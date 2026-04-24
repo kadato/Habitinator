@@ -162,6 +162,27 @@ h1:focus {
     text-align: start;
 }
 
+/* Edit Habit / Edit Daily: hide default MudDialog paper so only the inner card is visible; popovers need a non-scrolling dialog root */
+.mud-dialog.edit-habit-dialog,
+.mud-dialog:has(.edit-habit-shell),
+.mud-dialog.edit-daily-dialog,
+.mud-dialog:has(.edit-daily-shell) {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    overflow-y: visible !important;
+    max-height: none !important;
+}
+
+.mud-dialog.edit-habit-dialog .mud-dialog-content,
+.mud-dialog:has(.edit-habit-shell) .mud-dialog-content,
+.mud-dialog.edit-daily-dialog .mud-dialog-content,
+.mud-dialog:has(.edit-daily-shell) .mud-dialog-content {
+    padding: 0 !important;
+    overflow: visible !important;
+}
+
 .status-bar-safe-area {
     display: none;
 }

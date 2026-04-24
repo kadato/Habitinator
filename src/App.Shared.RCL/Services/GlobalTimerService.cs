@@ -28,6 +28,20 @@ public sealed class GlobalTimerService
         TargetId = targetId;
     }
 
+    /// <summary>Sets a user-entered focus label, or clears the target when the label is empty.</summary>
+    public void SetManualTarget(string? label)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            TargetType = null;
+            TargetId = null;
+            return;
+        }
+
+        TargetType = "Session";
+        TargetId = label.Trim();
+    }
+
     public void Start()
     {
         if (IsRunning)

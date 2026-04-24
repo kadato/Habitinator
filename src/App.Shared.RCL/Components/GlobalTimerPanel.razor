@@ -1,43 +1,148 @@
 @using App.Shared.RCL.Services
 @inject GlobalTimerService TimerService
+@implements IDisposable
 
-<MudPaper Elevation="1" Class="timer-panel">
-    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="w-100">
-        <MudStack Spacing="0">
-            <MudText Typo="Typo.h5" Class="timer-value">@TimerService.Elapsed.ToString(@"hh\:mm\:ss")</MudText>
-            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                Target: @(TimerService.TargetType is null ? "none selected" : $"{TimerService.TargetType} - {TimerService.TargetId}")
-            </MudText>
-        </MudStack>
+<MudCard Class="timer-panel" Elevation="0" Outlined="true">
+    <MudCardContent Class="pa-4">
+        <MudStack Spacing="3">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="flex-wrap">
+                <MudAvatar Class="timer-header-avatar" Color="Color.Tertiary" Variant="Variant.Filled" Size="Size.Medium">
+                    <MudIcon Icon="@Icons.Material.Filled.Timer" />
+                </MudAvatar>
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.overline" Color="Color.Secondary">Focus timer</MudText>
+                    <MudText Typo="Typo.subtitle1" Class="timer-header-title">Global session clock</MudText>
+                </MudStack>
+                <MudSpacer />
+                @if (TimerService.IsRunning)
+                {
+                    <MudChip T="string"
+                             Class="timer-status-chip"
+                             Icon="@Icons.Material.Filled.PlayCircle"
+                             Color="Color.Success"
+                             Size="Size.Small"
+                             Variant="Variant.Filled"
+                             Text="Running" />
+                }
+                else if (TimerService.Elapsed > TimeSpan.Zero)
+                {
+                    <MudChip T="string"
+                             Class="timer-status-chip"
+                             Icon="@Icons.Material.Filled.PauseCircle"
+                             Color="Color.Warning"
+                             Size="Size.Small"
+                             Variant="Variant.Filled"
+                             Text="Paused" />
+                }
+                else
+                {
+                    <MudChip T="string"
+                             Class="timer-status-chip"
+                             Icon="@Icons.Material.Filled.HourglassEmpty"
+                             Color="Color.Default"
+                             Size="Size.Small"
+                             Variant="Variant.Outlined"
+                             Text="Idle" />
+                }
+            </MudStack>
 
-        <MudStack Row="true" Spacing="1">
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Success"
-                       StartIcon="@Icons.Material.Filled.PlayArrow"
-                       OnClick="Start"
-                       Disabled="@TimerService.IsRunning">
-                Start
-            </MudButton>
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Warning"
-                       StartIcon="@Icons.Material.Filled.Pause"
-                       OnClick="Pause"
-                       Disabled="@(!TimerService.IsRunning)">
-                Pause
-            </MudButton>
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Stop"
-                       OnClick="StopAndLog">
-                Stop & Log
-            </MudButton>
+            <div class="timer-body-row">
+                <div class="timer-main-col">
+                    <div class="timer-main-inner">
+                        <MudText Typo="Typo.h3" Class="timer-value">@TimerService.Elapsed.ToString(@"hh\:mm\:ss")</MudText>
+                        <MudTextField T="string"
+                                      Value="@(TimerService.TargetId ?? string.Empty)"
+                                      ValueChanged="OnTargetChanged"
+                                      Label="Session target"
+                                      Placeholder="e.g. Deep work, Habit name…"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Flag"
+                                      Class="timer-target-field"
+                                      Immediate="true" />
+                    </div>
+                </div>
+
+                <div class="timer-actions-col">
+                    <div class="timer-actions-stack">
+                        <div class="timer-action-slot">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Success"
+                                       StartIcon="@Icons.Material.Filled.PlayArrow"
+                                       Class="timer-btn timer-btn--start"
+                                       FullWidth="true"
+                                       OnClick="Start"
+                                       Disabled="@TimerService.IsRunning">
+                                Start
+                            </MudButton>
+                        </div>
+                        <div class="timer-action-slot">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Warning"
+                                       StartIcon="@Icons.Material.Filled.Pause"
+                                       Class="timer-btn timer-btn--pause"
+                                       FullWidth="true"
+                                       OnClick="Pause"
+                                       Disabled="@(!TimerService.IsRunning)">
+                                Pause
+                            </MudButton>
+                        </div>
+                        <div class="timer-action-slot">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.Stop"
+                                       Class="timer-btn timer-btn--stop"
+                                       FullWidth="true"
+                                       OnClick="StopAndLog">
+                                Stop &amp; log
+                            </MudButton>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </MudStack>
-    </MudStack>
-</MudPaper>
+    </MudCardContent>
+</MudCard>
 
 @code {
     [Parameter]
     public EventCallback<TimeSpan> OnLogSaved { get; set; }
+
+    private PeriodicTimer? _uiTick;
+    private CancellationTokenSource? _uiTickCts;
+
+    protected override void OnInitialized()
+    {
+        _uiTickCts = new CancellationTokenSource();
+        _uiTick = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        _ = RunUiTickAsync(_uiTickCts.Token);
+    }
+
+    private async Task RunUiTickAsync(CancellationToken cancellationToken)
+    {
+        if (_uiTick is null)
+        {
+            return;
+        }
+
+        try
+        {
+            while (await _uiTick.WaitForNextTickAsync(cancellationToken))
+            {
+                if (TimerService.IsRunning)
+                {
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during disposal.
+        }
+    }
+
+    private void OnTargetChanged(string? value) => TimerService.SetManualTarget(value);
 
     private void Start() => TimerService.Start();
 
@@ -50,5 +155,12 @@
         {
             await OnLogSaved.InvokeAsync(elapsed);
         }
+    }
+
+    public void Dispose()
+    {
+        _uiTickCts?.Cancel();
+        _uiTick?.Dispose();
+        _uiTickCts?.Dispose();
     }
 }

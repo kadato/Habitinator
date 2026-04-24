@@ -19,6 +19,14 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.ToTable("BoardItems");
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Notes).HasMaxLength(4000);
+            entity.Property(x => x.Tags).HasMaxLength(500);
+            entity.Property(x => x.ChecklistJson).HasMaxLength(8000);
+            entity.Property(x => x.DailyLastCompletedOn);
+            entity.Property(x => x.TrackPlus).IsRequired();
+            entity.Property(x => x.TrackMinus).IsRequired();
+            entity.Property(x => x.ResetPeriod).IsRequired();
+            entity.Property(x => x.NegativeCounter).IsRequired();
             entity.Property(x => x.Section).HasConversion<string>().HasMaxLength(20);
             entity.Property(x => x.CreatedAtUtc).IsRequired();
             entity.Property(x => x.UpdatedAtUtc).IsRequired();

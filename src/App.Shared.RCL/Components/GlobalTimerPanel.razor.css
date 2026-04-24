@@ -1,5 +1,5 @@
 .timer-panel {
-    margin: 0.5rem 0 1rem;
+    margin: 0.35rem 0 0.35rem;
     border-radius: 16px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 80%, transparent);
@@ -102,6 +102,18 @@
 .timer-target-field ::deep .mud-input-helper {
     margin: 0;
     min-height: 0;
+}
+
+.timer-target-input-row {
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+}
+
+.timer-target-type-icon {
+    flex-shrink: 0;
+    margin-top: 0.35rem;
+    opacity: 0.88;
 }
 
 .timer-target-field {

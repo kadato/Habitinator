@@ -9,38 +9,75 @@
 
 <MudStack Class="board-shell" Spacing="2">
     <MudStack Spacing="0">
+        @if (!string.IsNullOrWhiteSpace(SignedInEmail))
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Signed in as @SignedInEmail</MudText>
+        }
         <MudText Typo="Typo.h4">Habitinator</MudText>
         <MudText Typo="Typo.body2" Color="Color.Secondary">Daily execution board with a single global timer.</MudText>
     </MudStack>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+
+    @if (_loadError is not null)
+    {
+        <MudAlert Severity="Severity.Error"
+                  Variant="Variant.Outlined"
+                  ShowCloseIcon="false">
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.body2">@_loadError</MudText>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Disabled="@_isLoading"
+                           OnClick="RetryLoadAsync">
+                    Retry
+                </MudButton>
+            </MudStack>
+        </MudAlert>
+    }
+
+    @if (_initialLoadComplete && _loadError is null)
+    {
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            @Habits.Count habits · @Dailies.Count(d => !d.IsCompleted) dailies left · @Todos.Count(t => !t.IsCompleted) to-dos open
+        </MudText>
+    }
+
     <GlobalTimerPanel OnLogSaved="HandleTimerLogSaved" />
 
-    <MudHidden Breakpoint="Breakpoint.SmAndDown">
-        <MudGrid>
-            <MudItem xs="12" md="4">
-                @BuildSectionCard(BoardSection.Habit, Habits)
-            </MudItem>
-            <MudItem xs="12" md="4">
-                @BuildSectionCard(BoardSection.Daily, Dailies)
-            </MudItem>
-            <MudItem xs="12" md="4">
-                @BuildSectionCard(BoardSection.Todo, Todos)
-            </MudItem>
-        </MudGrid>
-    </MudHidden>
+    @if (_loadError is null)
+    {
+        <MudHidden Breakpoint="Breakpoint.SmAndDown">
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    @BuildSectionCard(BoardSection.Habit, Habits)
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    @BuildSectionCard(BoardSection.Daily, Dailies)
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    @BuildSectionCard(BoardSection.Todo, Todos)
+                </MudItem>
+            </MudGrid>
+        </MudHidden>
 
-    <MudHidden Breakpoint="Breakpoint.MdAndUp">
-        <MudTabs Rounded="true">
-            <MudTabPanel Text="Habits">
-                @BuildSectionList(BoardSection.Habit, Habits)
-            </MudTabPanel>
-            <MudTabPanel Text="Dailies">
-                @BuildSectionList(BoardSection.Daily, Dailies)
-            </MudTabPanel>
-            <MudTabPanel Text="To-Dos">
-                @BuildSectionList(BoardSection.Todo, Todos)
-            </MudTabPanel>
-        </MudTabs>
-    </MudHidden>
+        <MudHidden Breakpoint="Breakpoint.MdAndUp">
+            <MudTabs Rounded="true">
+                <MudTabPanel Text="Habits">
+                    @BuildSectionList(BoardSection.Habit, Habits)
+                </MudTabPanel>
+                <MudTabPanel Text="Dailies">
+                    @BuildSectionList(BoardSection.Daily, Dailies)
+                </MudTabPanel>
+                <MudTabPanel Text="To-Dos">
+                    @BuildSectionList(BoardSection.Todo, Todos)
+                </MudTabPanel>
+            </MudTabs>
+        </MudHidden>
+    }
 
     @if (!string.IsNullOrWhiteSpace(LastEvent))
     {
@@ -49,19 +86,66 @@
 </MudStack>
 
 @code {
+    [Parameter]
+    public string? SignedInEmail { get; set; }
+
     private List<BoardItem> Habits { get; set; } = [];
     private List<BoardItem> Dailies { get; set; } = [];
     private List<BoardItem> Todos { get; set; } = [];
     private string? LastEvent { get; set; }
     private PeriodicTimer? _periodicTimer;
     private CancellationTokenSource? _timerCts;
+    private bool _isLoading;
+    private bool _initialLoadComplete;
+    private string? _loadError;
 
     protected override async Task OnInitializedAsync()
     {
         _timerCts = new CancellationTokenSource();
         _periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(1));
         _ = TickAsync(_timerCts.Token);
-        await LoadBoardAsync();
+        await InitialLoadAsync();
+    }
+
+    private async Task InitialLoadAsync()
+    {
+        _isLoading = true;
+        _loadError = null;
+        try
+        {
+            await LoadBoardAsync();
+        }
+        catch (Exception ex)
+        {
+            _loadError = ex is InvalidOperationException
+                ? ex.Message
+                : "Could not load your board. Please try again.";
+        }
+        finally
+        {
+            _isLoading = false;
+            _initialLoadComplete = true;
+        }
+    }
+
+    private async Task RetryLoadAsync()
+    {
+        _isLoading = true;
+        _loadError = null;
+        try
+        {
+            await LoadBoardAsync();
+        }
+        catch (Exception ex)
+        {
+            _loadError = ex is InvalidOperationException
+                ? ex.Message
+                : "Could not load your board. Please try again.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
     }
 
     private async Task LoadBoardAsync()
@@ -70,6 +154,21 @@
         Habits = snapshot.Habits.ToList();
         Dailies = snapshot.Dailies.ToList();
         Todos = snapshot.Todos.ToList();
+    }
+
+    private async Task<bool> TryMutateAsync(Func<Task> work)
+    {
+        try
+        {
+            await work();
+            await LoadBoardAsync();
+            return true;
+        }
+        catch (Exception)
+        {
+            Snackbar.Add("Something went wrong. Check your connection and try again.", Severity.Error);
+            return false;
+        }
     }
 
     private async Task TickAsync(CancellationToken cancellationToken)
@@ -126,6 +225,17 @@
     private RenderFragment BuildSectionList(BoardSection section, IReadOnlyCollection<BoardItem> items) => builder =>
     {
         var seq = 0;
+        if (items.Count == 0)
+        {
+            builder.OpenComponent<MudText>(seq++);
+            builder.AddAttribute(seq++, "Typo", Typo.body2);
+            builder.AddAttribute(seq++, "Color", Color.Secondary);
+            builder.AddAttribute(seq++, "Class", "py-2");
+            builder.AddContent(seq++, "No items yet. Use + in the header to add one.");
+            builder.CloseComponent();
+            return;
+        }
+
         foreach (BoardItem item in items)
         {
             builder.OpenComponent<MudStack>(seq++);
@@ -208,8 +318,11 @@
             return;
         }
 
-        await BoardDataService.CreateItemAsync(section, title);
-        await LoadBoardAsync();
+        if (!await TryMutateAsync(() => BoardDataService.CreateItemAsync(section, title)))
+        {
+            return;
+        }
+
         Snackbar.Add($"{GetSectionTitle(section)} item added.", Severity.Success);
     }
 
@@ -221,14 +334,12 @@
             return;
         }
 
-        await BoardDataService.RenameItemAsync(section, item.Id, title);
-        await LoadBoardAsync();
+        await TryMutateAsync(() => BoardDataService.RenameItemAsync(section, item.Id, title));
     }
 
     private async Task DeleteItemAsync(BoardSection section, Guid itemId)
     {
-        await BoardDataService.DeleteItemAsync(section, itemId);
-        await LoadBoardAsync();
+        await TryMutateAsync(() => BoardDataService.DeleteItemAsync(section, itemId));
     }
 
     private async Task PrimaryActionAsync(BoardSection section, BoardItem item)
@@ -236,17 +347,22 @@
         if (section == BoardSection.Habit)
         {
             TimerService.SelectTarget("Habit", item.Title);
-            await BoardDataService.IncrementHabitAsync(item.Id);
+            if (!await TryMutateAsync(() => BoardDataService.IncrementHabitAsync(item.Id)))
+            {
+                return;
+            }
+
             LastEvent = $"Habit increment captured for '{item.Title}'.";
-        }
-        else
-        {
-            TimerService.SelectTarget(section.ToString(), item.Title);
-            await BoardDataService.ToggleItemAsync(section, item.Id);
-            LastEvent = $"{section} toggled for '{item.Title}'.";
+            return;
         }
 
-        await LoadBoardAsync();
+        TimerService.SelectTarget(section.ToString(), item.Title);
+        if (!await TryMutateAsync(() => BoardDataService.ToggleItemAsync(section, item.Id)))
+        {
+            return;
+        }
+
+        LastEvent = $"{section} toggled for '{item.Title}'.";
     }
 
     private async Task<string?> PromptForTitleAsync(string title, string initialValue)

@@ -1,0 +1,10 @@
+/* Reinforce slate surface when global CSS sets a different default on cards. */
+.home-landing-card {
+    background: #111827;
+    border-color: #374151;
+}
+
+.guest-login-paper {
+    background: #0f172a;
+    border-color: #1f2937;
+}

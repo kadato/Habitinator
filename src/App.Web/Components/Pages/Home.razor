@@ -1,5 +1,20 @@
 ﻿@page "/"
+@rendermode InteractiveServer
+@using System.Security.Claims
 
-<PageTitle>Main Board</PageTitle>
+<PageTitle>Habitinator</PageTitle>
 
-<MainBoard />
+<AuthorizeView>
+    <Authorized>
+        <MainBoard SignedInEmail="@GetEmail(context.User)" />
+    </Authorized>
+    <NotAuthorized>
+        <HomeLanding />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private static string? GetEmail(ClaimsPrincipal user) =>
+        user.FindFirst(ClaimTypes.Email)?.Value
+        ?? user.Identity?.Name;
+}

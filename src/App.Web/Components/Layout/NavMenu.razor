@@ -1,4 +1,6 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using System.Security.Claims
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">Habitinator</a>
     </div>
@@ -14,17 +16,39 @@
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="auth/login">
-                <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> Login
-            </NavLink>
-        </div>
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3 py-1 small text-white-50 text-truncate" title="@GetDisplayEmail(context)">
+                    Signed in as @GetDisplayEmail(context)
+                </div>
+                <div class="nav-item px-3">
+                    <form method="post" action="/api/auth/cookie-logout" class="d-inline">
+                        <button class="nav-link btn btn-link border-0 p-0 text-start w-100" type="submit">
+                            <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Log out
+                        </button>
+                    </form>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="auth/login">
+                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> Login
+                    </NavLink>
+                </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="auth/register">
-                <span class="bi bi-person-plus-fill-nav-menu" aria-hidden="true"></span> Register
-            </NavLink>
-        </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="auth/register">
+                        <span class="bi bi-person-plus-fill-nav-menu" aria-hidden="true"></span> Register
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
     </nav>
 </div>
 
+@code {
+    private static string GetDisplayEmail(AuthenticationState context) =>
+        context.User.FindFirst(ClaimTypes.Email)?.Value
+        ?? context.User.Identity?.Name
+        ?? "User";
+}

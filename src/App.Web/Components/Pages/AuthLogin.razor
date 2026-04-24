@@ -1,70 +1,55 @@
 @page "/auth/login"
-@using System.ComponentModel.DataAnnotations
-@inject HttpClient Http
+@using Microsoft.AspNetCore.WebUtilities
+@inject NavigationManager Navigation
 
 <PageTitle>Login</PageTitle>
 
 <h1>Login</h1>
-<p>Demo account: <strong>guest@habitinator.local</strong> / <strong>Guest123!</strong></p>
-
-<EditForm Model="_model" OnValidSubmit="LoginAsync">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
-    <div class="mb-3">
-        <label>Email</label>
-        <InputText class="form-control" @bind-Value="_model.Email" />
-    </div>
-    <div class="mb-3">
-        <label>Password</label>
-        <InputText class="form-control" type="password" @bind-Value="_model.Password" />
-    </div>
-    <div class="form-check mb-3">
-        <InputCheckbox class="form-check-input" @bind-Value="_model.RememberMe" />
-        <label class="form-check-label">Remember me</label>
-    </div>
-    <button class="btn btn-primary me-2" type="submit">Login</button>
-    <button class="btn btn-outline-secondary" type="button" @onclick="GuestLoginAsync">Use demo guest</button>
-</EditForm>
 
 @if (!string.IsNullOrWhiteSpace(_message))
 {
-    <p class="mt-3">@_message</p>
+    <div class="alert alert-info" role="alert">@_message</div>
 }
 
+<div class="d-flex flex-wrap gap-2 align-items-end">
+    <form method="post" class="flex-grow-1" style="min-width: 240px;" action="/api/auth/cookie-login">
+        <div class="mb-3">
+            <label for="email">Email</label>
+            <input class="form-control" id="email" name="Email" type="email" required autocomplete="username" value="" />
+        </div>
+        <div class="mb-3">
+            <label for="password">Password</label>
+            <input class="form-control" id="password" name="Password" type="password" required autocomplete="current-password" value="" />
+        </div>
+        <div class="form-check mb-3">
+            <input class="form-check-input" id="remember" name="RememberMe" type="checkbox" value="true" />
+            <label class="form-check-label" for="remember">Remember me</label>
+        </div>
+        <button class="btn btn-primary" type="submit">Login</button>
+    </form>
+
+    <form method="post" action="/api/auth/guest-login">
+        <button class="btn btn-outline-secondary" type="submit">Use demo guest</button>
+    </form>
+</div>
+
 @code {
-    private LoginModel _model = new();
     private string? _message;
 
-    private async Task LoginAsync()
+    protected override void OnInitialized()
     {
-        var response = await Http.PostAsJsonAsync("/api/auth/login", new
+        var q = QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
+        if (q.ContainsKey("error") && q["error"] == "1")
         {
-            _model.Email,
-            _model.Password,
-            _model.RememberMe
-        });
-
-        _message = response.IsSuccessStatusCode
-            ? "Login request accepted. Cookie and token endpoint are active."
-            : "Login failed. Check credentials.";
-    }
-
-    private async Task GuestLoginAsync()
-    {
-        var response = await Http.PostAsync("/api/auth/guest-login", null);
-        _message = response.IsSuccessStatusCode
-            ? "Demo guest login request accepted."
-            : "Demo guest login failed.";
-    }
-
-    private sealed class LoginModel
-    {
-        [Required, EmailAddress]
-        public string Email { get; set; } = string.Empty;
-
-        [Required]
-        public string Password { get; set; } = string.Empty;
-
-        public bool RememberMe { get; set; }
+            _message = "Invalid login attempt.";
+        }
+        else if (q.ContainsKey("guest") && q["guest"] == "missing")
+        {
+            _message = "Demo guest user is not available.";
+        }
+        else if (q.ContainsKey("registered") && q["registered"] == "1")
+        {
+            _message = "Registration complete. You can sign in now.";
+        }
     }
 }

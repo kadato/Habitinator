@@ -1,5 +1,6 @@
 using App.Web.Components;
 using System.Text;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Options;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
@@ -19,6 +20,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddScoped<AuthenticationStateProvider, HttpContextAuthenticationStateProvider>();
 builder.Services.AddMudServices();
 
 string dbConnectionString =
@@ -125,7 +127,7 @@ app.MapPost("/api/auth/register", async (
     }
 
     return Results.Ok(new { message = "Registration successful." });
-});
+}).DisableAntiforgery();
 
 app.MapPost("/api/auth/login", async (
     LoginRequest request,
@@ -152,32 +154,101 @@ app.MapPost("/api/auth/login", async (
 
     string token = jwtTokenService.CreateToken(user);
     return Results.Ok(new LoginResponse(token, user.Email ?? string.Empty));
-});
+}).DisableAntiforgery();
 
 app.MapPost("/api/auth/logout", async (SignInManager<ApplicationUser> signInManager) =>
 {
     await signInManager.SignOutAsync();
     return Results.Ok(new { message = "Logged out." });
-}).RequireAuthorization();
+})
+    .RequireAuthorization()
+    .DisableAntiforgery();
 
+// Full browser POST so Set-Cookie runs before the response is committed (works with Blazor; interactive components cannot set cookies after streaming starts).
 app.MapPost("/api/auth/guest-login", async (
     SignInManager<ApplicationUser> signInManager,
     UserManager<ApplicationUser> userManager,
-    JwtTokenService jwtTokenService,
     IOptions<DemoUserOptions> demoOptions) =>
 {
     ApplicationUser? guestUser = await userManager.FindByEmailAsync(demoOptions.Value.Email);
     if (guestUser is null)
     {
-        return Results.NotFound("Demo guest user not found.");
+        return Results.LocalRedirect("/auth/login?guest=missing");
     }
 
     await signInManager.SignInAsync(guestUser, isPersistent: true);
-    string token = jwtTokenService.CreateToken(guestUser);
-    return Results.Ok(new LoginResponse(token, guestUser.Email ?? string.Empty));
-});
+    return Results.LocalRedirect("/");
+}).DisableAntiforgery();
 
-var boardApi = app.MapGroup("/api/board");
+app.MapPost("/api/auth/cookie-login", async (HttpContext httpContext, SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager) =>
+{
+    IFormCollection form = await httpContext.Request.ReadFormAsync();
+    string email = form["Email"].ToString();
+    string password = form["Password"].ToString();
+    bool rememberMe = form["RememberMe"] == "true";
+
+    if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+    {
+        return Results.LocalRedirect("/auth/login?error=1");
+    }
+
+    ApplicationUser? user = await userManager.FindByEmailAsync(email);
+    if (user is null)
+    {
+        return Results.LocalRedirect("/auth/login?error=1");
+    }
+
+    SignInResult loginResult = await signInManager.PasswordSignInAsync(
+        user,
+        password,
+        rememberMe,
+        lockoutOnFailure: true);
+
+    if (!loginResult.Succeeded)
+    {
+        return Results.LocalRedirect("/auth/login?error=1");
+    }
+
+    return Results.LocalRedirect("/");
+}).DisableAntiforgery();
+
+app.MapPost("/api/auth/cookie-logout", async (SignInManager<ApplicationUser> signInManager) =>
+{
+    await signInManager.SignOutAsync();
+    return Results.LocalRedirect("/");
+})
+    .RequireAuthorization()
+    .DisableAntiforgery();
+
+app.MapPost("/api/auth/register-form", async (HttpContext httpContext, UserManager<ApplicationUser> userManager) =>
+{
+    IFormCollection form = await httpContext.Request.ReadFormAsync();
+    string email = form["Email"].ToString();
+    string password = form["Password"].ToString();
+    string timezone = string.IsNullOrWhiteSpace(form["Timezone"].ToString()) ? "Europe/Budapest" : form["Timezone"].ToString()!;
+
+    if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+    {
+        return Results.LocalRedirect("/auth/register?error=1");
+    }
+
+    var user = new ApplicationUser
+    {
+        UserName = email,
+        Email = email,
+        Timezone = timezone
+    };
+
+    IdentityResult result = await userManager.CreateAsync(user, password);
+    if (!result.Succeeded)
+    {
+        return Results.LocalRedirect("/auth/register?error=1");
+    }
+
+    return Results.LocalRedirect("/auth/login?registered=1");
+}).DisableAntiforgery();
+
+var boardApi = app.MapGroup("/api/board").DisableAntiforgery();
 boardApi.MapGet("/", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService) =>
 {
     Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);

@@ -38,6 +38,23 @@ This document is the single source of truth for current architecture, features, 
 - Demo readiness:
   - Guest account seeded automatically with demo board data
 
+### Cross-platform sync and local-first requirements
+
+- PostgreSQL remains the server source of truth for synchronized user data.
+- Each client platform (web and MAUI) supports local-first operation:
+  - local persistent storage for board data
+  - read/write while offline
+- Synchronization requirements:
+  - outbound operation queue (create/update/delete/toggle/increment) with retry
+  - pull remote changes using incremental sync tokens/checkpoints
+  - idempotent push handling on the server
+- Consistency and conflict requirements:
+  - per-record `updatedAt` metadata and tombstone handling for deletions
+  - deterministic conflict resolution policy (default: last-write-wins by server timestamp)
+- Security and isolation:
+  - sync scope is always user-bound
+  - existing auth model (cookie/JWT + Identity) is used for sync endpoints
+
 ## Technology Stack
 
 - .NET 10

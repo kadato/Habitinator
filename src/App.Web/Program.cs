@@ -290,13 +290,74 @@ boardApi.MapPost("/{section}/{itemId:guid}/toggle", async (HttpContext httpConte
 boardApi.MapPost("/habits/{itemId:guid}/increment", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, Guid itemId) =>
 {
     Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
-    BoardItem? updated = await boardPersistenceService.IncrementHabitAsync(userId, itemId);
+    BoardItem? updated = await boardPersistenceService.IncrementHabitPlusAsync(userId, itemId);
     return updated is null ? Results.NotFound() : Results.Ok(updated);
 });
 boardApi.MapPost("/habits/{itemId:guid}/decrement", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, Guid itemId) =>
 {
     Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
-    BoardItem? updated = await boardPersistenceService.DecrementHabitAsync(userId, itemId);
+    BoardItem? updated = await boardPersistenceService.IncrementHabitMinusAsync(userId, itemId);
+    return updated is null ? Results.NotFound() : Results.Ok(updated);
+});
+boardApi.MapPut("/habits/{itemId:guid}", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, Guid itemId, HabitUpdateRequest request) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Title))
+    {
+        return Results.BadRequest("Title is required.");
+    }
+
+    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    BoardItem? updated = await boardPersistenceService.UpdateHabitAsync(
+        userId,
+        itemId,
+        request.Title.Trim(),
+        request.Notes,
+        request.Tags,
+        request.TrackPlus,
+        request.TrackMinus,
+        request.ResetPeriod,
+        request.Counter,
+        request.NegativeCounter,
+        request.ChecklistJson);
+    return updated is null ? Results.NotFound() : Results.Ok(updated);
+});
+boardApi.MapPut("/todos/{itemId:guid}", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, Guid itemId, TodoUpdateRequest request) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Title))
+    {
+        return Results.BadRequest("Title is required.");
+    }
+
+    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    BoardItem? updated = await boardPersistenceService.UpdateTodoAsync(
+        userId,
+        itemId,
+        request.Title.Trim(),
+        request.Notes,
+        request.Tags,
+        request.ChecklistJson,
+        request.DueDate);
+    return updated is null ? Results.NotFound() : Results.Ok(updated);
+});
+boardApi.MapPut("/dailies/{itemId:guid}", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, Guid itemId, DailyUpdateRequest request) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Title))
+    {
+        return Results.BadRequest("Title is required.");
+    }
+
+    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    BoardItem? updated = await boardPersistenceService.UpdateDailyAsync(
+        userId,
+        itemId,
+        request.Title.Trim(),
+        request.Notes,
+        request.Tags,
+        request.StartDate,
+        request.Repeat,
+        request.RepeatInterval,
+        request.ChecklistJson,
+        request.Streak);
     return updated is null ? Results.NotFound() : Results.Ok(updated);
 });
 

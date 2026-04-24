@@ -1,0 +1,18 @@
+.board-shell {
+    color: #e5e7eb;
+}
+
+.board-card {
+    background: #111827;
+    border: 1px solid #1f2937;
+}
+
+.item-stack {
+    border-bottom: 1px solid #1f2937;
+    padding: 0.35rem 0;
+}
+
+.item-done {
+    opacity: 0.7;
+    text-decoration: line-through;
+}

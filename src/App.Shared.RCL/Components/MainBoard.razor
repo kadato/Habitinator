@@ -1,0 +1,282 @@
+@using App.Shared.RCL.Components.Dialogs
+@using App.Shared.RCL.Models
+@using App.Shared.RCL.Services
+@inject GlobalTimerService TimerService
+@inject IBoardDataService BoardDataService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@implements IDisposable
+
+<MudStack Class="board-shell" Spacing="2">
+    <MudStack Spacing="0">
+        <MudText Typo="Typo.h4">Habitinator</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Daily execution board with a single global timer.</MudText>
+    </MudStack>
+    <GlobalTimerPanel OnLogSaved="HandleTimerLogSaved" />
+
+    <MudHidden Breakpoint="Breakpoint.SmAndDown">
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                @BuildSectionCard(BoardSection.Habit, Habits)
+            </MudItem>
+            <MudItem xs="12" md="4">
+                @BuildSectionCard(BoardSection.Daily, Dailies)
+            </MudItem>
+            <MudItem xs="12" md="4">
+                @BuildSectionCard(BoardSection.Todo, Todos)
+            </MudItem>
+        </MudGrid>
+    </MudHidden>
+
+    <MudHidden Breakpoint="Breakpoint.MdAndUp">
+        <MudTabs Rounded="true">
+            <MudTabPanel Text="Habits">
+                @BuildSectionList(BoardSection.Habit, Habits)
+            </MudTabPanel>
+            <MudTabPanel Text="Dailies">
+                @BuildSectionList(BoardSection.Daily, Dailies)
+            </MudTabPanel>
+            <MudTabPanel Text="To-Dos">
+                @BuildSectionList(BoardSection.Todo, Todos)
+            </MudTabPanel>
+        </MudTabs>
+    </MudHidden>
+
+    @if (!string.IsNullOrWhiteSpace(LastEvent))
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@LastEvent</MudAlert>
+    }
+</MudStack>
+
+@code {
+    private List<BoardItem> Habits { get; set; } = [];
+    private List<BoardItem> Dailies { get; set; } = [];
+    private List<BoardItem> Todos { get; set; } = [];
+    private string? LastEvent { get; set; }
+    private PeriodicTimer? _periodicTimer;
+    private CancellationTokenSource? _timerCts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _timerCts = new CancellationTokenSource();
+        _periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        _ = TickAsync(_timerCts.Token);
+        await LoadBoardAsync();
+    }
+
+    private async Task LoadBoardAsync()
+    {
+        BoardSnapshot snapshot = await BoardDataService.GetSnapshotAsync();
+        Habits = snapshot.Habits.ToList();
+        Dailies = snapshot.Dailies.ToList();
+        Todos = snapshot.Todos.ToList();
+    }
+
+    private async Task TickAsync(CancellationToken cancellationToken)
+    {
+        if (_periodicTimer is null)
+        {
+            return;
+        }
+
+        try
+        {
+            while (await _periodicTimer.WaitForNextTickAsync(cancellationToken))
+            {
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during component disposal.
+        }
+    }
+
+    private RenderFragment BuildSectionCard(BoardSection section, IReadOnlyCollection<BoardItem> items) => builder =>
+    {
+        builder.OpenComponent<MudCard>(0);
+        builder.AddAttribute(1, "Class", "board-card");
+        builder.AddAttribute(2, "ChildContent", (RenderFragment)((cardBuilder) =>
+        {
+            cardBuilder.OpenComponent<MudCardHeader>(3);
+            cardBuilder.AddAttribute(4, "CardHeaderContent", (RenderFragment)((headerBuilder) =>
+            {
+                headerBuilder.OpenComponent<MudText>(5);
+                headerBuilder.AddAttribute(6, "Typo", Typo.h6);
+                headerBuilder.AddContent(7, GetSectionTitle(section));
+                headerBuilder.CloseComponent();
+            }));
+            cardBuilder.AddAttribute(8, "CardHeaderActions", (RenderFragment)((actionsBuilder) =>
+            {
+                actionsBuilder.OpenComponent<MudIconButton>(9);
+                actionsBuilder.AddAttribute(10, "Icon", Icons.Material.Filled.AddCircle);
+                actionsBuilder.AddAttribute(11, "Color", Color.Primary);
+                actionsBuilder.AddAttribute(12, "OnClick", EventCallback.Factory.Create(this, () => AddItemAsync(section)));
+                actionsBuilder.CloseComponent();
+            }));
+            cardBuilder.CloseComponent();
+
+            cardBuilder.OpenComponent<MudCardContent>(13);
+            cardBuilder.AddAttribute(14, "ChildContent", BuildSectionList(section, items));
+            cardBuilder.CloseComponent();
+        }));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment BuildSectionList(BoardSection section, IReadOnlyCollection<BoardItem> items) => builder =>
+    {
+        var seq = 0;
+        foreach (BoardItem item in items)
+        {
+            builder.OpenComponent<MudStack>(seq++);
+            builder.AddAttribute(seq++, "Row", true);
+            builder.AddAttribute(seq++, "AlignItems", AlignItems.Center);
+            builder.AddAttribute(seq++, "Justify", Justify.SpaceBetween);
+            builder.AddAttribute(seq++, "Class", "item-stack");
+            builder.AddAttribute(seq++, "ChildContent", (RenderFragment)((rowBuilder) =>
+            {
+                rowBuilder.OpenComponent<MudStack>(0);
+                rowBuilder.AddAttribute(1, "Row", true);
+                rowBuilder.AddAttribute(2, "AlignItems", AlignItems.Center);
+                rowBuilder.AddAttribute(3, "Spacing", 1);
+                rowBuilder.AddAttribute(4, "ChildContent", (RenderFragment)((leftBuilder) =>
+                {
+                    leftBuilder.OpenComponent<MudIconButton>(0);
+                    leftBuilder.AddAttribute(1, "Icon", GetPrimaryIcon(section, item));
+                    leftBuilder.AddAttribute(2, "Color", GetPrimaryColor(section, item));
+                    leftBuilder.AddAttribute(3, "OnClick", EventCallback.Factory.Create(this, () => PrimaryActionAsync(section, item)));
+                    leftBuilder.CloseComponent();
+
+                    leftBuilder.OpenComponent<MudText>(4);
+                    leftBuilder.AddAttribute(5, "Class", item.IsCompleted ? "item-done" : string.Empty);
+                    leftBuilder.AddContent(6, section == BoardSection.Habit ? $"{item.Title} (+{item.Counter})" : item.Title);
+                    leftBuilder.CloseComponent();
+                }));
+                rowBuilder.CloseComponent();
+
+                rowBuilder.OpenComponent<MudStack>(5);
+                rowBuilder.AddAttribute(6, "Row", true);
+                rowBuilder.AddAttribute(7, "Spacing", 0);
+                rowBuilder.AddAttribute(8, "ChildContent", (RenderFragment)((rightBuilder) =>
+                {
+                    rightBuilder.OpenComponent<MudIconButton>(0);
+                    rightBuilder.AddAttribute(1, "Icon", Icons.Material.Filled.Edit);
+                    rightBuilder.AddAttribute(2, "Color", Color.Secondary);
+                    rightBuilder.AddAttribute(3, "OnClick", EventCallback.Factory.Create(this, () => RenameItemAsync(section, item)));
+                    rightBuilder.CloseComponent();
+
+                    rightBuilder.OpenComponent<MudIconButton>(4);
+                    rightBuilder.AddAttribute(5, "Icon", Icons.Material.Filled.DeleteOutline);
+                    rightBuilder.AddAttribute(6, "Color", Color.Error);
+                    rightBuilder.AddAttribute(7, "OnClick", EventCallback.Factory.Create(this, () => DeleteItemAsync(section, item.Id)));
+                    rightBuilder.CloseComponent();
+                }));
+                rowBuilder.CloseComponent();
+            }));
+            builder.CloseComponent();
+        }
+    };
+
+    private static string GetSectionTitle(BoardSection section) => section switch
+    {
+        BoardSection.Habit => "Habits",
+        BoardSection.Daily => "Dailies",
+        BoardSection.Todo => "To-Dos",
+        _ => section.ToString()
+    };
+
+    private static string GetPrimaryIcon(BoardSection section, BoardItem item) => section switch
+    {
+        BoardSection.Habit => Icons.Material.Filled.Add,
+        _ when item.IsCompleted => Icons.Material.Filled.CheckCircle,
+        _ => Icons.Material.Filled.RadioButtonUnchecked
+    };
+
+    private static Color GetPrimaryColor(BoardSection section, BoardItem item) => section switch
+    {
+        BoardSection.Habit => Color.Success,
+        _ when item.IsCompleted => Color.Success,
+        BoardSection.Daily => Color.Primary,
+        _ => Color.Error
+    };
+
+    private async Task AddItemAsync(BoardSection section)
+    {
+        string? title = await PromptForTitleAsync("Add item", string.Empty);
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return;
+        }
+
+        await BoardDataService.CreateItemAsync(section, title);
+        await LoadBoardAsync();
+        Snackbar.Add($"{GetSectionTitle(section)} item added.", Severity.Success);
+    }
+
+    private async Task RenameItemAsync(BoardSection section, BoardItem item)
+    {
+        string? title = await PromptForTitleAsync("Rename item", item.Title);
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return;
+        }
+
+        await BoardDataService.RenameItemAsync(section, item.Id, title);
+        await LoadBoardAsync();
+    }
+
+    private async Task DeleteItemAsync(BoardSection section, Guid itemId)
+    {
+        await BoardDataService.DeleteItemAsync(section, itemId);
+        await LoadBoardAsync();
+    }
+
+    private async Task PrimaryActionAsync(BoardSection section, BoardItem item)
+    {
+        if (section == BoardSection.Habit)
+        {
+            TimerService.SelectTarget("Habit", item.Title);
+            await BoardDataService.IncrementHabitAsync(item.Id);
+            LastEvent = $"Habit increment captured for '{item.Title}'.";
+        }
+        else
+        {
+            TimerService.SelectTarget(section.ToString(), item.Title);
+            await BoardDataService.ToggleItemAsync(section, item.Id);
+            LastEvent = $"{section} toggled for '{item.Title}'.";
+        }
+
+        await LoadBoardAsync();
+    }
+
+    private async Task<string?> PromptForTitleAsync(string title, string initialValue)
+    {
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        var parameters = new DialogParameters<ItemTitleDialog>
+        {
+            { x => x.Value, initialValue }
+        };
+
+        IDialogReference dialog = await DialogService.ShowAsync<ItemTitleDialog>(title, parameters, options);
+        DialogResult? result = await dialog.Result;
+        return result?.Canceled == false ? result.Data as string : null;
+    }
+
+    private void HandleTimerLogSaved(TimeSpan duration)
+    {
+        LastEvent = $"Timer log saved for {TimerService.TargetType ?? "Unassigned"} '{TimerService.TargetId ?? "-"}' with duration {duration:hh\\:mm\\:ss}.";
+    }
+
+    public void Dispose()
+    {
+        _timerCts?.Cancel();
+        _periodicTimer?.Dispose();
+        _timerCts?.Dispose();
+    }
+}

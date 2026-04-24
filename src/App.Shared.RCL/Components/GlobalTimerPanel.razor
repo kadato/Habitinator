@@ -1,0 +1,54 @@
+@using App.Shared.RCL.Services
+@inject GlobalTimerService TimerService
+
+<MudPaper Elevation="1" Class="timer-panel">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="w-100">
+        <MudStack Spacing="0">
+            <MudText Typo="Typo.h5" Class="timer-value">@TimerService.Elapsed.ToString(@"hh\:mm\:ss")</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                Target: @(TimerService.TargetType is null ? "none selected" : $"{TimerService.TargetType} - {TimerService.TargetId}")
+            </MudText>
+        </MudStack>
+
+        <MudStack Row="true" Spacing="1">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Success"
+                       StartIcon="@Icons.Material.Filled.PlayArrow"
+                       OnClick="Start"
+                       Disabled="@TimerService.IsRunning">
+                Start
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Warning"
+                       StartIcon="@Icons.Material.Filled.Pause"
+                       OnClick="Pause"
+                       Disabled="@(!TimerService.IsRunning)">
+                Pause
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Stop"
+                       OnClick="StopAndLog">
+                Stop & Log
+            </MudButton>
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public EventCallback<TimeSpan> OnLogSaved { get; set; }
+
+    private void Start() => TimerService.Start();
+
+    private void Pause() => TimerService.Pause();
+
+    private async Task StopAndLog()
+    {
+        TimeSpan elapsed = TimerService.Stop();
+        if (elapsed > TimeSpan.Zero)
+        {
+            await OnLogSaved.InvokeAsync(elapsed);
+        }
+    }
+}

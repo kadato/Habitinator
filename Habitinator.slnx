@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/App.MAUI/App.MAUI.csproj" />
+    <Project Path="src/App.Shared.RCL/App.Shared.RCL.csproj" />
+    <Project Path="src/App.Web/App.Web.csproj" />
+    <Project Path="src/AppHost/AppHost.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/App.Shared.Tests/App.Shared.Tests.csproj" />
+  </Folder>
+</Solution>

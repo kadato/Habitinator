@@ -1,54 +1,50 @@
 ﻿@using System.Security.Claims
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">Habitinator</a>
-    </div>
-</div>
+<MudNavMenu Rounded="true" Margin="Margin.Dense" Class="pa-1 nav-menu-narrow" Dense="true">
+    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.SpaceDashboard">Board</MudNavLink>
+</MudNavMenu>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<MudDivider Class="my-2 mx-1" />
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Main Board
-            </NavLink>
-        </div>
-
-        <AuthorizeView>
-            <Authorized>
-                <div class="nav-item px-3 py-1 small text-white-50 text-truncate" title="@GetDisplayEmail(context)">
-                    Signed in as @GetDisplayEmail(context)
-                </div>
-                <div class="nav-item px-3">
-                    <form method="post" action="/api/auth/cookie-logout" class="d-inline">
-                        <button class="nav-link btn btn-link border-0 p-0 text-start w-100" type="submit">
-                            <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Log out
-                        </button>
-                    </form>
-                </div>
-            </Authorized>
-            <NotAuthorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="auth/login">
-                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> Login
-                    </NavLink>
-                </div>
-
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="auth/register">
-                        <span class="bi bi-person-plus-fill-nav-menu" aria-hidden="true"></span> Register
-                    </NavLink>
-                </div>
-            </NotAuthorized>
-        </AuthorizeView>
-    </nav>
-</div>
+<AuthorizeView>
+    <Authorized Context="auth">
+        <MudText Typo="Typo.caption"
+                 Color="Color.Secondary"
+                 Class="px-2 mb-1 text-truncate"
+                 title="@GetFullIdentity(auth)">
+            @GetEmailLocalPart(auth)
+        </MudText>
+        <form method="post" action="/api/auth/cookie-logout" class="px-1">
+            <MudButton ButtonType="ButtonType.Submit"
+                       Variant="Variant.Text"
+                       Color="Color.Error"
+                       StartIcon="@Icons.Material.Filled.Logout"
+                       FullWidth="true"
+                       Size="Size.Small"
+                       Class="justify-start text-transform-none">
+                Log out
+            </MudButton>
+        </form>
+    </Authorized>
+    <NotAuthorized>
+        <MudNavMenu Rounded="true" Margin="Margin.Dense" Dense="true" Class="px-1">
+            <MudNavLink Href="auth/login" Icon="@Icons.Material.Filled.Login">Login</MudNavLink>
+            <MudNavLink Href="auth/register" Icon="@Icons.Material.Filled.PersonAdd">Register</MudNavLink>
+        </MudNavMenu>
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
-    private static string GetDisplayEmail(AuthenticationState context) =>
-        context.User.FindFirst(ClaimTypes.Email)?.Value
-        ?? context.User.Identity?.Name
+    private static string GetFullIdentity(AuthenticationState auth) =>
+        auth.User.FindFirst(ClaimTypes.Email)?.Value
+        ?? auth.User.Identity?.Name
         ?? "User";
+
+    /// <summary>Shows only the part before @ for emails; otherwise the full identity string.</summary>
+    private static string GetEmailLocalPart(AuthenticationState auth)
+    {
+        string full = GetFullIdentity(auth);
+        int at = full.IndexOf('@');
+        return at > 0 ? full[..at] : full;
+    }
 }

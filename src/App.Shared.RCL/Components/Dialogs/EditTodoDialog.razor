@@ -1,0 +1,461 @@
+@using App.Shared.RCL.Models
+@using App.Shared.RCL.Services
+@inject IBoardDataService BoardData
+@inject ISnackbar Snackbar
+
+<MudDialog Class="edit-daily-dialog"
+           ContentClass="edit-daily-dialog__content"
+           Style="width: min(24rem, calc(100vw - 2rem));">
+    <DialogContent>
+        <div class="edit-daily-shell" @onclick="OnShellClick">
+            <div class="edit-daily-header">
+                <div class="edit-daily-header__toolbar">
+                    <MudText Typo="Typo.subtitle1" Class="edit-daily-header__title">Edit To Do</MudText>
+                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                        <MudButton Variant="Variant.Text"
+                                   Class="edit-daily-header__cancel"
+                                   OnClick="Cancel">
+                            Cancel
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled"
+                                   Class="edit-daily-header__save"
+                                   OnClick="SaveAsync"
+                                   Disabled="@_saving">
+                            Save
+                        </MudButton>
+                    </MudStack>
+                </div>
+
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.caption" Class="edit-daily-label-header">Title*</MudText>
+                    <MudTextField @bind-Value="_title"
+                                  Variant="Variant.Outlined"
+                                  Class="edit-daily-field-header"
+                                  Placeholder="To-do title"
+                                  Immediate="true"
+                                  Margin="Margin.Dense" />
+
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mt-2 mb-1">
+                        <MudText Typo="Typo.caption" Class="edit-daily-label-header">Notes</MudText>
+                    </MudStack>
+                    <MudTextField @bind-Value="_notes"
+                                  Variant="Variant.Outlined"
+                                  Class="edit-daily-field-header"
+                                  Placeholder="Add notes"
+                                  Lines="3"
+                                  Margin="Margin.Dense" />
+                </MudStack>
+            </div>
+
+            <div class="edit-daily-body">
+                <MudExpansionPanels Class="edit-daily-checklist-panels" Elevation="0">
+                    <MudExpansionPanel @bind-Expanded="_checklistOpen">
+                        <TitleContent>
+                            <MudText Typo="Typo.body2" Class="edit-daily-label-body">Checklist</MudText>
+                        </TitleContent>
+                        <ChildContent>
+                            <div class="edit-daily-checklist">
+                                @for (int i = 0; i < _checklistRows.Count; i++)
+                                {
+                                    int idx = i;
+                                    var row = _checklistRows[idx];
+                                    <div class="edit-daily-checklist__row" @key="row.Key">
+                                        <MudCheckBox T="bool"
+                                                     Value="row.IsDone"
+                                                     ValueChanged="@(v => SetChecklistDone(idx, v))"
+                                                     Class="ma-0"
+                                                     Color="Color.Primary" />
+                                        <MudTextField @bind-Value="row.Text"
+                                                      Variant="Variant.Text"
+                                                      Class="edit-daily-checklist__input flex-grow-1"
+                                                      Placeholder="Checklist item"
+                                                      Margin="Margin.Dense"
+                                                      Immediate="true" />
+                                    </div>
+                                }
+                                <button type="button" class="edit-daily-checklist__add" @onclick="AddChecklistLine">
+                                    <span class="edit-daily-checklist__add-icon" aria-hidden="true">+</span>
+                                    <span class="edit-daily-checklist__add-text">New checklist item</span>
+                                </button>
+                            </div>
+                        </ChildContent>
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+
+                <MudText Typo="Typo.caption" Class="edit-daily-label-body d-block mb-1 mt-2">Due date (optional)</MudText>
+                <MudDatePicker @bind-Date="_dueDate"
+                               Variant="Variant.Outlined"
+                               Editable="true"
+                               Class="edit-daily-field-body edit-daily-date"
+                               DateFormat="dd MMM yyyy"
+                               Placeholder="No due date"
+                               Clearable="true"
+                               Margin="Margin.Dense" />
+
+                <MudText Typo="Typo.caption" Class="edit-daily-label-body d-block mb-1 mt-2">Tags</MudText>
+                <div class="habit-tag-picker @(_tagPickerOpen ? "habit-tag-picker--open" : null)"
+                     @onclick:stopPropagation="true">
+                    <div class="habit-tag-picker__control"
+                         role="button"
+                         tabindex="0"
+                         @onclick="ToggleTagPicker"
+                         @onkeydown="OnControlKeydown"
+                         aria-haspopup="listbox"
+                         aria-expanded="@_tagPickerOpen"
+                         id="edit-todo-tags-trigger">
+                        <div class="habit-tag-picker__chips">
+                            @if (_selectedTags.Count == 0)
+                            {
+                                <span class="habit-tag-picker__placeholder">Add tags…</span>
+                            }
+                            else
+                            {
+                                @foreach (string tag in _selectedTags)
+                                {
+                                    <span class="habit-tag-chip" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+                                        <span class="habit-tag-chip__text">@tag</span>
+                                        <button type="button"
+                                                class="habit-tag-chip__remove"
+                                                @onclick="() => RemoveTag(tag)"
+                                                @onclick:stopPropagation="true"
+                                                aria-label="@($"Remove {tag}")">
+                                            ×
+                                        </button>
+                                    </span>
+                                }
+                            }
+                        </div>
+                        <span class="habit-tag-picker__chevron" aria-hidden="true">▾</span>
+                    </div>
+                    @if (_tagPickerOpen)
+                    {
+                        <div class="habit-tag-picker__dropdown" role="listbox" aria-labelledby="edit-todo-tags-trigger">
+                            <input type="text"
+                                   class="habit-tag-picker__search"
+                                   @bind="_tagSearch"
+                                   @bind:event="oninput"
+                                   @onkeydown="OnTagSearchKeydown"
+                                   @ref="_tagSearchField"
+                                   placeholder="Enter a tag" />
+                            <div class="habit-tag-picker__list">
+                                @if (FilteredTagSuggestions().Count == 0 && !CanAddNewTagFromSearch())
+                                {
+                                    <div class="habit-tag-picker__empty">
+                                        @if (string.IsNullOrWhiteSpace(_tagSearch))
+                                        {
+                                            <text>Search or type a new tag, then press Enter</text>
+                                        }
+                                        else
+                                        {
+                                            <text>No tags match your search</text>
+                                        }
+                                    </div>
+                                }
+                                @foreach (string option in FilteredTagSuggestions())
+                                {
+                                    <button type="button"
+                                            class="habit-tag-picker__option"
+                                            role="option"
+                                            @onclick="() => AddTag(option)">@option</button>
+                                }
+                                @if (CanAddNewTagFromSearch() && !string.IsNullOrWhiteSpace(_tagSearch))
+                                {
+                                    <button type="button"
+                                            class="habit-tag-picker__option habit-tag-picker__option--add"
+                                            @onclick="AddTagFromSearch">Add “@(_tagSearch.Trim())”</button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="edit-daily-delete-wrap">
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Error"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Outlined.DeleteOutline"
+                               OnClick="DeleteAsync"
+                               Disabled="@_saving">
+                        Delete this to-do
+                    </MudButton>
+                </div>
+            </div>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public BoardItem Item { get; set; } = default!;
+
+    private sealed class ChecklistRow
+    {
+        public Guid Key { get; } = Guid.NewGuid();
+        public Guid Id { get; set; }
+        public string Text { get; set; } = string.Empty;
+        public bool IsDone { get; set; }
+    }
+
+    private string _title = string.Empty;
+    private string? _notes;
+    private List<string> _selectedTags = [];
+    private List<string> _allKnownTags = [];
+    private bool _tagPickerOpen;
+    private string _tagSearch = string.Empty;
+    private ElementReference _tagSearchField;
+    private List<ChecklistRow> _checklistRows = [];
+    private bool _checklistOpen = true;
+    private DateTime? _dueDate;
+    private bool _saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _title = Item.Title;
+        _notes = Item.Notes;
+        _selectedTags = BoardTagUtil.ParseTags(Item.Tags).ToList();
+        _dueDate = Item.TodoDueDate?.ToDateTime(TimeOnly.MinValue);
+        _checklistRows = DailyChecklistJson.Parse(Item.ChecklistJson)
+            .Select(x => new ChecklistRow { Id = x.Id, Text = x.Text, IsDone = x.IsDone })
+            .ToList();
+        await LoadTagSuggestionsAsync();
+    }
+
+    private void OnShellClick()
+    {
+        if (_tagPickerOpen)
+        {
+            _tagPickerOpen = false;
+            _tagSearch = string.Empty;
+        }
+    }
+
+    private void AddChecklistLine() =>
+        _checklistRows.Add(new ChecklistRow { Id = Guid.NewGuid() });
+
+    private void SetChecklistDone(int index, bool done)
+    {
+        if (index < 0 || index >= _checklistRows.Count)
+        {
+            return;
+        }
+
+        _checklistRows[index].IsDone = done;
+    }
+
+    private IReadOnlyList<DailyChecklistItem> ToChecklistModel() =>
+        _checklistRows
+            .Where(r => !string.IsNullOrWhiteSpace(r.Text))
+            .Select(r => new DailyChecklistItem(
+                r.Id == Guid.Empty ? Guid.NewGuid() : r.Id,
+                r.Text.Trim(),
+                r.IsDone))
+            .ToList();
+
+    private string SerializeTags() =>
+        _selectedTags.Count == 0 ? string.Empty : string.Join(", ", _selectedTags);
+
+    private async Task LoadTagSuggestionsAsync()
+    {
+        BoardSnapshot snapshot = await BoardData.GetSnapshotAsync();
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string t in _selectedTags)
+        {
+            set.Add(t);
+        }
+
+        void AddAll(IEnumerable<BoardItem> items)
+        {
+            foreach (BoardItem item in items)
+            {
+                foreach (string t in BoardTagUtil.ParseTags(item.Tags))
+                {
+                    set.Add(t);
+                }
+            }
+        }
+
+        AddAll(snapshot.Habits);
+        AddAll(snapshot.Dailies);
+        AddAll(snapshot.Todos);
+        _allKnownTags = set.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private IReadOnlyList<string> FilteredTagSuggestions()
+    {
+        var q = _tagSearch.Trim();
+        return _allKnownTags
+            .Where(t => _selectedTags.All(s => !s.Equals(t, StringComparison.OrdinalIgnoreCase)))
+            .Where(t => q.Length == 0 || t.Contains(q, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private bool CanAddNewTagFromSearch()
+    {
+        string t = _tagSearch.Trim();
+        if (t.Length == 0)
+        {
+            return false;
+        }
+
+        if (_selectedTags.Any(x => x.Equals(t, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        if (_allKnownTags.Any(x => x.Equals(t, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task ToggleTagPicker()
+    {
+        _tagPickerOpen = !_tagPickerOpen;
+        if (_tagPickerOpen)
+        {
+            _tagSearch = string.Empty;
+            await Task.Yield();
+            try
+            {
+                await _tagSearchField.FocusAsync();
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    private void AddTag(string tag)
+    {
+        string t = tag.Trim();
+        if (t.Length == 0)
+        {
+            return;
+        }
+
+        if (_selectedTags.Any(x => x.Equals(t, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        _selectedTags.Add(t);
+        if (_allKnownTags.All(x => !x.Equals(t, StringComparison.OrdinalIgnoreCase)))
+        {
+            _allKnownTags.Add(t);
+            _allKnownTags.Sort(StringComparer.OrdinalIgnoreCase);
+        }
+
+        _tagSearch = string.Empty;
+    }
+
+    private void AddTagFromSearch() => AddTag(_tagSearch);
+
+    private void OnTagSearchKeydown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            IReadOnlyList<string> list = FilteredTagSuggestions();
+            if (list.Count == 1)
+            {
+                AddTag(list[0]);
+            }
+            else if (CanAddNewTagFromSearch() && _tagSearch.Trim().Length > 0)
+            {
+                AddTagFromSearch();
+            }
+        }
+        else if (e.Key == "Escape")
+        {
+            _tagPickerOpen = false;
+            _tagSearch = string.Empty;
+        }
+    }
+
+    private void RemoveTag(string tag)
+    {
+        int i = _selectedTags.FindIndex(t => t.Equals(tag, StringComparison.OrdinalIgnoreCase));
+        if (i >= 0)
+        {
+            _selectedTags.RemoveAt(i);
+        }
+    }
+
+    private async Task OnControlKeydown(KeyboardEventArgs e)
+    {
+        if (e.Key is " " or "Enter")
+        {
+            await ToggleTagPicker();
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_title))
+        {
+            Snackbar.Add("Title is required.", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            string? tagsPayload = string.IsNullOrWhiteSpace(SerializeTags()) ? null : SerializeTags();
+            string? checklistPayload = DailyChecklistJson.Serialize(ToChecklistModel());
+            DateTime? due = _dueDate is { } d ? d.Date : null;
+            BoardItem? updated = await BoardData.UpdateTodoAsync(
+                Item.Id,
+                _title.Trim(),
+                string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim(),
+                tagsPayload,
+                checklistPayload,
+                due);
+
+            if (updated is null)
+            {
+                Snackbar.Add("Could not save this to-do.", Severity.Error);
+                return;
+            }
+
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception)
+        {
+            Snackbar.Add("Something went wrong. Check your connection and try again.", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        _saving = true;
+        try
+        {
+            bool removed = await BoardData.DeleteItemAsync(BoardSection.Todo, Item.Id);
+            if (!removed)
+            {
+                Snackbar.Add("Could not delete this to-do.", Severity.Error);
+                return;
+            }
+
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception)
+        {
+            Snackbar.Add("Something went wrong. Check your connection and try again.", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

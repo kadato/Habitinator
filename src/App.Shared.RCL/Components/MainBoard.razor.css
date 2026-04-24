@@ -1,5 +1,70 @@
 .board-shell {
     color: #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    /* App bar + MudMainContent padding */
+    min-height: calc(100vh - 7rem);
+    min-height: calc(100dvh - 7rem);
+}
+
+.board-columns-stage {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    min-height: 0;
+}
+
+.board-columns-grid {
+    flex-shrink: 0;
+}
+
+.board-stat-strip,
+.board-search-panel {
+    border-radius: 0.875rem;
+    background: color-mix(in srgb, var(--mud-palette-surface) 88%, transparent);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+}
+
+.board-search-panel {
+    background: color-mix(in srgb, var(--mud-palette-surface) 92%, transparent);
+}
+
+.board-search-row {
+    flex-wrap: wrap;
+}
+
+.board-search-field {
+    min-width: min(100%, 12rem);
+}
+
+.board-tags-menu-activator {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-self: center;
+}
+
+.board-tags-menu-body {
+    max-height: min(60vh, 26rem);
+    overflow-y: auto;
+}
+
+/* Popover is portaled; class applied via PopoverClass on MudMenu. */
+:global(.board-tags-menu-popover) {
+    z-index: calc(var(--mud-zindex-popover, 1300) + 1) !important;
+}
+
+.board-tags-trigger {
+    flex-shrink: 0;
+}
+
+.board-tag-filter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.25rem 1rem;
+    align-items: start;
 }
 
 .habitica-board-wrap {

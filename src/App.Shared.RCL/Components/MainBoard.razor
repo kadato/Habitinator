@@ -3,7 +3,7 @@
 @inject GlobalTimerService TimerService
 @inject IBoardDataService BoardDataService
 
-<MudStack Class="board-shell" Spacing="2">
+<MudStack Class="board-shell mud-width-full" Spacing="1">
     <MudStack Spacing="0">
         @if (!string.IsNullOrWhiteSpace(SignedInEmail))
         {
@@ -36,23 +36,23 @@
 
     @if (_initialLoadComplete && _loadError is null)
     {
-        <MudPaper Class="px-3 py-2" Outlined="true" Elevation="0">
+        <MudPaper Class="px-3 py-2 board-stat-strip" Outlined="false" Elevation="0">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="flex-wrap">
                 <MudChip T="string"
-                         Icon="@Icons.Material.Filled.FitnessCenter"
-                         Text="@($"{Habits.Count} habits")"
+                         Icon="@BoardSectionVisuals.GetMudIcon(BoardSection.Habit)"
+                         Text="@($"{FilteredHabits.Count} habits")"
                          Size="Size.Small"
                          Variant="Variant.Text"
                          Color="Color.Success" />
                 <MudChip T="string"
-                         Icon="@Icons.Material.Filled.Today"
-                         Text="@($"{Dailies.Count(d => !d.IsCompleted)} dailies left")"
+                         Icon="@BoardSectionVisuals.GetMudIcon(BoardSection.Daily)"
+                         Text="@($"{DailiesDueOpenCount} dailies left")"
                          Size="Size.Small"
                          Variant="Variant.Text"
                          Color="Color.Primary" />
                 <MudChip T="string"
-                         Icon="@Icons.Material.Filled.Checklist"
-                         Text="@($"{Todos.Count(t => !t.IsCompleted)} to-dos open")"
+                         Icon="@BoardSectionVisuals.GetMudIcon(BoardSection.Todo)"
+                         Text="@($"{FilteredTodos.Count(t => !t.IsCompleted)} to-dos open")"
                          Size="Size.Small"
                          Variant="Variant.Text"
                          Color="Color.Warning" />
@@ -60,21 +60,103 @@
         </MudPaper>
     }
 
-    <GlobalTimerPanel OnLogSaved="HandleTimerLogSaved" />
+    <GlobalTimerPanel OnLogSaved="HandleTimerLogSavedAsync"
+                      Habits="Habits"
+                      Dailies="Dailies"
+                      Todos="Todos" />
+
+    @if (_initialLoadComplete && _loadError is null)
+    {
+        <MudPaper Class="px-3 py-2 board-search-panel" Outlined="false" Elevation="0">
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Stretch" Class="board-search-row">
+                <MudTextField @bind-Value="_searchText"
+                              Placeholder="Search"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              Class="board-search-field flex-grow-1"
+                              InputType="InputType.Text"
+                              Immediate="true" />
+                <div class="board-tags-menu-activator">
+                    <MudMenu AnchorOrigin="Origin.BottomRight"
+                             TransformOrigin="Origin.TopRight"
+                             PopoverFixed="true"
+                             MaxHeight="500"
+                             RelativeWidth="DropdownWidth.Ignore"
+                             PopoverClass="board-tags-menu-popover">
+                        <ActivatorContent Context="tagMenu">
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Default"
+                                       Class="board-tags-trigger"
+                                       StartIcon="@Icons.Material.Filled.Tune"
+                                       EndIcon="@Icons.Material.Filled.ArrowDropDown"
+                                       OnClick="@(e => tagMenu.ToggleAsync(e))">
+                                @(SelectedFilterTagCount > 0 ? $"Tags ({SelectedFilterTagCount})" : "Tags")
+                            </MudButton>
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudPaper Class="board-tags-menu-panel pa-3" Elevation="0" Style="min-width: 17rem; max-width: 24rem;">
+                                <MudText Typo="Typo.subtitle1" Class="mb-1">Tags</MudText>
+                                @if (AllTagNamesForMenu.Count == 0)
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">No tags on the board yet. Add tags in an item&rsquo;s details.</MudText>
+                                }
+                                else
+                                {
+                                    <div class="board-tag-filter-grid board-tags-menu-body">
+                                        @foreach (string tag in AllTagNamesForMenu)
+                                        {
+                                            <MudCheckBox Value="IsFilterTagSelected(tag)"
+                                                         ValueChanged="@((bool b) => OnFilterTagChanged(tag, b))"
+                                                         Label="@tag"
+                                                         Color="Color.Primary"
+                                                         Dense="true"
+                                                         Class="ma-0" />
+                                        }
+                                    </div>
+                                }
+                                <MudStack Row="true" Spacing="1" Justify="Justify.SpaceBetween" Class="mt-2 pt-2" Style="border-top: 1px solid var(--mud-palette-divider);">
+                                    <MudButton Variant="Variant.Text"
+                                               Color="Color.Error"
+                                               Size="Size.Small"
+                                               OnClick="ClearBoardFilters"
+                                               Disabled="@(string.IsNullOrWhiteSpace(_searchText) && SelectedFilterTagCount == 0)">
+                                        Clear all filters
+                                    </MudButton>
+                                </MudStack>
+                            </MudPaper>
+                        </ChildContent>
+                    </MudMenu>
+                </div>
+            </MudStack>
+        </MudPaper>
+    }
 
     @if (_loadError is null)
     {
-        <MudGrid Spacing="3" Class="mt-1">
-            <MudItem xs="12" md="4">
-                <HabiticaColumn Section="BoardSection.Habit" Items="Habits" OnChanged="OnBoardChanged" />
-            </MudItem>
-            <MudItem xs="12" md="4">
-                <HabiticaColumn Section="BoardSection.Daily" Items="Dailies" OnChanged="OnBoardChanged" />
-            </MudItem>
-            <MudItem xs="12" md="4">
-                <HabiticaColumn Section="BoardSection.Todo" Items="Todos" OnChanged="OnBoardChanged" />
-            </MudItem>
-        </MudGrid>
+        <div class="board-columns-stage">
+            <MudGrid Spacing="3" Class="board-columns-grid mt-0 mud-width-full">
+                <MudItem xs="12" md="4">
+                    <HabiticaColumn Section="BoardSection.Habit"
+                                    Items="FilteredHabits"
+                                    IsBoardFilterExcludingAll="Habits.Count > 0 && FilteredHabits.Count == 0"
+                                    OnChanged="OnBoardChanged" />
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <HabiticaColumn Section="BoardSection.Daily"
+                                    Items="FilteredDailies"
+                                    IsBoardFilterExcludingAll="Dailies.Count > 0 && FilteredDailies.Count == 0"
+                                    OnChanged="OnBoardChanged" />
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <HabiticaColumn Section="BoardSection.Todo"
+                                    Items="FilteredTodos"
+                                    IsBoardFilterExcludingAll="Todos.Count > 0 && FilteredTodos.Count == 0"
+                                    OnChanged="OnBoardChanged" />
+                </MudItem>
+            </MudGrid>
+        </div>
     }
 
     @if (!string.IsNullOrWhiteSpace(LastEvent))
@@ -94,6 +176,50 @@
     private bool _isLoading;
     private bool _initialLoadComplete;
     private string? _loadError;
+    private string _searchText = string.Empty;
+    private readonly HashSet<string> _selectedFilterTags = new(StringComparer.OrdinalIgnoreCase);
+
+    private IReadOnlyList<BoardItem> FilteredHabits => FilterItems(Habits);
+    private IReadOnlyList<BoardItem> FilteredDailies => FilterItems(Dailies);
+
+    private int DailiesDueOpenCount =>
+        FilterItems(Dailies).Count(d => DailySchedule.IsDueOnDate(d, DailySchedule.UtcToday));
+    private IReadOnlyList<BoardItem> FilteredTodos => FilterItems(Todos);
+
+    private IReadOnlyList<string> AllTagNamesForMenu
+    {
+        get
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (BoardItem item in Habits)
+            {
+                foreach (string t in BoardTagUtil.ParseTags(item.Tags))
+                {
+                    set.Add(t);
+                }
+            }
+
+            foreach (BoardItem item in Dailies)
+            {
+                foreach (string t in BoardTagUtil.ParseTags(item.Tags))
+                {
+                    set.Add(t);
+                }
+            }
+
+            foreach (BoardItem item in Todos)
+            {
+                foreach (string t in BoardTagUtil.ParseTags(item.Tags))
+                {
+                    set.Add(t);
+                }
+            }
+
+            return set.OrderBy(t => t, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+    }
+
+    private int SelectedFilterTagCount => _selectedFilterTags.Count;
 
     protected override async Task OnInitializedAsync()
     {
@@ -152,11 +278,158 @@
         Habits = snapshot.Habits.ToList();
         Dailies = snapshot.Dailies.ToList();
         Todos = snapshot.Todos.ToList();
+        PruneStaleFilterTags();
     }
 
-    private void HandleTimerLogSaved(TimeSpan duration)
+    private IReadOnlyList<BoardItem> FilterItems(IReadOnlyList<BoardItem> source) =>
+        source.Where(MatchesGlobalFilters).ToList();
+
+    private bool MatchesGlobalFilters(BoardItem item) =>
+        MatchesTagFilter(item) && MatchesSearchQuery(item);
+
+    private bool MatchesTagFilter(BoardItem item)
     {
-        LastEvent = $"Timer log saved for {TimerService.TargetType ?? "Unassigned"} '{TimerService.TargetId ?? "-"}' with duration {duration:hh\\:mm\\:ss}.";
+        if (_selectedFilterTags.Count == 0)
+        {
+            return true;
+        }
+
+        var onItem = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string t in BoardTagUtil.ParseTags(item.Tags))
+        {
+            onItem.Add(t);
+        }
+
+        return _selectedFilterTags.Any(f => onItem.Contains(f));
+    }
+
+    private bool MatchesSearchQuery(BoardItem item)
+    {
+        string q = _searchText.Trim();
+        if (q.Length == 0)
+        {
+            return true;
+        }
+
+        if (item.Title.Contains(q, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (item.Notes is not null && item.Notes.Contains(q, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        foreach (DailyChecklistItem line in DailyChecklistJson.Parse(item.ChecklistJson))
+        {
+            if (line.Text.Contains(q, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsFilterTagSelected(string tag) => _selectedFilterTags.Contains(tag);
+
+    private void OnFilterTagChanged(string tag, bool isChecked)
+    {
+        if (isChecked)
+        {
+            _selectedFilterTags.Add(tag);
+        }
+        else
+        {
+            _ = _selectedFilterTags.Remove(tag);
+        }
+    }
+
+    private void PruneStaleFilterTags()
+    {
+        if (_selectedFilterTags.Count == 0)
+        {
+            return;
+        }
+
+        var available = new HashSet<string>(AllTagNamesForMenu, StringComparer.OrdinalIgnoreCase);
+        _selectedFilterTags.RemoveWhere(f => !available.Contains(f));
+    }
+
+    private void ClearBoardFilters()
+    {
+        _searchText = string.Empty;
+        _selectedFilterTags.Clear();
+    }
+
+    private async Task HandleTimerLogSavedAsync(TimeSpan duration)
+    {
+        string? targetType = TimerService.TargetType;
+        string? targetId = TimerService.TargetId;
+        Guid? boardId = ResolveBoardItemIdFromTitle(targetType, targetId);
+
+        if (boardId is Guid id && targetType is "Habit" or "Daily" or "Todo")
+        {
+            try
+            {
+                bool progressed = false;
+                if (targetType == "Habit")
+                {
+                    BoardItem? updated = await BoardDataService.IncrementHabitPlusAsync(id);
+                    progressed = updated is not null;
+                }
+                else if (targetType == "Daily")
+                {
+                    BoardItem? daily = Dailies.FirstOrDefault(d => d.Id == id);
+                    DateOnly today = DailySchedule.UtcToday;
+                    if (daily is not null && !DailySchedule.IsCompleteForDate(daily, today))
+                    {
+                        BoardItem? updated = await BoardDataService.ToggleItemAsync(BoardSection.Daily, id);
+                        progressed = updated is not null;
+                    }
+                }
+                else if (targetType == "Todo")
+                {
+                    BoardItem? todo = Todos.FirstOrDefault(t => t.Id == id);
+                    if (todo is { IsCompleted: false })
+                    {
+                        BoardItem? updated = await BoardDataService.ToggleItemAsync(BoardSection.Todo, id);
+                        progressed = updated is not null;
+                    }
+                }
+
+                if (progressed)
+                {
+                    await LoadBoardAsync();
+                    TimerService.SetManualTarget(null);
+                }
+            }
+            catch (Exception)
+            {
+                LastEvent =
+                    $"Timer stopped ({duration:hh\\:mm\\:ss}), but the board could not be updated. Check your connection and try again.";
+                return;
+            }
+        }
+
+        LastEvent = $"Timer log saved for {targetType ?? "Unassigned"} '{targetId ?? "-"}' with duration {duration:hh\\:mm\\:ss}.";
+    }
+
+    private Guid? ResolveBoardItemIdFromTitle(string? targetType, string? title)
+    {
+        if (string.IsNullOrEmpty(title))
+        {
+            return null;
+        }
+
+        return targetType switch
+        {
+            "Habit" => Habits.FirstOrDefault(h => string.Equals(h.Title, title, StringComparison.Ordinal))?.Id,
+            "Daily" => Dailies.FirstOrDefault(d => string.Equals(d.Title, title, StringComparison.Ordinal))?.Id,
+            "Todo" => Todos.FirstOrDefault(t => string.Equals(t.Title, title, StringComparison.Ordinal))?.Id,
+            _ => null
+        };
     }
 
     private static string EmailLocalPart(string? email)

@@ -57,6 +57,12 @@ public sealed class WebBoardDataService : IBoardDataService
         return await _boardPersistenceService.IncrementHabitAsync(userId, itemId, cancellationToken);
     }
 
+    public async Task<BoardItem?> DecrementHabitAsync(Guid itemId, CancellationToken cancellationToken = default)
+    {
+        Guid userId = await GetCurrentUserIdAsync(cancellationToken);
+        return await _boardPersistenceService.DecrementHabitAsync(userId, itemId, cancellationToken);
+    }
+
     private async Task<Guid> GetCurrentUserIdAsync(CancellationToken cancellationToken)
     {
         AuthenticationState authState = await _authenticationStateProvider.GetAuthenticationStateAsync();

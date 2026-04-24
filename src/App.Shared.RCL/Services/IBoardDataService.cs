@@ -15,4 +15,6 @@ public interface IBoardDataService
     Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default);
 
     Task<BoardItem?> IncrementHabitAsync(Guid itemId, CancellationToken cancellationToken = default);
+
+    Task<BoardItem?> DecrementHabitAsync(Guid itemId, CancellationToken cancellationToken = default);
 }

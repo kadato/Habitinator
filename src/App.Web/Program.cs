@@ -293,5 +293,11 @@ boardApi.MapPost("/habits/{itemId:guid}/increment", async (HttpContext httpConte
     BoardItem? updated = await boardPersistenceService.IncrementHabitAsync(userId, itemId);
     return updated is null ? Results.NotFound() : Results.Ok(updated);
 });
+boardApi.MapPost("/habits/{itemId:guid}/decrement", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, Guid itemId) =>
+{
+    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    BoardItem? updated = await boardPersistenceService.DecrementHabitAsync(userId, itemId);
+    return updated is null ? Results.NotFound() : Results.Ok(updated);
+});
 
 app.Run();

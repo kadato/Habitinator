@@ -21,9 +21,9 @@ public sealed class BoardPersistenceService
             .ToListAsync(cancellationToken);
 
         return new BoardSnapshot(
-            items.Where(x => x.Section == BoardSection.Habit).Select(ToModel).ToList(),
-            items.Where(x => x.Section == BoardSection.Daily).Select(ToModel).ToList(),
-            items.Where(x => x.Section == BoardSection.Todo).Select(ToModel).ToList());
+            items.Where(x => x.Section == BoardSection.Habit).OrderBy(x => x.CreatedAtUtc).Select(ToModel).ToList(),
+            items.Where(x => x.Section == BoardSection.Daily).OrderBy(x => x.IsCompleted).ThenBy(x => x.CreatedAtUtc).Select(ToModel).ToList(),
+            items.Where(x => x.Section == BoardSection.Todo).OrderBy(x => x.IsCompleted).ThenBy(x => x.CreatedAtUtc).Select(ToModel).ToList());
     }
 
     public async Task<BoardItem> CreateItemAsync(Guid userId, BoardSection section, string title, CancellationToken cancellationToken = default)
@@ -100,6 +100,21 @@ public sealed class BoardPersistenceService
         }
 
         entity.Counter++;
+        entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return ToModel(entity);
+    }
+
+    public async Task<BoardItem?> DecrementHabitAsync(Guid userId, Guid itemId, CancellationToken cancellationToken = default)
+    {
+        BoardItemEntity? entity = await _dbContext.BoardItems
+            .FirstOrDefaultAsync(x => x.UserId == userId && x.Section == BoardSection.Habit && x.Id == itemId, cancellationToken);
+        if (entity is null)
+        {
+            return null;
+        }
+
+        entity.Counter = Math.Max(0, entity.Counter - 1);
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
         return ToModel(entity);

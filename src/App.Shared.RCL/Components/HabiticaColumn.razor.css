@@ -1,0 +1,147 @@
+.habitica-column {
+    min-height: 18rem;
+}
+
+.habitica-column--habit {
+    border-top: 3px solid #22c55e;
+}
+
+.habitica-column--daily {
+    border-top: 3px solid #3b82f6;
+}
+
+.habitica-column--todo {
+    border-top: 3px solid #f59e0b;
+}
+
+.habitica-title {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.habitica-count-chip {
+    font-weight: 600;
+}
+
+.habitica-add-wrap ::deep .mud-input-outlined {
+    background: var(--mud-palette-black);
+}
+
+.habitica-list {
+    border-top: 1px solid var(--mud-palette-divider);
+    padding-top: 0.35rem;
+}
+
+.habitica-row {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.15rem;
+    border-bottom: 1px solid var(--mud-palette-divider-light);
+    min-height: 2.75rem;
+}
+
+.habitica-row-title {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.95rem;
+    cursor: pointer;
+    color: var(--mud-palette-text-primary);
+}
+
+.habitica-row-title:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.habitica-counters {
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.habitica-sq {
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    border-radius: 0.2rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.habitica-sq:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.habitica-sq--good {
+    background: #0d9488;
+}
+
+.habitica-sq--good:hover:not(:disabled) {
+    background: #14b8a6;
+}
+
+.habitica-sq--bad {
+    background: #b91c1c;
+}
+
+.habitica-sq--bad:hover:not(:disabled) {
+    background: #dc2626;
+}
+
+.habitica-check {
+    /* inline-flex: centers .habitica-check-glyph; works on empty buttons too (stable size) */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.65rem;
+    height: 1.65rem;
+    min-width: 1.65rem;
+    min-height: 1.65rem;
+    box-sizing: border-box;
+    border-radius: 0.15rem;
+    border: 2px solid #4b5563;
+    flex-shrink: 0;
+    cursor: pointer;
+    padding: 0;
+    background-clip: padding-box;
+    color: #86efac;
+}
+
+.habitica-check--daily {
+    background: #1e3a5f;
+    border-color: #3b82f6;
+}
+
+.habitica-check--todo {
+    background: #422006;
+    border-color: #f59e0b;
+}
+
+.habitica-check--ok {
+    background: #14532d;
+    border-color: #22c55e;
+}
+
+.habitica-check-glyph {
+    display: block;
+    flex-shrink: 0;
+    pointer-events: none;
+}
+
+.habitica-row--done .habitica-row-title {
+    opacity: 0.72;
+    text-decoration: line-through;
+}
+
+.habitica-col-foot {
+    border-top: 1px solid var(--mud-palette-divider);
+    margin-top: 0.25rem;
+    padding-top: 0.75rem !important;
+}

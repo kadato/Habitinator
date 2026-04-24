@@ -28,8 +28,8 @@ public sealed class LocalBoardDataService : IBoardDataService
     {
         return Task.FromResult(new BoardSnapshot(
             _habits.ToList(),
-            _dailies.ToList(),
-            _todos.ToList()));
+            _dailies.OrderBy(x => x.IsCompleted).ThenBy(x => x.Title, StringComparer.Ordinal).ToList(),
+            _todos.OrderBy(x => x.IsCompleted).ThenBy(x => x.Title, StringComparer.Ordinal).ToList()));
     }
 
     public Task<BoardItem> CreateItemAsync(BoardSection section, string title, CancellationToken cancellationToken = default)
@@ -89,6 +89,20 @@ public sealed class LocalBoardDataService : IBoardDataService
         }
 
         var updated = existing with { Counter = existing.Counter + 1 };
+        var index = _habits.IndexOf(existing);
+        _habits[index] = updated;
+        return Task.FromResult<BoardItem?>(updated);
+    }
+
+    public Task<BoardItem?> DecrementHabitAsync(Guid itemId, CancellationToken cancellationToken = default)
+    {
+        var existing = _habits.FirstOrDefault(x => x.Id == itemId);
+        if (existing is null)
+        {
+            return Task.FromResult<BoardItem?>(null);
+        }
+
+        var updated = existing with { Counter = Math.Max(0, existing.Counter - 1) };
         var index = _habits.IndexOf(existing);
         _habits[index] = updated;
         return Task.FromResult<BoardItem?>(updated);

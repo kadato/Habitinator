@@ -1,0 +1,353 @@
+@using App.Shared.RCL.Components.Dialogs
+@using App.Shared.RCL.Models
+@using App.Shared.RCL.Services
+@inject GlobalTimerService TimerService
+@inject IBoardDataService BoardData
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudCard Class="@($"habitica-column {GetAccentClass()}")" Elevation="2" Outlined="true">
+    <MudCardHeader Class="pb-2">
+        <CardHeaderContent>
+            <MudStack Spacing="2">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudText Typo="Typo.subtitle1" Class="habitica-title">@GetTitle()</MudText>
+                    <MudChip T="string"
+                             Text="@VisibleItems().Count.ToString()"
+                             Class="habitica-count-chip"
+                             Color="Color.Secondary"
+                             Size="Size.Small"
+                             Variant="Variant.Filled" />
+                </MudStack>
+                <MudStack Row="true" Spacing="1" Class="flex-wrap" role="toolbar">
+                    @if (Section == BoardSection.Habit)
+                    {
+                        <MudButton Size="Size.Small"
+                                   Variant="@FilterVariant(_habitFilter == HabitListFilter.All)"
+                                   Color="Color.Primary"
+                                   OnClick="@(() => { _habitFilter = HabitListFilter.All; })">All</MudButton>
+                        <MudButton Size="Size.Small"
+                                   Variant="@FilterVariant(_habitFilter == HabitListFilter.Weak)"
+                                   Color="Color.Primary"
+                                   OnClick="@(() => { _habitFilter = HabitListFilter.Weak; })">Weak</MudButton>
+                        <MudButton Size="Size.Small"
+                                   Variant="@FilterVariant(_habitFilter == HabitListFilter.Strong)"
+                                   Color="Color.Primary"
+                                   OnClick="@(() => { _habitFilter = HabitListFilter.Strong; })">Strong</MudButton>
+                    }
+                    else if (Section == BoardSection.Daily)
+                    {
+                        <MudButton Size="Size.Small"
+                                   Variant="@FilterVariant(_dailyFilter == DailyListFilter.All)"
+                                   Color="Color.Primary"
+                                   OnClick="@(() => { _dailyFilter = DailyListFilter.All; })">All</MudButton>
+                        <MudButton Size="Size.Small"
+                                   Variant="@FilterVariant(_dailyFilter == DailyListFilter.Due)"
+                                   Color="Color.Primary"
+                                   OnClick="@(() => { _dailyFilter = DailyListFilter.Due; })">Due</MudButton>
+                        <MudButton Size="Size.Small"
+                                   Variant="@FilterVariant(_dailyFilter == DailyListFilter.NotDue)"
+                                   Color="Color.Primary"
+                                   OnClick="@(() => { _dailyFilter = DailyListFilter.NotDue; })">Not due</MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Size="Size.Small"
+                                   Variant="@FilterVariant(_todoFilter == TodoListFilter.Active)"
+                                   Color="Color.Primary"
+                                   OnClick="@(() => { _todoFilter = TodoListFilter.Active; })">Active</MudButton>
+                        <MudButton Size="Size.Small"
+                                   Variant="@FilterVariant(_todoFilter == TodoListFilter.Scheduled)"
+                                   Color="Color.Primary"
+                                   OnClick="@(() => { _todoFilter = TodoListFilter.Scheduled; })">Scheduled</MudButton>
+                        <MudButton Size="Size.Small"
+                                   Variant="@FilterVariant(_todoFilter == TodoListFilter.Complete)"
+                                   Color="Color.Primary"
+                                   OnClick="@(() => { _todoFilter = TodoListFilter.Complete; })">Complete</MudButton>
+                    }
+                </MudStack>
+            </MudStack>
+        </CardHeaderContent>
+    </MudCardHeader>
+
+    <MudCardContent Class="pt-0">
+        <div @onkeydown="OnDraftKeyAsync" class="habitica-add-wrap">
+            <MudTextField @bind-Value="_draft"
+                          Class="habitica-add-field"
+                          Placeholder="@GetAddPlaceholder()"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@Icons.Material.Filled.Add"
+                          OnAdornmentClick="AddFromDraftAsync"
+                          Immediate="true" />
+        </div>
+
+        <MudStack Spacing="0" Class="habitica-list mt-3">
+            @if (VisibleItems().Count == 0)
+            {
+                <MudAlert Severity="Severity.Normal" Variant="Variant.Text" Dense="true" Class="ma-0" NoIcon="true">
+                    @GetEmptyMessage()
+                </MudAlert>
+            }
+            else
+            {
+                @foreach (BoardItem item in VisibleItems())
+                {
+                    <div class="habitica-row @GetRowClass(item)">
+                        @if (Section == BoardSection.Habit)
+                        {
+                            <button type="button" class="habitica-sq habitica-sq--good" title="Add rep" @onclick="@(() => HabitUpAsync(item))">+</button>
+                            <span class="habitica-row-title" @onclick="@(() => RenameAsync(item))">@item.Title</span>
+                            <span class="habitica-counters" title="Reps (use − to undo)">@($"≫ +{item.Counter}")</span>
+                            <button type="button" class="habitica-sq habitica-sq--bad" title="Undo one rep" @onclick="@(() => HabitDownAsync(item))" disabled="@(item.Counter < 1)">−</button>
+                            <MudMenu Dense="true">
+                                <ActivatorContent>
+                                    <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" title="actions" Class="ma-0" />
+                                </ActivatorContent>
+                                <ChildContent>
+                                    <MudMenuItem OnClick="@(async _ => await RenameAsync(item))">Edit title</MudMenuItem>
+                                    <MudMenuItem OnClick="@(async _ => await DeleteAsync(item.Id))">Delete</MudMenuItem>
+                                </ChildContent>
+                            </MudMenu>
+                        }
+                        else
+                        {
+                            <button type="button"
+                                    class="habitica-check @GetCheckClass(item)"
+                                    title="Toggle"
+                                    @onclick="@(() => ToggleAsync(item))"
+                                    aria-pressed="@(item.IsCompleted ? "true" : "false")"
+                                    aria-checked="@(item.IsCompleted ? "true" : "false")"
+                                    role="checkbox">
+                                @* Real markup (not button::after) so every host/browser shows the check *@
+                                @if (item.IsCompleted)
+                                {
+                                    <svg class="habitica-check-glyph"
+                                         viewBox="0 0 24 24"
+                                         width="14"
+                                         height="14"
+                                         fill="none"
+                                         xmlns="http://www.w3.org/2000/svg"
+                                         aria-hidden="true">
+                                        <path d="M5 12l5 5L19 5"
+                                              stroke="currentColor"
+                                              stroke-width="2.6"
+                                              stroke-linecap="round"
+                                              stroke-linejoin="round" />
+                                    </svg>
+                                }
+                            </button>
+                            <span class="habitica-row-title flex-grow-1" @onclick="@(() => RenameAsync(item))">@item.Title</span>
+                            <MudMenu Dense="true">
+                                <ActivatorContent>
+                                    <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" title="actions" Class="ma-0" />
+                                </ActivatorContent>
+                                <ChildContent>
+                                    <MudMenuItem OnClick="@(async _ => await RenameAsync(item))">Edit title</MudMenuItem>
+                                    <MudMenuItem OnClick="@(async _ => await DeleteAsync(item.Id))">Delete</MudMenuItem>
+                                </ChildContent>
+                            </MudMenu>
+                        }
+                    </div>
+                }
+            }
+        </MudStack>
+    </MudCardContent>
+
+    <MudCardActions Class="habitica-col-foot px-4 pb-3 pt-0">
+        <MudText Typo="Typo.caption" Color="Color.Secondary">@GetFooterText()</MudText>
+    </MudCardActions>
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public BoardSection Section { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<BoardItem> Items { get; set; } = Array.Empty<BoardItem>();
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private string _draft = string.Empty;
+
+    private HabitListFilter _habitFilter;
+    private DailyListFilter _dailyFilter = DailyListFilter.Due;
+    private TodoListFilter _todoFilter = TodoListFilter.Active;
+
+    private enum HabitListFilter { All, Weak, Strong }
+    private enum DailyListFilter { All, Due, NotDue }
+    private enum TodoListFilter { Active, Scheduled, Complete }
+
+    private static Variant FilterVariant(bool active) => active ? Variant.Filled : Variant.Outlined;
+
+    private IReadOnlyList<BoardItem> VisibleItems() => Section switch
+    {
+        BoardSection.Habit => FilterHabits(),
+        BoardSection.Daily => FilterDailies(),
+        BoardSection.Todo => FilterTodos(),
+        _ => Items.ToList()
+    };
+
+    private IReadOnlyList<BoardItem> FilterHabits() => _habitFilter switch
+    {
+        HabitListFilter.Weak => Items.Where(x => x.Counter < 3).ToList(),
+        HabitListFilter.Strong => Items.Where(x => x.Counter >= 3).ToList(),
+        _ => Items.ToList()
+    };
+
+    private IReadOnlyList<BoardItem> FilterDailies() => _dailyFilter switch
+    {
+        DailyListFilter.Due => Items.Where(x => !x.IsCompleted).ToList(),
+        DailyListFilter.NotDue => Items.Where(x => x.IsCompleted).ToList(),
+        _ => Items.ToList()
+    };
+
+    private IReadOnlyList<BoardItem> FilterTodos() => _todoFilter switch
+    {
+        TodoListFilter.Active => Items.Where(x => !x.IsCompleted).ToList(),
+        TodoListFilter.Complete => Items.Where(x => x.IsCompleted).ToList(),
+        TodoListFilter.Scheduled => [],
+        _ => Items.ToList()
+    };
+
+    private string GetTitle() => Section switch
+    {
+        BoardSection.Habit => "Habits",
+        BoardSection.Daily => "Dailies",
+        BoardSection.Todo => "To Do's",
+        _ => "Board"
+    };
+
+    private string GetAddPlaceholder() => Section switch
+    {
+        BoardSection.Habit => "Add a Habit",
+        BoardSection.Daily => "Add a Daily",
+        BoardSection.Todo => "Add a To Do",
+        _ => "Add"
+    };
+
+    private string GetEmptyMessage() => Section switch
+    {
+        BoardSection.Todo when _todoFilter == TodoListFilter.Scheduled => "No scheduled to-dos in this build — use the list to track one-off work.",
+        _ => "No items here yet. Add one above."
+    };
+
+    private string GetFooterText() => Section switch
+    {
+        BoardSection.Habit => "These are your habits — use +/− to log a rep and undo. The global timer can follow the habit you trigger.",
+        BoardSection.Daily => "Dailies are for recurring work — use the square when you are done for today.",
+        BoardSection.Todo => "To Do's are one-off. Use the menu to rename or delete.",
+        _ => string.Empty
+    };
+
+    private string GetAccentClass() => Section switch
+    {
+        BoardSection.Habit => "habitica-column--habit",
+        BoardSection.Daily => "habitica-column--daily",
+        BoardSection.Todo => "habitica-column--todo",
+        _ => string.Empty
+    };
+
+    private string GetRowClass(BoardItem item) => Section switch
+    {
+        BoardSection.Habit => "habitica-row--habit",
+        BoardSection.Daily => item.IsCompleted ? "habitica-row--done" : "habitica-row--daily-open",
+        BoardSection.Todo => item.IsCompleted ? "habitica-row--done" : "habitica-row--todo-open",
+        _ => string.Empty
+    };
+
+    private string GetCheckClass(BoardItem item)
+    {
+        if (item.IsCompleted)
+        {
+            return "habitica-check--ok";
+        }
+
+        return Section == BoardSection.Daily ? "habitica-check--daily" : "habitica-check--todo";
+    }
+
+    private async Task OnDraftKeyAsync(KeyboardEventArgs e)
+    {
+        if (e.Key is not "Enter" and not "NumpadEnter")
+        {
+            return;
+        }
+
+        await AddFromDraftAsync();
+    }
+
+    private async Task AddFromDraftAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_draft))
+        {
+            return;
+        }
+
+        string title = _draft.Trim();
+        if (!await TryMutateAsync(() => BoardData.CreateItemAsync(Section, title)))
+        {
+            return;
+        }
+
+        _draft = string.Empty;
+        Snackbar.Add("Item added.", Severity.Success);
+    }
+
+    private async Task HabitUpAsync(BoardItem item)
+    {
+        TimerService.SelectTarget("Habit", item.Title);
+        await TryMutateAsync(() => BoardData.IncrementHabitAsync(item.Id));
+    }
+
+    private async Task HabitDownAsync(BoardItem item)
+    {
+        TimerService.SelectTarget("Habit", item.Title);
+        await TryMutateAsync(() => BoardData.DecrementHabitAsync(item.Id));
+    }
+
+    private async Task ToggleAsync(BoardItem item)
+    {
+        TimerService.SelectTarget(Section.ToString(), item.Title);
+        await TryMutateAsync(() => BoardData.ToggleItemAsync(Section, item.Id));
+    }
+
+    private async Task RenameAsync(BoardItem item)
+    {
+        string? title = await PromptTitleAsync("Rename", item.Title);
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return;
+        }
+
+        await TryMutateAsync(() => BoardData.RenameItemAsync(Section, item.Id, title));
+    }
+
+    private async Task DeleteAsync(Guid id) =>
+        await TryMutateAsync(() => BoardData.DeleteItemAsync(Section, id));
+
+    private async Task<bool> TryMutateAsync(Func<Task> work)
+    {
+        try
+        {
+            await work();
+            await OnChanged.InvokeAsync();
+            return true;
+        }
+        catch (Exception)
+        {
+            Snackbar.Add("Something went wrong. Check your connection and try again.", Severity.Error);
+            return false;
+        }
+    }
+
+    private async Task<string?> PromptTitleAsync(string dialogTitle, string initial)
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var parameters = new DialogParameters<ItemTitleDialog> { { x => x.Value, initial } };
+        IDialogReference d = await DialogService.ShowAsync<ItemTitleDialog>(dialogTitle, parameters, options);
+        DialogResult? r = await d.Result;
+        return r is { Canceled: false } ? r.Data as string : null;
+    }
+}

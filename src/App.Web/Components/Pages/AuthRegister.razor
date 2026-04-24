@@ -1,0 +1,61 @@
+@page "/auth/register"
+@using System.ComponentModel.DataAnnotations
+@inject HttpClient Http
+
+<PageTitle>Register</PageTitle>
+
+<h1>Register</h1>
+
+<EditForm Model="_model" OnValidSubmit="RegisterAsync">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div class="mb-3">
+        <label>Email</label>
+        <InputText class="form-control" @bind-Value="_model.Email" />
+    </div>
+    <div class="mb-3">
+        <label>Password</label>
+        <InputText class="form-control" type="password" @bind-Value="_model.Password" />
+    </div>
+    <div class="mb-3">
+        <label>Timezone</label>
+        <InputText class="form-control" @bind-Value="_model.Timezone" />
+    </div>
+    <button class="btn btn-primary" type="submit">Create account</button>
+</EditForm>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <p class="mt-3">@_message</p>
+}
+
+@code {
+    private RegisterModel _model = new();
+    private string? _message;
+
+    private async Task RegisterAsync()
+    {
+        var response = await Http.PostAsJsonAsync("/api/auth/register", new
+        {
+            _model.Email,
+            _model.Password,
+            _model.Timezone
+        });
+
+        _message = response.IsSuccessStatusCode
+            ? "Registration successful. You can now log in."
+            : "Registration failed. Ensure password meets policy.";
+    }
+
+    private sealed class RegisterModel
+    {
+        [Required, EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [Required, MinLength(8)]
+        public string Password { get; set; } = string.Empty;
+
+        [Required]
+        public string Timezone { get; set; } = "Europe/Budapest";
+    }
+}

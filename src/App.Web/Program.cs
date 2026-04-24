@@ -1,0 +1,223 @@
+using App.Web.Components;
+using System.Text;
+using Microsoft.Extensions.Options;
+using App.Shared.RCL.Models;
+using App.Shared.RCL.Services;
+using App.Web.Auth;
+using App.Web.Data;
+using App.Web.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using MudBlazor.Services;
+using Npgsql;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddMudServices();
+
+string dbConnectionString =
+    builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? builder.Configuration.GetConnectionString("habitinatordb")
+    ?? throw new InvalidOperationException("No PostgreSQL connection string configured. Set ConnectionStrings:DefaultConnection or run through Aspire (habitinatordb).");
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(dbConnectionString));
+
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
+    {
+        options.Password.RequiredLength = 8;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireDigit = true;
+        options.Lockout.MaxFailedAccessAttempts = 5;
+    })
+    .AddRoles<IdentityRole<Guid>>()
+    .AddSignInManager()
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders();
+
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+builder.Services.Configure<DemoUserOptions>(builder.Configuration.GetSection(DemoUserOptions.SectionName));
+builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddSingleton<IClock, SystemClock>();
+builder.Services.AddScoped<GlobalTimerService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<DemoUserResolver>();
+builder.Services.AddScoped<BoardPersistenceService>();
+builder.Services.AddScoped<IBoardDataService, WebBoardDataService>();
+builder.Services.AddHttpClient();
+
+var authBuilder = builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultScheme = IdentityConstants.ApplicationScheme;
+        options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
+        options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
+    });
+
+authBuilder.AddIdentityCookies();
+authBuilder.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+{
+    JwtOptions jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateIssuerSigningKey = true,
+        ValidateLifetime = true,
+        ValidIssuer = jwt.Issuer,
+        ValidAudience = jwt.Audience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SigningKey))
+    };
+});
+builder.Services.AddAuthorization();
+
+var app = builder.Build();
+try
+{
+    await DemoDataSeeder.SeedAsync(app.Services);
+}
+catch (NpgsqlException ex)
+{
+    ILogger<Program> logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "Skipping startup demo data seeding because PostgreSQL is unreachable. Check ConnectionStrings:DefaultConnection and ensure PostgreSQL is running.");
+}
+
+// Configure the HTTP request pipeline.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    app.UseHsts();
+}
+app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+app.UseHttpsRedirection();
+
+app.UseAntiforgery();
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapStaticAssets();
+app.MapRazorComponents<global::App.Web.Components.App>()
+    .AddInteractiveServerRenderMode();
+
+app.MapPost("/api/auth/register", async (
+    RegisterRequest request,
+    UserManager<ApplicationUser> userManager) =>
+{
+    var user = new ApplicationUser
+    {
+        UserName = request.Email,
+        Email = request.Email,
+        Timezone = request.Timezone
+    };
+
+    IdentityResult result = await userManager.CreateAsync(user, request.Password);
+    if (!result.Succeeded)
+    {
+        return Results.BadRequest(result.Errors.Select(x => x.Description));
+    }
+
+    return Results.Ok(new { message = "Registration successful." });
+});
+
+app.MapPost("/api/auth/login", async (
+    LoginRequest request,
+    SignInManager<ApplicationUser> signInManager,
+    UserManager<ApplicationUser> userManager,
+    JwtTokenService jwtTokenService) =>
+{
+    ApplicationUser? user = await userManager.FindByEmailAsync(request.Email);
+    if (user is null)
+    {
+        return Results.Unauthorized();
+    }
+
+    SignInResult loginResult = await signInManager.PasswordSignInAsync(
+        user,
+        request.Password,
+        request.RememberMe,
+        lockoutOnFailure: true);
+
+    if (!loginResult.Succeeded)
+    {
+        return Results.Unauthorized();
+    }
+
+    string token = jwtTokenService.CreateToken(user);
+    return Results.Ok(new LoginResponse(token, user.Email ?? string.Empty));
+});
+
+app.MapPost("/api/auth/logout", async (SignInManager<ApplicationUser> signInManager) =>
+{
+    await signInManager.SignOutAsync();
+    return Results.Ok(new { message = "Logged out." });
+}).RequireAuthorization();
+
+app.MapPost("/api/auth/guest-login", async (
+    SignInManager<ApplicationUser> signInManager,
+    UserManager<ApplicationUser> userManager,
+    JwtTokenService jwtTokenService,
+    IOptions<DemoUserOptions> demoOptions) =>
+{
+    ApplicationUser? guestUser = await userManager.FindByEmailAsync(demoOptions.Value.Email);
+    if (guestUser is null)
+    {
+        return Results.NotFound("Demo guest user not found.");
+    }
+
+    await signInManager.SignInAsync(guestUser, isPersistent: true);
+    string token = jwtTokenService.CreateToken(guestUser);
+    return Results.Ok(new LoginResponse(token, guestUser.Email ?? string.Empty));
+});
+
+var boardApi = app.MapGroup("/api/board");
+boardApi.MapGet("/", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService) =>
+{
+    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    BoardSnapshot snapshot = await boardPersistenceService.GetSnapshotAsync(userId);
+    return Results.Ok(snapshot);
+});
+boardApi.MapPost("/{section}", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, BoardSection section, ItemTitleRequest request) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Title))
+    {
+        return Results.BadRequest("Title is required.");
+    }
+
+    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    BoardItem item = await boardPersistenceService.CreateItemAsync(userId, section, request.Title.Trim());
+    return Results.Ok(item);
+});
+boardApi.MapPut("/{section}/{itemId:guid}", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, BoardSection section, Guid itemId, ItemTitleRequest request) =>
+{
+    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    BoardItem? updated = await boardPersistenceService.RenameItemAsync(userId, section, itemId, request.Title.Trim());
+    return updated is null ? Results.NotFound() : Results.Ok(updated);
+});
+boardApi.MapDelete("/{section}/{itemId:guid}", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, BoardSection section, Guid itemId) =>
+{
+    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    bool removed = await boardPersistenceService.DeleteItemAsync(userId, section, itemId);
+    return removed ? Results.NoContent() : Results.NotFound();
+});
+boardApi.MapPost("/{section}/{itemId:guid}/toggle", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, BoardSection section, Guid itemId) =>
+{
+    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    BoardItem? updated = await boardPersistenceService.ToggleItemAsync(userId, section, itemId);
+    return updated is null ? Results.NotFound() : Results.Ok(updated);
+});
+boardApi.MapPost("/habits/{itemId:guid}/increment", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, Guid itemId) =>
+{
+    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    BoardItem? updated = await boardPersistenceService.IncrementHabitAsync(userId, itemId);
+    return updated is null ? Results.NotFound() : Results.Ok(updated);
+});
+
+app.Run();

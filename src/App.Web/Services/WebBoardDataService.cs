@@ -51,16 +51,93 @@ public sealed class WebBoardDataService : IBoardDataService
         return await _boardPersistenceService.ToggleItemAsync(userId, section, itemId, cancellationToken);
     }
 
-    public async Task<BoardItem?> IncrementHabitAsync(Guid itemId, CancellationToken cancellationToken = default)
+    public async Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
         Guid userId = await GetCurrentUserIdAsync(cancellationToken);
-        return await _boardPersistenceService.IncrementHabitAsync(userId, itemId, cancellationToken);
+        return await _boardPersistenceService.IncrementHabitPlusAsync(userId, itemId, cancellationToken);
     }
 
-    public async Task<BoardItem?> DecrementHabitAsync(Guid itemId, CancellationToken cancellationToken = default)
+    public async Task<BoardItem?> IncrementHabitMinusAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
         Guid userId = await GetCurrentUserIdAsync(cancellationToken);
-        return await _boardPersistenceService.DecrementHabitAsync(userId, itemId, cancellationToken);
+        return await _boardPersistenceService.IncrementHabitMinusAsync(userId, itemId, cancellationToken);
+    }
+
+    public async Task<BoardItem?> UpdateHabitAsync(
+        Guid itemId,
+        string title,
+        string? notes,
+        string? tags,
+        bool trackPlus,
+        bool trackMinus,
+        HabitResetPeriod resetPeriod,
+        int counter,
+        int negativeCounter,
+        string? checklistJson = null,
+        CancellationToken cancellationToken = default)
+    {
+        Guid userId = await GetCurrentUserIdAsync(cancellationToken);
+        return await _boardPersistenceService.UpdateHabitAsync(
+            userId,
+            itemId,
+            title,
+            notes,
+            tags,
+            trackPlus,
+            trackMinus,
+            resetPeriod,
+            counter,
+            negativeCounter,
+            checklistJson,
+            cancellationToken);
+    }
+
+    public async Task<BoardItem?> UpdateTodoAsync(
+        Guid itemId,
+        string title,
+        string? notes,
+        string? tags,
+        string? checklistJson,
+        DateTime? dueDate,
+        CancellationToken cancellationToken = default)
+    {
+        Guid userId = await GetCurrentUserIdAsync(cancellationToken);
+        return await _boardPersistenceService.UpdateTodoAsync(
+            userId,
+            itemId,
+            title,
+            notes,
+            tags,
+            checklistJson,
+            dueDate,
+            cancellationToken);
+    }
+
+    public async Task<BoardItem?> UpdateDailyAsync(
+        Guid itemId,
+        string title,
+        string? notes,
+        string? tags,
+        DateTime? startDate,
+        DailyRepeatType repeatType,
+        int repeatInterval,
+        string? checklistJson,
+        int streak,
+        CancellationToken cancellationToken = default)
+    {
+        Guid userId = await GetCurrentUserIdAsync(cancellationToken);
+        return await _boardPersistenceService.UpdateDailyAsync(
+            userId,
+            itemId,
+            title,
+            notes,
+            tags,
+            startDate,
+            repeatType,
+            repeatInterval,
+            checklistJson,
+            streak,
+            cancellationToken);
     }
 
     private async Task<Guid> GetCurrentUserIdAsync(CancellationToken cancellationToken)

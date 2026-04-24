@@ -367,7 +367,7 @@
     {
         string? targetType = TimerService.TargetType;
         string? targetId = TimerService.TargetId;
-        Guid? boardId = ResolveBoardItemIdFromTitle(targetType, targetId);
+        Guid? boardId = TimerService.BoardItemId ?? ResolveBoardItemIdFromTitle(targetType, targetId);
 
         if (boardId is Guid id && targetType is "Habit" or "Daily" or "Todo")
         {

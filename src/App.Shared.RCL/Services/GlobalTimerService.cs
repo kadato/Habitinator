@@ -15,6 +15,9 @@ public sealed class GlobalTimerService
 
     public string? TargetId { get; private set; }
 
+    /// <summary>When the target is a board row, the item id; otherwise null (e.g. free-text session).</summary>
+    public Guid? BoardItemId { get; private set; }
+
     public bool IsRunning => _runningSince.HasValue;
 
     public TimeSpan Elapsed =>
@@ -22,10 +25,11 @@ public sealed class GlobalTimerService
             ? _accumulated + (_clock.UtcNow - _runningSince.Value)
             : _accumulated;
 
-    public void SelectTarget(string targetType, string targetId)
+    public void SelectTarget(string targetType, string targetId, Guid? boardItemId = null)
     {
         TargetType = targetType;
         TargetId = targetId;
+        BoardItemId = boardItemId;
     }
 
     /// <summary>Sets a user-entered focus label, or clears the target when the label is empty.</summary>
@@ -35,11 +39,13 @@ public sealed class GlobalTimerService
         {
             TargetType = null;
             TargetId = null;
+            BoardItemId = null;
             return;
         }
 
         TargetType = "Session";
         TargetId = label.Trim();
+        BoardItemId = null;
     }
 
     public void Start()

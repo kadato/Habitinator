@@ -499,13 +499,13 @@
 
     private async Task HabitUpAsync(BoardItem item)
     {
-        TimerService.SelectTarget("Habit", item.Title);
+        TimerService.SelectTarget("Habit", item.Title, item.Id);
         await TryMutateAsync(() => BoardData.IncrementHabitPlusAsync(item.Id));
     }
 
     private async Task HabitDownAsync(BoardItem item)
     {
-        TimerService.SelectTarget("Habit", item.Title);
+        TimerService.SelectTarget("Habit", item.Title, item.Id);
         await TryMutateAsync(() => BoardData.IncrementHabitMinusAsync(item.Id));
     }
 
@@ -527,7 +527,7 @@
 
     private async Task ToggleAsync(BoardItem item)
     {
-        TimerService.SelectTarget(Section.ToString(), item.Title);
+        TimerService.SelectTarget(Section.ToString(), item.Title, item.Id);
         await TryMutateAsync(() => BoardData.ToggleItemAsync(Section, item.Id));
     }
 

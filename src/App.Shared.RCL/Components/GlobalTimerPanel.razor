@@ -253,7 +253,8 @@
                         k,
                         out (string TargetType, string TargetTitle, Guid ItemId) m)
                     && m.TargetType == timer.TargetType
-                    && m.TargetTitle == timer.TargetId)
+                    && m.TargetTitle == timer.TargetId
+                    && (timer.BoardItemId is null || m.ItemId == timer.BoardItemId))
                 {
                     return k;
                 }
@@ -328,7 +329,7 @@
         }
         else if (_sessionLabelToTarget.TryGetValue(text, out (string TargetType, string TargetTitle, Guid ItemId) mapped))
         {
-            TimerService.SelectTarget(mapped.TargetType, mapped.TargetTitle);
+            TimerService.SelectTarget(mapped.TargetType, mapped.TargetTitle, mapped.ItemId);
         }
         else
         {

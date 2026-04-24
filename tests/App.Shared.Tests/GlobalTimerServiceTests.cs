@@ -38,11 +38,24 @@ public sealed class GlobalTimerServiceTests
         var clock = new FakeClock(new DateTimeOffset(2026, 4, 24, 10, 0, 0, TimeSpan.Zero));
         var timer = new GlobalTimerService(clock);
 
-        timer.SelectTarget("Habit", "Run");
+        timer.SelectTarget("Habit", "Run", Guid.Parse("11111111-1111-1111-1111-111111111111"));
         timer.SetManualTarget("   ");
 
         Assert.Null(timer.TargetType);
         Assert.Null(timer.TargetId);
+        Assert.Null(timer.BoardItemId);
+    }
+
+    [Fact]
+    public void SelectTarget_WithBoardItemId_PersistsUntilCleared()
+    {
+        var clock = new FakeClock(new DateTimeOffset(2026, 4, 24, 10, 0, 0, TimeSpan.Zero));
+        var timer = new GlobalTimerService(clock);
+        var id = Guid.Parse("22222222-2222-2222-2222-222222222222");
+
+        timer.SelectTarget("Daily", "Workout", id);
+
+        Assert.Equal(id, timer.BoardItemId);
     }
 
     [Fact]

@@ -1,4 +1,7 @@
-﻿<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+﻿@using Microsoft.AspNetCore.Components.Web
+@* Avoid prerender + interactive using different DI scopes (auth, DbContext) which can fault the Blazor Server circuit. *@
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
     <Found Context="routeData">
         <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
         <FocusOnNavigate RouteData="routeData" Selector="h1" />

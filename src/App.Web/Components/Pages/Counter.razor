@@ -1,5 +1,6 @@
 ﻿@page "/counter"
-@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Web
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 
 <PageTitle>Counter</PageTitle>
 

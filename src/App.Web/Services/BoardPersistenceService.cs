@@ -8,27 +8,36 @@ public sealed class BoardPersistenceService
 {
     private readonly ApplicationDbContext _dbContext;
 
-    public BoardPersistenceService(ApplicationDbContext dbContext)
-    {
+    public BoardPersistenceService(ApplicationDbContext dbContext) =>
         _dbContext = dbContext;
-    }
 
     public async Task<BoardSnapshot> GetSnapshotAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         List<BoardItemEntity> items = await _dbContext.BoardItems
             .Where(x => x.UserId == userId)
             .OrderBy(x => x.CreatedAtUtc)
+            .ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);
 
         DateOnly today = DailySchedule.UtcToday;
         return new BoardSnapshot(
-            items.Where(x => x.Section == BoardSection.Habit).OrderBy(x => x.CreatedAtUtc).Select(ToModel).ToList(),
+            items.Where(x => x.Section == BoardSection.Habit)
+                .OrderBy(x => x.CreatedAtUtc)
+                .ThenBy(x => x.Id)
+                .Select(ToModel)
+                .ToList(),
             items.Where(x => x.Section == BoardSection.Daily)
                 .OrderBy(x => IsDailyEntityCompleteForToday(x, today) ? 1 : 0)
                 .ThenBy(x => x.CreatedAtUtc)
+                .ThenBy(x => x.Id)
                 .Select(ToModel)
                 .ToList(),
-            items.Where(x => x.Section == BoardSection.Todo).OrderBy(x => x.IsCompleted).ThenBy(x => x.CreatedAtUtc).Select(ToModel).ToList());
+            items.Where(x => x.Section == BoardSection.Todo)
+                .OrderBy(x => x.IsCompleted)
+                .ThenBy(x => x.CreatedAtUtc)
+                .ThenBy(x => x.Id)
+                .Select(ToModel)
+                .ToList());
     }
 
     public async Task<BoardItem> CreateItemAsync(Guid userId, BoardSection section, string title, CancellationToken cancellationToken = default)
@@ -105,7 +114,8 @@ public sealed class BoardPersistenceService
         if (section == BoardSection.Daily)
         {
             DateOnly today = DailySchedule.UtcToday;
-            if (IsDailyEntityCompleteForToday(entity, today))
+            bool wasCompleteForToday = IsDailyEntityCompleteForToday(entity, today);
+            if (wasCompleteForToday)
             {
                 entity.DailyLastCompletedOn = null;
                 entity.IsCompleted = false;
@@ -115,15 +125,35 @@ public sealed class BoardPersistenceService
                 entity.DailyLastCompletedOn = new DateTime(today.Year, today.Month, today.Day, 0, 0, 0, DateTimeKind.Utc);
                 entity.IsCompleted = true;
             }
+
+            AddActivityEvent(userId, wasCompleteForToday ? ActivityEventType.DailyUncomplete : ActivityEventType.DailyComplete, itemId);
         }
         else
         {
+            bool wasCompleted = entity.IsCompleted;
             entity.IsCompleted = !entity.IsCompleted;
+            AddActivityEvent(userId, wasCompleted ? ActivityEventType.TodoUncomplete : ActivityEventType.TodoComplete, itemId);
         }
 
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
         return ToModel(entity);
+    }
+
+    public async Task LogTimerSessionAsync(
+        Guid userId,
+        TimeSpan duration,
+        Guid? boardItemId,
+        CancellationToken cancellationToken = default)
+    {
+        int sec = (int)Math.Min((double)int.MaxValue, Math.Max(0, duration.TotalSeconds));
+        if (sec == 0)
+        {
+            return;
+        }
+
+        AddActivityEvent(userId, ActivityEventType.TimerSession, boardItemId, sec);
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<BoardItem?> IncrementHabitPlusAsync(Guid userId, Guid itemId, CancellationToken cancellationToken = default)
@@ -137,6 +167,7 @@ public sealed class BoardPersistenceService
 
         entity.Counter++;
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        AddActivityEvent(userId, ActivityEventType.HabitPlus, itemId);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return ToModel(entity);
     }
@@ -152,6 +183,7 @@ public sealed class BoardPersistenceService
 
         entity.NegativeCounter++;
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        AddActivityEvent(userId, ActivityEventType.HabitMinus, itemId);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return ToModel(entity);
     }
@@ -374,5 +406,18 @@ public sealed class BoardPersistenceService
         }
 
         return entity.DailyLastCompletedOn is null && entity.IsCompleted;
+    }
+
+    private void AddActivityEvent(Guid userId, ActivityEventType type, Guid? boardItemId, int? durationSeconds = null)
+    {
+        _dbContext.UserActivityEvents.Add(new UserActivityEventEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            OccurredAtUtc = DateTimeOffset.UtcNow,
+            EventType = type,
+            BoardItemId = boardItemId,
+            DurationSeconds = type == ActivityEventType.TimerSession ? durationSeconds : null
+        });
     }
 }

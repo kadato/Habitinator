@@ -38,5 +38,6 @@ public static class DemoDataSeeder
         }
 
         await boardPersistenceService.SeedBoardDataIfMissingAsync(guest.Id, cancellationToken);
+        await GuestActivityDemoSeeder.SeedIfMissingAsync(dbContext, guest.Id, cancellationToken);
     }
 }

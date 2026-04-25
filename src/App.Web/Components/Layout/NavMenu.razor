@@ -1,50 +1,106 @@
-﻿@using System.Security.Claims
+﻿@implements IDisposable
+@inject NavigationManager Nav
 
-<MudNavMenu Rounded="true" Margin="Margin.Dense" Class="pa-1 nav-menu-narrow" Dense="true">
-    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.SpaceDashboard">Board</MudNavLink>
-</MudNavMenu>
-
-<MudDivider Class="my-2 mx-1" />
-
-<AuthorizeView>
-    <Authorized Context="auth">
-        <MudText Typo="Typo.caption"
-                 Color="Color.Secondary"
-                 Class="px-2 mb-1 text-truncate"
-                 title="@GetFullIdentity(auth)">
-            @GetEmailLocalPart(auth)
-        </MudText>
-        <form method="post" action="/api/auth/cookie-logout" class="px-1">
-            <MudButton ButtonType="ButtonType.Submit"
-                       Variant="Variant.Text"
-                       Color="Color.Error"
-                       StartIcon="@Icons.Material.Filled.Logout"
-                       FullWidth="true"
-                       Size="Size.Small"
-                       Class="justify-start text-transform-none">
-                Log out
-            </MudButton>
-        </form>
-    </Authorized>
-    <NotAuthorized>
-        <MudNavMenu Rounded="true" Margin="Margin.Dense" Dense="true" Class="px-1">
-            <MudNavLink Href="auth/login" Icon="@Icons.Material.Filled.Login">Login</MudNavLink>
-            <MudNavLink Href="auth/register" Icon="@Icons.Material.Filled.PersonAdd">Register</MudNavLink>
-        </MudNavMenu>
-    </NotAuthorized>
-</AuthorizeView>
+@{
+    var navClass = Mode == AppNavMode.AuthLinks
+        ? "app-header-nav app-header-nav--auth d-flex flex-wrap align-center"
+        : "app-header-nav d-flex flex-wrap align-center";
+}
+<div class="@navClass">
+    @if (Mode is AppNavMode.Full or AppNavMode.BoardOnly)
+    {
+        <MudButton Href="/"
+                   Variant="@(IsActivePath("", NavLinkMatch.All) ? Variant.Filled : Variant.Outlined)"
+                   Color="Color.Primary"
+                   Size="Size.Medium"
+                   StartIcon="@Icons.Material.Filled.SpaceDashboard"
+                   Class="app-header-nav-btn text-transform-none">
+            Board
+        </MudButton>
+        <AuthorizeView>
+            <Authorized>
+                <MudButton Href="/stats"
+                           Variant="@(IsActivePath("stats", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
+                           Color="Color.Primary"
+                           Size="Size.Medium"
+                           StartIcon="@Icons.Material.Filled.BarChart"
+                           Class="app-header-nav-btn text-transform-none">
+                    Statistics
+                </MudButton>
+            </Authorized>
+        </AuthorizeView>
+    }
+    @if (Mode is AppNavMode.Full)
+    {
+        <AuthorizeView>
+            <NotAuthorized>
+                @AuthLinkButtons
+            </NotAuthorized>
+        </AuthorizeView>
+    }
+    @if (Mode is AppNavMode.AuthLinks)
+    {
+        <AuthorizeView>
+            <NotAuthorized>
+                @AuthLinkButtons
+            </NotAuthorized>
+        </AuthorizeView>
+    }
+</div>
 
 @code {
-    private static string GetFullIdentity(AuthenticationState auth) =>
-        auth.User.FindFirst(ClaimTypes.Email)?.Value
-        ?? auth.User.Identity?.Name
-        ?? "User";
+    [Parameter]
+    public AppNavMode Mode { get; set; } = AppNavMode.Full;
 
-    /// <summary>Shows only the part before @ for emails; otherwise the full identity string.</summary>
-    private static string GetEmailLocalPart(AuthenticationState auth)
+    private RenderFragment AuthLinkButtons => __builder =>
     {
-        string full = GetFullIdentity(auth);
-        int at = full.IndexOf('@');
-        return at > 0 ? full[..at] : full;
+        <MudButton Href="auth/login"
+                   Variant="@(IsActivePath("auth/login", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
+                   Color="Color.Secondary"
+                   Size="Size.Medium"
+                   StartIcon="@Icons.Material.Filled.Login"
+                   Class="app-header-nav-btn text-transform-none">
+            Login
+        </MudButton>
+        <MudButton Href="auth/register"
+                   Variant="@(IsActivePath("auth/register", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
+                   Color="Color.Secondary"
+                   Size="Size.Medium"
+                   StartIcon="@Icons.Material.Filled.PersonAdd"
+                   Class="app-header-nav-btn text-transform-none">
+            Register
+        </MudButton>
+    };
+
+    protected override void OnInitialized() =>
+        Nav.LocationChanged += OnLocationChanged;
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>
+        _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() =>
+        Nav.LocationChanged -= OnLocationChanged;
+
+    private bool IsActivePath(string path, NavLinkMatch match)
+    {
+        string rel = Nav.ToBaseRelativePath(Nav.Uri).TrimStart('/').TrimEnd('/');
+        string p = path.TrimStart('/').TrimEnd('/');
+
+        if (match == NavLinkMatch.All)
+        {
+            if (string.IsNullOrEmpty(p))
+            {
+                return string.IsNullOrEmpty(rel);
+            }
+
+            return string.Equals(rel, p, StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (string.IsNullOrEmpty(p))
+        {
+            return true;
+        }
+
+        return rel.StartsWith(p, StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @using global::App.Shared.RCL.Themes
+@using System.Security.Claims
 
 <MudThemeProvider Theme="@HabitinatorMudTheme.Default" IsDarkMode="true" />
 <MudPopoverProvider />
@@ -7,27 +8,43 @@
 <MudSnackbarProvider />
 
 <MudLayout>
-    <MudAppBar Elevation="0" Dense="false">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu"
-                       Color="Color.Inherit"
-                       Edge="Edge.Start"
-                       OnClick="@ToggleDrawer"
-                       aria-label="Open navigation" />
-        <MudText Typo="Typo.h6" Class="ml-1">Habitinator</MudText>
-        <MudSpacer />
-        <MudText Typo="Typo.caption" Class="mud-opacity-60 d-none d-sm-block">Blazor Hybrid Web Host</MudText>
+    <MudAppBar Elevation="0" Dense="false" Class="app-top-bar" ToolBarClass="app-top-bar-toolbar">
+        <div class="app-top-bar__row d-flex">
+            <div class="app-top-bar__left d-flex flex-wrap align-center">
+                <MudText Typo="Typo.h6" Class="app-top-bar__title">Habitinator</MudText>
+                <NavMenu Mode="AppNavMode.Full" />
+            </div>
+            <div class="app-top-bar__right d-flex flex-wrap align-center">
+                <AuthorizeView>
+                    <Authorized Context="auth">
+                        <div class="app-header-user-rail d-flex flex-wrap align-center">
+                            <MudChip T="string"
+                                     Icon="@Icons.Material.Filled.AccountCircle"
+                                     Color="Color.Primary"
+                                     Variant="Variant.Filled"
+                                     Size="Size.Medium"
+                                     Class="app-header-username-chip text-truncate"
+                                     title="@GetFullIdentity(auth)">
+                                @GetEmailLocalPart(auth)
+                            </MudChip>
+                            <form method="post" action="/api/auth/cookie-logout" class="d-inline m-0 app-header-logout-form">
+                                <MudButton ButtonType="ButtonType.Submit"
+                                           Variant="Variant.Outlined"
+                                           Color="Color.Error"
+                                           Size="Size.Medium"
+                                           StartIcon="@Icons.Material.Filled.Logout"
+                                           Class="app-header-logout-btn text-transform-none">
+                                    Log out
+                                </MudButton>
+                            </form>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+            </div>
+        </div>
     </MudAppBar>
-    <MudDrawer @bind-Open="_drawerOpen"
-               Class="app-nav-drawer"
-               Width="200px"
-               Elevation="1"
-               Variant="@DrawerVariant.Responsive"
-               Breakpoint="Breakpoint.Md"
-               ClipMode="DrawerClipMode.Always">
-        <NavMenu />
-    </MudDrawer>
     <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.False" Class="py-4 px-4">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4 px-4">
             @Body
         </MudContainer>
     </MudMainContent>
@@ -40,7 +57,15 @@
 </div>
 
 @code {
-    private bool _drawerOpen = true;
+    private static string GetFullIdentity(AuthenticationState auth) =>
+        auth.User.FindFirst(ClaimTypes.Email)?.Value
+        ?? auth.User.Identity?.Name
+        ?? "User";
 
-    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+    private static string GetEmailLocalPart(AuthenticationState auth)
+    {
+        string full = GetFullIdentity(auth);
+        int at = full.IndexOf('@');
+        return at > 0 ? full[..at] : full;
+    }
 }

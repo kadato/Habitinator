@@ -1,7 +1,78 @@
-/* Narrow drawer: no inner scroll (content fits the compact nav). */
-::deep .app-nav-drawer.mud-drawer .mud-drawer-content {
-    overflow-x: hidden;
-    overflow-y: hidden;
+::deep .app-top-bar.mud-appbar,
+::deep .app-top-bar {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    column-gap: 1rem;
+}
+
+/* One row fills the app bar: MudAppBar wraps in .mud-toolbar-appbar, which can shrink to content. */
+::deep .app-top-bar .app-top-bar-toolbar,
+::deep .app-top-bar .mud-toolbar-appbar {
+    width: 100% !important;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+::deep .app-top-bar__row {
+    display: flex !important;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+    column-gap: 1.25rem;
+    align-items: center;
+    justify-content: space-between;
+    flex: 1 1 auto;
+}
+
+::deep .app-top-bar__left {
+    gap: 0.75rem 0;
+    align-items: center;
+    min-width: 0;
+    flex: 0 1 auto;
+}
+
+::deep .app-top-bar__right {
+    gap: 0.6rem 0.9rem;
+    align-items: center;
+    min-width: 0;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    margin-left: auto;
+}
+
+::deep .app-top-bar__title {
+    margin: 0;
+    margin-right: 0.9rem;
+    flex-shrink: 0;
+}
+
+/* Account rail: signed-in user + log out (kept on the far right). */
+::deep .app-header-user-rail {
+    gap: 0.6rem 0.9rem;
+    margin-left: auto;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+::deep .app-header-username-chip {
+    max-width: 12rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+::deep .app-header-logout-btn {
+    min-width: 6.5rem;
+    font-weight: 600;
 }
 
 #blazor-error-ui {

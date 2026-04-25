@@ -81,8 +81,13 @@ public sealed class LocalBoardDataService : IBoardDataService
                 .Select(d => ProjectDailyForDisplay(d, today))
                 .OrderBy(x => x.IsCompleted ? 1 : 0)
                 .ThenBy(x => x.Title, StringComparer.Ordinal)
+                .ThenBy(x => x.Id)
                 .ToList(),
-            _todos.OrderBy(x => x.IsCompleted).ThenBy(x => x.Title, StringComparer.Ordinal).ToList()));
+            _todos
+                .OrderBy(x => x.IsCompleted)
+                .ThenBy(x => x.Title, StringComparer.Ordinal)
+                .ThenBy(x => x.Id)
+                .ToList()));
     }
 
     private static BoardItem ProjectDailyForDisplay(BoardItem d, DateOnly today)

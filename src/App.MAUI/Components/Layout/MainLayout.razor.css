@@ -1,6 +1,47 @@
-/* Shell layout handled by MudLayout. */
+::deep .app-top-bar.mud-appbar,
+::deep .app-top-bar {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    column-gap: 1rem;
+}
 
-::deep .app-nav-drawer.mud-drawer .mud-drawer-content {
-    overflow-x: hidden;
-    overflow-y: hidden;
+::deep .app-top-bar .app-top-bar-toolbar,
+::deep .app-top-bar .mud-toolbar-appbar {
+    width: 100% !important;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+::deep .app-top-bar__row {
+    display: flex !important;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+    column-gap: 1.25rem;
+    align-items: center;
+    justify-content: space-between;
+    flex: 1 1 auto;
+}
+
+::deep .app-top-bar__left {
+    gap: 0.75rem 0.6rem;
+    align-items: center;
+    min-width: 0;
+    flex: 0 1 auto;
+}
+
+::deep .app-top-bar__title {
+    margin: 0;
+    margin-right: 0.9rem;
+    flex-shrink: 0;
 }

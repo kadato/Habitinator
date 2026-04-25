@@ -7,34 +7,18 @@
 <MudSnackbarProvider />
 
 <MudLayout>
-    <MudAppBar Elevation="0" Dense="false">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu"
-                       Color="Color.Inherit"
-                       Edge="Edge.Start"
-                       OnClick="@ToggleDrawer"
-                       aria-label="Open navigation" />
-        <MudText Typo="Typo.h6" Class="ml-1">Habitinator</MudText>
-        <MudSpacer />
-        <MudText Typo="Typo.caption" Class="mud-opacity-60 d-none d-sm-block">Blazor Hybrid Android Host</MudText>
+    <MudAppBar Elevation="0" Dense="false" Class="app-top-bar" ToolBarClass="app-top-bar-toolbar">
+        <div class="app-top-bar__row d-flex">
+            <div class="app-top-bar__left d-flex flex-wrap align-center">
+                <MudText Typo="Typo.h6" Class="app-top-bar__title">Habitinator</MudText>
+                <NavMenu />
+            </div>
+        </div>
     </MudAppBar>
-    <MudDrawer @bind-Open="_drawerOpen"
-               Class="app-nav-drawer"
-               Width="200px"
-               Elevation="1"
-               Variant="@DrawerVariant.Responsive"
-               Breakpoint="Breakpoint.Md"
-               ClipMode="DrawerClipMode.Always">
-        <NavMenu />
-    </MudDrawer>
     <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.False" Class="py-4 px-4">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4 px-4">
             @Body
         </MudContainer>
     </MudMainContent>
 </MudLayout>
 
-@code {
-    private bool _drawerOpen = true;
-
-    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
-}

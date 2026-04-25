@@ -1,5 +1,63 @@
-﻿<MudNavMenu Rounded="true" Margin="Margin.Dense" Dense="true" Class="pa-1 nav-menu-narrow">
-    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.SpaceDashboard">Board</MudNavLink>
-    <MudNavLink Href="counter" Icon="@Icons.Material.Filled.Timer">Timer</MudNavLink>
-    <MudNavLink Href="weather" Icon="@Icons.Material.Filled.Person">Account</MudNavLink>
-</MudNavMenu>
+﻿@implements IDisposable
+@inject NavigationManager Nav
+
+<div class="app-header-nav d-flex flex-wrap align-center">
+    <MudButton Href="/"
+               Variant="@(IsActivePath("", NavLinkMatch.All) ? Variant.Filled : Variant.Outlined)"
+               Color="Color.Primary"
+               Size="Size.Medium"
+               StartIcon="@Icons.Material.Filled.SpaceDashboard"
+               Class="app-header-nav-btn text-transform-none">
+        Board
+    </MudButton>
+    <MudButton Href="counter"
+               Variant="@(IsActivePath("counter", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
+               Color="Color.Secondary"
+               Size="Size.Medium"
+               StartIcon="@Icons.Material.Filled.Timer"
+               Class="app-header-nav-btn text-transform-none">
+        Timer
+    </MudButton>
+    <MudButton Href="weather"
+               Variant="@(IsActivePath("weather", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
+               Color="Color.Secondary"
+               Size="Size.Medium"
+               StartIcon="@Icons.Material.Filled.Person"
+               Class="app-header-nav-btn text-transform-none">
+        Account
+    </MudButton>
+</div>
+
+@code {
+    protected override void OnInitialized() =>
+        Nav.LocationChanged += OnLocationChanged;
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>
+        _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() =>
+        Nav.LocationChanged -= OnLocationChanged;
+
+    private bool IsActivePath(string path, NavLinkMatch match)
+    {
+        string rel = Nav.ToBaseRelativePath(Nav.Uri).TrimStart('/').TrimEnd('/');
+        string p = path.TrimStart('/').TrimEnd('/');
+
+        if (match == NavLinkMatch.All)
+        {
+            if (string.IsNullOrEmpty(p))
+            {
+                return string.IsNullOrEmpty(rel);
+            }
+
+            return string.Equals(rel, p, StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (string.IsNullOrEmpty(p))
+        {
+            return true;
+        }
+
+        return rel.StartsWith(p, StringComparison.OrdinalIgnoreCase);
+    }
+}

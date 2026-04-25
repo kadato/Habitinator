@@ -1,10 +1,16 @@
-::deep .nav-menu-narrow .mud-nav-link {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
+.app-header-nav {
+    gap: 0.5rem 0.75rem;
+    margin-left: 0;
+    align-items: center;
+    row-gap: 0.5rem;
 }
 
-::deep .nav-menu-narrow .mud-nav-link .mud-nav-link-text {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+:deep .app-header-nav-btn.mud-button-root {
+    min-width: 5.5rem;
+    font-weight: 600;
+    border-width: 2px;
+}
+
+:deep .app-header-nav-btn.mud-button-outlined {
+    background-color: color-mix(in srgb, var(--mud-palette-surface) 40%, transparent);
 }

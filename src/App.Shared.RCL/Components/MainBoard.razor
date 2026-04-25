@@ -2,16 +2,9 @@
 @using App.Shared.RCL.Services
 @inject GlobalTimerService TimerService
 @inject IBoardDataService BoardDataService
+@inject IUserActivityLogService UserActivityLog
 
 <MudStack Class="board-shell mud-width-full" Spacing="1">
-    <MudStack Spacing="0">
-        @if (!string.IsNullOrWhiteSpace(SignedInEmail))
-        {
-        }
-        <MudText Typo="Typo.h4">Habitinator</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">Habits, dailies, and to-dos — one global timer for focus time.</MudText>
-    </MudStack>
-
     @if (_isLoading)
     {
         <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
@@ -368,7 +361,7 @@
         string? targetType = TimerService.TargetType;
         string? targetId = TimerService.TargetId;
         Guid? boardId = TimerService.BoardItemId ?? ResolveBoardItemIdFromTitle(targetType, targetId);
-
+        var boardError = false;
         if (boardId is Guid id && targetType is "Habit" or "Daily" or "Todo")
         {
             try
@@ -407,10 +400,24 @@
             }
             catch (Exception)
             {
-                LastEvent =
-                    $"Timer stopped ({duration:hh\\:mm\\:ss}), but the board could not be updated. Check your connection and try again.";
-                return;
+                boardError = true;
             }
+        }
+
+        try
+        {
+            await UserActivityLog.LogTimerSessionAsync(duration, boardId);
+        }
+        catch (Exception)
+        {
+            // Statistics persistence is best-effort; the board and LastEvent are primary feedback.
+        }
+
+        if (boardError)
+        {
+            LastEvent =
+                $"Timer stopped ({duration:hh\\:mm\\:ss}), but the board could not be updated. Check your connection and try again.";
+            return;
         }
 
         LastEvent = $"Timer log saved for {targetType ?? "Unassigned"} '{targetId ?? "-"}' with duration {duration:hh\\:mm\\:ss}.";

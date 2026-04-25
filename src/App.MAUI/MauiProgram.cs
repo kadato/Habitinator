@@ -21,6 +21,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IClock, SystemClock>();
 		builder.Services.AddSingleton<GlobalTimerService>();
 		builder.Services.AddSingleton<IBoardDataService, LocalBoardDataService>();
+		builder.Services.AddSingleton<IUserActivityLogService, NoOpUserActivityLogService>();
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();

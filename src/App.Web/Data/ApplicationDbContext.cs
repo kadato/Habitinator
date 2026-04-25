@@ -10,9 +10,24 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 {
     public DbSet<BoardItemEntity> BoardItems => Set<BoardItemEntity>();
 
+    public DbSet<UserActivityEventEntity> UserActivityEvents => Set<UserActivityEventEntity>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        builder.Entity<UserActivityEventEntity>(entity =>
+        {
+            entity.ToTable("UserActivityEvents");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.EventType).IsRequired();
+            entity.Property(x => x.OccurredAtUtc).IsRequired();
+            entity.HasIndex(x => new { x.UserId, x.OccurredAtUtc });
+            entity.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
 
         builder.Entity<BoardItemEntity>(entity =>
         {

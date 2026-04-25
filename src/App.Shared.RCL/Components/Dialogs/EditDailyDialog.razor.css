@@ -143,6 +143,15 @@
     color: #cbd5e1;
 }
 
+.edit-daily-checklist__remove {
+    flex-shrink: 0;
+    color: #64748b !important;
+}
+
+.edit-daily-checklist__remove:hover {
+    color: #f87171 !important;
+}
+
 .edit-daily-checklist__add {
     display: flex;
     align-items: center;

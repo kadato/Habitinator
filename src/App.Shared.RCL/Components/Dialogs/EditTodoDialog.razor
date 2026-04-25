@@ -71,6 +71,11 @@
                                                       Placeholder="Checklist item"
                                                       Margin="Margin.Dense"
                                                       Immediate="true" />
+                                        <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline"
+                                                       Size="Size.Small"
+                                                       title="Remove checklist item"
+                                                       Class="ma-0 edit-daily-checklist__remove"
+                                                       OnClick="@(() => RemoveChecklistLine(idx))" />
                                     </div>
                                 }
                                 <button type="button" class="edit-daily-checklist__add" @onclick="AddChecklistLine">
@@ -243,6 +248,16 @@
         }
 
         _checklistRows[index].IsDone = done;
+    }
+
+    private void RemoveChecklistLine(int index)
+    {
+        if (index < 0 || index >= _checklistRows.Count)
+        {
+            return;
+        }
+
+        _checklistRows.RemoveAt(index);
     }
 
     private IReadOnlyList<DailyChecklistItem> ToChecklistModel() =>

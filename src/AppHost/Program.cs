@@ -1,12 +1,10 @@
-using Aspire.Hosting;
-
 var builder = DistributedApplication.CreateBuilder(args);
 
 var postgresUser = builder.AddParameter("postgres-user", "postgres");
 var postgresPassword = builder.AddParameter("postgres-password", "postgres", secret: true);
 
 var postgres = builder
-    .AddPostgres("postgres", postgresUser, postgresPassword, port: 5432)
+    .AddPostgres("postgres", postgresUser, postgresPassword, 5432)
     .WithImage("library/postgres", "17.6")
     .WithDataVolume("habitinatordb-postgres-data")
     .WithPgAdmin();

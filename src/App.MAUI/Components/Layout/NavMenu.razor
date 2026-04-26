@@ -10,21 +10,13 @@
                Class="app-header-nav-btn text-transform-none">
         Board
     </MudButton>
-    <MudButton Href="counter"
-               Variant="@(IsActivePath("counter", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
-               Color="Color.Secondary"
+    <MudButton Href="/stats"
+               Variant="@(IsActivePath("stats", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
+               Color="Color.Primary"
                Size="Size.Medium"
-               StartIcon="@Icons.Material.Filled.Timer"
+               StartIcon="@Icons.Material.Filled.BarChart"
                Class="app-header-nav-btn text-transform-none">
-        Timer
-    </MudButton>
-    <MudButton Href="weather"
-               Variant="@(IsActivePath("weather", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
-               Color="Color.Secondary"
-               Size="Size.Medium"
-               StartIcon="@Icons.Material.Filled.Person"
-               Class="app-header-nav-btn text-transform-none">
-        Account
+        Statistics
     </MudButton>
 </div>
 

@@ -17,7 +17,9 @@ public sealed class BoardPersistenceService
 
     public async Task<BoardSnapshot> GetSnapshotAsync(Guid userId, CancellationToken cancellationToken = default)
     {
+        // Snapshot must reflect the database, not a long-lived scoped context's tracked copies (Blazor Server circuit).
         List<BoardItemEntity> items = await _dbContext.BoardItems
+            .AsNoTracking()
             .Where(x => x.UserId == userId)
             .OrderBy(x => x.CreatedAtUtc)
             .ThenBy(x => x.Id)

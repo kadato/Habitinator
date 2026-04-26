@@ -4,8 +4,11 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Options;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+using System.Security.Claims;
 using App.Web.Auth;
 using App.Web.Data;
+using App.Web;
+using App.Web.Hubs;
 using App.Web.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -54,8 +57,12 @@ builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddScoped<GlobalTimerService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<DemoUserResolver>();
+builder.Services.AddSingleton<IRemoteBoardRefreshService, RemoteBoardRefreshService>();
+builder.Services.AddSingleton<BoardRemoteNotifyBridge>();
+builder.Services.AddSingleton<IBoardChangeNotifier, BoardChangeNotifier>();
 builder.Services.AddScoped<BoardPersistenceService>();
 builder.Services.AddScoped<IBoardDataService, WebBoardDataService>();
+builder.Services.AddSignalR();
 builder.Services.AddScoped<ActivityStatisticsService>();
 builder.Services.AddScoped<IActivityStatisticsReader, WebActivityStatisticsReader>();
 builder.Services.AddScoped<IUserActivityLogService, WebUserActivityLogService>();
@@ -87,8 +94,32 @@ authBuilder.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
         ValidAudience = jwt.Audience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SigningKey))
     };
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            if (!string.IsNullOrEmpty(context.Token))
+            {
+                return Task.CompletedTask;
+            }
+
+            Microsoft.Extensions.Primitives.StringValues accessToken = context.Request.Query["access_token"];
+            Microsoft.AspNetCore.Http.PathString path = context.Request.Path;
+            if (path.StartsWithSegments("/hubs") && !string.IsNullOrEmpty(accessToken))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        }
+    };
 });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("BoardOrJwt", policy =>
+    {
+        policy.AddAuthenticationSchemes(IdentityConstants.ApplicationScheme, JwtBearerDefaults.AuthenticationScheme);
+        policy.RequireAuthenticatedUser();
+    });
 
 var app = builder.Build();
 try
@@ -118,6 +149,8 @@ app.UseAuthorization();
 app.MapStaticAssets();
 app.MapRazorComponents<global::App.Web.Components.App>()
     .AddInteractiveServerRenderMode();
+
+app.MapHub<BoardHub>("/hubs/board");
 
 app.MapPost("/api/auth/register", async (
     RegisterRequest request,
@@ -155,6 +188,35 @@ app.MapPost("/api/auth/login", async (
         user,
         request.Password,
         request.RememberMe,
+        lockoutOnFailure: true);
+
+    if (!loginResult.Succeeded)
+    {
+        return Results.Unauthorized();
+    }
+
+    string token = jwtTokenService.CreateToken(user);
+    return Results.Ok(new LoginResponse(token, user.Email ?? string.Empty));
+}).DisableAntiforgery();
+
+/// <summary>Same demo guest as cookie guest-login, but returns a JWT for native/API clients (MAUI).</summary>
+app.MapPost("/api/auth/guest-jwt", async (
+    SignInManager<ApplicationUser> signInManager,
+    UserManager<ApplicationUser> userManager,
+    JwtTokenService jwtTokenService,
+    IOptions<DemoUserOptions> demoOptions) =>
+{
+    string email = demoOptions.Value.Email;
+    ApplicationUser? user = await userManager.FindByEmailAsync(email);
+    if (user is null)
+    {
+        return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+    }
+
+    SignInResult loginResult = await signInManager.PasswordSignInAsync(
+        user,
+        demoOptions.Value.Password,
+        isPersistent: false,
         lockoutOnFailure: true);
 
     if (!loginResult.Succeeded)
@@ -258,62 +320,97 @@ app.MapPost("/api/auth/register-form", async (HttpContext httpContext, UserManag
     return Results.LocalRedirect("/auth/login?registered=1");
 }).DisableAntiforgery();
 
-var boardApi = app.MapGroup("/api/board").DisableAntiforgery();
-boardApi.MapGet("/", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService) =>
+var boardApi = app.MapGroup("/api/board")
+    .DisableAntiforgery()
+    .RequireAuthorization("BoardOrJwt");
+
+boardApi.MapGet("/", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService) =>
 {
-    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
+
     BoardSnapshot snapshot = await boardPersistenceService.GetSnapshotAsync(userId);
     return Results.Ok(snapshot);
 });
-boardApi.MapPost("/{section}", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, BoardSection section, ItemTitleRequest request) =>
+boardApi.MapPost("/{section}", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, BoardSection section, ItemTitleRequest request) =>
 {
     if (string.IsNullOrWhiteSpace(request.Title))
     {
         return Results.BadRequest("Title is required.");
     }
 
-    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
+
     BoardItem item = await boardPersistenceService.CreateItemAsync(userId, section, request.Title.Trim());
     return Results.Ok(item);
 });
-boardApi.MapPut("/{section}/{itemId:guid}", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, BoardSection section, Guid itemId, ItemTitleRequest request) =>
+boardApi.MapPut("/{section}/{itemId:guid}", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, BoardSection section, Guid itemId, ItemTitleRequest request) =>
 {
-    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
+
     BoardItem? updated = await boardPersistenceService.RenameItemAsync(userId, section, itemId, request.Title.Trim());
     return updated is null ? Results.NotFound() : Results.Ok(updated);
 });
-boardApi.MapDelete("/{section}/{itemId:guid}", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, BoardSection section, Guid itemId) =>
+boardApi.MapDelete("/{section}/{itemId:guid}", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, BoardSection section, Guid itemId) =>
 {
-    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
+
     bool removed = await boardPersistenceService.DeleteItemAsync(userId, section, itemId);
     return removed ? Results.NoContent() : Results.NotFound();
 });
-boardApi.MapPost("/{section}/{itemId:guid}/toggle", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, BoardSection section, Guid itemId) =>
+boardApi.MapPost("/{section}/{itemId:guid}/toggle", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, BoardSection section, Guid itemId) =>
 {
-    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
+
     BoardItem? updated = await boardPersistenceService.ToggleItemAsync(userId, section, itemId);
     return updated is null ? Results.NotFound() : Results.Ok(updated);
 });
-boardApi.MapPost("/habits/{itemId:guid}/increment", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, Guid itemId) =>
+boardApi.MapPost("/habits/{itemId:guid}/increment", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, Guid itemId) =>
 {
-    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
+
     BoardItem? updated = await boardPersistenceService.IncrementHabitPlusAsync(userId, itemId);
     return updated is null ? Results.NotFound() : Results.Ok(updated);
 });
-boardApi.MapPost("/habits/{itemId:guid}/decrement", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, Guid itemId) =>
+boardApi.MapPost("/habits/{itemId:guid}/decrement", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, Guid itemId) =>
 {
-    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
+
     BoardItem? updated = await boardPersistenceService.IncrementHabitMinusAsync(userId, itemId);
     return updated is null ? Results.NotFound() : Results.Ok(updated);
 });
-boardApi.MapPut("/habits/{itemId:guid}", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, Guid itemId, HabitUpdateRequest request) =>
+boardApi.MapPut("/habits/{itemId:guid}", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, Guid itemId, HabitUpdateRequest request) =>
 {
     if (string.IsNullOrWhiteSpace(request.Title))
     {
         return Results.BadRequest("Title is required.");
     }
 
-    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
+
     BoardItem? updated = await boardPersistenceService.UpdateHabitAsync(
         userId,
         itemId,
@@ -328,14 +425,18 @@ boardApi.MapPut("/habits/{itemId:guid}", async (HttpContext httpContext, DemoUse
         request.ChecklistJson);
     return updated is null ? Results.NotFound() : Results.Ok(updated);
 });
-boardApi.MapPut("/todos/{itemId:guid}", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, Guid itemId, TodoUpdateRequest request) =>
+boardApi.MapPut("/todos/{itemId:guid}", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, Guid itemId, TodoUpdateRequest request) =>
 {
     if (string.IsNullOrWhiteSpace(request.Title))
     {
         return Results.BadRequest("Title is required.");
     }
 
-    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
+
     BoardItem? updated = await boardPersistenceService.UpdateTodoAsync(
         userId,
         itemId,
@@ -346,14 +447,18 @@ boardApi.MapPut("/todos/{itemId:guid}", async (HttpContext httpContext, DemoUser
         request.DueDate);
     return updated is null ? Results.NotFound() : Results.Ok(updated);
 });
-boardApi.MapPut("/dailies/{itemId:guid}", async (HttpContext httpContext, DemoUserResolver demoUserResolver, BoardPersistenceService boardPersistenceService, Guid itemId, DailyUpdateRequest request) =>
+boardApi.MapPut("/dailies/{itemId:guid}", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, Guid itemId, DailyUpdateRequest request) =>
 {
     if (string.IsNullOrWhiteSpace(request.Title))
     {
         return Results.BadRequest("Title is required.");
     }
 
-    Guid userId = await demoUserResolver.ResolveUserIdAsync(httpContext.User);
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
+
     BoardItem? updated = await boardPersistenceService.UpdateDailyAsync(
         userId,
         itemId,
@@ -366,6 +471,88 @@ boardApi.MapPut("/dailies/{itemId:guid}", async (HttpContext httpContext, DemoUs
         request.ChecklistJson,
         request.Streak);
     return updated is null ? Results.NotFound() : Results.Ok(updated);
+});
+boardApi.MapPost("/dailies/{itemId:guid}/complete-for-date", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, Guid itemId, DailyCompleteForDateRequest request) =>
+{
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
+
+    BoardItem? updated = await boardPersistenceService.CompleteDailyForDateAsync(userId, itemId, request.CompletedOn);
+    return updated is null ? Results.NotFound() : Results.Ok(updated);
+});
+
+var activityApi = app.MapGroup("/api/activity")
+    .DisableAntiforgery()
+    .RequireAuthorization("BoardOrJwt");
+
+activityApi.MapGet("dashboard", async (ClaimsPrincipal user, ActivityStatisticsService stats, string? period, CancellationToken cancellationToken) =>
+{
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
+
+    return Results.Ok(await stats.GetDashboardAsync(userId, period, cancellationToken));
+});
+activityApi.MapGet("daily-contributions", async (ClaimsPrincipal user, ActivityStatisticsService stats, string? period, CancellationToken cancellationToken) =>
+{
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
+
+    return Results.Ok(await stats.GetDailyContributionsAsync(userId, period, cancellationToken));
+});
+activityApi.MapGet("day", async (ClaimsPrincipal user, ActivityStatisticsService stats, DateOnly date, CancellationToken cancellationToken) =>
+{
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
+
+    return Results.Ok(await stats.GetActivityDayDetailAsync(userId, date, cancellationToken));
+});
+
+var settingsApi = app.MapGroup("/api/settings")
+    .DisableAntiforgery()
+    .RequireAuthorization("BoardOrJwt");
+
+settingsApi.MapGet("/notifications", async (ClaimsPrincipal user, ApplicationDbContext db, CancellationToken cancellationToken) =>
+{
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
+
+    ApplicationUser? row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+    if (row is null)
+    {
+        return Results.NotFound();
+    }
+
+    NotificationSettings settings = NotificationSettingsJson.DeserializeOrDefault(row.NotificationSettingsJson);
+    return Results.Ok(settings);
+});
+
+settingsApi.MapPut("/notifications", async (ClaimsPrincipal user, ApplicationDbContext db, IBoardChangeNotifier boardChangeNotifier, NotificationSettings body, CancellationToken cancellationToken) =>
+{
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
+
+    ApplicationUser? row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+    if (row is null)
+    {
+        return Results.NotFound();
+    }
+
+    row.NotificationSettingsJson = NotificationSettingsJson.Serialize(body);
+    await db.SaveChangesAsync(cancellationToken);
+    await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+    return Results.NoContent();
 });
 
 app.Run();

@@ -1,0 +1,36 @@
+@using Microsoft.AspNetCore.Components
+@using global::App.Shared.RCL.Services
+@inject IJSRuntime JS
+@inject BoardRemoteNotifyBridge RefreshBridge
+@implements IAsyncDisposable
+
+@code {
+    private DotNetObjectReference<BoardRemoteNotifyBridge>? _dotNetRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _dotNetRef = DotNetObjectReference.Create(RefreshBridge);
+        await JS.InvokeVoidAsync("HabitinatorBoardHub.start", _dotNetRef);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("HabitinatorBoardHub.stop");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (TaskCanceledException)
+        {
+        }
+
+        _dotNetRef?.Dispose();
+    }
+}

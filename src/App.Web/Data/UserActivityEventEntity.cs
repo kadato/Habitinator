@@ -1,3 +1,5 @@
+using App.Shared.RCL.Models;
+
 namespace App.Web.Data;
 
 public sealed class UserActivityEventEntity

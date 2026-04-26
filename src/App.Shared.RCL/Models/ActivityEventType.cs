@@ -1,4 +1,4 @@
-namespace App.Web.Data;
+namespace App.Shared.RCL.Models;
 
 public enum ActivityEventType : byte
 {

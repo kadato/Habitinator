@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
-using App.MAUI.Services;
+﻿using App.MAUI.Services;
 using App.Shared.RCL.Services;
+using Microsoft.Extensions.Logging;
 using MudBlazor.Services;
 
 namespace App.MAUI;
@@ -31,6 +31,9 @@ public static class MauiProgram
 			return new ActivityLoggingBoardDataService(inner, log);
 		});
 		builder.Services.AddSingleton<IActivityStatisticsReader, MauiActivityStatisticsReader>();
+		builder.Services.AddSingleton<INotificationSettingsService, MauiNotificationSettingsService>();
+		// Scoped: UserNotifier -> ISnackbar uses NavigationManager, which is only valid inside the Blazor WebView scope (not root/singleton).
+		builder.Services.AddScoped<IUserNotifier, UserNotifier>();
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();

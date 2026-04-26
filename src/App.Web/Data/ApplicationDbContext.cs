@@ -16,6 +16,11 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     {
         base.OnModelCreating(builder);
 
+        builder.Entity<ApplicationUser>(entity =>
+        {
+            entity.Property(x => x.NotificationSettingsJson).HasColumnType("text");
+        });
+
         builder.Entity<UserActivityEventEntity>(entity =>
         {
             entity.ToTable("UserActivityEvents");

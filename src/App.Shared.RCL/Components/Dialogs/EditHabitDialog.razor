@@ -1,7 +1,7 @@
 @using App.Shared.RCL.Models
 @using App.Shared.RCL.Services
 @inject IBoardDataService BoardData
-@inject ISnackbar Snackbar
+@inject IUserNotifier Notifier
 
 <MudDialog Class="edit-habit-dialog"
            ContentClass="edit-habit-dialog__content"
@@ -483,13 +483,13 @@
     {
         if (string.IsNullOrWhiteSpace(_title))
         {
-            Snackbar.Add("Title is required.", Severity.Warning);
+            await Notifier.NotifyAsync("Title is required.", Severity.Warning);
             return;
         }
 
         if (!_trackPlus && !_trackMinus)
         {
-            Snackbar.Add("Turn on at least one counter (+ and/or −).", Severity.Warning);
+            await Notifier.NotifyAsync("Turn on at least one counter (+ and/or −).", Severity.Warning);
             return;
         }
 
@@ -512,7 +512,7 @@
 
             if (updated is null)
             {
-                Snackbar.Add("Could not save this habit.", Severity.Error);
+                await Notifier.NotifyAsync("Could not save this habit.", Severity.Error);
                 return;
             }
 
@@ -520,7 +520,7 @@
         }
         catch (Exception)
         {
-            Snackbar.Add("Something went wrong. Check your connection and try again.", Severity.Error);
+            await Notifier.NotifyAsync("Something went wrong. Check your connection and try again.", Severity.Error);
         }
         finally
         {
@@ -556,7 +556,7 @@
             bool removed = await BoardData.DeleteItemAsync(BoardSection.Habit, Item.Id);
             if (!removed)
             {
-                Snackbar.Add("Could not delete this habit.", Severity.Error);
+                await Notifier.NotifyAsync("Could not delete this habit.", Severity.Error);
                 return;
             }
 
@@ -564,7 +564,7 @@
         }
         catch (Exception)
         {
-            Snackbar.Add("Something went wrong. Check your connection and try again.", Severity.Error);
+            await Notifier.NotifyAsync("Something went wrong. Check your connection and try again.", Severity.Error);
         }
         finally
         {

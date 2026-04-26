@@ -1,7 +1,7 @@
 @using App.Shared.RCL.Models
 @using App.Shared.RCL.Services
 @inject IBoardDataService BoardData
-@inject ISnackbar Snackbar
+@inject IUserNotifier Notifier
 
 <MudDialog Class="edit-daily-dialog"
            ContentClass="edit-daily-dialog__content"
@@ -478,25 +478,25 @@
     {
         if (string.IsNullOrWhiteSpace(_title))
         {
-            Snackbar.Add("Title is required.", Severity.Warning);
+            await Notifier.NotifyAsync("Title is required.", Severity.Warning);
             return;
         }
 
         if (_startDate is null)
         {
-            Snackbar.Add("Start date is required.", Severity.Warning);
+            await Notifier.NotifyAsync("Start date is required.", Severity.Warning);
             return;
         }
 
         if (_repeatInterval < 1)
         {
-            Snackbar.Add("Repeat every must be at least 1.", Severity.Warning);
+            await Notifier.NotifyAsync("Repeat every must be at least 1.", Severity.Warning);
             return;
         }
 
         if (_streak is < 0 or > 9999)
         {
-            Snackbar.Add("Streak must be between 0 and 9999.", Severity.Warning);
+            await Notifier.NotifyAsync("Streak must be between 0 and 9999.", Severity.Warning);
             return;
         }
 
@@ -519,7 +519,7 @@
 
             if (updated is null)
             {
-                Snackbar.Add("Could not save this daily.", Severity.Error);
+                await Notifier.NotifyAsync("Could not save this daily.", Severity.Error);
                 return;
             }
 
@@ -527,7 +527,7 @@
         }
         catch (Exception)
         {
-            Snackbar.Add("Something went wrong. Check your connection and try again.", Severity.Error);
+            await Notifier.NotifyAsync("Something went wrong. Check your connection and try again.", Severity.Error);
         }
         finally
         {
@@ -543,7 +543,7 @@
             bool removed = await BoardData.DeleteItemAsync(BoardSection.Daily, Item.Id);
             if (!removed)
             {
-                Snackbar.Add("Could not delete this daily.", Severity.Error);
+                await Notifier.NotifyAsync("Could not delete this daily.", Severity.Error);
                 return;
             }
 
@@ -551,7 +551,7 @@
         }
         catch (Exception)
         {
-            Snackbar.Add("Something went wrong. Check your connection and try again.", Severity.Error);
+            await Notifier.NotifyAsync("Something went wrong. Check your connection and try again.", Severity.Error);
         }
         finally
         {

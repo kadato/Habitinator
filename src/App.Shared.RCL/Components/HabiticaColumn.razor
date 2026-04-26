@@ -4,7 +4,7 @@
 @inject GlobalTimerService TimerService
 @inject IBoardDataService BoardData
 @inject IDialogService DialogService
-@inject ISnackbar Snackbar
+@inject IUserNotifier Notifier
 
 <MudCard Class="@($"habitica-column {GetAccentClass()}")" Elevation="0" Outlined="false">
     <MudCardHeader Class="pb-2">
@@ -494,7 +494,7 @@
         }
 
         _draft = string.Empty;
-        Snackbar.Add("Item added.", Severity.Success);
+        await Notifier.NotifyAsync("Item added.", Severity.Success);
     }
 
     private async Task HabitUpAsync(BoardItem item)
@@ -635,18 +635,18 @@
             await OnChanged.InvokeAsync();
             if (deleted == toDelete.Count)
             {
-                Snackbar.Add($"Deleted {deleted} completed to-do(s).", Severity.Success);
+                await Notifier.NotifyAsync($"Deleted {deleted} completed to-do(s).", Severity.Success);
             }
             else
             {
-                Snackbar.Add(
+                await Notifier.NotifyAsync(
                     $"Removed {deleted} of {toDelete.Count} to-do(s). Some could not be deleted.",
                     Severity.Warning);
             }
         }
         catch (Exception)
         {
-            Snackbar.Add("Something went wrong. Check your connection and try again.", Severity.Error);
+            await Notifier.NotifyAsync("Something went wrong. Check your connection and try again.", Severity.Error);
         }
     }
 
@@ -660,7 +660,7 @@
         }
         catch (Exception)
         {
-            Snackbar.Add("Something went wrong. Check your connection and try again.", Severity.Error);
+            await Notifier.NotifyAsync("Something went wrong. Check your connection and try again.", Severity.Error);
             return false;
         }
     }

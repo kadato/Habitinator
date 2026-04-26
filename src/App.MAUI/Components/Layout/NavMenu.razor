@@ -18,6 +18,14 @@
                Class="app-header-nav-btn text-transform-none">
         Statistics
     </MudButton>
+    <MudButton Href="/settings"
+               Variant="@(IsActivePath("settings", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
+               Color="Color.Primary"
+               Size="Size.Medium"
+               StartIcon="@Icons.Material.Filled.Notifications"
+               Class="app-header-nav-btn text-transform-none">
+        Settings
+    </MudButton>
 </div>
 
 @code {

@@ -1,0 +1,328 @@
+@using App.Shared.RCL.Models
+@using App.Shared.RCL.Services
+@inject INotificationSettingsService NotificationSettingsService
+@inject ISnackbar Snackbar
+
+<MudStack Spacing="3">
+    <MudText Typo="Typo.h5">Notifications</MudText>
+
+    @if (_loadError is not null)
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_loadError</MudAlert>
+    }
+    else if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (_model is not null)
+    {
+        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.subtitle1" Class="mb-1">In-app messages</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
+                Short on-screen messages while you use the app (for example when something succeeded, needs attention, or went wrong).
+            </MudText>
+            <MudStack Spacing="2">
+                <MudSwitch T="bool"
+                           Color="Color.Primary"
+                           Value="_model.InAppMessagesEnabled"
+                           ValueChanged="OnInAppChanged"
+                           Label="Enable in-app messages" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
+                    Turn this off to hide all in-app messages at once. When it is on, you can still limit how much you see using the options below.
+                </MudText>
+                <MudSwitch T="bool"
+                           Color="Color.Primary"
+                           Value="_model.ShowSuccessToasts"
+                           ValueChanged="v => { _model.ShowSuccessToasts = v; _ = AutoSaveAsync(); }"
+                           Disabled="!_model.InAppMessagesEnabled"
+                           Label="Show success messages" />
+                <MudSwitch T="bool"
+                           Color="Color.Primary"
+                           Value="_model.ShowWarningToasts"
+                           ValueChanged="v => { _model.ShowWarningToasts = v; _ = AutoSaveAsync(); }"
+                           Disabled="!_model.InAppMessagesEnabled"
+                           Label="Show warnings" />
+                <MudSwitch T="bool"
+                           Color="Color.Primary"
+                           Value="_model.ShowErrorToasts"
+                           ValueChanged="v => { _model.ShowErrorToasts = v; _ = AutoSaveAsync(); }"
+                           Disabled="!_model.InAppMessagesEnabled"
+                           Label="Show errors" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
+                    Shown when an action completes, when something is uncertain, and when the app reports a problem. You can keep errors visible while silencing non-critical messages.
+                </MudText>
+                <MudSelect T="NotificationToastDuration"
+                           Label="How long messages stay visible"
+                           Variant="Variant.Outlined"
+                           Dense="true"
+                           Value="_model.ToastDuration"
+                           ValueChanged="OnToastDurationChanged"
+                           Disabled="!_model.InAppMessagesEnabled">
+                    <MudSelectItem T="NotificationToastDuration" Value="NotificationToastDuration.Short">Short</MudSelectItem>
+                    <MudSelectItem T="NotificationToastDuration" Value="NotificationToastDuration.Normal">Default</MudSelectItem>
+                    <MudSelectItem T="NotificationToastDuration" Value="NotificationToastDuration.Long">Long</MudSelectItem>
+                </MudSelect>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
+                    How long each in-app message remains on screen before it dismisses.
+                </MudText>
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.subtitle1" Class="mb-1">Scheduled and device alerts</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
+                Preferences for scheduled reminders and system notifications. In the mobile app, local notifications are scheduled on supported platforms (for example Android and iOS) using your device clock for the time below.
+            </MudText>
+            <MudStack Spacing="2">
+                <MudSwitch T="bool"
+                           Color="Color.Primary"
+                           Value="_model.DailyReminderEnabled"
+                           ValueChanged="OnDailyReminderEnabledChanged"
+                           Label="Daily reminder" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
+                    When enabled in the app build that supports it, a daily notification at the time you pick lists dailies that are due and incomplete to-dos whose deadline (due date) is today or earlier.
+                </MudText>
+                <MudTimePicker Label="Daily reminder time"
+                                 Time="_dailyReminderTime"
+                                 TimeChanged="OnDailyReminderTimeChanged"
+                                 Disabled="!_model.DailyReminderEnabled"
+                                 TimeEditMode="TimeEditMode.Normal"
+                                 Class="mb-1" />
+                <MudDivider Class="my-2" />
+                <MudSwitch T="bool"
+                           Color="Color.Primary"
+                           Value="_model.FocusTimerAlertsEnabled"
+                           ValueChanged="v => { _model.FocusTimerAlertsEnabled = v; _ = AutoSaveAsync(); }"
+                           Label="Focus timer alerts" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
+                    On the board, the session timer can show &quot;time's up&quot; after a duration you choose (hours and minutes in the time picker). Leave the field empty to use a plain stopwatch with no alert.
+                </MudText>
+                <MudSwitch T="bool"
+                           Color="Color.Primary"
+                           Value="_model.SyncFailureAlertsEnabled"
+                           ValueChanged="v => { _model.SyncFailureAlertsEnabled = v; _ = AutoSaveAsync(); }"
+                           Label="Sync / offline issue alerts" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
+                    Get alerted when the app cannot reach the server, data failed to sync, or you are working offline, when that detection is available.
+                </MudText>
+                <MudSwitch T="bool"
+                           Color="Color.Primary"
+                           Value="_model.SoundEnabledForDeviceNotifications"
+                           ValueChanged="v => { _model.SoundEnabledForDeviceNotifications = v; _ = AutoSaveAsync(); }"
+                           Label="Sound for device notifications (mobile)" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
+                    Plays a sound with push or system notifications on a phone or tablet, in addition to any on-screen alert.
+                </MudText>
+                <MudDivider Class="my-2" />
+                <MudSwitch T="bool"
+                           Color="Color.Primary"
+                           Value="_model.QuietHoursEnabled"
+                           ValueChanged="OnQuietHoursEnabledChanged"
+                           Label="Quiet hours (UTC)" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    In this window, in-app success and warning messages are hidden so the app stays calmer. Error messages are still shown so you do not miss real problems. The start and end use Universal Time (UTC), not your device's local time — convert if you want these to match particular local hours.
+                </MudText>
+                <MudStack Row="true" Spacing="2" Style="flex-wrap: wrap;">
+                    <MudTimePicker Label="Quiet start (UTC)"
+                                   Time="_quietStart"
+                                   TimeChanged="OnQuietStartChanged"
+                                   Disabled="!_model.QuietHoursEnabled"
+                                   TimeEditMode="TimeEditMode.Normal" />
+                    <MudTimePicker Label="Quiet end (UTC)"
+                                   Time="_quietEnd"
+                                   TimeChanged="OnQuietEndChanged"
+                                   Disabled="!_model.QuietHoursEnabled"
+                                   TimeEditMode="TimeEditMode.Normal" />
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Disabled="_saving"
+                   OnClick="SaveAsync"
+                   Class="text-transform-none">
+            Save now
+        </MudButton>
+    }
+</MudStack>
+
+@code {
+    private NotificationSettings? _model;
+    private TimeSpan? _dailyReminderTime;
+    private TimeSpan? _quietStart;
+    private TimeSpan? _quietEnd;
+    private bool _loading = true;
+    private bool _saving;
+    private string? _loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            NotificationSettings loaded = await NotificationSettingsService.GetAsync();
+            ApplyModel(loaded);
+        }
+        catch (Exception ex)
+        {
+            _loadError = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ApplyModel(NotificationSettings s)
+    {
+        _model = Clone(s);
+        _dailyReminderTime = s.DailyReminderTime ?? TimeSpan.FromHours(7);
+        _quietStart = s.QuietHoursStartUtc ?? TimeSpan.FromHours(22);
+        _quietEnd = s.QuietHoursEndUtc ?? TimeSpan.FromHours(7);
+    }
+
+    private static NotificationSettings Clone(NotificationSettings s) =>
+        NotificationSettingsJson.DeserializeOrDefault(NotificationSettingsJson.Serialize(s));
+
+    private Task OnInAppChanged(bool v)
+    {
+        if (_model is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        _model.InAppMessagesEnabled = v;
+        return AutoSaveAsync();
+    }
+
+    private Task OnToastDurationChanged(NotificationToastDuration v)
+    {
+        if (_model is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        _model.ToastDuration = v;
+        return AutoSaveAsync();
+    }
+
+    private Task OnDailyReminderEnabledChanged(bool v)
+    {
+        if (_model is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        _model.DailyReminderEnabled = v;
+        return AutoSaveAsync();
+    }
+
+    private Task OnDailyReminderTimeChanged(TimeSpan? t)
+    {
+        if (_model is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        _dailyReminderTime = t;
+        _model.DailyReminderTime = t;
+        return AutoSaveAsync();
+    }
+
+    private Task OnQuietHoursEnabledChanged(bool v)
+    {
+        if (_model is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        _model.QuietHoursEnabled = v;
+        return AutoSaveAsync();
+    }
+
+    private Task OnQuietStartChanged(TimeSpan? t)
+    {
+        if (_model is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        _quietStart = t;
+        _model.QuietHoursStartUtc = t;
+        return AutoSaveAsync();
+    }
+
+    private Task OnQuietEndChanged(TimeSpan? t)
+    {
+        if (_model is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        _quietEnd = t;
+        _model.QuietHoursEndUtc = t;
+        return AutoSaveAsync();
+    }
+
+    private async Task AutoSaveAsync()
+    {
+        if (_model is null)
+        {
+            return;
+        }
+
+        try
+        {
+            SyncTimePickersToModel();
+            await NotificationSettingsService.SaveAsync(_model);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Could not save settings: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_model is null)
+        {
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            SyncTimePickersToModel();
+            await NotificationSettingsService.SaveAsync(_model);
+            Snackbar.Add("Settings saved.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Could not save settings: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void SyncTimePickersToModel()
+    {
+        if (_model is null)
+        {
+            return;
+        }
+
+        _model.DailyReminderTime = _model.DailyReminderEnabled ? _dailyReminderTime : null;
+        if (_model.QuietHoursEnabled)
+        {
+            _model.QuietHoursStartUtc = _quietStart;
+            _model.QuietHoursEndUtc = _quietEnd;
+        }
+        else
+        {
+            _model.QuietHoursStartUtc = null;
+            _model.QuietHoursEndUtc = null;
+        }
+    }
+}

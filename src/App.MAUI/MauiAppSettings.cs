@@ -1,0 +1,37 @@
+using Microsoft.Extensions.Configuration;
+
+namespace App.MAUI;
+
+public static class MauiAppSettings
+{
+    internal const string EnvApiBaseUrl = "HABITINATOR_API_BASE_URL";
+
+    /// <summary>
+    /// Resolves the App.Web API origin (no trailing slash). The mobile app does not host the API:
+    /// run <c>App.Web</c> (or Aspire AppHost) so this host is listening, or override via env/appsettings.
+    /// </summary>
+    public static string ResolveApiBaseUrl(IConfiguration configuration)
+    {
+        string? env = Environment.GetEnvironmentVariable(EnvApiBaseUrl);
+        if (!string.IsNullOrWhiteSpace(env))
+        {
+            return env.Trim().TrimEnd('/');
+        }
+
+        string? fromConfig = configuration["Api:BaseUrl"];
+        if (!string.IsNullOrWhiteSpace(fromConfig))
+        {
+            return fromConfig.Trim().TrimEnd('/');
+        }
+
+        return DefaultApiBaseUrlNoSlash();
+    }
+
+    /// <summary>Fallback when env and appsettings do not set <c>Api:BaseUrl</c>.</summary>
+    public static string DefaultApiBaseUrlNoSlash() =>
+#if ANDROID
+        "http://10.0.2.2:5031";
+#else
+        "http://127.0.0.1:5031";
+#endif
+}

@@ -1,5 +1,10 @@
-﻿using App.MAUI.Services;
+﻿using System;
+using System.Linq;
+using System.Reflection;
+using App.MAUI.Services;
 using App.Shared.RCL.Services;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MudBlazor.Services;
 using Plugin.LocalNotification;
@@ -12,6 +17,7 @@ public static class MauiProgram
 	public static MauiApp CreateMauiApp()
 	{
 		var builder = MauiApp.CreateBuilder();
+		AddEmbeddedAppSettings(builder);
 		builder
 			.UseMauiApp<App>()
 			.ConfigureFonts(fonts =>
@@ -30,19 +36,31 @@ public static class MauiProgram
 
 		builder.Services.AddMauiBlazorWebView();
 		builder.Services.AddMudServices();
+		string apiBase = MauiAppSettings.ResolveApiBaseUrl(builder.Configuration).TrimEnd('/') + "/";
+		builder.Services.AddSingleton(_ => new MauiApiEndpointOptions(apiBase));
+		builder.Services.AddSingleton<IAuthTokenStore, AuthTokenStore>();
+		builder.Services.AddSingleton<IRemoteBoardRefreshService, RemoteBoardRefreshService>();
+		builder.Services.AddSingleton<BoardRemoteNotifyBridge>();
+		builder.Services.AddSingleton<MauiBoardHubService>();
+		builder.Services.AddSingleton<IApiSession, ApiSession>();
+		builder.Services.AddTransient<AuthMessageHandler>();
+		builder.Services.AddHttpClient("apiAuth", c => c.BaseAddress = new Uri(apiBase));
+		builder.Services.AddHttpClient("api", c => c.BaseAddress = new Uri(apiBase))
+			.AddHttpMessageHandler<AuthMessageHandler>();
+		builder.Services.AddSingleton<ApiAuthService>();
+		builder.Services.AddSingleton<RemoteBoardDataService>();
 		builder.Services.AddSingleton<IClock, SystemClock>();
 		builder.Services.AddSingleton<GlobalTimerService>();
 		builder.Services.AddSingleton<MauiActivityEventStore>();
-		builder.Services.AddSingleton<LocalBoardDataService>();
 		builder.Services.AddSingleton<IUserActivityLogService, MauiUserActivityLogService>();
 		builder.Services.AddSingleton<IBoardDataService>(sp =>
 		{
-			LocalBoardDataService inner = sp.GetRequiredService<LocalBoardDataService>();
+			RemoteBoardDataService inner = sp.GetRequiredService<RemoteBoardDataService>();
 			IUserActivityLogService log = sp.GetRequiredService<IUserActivityLogService>();
 			return new ActivityLoggingBoardDataService(inner, log);
 		});
-		builder.Services.AddSingleton<IActivityStatisticsReader, MauiActivityStatisticsReader>();
-		builder.Services.AddSingleton<INotificationSettingsService, MauiNotificationSettingsService>();
+		builder.Services.AddSingleton<IActivityStatisticsReader, MauiApiActivityStatisticsReader>();
+		builder.Services.AddSingleton<INotificationSettingsService, MauiApiNotificationSettingsService>();
 		builder.Services.AddSingleton<MauiDailyReminderService>();
 		// Scoped: UserNotifier -> ISnackbar uses NavigationManager, which is only valid inside the Blazor WebView scope (not root/singleton).
 		builder.Services.AddScoped<IUserNotifier, UserNotifier>();
@@ -55,5 +73,23 @@ public static class MauiProgram
 #endif
 
 		return builder.Build();
+	}
+
+	private static void AddEmbeddedAppSettings(MauiAppBuilder builder)
+	{
+		Assembly assembly = typeof(MauiProgram).Assembly;
+		string? resName = assembly
+			.GetManifestResourceNames()
+			.FirstOrDefault(static n => n.EndsWith("appsettings.json", StringComparison.OrdinalIgnoreCase));
+		if (resName is null)
+		{
+			return;
+		}
+
+		using Stream? stream = assembly.GetManifestResourceStream(resName);
+		if (stream is not null)
+		{
+			builder.Configuration.AddJsonStream(stream);
+		}
 	}
 }

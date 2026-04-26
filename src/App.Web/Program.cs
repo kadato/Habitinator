@@ -62,6 +62,7 @@ builder.Services.AddScoped<IUserActivityLogService, WebUserActivityLogService>()
 builder.Services.AddScoped<INotificationSettingsService, WebNotificationSettingsService>();
 builder.Services.AddScoped<IUserNotifier, UserNotifier>();
 builder.Services.AddScoped<IFocusTimerClientAlerts, FocusTimerClientAlerts>();
+builder.Services.AddScoped<IDailyRetroPromptStore, JsDailyRetroPromptStore>();
 builder.Services.AddHttpClient();
 
 var authBuilder = builder.Services

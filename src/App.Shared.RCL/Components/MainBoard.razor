@@ -1,8 +1,11 @@
+@using App.Shared.RCL.Components.Dialogs
 @using App.Shared.RCL.Models
 @using App.Shared.RCL.Services
 @inject GlobalTimerService TimerService
 @inject IBoardDataService BoardDataService
 @inject IUserActivityLogService UserActivityLog
+@inject IDialogService DialogService
+@inject IDailyRetroPromptStore DailyRetroStore
 
 <MudStack Class="board-shell mud-width-full" Spacing="1">
     @if (_isLoading)
@@ -171,6 +174,8 @@
     private string? _loadError;
     private string _searchText = string.Empty;
     private readonly HashSet<string> _selectedFilterTags = new(StringComparer.OrdinalIgnoreCase);
+    private bool _dailyRetroSessionOffered;
+    private bool _dailyRetroClientReady;
 
     private IReadOnlyList<BoardItem> FilteredHabits => FilterItems(Habits);
     private IReadOnlyList<BoardItem> FilteredDailies => FilterItems(Dailies);
@@ -219,6 +224,19 @@
         await InitialLoadAsync();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dailyRetroClientReady = true;
+        }
+
+        if (firstRender && _initialLoadComplete && _loadError is null)
+        {
+            await TryOpenDailyYesterdayRetroIfNeededAsync();
+        }
+    }
+
     private async Task OnBoardChanged()
     {
         await LoadBoardAsync();
@@ -262,6 +280,14 @@
         finally
         {
             _isLoading = false;
+        }
+
+        if (_loadError is null)
+        {
+            if (_dailyRetroClientReady)
+            {
+                await TryOpenDailyYesterdayRetroIfNeededAsync();
+            }
         }
     }
 
@@ -448,6 +474,79 @@
 
         int at = email.IndexOf('@');
         return at > 0 ? email[..at] : email;
+    }
+
+    private async Task TryOpenDailyYesterdayRetroIfNeededAsync()
+    {
+        if (_dailyRetroSessionOffered)
+        {
+            return;
+        }
+
+        DateOnly today = DailySchedule.UtcToday;
+        DateOnly? lastResolved;
+        try
+        {
+            lastResolved = await DailyRetroStore.GetLastPromptResolvedUtcDateAsync();
+        }
+        catch (Exception)
+        {
+            return;
+        }
+
+        if (lastResolved == today)
+        {
+            return;
+        }
+
+        IReadOnlyList<BoardItem> missed = DailySchedule.GetYesterdayUncompletedDailies(Dailies, today);
+        if (missed.Count == 0)
+        {
+            return;
+        }
+
+        DateOnly y = today.AddDays(-1);
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = false,
+            CloseButton = false,
+            CloseOnEscapeKey = true
+        };
+        var parameters = new DialogParameters<DailyYesterdayRetroDialog>
+        {
+            { x => x.DueOn, y },
+            { x => x.Items, missed }
+        };
+
+        _dailyRetroSessionOffered = true;
+        try
+        {
+            IDialogReference dialog = await DialogService.ShowAsync<DailyYesterdayRetroDialog>(
+                "Catch up: yesterday’s dailies", parameters, options);
+            _ = await dialog.Result;
+        }
+        catch (Exception)
+        {
+            _dailyRetroSessionOffered = false;
+            return;
+        }
+
+        try
+        {
+            await DailyRetroStore.SetPromptResolvedForTodayAsync();
+        }
+        catch (Exception)
+        {
+        }
+
+        try
+        {
+            await LoadBoardAsync();
+        }
+        catch (Exception)
+        {
+        }
     }
 
 }

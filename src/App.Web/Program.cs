@@ -57,6 +57,7 @@ builder.Services.AddScoped<DemoUserResolver>();
 builder.Services.AddScoped<BoardPersistenceService>();
 builder.Services.AddScoped<IBoardDataService, WebBoardDataService>();
 builder.Services.AddScoped<ActivityStatisticsService>();
+builder.Services.AddScoped<IActivityStatisticsReader, WebActivityStatisticsReader>();
 builder.Services.AddScoped<IUserActivityLogService, WebUserActivityLogService>();
 builder.Services.AddHttpClient();
 

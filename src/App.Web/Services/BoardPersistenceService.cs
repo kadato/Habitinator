@@ -408,6 +408,17 @@ public sealed class BoardPersistenceService
         return entity.DailyLastCompletedOn is null && entity.IsCompleted;
     }
 
+    public async Task LogActivityAsync(
+        Guid userId,
+        ActivityEventType type,
+        Guid? boardItemId,
+        int? durationSeconds = null,
+        CancellationToken cancellationToken = default)
+    {
+        AddActivityEvent(userId, type, boardItemId, durationSeconds);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     private void AddActivityEvent(Guid userId, ActivityEventType type, Guid? boardItemId, int? durationSeconds = null)
     {
         _dbContext.UserActivityEvents.Add(new UserActivityEventEntity

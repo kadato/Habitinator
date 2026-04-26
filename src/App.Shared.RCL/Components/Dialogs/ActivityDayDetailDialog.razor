@@ -1,8 +1,6 @@
-@using global::App.Web.Services
-@using global::App.Web.Data
-@inject ActivityStatisticsService Stats
-@inject DemoUserResolver DemoUser
-@inject AuthenticationStateProvider Auth
+@using App.Shared.RCL.Models
+@using App.Shared.RCL.Services
+@inject IActivityStatisticsReader Stats
 
 <MudDialog>
     <DialogContent>
@@ -63,15 +61,7 @@
         _error = null;
         try
         {
-            AuthenticationState state = await Auth.GetAuthenticationStateAsync();
-            if (state.User.Identity?.IsAuthenticated != true)
-            {
-                _error = "Not signed in.";
-                return;
-            }
-
-            Guid userId = await DemoUser.ResolveUserIdAsync(state.User);
-            _detail = await Stats.GetActivityDayDetailAsync(userId, Date);
+            _detail = await Stats.GetActivityDayDetailAsync(Date);
         }
         catch (Exception ex)
         {

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -25,10 +26,36 @@ public sealed class RemoteBoardDataService : IBoardDataService
 
     public async Task<BoardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
     {
-        using HttpResponseMessage res = await Client.GetAsync("api/board", cancellationToken);
-        res.EnsureSuccessStatusCode();
-        BoardSnapshot? s = await res.Content.ReadFromJsonAsync<BoardSnapshot>(Serializer, cancellationToken);
-        return s ?? throw new InvalidOperationException("Empty board response.");
+        try
+        {
+            using HttpResponseMessage res = await Client.GetAsync("api/board", cancellationToken);
+            if (!res.IsSuccessStatusCode)
+            {
+                string hint = res.StatusCode == HttpStatusCode.Unauthorized
+                    ? " Sign in again if you were logged out."
+                    : " Is App.Web running? On Android emulator use 10.0.2.2 instead of 127.0.0.1 (set Api:BaseUrl or HABITINATOR_API_BASE_URL).";
+                throw new InvalidOperationException($"Board request failed ({(int)res.StatusCode}).{hint}");
+            }
+
+            BoardSnapshot? s;
+            try
+            {
+                s = await res.Content.ReadFromJsonAsync<BoardSnapshot>(Serializer, cancellationToken);
+            }
+            catch (JsonException)
+            {
+                throw new InvalidOperationException(
+                    "Board response was not valid JSON. Check Api:BaseUrl / HABITINATOR_API_BASE_URL points at the Habitinator API host.");
+            }
+
+            return s ?? throw new InvalidOperationException("Empty board response.");
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new InvalidOperationException(
+                "Could not reach the API. Start App.Web, then try again. On the Android emulator use base URL http://10.0.2.2:5031 (127.0.0.1 is the emulator itself).",
+                ex);
+        }
     }
 
     public async Task<BoardItem> CreateItemAsync(BoardSection section, string title, CancellationToken cancellationToken = default)

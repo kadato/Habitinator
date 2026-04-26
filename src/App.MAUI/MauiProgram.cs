@@ -44,9 +44,11 @@ public static class MauiProgram
 		builder.Services.AddSingleton<MauiBoardHubService>();
 		builder.Services.AddSingleton<IApiSession, ApiSession>();
 		builder.Services.AddTransient<AuthMessageHandler>();
+		builder.Services.AddTransient<ClearSessionOnUnauthorizedHandler>();
 		builder.Services.AddHttpClient("apiAuth", c => c.BaseAddress = new Uri(apiBase));
 		builder.Services.AddHttpClient("api", c => c.BaseAddress = new Uri(apiBase))
-			.AddHttpMessageHandler<AuthMessageHandler>();
+			.AddHttpMessageHandler<AuthMessageHandler>()
+			.AddHttpMessageHandler<ClearSessionOnUnauthorizedHandler>();
 		builder.Services.AddSingleton<ApiAuthService>();
 		builder.Services.AddSingleton<RemoteBoardDataService>();
 		builder.Services.AddSingleton<IClock, SystemClock>();

@@ -67,6 +67,19 @@
     letter-spacing: 0.04em;
     line-height: 1.1;
     flex: 0 0 auto;
+    margin: 0;
+}
+
+/* Session target + "Time's up": vertically center with each other and with the clock row. */
+.timer-inputs-pair {
+    display: flex;
+    flex: 1 1 14rem;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    align-content: center;
+    gap: 0.35rem 0.75rem;
+    min-width: 0;
 }
 
 .timer-target-input-row {
@@ -91,9 +104,41 @@
 
 .timer-target-type-icon {
     flex-shrink: 0;
-    margin-top: 0.15rem;
     opacity: 0.88;
     align-self: center;
+}
+
+/* Focus duration (free-text minutes or h:mm); keep compact next to the session target. */
+.timer-focus-field {
+    display: flex;
+    align-items: center;
+    flex: 0 1 10.5rem;
+    min-width: 7.5rem;
+    max-width: 12.5rem;
+}
+
+.timer-focus-input-row {
+    min-width: 0;
+    width: 100%;
+}
+
+.focus-duration-help-text {
+    max-width: 20rem;
+    white-space: pre-line;
+    line-height: 1.4;
+    display: block;
+}
+
+.timer-focus-field ::deep .mud-input-control,
+.timer-focus-field ::deep .mud-input,
+.timer-focus-field ::deep .mud-input-outlined {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.timer-focus-field ::deep .mud-input > input.mud-input-root,
+.timer-focus-field ::deep .mud-input-slot input {
+    font-variant-numeric: tabular-nums;
 }
 
 .timer-target-field {

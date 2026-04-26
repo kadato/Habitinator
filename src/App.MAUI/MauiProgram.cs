@@ -34,6 +34,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<INotificationSettingsService, MauiNotificationSettingsService>();
 		// Scoped: UserNotifier -> ISnackbar uses NavigationManager, which is only valid inside the Blazor WebView scope (not root/singleton).
 		builder.Services.AddScoped<IUserNotifier, UserNotifier>();
+		builder.Services.AddScoped<IFocusTimerClientAlerts, FocusTimerClientAlerts>();
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();

@@ -73,6 +73,66 @@ public sealed class GlobalTimerServiceTests
         Assert.False(timer.IsRunning);
     }
 
+    [Fact]
+    public void TryConsumeFocusDurationReached_TrueWhileRunningPastMilestone_PauseClearsReadyState()
+    {
+        var clock = new FakeClock(new DateTimeOffset(2026, 4, 24, 10, 0, 0, TimeSpan.Zero));
+        var timer = new GlobalTimerService(clock);
+        timer.FocusAlertAfter = TimeSpan.FromMinutes(25);
+
+        timer.Start();
+        Assert.False(timer.TryConsumeFocusDurationReached());
+        clock.Advance(TimeSpan.FromMinutes(25));
+        Assert.True(timer.TryConsumeFocusDurationReached());
+        Assert.True(timer.TryConsumeFocusDurationReached());
+
+        clock.Advance(TimeSpan.FromMinutes(10));
+        Assert.True(timer.TryConsumeFocusDurationReached());
+        timer.PauseForFocusTimeUp();
+        Assert.False(timer.TryConsumeFocusDurationReached());
+        clock.Advance(TimeSpan.FromMinutes(1));
+        timer.ResumeAfterFocusPromptNotDone();
+        Assert.False(timer.TryConsumeFocusDurationReached());
+        clock.Advance(TimeSpan.FromMinutes(25));
+        Assert.True(timer.TryConsumeFocusDurationReached());
+    }
+
+    [Fact]
+    public void TryConsumeFocusDurationReached_NoTargetOrNotRunning()
+    {
+        var clock = new FakeClock(new DateTimeOffset(2026, 4, 24, 10, 0, 0, TimeSpan.Zero));
+        var timer = new GlobalTimerService(clock);
+
+        timer.Start();
+        clock.Advance(TimeSpan.FromHours(1));
+        Assert.False(timer.TryConsumeFocusDurationReached());
+
+        timer.FocusAlertAfter = TimeSpan.FromHours(1);
+        Assert.False(timer.TryConsumeFocusDurationReached());
+        clock.Advance(TimeSpan.FromHours(1));
+        Assert.True(timer.TryConsumeFocusDurationReached());
+        timer.Stop();
+
+        Assert.False(timer.TryConsumeFocusDurationReached());
+    }
+
+    [Fact]
+    public void Stop_ResetsFocusEndConsumed_SoNewSessionCanAlert()
+    {
+        var clock = new FakeClock(new DateTimeOffset(2026, 4, 24, 10, 0, 0, TimeSpan.Zero));
+        var timer = new GlobalTimerService(clock);
+        timer.FocusAlertAfter = TimeSpan.FromSeconds(1);
+        timer.Start();
+        clock.Advance(TimeSpan.FromSeconds(1));
+        Assert.True(timer.TryConsumeFocusDurationReached());
+        timer.Stop();
+        Assert.False(timer.IsRunning);
+        timer.Start();
+        Assert.False(timer.TryConsumeFocusDurationReached());
+        clock.Advance(TimeSpan.FromSeconds(1));
+        Assert.True(timer.TryConsumeFocusDurationReached());
+    }
+
     private sealed class FakeClock : IClock
     {
         public FakeClock(DateTimeOffset initial)

@@ -1,6 +1,9 @@
 @using App.Shared.RCL.Models
 @using App.Shared.RCL.Services
 @inject GlobalTimerService TimerService
+@inject IUserNotifier UserNotifier
+@inject IFocusTimerClientAlerts FocusClientAlerts
+@inject IDialogService DialogService
 @implements IDisposable
 
 <MudCard Class="timer-panel" Elevation="0" Outlined="true">
@@ -15,42 +18,83 @@
                              title="Session timer" />
                     <MudText Typo="Typo.h4" Class="timer-value">@TimerService.Elapsed.ToString(@"hh\:mm\:ss")</MudText>
                 </div>
-                <div class="timer-target-input-row">
-                    <MudIcon Icon="@GetTimerTargetLeadIcon()"
-                             Color="Color.Default"
-                             Size="Size.Small"
-                             Class="timer-target-type-icon"
-                             title="@GetTimerTargetLeadTitle()" />
-                    <MudAutocomplete T="string"
-                                     Value="@_sessionTargetText"
-                                     ValueChanged="OnSessionTargetValueChanged"
-                                     SearchFunc="SearchSessionTargetsAsync"
-                                     Label="Session target"
-                                     Placeholder="Search board or type a custom label"
-                                     Variant="Variant.Outlined"
-                                     Margin="Margin.Dense"
-                                     Class="timer-target-field flex-grow-1"
-                                     Immediate="true"
-                                     CoerceValue="true"
-                                     Strict="false"
-                                     MinCharacters="0"
-                                     Clearable="true"
-                                     ResetValueOnEmptyText="true">
-                        <ItemTemplate Context="rowKey">
-                            @{
-                                _sessionLabelToTarget.TryGetValue(rowKey, out (string TargetType, string TargetTitle, Guid _) entry);
-                            }
-                            <MudStack Row="true"
-                                      Spacing="2"
-                                      AlignItems="AlignItems.Center"
-                                      Class="mud-width-full">
-                                <MudIcon Color="Color.Default"
-                                         Icon="@BoardSectionVisuals.GetMudIconForTargetType(entry.TargetType)"
-                                         Size="Size.Small" />
-                                <MudText Typo="Typo.body2" Class="flex-grow-1 text-truncate">@rowKey</MudText>
-                            </MudStack>
-                        </ItemTemplate>
-                    </MudAutocomplete>
+                <div class="timer-inputs-pair">
+                    <div class="timer-target-input-row">
+                        <MudIcon Icon="@GetTimerTargetLeadIcon()"
+                                 Color="Color.Default"
+                                 Size="Size.Small"
+                                 Class="timer-target-type-icon"
+                                 title="@GetTimerTargetLeadTitle()" />
+                        <MudAutocomplete T="string"
+                                         Value="@_sessionTargetText"
+                                         ValueChanged="OnSessionTargetValueChanged"
+                                         SearchFunc="SearchSessionTargetsAsync"
+                                         Label="Session target"
+                                         Placeholder="Search board or type a custom label"
+                                         Variant="Variant.Outlined"
+                                         Margin="Margin.Dense"
+                                         Class="timer-target-field flex-grow-1"
+                                         Immediate="true"
+                                         CoerceValue="true"
+                                         Strict="false"
+                                         MinCharacters="0"
+                                         Clearable="true"
+                                         ResetValueOnEmptyText="true">
+                            <ItemTemplate Context="rowKey">
+                                @{
+                                    _sessionLabelToTarget.TryGetValue(rowKey, out (string TargetType, string TargetTitle, Guid _) entry);
+                                }
+                                <MudStack Row="true"
+                                          Spacing="2"
+                                          AlignItems="AlignItems.Center"
+                                          Class="mud-width-full">
+                                    <MudIcon Color="Color.Default"
+                                             Icon="@BoardSectionVisuals.GetMudIconForTargetType(entry.TargetType)"
+                                             Size="Size.Small" />
+                                    <MudText Typo="Typo.body2" Class="flex-grow-1 text-truncate">@rowKey</MudText>
+                                </MudStack>
+                            </ItemTemplate>
+                        </MudAutocomplete>
+                    </div>
+                    <div class="timer-focus-field" @onkeydown="OnFocusDurationKeyDown">
+                        <MudStack Row="true"
+                                  Spacing="0"
+                                  AlignItems="AlignItems.Center"
+                                  Class="timer-focus-input-row">
+                            <MudTextField T="string"
+                                          @bind-Text="FocusDurationText"
+                                          OnBlur="OnFocusDurationBlur"
+                                          Label="Time's up after"
+                                          Placeholder="e.g. 25, 1:20, 90s, 0:0:30"
+                                          Clearable="true"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense"
+                                          Class="mud-width-full flex-grow-1"
+                                          Immediate="true"
+                                          Error="@_focusDurationParseError"
+                                          ErrorText="@_focusDurationErrorText" />
+                            <MudTooltip ShowOnHover="true"
+                                        ShowOnClick="true"
+                                        ShowOnFocus="true"
+                                        Delay="100"
+                                        Arrow="true"
+                                        Placement="Placement.Top">
+                                <ChildContent>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                                   Variant="Variant.Text"
+                                                   Size="Size.Small"
+                                                   Color="Color.Default"
+                                                   Class="timer-focus-info-icon"
+                                                   aria-label="How time's up alert works" />
+                                </ChildContent>
+                                <TooltipContent>
+                                    <MudText Typo="Typo.caption" Class="focus-duration-help-text">
+                                        @FocusDurationInput.HelpTooltip
+                                    </MudText>
+                                </TooltipContent>
+                            </MudTooltip>
+                        </MudStack>
+                    </div>
                 </div>
             </div>
 
@@ -61,7 +105,7 @@
                            Class="timer-btn timer-btn--start"
                            OnClick="Start"
                            Size="Size.Small"
-                           Disabled="@TimerService.IsRunning">
+                           Disabled="@(!CanStart)">
                     Start
                 </MudButton>
                 <MudButton Variant="Variant.Filled"
@@ -102,6 +146,36 @@
     private PeriodicTimer? _uiTick;
     private CancellationTokenSource? _uiTickCts;
     private string _sessionTargetText = string.Empty;
+    private string _focusDurationText = string.Empty;
+    private string FocusDurationText
+    {
+        get => _focusDurationText;
+        set
+        {
+            string v = value ?? string.Empty;
+            if (_focusDurationText == v)
+            {
+                return;
+            }
+
+            _focusDurationText = v;
+            _focusDurationParseError = false;
+            if (string.IsNullOrWhiteSpace(_focusDurationText))
+            {
+                TimerService.FocusAlertAfter = null;
+            }
+        }
+    }
+
+    private bool _focusDurationParseError;
+    private string? _focusDurationErrorText =>
+        _focusDurationParseError ? FocusDurationInput.ParseErrorHint : null;
+
+    /// <summary>Session target (board item or custom label) is required before starting.</summary>
+    private bool CanStart =>
+        !TimerService.IsRunning
+        && !TimerService.AwaitingFocusTimeUpPrompt
+        && !string.IsNullOrWhiteSpace(TimerService.TargetId);
     private readonly List<string> _sessionTargetOptions = [];
     private readonly Dictionary<string, (string TargetType, string TargetTitle, Guid ItemId)> _sessionLabelToTarget = new(StringComparer.Ordinal);
 
@@ -116,6 +190,49 @@
     {
         RebuildSessionTargetOptions();
         _sessionTargetText = FormatTargetForField(TimerService);
+        SyncFocusDurationFromService();
+    }
+
+    private void SyncFocusDurationFromService()
+    {
+        _focusDurationText = FocusDurationInput.FormatForField(TimerService.FocusAlertAfter);
+        _focusDurationParseError = false;
+    }
+
+    private void OnFocusDurationBlur()
+    {
+        ApplyFocusDurationFromText();
+    }
+
+    private void OnFocusDurationKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or "NumpadEnter")
+        {
+            ApplyFocusDurationFromText();
+        }
+    }
+
+    private void ApplyFocusDurationFromText()
+    {
+        if (string.IsNullOrWhiteSpace(_focusDurationText))
+        {
+            TimerService.FocusAlertAfter = null;
+            _focusDurationText = string.Empty;
+            _focusDurationParseError = false;
+            return;
+        }
+
+        if (!FocusDurationInput.TryParse(_focusDurationText, out TimeSpan? parsed)
+            || parsed is null
+            || parsed <= TimeSpan.Zero)
+        {
+            _focusDurationParseError = true;
+            return;
+        }
+
+        _focusDurationParseError = false;
+        TimerService.FocusAlertAfter = parsed;
+        _focusDurationText = FocusDurationInput.FormatForField(parsed);
     }
 
     private async Task RunUiTickAsync(CancellationToken cancellationToken)
@@ -129,10 +246,20 @@
         {
             while (await _uiTick.WaitForNextTickAsync(cancellationToken))
             {
-                if (TimerService.IsRunning)
+                if (TimerService.IsRunning && TimerService.TryConsumeFocusDurationReached())
                 {
-                    await InvokeAsync(StateHasChanged);
+                    string label = string.IsNullOrEmpty(TimerService.TargetId) ? "Open session" : TimerService.TargetId;
+                    string dur = FocusDurationInput.FormatForAlertLabel(TimerService.FocusAlertAfter!.Value);
+                    string message = $"Time's up ({dur}) — {label}";
+                    TimerService.PauseForFocusTimeUp();
+                    // Do not await: show prompt without blocking the UI tick (display stays on the frozen time).
+                    _ = InvokeAsync(async () =>
+                    {
+                        await OnFocusDurationReachedAsync(message, dur, label, cancellationToken);
+                    });
                 }
+
+                await InvokeAsync(StateHasChanged);
             }
         }
         catch (OperationCanceledException)
@@ -293,9 +420,81 @@
         _sessionTargetText = FormatTargetForField(TimerService);
     }
 
-    private void Start() => TimerService.Start();
+    private void Start()
+    {
+        if (!CanStart)
+        {
+            return;
+        }
+
+        TimerService.Start();
+    }
 
     private void Pause() => TimerService.Pause();
+
+    /// <summary>
+    /// The timer is already paused at the milestone. Logging only if the user confirms; "not done" resumes counting.
+    /// </summary>
+    private async Task OnFocusDurationReachedAsync(
+        string notifyMessage,
+        string durationLabel,
+        string targetLabel,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await FocusClientAlerts.NotifyTimeUpAsync("Time's up", notifyMessage, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            TimerService.ResumeAfterFocusPromptNotDone();
+            return;
+        }
+
+        try
+        {
+            await UserNotifier.NotifyFocusTimerEndAsync(notifyMessage, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            TimerService.ResumeAfterFocusPromptNotDone();
+            return;
+        }
+
+        bool? confirmed;
+        try
+        {
+            confirmed = await DialogService.ShowMessageBoxAsync(
+                "Time's up",
+                "(" + durationLabel + ") is up for \"" + targetLabel + "\". "
+                + "The timer is paused. If you actually finished, log this session and update the board. "
+                + "If you are not done yet, choose Not done — the timer will continue from this time.",
+                yesText: "Yes, log session",
+                noText: "Not done",
+                cancelText: null);
+        }
+        catch (Exception)
+        {
+            await UserNotifier.NotifyAsync(
+                "Time's up — open the timer panel to log your session, or use Stop & log.",
+                Severity.Info,
+                cancellationToken);
+            TimerService.ResumeAfterFocusPromptNotDone();
+            return;
+        }
+
+        if (confirmed != true)
+        {
+            TimerService.ResumeAfterFocusPromptNotDone();
+            return;
+        }
+
+        TimeSpan elapsed = TimerService.Stop();
+        if (elapsed > TimeSpan.Zero)
+        {
+            await OnLogSaved.InvokeAsync(elapsed);
+        }
+    }
 
     private async Task StopAndLog()
     {

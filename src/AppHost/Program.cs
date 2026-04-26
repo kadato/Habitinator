@@ -11,7 +11,9 @@ var postgres = builder
 
 var habitinatorDb = postgres.AddDatabase("habitinatordb");
 
-builder.AddProject("app-web", "../App.Web/App.Web.csproj")
+// Port 5031 comes from App.Web Properties/launchSettings.json profile "http".
+// Do not add WithHttpEndpoint(name: "http") — AddProject already creates that endpoint from the launch profile.
+builder.AddProject("app-web", "../App.Web/App.Web.csproj", options => options.LaunchProfileName = "http")
     .WithReference(habitinatorDb)
     .WaitFor(habitinatorDb);
 

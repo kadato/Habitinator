@@ -1,4 +1,4 @@
-namespace App.Web.Auth;
+namespace App.Shared.RCL.Models;
 
 public sealed record RegisterRequest(string Email, string Password, string Timezone = "Europe/Budapest");
 

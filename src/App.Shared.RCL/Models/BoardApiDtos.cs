@@ -1,6 +1,4 @@
-using App.Shared.RCL.Models;
-
-namespace App.Web.Services;
+namespace App.Shared.RCL.Models;
 
 public sealed record ItemTitleRequest(string Title);
 
@@ -33,3 +31,5 @@ public sealed record TodoUpdateRequest(
     DateTime? DueDate);
 
 public sealed record BoardSectionRequest(BoardSection Section);
+
+public sealed record DailyCompleteForDateRequest(DateOnly CompletedOn);

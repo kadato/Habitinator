@@ -26,6 +26,23 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
     public Task<bool> DeleteItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default) =>
         _inner.DeleteItemAsync(section, itemId, cancellationToken);
 
+    public async Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn, CancellationToken cancellationToken = default)
+    {
+        BoardItem? updated = await _inner.CompleteDailyForDateAsync(itemId, completedOn, cancellationToken);
+        if (updated is not null)
+        {
+            try
+            {
+                await _activityLog.LogActivityAsync(ActivityEventType.DailyComplete, itemId, null, cancellationToken);
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        return updated;
+    }
+
     public async Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
     {
         if (section == BoardSection.Habit)

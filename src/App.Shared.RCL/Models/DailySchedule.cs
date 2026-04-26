@@ -47,6 +47,21 @@ public static class DailySchedule
     public static int CountDuesOpen(IReadOnlyList<BoardItem> dailies, DateOnly on) =>
         dailies.Count(d => IsDueOnDate(d, on));
 
+    /// <summary>
+    /// Dailies that were due on the previous calendar day (UTC) and not completed for that day, excluding
+    /// items already checked for <paramref name="today"/> to avoid clobbering a same-day check when backfilling.
+    /// </summary>
+    public static IReadOnlyList<BoardItem> GetYesterdayUncompletedDailies(
+        IReadOnlyList<BoardItem> dailies,
+        DateOnly today)
+    {
+        DateOnly yesterday = today.AddDays(-1);
+        return dailies
+            .Where(d => d.DailyLastCompletedOn != today
+                        && IsDueOnDate(d, yesterday))
+            .ToList();
+    }
+
     private static bool IsEveryNDaysFrom(DateOnly start, DateOnly on, int n)
     {
         int d = (on.ToDateTime(TimeOnly.MinValue) - start.ToDateTime(TimeOnly.MinValue)).Days;

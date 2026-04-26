@@ -144,6 +144,41 @@ public sealed class LocalBoardDataService : IBoardDataService
         return Task.FromResult(list.RemoveAll(x => x.Id == itemId) > 0);
     }
 
+    public Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn, CancellationToken cancellationToken = default)
+    {
+        DateOnly today = DailySchedule.UtcToday;
+        if (completedOn >= today)
+        {
+            return Task.FromResult<BoardItem?>(null);
+        }
+
+        var list = _dailies;
+        var existing = list.FirstOrDefault(x => x.Id == itemId);
+        if (existing is null)
+        {
+            return Task.FromResult<BoardItem?>(null);
+        }
+
+        if (existing.DailyLastCompletedOn == today)
+        {
+            return Task.FromResult<BoardItem?>(null);
+        }
+
+        if (!DailySchedule.IsDueOnDate(existing, completedOn))
+        {
+            return Task.FromResult<BoardItem?>(null);
+        }
+
+        var updated = existing with
+        {
+            DailyLastCompletedOn = completedOn,
+            IsCompleted = true
+        };
+        int index = list.IndexOf(existing);
+        list[index] = updated;
+        return Task.FromResult<BoardItem?>(ProjectDailyForDisplay(updated, today));
+    }
+
     public Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
     {
         if (section == BoardSection.Habit)

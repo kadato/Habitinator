@@ -51,6 +51,12 @@ public sealed class WebBoardDataService : IBoardDataService
         return await _boardPersistenceService.ToggleItemAsync(userId, section, itemId, cancellationToken);
     }
 
+    public async Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn, CancellationToken cancellationToken = default)
+    {
+        Guid userId = await GetCurrentUserIdAsync(cancellationToken);
+        return await _boardPersistenceService.CompleteDailyForDateAsync(userId, itemId, completedOn, cancellationToken);
+    }
+
     public async Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
         Guid userId = await GetCurrentUserIdAsync(cancellationToken);

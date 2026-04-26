@@ -102,6 +102,53 @@ public sealed class BoardPersistenceService
         return true;
     }
 
+    public async Task<BoardItem?> CompleteDailyForDateAsync(
+        Guid userId,
+        Guid itemId,
+        DateOnly completedOn,
+        CancellationToken cancellationToken = default)
+    {
+        DateOnly today = DailySchedule.UtcToday;
+        if (completedOn >= today)
+        {
+            return null;
+        }
+
+        BoardItemEntity? entity = await _dbContext.BoardItems
+            .FirstOrDefaultAsync(
+                x => x.UserId == userId && x.Section == BoardSection.Daily && x.Id == itemId,
+                cancellationToken);
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var model = ToModelForDailyCheck(entity, today);
+        if (!DailySchedule.IsDueOnDate(model, completedOn))
+        {
+            return null;
+        }
+
+        if (model.DailyLastCompletedOn == today)
+        {
+            return null;
+        }
+
+        entity.DailyLastCompletedOn = new DateTime(
+            completedOn.Year,
+            completedOn.Month,
+            completedOn.Day,
+            0,
+            0,
+            0,
+            DateTimeKind.Utc);
+        entity.IsCompleted = true;
+        entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        AddActivityEvent(userId, ActivityEventType.DailyComplete, itemId);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return ToModel(entity);
+    }
+
     public async Task<BoardItem?> ToggleItemAsync(Guid userId, BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
     {
         BoardItemEntity? entity = await _dbContext.BoardItems
@@ -346,7 +393,13 @@ public sealed class BoardPersistenceService
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private static BoardItem ToModel(BoardItemEntity entity)
+    private static BoardItem ToModel(BoardItemEntity entity) =>
+        ToModelWithToday(entity, DailySchedule.UtcToday);
+
+    private static BoardItem ToModelForDailyCheck(BoardItemEntity entity, DateOnly today) =>
+        ToModelWithToday(entity, today);
+
+    private static BoardItem ToModelWithToday(BoardItemEntity entity, DateOnly today)
     {
         DateOnly? start = null;
         DateOnly? todoDue = null;
@@ -366,7 +419,6 @@ public sealed class BoardPersistenceService
         DateOnly? lastCompleted = entity.DailyLastCompletedOn is { } lc
             ? DateOnly.FromDateTime(lc)
             : null;
-        DateOnly today = DailySchedule.UtcToday;
         bool isCompleted;
         if (entity.Section == BoardSection.Daily)
         {

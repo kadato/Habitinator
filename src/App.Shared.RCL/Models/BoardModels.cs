@@ -27,8 +27,11 @@ public enum DailyRepeatType
 
 public sealed record DailyChecklistItem(Guid Id, string Text, bool IsDone = false);
 
-/// <param name="Counter">For habits: + counter when <see cref="TrackPlus"/> is enabled. For dailies: current streak (manual in edit dialog).</param>
-/// <param name="NegativeCounter">Tally for the − button when <see cref="TrackMinus"/> is enabled.</param>
+/// <param name="Counter">
+///     For habits: + counter when <see cref="TrackPlus" /> is enabled. For dailies: current streak
+///     (manual in edit dialog).
+/// </param>
+/// <param name="NegativeCounter">Tally for the − button when <see cref="TrackMinus" /> is enabled.</param>
 public sealed record BoardItem(
     Guid Id,
     string Title,
@@ -59,18 +62,11 @@ public static class BoardTagUtil
 {
     public static IEnumerable<string> ParseTags(string? raw)
     {
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            yield break;
-        }
+        if (string.IsNullOrWhiteSpace(raw)) yield break;
 
-        foreach (string part in raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
+        foreach (var part in raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             if (part.Length > 0)
-            {
                 yield return part;
-            }
-        }
     }
 }
 
@@ -83,14 +79,11 @@ public static class DailyChecklistJson
 
     public static IReadOnlyList<DailyChecklistItem> Parse(string? json)
     {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return Array.Empty<DailyChecklistItem>();
-        }
+        if (string.IsNullOrWhiteSpace(json)) return Array.Empty<DailyChecklistItem>();
 
         try
         {
-            DailyChecklistItem[]? rows = JsonSerializer.Deserialize<DailyChecklistItem[]>(json, s_options);
+            var rows = JsonSerializer.Deserialize<DailyChecklistItem[]>(json, s_options);
             return rows?.Where(x => !string.IsNullOrWhiteSpace(x.Text)).ToList() ?? [];
         }
         catch
@@ -108,10 +101,7 @@ public static class DailyChecklistJson
                 x.Text.Trim(),
                 x.IsDone))
             .ToList();
-        if (cleaned.Count == 0)
-        {
-            return null;
-        }
+        if (cleaned.Count == 0) return null;
 
         return JsonSerializer.Serialize(cleaned, s_options);
     }

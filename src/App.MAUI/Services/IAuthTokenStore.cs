@@ -18,34 +18,28 @@ public sealed class AuthTokenStore : IAuthTokenStore
 
     public async Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default)
     {
-        string? t = await SecureStorage.GetAsync(TokenKey);
+        var t = await SecureStorage.GetAsync(TokenKey);
         return string.IsNullOrWhiteSpace(t) ? null : t;
     }
 
     public async Task SetAccessTokenAsync(string? token, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(token))
-        {
             SecureStorage.Remove(TokenKey);
-        }
         else
-        {
             await SecureStorage.SetAsync(TokenKey, token);
-        }
     }
 
-    public async Task<string?> GetEmailAsync(CancellationToken cancellationToken = default) =>
-        await SecureStorage.GetAsync(EmailKey);
+    public async Task<string?> GetEmailAsync(CancellationToken cancellationToken = default)
+    {
+        return await SecureStorage.GetAsync(EmailKey);
+    }
 
     public async Task SetEmailAsync(string? email, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(email))
-        {
             SecureStorage.Remove(EmailKey);
-        }
         else
-        {
             await SecureStorage.SetAsync(EmailKey, email);
-        }
     }
 }

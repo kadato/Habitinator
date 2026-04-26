@@ -2,17 +2,14 @@ namespace App.Shared.RCL.Services;
 
 public sealed class RemoteBoardRefreshService : IRemoteBoardRefreshService
 {
-    private readonly object _lock = new();
     private readonly List<Func<Task>> _callbacks = [];
+    private readonly object _lock = new();
 
     public void RegisterForRemoteRefresh(Func<Task> onRefresh)
     {
         lock (_lock)
         {
-            if (!_callbacks.Contains(onRefresh))
-            {
-                _callbacks.Add(onRefresh);
-            }
+            if (!_callbacks.Contains(onRefresh)) _callbacks.Add(onRefresh);
         }
     }
 
@@ -32,17 +29,13 @@ public sealed class RemoteBoardRefreshService : IRemoteBoardRefreshService
             copy = _callbacks.ToList();
         }
 
-        if (copy.Count == 0)
-        {
-            return Task.CompletedTask;
-        }
+        if (copy.Count == 0) return Task.CompletedTask;
 
         return RunSequentiallyAsync();
 
         async Task RunSequentiallyAsync()
         {
-            foreach (Func<Task> fn in copy)
-            {
+            foreach (var fn in copy)
                 try
                 {
                     await fn();
@@ -51,7 +44,6 @@ public sealed class RemoteBoardRefreshService : IRemoteBoardRefreshService
                 {
                     // best-effort; other subscribers still run
                 }
-            }
         }
     }
 }

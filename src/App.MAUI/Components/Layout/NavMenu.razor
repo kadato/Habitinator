@@ -10,40 +10,45 @@
                    Color="Color.Primary"
                    Size="Size.Medium"
                    StartIcon="@Icons.Material.Filled.SpaceDashboard"
-                   Class="app-header-nav-btn text-transform-none">
+                   Class="app - header - nav - btn text - transform - none">
             Board
         </MudButton>
-        <MudButton Href="/stats"
+        <MudButton Href="/ stats"
                    Variant="@(IsActivePath("stats", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
                    Color="Color.Primary"
                    Size="Size.Medium"
                    StartIcon="@Icons.Material.Filled.BarChart"
-                   Class="app-header-nav-btn text-transform-none">
+                   Class="app - header - nav - btn text - transform - none">
             Statistics
         </MudButton>
-        <MudButton Href="/settings"
+        <MudButton Href="/ settings"
                    Variant="@(IsActivePath("settings", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
                    Color="Color.Primary"
                    Size="Size.Medium"
                    StartIcon="@Icons.Material.Filled.Notifications"
-                   Class="app-header-nav-btn text-transform-none">
+                   Class="app - header - nav - btn text - transform - none">
             Settings
         </MudButton>
     }
 </div>
 
 @code {
+
     protected override void OnInitialized()
     {
         Nav.LocationChanged += OnLocationChanged;
         Session.Changed += OnSessionChanged;
     }
 
-    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
         _ = InvokeAsync(StateHasChanged);
+    }
 
-    private void OnSessionChanged(object? sender, EventArgs e) =>
+    private void OnSessionChanged(object? sender, EventArgs e)
+    {
         _ = InvokeAsync(StateHasChanged);
+    }
 
     public void Dispose()
     {
@@ -53,8 +58,8 @@
 
     private bool IsActivePath(string path, NavLinkMatch match)
     {
-        string rel = Nav.ToBaseRelativePath(Nav.Uri).TrimStart('/').TrimEnd('/');
-        string p = path.TrimStart('/').TrimEnd('/');
+        var rel = Nav.ToBaseRelativePath(Nav.Uri).TrimStart('/').TrimEnd('/');
+        var p = path.TrimStart('/').TrimEnd('/');
 
         if (match == NavLinkMatch.All)
         {
@@ -73,4 +78,5 @@
 
         return rel.StartsWith(p, StringComparison.OrdinalIgnoreCase);
     }
+
 }

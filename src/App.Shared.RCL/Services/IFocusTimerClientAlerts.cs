@@ -1,7 +1,7 @@
 namespace App.Shared.RCL.Services;
 
 /// <summary>
-/// Plays a short chime and shows a browser Notification (when permission allows) for the focus timer.
+///     Plays a short chime and shows a browser Notification (when permission allows) for the focus timer.
 /// </summary>
 public interface IFocusTimerClientAlerts
 {

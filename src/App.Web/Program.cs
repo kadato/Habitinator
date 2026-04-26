@@ -1,38 +1,39 @@
-using App.Web.Components;
+using System.Security.Claims;
 using System.Text;
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.Extensions.Options;
+
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
-using System.Security.Claims;
+using App.Web;
 using App.Web.Auth;
 using App.Web.Data;
-using App.Web;
 using App.Web.Hubs;
 using App.Web.Services;
+
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+
 using MudBlazor.Services;
+
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents(options =>
-    {
-        options.DetailedErrors = builder.Environment.IsDevelopment();
-    });
+    .AddInteractiveServerComponents(options => { options.DetailedErrors = builder.Environment.IsDevelopment(); });
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, HttpContextAuthenticationStateProvider>();
 builder.Services.AddMudServices();
 
-string dbConnectionString =
+var dbConnectionString =
     builder.Configuration.GetConnectionString("DefaultConnection")
     ?? builder.Configuration.GetConnectionString("habitinatordb")
-    ?? throw new InvalidOperationException("No PostgreSQL connection string configured. Set ConnectionStrings:DefaultConnection or run through Aspire (habitinatordb).");
+    ?? throw new InvalidOperationException(
+        "No PostgreSQL connection string configured. Set ConnectionStrings:DefaultConnection or run through Aspire (habitinatordb).");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(dbConnectionString));
@@ -83,7 +84,7 @@ var authBuilder = builder.Services
 authBuilder.AddIdentityCookies();
 authBuilder.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
 {
-    JwtOptions jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+    var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -98,17 +99,11 @@ authBuilder.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
         OnMessageReceived = context =>
         {
-            if (!string.IsNullOrEmpty(context.Token))
-            {
-                return Task.CompletedTask;
-            }
+            if (!string.IsNullOrEmpty(context.Token)) return Task.CompletedTask;
 
-            Microsoft.Extensions.Primitives.StringValues accessToken = context.Request.Query["access_token"];
-            Microsoft.AspNetCore.Http.PathString path = context.Request.Path;
-            if (path.StartsWithSegments("/hubs") && !string.IsNullOrEmpty(accessToken))
-            {
-                context.Token = accessToken;
-            }
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.Request.Path;
+            if (path.StartsWithSegments("/hubs") && !string.IsNullOrEmpty(accessToken)) context.Token = accessToken;
 
             return Task.CompletedTask;
         }
@@ -128,17 +123,19 @@ try
 }
 catch (NpgsqlException ex)
 {
-    ILogger<Program> logger = app.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogError(ex, "Skipping startup demo data seeding because PostgreSQL is unreachable. Check ConnectionStrings:DefaultConnection and ensure PostgreSQL is running.");
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex,
+        "Skipping startup demo data seeding because PostgreSQL is unreachable. Check ConnectionStrings:DefaultConnection and ensure PostgreSQL is running.");
 }
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    app.UseExceptionHandler("/Error", true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
@@ -147,7 +144,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
-app.MapRazorComponents<global::App.Web.Components.App>()
+app.MapRazorComponents<App.Web.Components.App>()
     .AddInteractiveServerRenderMode();
 
 app.MapHub<BoardHub>("/hubs/board");
@@ -163,11 +160,8 @@ app.MapPost("/api/auth/register", async (
         Timezone = request.Timezone
     };
 
-    IdentityResult result = await userManager.CreateAsync(user, request.Password);
-    if (!result.Succeeded)
-    {
-        return Results.BadRequest(result.Errors.Select(x => x.Description));
-    }
+    var result = await userManager.CreateAsync(user, request.Password);
+    if (!result.Succeeded) return Results.BadRequest(result.Errors.Select(x => x.Description));
 
     return Results.Ok(new { message = "Registration successful." });
 }).DisableAntiforgery();
@@ -178,24 +172,18 @@ app.MapPost("/api/auth/login", async (
     UserManager<ApplicationUser> userManager,
     JwtTokenService jwtTokenService) =>
 {
-    ApplicationUser? user = await userManager.FindByEmailAsync(request.Email);
-    if (user is null)
-    {
-        return Results.Unauthorized();
-    }
+    var user = await userManager.FindByEmailAsync(request.Email);
+    if (user is null) return Results.Unauthorized();
 
-    SignInResult loginResult = await signInManager.PasswordSignInAsync(
+    var loginResult = await signInManager.PasswordSignInAsync(
         user,
         request.Password,
         request.RememberMe,
-        lockoutOnFailure: true);
+        true);
 
-    if (!loginResult.Succeeded)
-    {
-        return Results.Unauthorized();
-    }
+    if (!loginResult.Succeeded) return Results.Unauthorized();
 
-    string token = jwtTokenService.CreateToken(user);
+    var token = jwtTokenService.CreateToken(user);
     return Results.Ok(new LoginResponse(token, user.Email ?? string.Empty));
 }).DisableAntiforgery();
 
@@ -206,33 +194,27 @@ app.MapPost("/api/auth/guest-jwt", async (
     JwtTokenService jwtTokenService,
     IOptions<DemoUserOptions> demoOptions) =>
 {
-    string email = demoOptions.Value.Email;
-    ApplicationUser? user = await userManager.FindByEmailAsync(email);
-    if (user is null)
-    {
-        return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
-    }
+    var email = demoOptions.Value.Email;
+    var user = await userManager.FindByEmailAsync(email);
+    if (user is null) return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
 
-    SignInResult loginResult = await signInManager.PasswordSignInAsync(
+    var loginResult = await signInManager.PasswordSignInAsync(
         user,
         demoOptions.Value.Password,
-        isPersistent: false,
-        lockoutOnFailure: true);
+        false,
+        true);
 
-    if (!loginResult.Succeeded)
-    {
-        return Results.Unauthorized();
-    }
+    if (!loginResult.Succeeded) return Results.Unauthorized();
 
-    string token = jwtTokenService.CreateToken(user);
+    var token = jwtTokenService.CreateToken(user);
     return Results.Ok(new LoginResponse(token, user.Email ?? string.Empty));
 }).DisableAntiforgery();
 
 app.MapPost("/api/auth/logout", async (SignInManager<ApplicationUser> signInManager) =>
-{
-    await signInManager.SignOutAsync();
-    return Results.Ok(new { message = "Logged out." });
-})
+    {
+        await signInManager.SignOutAsync();
+        return Results.Ok(new { message = "Logged out." });
+    })
     .RequireAuthorization()
     .DisableAntiforgery();
 
@@ -242,67 +224,57 @@ app.MapPost("/api/auth/guest-login", async (
     UserManager<ApplicationUser> userManager,
     IOptions<DemoUserOptions> demoOptions) =>
 {
-    ApplicationUser? guestUser = await userManager.FindByEmailAsync(demoOptions.Value.Email);
-    if (guestUser is null)
-    {
-        return Results.LocalRedirect("/auth/login?guest=missing");
-    }
+    var guestUser = await userManager.FindByEmailAsync(demoOptions.Value.Email);
+    if (guestUser is null) return Results.LocalRedirect("/auth/login?guest=missing");
 
-    await signInManager.SignInAsync(guestUser, isPersistent: true);
+    await signInManager.SignInAsync(guestUser, true);
     return Results.LocalRedirect("/");
 }).DisableAntiforgery();
 
-app.MapPost("/api/auth/cookie-login", async (HttpContext httpContext, SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager) =>
+app.MapPost("/api/auth/cookie-login", async (HttpContext httpContext, SignInManager<ApplicationUser> signInManager,
+    UserManager<ApplicationUser> userManager) =>
 {
-    IFormCollection form = await httpContext.Request.ReadFormAsync();
-    string email = form["Email"].ToString();
-    string password = form["Password"].ToString();
-    bool rememberMe = form["RememberMe"] == "true";
+    var form = await httpContext.Request.ReadFormAsync();
+    var email = form["Email"].ToString();
+    var password = form["Password"].ToString();
+    var rememberMe = form["RememberMe"] == "true";
 
     if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
-    {
         return Results.LocalRedirect("/auth/login?error=1");
-    }
 
-    ApplicationUser? user = await userManager.FindByEmailAsync(email);
-    if (user is null)
-    {
-        return Results.LocalRedirect("/auth/login?error=1");
-    }
+    var user = await userManager.FindByEmailAsync(email);
+    if (user is null) return Results.LocalRedirect("/auth/login?error=1");
 
-    SignInResult loginResult = await signInManager.PasswordSignInAsync(
+    var loginResult = await signInManager.PasswordSignInAsync(
         user,
         password,
         rememberMe,
-        lockoutOnFailure: true);
+        true);
 
-    if (!loginResult.Succeeded)
-    {
-        return Results.LocalRedirect("/auth/login?error=1");
-    }
+    if (!loginResult.Succeeded) return Results.LocalRedirect("/auth/login?error=1");
 
     return Results.LocalRedirect("/");
 }).DisableAntiforgery();
 
 app.MapPost("/api/auth/cookie-logout", async (SignInManager<ApplicationUser> signInManager) =>
-{
-    await signInManager.SignOutAsync();
-    return Results.LocalRedirect("/");
-})
+    {
+        await signInManager.SignOutAsync();
+        return Results.LocalRedirect("/");
+    })
     .RequireAuthorization()
     .DisableAntiforgery();
 
 app.MapPost("/api/auth/register-form", async (HttpContext httpContext, UserManager<ApplicationUser> userManager) =>
 {
-    IFormCollection form = await httpContext.Request.ReadFormAsync();
-    string email = form["Email"].ToString();
-    string password = form["Password"].ToString();
-    string timezone = string.IsNullOrWhiteSpace(form["Timezone"].ToString()) ? "Europe/Budapest" : form["Timezone"].ToString()!;
+    var form = await httpContext.Request.ReadFormAsync();
+    var email = form["Email"].ToString();
+    var password = form["Password"].ToString();
+    var timezone = string.IsNullOrWhiteSpace(form["Timezone"].ToString())
+        ? "Europe/Budapest"
+        : form["Timezone"].ToString()!;
 
     if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
-    {
         return Results.LocalRedirect("/auth/register?error=1");
-    }
 
     var user = new ApplicationUser
     {
@@ -311,11 +283,8 @@ app.MapPost("/api/auth/register-form", async (HttpContext httpContext, UserManag
         Timezone = timezone
     };
 
-    IdentityResult result = await userManager.CreateAsync(user, password);
-    if (!result.Succeeded)
-    {
-        return Results.LocalRedirect("/auth/register?error=1");
-    }
+    var result = await userManager.CreateAsync(user, password);
+    if (!result.Succeeded) return Results.LocalRedirect("/auth/register?error=1");
 
     return Results.LocalRedirect("/auth/login?registered=1");
 }).DisableAntiforgery();
@@ -326,92 +295,70 @@ var boardApi = app.MapGroup("/api/board")
 
 boardApi.MapGet("/", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService) =>
 {
-    if (AuthenticatedUserId.TryGet(user) is not { } userId)
-    {
-        return Results.Unauthorized();
-    }
+    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
-    BoardSnapshot snapshot = await boardPersistenceService.GetSnapshotAsync(userId);
+    var snapshot = await boardPersistenceService.GetSnapshotAsync(userId);
     return Results.Ok(snapshot);
 });
-boardApi.MapPost("/{section}", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, BoardSection section, ItemTitleRequest request) =>
+boardApi.MapPost("/{section}",
+    async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, BoardSection section,
+        ItemTitleRequest request) =>
+    {
+        if (string.IsNullOrWhiteSpace(request.Title)) return Results.BadRequest("Title is required.");
+
+        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+
+        var item = await boardPersistenceService.CreateItemAsync(userId, section, request.Title.Trim());
+        return Results.Ok(item);
+    });
+boardApi.MapPut("/{section}/{itemId:guid}", async (ClaimsPrincipal user,
+    BoardPersistenceService boardPersistenceService, BoardSection section, Guid itemId, ItemTitleRequest request) =>
 {
-    if (string.IsNullOrWhiteSpace(request.Title))
-    {
-        return Results.BadRequest("Title is required.");
-    }
+    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
-    if (AuthenticatedUserId.TryGet(user) is not { } userId)
-    {
-        return Results.Unauthorized();
-    }
-
-    BoardItem item = await boardPersistenceService.CreateItemAsync(userId, section, request.Title.Trim());
-    return Results.Ok(item);
-});
-boardApi.MapPut("/{section}/{itemId:guid}", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, BoardSection section, Guid itemId, ItemTitleRequest request) =>
-{
-    if (AuthenticatedUserId.TryGet(user) is not { } userId)
-    {
-        return Results.Unauthorized();
-    }
-
-    BoardItem? updated = await boardPersistenceService.RenameItemAsync(userId, section, itemId, request.Title.Trim());
+    var updated = await boardPersistenceService.RenameItemAsync(userId, section, itemId, request.Title.Trim());
     return updated is null ? Results.NotFound() : Results.Ok(updated);
 });
-boardApi.MapDelete("/{section}/{itemId:guid}", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, BoardSection section, Guid itemId) =>
-{
-    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+boardApi.MapDelete("/{section}/{itemId:guid}",
+    async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, BoardSection section, Guid itemId) =>
     {
-        return Results.Unauthorized();
-    }
+        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
-    bool removed = await boardPersistenceService.DeleteItemAsync(userId, section, itemId);
-    return removed ? Results.NoContent() : Results.NotFound();
-});
-boardApi.MapPost("/{section}/{itemId:guid}/toggle", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, BoardSection section, Guid itemId) =>
+        var removed = await boardPersistenceService.DeleteItemAsync(userId, section, itemId);
+        return removed ? Results.NoContent() : Results.NotFound();
+    });
+boardApi.MapPost("/{section}/{itemId:guid}/toggle", async (ClaimsPrincipal user,
+    BoardPersistenceService boardPersistenceService, BoardSection section, Guid itemId) =>
 {
-    if (AuthenticatedUserId.TryGet(user) is not { } userId)
-    {
-        return Results.Unauthorized();
-    }
+    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
-    BoardItem? updated = await boardPersistenceService.ToggleItemAsync(userId, section, itemId);
+    var updated = await boardPersistenceService.ToggleItemAsync(userId, section, itemId);
     return updated is null ? Results.NotFound() : Results.Ok(updated);
 });
-boardApi.MapPost("/habits/{itemId:guid}/increment", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, Guid itemId) =>
+boardApi.MapPost("/habits/{itemId:guid}/increment",
+    async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, Guid itemId) =>
+    {
+        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+
+        var updated = await boardPersistenceService.IncrementHabitPlusAsync(userId, itemId);
+        return updated is null ? Results.NotFound() : Results.Ok(updated);
+    });
+boardApi.MapPost("/habits/{itemId:guid}/decrement",
+    async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, Guid itemId) =>
+    {
+        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+
+        var updated = await boardPersistenceService.IncrementHabitMinusAsync(userId, itemId);
+        return updated is null ? Results.NotFound() : Results.Ok(updated);
+    });
+boardApi.MapPut("/habits/{itemId:guid}", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService,
+    Guid itemId, HabitUpdateRequest request) =>
 {
-    if (AuthenticatedUserId.TryGet(user) is not { } userId)
-    {
-        return Results.Unauthorized();
-    }
+    if (string.IsNullOrWhiteSpace(request.Title)) return Results.BadRequest("Title is required.");
 
-    BoardItem? updated = await boardPersistenceService.IncrementHabitPlusAsync(userId, itemId);
-    return updated is null ? Results.NotFound() : Results.Ok(updated);
-});
-boardApi.MapPost("/habits/{itemId:guid}/decrement", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, Guid itemId) =>
-{
-    if (AuthenticatedUserId.TryGet(user) is not { } userId)
-    {
-        return Results.Unauthorized();
-    }
+    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
-    BoardItem? updated = await boardPersistenceService.IncrementHabitMinusAsync(userId, itemId);
-    return updated is null ? Results.NotFound() : Results.Ok(updated);
-});
-boardApi.MapPut("/habits/{itemId:guid}", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, Guid itemId, HabitUpdateRequest request) =>
-{
-    if (string.IsNullOrWhiteSpace(request.Title))
-    {
-        return Results.BadRequest("Title is required.");
-    }
-
-    if (AuthenticatedUserId.TryGet(user) is not { } userId)
-    {
-        return Results.Unauthorized();
-    }
-
-    BoardItem? updated = await boardPersistenceService.UpdateHabitAsync(
+    var updated = await boardPersistenceService.UpdateHabitAsync(
         userId,
         itemId,
         request.Title.Trim(),
@@ -425,19 +372,14 @@ boardApi.MapPut("/habits/{itemId:guid}", async (ClaimsPrincipal user, BoardPersi
         request.ChecklistJson);
     return updated is null ? Results.NotFound() : Results.Ok(updated);
 });
-boardApi.MapPut("/todos/{itemId:guid}", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, Guid itemId, TodoUpdateRequest request) =>
+boardApi.MapPut("/todos/{itemId:guid}", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService,
+    Guid itemId, TodoUpdateRequest request) =>
 {
-    if (string.IsNullOrWhiteSpace(request.Title))
-    {
-        return Results.BadRequest("Title is required.");
-    }
+    if (string.IsNullOrWhiteSpace(request.Title)) return Results.BadRequest("Title is required.");
 
-    if (AuthenticatedUserId.TryGet(user) is not { } userId)
-    {
-        return Results.Unauthorized();
-    }
+    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
-    BoardItem? updated = await boardPersistenceService.UpdateTodoAsync(
+    var updated = await boardPersistenceService.UpdateTodoAsync(
         userId,
         itemId,
         request.Title.Trim(),
@@ -447,19 +389,14 @@ boardApi.MapPut("/todos/{itemId:guid}", async (ClaimsPrincipal user, BoardPersis
         request.DueDate);
     return updated is null ? Results.NotFound() : Results.Ok(updated);
 });
-boardApi.MapPut("/dailies/{itemId:guid}", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, Guid itemId, DailyUpdateRequest request) =>
+boardApi.MapPut("/dailies/{itemId:guid}", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService,
+    Guid itemId, DailyUpdateRequest request) =>
 {
-    if (string.IsNullOrWhiteSpace(request.Title))
-    {
-        return Results.BadRequest("Title is required.");
-    }
+    if (string.IsNullOrWhiteSpace(request.Title)) return Results.BadRequest("Title is required.");
 
-    if (AuthenticatedUserId.TryGet(user) is not { } userId)
-    {
-        return Results.Unauthorized();
-    }
+    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
-    BoardItem? updated = await boardPersistenceService.UpdateDailyAsync(
+    var updated = await boardPersistenceService.UpdateDailyAsync(
         userId,
         itemId,
         request.Title.Trim(),
@@ -472,14 +409,12 @@ boardApi.MapPut("/dailies/{itemId:guid}", async (ClaimsPrincipal user, BoardPers
         request.Streak);
     return updated is null ? Results.NotFound() : Results.Ok(updated);
 });
-boardApi.MapPost("/dailies/{itemId:guid}/complete-for-date", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, Guid itemId, DailyCompleteForDateRequest request) =>
+boardApi.MapPost("/dailies/{itemId:guid}/complete-for-date", async (ClaimsPrincipal user,
+    BoardPersistenceService boardPersistenceService, Guid itemId, DailyCompleteForDateRequest request) =>
 {
-    if (AuthenticatedUserId.TryGet(user) is not { } userId)
-    {
-        return Results.Unauthorized();
-    }
+    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
-    BoardItem? updated = await boardPersistenceService.CompleteDailyForDateAsync(userId, itemId, request.CompletedOn);
+    var updated = await boardPersistenceService.CompleteDailyForDateAsync(userId, itemId, request.CompletedOn);
     return updated is null ? Results.NotFound() : Results.Ok(updated);
 });
 
@@ -487,72 +422,59 @@ var activityApi = app.MapGroup("/api/activity")
     .DisableAntiforgery()
     .RequireAuthorization("BoardOrJwt");
 
-activityApi.MapGet("dashboard", async (ClaimsPrincipal user, ActivityStatisticsService stats, string? period, CancellationToken cancellationToken) =>
-{
-    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+activityApi.MapGet("dashboard",
+    async (ClaimsPrincipal user, ActivityStatisticsService stats, string? period,
+        CancellationToken cancellationToken) =>
     {
-        return Results.Unauthorized();
-    }
+        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
-    return Results.Ok(await stats.GetDashboardAsync(userId, period, cancellationToken));
-});
-activityApi.MapGet("daily-contributions", async (ClaimsPrincipal user, ActivityStatisticsService stats, string? period, CancellationToken cancellationToken) =>
-{
-    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+        return Results.Ok(await stats.GetDashboardAsync(userId, period, cancellationToken));
+    });
+activityApi.MapGet("daily-contributions",
+    async (ClaimsPrincipal user, ActivityStatisticsService stats, string? period,
+        CancellationToken cancellationToken) =>
     {
-        return Results.Unauthorized();
-    }
+        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
-    return Results.Ok(await stats.GetDailyContributionsAsync(userId, period, cancellationToken));
-});
-activityApi.MapGet("day", async (ClaimsPrincipal user, ActivityStatisticsService stats, DateOnly date, CancellationToken cancellationToken) =>
-{
-    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+        return Results.Ok(await stats.GetDailyContributionsAsync(userId, period, cancellationToken));
+    });
+activityApi.MapGet("day",
+    async (ClaimsPrincipal user, ActivityStatisticsService stats, DateOnly date, CancellationToken cancellationToken) =>
     {
-        return Results.Unauthorized();
-    }
+        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
-    return Results.Ok(await stats.GetActivityDayDetailAsync(userId, date, cancellationToken));
-});
+        return Results.Ok(await stats.GetActivityDayDetailAsync(userId, date, cancellationToken));
+    });
 
 var settingsApi = app.MapGroup("/api/settings")
     .DisableAntiforgery()
     .RequireAuthorization("BoardOrJwt");
 
-settingsApi.MapGet("/notifications", async (ClaimsPrincipal user, ApplicationDbContext db, CancellationToken cancellationToken) =>
-{
-    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+settingsApi.MapGet("/notifications",
+    async (ClaimsPrincipal user, ApplicationDbContext db, CancellationToken cancellationToken) =>
     {
-        return Results.Unauthorized();
-    }
+        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
-    ApplicationUser? row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-    if (row is null)
+        var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (row is null) return Results.NotFound();
+
+        var settings = NotificationSettingsJson.DeserializeOrDefault(row.NotificationSettingsJson);
+        return Results.Ok(settings);
+    });
+
+settingsApi.MapPut("/notifications",
+    async (ClaimsPrincipal user, ApplicationDbContext db, IBoardChangeNotifier boardChangeNotifier,
+        NotificationSettings body, CancellationToken cancellationToken) =>
     {
-        return Results.NotFound();
-    }
+        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
-    NotificationSettings settings = NotificationSettingsJson.DeserializeOrDefault(row.NotificationSettingsJson);
-    return Results.Ok(settings);
-});
+        var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (row is null) return Results.NotFound();
 
-settingsApi.MapPut("/notifications", async (ClaimsPrincipal user, ApplicationDbContext db, IBoardChangeNotifier boardChangeNotifier, NotificationSettings body, CancellationToken cancellationToken) =>
-{
-    if (AuthenticatedUserId.TryGet(user) is not { } userId)
-    {
-        return Results.Unauthorized();
-    }
-
-    ApplicationUser? row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-    if (row is null)
-    {
-        return Results.NotFound();
-    }
-
-    row.NotificationSettingsJson = NotificationSettingsJson.Serialize(body);
-    await db.SaveChangesAsync(cancellationToken);
-    await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
-    return Results.NoContent();
-});
+        row.NotificationSettingsJson = NotificationSettingsJson.Serialize(body);
+        await db.SaveChangesAsync(cancellationToken);
+        await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+        return Results.NoContent();
+    });
 
 app.Run();

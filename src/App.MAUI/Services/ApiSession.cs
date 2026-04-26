@@ -4,12 +4,16 @@ namespace App.MAUI.Services;
 
 public interface IApiSession
 {
-    /// <summary>Raised when login state, email, or readiness changes. Blazor should refresh UI; injected session properties are not parameters.</summary>
-    event EventHandler? Changed;
-
     bool IsReady { get; }
     bool IsLoggedIn { get; }
     string? Email { get; }
+
+    /// <summary>
+    ///     Raised when login state, email, or readiness changes. Blazor should refresh UI; injected session properties
+    ///     are not parameters.
+    /// </summary>
+    event EventHandler? Changed;
+
     Task LoadAsync(CancellationToken cancellationToken = default);
     Task SetSessionAsync(LoginResponse response, CancellationToken cancellationToken = default);
     Task ClearSessionAsync(CancellationToken cancellationToken = default);
@@ -17,8 +21,8 @@ public interface IApiSession
 
 public sealed class ApiSession : IApiSession
 {
-    private readonly IAuthTokenStore _store;
     private readonly MauiBoardHubService _hub;
+    private readonly IAuthTokenStore _store;
 
     public ApiSession(IAuthTokenStore store, MauiBoardHubService hub)
     {
@@ -34,24 +38,18 @@ public sealed class ApiSession : IApiSession
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
-        string? t = await _store.GetAccessTokenAsync(cancellationToken);
-        string? e = await _store.GetEmailAsync(cancellationToken);
+        var t = await _store.GetAccessTokenAsync(cancellationToken);
+        var e = await _store.GetEmailAsync(cancellationToken);
         if (string.IsNullOrEmpty(e) && !string.IsNullOrEmpty(t))
         {
             e = JwtAccessTokenDisplayClaims.TryGetEmail(t);
-            if (!string.IsNullOrEmpty(e))
-            {
-                await _store.SetEmailAsync(e, cancellationToken);
-            }
+            if (!string.IsNullOrEmpty(e)) await _store.SetEmailAsync(e, cancellationToken);
         }
 
         IsLoggedIn = !string.IsNullOrEmpty(t);
         Email = e;
         IsReady = true;
-        if (IsLoggedIn)
-        {
-            await _hub.EnsureConnectedAsync(cancellationToken);
-        }
+        if (IsLoggedIn) await _hub.EnsureConnectedAsync(cancellationToken);
 
         OnChanged();
     }
@@ -77,6 +75,8 @@ public sealed class ApiSession : IApiSession
         OnChanged();
     }
 
-    private void OnChanged() =>
+    private void OnChanged()
+    {
         Changed?.Invoke(this, EventArgs.Empty);
+    }
 }

@@ -1,6 +1,5 @@
 ﻿@page "/counter"
-@using Microsoft.AspNetCore.Components.Web
-@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@rendermode @(new InteractiveServerRenderMode(false))
 
 <PageTitle>Counter</PageTitle>
 
@@ -11,10 +10,11 @@
 <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
 
 @code {
-    private int currentCount = 0;
+    private int currentCount;
 
     private void IncrementCount()
     {
         currentCount++;
     }
+
 }

@@ -7,8 +7,10 @@ public sealed class MauiUserActivityLogService : IUserActivityLogService
 {
     private readonly MauiActivityEventStore _store;
 
-    public MauiUserActivityLogService(MauiActivityEventStore store) =>
+    public MauiUserActivityLogService(MauiActivityEventStore store)
+    {
         _store = store;
+    }
 
     public async Task LogActivityAsync(
         ActivityEventType eventType,
@@ -23,17 +25,15 @@ public sealed class MauiUserActivityLogService : IUserActivityLogService
             OccurredAtUtc = DateTimeOffset.UtcNow,
             EventType = eventType,
             BoardItemId = boardItemId,
-            DurationSeconds = eventType == ActivityEventType.TimerSession ? durationSeconds : null,
+            DurationSeconds = eventType == ActivityEventType.TimerSession ? durationSeconds : null
         }, cancellationToken);
     }
 
-    public Task LogTimerSessionAsync(TimeSpan duration, Guid? boardItemId, CancellationToken cancellationToken = default)
+    public Task LogTimerSessionAsync(TimeSpan duration, Guid? boardItemId,
+        CancellationToken cancellationToken = default)
     {
-        int sec = (int)Math.Min((double)int.MaxValue, Math.Max(0, duration.TotalSeconds));
-        if (sec == 0)
-        {
-            return Task.CompletedTask;
-        }
+        var sec = (int)Math.Min(int.MaxValue, Math.Max(0, duration.TotalSeconds));
+        if (sec == 0) return Task.CompletedTask;
 
         return LogActivityAsync(ActivityEventType.TimerSession, boardItemId, sec, cancellationToken);
     }

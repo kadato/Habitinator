@@ -3,7 +3,7 @@ using MudBlazor;
 namespace App.Shared.RCL.Themes;
 
 /// <summary>
-/// Dark palette aligned with app shell CSS (<c>#030712</c> background, <c>#111827</c> surfaces).
+///     Dark palette aligned with app shell CSS (<c>#030712</c> background, <c>#111827</c> surfaces).
 /// </summary>
 public static class HabitinatorMudTheme
 {
@@ -33,11 +33,11 @@ public static class HabitinatorMudTheme
             TableLines = "#374151",
             LinesDefault = "#374151",
             Dark = "#030712",
-            DarkContrastText = "#e5e7eb",
+            DarkContrastText = "#e5e7eb"
         },
         LayoutProperties = new LayoutProperties
         {
-            DefaultBorderRadius = "0.375rem",
-        },
+            DefaultBorderRadius = "0.375rem"
+        }
     };
 }

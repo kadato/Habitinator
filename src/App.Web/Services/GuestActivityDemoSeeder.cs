@@ -1,6 +1,8 @@
 using App.Shared.RCL.Models;
 using App.Web.Data;
+
 using Bogus;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace App.Web.Services;
@@ -10,14 +12,12 @@ public static class GuestActivityDemoSeeder
     private const int DemoRandomSeed = 2026_04_24;
     private const int HeatmapDataDays = 370;
 
-    public static async Task SeedIfMissingAsync(ApplicationDbContext db, Guid guestUserId, CancellationToken cancellationToken = default)
+    public static async Task SeedIfMissingAsync(ApplicationDbContext db, Guid guestUserId,
+        CancellationToken cancellationToken = default)
     {
-        if (await db.UserActivityEvents.AnyAsync(e => e.UserId == guestUserId, cancellationToken))
-        {
-            return;
-        }
+        if (await db.UserActivityEvents.AnyAsync(e => e.UserId == guestUserId, cancellationToken)) return;
 
-        List<Guid> boardItemIds = await db.BoardItems
+        var boardItemIds = await db.BoardItems
             .AsNoTracking()
             .Where(x => x.UserId == guestUserId)
             .Select(x => x.Id)
@@ -28,23 +28,23 @@ public static class GuestActivityDemoSeeder
             Random = new Randomizer(DemoRandomSeed)
         };
 
-        DateOnly end = DailySchedule.UtcToday;
-        DateOnly start = end.AddDays(-(HeatmapDataDays - 1));
+        var end = DailySchedule.UtcToday;
+        var start = end.AddDays(-(HeatmapDataDays - 1));
 
         var events = new List<UserActivityEventEntity>();
-        for (DateOnly day = start; day <= end; day = day.AddDays(1))
+        for (var day = start; day <= end; day = day.AddDays(1))
         {
-            bool weekend = day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-            int maxPerDay = weekend ? 5 : 12;
-            int count = faker.Random.Int(0, maxPerDay);
-            for (int i = 0; i < count; i++)
+            var weekend = day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+            var maxPerDay = weekend ? 5 : 12;
+            var count = faker.Random.Int(0, maxPerDay);
+            for (var i = 0; i < count; i++)
             {
-                int minuteOfDay = faker.Random.Int(0, 1439);
+                var minuteOfDay = faker.Random.Int(0, 1439);
                 var time = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(minuteOfDay));
-                DateTime utc = day.ToDateTime(time, DateTimeKind.Utc);
+                var utc = day.ToDateTime(time, DateTimeKind.Utc);
                 var occurred = new DateTimeOffset(utc, TimeSpan.Zero);
 
-                ActivityEventType eventType = PickEventType(faker);
+                var eventType = PickEventType(faker);
                 Guid? boardItemId = boardItemIds.Count > 0 && faker.Random.Bool(0.45f)
                     ? faker.PickRandom(boardItemIds)
                     : null;

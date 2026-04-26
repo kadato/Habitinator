@@ -1,4 +1,5 @@
 using System.Text.Json;
+
 using App.Shared.RCL.Models;
 
 namespace App.Shared.RCL.Services;
@@ -8,18 +9,17 @@ public static class NotificationSettingsJson
     private static readonly JsonSerializerOptions Options = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false,
+        WriteIndented = false
     };
 
-    public static string Serialize(NotificationSettings settings) =>
-        JsonSerializer.Serialize(settings, Options);
+    public static string Serialize(NotificationSettings settings)
+    {
+        return JsonSerializer.Serialize(settings, Options);
+    }
 
     public static NotificationSettings DeserializeOrDefault(string? json)
     {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return NotificationSettings.CreateDefault();
-        }
+        if (string.IsNullOrWhiteSpace(json)) return NotificationSettings.CreateDefault();
 
         try
         {

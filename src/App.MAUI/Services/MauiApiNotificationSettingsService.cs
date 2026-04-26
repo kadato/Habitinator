@@ -1,15 +1,15 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
-using Microsoft.Maui.Storage;
 
 namespace App.MAUI.Services;
 
 /// <summary>
-/// When logged in, loads and saves notification preferences on the server (same row as web).
-/// Falls back to <see cref="Preferences"/> when offline or not authenticated.
+///     When logged in, loads and saves notification preferences on the server (same row as web).
+///     Falls back to <see cref="Preferences" /> when offline or not authenticated.
 /// </summary>
 public sealed class MauiApiNotificationSettingsService : INotificationSettingsService
 {
@@ -19,11 +19,12 @@ public sealed class MauiApiNotificationSettingsService : INotificationSettingsSe
     {
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    private readonly IHttpClientFactory _http;
     private readonly IApiSession _apiSession;
+
+    private readonly IHttpClientFactory _http;
 
     public MauiApiNotificationSettingsService(IHttpClientFactory http, IApiSession apiSession)
     {
@@ -32,33 +33,25 @@ public sealed class MauiApiNotificationSettingsService : INotificationSettingsSe
         _apiSession.Changed += (_, _) => Changed?.Invoke();
     }
 
-    public event Action? Changed;
-
     private HttpClient Client => _http.CreateClient("api");
+
+    public event Action? Changed;
 
     public async Task<NotificationSettings> GetAsync(CancellationToken cancellationToken = default)
     {
         await EnsureSessionReadyAsync(cancellationToken).ConfigureAwait(false);
-        if (!_apiSession.IsLoggedIn)
-        {
-            return ReadLocal();
-        }
+        if (!_apiSession.IsLoggedIn) return ReadLocal();
 
         try
         {
-            using HttpResponseMessage res = await Client.GetAsync("api/settings/notifications", cancellationToken).ConfigureAwait(false);
-            if (!res.IsSuccessStatusCode)
-            {
-                return ReadLocal();
-            }
+            using var res = await Client.GetAsync("api/settings/notifications", cancellationToken)
+                .ConfigureAwait(false);
+            if (!res.IsSuccessStatusCode) return ReadLocal();
 
-            NotificationSettings? remote = await res.Content
+            var remote = await res.Content
                 .ReadFromJsonAsync<NotificationSettings>(Serializer, cancellationToken)
                 .ConfigureAwait(false);
-            if (remote is null)
-            {
-                return ReadLocal();
-            }
+            if (remote is null) return ReadLocal();
 
             WriteLocal(remote);
             return remote;
@@ -80,7 +73,7 @@ public sealed class MauiApiNotificationSettingsService : INotificationSettingsSe
             return;
         }
 
-        using HttpResponseMessage res = await Client
+        using var res = await Client
             .PutAsJsonAsync("api/settings/notifications", settings, Serializer, cancellationToken)
             .ConfigureAwait(false);
         res.EnsureSuccessStatusCode();
@@ -89,18 +82,17 @@ public sealed class MauiApiNotificationSettingsService : INotificationSettingsSe
 
     private async Task EnsureSessionReadyAsync(CancellationToken cancellationToken)
     {
-        if (!_apiSession.IsReady)
-        {
-            await _apiSession.LoadAsync(cancellationToken).ConfigureAwait(false);
-        }
+        if (!_apiSession.IsReady) await _apiSession.LoadAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private NotificationSettings ReadLocal()
     {
-        string? json = Preferences.Get(PreferencesKey, null);
+        var json = Preferences.Get(PreferencesKey, null);
         return NotificationSettingsJson.DeserializeOrDefault(json);
     }
 
-    private static void WriteLocal(NotificationSettings settings) =>
+    private static void WriteLocal(NotificationSettings settings)
+    {
         Preferences.Set(PreferencesKey, NotificationSettingsJson.Serialize(settings));
+    }
 }

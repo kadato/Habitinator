@@ -1,26 +1,27 @@
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+
 using Microsoft.Extensions.Logging;
-using Microsoft.Maui.ApplicationModel;
+
 using Plugin.LocalNotification;
 using Plugin.LocalNotification.Core.Models;
 
 namespace App.MAUI.Services;
 
 /// <summary>
-/// Schedules a one-shot local notification for the next daily reminder time, with content derived from
-/// the current board. Reschedules when settings change or the app is foregrounded so the message stays
-/// up to date.
+///     Schedules a one-shot local notification for the next daily reminder time, with content derived from
+///     the current board. Reschedules when settings change or the app is foregrounded so the message stays
+///     up to date.
 /// </summary>
 public sealed class MauiDailyReminderService : IDisposable
 {
     public const int NotificationId = 42_001;
 
     public const string AndroidChannelId = "habitinator.daily";
-
-    private readonly INotificationSettingsService _notificationSettings;
     private readonly IBoardDataService _board;
     private readonly ILogger<MauiDailyReminderService> _logger;
+
+    private readonly INotificationSettingsService _notificationSettings;
 
     public MauiDailyReminderService(
         INotificationSettingsService notificationSettings,
@@ -33,45 +34,42 @@ public sealed class MauiDailyReminderService : IDisposable
         _notificationSettings.Changed += OnSettingsChanged;
     }
 
-    public void Dispose() => _notificationSettings.Changed -= OnSettingsChanged;
+    public void Dispose()
+    {
+        _notificationSettings.Changed -= OnSettingsChanged;
+    }
 
-    private void OnSettingsChanged() =>
+    private void OnSettingsChanged()
+    {
         MainThread.BeginInvokeOnMainThread(() => { _ = SynchronizeAsync(); });
+    }
 
     public async Task SynchronizeAsync(CancellationToken cancellationToken = default)
     {
-        if (!LocalNotificationCenter.Current.IsSupported)
-        {
-            return;
-        }
+        if (!LocalNotificationCenter.Current.IsSupported) return;
 
         try
         {
-            INotificationService center = LocalNotificationCenter.Current;
+            var center = LocalNotificationCenter.Current;
             center.Cancel(NotificationId);
 
-            NotificationSettings settings = await _notificationSettings.GetAsync(cancellationToken);
-            if (!settings.DailyReminderEnabled || !settings.DailyReminderTime.HasValue)
-            {
-                return;
-            }
+            var settings = await _notificationSettings.GetAsync(cancellationToken);
+            if (!settings.DailyReminderEnabled || !settings.DailyReminderTime.HasValue) return;
 
-            TimeSpan timeOfDay = settings.DailyReminderTime.Value;
-            DateTime next = NextLocalNotificationTime(timeOfDay);
+            var timeOfDay = settings.DailyReminderTime.Value;
+            var next = NextLocalNotificationTime(timeOfDay);
 
             var snapshot = await _board.GetSnapshotAsync(cancellationToken);
-            (string title, string body) = DailyReminderText.Build(snapshot, DailySchedule.UtcToday);
+            var (title, body) = DailyReminderText.Build(snapshot, DailySchedule.UtcToday);
 
             var perm = new NotificationPermission { AskPermission = true };
             if (!await center.AreNotificationsEnabled(perm).ConfigureAwait(false))
-            {
                 if (!await center.RequestNotificationPermission(perm).ConfigureAwait(false)
                     || !await center.AreNotificationsEnabled(perm).ConfigureAwait(false))
                 {
                     _logger.LogDebug("Daily reminder not scheduled: notification permission denied.");
                     return;
                 }
-            }
 
             var request = new NotificationRequest
             {
@@ -99,17 +97,14 @@ public sealed class MauiDailyReminderService : IDisposable
         }
     }
 
-    /// <summary>Next <paramref name="timeOfDay"/> on the device clock (today if still ahead, else tomorrow).</summary>
+    /// <summary>Next <paramref name="timeOfDay" /> on the device clock (today if still ahead, else tomorrow).</summary>
     internal static DateTime NextLocalNotificationTime(TimeSpan timeOfDay)
     {
-        if (timeOfDay < TimeSpan.Zero || timeOfDay >= TimeSpan.FromDays(1))
-        {
-            timeOfDay = TimeSpan.FromHours(7);
-        }
+        if (timeOfDay < TimeSpan.Zero || timeOfDay >= TimeSpan.FromDays(1)) timeOfDay = TimeSpan.FromHours(7);
 
-        DateTime now = DateTime.Now;
-        DateTime today = now.Date;
-        DateTime candidate = today + timeOfDay;
+        var now = DateTime.Now;
+        var today = now.Date;
+        var candidate = today + timeOfDay;
         return candidate > now ? candidate : candidate.AddDays(1);
     }
 }

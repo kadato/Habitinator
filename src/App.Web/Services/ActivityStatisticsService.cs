@@ -1,6 +1,7 @@
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 using App.Web.Data;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace App.Web.Services;
@@ -9,8 +10,10 @@ public sealed class ActivityStatisticsService
 {
     private readonly ApplicationDbContext _db;
 
-    public ActivityStatisticsService(ApplicationDbContext db) =>
+    public ActivityStatisticsService(ApplicationDbContext db)
+    {
         _db = db;
+    }
 
     public async Task<ActivityDayDetailDto> GetActivityDayDetailAsync(
         Guid userId,
@@ -20,7 +23,7 @@ public sealed class ActivityStatisticsService
         var fromUtc = day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var toUtc = day.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
-        List<UserActivityEventRecord> rows = await _db.UserActivityEvents.AsNoTracking()
+        var rows = await _db.UserActivityEvents.AsNoTracking()
             .Where(e => e.UserId == userId && e.OccurredAtUtc >= fromUtc && e.OccurredAtUtc < toUtc)
             .OrderBy(e => e.OccurredAtUtc)
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds))
@@ -47,14 +50,14 @@ public sealed class ActivityStatisticsService
         string? periodKey,
         CancellationToken cancellationToken = default)
     {
-        DateOnly utcToday = DailySchedule.UtcToday;
-        IReadOnlyList<DailyGraphPeriodOption> options = await BuildDailyPeriodOptionsAsync(userId, utcToday, cancellationToken);
-        (string key, DateOnly start, DateOnly end) = ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, utcToday, options);
+        var utcToday = DailySchedule.UtcToday;
+        var options = await BuildDailyPeriodOptionsAsync(userId, utcToday, cancellationToken);
+        var (key, start, end) = ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, utcToday, options);
 
         var fromUtc = start.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var toUtc = end.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
-        List<UserActivityEventRecord> rows = await _db.UserActivityEvents.AsNoTracking()
+        var rows = await _db.UserActivityEvents.AsNoTracking()
             .Where(e => e.UserId == userId && e.OccurredAtUtc >= fromUtc && e.OccurredAtUtc < toUtc)
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds))
             .ToListAsync(cancellationToken);
@@ -67,9 +70,10 @@ public sealed class ActivityStatisticsService
         string? periodKey,
         CancellationToken cancellationToken = default)
     {
-        DateOnly utcToday = DailySchedule.UtcToday;
-        IReadOnlyList<DailyGraphPeriodOption> options = await BuildDailyPeriodOptionsAsync(userId, utcToday, cancellationToken);
-        (string key, DateOnly rangeStart, DateOnly rangeEnd) = ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, utcToday, options);
+        var utcToday = DailySchedule.UtcToday;
+        var options = await BuildDailyPeriodOptionsAsync(userId, utcToday, cancellationToken);
+        var (key, rangeStart, rangeEnd) =
+            ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, utcToday, options);
 
         var fromUtc = rangeStart.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var toUtc = rangeEnd.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
@@ -80,7 +84,7 @@ public sealed class ActivityStatisticsService
             .Select(b => new { b.Id, b.Title })
             .ToListAsync(cancellationToken);
 
-        List<UserActivityEventRecord> eventRows = await _db.UserActivityEvents.AsNoTracking()
+        var eventRows = await _db.UserActivityEvents.AsNoTracking()
             .Where(e =>
                 e.UserId == userId &&
                 e.OccurredAtUtc >= fromUtc &&
@@ -105,27 +109,22 @@ public sealed class ActivityStatisticsService
         DateOnly utcToday,
         CancellationToken cancellationToken)
     {
-        int maxYear = utcToday.Year;
-        DateTimeOffset? first = await _db.UserActivityEvents.AsNoTracking()
+        var maxYear = utcToday.Year;
+        var first = await _db.UserActivityEvents.AsNoTracking()
             .Where(e => e.UserId == userId && e.EventType == ActivityEventType.DailyComplete)
             .OrderBy(e => e.OccurredAtUtc)
             .Select(e => (DateTimeOffset?)e.OccurredAtUtc)
             .FirstOrDefaultAsync(cancellationToken);
 
-        int minYear = first is { } f ? f.UtcDateTime.Year : maxYear;
-        if (minYear > maxYear)
-        {
-            minYear = maxYear;
-        }
+        var minYear = first is { } f ? f.UtcDateTime.Year : maxYear;
+        if (minYear > maxYear) minYear = maxYear;
 
         var list = new List<DailyGraphPeriodOption>
         {
-            new(DailyGraphPeriods.Rolling370Days, "Last 370 days"),
+            new(DailyGraphPeriods.Rolling370Days, "Last 370 days")
         };
-        for (int y = maxYear; y >= minYear; y--)
-        {
+        for (var y = maxYear; y >= minYear; y--)
             list.Add(new DailyGraphPeriodOption(DailyGraphPeriods.ForCalendarYear(y), y.ToString()));
-        }
 
         return list;
     }

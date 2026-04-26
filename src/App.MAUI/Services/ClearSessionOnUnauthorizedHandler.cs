@@ -7,16 +7,17 @@ public sealed class ClearSessionOnUnauthorizedHandler : DelegatingHandler
 {
     private readonly IApiSession _session;
 
-    public ClearSessionOnUnauthorizedHandler(IApiSession session) =>
-        _session = session;
-
-    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    public ClearSessionOnUnauthorizedHandler(IApiSession session)
     {
-        HttpResponseMessage res = await base.SendAsync(request, cancellationToken);
+        _session = session;
+    }
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        var res = await base.SendAsync(request, cancellationToken);
         if (res.StatusCode == HttpStatusCode.Unauthorized && _session.IsLoggedIn)
-        {
             await _session.ClearSessionAsync(cancellationToken);
-        }
 
         return res;
     }

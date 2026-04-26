@@ -1,6 +1,6 @@
-using System.Security.Claims;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace App.Web.Services;
@@ -8,8 +8,8 @@ namespace App.Web.Services;
 public sealed class WebBoardDataService : IBoardDataService
 {
     private readonly AuthenticationStateProvider _authenticationStateProvider;
-    private readonly DemoUserResolver _demoUserResolver;
     private readonly BoardPersistenceService _boardPersistenceService;
+    private readonly DemoUserResolver _demoUserResolver;
 
     public WebBoardDataService(
         AuthenticationStateProvider authenticationStateProvider,
@@ -23,49 +23,54 @@ public sealed class WebBoardDataService : IBoardDataService
 
     public async Task<BoardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
     {
-        Guid userId = await GetCurrentUserIdAsync(cancellationToken);
+        var userId = await GetCurrentUserIdAsync(cancellationToken);
         return await _boardPersistenceService.GetSnapshotAsync(userId, cancellationToken);
     }
 
-    public async Task<BoardItem> CreateItemAsync(BoardSection section, string title, CancellationToken cancellationToken = default)
+    public async Task<BoardItem> CreateItemAsync(BoardSection section, string title,
+        CancellationToken cancellationToken = default)
     {
-        Guid userId = await GetCurrentUserIdAsync(cancellationToken);
+        var userId = await GetCurrentUserIdAsync(cancellationToken);
         return await _boardPersistenceService.CreateItemAsync(userId, section, title, cancellationToken);
     }
 
-    public async Task<BoardItem?> RenameItemAsync(BoardSection section, Guid itemId, string title, CancellationToken cancellationToken = default)
+    public async Task<BoardItem?> RenameItemAsync(BoardSection section, Guid itemId, string title,
+        CancellationToken cancellationToken = default)
     {
-        Guid userId = await GetCurrentUserIdAsync(cancellationToken);
+        var userId = await GetCurrentUserIdAsync(cancellationToken);
         return await _boardPersistenceService.RenameItemAsync(userId, section, itemId, title, cancellationToken);
     }
 
-    public async Task<bool> DeleteItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteItemAsync(BoardSection section, Guid itemId,
+        CancellationToken cancellationToken = default)
     {
-        Guid userId = await GetCurrentUserIdAsync(cancellationToken);
+        var userId = await GetCurrentUserIdAsync(cancellationToken);
         return await _boardPersistenceService.DeleteItemAsync(userId, section, itemId, cancellationToken);
     }
 
-    public async Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
+    public async Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId,
+        CancellationToken cancellationToken = default)
     {
-        Guid userId = await GetCurrentUserIdAsync(cancellationToken);
+        var userId = await GetCurrentUserIdAsync(cancellationToken);
         return await _boardPersistenceService.ToggleItemAsync(userId, section, itemId, cancellationToken);
     }
 
-    public async Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn, CancellationToken cancellationToken = default)
+    public async Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn,
+        CancellationToken cancellationToken = default)
     {
-        Guid userId = await GetCurrentUserIdAsync(cancellationToken);
+        var userId = await GetCurrentUserIdAsync(cancellationToken);
         return await _boardPersistenceService.CompleteDailyForDateAsync(userId, itemId, completedOn, cancellationToken);
     }
 
     public async Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
-        Guid userId = await GetCurrentUserIdAsync(cancellationToken);
+        var userId = await GetCurrentUserIdAsync(cancellationToken);
         return await _boardPersistenceService.IncrementHabitPlusAsync(userId, itemId, cancellationToken);
     }
 
     public async Task<BoardItem?> IncrementHabitMinusAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
-        Guid userId = await GetCurrentUserIdAsync(cancellationToken);
+        var userId = await GetCurrentUserIdAsync(cancellationToken);
         return await _boardPersistenceService.IncrementHabitMinusAsync(userId, itemId, cancellationToken);
     }
 
@@ -82,7 +87,7 @@ public sealed class WebBoardDataService : IBoardDataService
         string? checklistJson = null,
         CancellationToken cancellationToken = default)
     {
-        Guid userId = await GetCurrentUserIdAsync(cancellationToken);
+        var userId = await GetCurrentUserIdAsync(cancellationToken);
         return await _boardPersistenceService.UpdateHabitAsync(
             userId,
             itemId,
@@ -107,7 +112,7 @@ public sealed class WebBoardDataService : IBoardDataService
         DateTime? dueDate,
         CancellationToken cancellationToken = default)
     {
-        Guid userId = await GetCurrentUserIdAsync(cancellationToken);
+        var userId = await GetCurrentUserIdAsync(cancellationToken);
         return await _boardPersistenceService.UpdateTodoAsync(
             userId,
             itemId,
@@ -131,7 +136,7 @@ public sealed class WebBoardDataService : IBoardDataService
         int streak,
         CancellationToken cancellationToken = default)
     {
-        Guid userId = await GetCurrentUserIdAsync(cancellationToken);
+        var userId = await GetCurrentUserIdAsync(cancellationToken);
         return await _boardPersistenceService.UpdateDailyAsync(
             userId,
             itemId,
@@ -148,8 +153,8 @@ public sealed class WebBoardDataService : IBoardDataService
 
     private async Task<Guid> GetCurrentUserIdAsync(CancellationToken cancellationToken)
     {
-        AuthenticationState authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
-        ClaimsPrincipal user = authState.User;
+        var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
         return await _demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
     }
 }

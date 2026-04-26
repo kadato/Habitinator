@@ -1,12 +1,10 @@
-@using MudBlazor
-
 <MudDialog>
     <DialogContent>
         <MudTextField @bind-Value="Value"
                       Label="Title"
                       Variant="Variant.Outlined"
                       Immediate="true"
-                      Required="true" />
+                      Required="true"/>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Color="Color.Default">Cancel</MudButton>
@@ -15,13 +13,14 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter]
-    private IMudDialogInstance Dialog { get; set; } = default!;
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
 
-    [Parameter]
-    public string Value { get; set; } = string.Empty;
+    [Parameter] public string Value { get; set; } = string.Empty;
 
-    private void Cancel() => Dialog.Cancel();
+    private void Cancel()
+    {
+        Dialog.Cancel();
+    }
 
     private void Submit()
     {
@@ -32,4 +31,5 @@
 
         Dialog.Close(DialogResult.Ok(Value.Trim()));
     }
+
 }

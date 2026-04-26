@@ -32,5 +32,8 @@ public sealed class NotificationSettings
     /// <summary>End of quiet window, UTC time-of-day.</summary>
     public TimeSpan? QuietHoursEndUtc { get; set; }
 
-    public static NotificationSettings CreateDefault() => new();
+    public static NotificationSettings CreateDefault()
+    {
+        return new NotificationSettings();
+    }
 }

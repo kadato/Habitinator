@@ -4,13 +4,23 @@ namespace App.Shared.RCL.Services;
 
 public sealed record ActivityWeekBarDto(int Index, DateOnly WeekStart, int EventCount, int FocusMinutes);
 
-public sealed record ActivityHeatmapCellDto(int DayRow, int WeekCol, DateOnly Date, int Count, int Intensity, bool InDataRange);
+public sealed record ActivityHeatmapCellDto(
+    int DayRow,
+    int WeekCol,
+    DateOnly Date,
+    int Count,
+    int Intensity,
+    bool InDataRange);
 
 public static class DailyGraphPeriods
 {
     public const string Rolling370Days = "r370";
     public const string YearPrefix = "y";
-    public static string ForCalendarYear(int year) => $"{YearPrefix}{year}";
+
+    public static string ForCalendarYear(int year)
+    {
+        return $"{YearPrefix}{year}";
+    }
 }
 
 /// <summary>GitHub-style contribution grid for one daily in the selected period.</summary>

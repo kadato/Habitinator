@@ -5,13 +5,13 @@
 @inject NavigationManager Nav
 
 <PageTitle>Register</PageTitle>
-<MudStack Spacing="2" Class="pt-2" Style="max-width: 24rem">
+<MudStack Spacing="2" Class="pt - 2" Style="max - width: 24rem">
     <MudText Typo="Typo.h5">Create account</MudText>
-    <MudTextField @bind-Value="_email" Label="Email" InputType="InputType.Email" Variant="Variant.Outlined" />
-    <MudTextField @bind-Value="_password" Label="Password" InputType="InputType.Password" Variant="Variant.Outlined" />
-    <MudTextField @bind-Value="_confirm" Label="Confirm password" InputType="InputType.Password" Variant="Variant.Outlined" />
+    <MudTextField @bind-Value="_email" Label="Email" InputType="InputType.Email" Variant="Variant.Outlined"/>
+    <MudTextField @bind-Value="_password" Label="Password" InputType="InputType.Password" Variant="Variant.Outlined"/>
+    <MudTextField @bind-Value="_confirm" Label="Confirm password" InputType="InputType.Password" Variant="Variant.Outlined"/>
     <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="_busy" OnClick="RegisterAsync">Register</MudButton>
-    <MudButton Variant="Variant.Text" Href="/login">Back to sign in</MudButton>
+    <MudButton Variant="Variant.Text" Href="/ login">Back to sign in</MudButton>
     @if (!string.IsNullOrWhiteSpace(_error))
     {
         <MudAlert Severity="Severity.Error">@_error</MudAlert>
@@ -64,4 +64,5 @@
             _busy = false;
         }
     }
+
 }

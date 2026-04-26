@@ -8,9 +8,14 @@ public sealed class NoOpUserActivityLogService : IUserActivityLogService
         ActivityEventType eventType,
         Guid? boardItemId,
         int? durationSeconds = null,
-        CancellationToken cancellationToken = default) =>
-        Task.CompletedTask;
+        CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
 
-    public Task LogTimerSessionAsync(TimeSpan duration, Guid? boardItemId, CancellationToken cancellationToken = default) =>
-        Task.CompletedTask;
+    public Task LogTimerSessionAsync(TimeSpan duration, Guid? boardItemId,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
 }

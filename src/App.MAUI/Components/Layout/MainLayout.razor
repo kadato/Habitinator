@@ -1,20 +1,20 @@
 ﻿@inherits LayoutComponentBase
-@implements IDisposable
 @using global::App.Shared.RCL.Themes
+@implements IDisposable
 @inject IApiSession Session
 @inject NavigationManager Nav
 
-<MudThemeProvider Theme="@HabitinatorMudTheme.Default" IsDarkMode="true" />
-<MudPopoverProvider />
-<MudDialogProvider />
-<MudSnackbarProvider />
+<MudThemeProvider Theme="@HabitinatorMudTheme.Default" IsDarkMode="true"/>
+<MudPopoverProvider/>
+<MudDialogProvider/>
+<MudSnackbarProvider/>
 
 <MudLayout>
-    <MudAppBar Elevation="0" Dense="false" Class="app-top-bar" ToolBarClass="app-top-bar-toolbar">
+    <MudAppBar Elevation="0" Dense="false" Class="app - top - bar" ToolBarClass="app - top - bar - toolbar">
         <div class="app-top-bar__row d-flex">
             <div class="app-top-bar__left d-flex flex-wrap align-center">
-                <MudText Typo="Typo.h6" Class="app-top-bar__title">Habitinator</MudText>
-                <NavMenu />
+                <MudText Typo="Typo.h6" Class="app - top - bar__title">Habitinator</MudText>
+                <NavMenu/>
             </div>
             <div class="app-top-bar__right d-flex flex-wrap align-center">
                 @if (Session.IsLoggedIn)
@@ -25,7 +25,7 @@
                                  Color="Color.Primary"
                                  Variant="Variant.Filled"
                                  Size="Size.Medium"
-                                 Class="app-header-username-chip text-truncate"
+                                 Class="app - header - username - chip text - truncate"
                                  title="@(Session.Email ?? "User")">
                             @DisplayNameFromEmail(Session.Email)
                         </MudChip>
@@ -33,7 +33,7 @@
                                    Color="Color.Error"
                                    Size="Size.Medium"
                                    StartIcon="@Icons.Material.Filled.Logout"
-                                   Class="app-header-logout-btn text-transform-none"
+                                   Class="app - header - logout - btn text - transform - none"
                                    OnClick="LogoutAsync">
                             Log out
                         </MudButton>
@@ -43,10 +43,10 @@
         </div>
     </MudAppBar>
     <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4 px-4">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py - 4 px - 4">
             @if (!_sessionInitialized)
             {
-                <MudProgressLinear Indeterminate="true" />
+                <MudProgressLinear Indeterminate="true"/>
             }
             else
             {
@@ -59,22 +59,28 @@
 @code {
     private bool _sessionInitialized;
 
-    protected override void OnInitialized() =>
+    protected override void OnInitialized()
+    {
         Session.Changed += OnSessionChanged;
+    }
 
-    public void Dispose() =>
+    public void Dispose()
+    {
         Session.Changed -= OnSessionChanged;
+    }
 
-    private void OnSessionChanged(object? sender, EventArgs e) =>
+    private void OnSessionChanged(object? sender, EventArgs e)
+    {
         _ = InvokeAsync(OnSessionChangedAsync);
+    }
 
     private async Task OnSessionChangedAsync()
     {
         if (_sessionInitialized && !Session.IsLoggedIn)
         {
-            string path = new Uri(Nav.Uri).LocalPath.TrimEnd('/');
-            bool onAuth = path.Equals("/login", StringComparison.OrdinalIgnoreCase) ||
-                          path.Equals("/register", StringComparison.OrdinalIgnoreCase);
+            var path = new Uri(Nav.Uri).LocalPath.TrimEnd('/');
+            var onAuth = path.Equals("/login", StringComparison.OrdinalIgnoreCase) ||
+                         path.Equals("/register", StringComparison.OrdinalIgnoreCase);
             if (!onAuth)
             {
                 Nav.NavigateTo("/login", replace: true);
@@ -91,7 +97,7 @@
             return "guest";
         }
 
-        int at = email.IndexOf('@');
+        var at = email.IndexOf('@');
         return at > 0 ? email[..at] : email;
     }
 
@@ -106,9 +112,9 @@
         await Session.LoadAsync();
         if (!Session.IsLoggedIn)
         {
-            string path = new Uri(Nav.Uri).LocalPath.TrimEnd('/');
-            bool onAuth = path.Equals("/login", StringComparison.OrdinalIgnoreCase) ||
-                          path.Equals("/register", StringComparison.OrdinalIgnoreCase);
+            var path = new Uri(Nav.Uri).LocalPath.TrimEnd('/');
+            var onAuth = path.Equals("/login", StringComparison.OrdinalIgnoreCase) ||
+                         path.Equals("/register", StringComparison.OrdinalIgnoreCase);
             if (!onAuth)
             {
                 Nav.NavigateTo("/login", replace: true);
@@ -118,5 +124,5 @@
         _sessionInitialized = true;
         await InvokeAsync(StateHasChanged);
     }
-}
 
+}

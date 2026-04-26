@@ -1,7 +1,3 @@
-@using App.Shared.RCL.Components.Dialogs
-@using App.Shared.RCL.Models
-@using App.Shared.RCL.Services
-@using Microsoft.JSInterop
 @inject GlobalTimerService TimerService
 @inject IBoardDataService BoardDataService
 @inject IUserActivityLogService UserActivityLog
@@ -11,10 +7,10 @@
 @inject BoardRemoteNotifyBridge BoardNotifyBridge
 @inject IJSRuntime JS
 
-<MudStack Class="board-shell mud-width-full" Spacing="1">
+<MudStack Class="board - shell mud - width - full" Spacing="1">
     @if (_isLoading)
     {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true"/>
     }
 
     @if (_loadError is not null)
@@ -36,26 +32,26 @@
 
     @if (_initialLoadComplete && _loadError is null)
     {
-        <MudPaper Class="px-3 py-2 board-stat-strip" Outlined="false" Elevation="0">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="flex-wrap">
+        <MudPaper Class="px - 3 py - 2 board - stat - strip" Outlined="false" Elevation="0">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="flex - wrap">
                 <MudChip T="string"
                          Icon="@BoardSectionVisuals.GetMudIcon(BoardSection.Habit)"
                          Text="@($"{FilteredHabits.Count} habits")"
                          Size="Size.Small"
                          Variant="Variant.Text"
-                         Color="Color.Success" />
+                         Color="Color.Success"/>
                 <MudChip T="string"
                          Icon="@BoardSectionVisuals.GetMudIcon(BoardSection.Daily)"
                          Text="@($"{DailiesDueOpenCount} dailies left")"
                          Size="Size.Small"
                          Variant="Variant.Text"
-                         Color="Color.Primary" />
+                         Color="Color.Primary"/>
                 <MudChip T="string"
                          Icon="@BoardSectionVisuals.GetMudIcon(BoardSection.Todo)"
                          Text="@($"{FilteredTodos.Count(t => !t.IsCompleted)} to-dos open")"
                          Size="Size.Small"
                          Variant="Variant.Text"
-                         Color="Color.Warning" />
+                         Color="Color.Warning"/>
             </MudStack>
         </MudPaper>
     }
@@ -63,32 +59,32 @@
     <GlobalTimerPanel OnLogSaved="HandleTimerLogSavedAsync"
                       Habits="Habits"
                       Dailies="Dailies"
-                      Todos="Todos" />
+                      Todos="Todos"/>
 
     @if (_initialLoadComplete && _loadError is null)
     {
-        <MudPaper Class="px-3 py-2 board-search-panel" Outlined="false" Elevation="0">
-            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Stretch" Class="board-search-row">
+        <MudPaper Class="px - 3 py - 2 board - search - panel" Outlined="false" Elevation="0">
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Stretch" Class="board - search - row">
                 <MudTextField @bind-Value="_searchText"
                               Placeholder="Search"
                               Variant="Variant.Outlined"
                               Margin="Margin.Dense"
                               Adornment="Adornment.Start"
                               AdornmentIcon="@Icons.Material.Filled.Search"
-                              Class="board-search-field flex-grow-1"
+                              Class="board - search - field flex - grow - 1"
                               InputType="InputType.Text"
-                              Immediate="true" />
+                              Immediate="true"/>
                 <div class="board-tags-menu-activator">
                     <MudMenu AnchorOrigin="Origin.BottomRight"
                              TransformOrigin="Origin.TopRight"
                              PopoverFixed="true"
                              MaxHeight="500"
                              RelativeWidth="DropdownWidth.Ignore"
-                             PopoverClass="board-tags-menu-popover">
+                             PopoverClass="board - tags - menu - popover">
                         <ActivatorContent Context="tagMenu">
                             <MudButton Variant="Variant.Outlined"
                                        Color="Color.Default"
-                                       Class="board-tags-trigger"
+                                       Class="board - tags - trigger"
                                        StartIcon="@Icons.Material.Filled.Tune"
                                        EndIcon="@Icons.Material.Filled.ArrowDropDown"
                                        OnClick="@(e => tagMenu.ToggleAsync(e))">
@@ -96,8 +92,8 @@
                             </MudButton>
                         </ActivatorContent>
                         <ChildContent>
-                            <MudPaper Class="board-tags-menu-panel pa-3" Elevation="0" Style="min-width: 17rem; max-width: 24rem;">
-                                <MudText Typo="Typo.subtitle1" Class="mb-1">Tags</MudText>
+                            <MudPaper Class="board - tags - menu - panel pa - 3" Elevation="0" Style="min - width: 17rem; max - width: 24rem;">
+                                <MudText Typo="Typo.subtitle1" Class="mb - 1">Tags</MudText>
                                 @if (AllTagNamesForMenu.Count == 0)
                                 {
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">No tags on the board yet. Add tags in an item&rsquo;s details.</MudText>
@@ -105,18 +101,18 @@
                                 else
                                 {
                                     <div class="board-tag-filter-grid board-tags-menu-body">
-                                        @foreach (string tag in AllTagNamesForMenu)
+                                        @foreach (var tag in AllTagNamesForMenu)
                                         {
                                             <MudCheckBox Value="IsFilterTagSelected(tag)"
                                                          ValueChanged="@((bool b) => OnFilterTagChanged(tag, b))"
                                                          Label="@tag"
                                                          Color="Color.Primary"
                                                          Dense="true"
-                                                         Class="ma-0" />
+                                                         Class="ma - 0"/>
                                         }
                                     </div>
                                 }
-                                <MudStack Row="true" Spacing="1" Justify="Justify.SpaceBetween" Class="mt-2 pt-2" Style="border-top: 1px solid var(--mud-palette-divider);">
+                                <MudStack Row="true" Spacing="1" Justify="Justify.SpaceBetween" Class="mt - 2 pt - 2" Style="border - top: 1px solid var(--mud - palette - divider);">
                                     <MudButton Variant="Variant.Text"
                                                Color="Color.Error"
                                                Size="Size.Small"
@@ -136,24 +132,24 @@
     @if (_loadError is null)
     {
         <div class="board-columns-stage">
-            <MudGrid Spacing="3" Class="board-columns-grid mt-0 mud-width-full">
+            <MudGrid Spacing="3" Class="board - columns - grid mt - 0 mud - width - full">
                 <MudItem xs="12" md="4">
                     <HabiticaColumn Section="BoardSection.Habit"
                                     Items="FilteredHabits"
                                     IsBoardFilterExcludingAll="Habits.Count > 0 && FilteredHabits.Count == 0"
-                                    OnChanged="OnBoardChanged" />
+                                    OnChanged="OnBoardChanged"/>
                 </MudItem>
                 <MudItem xs="12" md="4">
                     <HabiticaColumn Section="BoardSection.Daily"
                                     Items="FilteredDailies"
                                     IsBoardFilterExcludingAll="Dailies.Count > 0 && FilteredDailies.Count == 0"
-                                    OnChanged="OnBoardChanged" />
+                                    OnChanged="OnBoardChanged"/>
                 </MudItem>
                 <MudItem xs="12" md="4">
                     <HabiticaColumn Section="BoardSection.Todo"
                                     Items="FilteredTodos"
                                     IsBoardFilterExcludingAll="Todos.Count > 0 && FilteredTodos.Count == 0"
-                                    OnChanged="OnBoardChanged" />
+                                    OnChanged="OnBoardChanged"/>
                 </MudItem>
             </MudGrid>
         </div>
@@ -165,11 +161,12 @@
     }
 </MudStack>
 
+@using App.Shared.RCL.Components.Dialogs
+@using Microsoft.JSInterop
 @implements IAsyncDisposable
 
 @code {
-    [Parameter]
-    public string? SignedInEmail { get; set; }
+    [Parameter] public string? SignedInEmail { get; set; }
 
     private List<BoardItem> Habits { get; set; } = [];
     private List<BoardItem> Dailies { get; set; } = [];
@@ -189,6 +186,7 @@
 
     private int DailiesDueOpenCount =>
         FilterItems(Dailies).Count(d => DailySchedule.IsDueOnDate(d, DailySchedule.UtcToday));
+
     private IReadOnlyList<BoardItem> FilteredTodos => FilterItems(Todos);
 
     private IReadOnlyList<string> AllTagNamesForMenu
@@ -196,25 +194,25 @@
         get
         {
             var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (BoardItem item in Habits)
+            foreach (var item in Habits)
             {
-                foreach (string t in BoardTagUtil.ParseTags(item.Tags))
+                foreach (var t in BoardTagUtil.ParseTags(item.Tags))
                 {
                     set.Add(t);
                 }
             }
 
-            foreach (BoardItem item in Dailies)
+            foreach (var item in Dailies)
             {
-                foreach (string t in BoardTagUtil.ParseTags(item.Tags))
+                foreach (var t in BoardTagUtil.ParseTags(item.Tags))
                 {
                     set.Add(t);
                 }
             }
 
-            foreach (BoardItem item in Todos)
+            foreach (var item in Todos)
             {
-                foreach (string t in BoardTagUtil.ParseTags(item.Tags))
+                foreach (var t in BoardTagUtil.ParseTags(item.Tags))
                 {
                     set.Add(t);
                 }
@@ -232,8 +230,14 @@
         await InitialLoadAsync();
     }
 
-    /// <summary>Marshals server-pushed refreshes onto the Blazor dispatcher (SignalR/JS callbacks are not on the renderer sync context).</summary>
-    private Task HandleRemoteBoardRefreshedAsync() => InvokeAsync(OnRemoteBoardRefreshedAsync);
+    /// <summary>
+    ///     Marshals server-pushed refreshes onto the Blazor dispatcher (SignalR/JS callbacks are not on the renderer sync
+    ///     context).
+    /// </summary>
+    private Task HandleRemoteBoardRefreshedAsync()
+    {
+        return InvokeAsync(OnRemoteBoardRefreshedAsync);
+    }
 
     private async Task OnRemoteBoardRefreshedAsync()
     {
@@ -347,18 +351,22 @@
 
     private async Task LoadBoardAsync()
     {
-        BoardSnapshot snapshot = await BoardDataService.GetSnapshotAsync();
+        var snapshot = await BoardDataService.GetSnapshotAsync();
         Habits = snapshot.Habits.ToList();
         Dailies = snapshot.Dailies.ToList();
         Todos = snapshot.Todos.ToList();
         PruneStaleFilterTags();
     }
 
-    private IReadOnlyList<BoardItem> FilterItems(IReadOnlyList<BoardItem> source) =>
-        source.Where(MatchesGlobalFilters).ToList();
+    private IReadOnlyList<BoardItem> FilterItems(IReadOnlyList<BoardItem> source)
+    {
+        return source.Where(MatchesGlobalFilters).ToList();
+    }
 
-    private bool MatchesGlobalFilters(BoardItem item) =>
-        MatchesTagFilter(item) && MatchesSearchQuery(item);
+    private bool MatchesGlobalFilters(BoardItem item)
+    {
+        return MatchesTagFilter(item) && MatchesSearchQuery(item);
+    }
 
     private bool MatchesTagFilter(BoardItem item)
     {
@@ -368,7 +376,7 @@
         }
 
         var onItem = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (string t in BoardTagUtil.ParseTags(item.Tags))
+        foreach (var t in BoardTagUtil.ParseTags(item.Tags))
         {
             onItem.Add(t);
         }
@@ -378,7 +386,7 @@
 
     private bool MatchesSearchQuery(BoardItem item)
     {
-        string q = _searchText.Trim();
+        var q = _searchText.Trim();
         if (q.Length == 0)
         {
             return true;
@@ -394,7 +402,7 @@
             return true;
         }
 
-        foreach (DailyChecklistItem line in DailyChecklistJson.Parse(item.ChecklistJson))
+        foreach (var line in DailyChecklistJson.Parse(item.ChecklistJson))
         {
             if (line.Text.Contains(q, StringComparison.OrdinalIgnoreCase))
             {
@@ -405,7 +413,10 @@
         return false;
     }
 
-    private bool IsFilterTagSelected(string tag) => _selectedFilterTags.Contains(tag);
+    private bool IsFilterTagSelected(string tag)
+    {
+        return _selectedFilterTags.Contains(tag);
+    }
 
     private void OnFilterTagChanged(string tag, bool isChecked)
     {
@@ -438,36 +449,36 @@
 
     private async Task HandleTimerLogSavedAsync(TimeSpan duration)
     {
-        string? targetType = TimerService.TargetType;
-        string? targetId = TimerService.TargetId;
-        Guid? boardId = TimerService.BoardItemId ?? ResolveBoardItemIdFromTitle(targetType, targetId);
+        var targetType = TimerService.TargetType;
+        var targetId = TimerService.TargetId;
+        var boardId = TimerService.BoardItemId ?? ResolveBoardItemIdFromTitle(targetType, targetId);
         var boardError = false;
         if (boardId is Guid id && targetType is "Habit" or "Daily" or "Todo")
         {
             try
             {
-                bool progressed = false;
+                var progressed = false;
                 if (targetType == "Habit")
                 {
-                    BoardItem? updated = await BoardDataService.IncrementHabitPlusAsync(id);
+                    var updated = await BoardDataService.IncrementHabitPlusAsync(id);
                     progressed = updated is not null;
                 }
                 else if (targetType == "Daily")
                 {
-                    BoardItem? daily = Dailies.FirstOrDefault(d => d.Id == id);
-                    DateOnly today = DailySchedule.UtcToday;
+                    var daily = Dailies.FirstOrDefault(d => d.Id == id);
+                    var today = DailySchedule.UtcToday;
                     if (daily is not null && !DailySchedule.IsCompleteForDate(daily, today))
                     {
-                        BoardItem? updated = await BoardDataService.ToggleItemAsync(BoardSection.Daily, id);
+                        var updated = await BoardDataService.ToggleItemAsync(BoardSection.Daily, id);
                         progressed = updated is not null;
                     }
                 }
                 else if (targetType == "Todo")
                 {
-                    BoardItem? todo = Todos.FirstOrDefault(t => t.Id == id);
+                    var todo = Todos.FirstOrDefault(t => t.Id == id);
                     if (todo is { IsCompleted: false })
                     {
-                        BoardItem? updated = await BoardDataService.ToggleItemAsync(BoardSection.Todo, id);
+                        var updated = await BoardDataService.ToggleItemAsync(BoardSection.Todo, id);
                         progressed = updated is not null;
                     }
                 }
@@ -526,7 +537,7 @@
             return string.Empty;
         }
 
-        int at = email.IndexOf('@');
+        var at = email.IndexOf('@');
         return at > 0 ? email[..at] : email;
     }
 
@@ -537,7 +548,7 @@
             return;
         }
 
-        DateOnly today = DailySchedule.UtcToday;
+        var today = DailySchedule.UtcToday;
         DateOnly? lastResolved;
         try
         {
@@ -553,13 +564,13 @@
             return;
         }
 
-        IReadOnlyList<BoardItem> missed = DailySchedule.GetYesterdayUncompletedDailies(Dailies, today);
+        var missed = DailySchedule.GetYesterdayUncompletedDailies(Dailies, today);
         if (missed.Count == 0)
         {
             return;
         }
 
-        DateOnly y = today.AddDays(-1);
+        var y = today.AddDays(-1);
         var options = new DialogOptions
         {
             MaxWidth = MaxWidth.Small,
@@ -576,7 +587,7 @@
         _dailyRetroSessionOffered = true;
         try
         {
-            IDialogReference dialog = await DialogService.ShowAsync<DailyYesterdayRetroDialog>(
+            var dialog = await DialogService.ShowAsync<DailyYesterdayRetroDialog>(
                 "Catch up: yesterday’s dailies", parameters, options);
             _ = await dialog.Result;
         }

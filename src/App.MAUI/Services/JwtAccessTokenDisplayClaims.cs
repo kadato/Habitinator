@@ -8,32 +8,26 @@ internal static class JwtAccessTokenDisplayClaims
 {
     public static string? TryGetEmail(string? jwt)
     {
-        if (string.IsNullOrEmpty(jwt))
-        {
-            return null;
-        }
+        if (string.IsNullOrEmpty(jwt)) return null;
 
-        string[] parts = jwt.Split('.');
-        if (parts.Length < 2)
-        {
-            return null;
-        }
+        var parts = jwt.Split('.');
+        if (parts.Length < 2) return null;
 
         try
         {
-            string payload = parts[1].Replace('-', '+').Replace('_', '/');
+            var payload = parts[1].Replace('-', '+').Replace('_', '/');
             switch (payload.Length % 4)
             {
                 case 2: payload += "=="; break;
                 case 3: payload += "="; break;
             }
 
-            byte[] jsonBytes = Convert.FromBase64String(payload);
-            string json = Encoding.UTF8.GetString(jsonBytes);
-            using JsonDocument doc = JsonDocument.Parse(json);
-            if (doc.RootElement.TryGetProperty("email", out JsonElement e))
+            var jsonBytes = Convert.FromBase64String(payload);
+            var json = Encoding.UTF8.GetString(jsonBytes);
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("email", out var e))
             {
-                string? s = e.GetString();
+                var s = e.GetString();
                 return string.IsNullOrEmpty(s) ? null : s;
             }
         }

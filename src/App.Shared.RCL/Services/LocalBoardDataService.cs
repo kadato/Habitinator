@@ -4,12 +4,6 @@ namespace App.Shared.RCL.Services;
 
 public sealed class LocalBoardDataService : IBoardDataService
 {
-    private readonly List<BoardItem> _habits =
-    [
-        new(Guid.NewGuid(), "Drink a glass of water", false, 3, null, null, true, true, 2),
-        new(Guid.NewGuid(), "Read 10 pages", false, 1)
-    ];
-
     private readonly List<BoardItem> _dailies =
     [
         new(
@@ -23,12 +17,7 @@ public sealed class LocalBoardDataService : IBoardDataService
             true,
             0,
             HabitResetPeriod.Daily,
-            DailySchedule.UtcToday,
-            DailyRepeatType.Daily,
-            1,
-            null,
-            null,
-            null),
+            DailySchedule.UtcToday),
         new(
             Guid.NewGuid(),
             "Deep work block",
@@ -44,8 +33,7 @@ public sealed class LocalBoardDataService : IBoardDataService
             DailyRepeatType.Daily,
             1,
             null,
-            DailySchedule.UtcToday,
-            null),
+            DailySchedule.UtcToday),
         new(
             Guid.NewGuid(),
             "Progress thesis",
@@ -57,12 +45,13 @@ public sealed class LocalBoardDataService : IBoardDataService
             true,
             0,
             HabitResetPeriod.Daily,
-            DailySchedule.UtcToday,
-            DailyRepeatType.Daily,
-            1,
-            null,
-            null,
-            null)
+            DailySchedule.UtcToday)
+    ];
+
+    private readonly List<BoardItem> _habits =
+    [
+        new(Guid.NewGuid(), "Drink a glass of water", false, 3, null, null, true, true, 2),
+        new(Guid.NewGuid(), "Read 10 pages", false, 1)
     ];
 
     private readonly List<BoardItem> _todos =
@@ -74,7 +63,7 @@ public sealed class LocalBoardDataService : IBoardDataService
 
     public Task<BoardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
     {
-        DateOnly today = DailySchedule.UtcToday;
+        var today = DailySchedule.UtcToday;
         return Task.FromResult(new BoardSnapshot(
             _habits.ToList(),
             _dailies
@@ -90,14 +79,8 @@ public sealed class LocalBoardDataService : IBoardDataService
                 .ToList()));
     }
 
-    private static BoardItem ProjectDailyForDisplay(BoardItem d, DateOnly today)
-    {
-        bool done = d.DailyLastCompletedOn == today
-            || (d.DailyLastCompletedOn is null && d.IsCompleted);
-        return d with { IsCompleted = done };
-    }
-
-    public Task<BoardItem> CreateItemAsync(BoardSection section, string title, CancellationToken cancellationToken = default)
+    public Task<BoardItem> CreateItemAsync(BoardSection section, string title,
+        CancellationToken cancellationToken = default)
     {
         var today = DailySchedule.UtcToday;
         var item = section == BoardSection.Daily
@@ -112,25 +95,18 @@ public sealed class LocalBoardDataService : IBoardDataService
                 true,
                 0,
                 HabitResetPeriod.Daily,
-                today,
-                DailyRepeatType.Daily,
-                1,
-                null,
-                null,
-                null)
+                today)
             : new BoardItem(Guid.NewGuid(), title);
         GetSection(section).Add(item);
         return Task.FromResult(section == BoardSection.Daily ? ProjectDailyForDisplay(item, today) : item);
     }
 
-    public Task<BoardItem?> RenameItemAsync(BoardSection section, Guid itemId, string title, CancellationToken cancellationToken = default)
+    public Task<BoardItem?> RenameItemAsync(BoardSection section, Guid itemId, string title,
+        CancellationToken cancellationToken = default)
     {
         var list = GetSection(section);
         var existing = list.FirstOrDefault(x => x.Id == itemId);
-        if (existing is null)
-        {
-            return Task.FromResult<BoardItem?>(null);
-        }
+        if (existing is null) return Task.FromResult<BoardItem?>(null);
 
         var updated = existing with { Title = title };
         var index = list.IndexOf(existing);
@@ -144,67 +120,47 @@ public sealed class LocalBoardDataService : IBoardDataService
         return Task.FromResult(list.RemoveAll(x => x.Id == itemId) > 0);
     }
 
-    public Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn, CancellationToken cancellationToken = default)
+    public Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn,
+        CancellationToken cancellationToken = default)
     {
-        DateOnly today = DailySchedule.UtcToday;
-        if (completedOn >= today)
-        {
-            return Task.FromResult<BoardItem?>(null);
-        }
+        var today = DailySchedule.UtcToday;
+        if (completedOn >= today) return Task.FromResult<BoardItem?>(null);
 
         var list = _dailies;
         var existing = list.FirstOrDefault(x => x.Id == itemId);
-        if (existing is null)
-        {
-            return Task.FromResult<BoardItem?>(null);
-        }
+        if (existing is null) return Task.FromResult<BoardItem?>(null);
 
-        if (existing.DailyLastCompletedOn == today)
-        {
-            return Task.FromResult<BoardItem?>(null);
-        }
+        if (existing.DailyLastCompletedOn == today) return Task.FromResult<BoardItem?>(null);
 
-        if (!DailySchedule.IsDueOnDate(existing, completedOn))
-        {
-            return Task.FromResult<BoardItem?>(null);
-        }
+        if (!DailySchedule.IsDueOnDate(existing, completedOn)) return Task.FromResult<BoardItem?>(null);
 
         var updated = existing with
         {
             DailyLastCompletedOn = completedOn,
             IsCompleted = true
         };
-        int index = list.IndexOf(existing);
+        var index = list.IndexOf(existing);
         list[index] = updated;
         return Task.FromResult<BoardItem?>(ProjectDailyForDisplay(updated, today));
     }
 
-    public Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
+    public Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId,
+        CancellationToken cancellationToken = default)
     {
-        if (section == BoardSection.Habit)
-        {
-            return Task.FromResult<BoardItem?>(null);
-        }
+        if (section == BoardSection.Habit) return Task.FromResult<BoardItem?>(null);
 
         var list = GetSection(section);
         var existing = list.FirstOrDefault(x => x.Id == itemId);
-        if (existing is null)
-        {
-            return Task.FromResult<BoardItem?>(null);
-        }
+        if (existing is null) return Task.FromResult<BoardItem?>(null);
 
         BoardItem updated;
         if (section == BoardSection.Daily)
         {
-            DateOnly today = DailySchedule.UtcToday;
+            var today = DailySchedule.UtcToday;
             if (ProjectDailyForDisplay(existing, today).IsCompleted)
-            {
                 updated = existing with { DailyLastCompletedOn = null, IsCompleted = false };
-            }
             else
-            {
                 updated = existing with { DailyLastCompletedOn = today, IsCompleted = true };
-            }
         }
         else
         {
@@ -221,10 +177,7 @@ public sealed class LocalBoardDataService : IBoardDataService
     public Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
         var existing = _habits.FirstOrDefault(x => x.Id == itemId);
-        if (existing is null || !existing.TrackPlus)
-        {
-            return Task.FromResult<BoardItem?>(null);
-        }
+        if (existing is null || !existing.TrackPlus) return Task.FromResult<BoardItem?>(null);
 
         var updated = existing with { Counter = existing.Counter + 1 };
         var index = _habits.IndexOf(existing);
@@ -235,10 +188,7 @@ public sealed class LocalBoardDataService : IBoardDataService
     public Task<BoardItem?> IncrementHabitMinusAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
         var existing = _habits.FirstOrDefault(x => x.Id == itemId);
-        if (existing is null || !existing.TrackMinus)
-        {
-            return Task.FromResult<BoardItem?>(null);
-        }
+        if (existing is null || !existing.TrackMinus) return Task.FromResult<BoardItem?>(null);
 
         var updated = existing with { NegativeCounter = existing.NegativeCounter + 1 };
         var index = _habits.IndexOf(existing);
@@ -260,10 +210,7 @@ public sealed class LocalBoardDataService : IBoardDataService
         CancellationToken cancellationToken = default)
     {
         var existing = _habits.FirstOrDefault(x => x.Id == itemId);
-        if (existing is null)
-        {
-            return Task.FromResult<BoardItem?>(null);
-        }
+        if (existing is null) return Task.FromResult<BoardItem?>(null);
 
         if (!trackPlus && !trackMinus)
         {
@@ -298,10 +245,7 @@ public sealed class LocalBoardDataService : IBoardDataService
         CancellationToken cancellationToken = default)
     {
         var existing = _todos.FirstOrDefault(x => x.Id == itemId);
-        if (existing is null)
-        {
-            return Task.FromResult<BoardItem?>(null);
-        }
+        if (existing is null) return Task.FromResult<BoardItem?>(null);
 
         DateOnly? due = dueDate is { } d ? DateOnly.FromDateTime(d) : null;
         var updated = existing with
@@ -312,7 +256,7 @@ public sealed class LocalBoardDataService : IBoardDataService
             ChecklistJson = string.IsNullOrWhiteSpace(checklistJson) ? null : checklistJson.Trim(),
             TodoDueDate = due
         };
-        int index = _todos.IndexOf(existing);
+        var index = _todos.IndexOf(existing);
         _todos[index] = updated;
         return Task.FromResult<BoardItem?>(updated);
     }
@@ -330,13 +274,10 @@ public sealed class LocalBoardDataService : IBoardDataService
         CancellationToken cancellationToken = default)
     {
         var existing = _dailies.FirstOrDefault(x => x.Id == itemId);
-        if (existing is null)
-        {
-            return Task.FromResult<BoardItem?>(null);
-        }
+        if (existing is null) return Task.FromResult<BoardItem?>(null);
 
-        int n = Math.Max(1, Math.Min(999, repeatInterval));
-        int streakClamped = Math.Max(0, Math.Min(9999, streak));
+        var n = Math.Max(1, Math.Min(999, repeatInterval));
+        var streakClamped = Math.Max(0, Math.Min(9999, streak));
         var updated = existing with
         {
             Title = title,
@@ -348,16 +289,26 @@ public sealed class LocalBoardDataService : IBoardDataService
             ChecklistJson = string.IsNullOrWhiteSpace(checklistJson) ? null : checklistJson.Trim(),
             Counter = streakClamped
         };
-        int index = _dailies.IndexOf(existing);
+        var index = _dailies.IndexOf(existing);
         _dailies[index] = updated;
         return Task.FromResult<BoardItem?>(ProjectDailyForDisplay(updated, DailySchedule.UtcToday));
     }
 
-    private List<BoardItem> GetSection(BoardSection section) => section switch
+    private static BoardItem ProjectDailyForDisplay(BoardItem d, DateOnly today)
     {
-        BoardSection.Habit => _habits,
-        BoardSection.Daily => _dailies,
-        BoardSection.Todo => _todos,
-        _ => throw new ArgumentOutOfRangeException(nameof(section))
-    };
+        var done = d.DailyLastCompletedOn == today
+                   || (d.DailyLastCompletedOn is null && d.IsCompleted);
+        return d with { IsCompleted = done };
+    }
+
+    private List<BoardItem> GetSection(BoardSection section)
+    {
+        return section switch
+        {
+            BoardSection.Habit => _habits,
+            BoardSection.Daily => _dailies,
+            BoardSection.Todo => _todos,
+            _ => throw new ArgumentOutOfRangeException(nameof(section))
+        };
+    }
 }

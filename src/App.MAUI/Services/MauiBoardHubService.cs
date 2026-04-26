@@ -1,5 +1,6 @@
 using App.Shared.RCL.Hubs;
 using App.Shared.RCL.Services;
+
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 
@@ -7,11 +8,11 @@ namespace App.MAUI.Services;
 
 public sealed class MauiBoardHubService
 {
-    private readonly IAuthTokenStore _tokens;
-    private readonly IRemoteBoardRefreshService _refresh;
     private readonly MauiApiEndpointOptions _api;
-    private readonly ILogger<MauiBoardHubService> _logger;
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly ILogger<MauiBoardHubService> _logger;
+    private readonly IRemoteBoardRefreshService _refresh;
+    private readonly IAuthTokenStore _tokens;
     private HubConnection? _connection;
 
     public MauiBoardHubService(
@@ -28,19 +29,13 @@ public sealed class MauiBoardHubService
 
     public async Task EnsureConnectedAsync(CancellationToken cancellationToken = default)
     {
-        string? t = await _tokens.GetAccessTokenAsync(cancellationToken);
-        if (string.IsNullOrEmpty(t))
-        {
-            return;
-        }
+        var t = await _tokens.GetAccessTokenAsync(cancellationToken);
+        if (string.IsNullOrEmpty(t)) return;
 
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            if (_connection is { State: HubConnectionState.Connected })
-            {
-                return;
-            }
+            if (_connection is { State: HubConnectionState.Connected }) return;
 
             if (_connection is not null)
             {
@@ -61,10 +56,7 @@ public sealed class MauiBoardHubService
             var hub = new HubConnectionBuilder()
                 .WithUrl(
                     hubUri,
-                    o =>
-                    {
-                        o.AccessTokenProvider = () => _tokens.GetAccessTokenAsync(CancellationToken.None);
-                    })
+                    o => { o.AccessTokenProvider = () => _tokens.GetAccessTokenAsync(CancellationToken.None); })
                 .WithAutomaticReconnect()
                 .Build();
 

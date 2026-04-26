@@ -15,14 +15,14 @@
     <form method="post" class="flex-grow-1" style="min-width: 240px;" action="/api/auth/cookie-login">
         <div class="mb-3">
             <label for="email">Email</label>
-            <input class="form-control" id="email" name="Email" type="email" required autocomplete="username" value="" />
+            <input class="form-control" id="email" name="Email" type="email" required autocomplete="username" value=""/>
         </div>
         <div class="mb-3">
             <label for="password">Password</label>
-            <input class="form-control" id="password" name="Password" type="password" required autocomplete="current-password" value="" />
+            <input class="form-control" id="password" name="Password" type="password" required autocomplete="current-password" value=""/>
         </div>
         <div class="form-check mb-3">
-            <input class="form-check-input" id="remember" name="RememberMe" type="checkbox" value="true" />
+            <input class="form-check-input" id="remember" name="RememberMe" type="checkbox" value="true"/>
             <label class="form-check-label" for="remember">Remember me</label>
         </div>
         <button class="btn btn-primary" type="submit">Login</button>
@@ -52,4 +52,5 @@
             _message = "Registration complete. You can sign in now.";
         }
     }
+
 }

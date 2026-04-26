@@ -14,15 +14,15 @@
 <form method="post" action="/api/auth/register-form">
     <div class="mb-3">
         <label for="reg-email">Email</label>
-        <input class="form-control" id="reg-email" name="Email" type="email" required autocomplete="username" value="" />
+        <input class="form-control" id="reg-email" name="Email" type="email" required autocomplete="username" value=""/>
     </div>
     <div class="mb-3">
         <label for="reg-password">Password</label>
-        <input class="form-control" id="reg-password" name="Password" type="password" required minlength="8" autocomplete="new-password" value="" />
+        <input class="form-control" id="reg-password" name="Password" type="password" required minlength="8" autocomplete="new-password" value=""/>
     </div>
     <div class="mb-3">
         <label for="reg-tz">Timezone</label>
-        <input class="form-control" id="reg-tz" name="Timezone" type="text" value="Europe/Budapest" />
+        <input class="form-control" id="reg-tz" name="Timezone" type="text" value="Europe/Budapest"/>
     </div>
     <button class="btn btn-primary" type="submit">Create account</button>
 </form>
@@ -38,4 +38,5 @@
             _message = "Registration failed. Check password policy (8+ characters with upper, lower, and digit) and that the email is not already used.";
         }
     }
+
 }

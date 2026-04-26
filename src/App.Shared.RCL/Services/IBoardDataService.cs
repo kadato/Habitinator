@@ -8,14 +8,16 @@ public interface IBoardDataService
 
     Task<BoardItem> CreateItemAsync(BoardSection section, string title, CancellationToken cancellationToken = default);
 
-    Task<BoardItem?> RenameItemAsync(BoardSection section, Guid itemId, string title, CancellationToken cancellationToken = default);
+    Task<BoardItem?> RenameItemAsync(BoardSection section, Guid itemId, string title,
+        CancellationToken cancellationToken = default);
 
     Task<bool> DeleteItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default);
 
     Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default);
 
     /// <summary>Sets the daily's last completion to a specific past calendar day (UTC), for backdating completion.</summary>
-    Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn, CancellationToken cancellationToken = default);
+    Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn,
+        CancellationToken cancellationToken = default);
 
     Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default);
 

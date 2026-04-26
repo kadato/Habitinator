@@ -71,6 +71,7 @@
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
         <PackageReference Include="MudBlazor" Version="9.4.0" />
+        <PackageReference Include="Plugin.LocalNotification" Version="14.1.0" />
     </ItemGroup>
 
     <ItemGroup>

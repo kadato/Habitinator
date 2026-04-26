@@ -2,6 +2,8 @@
 using App.Shared.RCL.Services;
 using Microsoft.Extensions.Logging;
 using MudBlazor.Services;
+using Plugin.LocalNotification;
+using Plugin.LocalNotification.Core.Models.AndroidOption;
 
 namespace App.MAUI;
 
@@ -16,6 +18,15 @@ public static class MauiProgram
 			{
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
 			});
+		builder.UseLocalNotification(config =>
+		{
+			_ = config.AddAndroid(a => a.AddChannel(new AndroidNotificationChannelRequest
+			{
+				Id = MauiDailyReminderService.AndroidChannelId,
+				Name = "Daily reminder",
+				Description = "Dailies due and to-dos with deadlines",
+			}));
+		});
 
 		builder.Services.AddMauiBlazorWebView();
 		builder.Services.AddMudServices();
@@ -32,6 +43,7 @@ public static class MauiProgram
 		});
 		builder.Services.AddSingleton<IActivityStatisticsReader, MauiActivityStatisticsReader>();
 		builder.Services.AddSingleton<INotificationSettingsService, MauiNotificationSettingsService>();
+		builder.Services.AddSingleton<MauiDailyReminderService>();
 		// Scoped: UserNotifier -> ISnackbar uses NavigationManager, which is only valid inside the Blazor WebView scope (not root/singleton).
 		builder.Services.AddScoped<IUserNotifier, UserNotifier>();
 		builder.Services.AddScoped<IFocusTimerClientAlerts, FocusTimerClientAlerts>();

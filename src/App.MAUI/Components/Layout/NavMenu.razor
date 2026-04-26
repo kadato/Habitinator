@@ -1,42 +1,55 @@
 ﻿@implements IDisposable
 @inject NavigationManager Nav
+@inject IApiSession Session
 
 <div class="app-header-nav d-flex flex-wrap align-center">
-    <MudButton Href="/"
-               Variant="@(IsActivePath("", NavLinkMatch.All) ? Variant.Filled : Variant.Outlined)"
-               Color="Color.Primary"
-               Size="Size.Medium"
-               StartIcon="@Icons.Material.Filled.SpaceDashboard"
-               Class="app-header-nav-btn text-transform-none">
-        Board
-    </MudButton>
-    <MudButton Href="/stats"
-               Variant="@(IsActivePath("stats", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
-               Color="Color.Primary"
-               Size="Size.Medium"
-               StartIcon="@Icons.Material.Filled.BarChart"
-               Class="app-header-nav-btn text-transform-none">
-        Statistics
-    </MudButton>
-    <MudButton Href="/settings"
-               Variant="@(IsActivePath("settings", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
-               Color="Color.Primary"
-               Size="Size.Medium"
-               StartIcon="@Icons.Material.Filled.Notifications"
-               Class="app-header-nav-btn text-transform-none">
-        Settings
-    </MudButton>
+    @if (Session.IsLoggedIn)
+    {
+        <MudButton Href="/"
+                   Variant="@(IsActivePath("", NavLinkMatch.All) ? Variant.Filled : Variant.Outlined)"
+                   Color="Color.Primary"
+                   Size="Size.Medium"
+                   StartIcon="@Icons.Material.Filled.SpaceDashboard"
+                   Class="app-header-nav-btn text-transform-none">
+            Board
+        </MudButton>
+        <MudButton Href="/stats"
+                   Variant="@(IsActivePath("stats", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
+                   Color="Color.Primary"
+                   Size="Size.Medium"
+                   StartIcon="@Icons.Material.Filled.BarChart"
+                   Class="app-header-nav-btn text-transform-none">
+            Statistics
+        </MudButton>
+        <MudButton Href="/settings"
+                   Variant="@(IsActivePath("settings", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
+                   Color="Color.Primary"
+                   Size="Size.Medium"
+                   StartIcon="@Icons.Material.Filled.Notifications"
+                   Class="app-header-nav-btn text-transform-none">
+            Settings
+        </MudButton>
+    }
 </div>
 
 @code {
-    protected override void OnInitialized() =>
+    protected override void OnInitialized()
+    {
         Nav.LocationChanged += OnLocationChanged;
+        Session.Changed += OnSessionChanged;
+    }
 
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>
         _ = InvokeAsync(StateHasChanged);
 
-    public void Dispose() =>
+    private void OnSessionChanged(object? sender, EventArgs e) =>
+        _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
         Nav.LocationChanged -= OnLocationChanged;
+        Session.Changed -= OnSessionChanged;
+    }
 
     private bool IsActivePath(string path, NavLinkMatch match)
     {

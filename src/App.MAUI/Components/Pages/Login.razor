@@ -1,0 +1,86 @@
+@page "/login"
+@using global::App.Shared.RCL.Models
+@inject ApiAuthService Auth
+@inject IApiSession Session
+@inject NavigationManager Nav
+
+<PageTitle>Sign in</PageTitle>
+<MudStack Spacing="2" Class="pt-2" Style="max-width: 24rem">
+    <MudText Typo="Typo.h5">Sign in to Habitinator</MudText>
+    <MudTextField @bind-Value="_email"
+                   InputType="InputType.Email"
+                   Label="Email"
+                   Variant="Variant.Outlined" />
+    <MudTextField @bind-Value="_password"
+                   InputType="InputType.Password"
+                   Label="Password"
+                   Variant="Variant.Outlined" />
+    <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="_busy" OnClick="LoginAsync">Sign in</MudButton>
+    <MudButton Color="Color.Secondary" Variant="Variant.Outlined" Disabled="_busy" OnClick="GuestAsync">Continue as demo guest</MudButton>
+    <MudButton Variant="Variant.Text" Disabled="_busy" Href="/register">Create account</MudButton>
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <MudAlert Severity="Severity.Error">@_error</MudAlert>
+    }
+</MudStack>
+
+@code {
+    private string _email = string.Empty;
+    private string _password = string.Empty;
+    private string? _error;
+    private bool _busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.LoadAsync();
+        if (Session.IsLoggedIn)
+        {
+            Nav.NavigateTo("/");
+        }
+    }
+
+    private async Task LoginAsync()
+    {
+        _error = null;
+        _busy = true;
+        try
+        {
+            LoginRequest req = new(_email, _password);
+            LoginResponse? r = await Auth.LoginAsync(req);
+            if (r is null)
+            {
+                _error = "Invalid email or password.";
+                return;
+            }
+
+            await Session.SetSessionAsync(r);
+            Nav.NavigateTo("/");
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task GuestAsync()
+    {
+        _error = null;
+        _busy = true;
+        try
+        {
+            LoginResponse? r = await Auth.GuestJwtLoginAsync();
+            if (r is null)
+            {
+                _error = "Demo guest is not available. Is the server running?";
+                return;
+            }
+
+            await Session.SetSessionAsync(r);
+            Nav.NavigateTo("/");
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

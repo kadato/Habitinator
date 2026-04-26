@@ -1,0 +1,67 @@
+@page "/register"
+@using global::App.Shared.RCL.Models
+@inject ApiAuthService Auth
+@inject IApiSession Session
+@inject NavigationManager Nav
+
+<PageTitle>Register</PageTitle>
+<MudStack Spacing="2" Class="pt-2" Style="max-width: 24rem">
+    <MudText Typo="Typo.h5">Create account</MudText>
+    <MudTextField @bind-Value="_email" Label="Email" InputType="InputType.Email" Variant="Variant.Outlined" />
+    <MudTextField @bind-Value="_password" Label="Password" InputType="InputType.Password" Variant="Variant.Outlined" />
+    <MudTextField @bind-Value="_confirm" Label="Confirm password" InputType="InputType.Password" Variant="Variant.Outlined" />
+    <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="_busy" OnClick="RegisterAsync">Register</MudButton>
+    <MudButton Variant="Variant.Text" Href="/login">Back to sign in</MudButton>
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <MudAlert Severity="Severity.Error">@_error</MudAlert>
+    }
+    @if (!string.IsNullOrWhiteSpace(_ok))
+    {
+        <MudAlert Severity="Severity.Success">@_ok</MudAlert>
+    }
+</MudStack>
+
+@code {
+    private string _email = string.Empty;
+    private string _password = string.Empty;
+    private string _confirm = string.Empty;
+    private string? _error;
+    private string? _ok;
+    private bool _busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.LoadAsync();
+        if (Session.IsLoggedIn)
+        {
+            Nav.NavigateTo("/");
+        }
+    }
+
+    private async Task RegisterAsync()
+    {
+        _error = _ok = null;
+        if (_password != _confirm)
+        {
+            _error = "Passwords do not match.";
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            if (!await Auth.RegisterAsync(new RegisterRequest(_email, _password)))
+            {
+                _error = "Registration failed. The email may already be in use.";
+                return;
+            }
+
+            _ok = "You can sign in now.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

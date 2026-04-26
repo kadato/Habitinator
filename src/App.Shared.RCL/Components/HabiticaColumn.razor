@@ -126,7 +126,7 @@
                     int subDone = checklist.Count(x => x.IsDone);
                     int subTotal = checklist.Count;
                     bool hasBodyExtra = !string.IsNullOrWhiteSpace(item.Notes) || subTotal > 0;
-                    <div class="@GetCardItemClass(item)">
+                    <div @key="item.Id" class="@GetCardItemClass(item)">
                         @if (Section == BoardSection.Habit)
                         {
                             <div class="habitica-card__habit-btns habitica-card__left">

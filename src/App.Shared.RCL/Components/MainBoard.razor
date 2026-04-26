@@ -1,11 +1,15 @@
 @using App.Shared.RCL.Components.Dialogs
 @using App.Shared.RCL.Models
 @using App.Shared.RCL.Services
+@using Microsoft.JSInterop
 @inject GlobalTimerService TimerService
 @inject IBoardDataService BoardDataService
 @inject IUserActivityLogService UserActivityLog
 @inject IDialogService DialogService
 @inject IDailyRetroPromptStore DailyRetroStore
+@inject IRemoteBoardRefreshService RemoteBoardRefresh
+@inject BoardRemoteNotifyBridge BoardNotifyBridge
+@inject IJSRuntime JS
 
 <MudStack Class="board-shell mud-width-full" Spacing="1">
     @if (_isLoading)
@@ -161,6 +165,8 @@
     }
 </MudStack>
 
+@implements IAsyncDisposable
+
 @code {
     [Parameter]
     public string? SignedInEmail { get; set; }
@@ -176,6 +182,7 @@
     private readonly HashSet<string> _selectedFilterTags = new(StringComparer.OrdinalIgnoreCase);
     private bool _dailyRetroSessionOffered;
     private bool _dailyRetroClientReady;
+    private DotNetObjectReference<BoardRemoteNotifyBridge>? _visibilityRef;
 
     private IReadOnlyList<BoardItem> FilteredHabits => FilterItems(Habits);
     private IReadOnlyList<BoardItem> FilteredDailies => FilterItems(Dailies);
@@ -221,7 +228,43 @@
 
     protected override async Task OnInitializedAsync()
     {
+        RemoteBoardRefresh.RegisterForRemoteRefresh(HandleRemoteBoardRefreshedAsync);
         await InitialLoadAsync();
+    }
+
+    /// <summary>Marshals server-pushed refreshes onto the Blazor dispatcher (SignalR/JS callbacks are not on the renderer sync context).</summary>
+    private Task HandleRemoteBoardRefreshedAsync() => InvokeAsync(OnRemoteBoardRefreshedAsync);
+
+    private async Task OnRemoteBoardRefreshedAsync()
+    {
+        try
+        {
+            await LoadBoardAsync();
+        }
+        catch
+        {
+            // keep existing UI; user can use Retry
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        RemoteBoardRefresh.UnregisterForRemoteRefresh(HandleRemoteBoardRefreshedAsync);
+        try
+        {
+            await JS.InvokeVoidAsync("HabitinatorBoardVisibility.stop");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (TaskCanceledException)
+        {
+        }
+
+        _visibilityRef?.Dispose();
+        _visibilityRef = null;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -229,6 +272,17 @@
         if (firstRender)
         {
             _dailyRetroClientReady = true;
+            try
+            {
+                _visibilityRef = DotNetObjectReference.Create(BoardNotifyBridge);
+                await JS.InvokeVoidAsync("HabitinatorBoardVisibility.start", _visibilityRef);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+            catch (InvalidOperationException)
+            {
+            }
         }
 
         if (firstRender && _initialLoadComplete && _loadError is null)

@@ -1,7 +1,9 @@
 @using App.Shared.RCL.Models
 @using App.Shared.RCL.Services
 @inject INotificationSettingsService NotificationSettingsService
+@inject IRemoteBoardRefreshService RemoteBoardRefresh
 @inject ISnackbar Snackbar
+@implements IDisposable
 
 <MudStack Spacing="3">
     <MudText Typo="Typo.h5">Notifications</MudText>
@@ -158,6 +160,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        RemoteBoardRefresh.RegisterForRemoteRefresh(HandleRemoteSettingsRefreshedAsync);
         try
         {
             NotificationSettings loaded = await NotificationSettingsService.GetAsync();
@@ -172,6 +175,28 @@
             _loading = false;
         }
     }
+
+    /// <summary>Marshals hub-pushed refreshes onto the Blazor dispatcher.</summary>
+    private Task HandleRemoteSettingsRefreshedAsync() => InvokeAsync(OnRemoteSettingsRefreshedAsync);
+
+    private async Task OnRemoteSettingsRefreshedAsync()
+    {
+        try
+        {
+            NotificationSettings loaded = await NotificationSettingsService.GetAsync();
+            ApplyModel(loaded);
+            _loadError = null;
+        }
+        catch (Exception ex)
+        {
+            _loadError = ex.Message;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() =>
+        RemoteBoardRefresh.UnregisterForRemoteRefresh(HandleRemoteSettingsRefreshedAsync);
 
     private void ApplyModel(NotificationSettings s)
     {

@@ -12,15 +12,18 @@ public sealed class WebNotificationSettingsService : INotificationSettingsServic
     private readonly AuthenticationStateProvider _authenticationStateProvider;
     private readonly DemoUserResolver _demoUserResolver;
     private readonly ApplicationDbContext _db;
+    private readonly IBoardChangeNotifier _boardChangeNotifier;
 
     public WebNotificationSettingsService(
         AuthenticationStateProvider authenticationStateProvider,
         DemoUserResolver demoUserResolver,
-        ApplicationDbContext db)
+        ApplicationDbContext db,
+        IBoardChangeNotifier boardChangeNotifier)
     {
         _authenticationStateProvider = authenticationStateProvider;
         _demoUserResolver = demoUserResolver;
         _db = db;
+        _boardChangeNotifier = boardChangeNotifier;
     }
 
     public event Action? Changed;
@@ -63,5 +66,6 @@ public sealed class WebNotificationSettingsService : INotificationSettingsServic
         row.NotificationSettingsJson = NotificationSettingsJson.Serialize(settings);
         await _db.SaveChangesAsync(cancellationToken);
         Changed?.Invoke();
+        await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
     }
 }

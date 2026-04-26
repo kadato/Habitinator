@@ -7,15 +7,24 @@ public sealed class UserNotifier : IUserNotifier, IDisposable
 {
     private readonly ISnackbar _snackbar;
     private readonly INotificationSettingsService _settingsService;
+    private readonly IRemoteBoardRefreshService _remoteBoardRefresh;
     private readonly IClock _clock;
     private NotificationSettings? _cache;
+    private readonly Func<Task> _onRemoteRefresh;
 
-    public UserNotifier(ISnackbar snackbar, INotificationSettingsService settingsService, IClock clock)
+    public UserNotifier(
+        ISnackbar snackbar,
+        INotificationSettingsService settingsService,
+        IRemoteBoardRefreshService remoteBoardRefresh,
+        IClock clock)
     {
         _snackbar = snackbar;
         _settingsService = settingsService;
+        _remoteBoardRefresh = remoteBoardRefresh;
         _clock = clock;
         _settingsService.Changed += OnSettingsChanged;
+        _onRemoteRefresh = OnRemoteBoardRefreshInvalidateCacheAsync;
+        _remoteBoardRefresh.RegisterForRemoteRefresh(_onRemoteRefresh);
     }
 
     public async ValueTask NotifyAsync(string message, Severity severity, CancellationToken cancellationToken = default)
@@ -56,6 +65,15 @@ public sealed class UserNotifier : IUserNotifier, IDisposable
     private void OnSettingsChanged() =>
         _cache = null;
 
-    public void Dispose() =>
+    private Task OnRemoteBoardRefreshInvalidateCacheAsync()
+    {
+        _cache = null;
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
         _settingsService.Changed -= OnSettingsChanged;
+        _remoteBoardRefresh.UnregisterForRemoteRefresh(_onRemoteRefresh);
+    }
 }

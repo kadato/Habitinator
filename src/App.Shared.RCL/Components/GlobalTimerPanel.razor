@@ -35,7 +35,7 @@
                                          Margin="Margin.Dense"
                                          Class="timer-target-field flex-grow-1"
                                          Immediate="true"
-                                         CoerceValue="true"
+                                         CoerceValue="false"
                                          Strict="false"
                                          MinCharacters="0"
                                          Clearable="true"
@@ -146,6 +146,8 @@
     private PeriodicTimer? _uiTick;
     private CancellationTokenSource? _uiTickCts;
     private string _sessionTargetText = string.Empty;
+    private bool _sessionTargetFieldInitialized;
+    private (string? TargetId, string? TargetType, Guid? BoardItemId) _lastSyncedSessionTarget;
     private string _focusDurationText = string.Empty;
     private string FocusDurationText
     {
@@ -189,7 +191,17 @@
     protected override void OnParametersSet()
     {
         RebuildSessionTargetOptions();
-        _sessionTargetText = FormatTargetForField(TimerService);
+        // Only sync the text box from TimerService when the *service* target changes. Otherwise every
+        // MainBoard re-render (board refresh, remote update) overwrites the field while the user is
+        // still typing a label that has not yet been committed to the service.
+        var key = (TimerService.TargetId, TimerService.TargetType, TimerService.BoardItemId);
+        if (!_sessionTargetFieldInitialized || key != _lastSyncedSessionTarget)
+        {
+            _lastSyncedSessionTarget = key;
+            _sessionTargetFieldInitialized = true;
+            _sessionTargetText = FormatTargetForField(TimerService);
+        }
+
         SyncFocusDurationFromService();
     }
 
@@ -418,6 +430,8 @@
         }
 
         _sessionTargetText = FormatTargetForField(TimerService);
+        _lastSyncedSessionTarget = (TimerService.TargetId, TimerService.TargetType, TimerService.BoardItemId);
+        _sessionTargetFieldInitialized = true;
     }
 
     private void Start()

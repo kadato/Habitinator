@@ -7,9 +7,13 @@ namespace App.Web.Services;
 public sealed class BoardPersistenceService
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly IBoardChangeNotifier _boardChangeNotifier;
 
-    public BoardPersistenceService(ApplicationDbContext dbContext) =>
+    public BoardPersistenceService(ApplicationDbContext dbContext, IBoardChangeNotifier boardChangeNotifier)
+    {
         _dbContext = dbContext;
+        _boardChangeNotifier = boardChangeNotifier;
+    }
 
     public async Task<BoardSnapshot> GetSnapshotAsync(Guid userId, CancellationToken cancellationToken = default)
     {
@@ -70,6 +74,7 @@ public sealed class BoardPersistenceService
 
         _dbContext.BoardItems.Add(entity);
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         return ToModel(entity);
     }
 
@@ -85,6 +90,7 @@ public sealed class BoardPersistenceService
         entity.Title = title;
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         return ToModel(entity);
     }
 
@@ -99,6 +105,7 @@ public sealed class BoardPersistenceService
 
         _dbContext.BoardItems.Remove(entity);
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         return true;
     }
 
@@ -146,6 +153,7 @@ public sealed class BoardPersistenceService
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
         AddActivityEvent(userId, ActivityEventType.DailyComplete, itemId);
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         return ToModel(entity);
     }
 
@@ -184,6 +192,7 @@ public sealed class BoardPersistenceService
 
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         return ToModel(entity);
     }
 
@@ -216,6 +225,7 @@ public sealed class BoardPersistenceService
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
         AddActivityEvent(userId, ActivityEventType.HabitPlus, itemId);
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         return ToModel(entity);
     }
 
@@ -232,6 +242,7 @@ public sealed class BoardPersistenceService
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
         AddActivityEvent(userId, ActivityEventType.HabitMinus, itemId);
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         return ToModel(entity);
     }
 
@@ -273,6 +284,7 @@ public sealed class BoardPersistenceService
         entity.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson) ? null : checklistJson.Trim();
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         return ToModel(entity);
     }
 
@@ -304,6 +316,7 @@ public sealed class BoardPersistenceService
         entity.DailyStartDate = dueUtc;
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         return ToModel(entity);
     }
 
@@ -343,6 +356,7 @@ public sealed class BoardPersistenceService
         entity.Counter = streakClamped;
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         return ToModel(entity);
     }
 
@@ -391,6 +405,7 @@ public sealed class BoardPersistenceService
         );
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
     }
 
     private static BoardItem ToModel(BoardItemEntity entity) =>

@@ -1,6 +1,6 @@
-using App.Web.Data;
+using App.Shared.RCL.Models;
 
-namespace App.Web.Services;
+namespace App.Shared.RCL.Services;
 
 public sealed record ActivityWeekBarDto(int Index, DateOnly WeekStart, int EventCount, int FocusMinutes);
 

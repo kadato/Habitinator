@@ -300,6 +300,26 @@ Committed assets for architecture and UI references live under **`docs/automatio
 | [`docs/automation/openapi-v1.json`](docs/automation/openapi-v1.json) | OpenAPI **3.1** document from `GET /openapi/v1.json` (paths and schemas for HTTP APIs). |
 | [`docs/automation/screenshots/`](docs/automation/screenshots/) | Playwright **PNG** captures (login, board, statistics, settings). |
 
+### Web UI screenshots
+
+Captured with the **demo guest** board after sign-in (same files as in `docs/automation/screenshots/`).
+
+**Login**
+
+![Login — Habitinator web](docs/automation/screenshots/01-login.png)
+
+**Board**
+
+![Board — habits, dailies, to-dos](docs/automation/screenshots/02-board.png)
+
+**Statistics**
+
+![Statistics — activity heatmap and summaries](docs/automation/screenshots/03-statistics.png)
+
+**Settings**
+
+![Settings — notification preferences](docs/automation/screenshots/04-settings.png)
+
 **Regenerate everything locally:** start **`App.Web`** with PostgreSQL (e.g. standalone or Aspire), using the same **URL** you pass as `-BaseUrl` (default `http://127.0.0.1:5050`). Then run:
 
 ```powershell

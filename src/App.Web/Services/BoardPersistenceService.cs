@@ -22,15 +22,68 @@ public sealed class BoardPersistenceService
         _boardChangeNotifier = boardChangeNotifier;
     }
 
+    private static IQueryable<BoardItemEntity> LiveBoardItems(ApplicationDbContext db, Guid userId) =>
+        db.BoardItems.Where(x => x.UserId == userId && x.DeletedAtUtc == null);
+
+    private static BoardMutationStatus MatchExpected(BoardItemEntity? entity, DateTimeOffset? expectedUpdatedAtUtc)
+    {
+        if (entity is null) return BoardMutationStatus.NotFound;
+        if (expectedUpdatedAtUtc is null) return BoardMutationStatus.Ok;
+        return entity.UpdatedAtUtc.Equals(expectedUpdatedAtUtc.Value)
+            ? BoardMutationStatus.Ok
+            : BoardMutationStatus.Conflict;
+    }
+
+    public async Task<BoardSyncDelta> GetSyncDeltaAsync(
+        Guid userId,
+        DateTimeOffset cursorExclusive,
+        CancellationToken cancellationToken = default)
+    {
+        await using var readDb = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var changed = await readDb.BoardItems
+            .AsNoTracking()
+            .Where(x => x.UserId == userId
+                        && ((x.DeletedAtUtc == null && x.UpdatedAtUtc > cursorExclusive)
+                            || (x.DeletedAtUtc != null && x.DeletedAtUtc > cursorExclusive)))
+            .OrderBy(x => x.UpdatedAtUtc)
+            .ThenBy(x => x.Id)
+            .ToListAsync(cancellationToken);
+
+        var upserts = new List<BoardSyncItem>();
+        var deletedIds = new List<Guid>();
+        DateTimeOffset? next = null;
+
+        var today = DailySchedule.UtcToday;
+        var dailies = changed.Where(x => x.Section == BoardSection.Daily && x.DeletedAtUtc is null).ToList();
+        var dailyStreaks = await BuildDailyStreakMapAsync(userId, dailies, today, readDb, cancellationToken);
+
+        foreach (var row in changed)
+        {
+            if (row.DeletedAtUtc is not null)
+            {
+                deletedIds.Add(row.Id);
+                next = MaxCursor(next, row.DeletedAtUtc.Value);
+                continue;
+            }
+
+            upserts.Add(new BoardSyncItem(row.Section, ToModelWithToday(row, today, dailyStreaks)));
+            next = MaxCursor(next, row.UpdatedAtUtc);
+        }
+
+        var nextCursor = (next ?? cursorExclusive).ToString("O");
+        return new BoardSyncDelta(upserts, deletedIds, nextCursor);
+    }
+
+    private static DateTimeOffset? MaxCursor(DateTimeOffset? a, DateTimeOffset b) => a is null || b > a ? b : a;
+
     public async Task<BoardSnapshot> GetSnapshotAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         // Snapshot must reflect the database, not a long-lived scoped context's tracked copies (Blazor Server circuit).
         // Use a fresh context for reads so this cannot interleave on the same instance as a concurrent write
         // (Blazor re-entrancy: BoardChanged can trigger GetSnapshot while CreateItem is still in progress).
         await using var readDb = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var items = await readDb.BoardItems
+        var items = await LiveBoardItems(readDb, userId)
             .AsNoTracking()
-            .Where(x => x.UserId == userId)
             .OrderBy(x => x.CreatedAtUtc)
             .ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);
@@ -96,29 +149,68 @@ public sealed class BoardPersistenceService
     public async Task<BoardItem?> RenameItemAsync(Guid userId, BoardSection section, Guid itemId, string title,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.BoardItems
-            .FirstOrDefaultAsync(x => x.UserId == userId && x.Section == section && x.Id == itemId, cancellationToken);
-        if (entity is null) return null;
+        var r = await RenameItemForApiAsync(userId, section, itemId, title, null, cancellationToken);
+        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
+    }
 
-        entity.Title = title;
+    public async Task<BoardMutationResult> RenameItemForApiAsync(
+        Guid userId,
+        BoardSection section,
+        Guid itemId,
+        string title,
+        DateTimeOffset? expectedUpdatedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _dbContext.BoardItems
+            .FirstOrDefaultAsync(
+                x => x.UserId == userId && x.Section == section && x.Id == itemId && x.DeletedAtUtc == null,
+                cancellationToken);
+        var st = MatchExpected(entity, expectedUpdatedAtUtc);
+        if (st == BoardMutationStatus.NotFound) return new BoardMutationResult(BoardMutationStatus.NotFound, null);
+        if (st == BoardMutationStatus.Conflict)
+            return new BoardMutationResult(
+                BoardMutationStatus.Conflict,
+                await ToModelWithDailyStreaksAsync(userId, entity!, cancellationToken));
+
+        entity!.Title = title;
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
         var renamed = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
         await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
-        return renamed;
+        return new BoardMutationResult(BoardMutationStatus.Ok, renamed);
     }
 
     public async Task<bool> DeleteItemAsync(Guid userId, BoardSection section, Guid itemId,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.BoardItems
-            .FirstOrDefaultAsync(x => x.UserId == userId && x.Section == section && x.Id == itemId, cancellationToken);
-        if (entity is null) return false;
+        var r = await DeleteItemForApiAsync(userId, section, itemId, null, cancellationToken);
+        return r.Status == BoardMutationStatus.Ok;
+    }
 
-        _dbContext.BoardItems.Remove(entity);
+    public async Task<BoardMutationResult> DeleteItemForApiAsync(
+        Guid userId,
+        BoardSection section,
+        Guid itemId,
+        DateTimeOffset? expectedUpdatedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _dbContext.BoardItems
+            .FirstOrDefaultAsync(
+                x => x.UserId == userId && x.Section == section && x.Id == itemId && x.DeletedAtUtc == null,
+                cancellationToken);
+        var st = MatchExpected(entity, expectedUpdatedAtUtc);
+        if (st == BoardMutationStatus.NotFound) return new BoardMutationResult(BoardMutationStatus.NotFound, null);
+        if (st == BoardMutationStatus.Conflict)
+            return new BoardMutationResult(
+                BoardMutationStatus.Conflict,
+                await ToModelWithDailyStreaksAsync(userId, entity!, cancellationToken));
+
+        var utc = DateTimeOffset.UtcNow;
+        entity!.DeletedAtUtc = utc;
+        entity.UpdatedAtUtc = utc;
         await _dbContext.SaveChangesAsync(cancellationToken);
         await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
-        return true;
+        return new BoardMutationResult(BoardMutationStatus.Ok, null);
     }
 
     public async Task<BoardItem?> CompleteDailyForDateAsync(
@@ -127,19 +219,38 @@ public sealed class BoardPersistenceService
         DateOnly completedOn,
         CancellationToken cancellationToken = default)
     {
+        var r = await CompleteDailyForDateForApiAsync(userId, itemId, completedOn, null, cancellationToken);
+        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
+    }
+
+    public async Task<BoardMutationResult> CompleteDailyForDateForApiAsync(
+        Guid userId,
+        Guid itemId,
+        DateOnly completedOn,
+        DateTimeOffset? expectedUpdatedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
         var today = DailySchedule.UtcToday;
-        if (completedOn >= today) return null;
+        if (completedOn >= today) return new BoardMutationResult(BoardMutationStatus.NotFound, null);
 
         var entity = await _dbContext.BoardItems
             .FirstOrDefaultAsync(
-                x => x.UserId == userId && x.Section == BoardSection.Daily && x.Id == itemId,
+                x => x.UserId == userId && x.Section == BoardSection.Daily && x.Id == itemId
+                     && x.DeletedAtUtc == null,
                 cancellationToken);
-        if (entity is null) return null;
+        if (entity is null) return new BoardMutationResult(BoardMutationStatus.NotFound, null);
+
+        var st = MatchExpected(entity, expectedUpdatedAtUtc);
+        if (st == BoardMutationStatus.Conflict)
+            return new BoardMutationResult(
+                BoardMutationStatus.Conflict,
+                await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken));
 
         var model = ToModelForDailyCheck(entity, today);
-        if (!DailySchedule.IsDueOnDate(model, completedOn)) return null;
+        if (!DailySchedule.IsDueOnDate(model, completedOn))
+            return new BoardMutationResult(BoardMutationStatus.NotFound, null);
 
-        if (model.DailyLastCompletedOn == today) return null;
+        if (model.DailyLastCompletedOn == today) return new BoardMutationResult(BoardMutationStatus.NotFound, null);
 
         entity.DailyLastCompletedOn = new DateTime(
             completedOn.Year,
@@ -157,15 +268,35 @@ public sealed class BoardPersistenceService
         await SyncDailyStreakCounterToComputedAsync(userId, entity, cancellationToken);
         var completed = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
         await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
-        return completed;
+        return new BoardMutationResult(BoardMutationStatus.Ok, completed);
     }
 
     public async Task<BoardItem?> ToggleItemAsync(Guid userId, BoardSection section, Guid itemId,
         CancellationToken cancellationToken = default)
     {
+        var r = await ToggleItemForApiAsync(userId, section, itemId, null, cancellationToken);
+        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
+    }
+
+    public async Task<BoardMutationResult> ToggleItemForApiAsync(
+        Guid userId,
+        BoardSection section,
+        Guid itemId,
+        DateTimeOffset? expectedUpdatedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
         var entity = await _dbContext.BoardItems
-            .FirstOrDefaultAsync(x => x.UserId == userId && x.Section == section && x.Id == itemId, cancellationToken);
-        if (entity is null || section == BoardSection.Habit) return null;
+            .FirstOrDefaultAsync(
+                x => x.UserId == userId && x.Section == section && x.Id == itemId && x.DeletedAtUtc == null,
+                cancellationToken);
+        if (entity is null || section == BoardSection.Habit)
+            return new BoardMutationResult(BoardMutationStatus.NotFound, null);
+
+        var st = MatchExpected(entity, expectedUpdatedAtUtc);
+        if (st == BoardMutationStatus.Conflict)
+            return new BoardMutationResult(
+                BoardMutationStatus.Conflict,
+                await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken));
 
         if (section == BoardSection.Daily)
         {
@@ -201,7 +332,7 @@ public sealed class BoardPersistenceService
 
         var toggled = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
         await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
-        return toggled;
+        return new BoardMutationResult(BoardMutationStatus.Ok, toggled);
     }
 
     /// <summary>
@@ -213,8 +344,8 @@ public sealed class BoardPersistenceService
         BoardItemEntity dailyEntity,
         CancellationToken cancellationToken)
     {
-        var dailies = await _dbContext.BoardItems.AsNoTracking()
-            .Where(x => x.UserId == userId && x.Section == BoardSection.Daily)
+        var dailies = await LiveBoardItems(_dbContext, userId).AsNoTracking()
+            .Where(x => x.Section == BoardSection.Daily)
             .ToListAsync(cancellationToken);
         var today = DailySchedule.UtcToday;
         var map = await BuildDailyStreakMapAsync(userId, dailies, today, _dbContext, cancellationToken);
@@ -242,10 +373,28 @@ public sealed class BoardPersistenceService
     public async Task<BoardItem?> IncrementHabitPlusAsync(Guid userId, Guid itemId,
         CancellationToken cancellationToken = default)
     {
+        var r = await IncrementHabitPlusForApiAsync(userId, itemId, null, cancellationToken);
+        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
+    }
+
+    public async Task<BoardMutationResult> IncrementHabitPlusForApiAsync(
+        Guid userId,
+        Guid itemId,
+        DateTimeOffset? expectedUpdatedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
         var entity = await _dbContext.BoardItems
-            .FirstOrDefaultAsync(x => x.UserId == userId && x.Section == BoardSection.Habit && x.Id == itemId,
+            .FirstOrDefaultAsync(
+                x => x.UserId == userId && x.Section == BoardSection.Habit && x.Id == itemId && x.DeletedAtUtc == null,
                 cancellationToken);
-        if (entity is null || !entity.TrackPlus) return null;
+        if (entity is null || !entity.TrackPlus)
+            return new BoardMutationResult(BoardMutationStatus.NotFound, null);
+
+        var st = MatchExpected(entity, expectedUpdatedAtUtc);
+        if (st == BoardMutationStatus.Conflict)
+            return new BoardMutationResult(
+                BoardMutationStatus.Conflict,
+                await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken));
 
         entity.Counter++;
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
@@ -253,16 +402,34 @@ public sealed class BoardPersistenceService
         await _dbContext.SaveChangesAsync(cancellationToken);
         var afterPlus = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
         await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
-        return afterPlus;
+        return new BoardMutationResult(BoardMutationStatus.Ok, afterPlus);
     }
 
     public async Task<BoardItem?> IncrementHabitMinusAsync(Guid userId, Guid itemId,
         CancellationToken cancellationToken = default)
     {
+        var r = await IncrementHabitMinusForApiAsync(userId, itemId, null, cancellationToken);
+        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
+    }
+
+    public async Task<BoardMutationResult> IncrementHabitMinusForApiAsync(
+        Guid userId,
+        Guid itemId,
+        DateTimeOffset? expectedUpdatedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
         var entity = await _dbContext.BoardItems
-            .FirstOrDefaultAsync(x => x.UserId == userId && x.Section == BoardSection.Habit && x.Id == itemId,
+            .FirstOrDefaultAsync(
+                x => x.UserId == userId && x.Section == BoardSection.Habit && x.Id == itemId && x.DeletedAtUtc == null,
                 cancellationToken);
-        if (entity is null || !entity.TrackMinus) return null;
+        if (entity is null || !entity.TrackMinus)
+            return new BoardMutationResult(BoardMutationStatus.NotFound, null);
+
+        var st = MatchExpected(entity, expectedUpdatedAtUtc);
+        if (st == BoardMutationStatus.Conflict)
+            return new BoardMutationResult(
+                BoardMutationStatus.Conflict,
+                await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken));
 
         entity.NegativeCounter++;
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
@@ -270,7 +437,7 @@ public sealed class BoardPersistenceService
         await _dbContext.SaveChangesAsync(cancellationToken);
         var afterMinus = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
         await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
-        return afterMinus;
+        return new BoardMutationResult(BoardMutationStatus.Ok, afterMinus);
     }
 
     public async Task<BoardItem?> UpdateHabitAsync(
@@ -287,10 +454,49 @@ public sealed class BoardPersistenceService
         string? checklistJson = null,
         CancellationToken cancellationToken = default)
     {
+        var r = await UpdateHabitForApiAsync(
+            userId,
+            itemId,
+            title,
+            notes,
+            tags,
+            trackPlus,
+            trackMinus,
+            resetPeriod,
+            counter,
+            negativeCounter,
+            checklistJson,
+            null,
+            cancellationToken);
+        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
+    }
+
+    public async Task<BoardMutationResult> UpdateHabitForApiAsync(
+        Guid userId,
+        Guid itemId,
+        string title,
+        string? notes,
+        string? tags,
+        bool trackPlus,
+        bool trackMinus,
+        HabitResetPeriod resetPeriod,
+        int counter,
+        int negativeCounter,
+        string? checklistJson = null,
+        DateTimeOffset? expectedUpdatedAtUtc = null,
+        CancellationToken cancellationToken = default)
+    {
         var entity = await _dbContext.BoardItems
-            .FirstOrDefaultAsync(x => x.UserId == userId && x.Section == BoardSection.Habit && x.Id == itemId,
+            .FirstOrDefaultAsync(
+                x => x.UserId == userId && x.Section == BoardSection.Habit && x.Id == itemId && x.DeletedAtUtc == null,
                 cancellationToken);
-        if (entity is null) return null;
+        if (entity is null) return new BoardMutationResult(BoardMutationStatus.NotFound, null);
+
+        var st = MatchExpected(entity, expectedUpdatedAtUtc);
+        if (st == BoardMutationStatus.Conflict)
+            return new BoardMutationResult(
+                BoardMutationStatus.Conflict,
+                await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken));
 
         if (!trackPlus && !trackMinus)
         {
@@ -311,7 +517,7 @@ public sealed class BoardPersistenceService
         await _dbContext.SaveChangesAsync(cancellationToken);
         var habit = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
         await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
-        return habit;
+        return new BoardMutationResult(BoardMutationStatus.Ok, habit);
     }
 
     public async Task<BoardItem?> UpdateTodoAsync(
@@ -324,10 +530,41 @@ public sealed class BoardPersistenceService
         DateTime? dueDate,
         CancellationToken cancellationToken = default)
     {
+        var r = await UpdateTodoForApiAsync(
+            userId,
+            itemId,
+            title,
+            notes,
+            tags,
+            checklistJson,
+            dueDate,
+            null,
+            cancellationToken);
+        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
+    }
+
+    public async Task<BoardMutationResult> UpdateTodoForApiAsync(
+        Guid userId,
+        Guid itemId,
+        string title,
+        string? notes,
+        string? tags,
+        string? checklistJson,
+        DateTime? dueDate,
+        DateTimeOffset? expectedUpdatedAtUtc = null,
+        CancellationToken cancellationToken = default)
+    {
         var entity = await _dbContext.BoardItems
-            .FirstOrDefaultAsync(x => x.UserId == userId && x.Section == BoardSection.Todo && x.Id == itemId,
+            .FirstOrDefaultAsync(
+                x => x.UserId == userId && x.Section == BoardSection.Todo && x.Id == itemId && x.DeletedAtUtc == null,
                 cancellationToken);
-        if (entity is null) return null;
+        if (entity is null) return new BoardMutationResult(BoardMutationStatus.NotFound, null);
+
+        var st = MatchExpected(entity, expectedUpdatedAtUtc);
+        if (st == BoardMutationStatus.Conflict)
+            return new BoardMutationResult(
+                BoardMutationStatus.Conflict,
+                await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken));
 
         DateTime? dueUtc = dueDate is { } d
             ? new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc)
@@ -342,7 +579,7 @@ public sealed class BoardPersistenceService
         await _dbContext.SaveChangesAsync(cancellationToken);
         var todo = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
         await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
-        return todo;
+        return new BoardMutationResult(BoardMutationStatus.Ok, todo);
     }
 
     public async Task<BoardItem?> UpdateDailyAsync(
@@ -358,10 +595,47 @@ public sealed class BoardPersistenceService
         int streak,
         CancellationToken cancellationToken = default)
     {
+        var r = await UpdateDailyForApiAsync(
+            userId,
+            itemId,
+            title,
+            notes,
+            tags,
+            startDate,
+            repeatType,
+            repeatInterval,
+            checklistJson,
+            streak,
+            null,
+            cancellationToken);
+        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
+    }
+
+    public async Task<BoardMutationResult> UpdateDailyForApiAsync(
+        Guid userId,
+        Guid itemId,
+        string title,
+        string? notes,
+        string? tags,
+        DateTime? startDate,
+        DailyRepeatType repeatType,
+        int repeatInterval,
+        string? checklistJson,
+        int streak,
+        DateTimeOffset? expectedUpdatedAtUtc = null,
+        CancellationToken cancellationToken = default)
+    {
         var entity = await _dbContext.BoardItems
-            .FirstOrDefaultAsync(x => x.UserId == userId && x.Section == BoardSection.Daily && x.Id == itemId,
+            .FirstOrDefaultAsync(
+                x => x.UserId == userId && x.Section == BoardSection.Daily && x.Id == itemId && x.DeletedAtUtc == null,
                 cancellationToken);
-        if (entity is null) return null;
+        if (entity is null) return new BoardMutationResult(BoardMutationStatus.NotFound, null);
+
+        var st = MatchExpected(entity, expectedUpdatedAtUtc);
+        if (st == BoardMutationStatus.Conflict)
+            return new BoardMutationResult(
+                BoardMutationStatus.Conflict,
+                await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken));
 
         var today = DailySchedule.UtcToday;
         var wasCompleteForToday = IsDailyEntityCompleteForToday(entity, today);
@@ -395,7 +669,7 @@ public sealed class BoardPersistenceService
         await _dbContext.SaveChangesAsync(cancellationToken);
         var daily = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
         await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
-        return daily;
+        return new BoardMutationResult(BoardMutationStatus.Ok, daily);
     }
 
     private static void ApplyManualStreakToEntity(
@@ -498,66 +772,223 @@ public sealed class BoardPersistenceService
 
     public async Task SeedBoardDataIfMissingAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var hasItems = await _dbContext.BoardItems.AnyAsync(x => x.UserId == userId, cancellationToken);
-        if (hasItems) return;
+        if (await LiveBoardItems(_dbContext, userId).AnyAsync(cancellationToken)) return;
+        await InsertDemoBoardDataAsync(userId, cancellationToken);
+    }
 
+    /// <summary>Inserts the full demo board (habits, dailies, to-dos with tags, checklists, due dates).
+    ///     Caller must ensure this user's board rows are cleared when replacing existing data.</summary>
+    public async Task InsertDemoBoardDataAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
         var utcNow = DateTimeOffset.UtcNow;
-        var dayStart = new DateTime(utcNow.UtcDateTime.Year, utcNow.UtcDateTime.Month, utcNow.UtcDateTime.Day, 0, 0, 0,
-            DateTimeKind.Utc);
+        var today = DailySchedule.UtcToday;
+        var dayStart = new DateTime(today.Year, today.Month, today.Day, 0, 0, 0, DateTimeKind.Utc);
+        var firstOfMonth = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        static DateTime UtcDay(DateOnly d) => new(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc);
+
         var dailyWorkoutId = Guid.NewGuid();
         var dailyDeepId = Guid.NewGuid();
-        _dbContext.BoardItems.AddRange(
-            new BoardItemEntity
-            {
-                Id = Guid.NewGuid(), UserId = userId, Section = BoardSection.Habit, Title = "Drink a glass of water",
-                Counter = 3, NegativeCounter = 2, CreatedAtUtc = utcNow, UpdatedAtUtc = utcNow
-            },
-            new BoardItemEntity
-            {
-                Id = Guid.NewGuid(), UserId = userId, Section = BoardSection.Habit, Title = "Read 10 pages",
-                Counter = 1, NegativeCounter = 0, CreatedAtUtc = utcNow, UpdatedAtUtc = utcNow
-            },
-            new BoardItemEntity
-            {
-                Id = dailyWorkoutId,
-                UserId = userId,
-                Section = BoardSection.Daily,
-                Title = "Workout",
-                IsCompleted = false,
-                DailyStartDate = dayStart,
-                DailyRepeatType = (int)DailyRepeatType.Daily,
-                DailyRepeatInterval = 1,
-                DailyLastCompletedOn = null,
-                CreatedAtUtc = utcNow,
-                UpdatedAtUtc = utcNow
-            },
-            new BoardItemEntity
-            {
-                Id = dailyDeepId,
-                UserId = userId,
-                Section = BoardSection.Daily,
-                Title = "Deep work block",
-                IsCompleted = true,
-                DailyStartDate = dayStart,
-                DailyRepeatType = (int)DailyRepeatType.Daily,
-                DailyRepeatInterval = 1,
-                DailyLastCompletedOn = dayStart,
-                CreatedAtUtc = utcNow,
-                UpdatedAtUtc = utcNow
-            },
-            new BoardItemEntity
-            {
-                Id = Guid.NewGuid(), UserId = userId, Section = BoardSection.Todo, Title = "Submit assignment",
-                IsCompleted = false, CreatedAtUtc = utcNow, UpdatedAtUtc = utcNow
-            },
-            new BoardItemEntity
-            {
-                Id = Guid.NewGuid(), UserId = userId, Section = BoardSection.Todo, Title = "Call advisor",
-                IsCompleted = false, CreatedAtUtc = utcNow, UpdatedAtUtc = utcNow
-            }
-        );
 
-        var today = DateOnly.FromDateTime(utcNow.UtcDateTime);
+        var workoutCheck = DailyChecklistJson.Serialize(
+        [
+            new DailyChecklistItem(Guid.NewGuid(), "5 min warm-up", false),
+            new DailyChecklistItem(Guid.NewGuid(), "20 min main block", false),
+            new DailyChecklistItem(Guid.NewGuid(), "Track progress in the journal", false)
+        ]);
+        var deepCheck = DailyChecklistJson.Serialize(
+        [
+            new DailyChecklistItem(Guid.NewGuid(), "Close email / chat", true),
+            new DailyChecklistItem(Guid.NewGuid(), "Single focus task (45+ min)", false),
+            new DailyChecklistItem(Guid.NewGuid(), "Short review of what got done", false)
+        ]);
+        var plantsCheck = DailyChecklistJson.Serialize(
+        [
+            new DailyChecklistItem(Guid.NewGuid(), "Kitchen plants", false),
+            new DailyChecklistItem(Guid.NewGuid(), "Windowsill succulents", true),
+            new DailyChecklistItem(Guid.NewGuid(), "Patio (if in season)", false)
+        ]);
+        var groceriesSub = DailyChecklistJson.Serialize(
+        [
+            new DailyChecklistItem(Guid.NewGuid(), "Vegetables", true),
+            new DailyChecklistItem(Guid.NewGuid(), "Dairy", false),
+            new DailyChecklistItem(Guid.NewGuid(), "Snacks for the week", false)
+        ]);
+        var tripSub = DailyChecklistJson.Serialize(
+        [
+            new DailyChecklistItem(Guid.NewGuid(), "Book transport", true),
+            new DailyChecklistItem(Guid.NewGuid(), "Packing list", false),
+            new DailyChecklistItem(Guid.NewGuid(), "Check weather", false)
+        ]);
+        var skincareSub = DailyChecklistJson.Serialize(
+        [
+            new DailyChecklistItem(Guid.NewGuid(), "AM routine", true),
+            new DailyChecklistItem(Guid.NewGuid(), "PM routine", false)
+        ]);
+
+        int order = 0;
+        void AddBoardRow(BoardItemEntity row)
+        {
+            var t = utcNow.AddSeconds(order++);
+            row.CreatedAtUtc = t;
+            row.UpdatedAtUtc = t;
+            _dbContext.BoardItems.Add(row);
+        }
+
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Section = BoardSection.Habit,
+            Title = "Drink a glass of water",
+            Notes = "Log each glass with + so statistics show up on the board.",
+            Tags = "health, hydration",
+            Counter = 4,
+            NegativeCounter = 1
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Section = BoardSection.Habit,
+            Title = "Read 10 minutes",
+            Tags = "focus, learning",
+            Counter = 2,
+            NegativeCounter = 0
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Section = BoardSection.Habit,
+            Title = "Plan the week",
+            Notes = "Habit uses a weekly counter reset in the edit dialog to match a Sunday review.",
+            Tags = "planning, work",
+            ResetPeriod = (int)HabitResetPeriod.Weekly,
+            Counter = 0,
+            NegativeCounter = 0
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = dailyWorkoutId,
+            UserId = userId,
+            Section = BoardSection.Daily,
+            Title = "Workout",
+            Tags = "health, body",
+            ChecklistJson = workoutCheck,
+            IsCompleted = false,
+            DailyStartDate = dayStart,
+            DailyRepeatType = (int)DailyRepeatType.Daily,
+            DailyRepeatInterval = 1,
+            DailyLastCompletedOn = null
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = dailyDeepId,
+            UserId = userId,
+            Section = BoardSection.Daily,
+            Title = "Deep work block",
+            Tags = "focus, work",
+            ChecklistJson = deepCheck,
+            IsCompleted = true,
+            DailyStartDate = dayStart,
+            DailyRepeatType = (int)DailyRepeatType.Daily,
+            DailyRepeatInterval = 1,
+            DailyLastCompletedOn = dayStart
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Section = BoardSection.Daily,
+            Title = "Water the plants",
+            Tags = "home, health",
+            ChecklistJson = plantsCheck,
+            IsCompleted = false,
+            DailyStartDate = dayStart,
+            DailyRepeatType = (int)DailyRepeatType.Weekly,
+            DailyRepeatInterval = 1,
+            DailyLastCompletedOn = null
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Section = BoardSection.Daily,
+            Title = "Inbox review",
+            Notes = "Monthly schedule — due on the same calendar day each month when it lands on a scheduled date.",
+            Tags = "work",
+            IsCompleted = false,
+            DailyStartDate = firstOfMonth,
+            DailyRepeatType = (int)DailyRepeatType.Monthly,
+            DailyRepeatInterval = 1,
+            DailyLastCompletedOn = null
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Section = BoardSection.Todo,
+            Title = "Buy groceries",
+            Tags = "home, errands",
+            ChecklistJson = groceriesSub,
+            IsCompleted = false,
+            DailyStartDate = dayStart
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Section = BoardSection.Todo,
+            Title = "Submit project draft",
+            Notes = "Due in a few days — open the card to set another due date or subtasks.",
+            Tags = "school, focus",
+            IsCompleted = false,
+            DailyStartDate = UtcDay(today.AddDays(3))
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Section = BoardSection.Todo,
+            Title = "Skincare routine (evening)",
+            Tags = "health, personal",
+            ChecklistJson = skincareSub,
+            IsCompleted = false,
+            DailyStartDate = null
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Section = BoardSection.Todo,
+            Title = "Return library books",
+            Tags = "school, errands",
+            IsCompleted = false,
+            DailyStartDate = UtcDay(today.AddDays(-2))
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Section = BoardSection.Todo,
+            Title = "Weekend trip",
+            Tags = "personal, travel",
+            ChecklistJson = tripSub,
+            IsCompleted = false,
+            DailyStartDate = UtcDay(today.AddDays(5))
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Section = BoardSection.Todo,
+            Title = "File expense report",
+            Tags = "work",
+            IsCompleted = true,
+            DailyStartDate = UtcDay(today.AddDays(-1))
+        });
+
         for (var i = 0; i < 3; i++)
         {
             var d = today.AddDays(-(2 - i));
@@ -588,9 +1019,9 @@ public sealed class BoardPersistenceService
     {
         var today = DailySchedule.UtcToday;
         await using var readDb = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var dailies = await readDb.BoardItems
+        var dailies = await LiveBoardItems(readDb, userId)
             .AsNoTracking()
-            .Where(x => x.UserId == userId && x.Section == BoardSection.Daily)
+            .Where(x => x.Section == BoardSection.Daily)
             .ToListAsync(cancellationToken);
         var streaks = await BuildDailyStreakMapAsync(userId, dailies, today, readDb, cancellationToken);
         return ToModelWithToday(entity, today, streaks);
@@ -712,7 +1143,9 @@ public sealed class BoardPersistenceService
             entity.Section == BoardSection.Daily ? interval : 1,
             entity.ChecklistJson,
             lastCompleted,
-            todoDue);
+            todoDue,
+            entity.UpdatedAtUtc,
+            entity.CreatedAtUtc);
     }
 
     private static bool IsDailyEntityCompleteForToday(BoardItemEntity entity, DateOnly today)

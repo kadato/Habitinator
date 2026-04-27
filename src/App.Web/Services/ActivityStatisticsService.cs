@@ -46,7 +46,7 @@ public sealed class ActivityStatisticsService
         IReadOnlyDictionary<Guid, string> titles = boardIds.Count == 0
             ? new Dictionary<Guid, string>()
             : await _db.BoardItems.AsNoTracking()
-                .Where(b => b.UserId == userId && boardIds.Contains(b.Id))
+                .Where(b => b.UserId == userId && b.DeletedAtUtc == null && boardIds.Contains(b.Id))
                 .ToDictionaryAsync(b => b.Id, b => b.Title, cancellationToken);
 
         return ActivityStatisticsCalculator.BuildDayDetail(day, rows, titles);
@@ -98,7 +98,7 @@ public sealed class ActivityStatisticsService
         var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(userId, tag, cancellationToken);
 
         IQueryable<BoardItemEntity> dailyQ = _db.BoardItems.AsNoTracking()
-            .Where(b => b.UserId == userId && b.Section == BoardSection.Daily);
+            .Where(b => b.UserId == userId && b.DeletedAtUtc == null && b.Section == BoardSection.Daily);
         if (allowedIds is not null)
             dailyQ = dailyQ.Where(b => allowedIds.Contains(b.Id));
 
@@ -136,7 +136,7 @@ public sealed class ActivityStatisticsService
         CancellationToken cancellationToken)
     {
         var tagStrings = await _db.BoardItems.AsNoTracking()
-            .Where(b => b.UserId == userId)
+            .Where(b => b.UserId == userId && b.DeletedAtUtc == null)
             .Select(b => b.Tags)
             .ToListAsync(cancellationToken);
 
@@ -157,7 +157,7 @@ public sealed class ActivityStatisticsService
 
         var wanted = tag.Trim();
         var rows = await _db.BoardItems.AsNoTracking()
-            .Where(b => b.UserId == userId)
+            .Where(b => b.UserId == userId && b.DeletedAtUtc == null)
             .Select(b => new { b.Id, b.Tags })
             .ToListAsync(cancellationToken);
 

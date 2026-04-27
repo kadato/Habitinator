@@ -52,7 +52,11 @@ public sealed record BoardItem(
     /// <summary>UTC calendar day the daily was last checked off. Used for dailies; null = not completed for this cycle.</summary>
     DateOnly? DailyLastCompletedOn = null,
     /// <summary>Due date for to-dos; stored in the same DB column as daily start when section is to-do.</summary>
-    DateOnly? TodoDueDate = null);
+    DateOnly? TodoDueDate = null,
+    /// <summary>Server row version for optimistic concurrency and incremental sync (maps to <c>UpdatedAtUtc</c> on the server).</summary>
+    DateTimeOffset? ServerUpdatedAtUtc = null,
+    /// <summary>Server creation time; used for stable list ordering (matches <c>CreatedAtUtc</c> in the board store).</summary>
+    DateTimeOffset? CreatedAtUtc = null);
 
 public sealed record BoardSnapshot(
     IReadOnlyList<BoardItem> Habits,

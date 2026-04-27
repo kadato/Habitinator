@@ -41,19 +41,24 @@ This document is the single source of truth for current architecture, features, 
 ### Cross-platform sync and local-first requirements
 
 - PostgreSQL remains the server source of truth for synchronized user data.
-- Each client platform (web and MAUI) supports local-first operation:
-  - local persistent storage for board data
-  - read/write while offline
-- Synchronization requirements:
-  - outbound operation queue (create/update/delete/toggle/increment) with retry
-  - pull remote changes using incremental sync tokens/checkpoints
-  - idempotent push handling on the server
-- Consistency and conflict requirements:
-  - per-record `updatedAt` metadata and tombstone handling for deletions
-  - deterministic conflict resolution policy (default: last-write-wins by server timestamp)
+- **Web (`App.Web`)** is **online-only**: the board is read and written through `WebBoardDataService` against PostgreSQL in the same process.
+- **MAUI (`App.MAUI`)** is **local-first** for the productivity board:
+  - board data is mirrored in **SQLite** on the device
+  - edits apply locally immediately and append to an **outbox** for the existing REST board API (`GET/POST/PUT/DELETE` under `/api/board`)
+  - a background **sync coordinator** drains the outbox when online (exponential backoff on failures), then **pulls** incremental changes (`GET /api/board/sync?cursor=`) when a cursor is stored, otherwise a **full snapshot** (`GET /api/board`)
+  - **SignalR** can still prompt a refresh; the refresh path pulls into SQLite before the Blazor UI reloads
+  - signing **out** clears the local mirror and outbox for that device
+- **Board API reliability contract** (native clients and tests should assume this behavior):
+  - **`Idempotency-Key`** (optional on web; **sent from MAUI** using the outbox `OperationId`): duplicate requests with the same key and the same request **fingerprint** replay the stored status/body without re-running side effects. The same key with a **different** body returns **409** with `problem: idempotency_key_reuse`.
+  - **Optimistic concurrency**: **`X-Board-Expected-Updated-At-Utc`** or **`If-Match`** with the item’s `ServerUpdatedAtUtc` (ISO-8601). If the server row’s `UpdatedAtUtc` does not match, the API returns **409** with `problem: version_conflict` and the **current** `item` JSON. **Conflict policy** for MAUI: the outbox operation is **dropped** after 409 and a **resync** is requested (**server wins** for conflicting mutations).
+  - **Incremental sync**: **`GET /api/board/sync?cursor=`** returns upserts (`BoardSyncItem`: section + `BoardItem`), **`deletedItemIds`** (soft-delete tombstones), and **`nextCursor`**. Deletes use **`DeletedAtUtc`** on the server; the full snapshot excludes tombstones. Invalid or rejected cursors return **400**; MAUI clears the cursor and falls back to a full snapshot.
+  - **HTTP resilience**: the MAUI **`api`** `HttpClient` uses **`Microsoft.Extensions.Http.Resilience`** (timeouts + transient retries). **401** still clears the session via the existing handler.
+  - **Maintenance**: a hosted service **purges** old idempotency rows and **physically deletes** aged tombstones per configured retention.
 - Security and isolation:
-  - sync scope is always user-bound
-  - existing auth model (cookie/JWT + Identity) is used for sync endpoints
+  - sync scope is always user-bound (JWT on MAUI, cookies on web)
+  - existing auth model (cookie/JWT + Identity) is used for API routes
+
+MAUI API base URL is unchanged: configure `Api:BaseUrl` / `HABITINATOR_API_BASE_URL` and `MauiAppSettings` as before (see run/debug sections below).
 
 ## Technology Stack
 

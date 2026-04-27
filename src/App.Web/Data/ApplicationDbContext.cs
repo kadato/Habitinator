@@ -9,6 +9,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 {
     public DbSet<BoardItemEntity> BoardItems => Set<BoardItemEntity>();
 
+    public DbSet<BoardRequestIdempotencyEntity> BoardRequestIdempotencies => Set<BoardRequestIdempotencyEntity>();
+
     public DbSet<UserActivityEventEntity> UserActivityEvents => Set<UserActivityEventEntity>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -50,6 +52,24 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(x => x.CreatedAtUtc).IsRequired();
             entity.Property(x => x.UpdatedAtUtc).IsRequired();
             entity.HasIndex(x => new { x.UserId, x.Section });
+            entity.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(x => x.DeletedAtUtc);
+        });
+
+        builder.Entity<BoardRequestIdempotencyEntity>(entity =>
+        {
+            entity.ToTable("BoardRequestIdempotencies");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.IdempotencyKey).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.RequestFingerprintHex).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.ResponseBody).HasColumnType("text");
+            entity.Property(x => x.CreatedAtUtc).IsRequired();
+            entity.HasIndex(x => new { x.UserId, x.IdempotencyKey }).IsUnique();
+            entity.HasIndex(x => x.CreatedAtUtc);
             entity.HasOne(x => x.User)
                 .WithMany()
                 .HasForeignKey(x => x.UserId)

@@ -49,9 +49,12 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
         options.Password.RequiredLength = 8;
-        options.Password.RequireUppercase = true;
-        options.Password.RequireLowercase = true;
-        options.Password.RequireDigit = true;
+        options.Password.RequireUppercase = false;
+        options.Password.RequireLowercase = false;
+        options.Password.RequireDigit = false;
+        options.Password.RequireNonAlphanumeric = false;
+        // Default is 1; set explicitly so simple passwords (e.g. repeated keys) are not blocked.
+        options.Password.RequiredUniqueChars = 1;
         options.Lockout.MaxFailedAccessAttempts = 5;
     })
     .AddRoles<IdentityRole<Guid>>()
@@ -67,9 +70,14 @@ builder.Services.AddScoped<GlobalTimerService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<DemoUserResolver>();
 builder.Services.AddScoped<IRemoteBoardRefreshService, RemoteBoardRefreshService>();
+builder.Services.AddSingleton<IBoardSyncStatus, NoOpBoardSyncStatus>();
 builder.Services.AddScoped<BoardRemoteNotifyBridge>();
 builder.Services.AddSingleton<IBoardChangeNotifier, BoardChangeNotifier>();
 builder.Services.AddScoped<BoardPersistenceService>();
+builder.Services.AddScoped<BoardIdempotencyService>();
+builder.Services.Configure<BoardMaintenanceOptions>(
+    builder.Configuration.GetSection(BoardMaintenanceOptions.SectionName));
+builder.Services.AddHostedService<BoardMaintenanceHostedService>();
 builder.Services.AddScoped<IBoardDataService, WebBoardDataService>();
 builder.Services.AddSignalR();
 builder.Services.AddScoped<ActivityStatisticsService>();
@@ -126,6 +134,15 @@ builder.Services.AddAuthorizationBuilder()
 
 var app = builder.Build();
 
+List<string> MapRegistrationErrorsToUserFacing(IEnumerable<IdentityError> errors) =>
+    errors.Select(static e => e.Code switch
+    {
+        "DuplicateUserName" or "DuplicateEmail" => "This email is already registered.",
+        "InvalidUserName" or "InvalidEmail" => "Enter a valid email address.",
+        _ => (e.Description ?? "Registration could not be completed.").Replace(
+            "Username", "Email", StringComparison.OrdinalIgnoreCase)
+    }).ToList();
+
 const int maxSeedAttempts = 4;
 for (var attempt = 1; attempt <= maxSeedAttempts; attempt++)
 {
@@ -180,6 +197,9 @@ app.MapPost("/api/auth/register", async (
     RegisterRequest request,
     UserManager<ApplicationUser> userManager) =>
 {
+    if (!RegistrationEmailValidation.IsValid(request.Email))
+        return Results.BadRequest(new List<string> { "Enter a valid email address." });
+
     var user = new ApplicationUser
     {
         UserName = request.Email,
@@ -188,7 +208,7 @@ app.MapPost("/api/auth/register", async (
     };
 
     var result = await userManager.CreateAsync(user, request.Password);
-    if (!result.Succeeded) return Results.BadRequest(result.Errors.Select(x => x.Description));
+    if (!result.Succeeded) return Results.BadRequest(MapRegistrationErrorsToUserFacing(result.Errors));
 
     return Results.Ok(new { message = "Registration successful." });
 }).DisableAntiforgery();
@@ -303,6 +323,9 @@ app.MapPost("/api/auth/register-form", async (HttpContext httpContext, UserManag
     if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         return Results.LocalRedirect("/auth/register?error=1");
 
+    if (!RegistrationEmailValidation.IsValid(email))
+        return Results.LocalRedirect("/auth/register?error=1");
+
     var user = new ApplicationUser
     {
         UserName = email,
@@ -311,139 +334,17 @@ app.MapPost("/api/auth/register-form", async (HttpContext httpContext, UserManag
     };
 
     var result = await userManager.CreateAsync(user, password);
-    if (!result.Succeeded) return Results.LocalRedirect("/auth/register?error=1");
+    if (!result.Succeeded)
+    {
+        var retry =
+            $"?error=1&email={Uri.EscapeDataString(email)}&tz={Uri.EscapeDataString(timezone)}";
+        return Results.LocalRedirect("/auth/register" + retry);
+    }
 
     return Results.LocalRedirect("/auth/login?registered=1");
 }).DisableAntiforgery();
 
-var boardApi = app.MapGroup("/api/board")
-    .DisableAntiforgery()
-    .RequireAuthorization("BoardOrJwt");
-
-boardApi.MapGet("/", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService) =>
-{
-    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
-
-    var snapshot = await boardPersistenceService.GetSnapshotAsync(userId);
-    return Results.Ok(snapshot);
-});
-boardApi.MapPost("/{section}",
-    async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, BoardSection section,
-        ItemTitleRequest request) =>
-    {
-        if (string.IsNullOrWhiteSpace(request.Title)) return Results.BadRequest("Title is required.");
-
-        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
-
-        var item = await boardPersistenceService.CreateItemAsync(userId, section, request.Title.Trim());
-        return Results.Ok(item);
-    });
-boardApi.MapPut("/{section}/{itemId:guid}", async (ClaimsPrincipal user,
-    BoardPersistenceService boardPersistenceService, BoardSection section, Guid itemId, ItemTitleRequest request) =>
-{
-    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
-
-    var updated = await boardPersistenceService.RenameItemAsync(userId, section, itemId, request.Title.Trim());
-    return updated is null ? Results.NotFound() : Results.Ok(updated);
-});
-boardApi.MapDelete("/{section}/{itemId:guid}",
-    async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, BoardSection section, Guid itemId) =>
-    {
-        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
-
-        var removed = await boardPersistenceService.DeleteItemAsync(userId, section, itemId);
-        return removed ? Results.NoContent() : Results.NotFound();
-    });
-boardApi.MapPost("/{section}/{itemId:guid}/toggle", async (ClaimsPrincipal user,
-    BoardPersistenceService boardPersistenceService, BoardSection section, Guid itemId) =>
-{
-    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
-
-    var updated = await boardPersistenceService.ToggleItemAsync(userId, section, itemId);
-    return updated is null ? Results.NotFound() : Results.Ok(updated);
-});
-boardApi.MapPost("/habits/{itemId:guid}/increment",
-    async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, Guid itemId) =>
-    {
-        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
-
-        var updated = await boardPersistenceService.IncrementHabitPlusAsync(userId, itemId);
-        return updated is null ? Results.NotFound() : Results.Ok(updated);
-    });
-boardApi.MapPost("/habits/{itemId:guid}/decrement",
-    async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService, Guid itemId) =>
-    {
-        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
-
-        var updated = await boardPersistenceService.IncrementHabitMinusAsync(userId, itemId);
-        return updated is null ? Results.NotFound() : Results.Ok(updated);
-    });
-boardApi.MapPut("/habits/{itemId:guid}", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService,
-    Guid itemId, HabitUpdateRequest request) =>
-{
-    if (string.IsNullOrWhiteSpace(request.Title)) return Results.BadRequest("Title is required.");
-
-    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
-
-    var updated = await boardPersistenceService.UpdateHabitAsync(
-        userId,
-        itemId,
-        request.Title.Trim(),
-        request.Notes,
-        request.Tags,
-        request.TrackPlus,
-        request.TrackMinus,
-        request.ResetPeriod,
-        request.Counter,
-        request.NegativeCounter,
-        request.ChecklistJson);
-    return updated is null ? Results.NotFound() : Results.Ok(updated);
-});
-boardApi.MapPut("/todos/{itemId:guid}", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService,
-    Guid itemId, TodoUpdateRequest request) =>
-{
-    if (string.IsNullOrWhiteSpace(request.Title)) return Results.BadRequest("Title is required.");
-
-    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
-
-    var updated = await boardPersistenceService.UpdateTodoAsync(
-        userId,
-        itemId,
-        request.Title.Trim(),
-        request.Notes,
-        request.Tags,
-        request.ChecklistJson,
-        request.DueDate);
-    return updated is null ? Results.NotFound() : Results.Ok(updated);
-});
-boardApi.MapPut("/dailies/{itemId:guid}", async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService,
-    Guid itemId, DailyUpdateRequest request) =>
-{
-    if (string.IsNullOrWhiteSpace(request.Title)) return Results.BadRequest("Title is required.");
-
-    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
-
-    var updated = await boardPersistenceService.UpdateDailyAsync(
-        userId,
-        itemId,
-        request.Title.Trim(),
-        request.Notes,
-        request.Tags,
-        request.StartDate,
-        request.Repeat,
-        request.RepeatInterval,
-        request.ChecklistJson,
-        request.Streak);
-    return updated is null ? Results.NotFound() : Results.Ok(updated);
-});
-boardApi.MapPost("/dailies/{itemId:guid}/complete-for-date", async (ClaimsPrincipal user,
-    BoardPersistenceService boardPersistenceService, Guid itemId, DailyCompleteForDateRequest request) =>
-{
-    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
-
-    var updated = await boardPersistenceService.CompleteDailyForDateAsync(userId, itemId, request.CompletedOn);
-    return updated is null ? Results.NotFound() : Results.Ok(updated);
-});
+app.MapBoardApi();
 
 var activityApi = app.MapGroup("/api/activity")
     .DisableAntiforgery()

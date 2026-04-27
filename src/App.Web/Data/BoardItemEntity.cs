@@ -44,4 +44,7 @@ public sealed class BoardItemEntity
     public DateTimeOffset CreatedAtUtc { get; set; }
 
     public DateTimeOffset UpdatedAtUtc { get; set; }
+
+    /// <summary>When set, the row is a tombstone (soft-deleted). Live board queries exclude these.</summary>
+    public DateTimeOffset? DeletedAtUtc { get; set; }
 }

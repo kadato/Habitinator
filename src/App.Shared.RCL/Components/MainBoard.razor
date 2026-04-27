@@ -5,6 +5,7 @@
 @inject IDailyRetroPromptStore DailyRetroStore
 @inject IRemoteBoardRefreshService RemoteBoardRefresh
 @inject BoardRemoteNotifyBridge BoardNotifyBridge
+@inject IBoardSyncStatus BoardSync
 @inject IJSRuntime JS
 
 <MudStack Class="board-shell w-100" Spacing="2">
@@ -28,6 +29,38 @@
                 </MudButton>
             </MudStack>
         </MudAlert>
+    }
+
+    @if (BoardSync.IsOffline || BoardSync.IsSyncing || !string.IsNullOrEmpty(BoardSync.SyncProblemMessage) ||
+         BoardSync.LastSyncedUtc is not null)
+    {
+        <MudStack Spacing="1">
+            @if (BoardSync.IsOffline)
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Class="ma-0">
+                    You appear to be offline. Changes stay on this device and sync when you reconnect.
+                </MudAlert>
+            }
+            @if (BoardSync.IsSyncing && !BoardSync.IsOffline)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="ma-0"
+                          Icon="@Icons.Material.Filled.CloudSync">
+                    Syncing with the server…
+                </MudAlert>
+            }
+            @if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true" Class="ma-0">
+                    @BoardSync.SyncProblemMessage
+                </MudAlert>
+            }
+            @if (BoardSync.LastSyncedUtc is { } syncedAt && !BoardSync.IsOffline && !_isLoading)
+            {
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    Last synced @syncedAt.LocalDateTime.ToString("g")
+                </MudText>
+            }
+        </MudStack>
     }
 
     <GlobalTimerPanel OnLogSaved="HandleTimerLogSavedAsync"
@@ -226,8 +259,14 @@
 
     protected override async Task OnInitializedAsync()
     {
+        BoardSync.Changed += OnBoardSyncStatusChanged;
         RemoteBoardRefresh.RegisterForRemoteRefresh(HandleRemoteBoardRefreshedAsync);
         await InitialLoadAsync();
+    }
+
+    private void OnBoardSyncStatusChanged(object? sender, EventArgs e)
+    {
+        _ = InvokeAsync(StateHasChanged);
     }
 
     /// <summary>
@@ -255,6 +294,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        BoardSync.Changed -= OnBoardSyncStatusChanged;
         RemoteBoardRefresh.UnregisterForRemoteRefresh(HandleRemoteBoardRefreshedAsync);
         try
         {

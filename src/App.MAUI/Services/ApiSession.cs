@@ -1,5 +1,7 @@
 using App.Shared.RCL.Models;
 
+using App.MAUI.Services.LocalBoard;
+
 namespace App.MAUI.Services;
 
 public interface IApiSession
@@ -22,12 +24,23 @@ public interface IApiSession
 public sealed class ApiSession : IApiSession
 {
     private readonly MauiBoardHubService _hub;
+    private readonly IMauiBoardLocalStoreLifecycle _localBoard;
+    private readonly MauiBoardSyncCoordinator _sync;
+    private readonly MauiBoardSyncStatus _syncStatus;
     private readonly IAuthTokenStore _store;
 
-    public ApiSession(IAuthTokenStore store, MauiBoardHubService hub)
+    public ApiSession(
+        IAuthTokenStore store,
+        MauiBoardHubService hub,
+        IMauiBoardLocalStoreLifecycle localBoard,
+        MauiBoardSyncCoordinator sync,
+        MauiBoardSyncStatus syncStatus)
     {
         _store = store;
         _hub = hub;
+        _localBoard = localBoard;
+        _sync = sync;
+        _syncStatus = syncStatus;
     }
 
     public event EventHandler? Changed;
@@ -49,7 +62,11 @@ public sealed class ApiSession : IApiSession
         IsLoggedIn = !string.IsNullOrEmpty(t);
         Email = e;
         IsReady = true;
-        if (IsLoggedIn) await _hub.EnsureConnectedAsync(cancellationToken);
+        if (IsLoggedIn)
+        {
+            await _hub.EnsureConnectedAsync(cancellationToken);
+            _sync.RequestSync();
+        }
 
         OnChanged();
     }
@@ -62,12 +79,16 @@ public sealed class ApiSession : IApiSession
         Email = response.Email;
         IsReady = true;
         await _hub.EnsureConnectedAsync(cancellationToken);
+        _sync.RequestSync();
         OnChanged();
     }
 
     public async Task ClearSessionAsync(CancellationToken cancellationToken = default)
     {
         await _hub.DisconnectAsync(cancellationToken);
+        await _localBoard.ClearAllLocalStateAsync(cancellationToken);
+        _syncStatus.LastSyncedUtc = null;
+        _syncStatus.SyncProblemMessage = null;
         await _store.SetAccessTokenAsync(null, cancellationToken);
         await _store.SetEmailAsync(null, cancellationToken);
         IsLoggedIn = false;

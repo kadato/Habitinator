@@ -1,3 +1,31 @@
 ﻿@page "/"
+@inject IApiSession Session
+@inject ApiAuthService Auth
+@inject NavigationManager Nav
 
-<MainBoard/>
+<PageTitle>Habitinator</PageTitle>
+
+@if (Session.IsLoggedIn)
+{
+    <MainBoard/>
+}
+else
+{
+    <HomeLanding UseCookieGuestLogin="false" OnContinueAsDemoGuest="ContinueAsDemoGuestAsync"/>
+}
+
+@code {
+
+    private async Task ContinueAsDemoGuestAsync()
+    {
+        var r = await Auth.GuestJwtLoginAsync();
+        if (r is null)
+        {
+            Nav.NavigateTo("/auth/login?guest=missing", replace: true);
+            return;
+        }
+
+        await Session.SetSessionAsync(r);
+        Nav.NavigateTo("/", replace: true);
+    }
+}

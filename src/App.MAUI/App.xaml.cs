@@ -24,6 +24,14 @@ public partial class App : Application
     {
         base.OnResume();
         RequestDailyReminderReschedule();
+        RequestBoardSync();
+    }
+
+    private static void RequestBoardSync()
+    {
+        if (IPlatformApplication.Current?.Services is not IServiceProvider sp) return;
+
+        if (sp.GetService(typeof(MauiBoardSyncCoordinator)) is MauiBoardSyncCoordinator sync) sync.RequestSync();
     }
 
     private static void RequestDailyReminderReschedule()

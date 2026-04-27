@@ -26,6 +26,38 @@ public sealed class RemoteBoardDataService : IBoardDataService
 
     private HttpClient Client => _http.CreateClient("api");
 
+    private static void AddMutationHeaders(HttpRequestMessage req, Guid operationId, DateTimeOffset? expectedUpdatedAtUtc)
+    {
+        if (operationId != Guid.Empty)
+            req.Headers.TryAddWithoutValidation("Idempotency-Key", operationId.ToString("D"));
+        if (expectedUpdatedAtUtc is { } e)
+            req.Headers.TryAddWithoutValidation("X-Board-Expected-Updated-At-Utc", e.ToString("O"));
+    }
+
+    private static async Task ThrowIfConflictAsync(HttpResponseMessage res, CancellationToken cancellationToken)
+    {
+        if (res.StatusCode != HttpStatusCode.Conflict) return;
+
+        var body = await res.Content.ReadAsStringAsync(cancellationToken);
+        throw new BoardRemoteConflictException(body);
+    }
+
+    public async Task<BoardSyncDelta?> TryGetSyncDeltaAsync(string cursor, CancellationToken cancellationToken = default)
+    {
+        using var res = await Client.GetAsync(
+            $"api/board/sync?cursor={Uri.EscapeDataString(cursor)}",
+            cancellationToken);
+        if (res.StatusCode == HttpStatusCode.BadRequest) return null;
+
+        if (!res.IsSuccessStatusCode)
+        {
+            await ThrowIfConflictAsync(res, cancellationToken);
+            res.EnsureSuccessStatusCode();
+        }
+
+        return await res.Content.ReadFromJsonAsync<BoardSyncDelta>(Serializer, cancellationToken);
+    }
+
     public async Task<BoardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -60,68 +92,162 @@ public sealed class RemoteBoardDataService : IBoardDataService
         }
     }
 
-    public async Task<BoardItem> CreateItemAsync(BoardSection section, string title,
+    public Task<BoardItem> CreateItemAsync(BoardSection section, string title,
+        CancellationToken cancellationToken = default) =>
+        CreateItemAsync(section, title, Guid.Empty, cancellationToken);
+
+    public async Task<BoardItem> CreateItemAsync(
+        BoardSection section,
+        string title,
+        Guid operationId,
         CancellationToken cancellationToken = default)
     {
-        using var res = await Client.PostAsJsonAsync(
-            $"api/board/{section}",
-            new ItemTitleRequest(title),
-            Serializer,
-            cancellationToken);
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"api/board/{section}")
+        {
+            Content = JsonContent.Create(new ItemTitleRequest(title), options: Serializer)
+        };
+        AddMutationHeaders(req, operationId, null);
+        using var res = await Client.SendAsync(req, cancellationToken);
+        await ThrowIfConflictAsync(res, cancellationToken);
         res.EnsureSuccessStatusCode();
         return (await res.Content.ReadFromJsonAsync<BoardItem>(Serializer, cancellationToken))!;
     }
 
-    public async Task<BoardItem?> RenameItemAsync(BoardSection section, Guid itemId, string title,
+    public Task<BoardItem?> RenameItemAsync(BoardSection section, Guid itemId, string title,
+        CancellationToken cancellationToken = default) =>
+        RenameItemAsync(section, itemId, title, Guid.Empty, null, cancellationToken);
+
+    public async Task<BoardItem?> RenameItemAsync(
+        BoardSection section,
+        Guid itemId,
+        string title,
+        Guid operationId,
+        DateTimeOffset? expectedServerUpdatedAtUtc,
         CancellationToken cancellationToken = default)
     {
-        using var res = await Client.PutAsJsonAsync(
-            $"api/board/{section}/{itemId}",
-            new ItemTitleRequest(title),
-            Serializer,
-            cancellationToken);
+        using var req = new HttpRequestMessage(HttpMethod.Put, $"api/board/{section}/{itemId}")
+        {
+            Content = JsonContent.Create(new ItemTitleRequest(title), options: Serializer)
+        };
+        AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
+        using var res = await Client.SendAsync(req, cancellationToken);
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
 
-    public async Task<bool> DeleteItemAsync(BoardSection section, Guid itemId,
+    public Task<bool> DeleteItemAsync(BoardSection section, Guid itemId,
+        CancellationToken cancellationToken = default) =>
+        DeleteItemAsync(section, itemId, Guid.Empty, null, cancellationToken);
+
+    public async Task<bool> DeleteItemAsync(
+        BoardSection section,
+        Guid itemId,
+        Guid operationId,
+        DateTimeOffset? expectedServerUpdatedAtUtc,
         CancellationToken cancellationToken = default)
     {
-        using var res = await Client.DeleteAsync($"api/board/{section}/{itemId}", cancellationToken);
+        using var req = new HttpRequestMessage(HttpMethod.Delete, $"api/board/{section}/{itemId}");
+        AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
+        using var res = await Client.SendAsync(req, cancellationToken);
         if (res.StatusCode == HttpStatusCode.NotFound) return false;
 
+        await ThrowIfConflictAsync(res, cancellationToken);
         res.EnsureSuccessStatusCode();
         return true;
     }
 
-    public async Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId,
+    public Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId,
+        CancellationToken cancellationToken = default) =>
+        ToggleItemAsync(section, itemId, Guid.Empty, null, cancellationToken);
+
+    public async Task<BoardItem?> ToggleItemAsync(
+        BoardSection section,
+        Guid itemId,
+        Guid operationId,
+        DateTimeOffset? expectedServerUpdatedAtUtc,
         CancellationToken cancellationToken = default)
     {
-        using var res = await Client.PostAsync($"api/board/{section}/{itemId}/toggle", null, cancellationToken);
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"api/board/{section}/{itemId}/toggle");
+        AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
+        using var res = await Client.SendAsync(req, cancellationToken);
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
 
-    public async Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn,
+    public Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn,
+        CancellationToken cancellationToken = default) =>
+        CompleteDailyForDateAsync(itemId, completedOn, Guid.Empty, null, cancellationToken);
+
+    public async Task<BoardItem?> CompleteDailyForDateAsync(
+        Guid itemId,
+        DateOnly completedOn,
+        Guid operationId,
+        DateTimeOffset? expectedServerUpdatedAtUtc,
         CancellationToken cancellationToken = default)
     {
-        using var res = await Client.PostAsJsonAsync(
-            $"api/board/dailies/{itemId}/complete-for-date",
-            new DailyCompleteForDateRequest(completedOn),
-            Serializer,
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"api/board/dailies/{itemId}/complete-for-date")
+        {
+            Content = JsonContent.Create(new DailyCompleteForDateRequest(completedOn), options: Serializer)
+        };
+        AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
+        using var res = await Client.SendAsync(req, cancellationToken);
+        return await ReadBoardItemOrNullAsync(res, cancellationToken);
+    }
+
+    public Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default) =>
+        IncrementHabitPlusAsync(itemId, Guid.Empty, null, cancellationToken);
+
+    public async Task<BoardItem?> IncrementHabitPlusAsync(
+        Guid itemId,
+        Guid operationId,
+        DateTimeOffset? expectedServerUpdatedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"api/board/habits/{itemId}/increment");
+        AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
+        using var res = await Client.SendAsync(req, cancellationToken);
+        return await ReadBoardItemOrNullAsync(res, cancellationToken);
+    }
+
+    public Task<BoardItem?> IncrementHabitMinusAsync(Guid itemId, CancellationToken cancellationToken = default) =>
+        IncrementHabitMinusAsync(itemId, Guid.Empty, null, cancellationToken);
+
+    public async Task<BoardItem?> IncrementHabitMinusAsync(
+        Guid itemId,
+        Guid operationId,
+        DateTimeOffset? expectedServerUpdatedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"api/board/habits/{itemId}/decrement");
+        AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
+        using var res = await Client.SendAsync(req, cancellationToken);
+        return await ReadBoardItemOrNullAsync(res, cancellationToken);
+    }
+
+    public Task<BoardItem?> UpdateHabitAsync(
+        Guid itemId,
+        string title,
+        string? notes,
+        string? tags,
+        bool trackPlus,
+        bool trackMinus,
+        HabitResetPeriod resetPeriod,
+        int counter,
+        int negativeCounter,
+        string? checklistJson = null,
+        CancellationToken cancellationToken = default) =>
+        UpdateHabitAsync(
+            itemId,
+            title,
+            notes,
+            tags,
+            trackPlus,
+            trackMinus,
+            resetPeriod,
+            counter,
+            negativeCounter,
+            checklistJson,
+            Guid.Empty,
+            null,
             cancellationToken);
-        return await ReadBoardItemOrNullAsync(res, cancellationToken);
-    }
-
-    public async Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default)
-    {
-        using var res = await Client.PostAsync($"api/board/habits/{itemId}/increment", null, cancellationToken);
-        return await ReadBoardItemOrNullAsync(res, cancellationToken);
-    }
-
-    public async Task<BoardItem?> IncrementHabitMinusAsync(Guid itemId, CancellationToken cancellationToken = default)
-    {
-        using var res = await Client.PostAsync($"api/board/habits/{itemId}/decrement", null, cancellationToken);
-        return await ReadBoardItemOrNullAsync(res, cancellationToken);
-    }
 
     public async Task<BoardItem?> UpdateHabitAsync(
         Guid itemId,
@@ -133,7 +259,9 @@ public sealed class RemoteBoardDataService : IBoardDataService
         HabitResetPeriod resetPeriod,
         int counter,
         int negativeCounter,
-        string? checklistJson = null,
+        string? checklistJson,
+        Guid operationId,
+        DateTimeOffset? expectedServerUpdatedAtUtc,
         CancellationToken cancellationToken = default)
     {
         var body = new HabitUpdateRequest(
@@ -146,9 +274,33 @@ public sealed class RemoteBoardDataService : IBoardDataService
             counter,
             negativeCounter,
             checklistJson);
-        using var res = await Client.PutAsJsonAsync($"api/board/habits/{itemId}", body, Serializer, cancellationToken);
+        using var req = new HttpRequestMessage(HttpMethod.Put, $"api/board/habits/{itemId}")
+        {
+            Content = JsonContent.Create(body, options: Serializer)
+        };
+        AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
+        using var res = await Client.SendAsync(req, cancellationToken);
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
+
+    public Task<BoardItem?> UpdateTodoAsync(
+        Guid itemId,
+        string title,
+        string? notes,
+        string? tags,
+        string? checklistJson,
+        DateTime? dueDate,
+        CancellationToken cancellationToken = default) =>
+        UpdateTodoAsync(
+            itemId,
+            title,
+            notes,
+            tags,
+            checklistJson,
+            dueDate,
+            Guid.Empty,
+            null,
+            cancellationToken);
 
     public async Task<BoardItem?> UpdateTodoAsync(
         Guid itemId,
@@ -157,12 +309,44 @@ public sealed class RemoteBoardDataService : IBoardDataService
         string? tags,
         string? checklistJson,
         DateTime? dueDate,
+        Guid operationId,
+        DateTimeOffset? expectedServerUpdatedAtUtc,
         CancellationToken cancellationToken = default)
     {
         var body = new TodoUpdateRequest(title, notes, tags, checklistJson, dueDate);
-        using var res = await Client.PutAsJsonAsync($"api/board/todos/{itemId}", body, Serializer, cancellationToken);
+        using var req = new HttpRequestMessage(HttpMethod.Put, $"api/board/todos/{itemId}")
+        {
+            Content = JsonContent.Create(body, options: Serializer)
+        };
+        AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
+        using var res = await Client.SendAsync(req, cancellationToken);
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
+
+    public Task<BoardItem?> UpdateDailyAsync(
+        Guid itemId,
+        string title,
+        string? notes,
+        string? tags,
+        DateTime? startDate,
+        DailyRepeatType repeatType,
+        int repeatInterval,
+        string? checklistJson,
+        int streak,
+        CancellationToken cancellationToken = default) =>
+        UpdateDailyAsync(
+            itemId,
+            title,
+            notes,
+            tags,
+            startDate,
+            repeatType,
+            repeatInterval,
+            checklistJson,
+            streak,
+            Guid.Empty,
+            null,
+            cancellationToken);
 
     public async Task<BoardItem?> UpdateDailyAsync(
         Guid itemId,
@@ -174,6 +358,8 @@ public sealed class RemoteBoardDataService : IBoardDataService
         int repeatInterval,
         string? checklistJson,
         int streak,
+        Guid operationId,
+        DateTimeOffset? expectedServerUpdatedAtUtc,
         CancellationToken cancellationToken = default)
     {
         var body = new DailyUpdateRequest(
@@ -185,7 +371,12 @@ public sealed class RemoteBoardDataService : IBoardDataService
             repeatInterval,
             checklistJson,
             streak);
-        using var res = await Client.PutAsJsonAsync($"api/board/dailies/{itemId}", body, Serializer, cancellationToken);
+        using var req = new HttpRequestMessage(HttpMethod.Put, $"api/board/dailies/{itemId}")
+        {
+            Content = JsonContent.Create(body, options: Serializer)
+        };
+        AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
+        using var res = await Client.SendAsync(req, cancellationToken);
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
 
@@ -194,6 +385,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
     {
         if (res.StatusCode == HttpStatusCode.NotFound) return null;
 
+        await ThrowIfConflictAsync(res, cancellationToken);
         res.EnsureSuccessStatusCode();
         return await res.Content.ReadFromJsonAsync<BoardItem>(Serializer, cancellationToken);
     }

@@ -9,4 +9,12 @@ public sealed class DemoUserOptions
     public string Password { get; set; } = "Guest123!";
 
     public string Timezone { get; set; } = "Europe/Budapest";
+
+    /// <summary>
+    /// When true, the demo guest's board, activity log, and notification settings are cleared, the
+    /// password is reset to <see cref="Password" />, and full demo data is inserted again. Use for
+    /// local dev or a one-time refresh; can be set with environment variable
+    /// <c>DemoUser__ForceReseed=true</c>.
+    /// </summary>
+    public bool ForceReseed { get; set; }
 }

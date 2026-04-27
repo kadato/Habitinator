@@ -15,11 +15,15 @@ public static class GuestActivityDemoSeeder
     public static async Task SeedIfMissingAsync(ApplicationDbContext db, Guid guestUserId,
         CancellationToken cancellationToken = default)
     {
-        if (await db.UserActivityEvents.AnyAsync(e => e.UserId == guestUserId, cancellationToken)) return;
+        // Board demo seed adds a few activity rows (e.g. daily streak backfill). A full guest heatmap is
+        // thousands of events — if we have that many, skip. Otherwise fill in the year-long demo series.
+        const int heatmapPresentThreshold = 2_000;
+        var n = await db.UserActivityEvents.CountAsync(e => e.UserId == guestUserId, cancellationToken);
+        if (n > heatmapPresentThreshold) return;
 
         var boardItemIds = await db.BoardItems
             .AsNoTracking()
-            .Where(x => x.UserId == guestUserId)
+            .Where(x => x.UserId == guestUserId && x.DeletedAtUtc == null)
             .Select(x => x.Id)
             .ToListAsync(cancellationToken);
 

@@ -111,7 +111,9 @@ public sealed class LocalBoardDataService : IBoardDataService
         var updated = existing with { Title = title };
         var index = list.IndexOf(existing);
         list[index] = updated;
-        return Task.FromResult<BoardItem?>(updated);
+        return Task.FromResult<BoardItem?>(section == BoardSection.Daily
+            ? ProjectDailyForDisplay(updated, DailySchedule.UtcToday)
+            : updated);
     }
 
     public Task<bool> DeleteItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
@@ -278,20 +280,68 @@ public sealed class LocalBoardDataService : IBoardDataService
 
         var n = Math.Max(1, Math.Min(999, repeatInterval));
         var streakClamped = Math.Max(0, Math.Min(9999, streak));
+        var today = DailySchedule.UtcToday;
+        var wasCompleteForToday = existing.DailyLastCompletedOn == today
+                                  || (existing.DailyLastCompletedOn is null && existing.IsCompleted);
+        DateOnly? startD = startDate is { } sd ? DateOnly.FromDateTime(sd) : null;
+
+        DateOnly? lastC;
+        bool comp;
+        if (streakClamped <= 0)
+        {
+            lastC = null;
+            comp = false;
+        }
+        else
+        {
+            var notAfterPrevDays = today.AddDays(-1);
+            var days = DailyStreakBackfill.GetLastNScheduledCompletionDays(
+                startD, repeatType, n, streakClamped, notAfterPrevDays);
+            if (days.Count == 0)
+            {
+                if (wasCompleteForToday)
+                {
+                    lastC = today;
+                    comp = true;
+                }
+                else
+                {
+                    lastC = null;
+                    comp = false;
+                }
+            }
+            else
+            {
+                var newest = days[0];
+                if (wasCompleteForToday)
+                {
+                    lastC = today;
+                    comp = true;
+                }
+                else
+                {
+                    lastC = newest;
+                    comp = false;
+                }
+            }
+        }
+
         var updated = existing with
         {
             Title = title,
             Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim(),
             Tags = string.IsNullOrWhiteSpace(tags) ? null : tags.Trim(),
-            DailyStartDate = startDate is { } d ? DateOnly.FromDateTime(d) : null,
+            DailyStartDate = startD,
             DailyRepeat = repeatType,
             DailyRepeatInterval = n,
             ChecklistJson = string.IsNullOrWhiteSpace(checklistJson) ? null : checklistJson.Trim(),
-            Counter = streakClamped
+            Counter = streakClamped,
+            DailyLastCompletedOn = lastC,
+            IsCompleted = comp
         };
         var index = _dailies.IndexOf(existing);
         _dailies[index] = updated;
-        return Task.FromResult<BoardItem?>(ProjectDailyForDisplay(updated, DailySchedule.UtcToday));
+        return Task.FromResult<BoardItem?>(ProjectDailyForDisplay(updated, today));
     }
 
     private static BoardItem ProjectDailyForDisplay(BoardItem d, DateOnly today)

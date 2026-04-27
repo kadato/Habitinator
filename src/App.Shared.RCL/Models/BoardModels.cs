@@ -28,8 +28,9 @@ public enum DailyRepeatType
 public sealed record DailyChecklistItem(Guid Id, string Text, bool IsDone = false);
 
 /// <param name="Counter">
-///     For habits: + counter when <see cref="TrackPlus" /> is enabled. For dailies: current streak
-///     (manual in edit dialog).
+///     For habits: + counter when <see cref="TrackPlus" /> is enabled. For dailies: the larger of the
+///     event-derived streak and the <c>Counter</c> column (last value from the daily edit dialog and
+///     backfill), so a manual change is visible in the API/UI even when the computed streak lags.
 /// </param>
 /// <param name="NegativeCounter">Tally for the − button when <see cref="TrackMinus" /> is enabled.</param>
 public sealed record BoardItem(

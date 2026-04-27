@@ -14,6 +14,60 @@ public static class DailySchedule
         return dailyStart ?? UtcToday;
     }
 
+    /// <summary>
+    ///     First calendar day used as the schedule anchor when walking streak history. When
+    ///     <paramref name="dailyStart" /> is set, it is the real start. When it is <c>null</c>, the board treats
+    ///     the daily as "due from today", but streak backfill and <see cref="Services.DailyStreakCalculator" />
+    ///     must still count prior scheduled days — so we synthesize a start far enough before
+    ///     <paramref name="notAfter" /> (aligned for weekly repeats). See
+    ///     <see cref="App.Shared.RCL.Services.DailyStreakCalculator" />.
+    /// </summary>
+    /// <remarks>
+    ///     If <paramref name="dailyStart" /> is after <paramref name="notAfter" /> (e.g. item created today but
+    ///     streak backfill targets yesterday), we treat it like a missing start so history is not empty.
+    ///     If <paramref name="dailyStart" /> <strong>equals</strong> <paramref name="notAfter" />, using it as
+    ///     the floor would allow at most one backfill day; use a synthetic anchor so several prior days can
+    ///     be scheduled the same as <see cref="Services.DailyStreakCalculator" /> and manual streak 3+.
+    /// </remarks>
+    public static DateOnly StreakHistoryScheduleStart(
+        DateOnly? dailyStart,
+        DateOnly notAfter,
+        DailyRepeatType repeat,
+        int rawInterval,
+        int streakWindow)
+    {
+        if (dailyStart is { } d0 && d0 < notAfter) return d0;
+
+        return StreakHistorySyntheticAnchor(notAfter, repeat, rawInterval, streakWindow);
+    }
+
+    private static DateOnly StreakHistorySyntheticAnchor(
+        DateOnly notAfter,
+        DailyRepeatType repeat,
+        int rawInterval,
+        int streakWindow)
+    {
+        var interval = Math.Max(1, Math.Min(999, rawInterval < 1 ? 1 : rawInterval));
+        var s = Math.Min(9999, Math.Max(1, streakWindow));
+        var padDays = repeat switch
+        {
+            DailyRepeatType.Daily => s * interval + 31,
+            DailyRepeatType.Weekly => s * 7 * interval + 31,
+            DailyRepeatType.Monthly => Math.Min(200_000, s * 31 * interval + 120),
+            DailyRepeatType.Yearly => Math.Min(400_000, s * 366 * interval + 800),
+            _ => s * interval + 31
+        };
+
+        var candidate = notAfter.AddDays(-padDays);
+        if (repeat != DailyRepeatType.Weekly) return candidate;
+
+        var dowDelta = ((int)notAfter.DayOfWeek - (int)candidate.DayOfWeek + 7) % 7;
+        candidate = candidate.AddDays(dowDelta);
+        if (candidate > notAfter) candidate = candidate.AddDays(-7 * interval);
+
+        return candidate;
+    }
+
     public static bool IsScheduledOn(
         DateOnly? dailyStart,
         DailyRepeatType repeat,

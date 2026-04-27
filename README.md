@@ -327,7 +327,7 @@ The **`servers`** entry inside `openapi-v1.json` reflects the base URL used when
   2. Install browsers once: `pwsh tests/App.Web.E2E/bin/Debug/net10.0/playwright.ps1 install chromium` (path matches your configuration).  
   3. `dotnet test tests/App.Web.E2E/App.Web.E2E.csproj` (defaults to `E2E_BASE_URL=http://127.0.0.1:5050` if unset).
 - **Android UI (Appium)** — build APK, emulator/device, **Appium 2** + **UiAutomator2**, then opt-in `dotnet test` with `ANDROID_UI_TESTS`; optional `ANDROID_APP_PATH`, `APPIUM_SERVER_URL`. Optional workflow: [`.github/workflows/android-uitest.yml`](.github/workflows/android-uitest.yml) (`workflow_dispatch`).
-- **CI:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — **`dotnet build`** and **`dotnet test`** on the solution only (no Playwright, no committed-asset generation).
+- **CI:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — **`dotnet build`** and **`dotnet test`** (TRX to **Test results** in GitHub Checks; TRX files also uploaded as a workflow artifact). No Playwright or committed-asset generation in CI.
 
 ---
 

@@ -27,6 +27,9 @@ jobs:
             10.0.x
           include-prerelease: true
 
+      - name: Restore workloads
+        run: dotnet workload restore Habitinator.slnx
+
       - name: Build
         run: dotnet build Habitinator.slnx --configuration Release
 

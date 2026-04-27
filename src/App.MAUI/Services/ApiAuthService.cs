@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -39,10 +40,60 @@ public sealed class ApiAuthService
         return await res.Content.ReadFromJsonAsync<LoginResponse>(Serializer, cancellationToken);
     }
 
-    public async Task<bool> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+    public async Task<RegistrationResult> RegisterAsync(
+        RegisterRequest request,
+        CancellationToken cancellationToken = default)
     {
         var client = _http.CreateClient("apiAuth");
-        using var res = await client.PostAsJsonAsync("api/auth/register", request, Serializer, cancellationToken);
-        return res.IsSuccessStatusCode;
+        HttpResponseMessage res;
+        try
+        {
+            res = await client.PostAsJsonAsync("api/auth/register", request, Serializer, cancellationToken);
+        }
+        catch (HttpRequestException)
+        {
+            return new RegistrationResult(false, OtherError: "Could not reach the server. Check the network and API base URL in settings.");
+        }
+        catch (TaskCanceledException)
+        {
+            return new RegistrationResult(false, OtherError: "The request was cancelled or timed out.");
+        }
+
+        if (res.IsSuccessStatusCode)
+        {
+            return new RegistrationResult(true);
+        }
+
+        if (res.StatusCode == HttpStatusCode.BadRequest)
+        {
+            var body = await res.Content.ReadAsStringAsync(cancellationToken);
+            if (!string.IsNullOrWhiteSpace(body))
+            {
+                try
+                {
+                    var list = JsonSerializer.Deserialize<List<string>>(body, Serializer);
+                    if (list is { Count: > 0 })
+                    {
+                        return new RegistrationResult(false, ErrorDetails: list);
+                    }
+                }
+                catch (JsonException)
+                {
+                }
+            }
+
+            return new RegistrationResult(false, OtherError: "Registration was rejected. Check the email and password, then try again.");
+        }
+
+        if ((int)res.StatusCode is >= 500 and <= 599)
+        {
+            return new RegistrationResult(
+                false,
+                OtherError: "The server returned an error. Try again later, or check that the API is up to date and running.");
+        }
+
+        return new RegistrationResult(
+            false,
+            OtherError: $"Registration failed (HTTP {(int)res.StatusCode}). Check the API and try again.");
     }
 }

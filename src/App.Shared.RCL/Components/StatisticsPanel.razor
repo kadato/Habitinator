@@ -1,3 +1,4 @@
+@using System.Globalization
 @using App.Shared.RCL.Components.Dialogs
 @inject IActivityStatisticsReader Stats
 @inject IDialogService DialogService
@@ -361,7 +362,10 @@
             { x => x.Date, date },
             { x => x.TagFilter, filterTag }
         };
-        await DialogService.ShowAsync<ActivityDayDetailDialog>(date.ToString("yyyy-MM-dd (dddd)"), parameters, options);
+        await DialogService.ShowAsync<ActivityDayDetailDialog>(
+            date.ToString("yyyy-MM-dd (dddd)", CultureInfo.InvariantCulture),
+            parameters,
+            options);
     }
 
     private static string FormatFocus(int totalMinutes)

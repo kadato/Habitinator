@@ -183,6 +183,54 @@ h1:focus {
     overflow: visible !important;
 }
 
+.app-page-title {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #f3f4f6;
+    border-bottom: 1px solid color-mix(in srgb, #3b82f6 25%, #374151 75%);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* App bar: MudToolBar can shrink-wrap; force full width + flex spacer so user/logout stay on the right edge */
+.mud-appbar.app-top-bar {
+    display: flex !important;
+}
+
+.mud-appbar.app-top-bar .mud-toolbar-appbar.app-top-bar-toolbar,
+.mud-appbar.app-top-bar .mud-toolbar.mud-toolbar-appbar {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+}
+
+.mud-appbar.app-top-bar .app-top-bar__row {
+    display: flex !important;
+    flex: 1 1 0% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    box-sizing: border-box !important;
+}
+
+.mud-appbar.app-top-bar .app-top-bar__flex-spacer {
+    flex: 1 1 auto !important;
+    min-width: 0.5rem !important;
+    align-self: stretch !important;
+}
+
+.mud-appbar.app-top-bar .app-top-bar__right {
+    flex: 0 0 auto !important;
+    margin-left: 0 !important;
+}
+
 .status-bar-safe-area {
     display: none;
 }

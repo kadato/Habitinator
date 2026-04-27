@@ -5,28 +5,28 @@
 <div class="app-header-nav d-flex flex-wrap align-center">
     @if (Session.IsLoggedIn)
     {
-        <MudButton Href="/"
+        <MudButton OnClick="@(() => Nav.NavigateTo("/"))"
                    Variant="@(IsActivePath("", NavLinkMatch.All) ? Variant.Filled : Variant.Outlined)"
                    Color="Color.Primary"
                    Size="Size.Medium"
                    StartIcon="@Icons.Material.Filled.SpaceDashboard"
-                   Class="app - header - nav - btn text - transform - none">
+                   Class="app-header-nav-btn text-transform-none">
             Board
         </MudButton>
-        <MudButton Href="/ stats"
+        <MudButton OnClick="@(() => Nav.NavigateTo("/stats"))"
                    Variant="@(IsActivePath("stats", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
                    Color="Color.Primary"
                    Size="Size.Medium"
                    StartIcon="@Icons.Material.Filled.BarChart"
-                   Class="app - header - nav - btn text - transform - none">
+                   Class="app-header-nav-btn text-transform-none">
             Statistics
         </MudButton>
-        <MudButton Href="/ settings"
+        <MudButton OnClick="@(() => Nav.NavigateTo("/settings"))"
                    Variant="@(IsActivePath("settings", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
                    Color="Color.Primary"
                    Size="Size.Medium"
                    StartIcon="@Icons.Material.Filled.Notifications"
-                   Class="app - header - nav - btn text - transform - none">
+                   Class="app-header-nav-btn text-transform-none">
             Settings
         </MudButton>
     }

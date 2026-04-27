@@ -10,12 +10,13 @@
 <MudSnackbarProvider/>
 
 <MudLayout>
-    <MudAppBar Elevation="0" Dense="false" Class="app - top - bar" ToolBarClass="app - top - bar - toolbar">
+    <MudAppBar Elevation="0" Dense="false" Class="app-top-bar" ToolBarClass="app-top-bar-toolbar">
         <div class="app-top-bar__row d-flex">
             <div class="app-top-bar__left d-flex flex-wrap align-center">
-                <MudText Typo="Typo.h6" Class="app - top - bar__title">Habitinator</MudText>
+                <MudText Typo="Typo.h6" Class="app-top-bar__title">Habitinator</MudText>
                 <NavMenu/>
             </div>
+            <div class="app-top-bar__flex-spacer" aria-hidden="true"></div>
             <div class="app-top-bar__right d-flex flex-wrap align-center">
                 @if (Session.IsLoggedIn)
                 {
@@ -25,7 +26,7 @@
                                  Color="Color.Primary"
                                  Variant="Variant.Filled"
                                  Size="Size.Medium"
-                                 Class="app - header - username - chip text - truncate"
+                                 Class="app-header-username-chip text-truncate"
                                  title="@(Session.Email ?? "User")">
                             @DisplayNameFromEmail(Session.Email)
                         </MudChip>
@@ -33,7 +34,7 @@
                                    Color="Color.Error"
                                    Size="Size.Medium"
                                    StartIcon="@Icons.Material.Filled.Logout"
-                                   Class="app - header - logout - btn text - transform - none"
+                                   Class="app-header-logout-btn"
                                    OnClick="LogoutAsync">
                             Log out
                         </MudButton>
@@ -43,7 +44,7 @@
         </div>
     </MudAppBar>
     <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py - 4 px - 4">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4 px-4 px-sm-5 board-main-container">
             @if (!_sessionInitialized)
             {
                 <MudProgressLinear Indeterminate="true"/>

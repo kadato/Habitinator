@@ -5,7 +5,7 @@
 @inject NavigationManager Nav
 
 <PageTitle>Sign in</PageTitle>
-<MudStack Spacing="2" Class="pt - 2" Style="max - width: 24rem">
+<MudStack Spacing="2" Class="pt-2" Style="max-width: 24rem">
     <MudText Typo="Typo.h5">Sign in to Habitinator</MudText>
     <MudTextField @bind-Value="_email"
                   InputType="InputType.Email"
@@ -17,7 +17,7 @@
                   Variant="Variant.Outlined"/>
     <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="_busy" OnClick="LoginAsync">Sign in</MudButton>
     <MudButton Color="Color.Secondary" Variant="Variant.Outlined" Disabled="_busy" OnClick="GuestAsync">Continue as demo guest</MudButton>
-    <MudButton Variant="Variant.Text" Disabled="_busy" Href="/ register">Create account</MudButton>
+    <MudButton Variant="Variant.Text" Disabled="_busy" Href="/register">Create account</MudButton>
     @if (!string.IsNullOrWhiteSpace(_error))
     {
         <MudAlert Severity="Severity.Error">@_error</MudAlert>

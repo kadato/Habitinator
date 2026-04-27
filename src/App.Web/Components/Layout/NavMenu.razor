@@ -14,25 +14,25 @@
                    Color="Color.Primary"
                    Size="Size.Medium"
                    StartIcon="@Icons.Material.Filled.SpaceDashboard"
-                   Class="app - header - nav - btn text - transform - none">
+                   Class="app-header-nav-btn text-transform-none">
             Board
         </MudButton>
         <AuthorizeView>
             <Authorized>
-                <MudButton Href="/ stats"
+                <MudButton Href="/stats"
                            Variant="@(IsActivePath("stats", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
                            Color="Color.Primary"
                            Size="Size.Medium"
                            StartIcon="@Icons.Material.Filled.BarChart"
-                           Class="app - header - nav - btn text - transform - none">
+                           Class="app-header-nav-btn text-transform-none">
                     Statistics
                 </MudButton>
-                <MudButton Href="/ settings"
+                <MudButton Href="/settings"
                            Variant="@(IsActivePath("settings", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
                            Color="Color.Primary"
                            Size="Size.Medium"
                            StartIcon="@Icons.Material.Filled.Notifications"
-                           Class="app - header - nav - btn text - transform - none">
+                           Class="app-header-nav-btn text-transform-none">
                     Settings
                 </MudButton>
             </Authorized>
@@ -61,20 +61,20 @@
 
     private RenderFragment AuthLinkButtons => __builder =>
     {
-        <MudButton Href="auth / login"
+        <MudButton Href="auth/login"
                    Variant="@(IsActivePath("auth/login", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
                    Color="Color.Secondary"
                    Size="Size.Medium"
                    StartIcon="@Icons.Material.Filled.Login"
-                   Class="app - header - nav - btn text - transform - none">
+                   Class="app-header-nav-btn text-transform-none">
             Login
         </MudButton>
-        <MudButton Href="auth / register"
+        <MudButton Href="auth/register"
                    Variant="@(IsActivePath("auth/register", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
                    Color="Color.Secondary"
                    Size="Size.Medium"
                    StartIcon="@Icons.Material.Filled.PersonAdd"
-                   Class="app - header - nav - btn text - transform - none">
+                   Class="app-header-nav-btn text-transform-none">
             Register
         </MudButton>
     };

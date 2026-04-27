@@ -9,9 +9,14 @@
     column-gap: 1rem;
 }
 
-/* One row fills the app bar: MudAppBar wraps in .mud-toolbar-appbar, which can shrink to content. */
+/* One row fills the app bar: MudToolBar defaults to shrink-wrapped width; grow it so left/right split works. */
+::deep .app-top-bar.mud-appbar {
+    display: flex;
+}
+
 ::deep .app-top-bar .app-top-bar-toolbar,
 ::deep .app-top-bar .mud-toolbar-appbar {
+    flex: 1 1 auto !important;
     width: 100% !important;
     max-width: 100%;
     min-width: 0;
@@ -19,19 +24,27 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-start;
+    display: flex !important;
 }
 
 ::deep .app-top-bar__row {
     display: flex !important;
+    flex: 1 1 0% !important;
     width: 100%;
+    max-width: 100%;
     min-width: 0;
     box-sizing: border-box;
     flex-wrap: wrap;
     row-gap: 0.5rem;
     column-gap: 1.25rem;
     align-items: center;
-    justify-content: space-between;
-    flex: 1 1 auto;
+    justify-content: flex-start;
+}
+
+::deep .app-top-bar__flex-spacer {
+    flex: 1 1 auto !important;
+    min-width: 0.5rem;
+    align-self: stretch;
 }
 
 ::deep .app-top-bar__left {
@@ -47,7 +60,6 @@
     min-width: 0;
     flex: 0 0 auto;
     justify-content: flex-end;
-    margin-left: auto;
 }
 
 ::deep .app-top-bar__title {
@@ -59,7 +71,6 @@
 /* Account rail: signed-in user + log out (kept on the far right). */
 ::deep .app-header-user-rail {
     gap: 0.6rem 0.9rem;
-    margin-left: auto;
     justify-content: flex-end;
     flex-wrap: wrap;
 }
@@ -73,6 +84,16 @@
 ::deep .app-header-logout-btn {
     min-width: 6.5rem;
     font-weight: 600;
+    text-transform: none !important;
+}
+
+/* Extra horizontal breathing room on large viewports (Bootstrap sm/md already step px via px-sm-5). */
+@media (min-width: 1280px) {
+    ::deep .board-main-container.mud-container--fluid,
+    ::deep .board-main-container.mud-container {
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+    }
 }
 
 #blazor-error-ui {

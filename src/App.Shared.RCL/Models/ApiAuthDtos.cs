@@ -1,6 +1,6 @@
 namespace App.Shared.RCL.Models;
 
-public sealed record RegisterRequest(string Email, string Password, string Timezone = "Europe/Budapest");
+public sealed record RegisterRequest(string Email, string Password);
 
 /// <summary>Outcome of <c>POST /api/auth/register</c> for MAUI and other API clients.</summary>
 public sealed record RegistrationResult(bool Succeeded, IReadOnlyList<string>? ErrorDetails = null, string? OtherError = null)

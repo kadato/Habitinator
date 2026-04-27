@@ -28,7 +28,6 @@ public static class DemoDataSeeder
             {
                 UserName = demo.Email,
                 Email = demo.Email,
-                Timezone = demo.Timezone,
                 EmailConfirmed = true
             };
 
@@ -52,7 +51,6 @@ public static class DemoDataSeeder
 
             await ClearGuestDataAsync(dbContext, guest.Id, cancellationToken);
             guest.NotificationSettingsJson = null;
-            guest.Timezone = demo.Timezone;
             await userManager.UpdateAsync(guest);
 
             await boardPersistence.InsertDemoBoardDataAsync(guest.Id, cancellationToken);

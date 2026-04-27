@@ -33,11 +33,6 @@
                value="@_password" @oninput="OnPasswordInput" disabled="@_busy"/>
     </div>
     <p class="auth-form-hint">Use at least 8 characters. Avoid obvious passwords for your own account security.</p>
-    <div class="mb-3">
-        <label for="reg-tz">Timezone</label>
-        <input class="form-control" id="reg-tz" type="text" autocomplete="off"
-               value="@_timezone" @oninput="OnTimezoneInput" disabled="@_busy"/>
-    </div>
     <button class="btn btn-primary" type="button" disabled="@_busy" @onclick="RegisterAsync">Create account</button>
     <div class="mt-3">
         <a class="btn btn-link p-0" href="/auth/login">Back to sign in</a>
@@ -47,7 +42,6 @@
 @code {
     private string _email = string.Empty;
     private string _password = string.Empty;
-    private string _timezone = "Europe/Budapest";
     private string? _message;
     private bool _busy;
 
@@ -55,19 +49,12 @@
 
     private void OnPasswordInput(ChangeEventArgs e) => _password = e.Value?.ToString() ?? string.Empty;
 
-    private void OnTimezoneInput(ChangeEventArgs e) => _timezone = e.Value?.ToString() ?? string.Empty;
-
     protected override void OnInitialized()
     {
         var q = QueryHelpers.ParseQuery(new Uri(Nav.Uri).Query);
         if (q.TryGetValue("email", out var em) && !string.IsNullOrWhiteSpace(em))
         {
             _email = em.ToString();
-        }
-
-        if (q.TryGetValue("tz", out var tz) && !string.IsNullOrWhiteSpace(tz))
-        {
-            _timezone = tz.ToString();
         }
 
         if (q.ContainsKey("error") && q["error"] == "1")
@@ -98,8 +85,7 @@
                 return;
             }
 
-            var tz = string.IsNullOrWhiteSpace(_timezone) ? "Europe/Budapest" : _timezone;
-            var result = await Auth.RegisterAsync(new RegisterRequest(_email, _password, tz));
+            var result = await Auth.RegisterAsync(new RegisterRequest(_email, _password));
             if (!result.Succeeded)
             {
                 _message = result.Message;

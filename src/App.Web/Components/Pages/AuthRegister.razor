@@ -13,7 +13,7 @@
     }
 
     <form method="post" action="/api/auth/register-form">
-        <RegisterFormFields IsInteractive="false" FormEmail="@_email" FormTimezone="@_timezone"/>
+        <RegisterFormFields IsInteractive="false" FormEmail="@_email"/>
         <button class="btn btn-primary" type="submit">Create account</button>
     </form>
     <div class="mt-3">
@@ -24,7 +24,6 @@
 @code {
     private string? _message;
     private string _email = string.Empty;
-    private string _timezone = "Europe/Budapest";
 
     protected override void OnInitialized()
     {
@@ -32,11 +31,6 @@
         if (q.TryGetValue("email", out var email) && !string.IsNullOrWhiteSpace(email))
         {
             _email = email.ToString();
-        }
-
-        if (q.TryGetValue("tz", out var tz) && !string.IsNullOrWhiteSpace(tz))
-        {
-            _timezone = tz.ToString();
         }
 
         if (q.ContainsKey("error") && q["error"] == "1")

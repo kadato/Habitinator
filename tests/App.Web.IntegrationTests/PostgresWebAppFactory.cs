@@ -35,7 +35,6 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
                 ["Jwt:ExpirationMinutes"] = "60",
                 ["DemoUser:Email"] = "guest@habitinator.local",
                 ["DemoUser:Password"] = "Guest123!",
-                ["DemoUser:Timezone"] = "Europe/Budapest"
             });
         });
     }

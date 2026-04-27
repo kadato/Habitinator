@@ -8,8 +8,6 @@ public sealed class DemoUserOptions
 
     public string Password { get; set; } = "Guest123!";
 
-    public string Timezone { get; set; } = "Europe/Budapest";
-
     /// <summary>
     /// When true, the demo guest's board, activity log, and notification settings are cleared, the
     /// password is reset to <see cref="Password" />, and full demo data is inserted again. Use for

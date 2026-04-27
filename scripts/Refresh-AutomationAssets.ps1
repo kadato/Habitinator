@@ -14,17 +14,67 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $docsAutomation = Join-Path $repoRoot "docs" "automation"
 $shotDir = Join-Path $docsAutomation "screenshots"
 
 New-Item -ItemType Directory -Path $shotDir -Force | Out-Null
+
+function Sync-ReadmeMermaidEmbeds {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $RepoRootPath
+    )
+
+    $readmePath = Join-Path $RepoRootPath "README.md"
+    if (-not (Test-Path $readmePath)) {
+        Write-Warning "README.md not found; skip Mermaid embed sync."
+        return
+    }
+
+    $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+    $text = [System.IO.File]::ReadAllText($readmePath)
+
+    $sections = @(
+        @{ Id = "solution-graph"; File = "solution-graph.mmd" }
+        @{ Id = "database-schema"; File = "database-schema.mmd" }
+    )
+
+    foreach ($s in $sections) {
+        $mmdPath = Join-Path $RepoRootPath "docs" "automation" $s.File
+        if (-not (Test-Path $mmdPath)) {
+            Write-Warning "Skip README embed '$($s.Id)': missing $mmdPath"
+            continue
+        }
+
+        $body = [System.IO.File]::ReadAllText($mmdPath).TrimEnd()
+        $nl = [Environment]::NewLine
+        $fence = '```mermaid' + $nl + $body + $nl + '```'
+        $replacement = '<!-- HABITINATOR_MERMAID_BEGIN:' + $s.Id + ' -->' + $nl + $fence + $nl + '<!-- HABITINATOR_MERMAID_END:' + $s.Id + ' -->'
+
+        $escapedId = [regex]::Escape($s.Id)
+        $pattern = '(?s)<!-- HABITINATOR_MERMAID_BEGIN:' + $escapedId + ' -->\s*```mermaid\s*.*?```\s*<!-- HABITINATOR_MERMAID_END:' + $escapedId + ' -->'
+
+        $newText = [regex]::Replace($text, $pattern, $replacement)
+        if ($newText -ceq $text) {
+            Write-Warning "README: marker block '$($s.Id)' not found or pattern mismatch; section not updated."
+        }
+        else {
+            $text = $newText
+        }
+    }
+
+    [System.IO.File]::WriteAllText($readmePath, $text, $utf8NoBom)
+    Write-Host "== README Mermaid embeds synced from docs/automation/*.mmd"
+}
 
 Write-Host "== Diagrams (Mermaid) -> $docsAutomation"
 dotnet build (Join-Path $repoRoot "tools" "Habitinator.Diagrams" "Habitinator.Diagrams.csproj") --configuration Release
 dotnet run --project (Join-Path $repoRoot "tools" "Habitinator.Diagrams" "Habitinator.Diagrams.csproj") `
     --configuration Release --no-build -- `
     "$repoRoot" "$docsAutomation"
+
+Sync-ReadmeMermaidEmbeds -RepoRootPath $repoRoot
 
 $openApiPath = Join-Path $docsAutomation "openapi-v1.json"
 $base = $BaseUrl.TrimEnd('/')
@@ -61,4 +111,4 @@ finally {
     Remove-Item Env:E2E_SCREENSHOT_DIR -ErrorAction SilentlyContinue
 }
 
-Write-Host "Done. Review changes under docs/automation/ then commit."
+Write-Host "Done. Review changes under docs/automation/ and README.md, then commit."

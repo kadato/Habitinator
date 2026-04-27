@@ -80,6 +80,7 @@ builder.Services.Configure<BoardMaintenanceOptions>(
 builder.Services.AddHostedService<BoardMaintenanceHostedService>();
 builder.Services.AddScoped<IBoardDataService, WebBoardDataService>();
 builder.Services.AddSignalR();
+builder.Services.AddOpenApi();
 builder.Services.AddScoped<ActivityStatisticsService>();
 builder.Services.AddScoped<IActivityStatisticsReader, WebActivityStatisticsReader>();
 builder.Services.AddScoped<IUserActivityLogService, WebUserActivityLogService>();
@@ -187,6 +188,7 @@ app.UseAuthorization();
 
 // Used by AppHost WithHttpHealthCheck; anonymous, no auth required.
 app.MapGet("/health", () => Results.Text("OK", "text/plain"));
+app.MapOpenApi();
 app.MapStaticAssets();
 app.MapRazorComponents<App.Web.Components.App>()
     .AddInteractiveServerRenderMode();
@@ -203,8 +205,7 @@ app.MapPost("/api/auth/register", async (
     var user = new ApplicationUser
     {
         UserName = request.Email,
-        Email = request.Email,
-        Timezone = request.Timezone
+        Email = request.Email
     };
 
     var result = await userManager.CreateAsync(user, request.Password);
@@ -316,9 +317,6 @@ app.MapPost("/api/auth/register-form", async (HttpContext httpContext, UserManag
     var form = await httpContext.Request.ReadFormAsync();
     var email = form["Email"].ToString();
     var password = form["Password"].ToString();
-    var timezone = string.IsNullOrWhiteSpace(form["Timezone"].ToString())
-        ? "Europe/Budapest"
-        : form["Timezone"].ToString()!;
 
     if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         return Results.LocalRedirect("/auth/register?error=1");
@@ -329,15 +327,13 @@ app.MapPost("/api/auth/register-form", async (HttpContext httpContext, UserManag
     var user = new ApplicationUser
     {
         UserName = email,
-        Email = email,
-        Timezone = timezone
+        Email = email
     };
 
     var result = await userManager.CreateAsync(user, password);
     if (!result.Succeeded)
     {
-        var retry =
-            $"?error=1&email={Uri.EscapeDataString(email)}&tz={Uri.EscapeDataString(timezone)}";
+        var retry = $"?error=1&email={Uri.EscapeDataString(email)}";
         return Results.LocalRedirect("/auth/register" + retry);
     }
 

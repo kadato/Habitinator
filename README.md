@@ -1,111 +1,178 @@
 # Habitinator
 
-Habitinator is a gamification-free productivity app inspired by Habitica's structure (Habits, Dailies, To-Dos) without RPG visuals.
+Habitinator is a productivity app organized like **Habits**, **Dailies**, and **To-Dos** (the same three pillars as Habitica), but **without** RPG characters, avatars, or other game-style gamification. The focus is on a clear board, a single focus timer, optional analytics, and reliable sync when you use the mobile client.
 
-This document is the single source of truth for current architecture, features, requirements, and run/debug workflows.
+This document is the project’s source of truth for **architecture**, **features**, **APIs**, **stack**, and **run / test** workflows.
 
-## Product Scope
+---
 
-- Platforms:
-  - Web (`App.Web`)
-  - Android-ready MAUI Blazor Hybrid host (`App.MAUI`)
-- Main UX:
-  - Three productivity sections: Habits, Dailies, To-Dos
-  - Responsive board:
-    - Desktop: three columns
-    - Mobile/tablet: tabs
-  - One global stopwatch-style timer (start/pause/stop + log)
-- Non-gamified direction:
-  - No RPG mechanics
-  - Keep practical productivity tracking and analytics foundation
+## What the app is for
 
-## Core Requirements
+- **One place to plan work**: recurring habits, scheduled dailies, and one-off to-dos, each with title, optional notes, tags, and (where relevant) checklists and scheduling options.
+- **Time on task**: a **global** stopwatch-style timer; when you stop it, you log elapsed time to a chosen habit, daily, or to-do so it appears in your **activity history** and **statistics**.
+- **Insight without games**: an **activity heatmap**, period summaries, per-day drill-down, and tag filtering are built on **UserActivity** events (completions, timer logs, etc.) stored in PostgreSQL on the server.
+- **Web and native**: use the **Blazor web** app in the browser (online, server-backed), or the **.NET MAUI** Blazor Hybrid app on **Android, iOS, Mac Catalyst, or Windows** with **local-first** board data and background sync to the same API the web uses.
 
-- Habit and task management:
-  - CRUD operations for board items
-  - Habit increment/check behavior
-  - Daily/To-Do completion toggle behavior
-- Time tracking:
-  - Single global timer per session
-  - Timer log attachment to selected target
-- User management:
-  - ASP.NET Core Identity
-  - Multi-user model
-  - Cookie auth for web + JWT token response for API/mobile usage
-- Data persistence:
-  - PostgreSQL via EF Core
-  - Startup migration + seed support
-- Demo readiness:
-  - Guest account seeded automatically with demo board data
+---
 
-### Cross-platform sync and local-first requirements
+## Product features (current)
 
-- PostgreSQL remains the server source of truth for synchronized user data.
+### Login, register, and seeding
+
+- **Register**: email and password via **web pages** and **`POST /api/auth/register`**; HTML forms use **`/api/auth/register-form`** and redirect after success.
+- **Log in**: **web** uses **cookie** sign-in (`/api/auth/cookie-login`); **MAUI** uses **`POST /api/auth/login`** and sends the returned **JWT** on API calls. **Log out** via cookie or JSON logout as appropriate.
+- **Demo / guest**: **`/api/auth/guest-login`** (browser, sets cookie) or **`/api/auth/guest-jwt`** (returns JWT for native clients).
+- **Seeding** (after migrations at startup): the **guest** user from **`DemoUser`** in configuration is **created if missing**; if that user has **no board items**, **sample habits, dailies, and to-dos** are inserted, and **sample activity** may be generated for **Statistics**. Re-runs do not duplicate existing data.
+
+### Board layout and finding items
+
+- **Three sections** with the same mental model as Habitica: Habits, Dailies, To-Dos.
+- **Layout**: on large screens, **three columns**; on small screens, **tabs** for each section.
+- **Summary chips** (counts for habits, dailies still due, open to-dos).
+- **Search**: a **search** box filters items by **title** (and related visible text) so long boards stay manageable.
+- **Tag filtering**: items carry **tags** (set in the **edit** modals). A **tag** menu on the board restricts the list to matching items; **Statistics** can use the same tag filter for the heatmap and aggregates.
+
+### Edit modals (add and full edit)
+
+- **New item**: a **title** dialog creates a Habit, Daily, or To-Do; each type opens a dedicated **edit** modal for the rest of the fields.
+- **Habit**: **title**, **notes**, **tags**, **+ / −** visibility, **sub-checklist**, **reset period** for counters, manual counter values.
+- **Daily**: **title**, **notes**, **tags**, **start date** (UTC calendar), **repeat** pattern and **interval**, **streak** fields, **sub-checklist**, completion aligned with the schedule.
+- **To-do**: **title**, **notes**, **tags**, optional **due date**, **sub-checklist**, completion.
+- **Shared UI**: the same **Razor Class Library** components run in **Blazor Server** and in the **MAUI WebView**.
+
+### Dailies: repeating periods
+
+- Repeats are **daily** (with an **interval**, e.g. every 2 days), **weekly**, **monthly**, or **yearly**, anchored by a **start date**. Streaks and “due on” logic follow this model. The **yesterday catch-up** dialog (below) lists dailies that were **due yesterday (UTC)** but still incomplete for that date.
+
+### Sub-checklists
+
+- **Habits, dailies, and to-dos** can each include a **checklist** of smaller steps (independent checkboxes). Checklist JSON is stored on the item and **syncs** through the board API (and **SQLite** outbox on MAUI).
+
+### First board load each UTC day: “Catch up: yesterday’s dailies”
+
+- After the board loads, the app may open a modal (**“Catch up: yesterday’s dailies”**) if there are **incomplete dailies** whose **due date was yesterday (UTC)**. You can **mark done** for that date from the dialog.
+- The prompt is shown **at most once per UTC day** per browser session (with **local storage** so returning the same day does not repeat it). If there is nothing to catch up, **no** dialog appears.
+
+### Board actions, loading, and offline
+
+- **Habits**: **+** / **−** when enabled; **edit** for full fields.
+- **Dailies** / **To-dos**: **complete** toggles and **edit** modals; dailies support **complete for a specific date** via the API where applicable.
+- **Errors**: **Retry** if the board snapshot fails to load.
+- **MAUI**: **offline**, **syncing**, **last synced**, and **sync error** messages when the local-first pipeline is active.
+
+### Timer and “Time’s up after”
+
+- **Session timer** (one global clock for the app): **start**, **pause**, **resume**, **stop**; elapsed time is shown as **hh:mm:ss**.
+- **Session target** (autocomplete): pick a **Habit, Daily, or To-Do** (or a custom label). On **Stop & log**, elapsed time is recorded as **activity** for that target, which feeds **Statistics** and server **UserActivity** on web.
+- **“Time’s up after”** (optional): a **focus duration** in flexible text forms (e.g. `25` minutes, `1:20`, `90s`, `0:0:30`). While the timer **runs**, reaching that duration **pauses** the clock and triggers **in-app** and (where enabled) **device** alerts—see **Settings** for **focus timer** end alerts, **quiet hours**, and sound. Leave the field empty for a **plain stopwatch** with no automatic “time’s up” behavior.
+
+### Statistics and activity
+
+- **Statistics** page: **activity heatmap** (click a day for detail), **period** selection aligned with how your dailies define “calendar” periods where applicable, and optional **tag** filter to narrow events to items that carry that tag.
+- **Per-day detail** dialog: list of **logged events** for a chosen day (completions, timer duration, etc.) with links back to item titles when available.
+- **Dashboard / daily contributions** data is exposed from the **Activity API** (used by the statistics reader implementation).
+
+### Notifications and settings
+
+- **User notification settings** (stored per user, JSON in the database) control:
+  - In-app toasts and **severity** (success / warning / error) and **duration**
+  - **Focus timer** end alerts (respecting quiet hours where applicable)
+  - **Daily reminder** (enable + time of day)
+  - **Sync failure** alerts (relevant for MAUI)
+  - **Device notification** sound preference where local notifications are used
+  - **Quiet hours** (UTC window) to suppress noisy notifications at night
+- Changing settings can **notify** connected clients (via the board change pipeline) so preferences stay coherent.
+
+### Authentication and accounts (technical)
+
+- User store is **ASP.NET Core Identity** (see [Login, register, and seeding](#login-register-and-seeding) for UX). **Board / activity / settings** APIs require the **`BoardOrJwt`** policy: **cookie** (interactive web) or **`Authorization: Bearer`** (MAUI / JSON clients).
+- Default **demo guest** credentials and seeding behavior: [Demo guest user](#demo-guest-user).
+
+### Real-time and sync
+
+- **SignalR** hub at `/hubs/board` notifies the current user’s group when the board (or related settings) should refresh; the **web** Blazor app reconnects and reloads; **MAUI** uses the .NET **SignalR client** and then refreshes from local SQLite / server as implemented.
+- **Web** is **online-only** for the board: reads and writes go straight to PostgreSQL through `WebBoardDataService`.
+- **MAUI** is **local-first**: SQLite mirror, **outbox** of mutations, **sync coordinator** with retries, **incremental sync** when a cursor is known, and **idempotency** + **optimistic concurrency** on the API (see [Cross-platform sync](#cross-platform-sync-and-local-first-behavior) below).
+
+### Demo and developer experience
+
+- **Aspire AppHost** starts PostgreSQL (with **pgAdmin** and a data volume in the default template), the **web** project, and optionally the **MAUI** project with the API base URL **injected** for device/emulator use.
+- **Health endpoint**: `GET /health` (plain `OK`) for orchestration and CI.
+- **Seeded guest** account and **demo board / activity** data when appropriate so you can explore without manual setup.
+
+---
+
+## Technology stack
+
+| Area | Technology |
+|------|------------|
+| Runtime | **.NET 10** |
+| Web UI | **Blazor Web App** with **Interactive Server** components, **MudBlazor** |
+| Mobile / desktop shell | **.NET MAUI** + **BlazorWebView** (Android, iOS, Mac Catalyst, Windows where enabled in the project) |
+| Shared UI | **Razor Class Library** (`App.Shared.RCL`) consumed by **App.Web** and **App.MAUI** |
+| API host | **ASP.NET Core** minimal APIs, **SignalR** |
+| Auth | **ASP.NET Core Identity**, **cookie** + **JWT Bearer** (`Microsoft.AspNetCore.Authentication.JwtBearer`) |
+| Server database | **PostgreSQL** via **EF Core** + **Npgsql** |
+| MAUI local store | **SQLite** + **EF Core Sqlite** for mirrored board and sync metadata |
+| Orchestration (local) | **.NET Aspire** AppHost (e.g. **Aspire.Hosting.Postgres**, **13.x**), PostgreSQL **17.6** image, **pgAdmin** in the default AppHost project |
+| HTTP resilience (MAUI) | **Microsoft.Extensions.Http.Resilience** (timeouts, transient retries) |
+| Local notifications (MAUI) | **Plugin.LocalNotification** |
+| Test data (server) | **Bogus** (guest activity demo seeding, etc.) |
+| Unit / component tests | **xUnit**, **bUnit** (RCL smoke tests) |
+| Integration tests | **WebApplicationFactory**, **Testcontainers** (Docker) for PostgreSQL |
+| Browser E2E | **Playwright** |
+| Android UI (opt-in) | **Appium** + **UiAutomator2** |
+
+---
+
+## Solution structure
+
+- **`src/AppHost`** — Aspire orchestration: PostgreSQL, database `habitinatordb`, `app-web` (HTTP launch profile, endpoint **not** proxied so **Blazor + SignalR WebSockets** work with Kestrel), **`app-maui`** with `HABITINATOR_API_BASE_URL` set to the web app’s HTTP endpoint, **WaitFor** database and web.
+- **`src/App.Web`** — Blazor app, minimal APIs, Identity, EF Core, SignalR `BoardHub`, health check, static assets, hosted board maintenance.
+- **`src/App.MAUI`** — MAUI Blazor host, SQLite, outbox sync, SignalR client, resilient `HttpClient`, local notifications.
+- **`src/App.Shared.RCL`** — Shared Razor components (board, columns, timer, statistics, settings, dialogs), models, and services (board abstractions, activity stats calculator, timer, notifier).
+- **`tests/App.Shared.Tests`** — Unit tests for shared logic.
+- **`tests/App.Shared.RCL.Tests`** — bUnit component tests.
+- **`tests/App.Web.IntegrationTests`** — API + PostgreSQL (Docker / Testcontainers).
+- **`tests/App.Web.E2E`** — Playwright (requires running `App.Web`, `E2E_BASE_URL`).
+- **`tests/App.MAUI.UITests`** — Android UI (opt-in via `ANDROID_UI_TESTS`).
+
+---
+
+## Cross-platform sync and local-first behavior
+
+- **PostgreSQL** is the **source of truth** for synchronized user data.
 - **Web (`App.Web`)** is **online-only**: the board is read and written through `WebBoardDataService` against PostgreSQL in the same process.
 - **MAUI (`App.MAUI`)** is **local-first** for the productivity board:
-  - board data is mirrored in **SQLite** on the device
-  - edits apply locally immediately and append to an **outbox** for the existing REST board API (`GET/POST/PUT/DELETE` under `/api/board`)
-  - a background **sync coordinator** drains the outbox when online (exponential backoff on failures), then **pulls** incremental changes (`GET /api/board/sync?cursor=`) when a cursor is stored, otherwise a **full snapshot** (`GET /api/board`)
-  - **SignalR** can still prompt a refresh; the refresh path pulls into SQLite before the Blazor UI reloads
-  - signing **out** clears the local mirror and outbox for that device
-- **Board API reliability contract** (native clients and tests should assume this behavior):
-  - **`Idempotency-Key`** (optional on web; **sent from MAUI** using the outbox `OperationId`): duplicate requests with the same key and the same request **fingerprint** replay the stored status/body without re-running side effects. The same key with a **different** body returns **409** with `problem: idempotency_key_reuse`.
-  - **Optimistic concurrency**: **`X-Board-Expected-Updated-At-Utc`** or **`If-Match`** with the item’s `ServerUpdatedAtUtc` (ISO-8601). If the server row’s `UpdatedAtUtc` does not match, the API returns **409** with `problem: version_conflict` and the **current** `item` JSON. **Conflict policy** for MAUI: the outbox operation is **dropped** after 409 and a **resync** is requested (**server wins** for conflicting mutations).
-  - **Incremental sync**: **`GET /api/board/sync?cursor=`** returns upserts (`BoardSyncItem`: section + `BoardItem`), **`deletedItemIds`** (soft-delete tombstones), and **`nextCursor`**. Deletes use **`DeletedAtUtc`** on the server; the full snapshot excludes tombstones. Invalid or rejected cursors return **400**; MAUI clears the cursor and falls back to a full snapshot.
-  - **HTTP resilience**: the MAUI **`api`** `HttpClient` uses **`Microsoft.Extensions.Http.Resilience`** (timeouts + transient retries). **401** still clears the session via the existing handler.
-  - **Maintenance**: a hosted service **purges** old idempotency rows and **physically deletes** aged tombstones per configured retention.
-- Security and isolation:
-  - sync scope is always user-bound (JWT on MAUI, cookies on web)
-  - existing auth model (cookie/JWT + Identity) is used for API routes
+  - Board data is mirrored in **SQLite** on the device.
+  - Edits apply locally and append to an **outbox** for the REST board API under `/api/board`.
+  - A background **sync coordinator** drains the outbox when online (exponential backoff on failures), then **pulls** incremental changes (`GET /api/board/sync?cursor=`) when a cursor is stored, otherwise a **full snapshot** (`GET /api/board`).
+  - **SignalR** can still prompt a refresh; the refresh path pulls into SQLite before the Blazor UI reloads.
+  - **Signing out** clears the local mirror and outbox for that device.
+- **Board API reliability** (what native clients and tests assume):
+  - **`Idempotency-Key`**: optional on web; **MAUI** sends it from the outbox `OperationId`. Duplicate same key + same request **fingerprint** replays the stored result; same key with a **different** body returns **409** with `problem: idempotency_key_reuse`.
+  - **Optimistic concurrency**: **`X-Board-Expected-Updated-At-Utc`** or **`If-Match`** (item `ServerUpdatedAtUtc`, ISO-8601). Mismatch returns **409** with `problem: version_conflict` and current `item` JSON. **MAUI** policy: drop conflicting outbox op and **resync** (server wins).
+  - **Incremental sync**: `GET /api/board/sync?cursor=` returns upserts, **`deletedItemIds`**, **`nextCursor`**. Invalid cursors: **400**; MAUI clears cursor and does a full snapshot.
+  - **HTTP resilience**: MAUI’s API `HttpClient` uses **Microsoft.Extensions.Http.Resilience** (timeouts + transient retries). **401** still clears the session as implemented.
+  - **Maintenance**: a hosted service purges old idempotency rows and prunes old tombstones per configuration.
 
-MAUI API base URL is unchanged: configure `Api:BaseUrl` / `HABITINATOR_API_BASE_URL` and `MauiAppSettings` as before (see run/debug sections below).
+**MAUI base URL** — configure `Api:BaseUrl`, **`HABITINATOR_API_BASE_URL`**, or `MauiAppSettings` (see [Run and debug](#run-and-debug)). When you start from **AppHost**, the MAUI process receives the web URL automatically.
 
-## Technology Stack
-
-- .NET 10
-- Blazor Web App + MAUI Blazor Hybrid
-- MudBlazor (UI components)
-- ASP.NET Core Identity
-- Entity Framework Core + Npgsql provider
-- .NET Aspire AppHost for orchestration
-
-## Solution Structure
-
-- `src/AppHost`
-  - .NET Aspire orchestrator
-  - Starts PostgreSQL and `App.Web`
-- `src/App.Web`
-  - ASP.NET Core host
-  - Blazor UI + API + Identity + EF Core
-- `src/App.MAUI`
-  - MAUI Blazor host
-  - Uses shared components/services
-- `src/App.Shared.RCL`
-  - Shared Razor components, models, services
-- `tests/App.Shared.Tests`
-  - Unit tests for shared logic (services, schedules, notifications)
-- `tests/App.Shared.RCL.Tests`
-  - bUnit component smoke tests (Razor test project)
-- `tests/App.Web.IntegrationTests`
-  - API + PostgreSQL integration tests (Docker required — Testcontainers)
-- `tests/App.Web.E2E`
-  - Playwright browser smoke tests (requires running `App.Web`; set `E2E_BASE_URL`)
-- `tests/App.MAUI.UITests`
-  - **Android** UI smoke tests (Appium + UiAutomator2); skipped unless you opt in (see below)
+---
 
 ## Aspire and PostgreSQL
 
-Aspire is the recommended way to run locally.
-
-- `AppHost` provisions:
-  - PostgreSQL container resource: `postgres`
-  - Database resource: `habitinatordb`
-  - Web project: `app-web` (depends on `habitinatordb`)
-- `App.Web` accepts either:
+- **AppHost** provisions:
+  - PostgreSQL (parameters for user/password, **Postgres 17.6** image, optional **data volume**)
+  - Database resource **`habitinatordb`**
+  - **`app-web`**: project reference, **WaitFor** database, **HTTP health** on `/health`
+- **`App.Web`** accepts:
   - `ConnectionStrings:habitinatordb` (from Aspire), or
-  - `ConnectionStrings:DefaultConnection` (standalone mode)
+  - `ConnectionStrings:DefaultConnection` (standalone with your own PostgreSQL)
 
-## Run and Debug
+---
+
+## Run and debug
 
 ### Recommended: run via Aspire
 
@@ -115,13 +182,12 @@ dotnet test Habitinator.slnx
 dotnet run --project src/AppHost/AppHost.csproj
 ```
 
-### Visual Studio debugging
+This starts **PostgreSQL**, **App.Web** (Kestrel on the HTTP launch profile, e.g. port **5031** per `launchSettings.json`), and **App.MAUI** with the API URL pre-set—useful for emulator/device against your machine’s IP or `10.0.2.2` (Android) as appropriate.
 
-- To auto-start PostgreSQL through Aspire:
-  - set `AppHost` as startup project
-  - run/debug from `AppHost`
-- If `App.Web` is startup project:
-  - PostgreSQL must already be running externally on `127.0.0.1:5432` (or matching connection string)
+### Visual Studio
+
+- Set **`AppHost`** as startup to bring up Postgres + web (and MAUI if included).
+- If **`App.Web`** is the only startup project, run **PostgreSQL** on `127.0.0.1:5432` (or match your connection string) yourself.
 
 ### Standalone web (without Aspire)
 
@@ -129,92 +195,144 @@ dotnet run --project src/AppHost/AppHost.csproj
 dotnet run --project src/App.Web/App.Web.csproj
 ```
 
-## Demo Guest User
+### MAUI only
+
+Point the client at a running `App.Web` using **`HABITINATOR_API_BASE_URL`** or **`Api:BaseUrl`** in `appsettings.json` (embedded in the MAUI project).
+
+---
+
+## Demo guest user
 
 Seeded at startup (if missing):
 
-- Email: `guest@habitinator.local`
-- Password: `Guest123!`
-- Timezone: `Europe/Budapest`
+- **Email:** `guest@habitinator.local`  
+- **Password:** `Guest123!`  
 
-Guest login endpoint:
+- **Browser demo:** `POST /api/auth/guest-login` (cookie; redirects home).  
+- **API / MAUI demo:** `POST /api/auth/guest-jwt` (returns a JWT; guest user must exist).  
 
-- `POST /api/auth/guest-login`
+**Behavior:** migrations at startup, guest user created if missing, **demo board** (and **sample activity** for stats) if none exist for that user.
 
-Behavior:
+> Configure credentials under **`DemoUser`** in `appsettings.json` (overridable in production via configuration).
 
-- DB migration is applied at startup
-- guest user is created if missing
-- demo board items are seeded if none exist for guest
+---
 
-## API Surface (Current)
+## API surface (current)
 
-### Auth API
+### Auth
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `POST /api/auth/guest-login`
-- `POST /api/auth/logout`
+| Method & path | Notes |
+|---------------|--------|
+| `POST /api/auth/register` | JSON body; valid email; creates user. |
+| `POST /api/auth/login` | JSON; returns `LoginResponse` with **JWT** and email. |
+| `POST /api/auth/guest-jwt` | Demo guest; returns JWT for MAUI/clients. |
+| `POST /api/auth/logout` | **Authorized**; signs out (cookie). |
+| `POST /api/auth/guest-login` | Form-style guest sign-in; **redirect**. |
+| `POST /api/auth/cookie-login` | Form email/password/remember; **redirect**. |
+| `POST /api/auth/cookie-logout` | **Authorized**; **redirect**. |
+| `POST /api/auth/register-form` | Form register; **redirect** to login on success. |
 
-### Board API
+All board/settings/activity routes use the **`BoardOrJwt`** policy: **cookie (web)** or **Bearer (API/MAUI)**.
 
-- `GET /api/board`
-- `POST /api/board/{section}`
-- `PUT /api/board/{section}/{itemId}`
-- `DELETE /api/board/{section}/{itemId}`
-- `POST /api/board/{section}/{itemId}/toggle`
-- `POST /api/board/habits/{itemId}/increment`
+### Board
 
-`section` values:
+| Method & path | Purpose |
+|---------------|--------|
+| `GET /api/board` | Full snapshot. |
+| `GET /api/board/sync?cursor=` | Incremental sync (**cursor** required, ISO-8601). |
+| `POST /api/board/{section}` | Create item (`Habit` / `Daily` / `Todo`); `ItemTitleRequest`. |
+| `PUT /api/board/{section}/{itemId}` | Rename (title) for simple path. |
+| `DELETE /api/board/{section}/{itemId}` | Soft-delete. |
+| `POST /api/board/{section}/{itemId}/toggle` | Toggle completion (Dailies/To-dos as applicable). |
+| `POST /api/board/habits/{itemId}/increment` | Habit **+** |
+| `POST /api/board/habits/{itemId}/decrement` | Habit **−** |
+| `PUT /api/board/habits/{itemId}` | Full habit update (`HabitUpdateRequest`). |
+| `PUT /api/board/todos/{itemId}` | Full to-do update (`TodoUpdateRequest`). |
+| `PUT /api/board/dailies/{itemId}` | Full daily update (`DailyUpdateRequest`). |
+| `POST /api/board/dailies/{itemId}/complete-for-date` | Complete for a specific date (`DailyCompleteForDateRequest`). |
 
-- `Habit`
-- `Daily`
-- `Todo`
+Mutations support **`Idempotency-Key`**, and **`X-Board-Expected-Updated-At-Utc` / `If-Match`** for concurrency (see above).
+
+### Activity
+
+| Method & path | Purpose |
+|---------------|--------|
+| `GET /api/activity/dashboard?period=&tag=` | Dashboard aggregates for the statistics UI. |
+| `GET /api/activity/daily-contributions?period=&tag=` | Per-day series for heatmap / contributions. |
+| `GET /api/activity/day?date=&tag=` | Single-day detail. |
+
+### Settings
+
+| Method & path | Purpose |
+|---------------|--------|
+| `GET /api/settings/notifications` | Get `NotificationSettings` JSON. |
+| `PUT /api/settings/notifications` | Save; triggers board-related notification to refresh clients. |
+
+### Real-time
+
+- **SignalR:** `BoardHub` at `/hubs/board` — server pushes **`BoardChanged`** to the user’s group after relevant mutations and settings updates.
+
+---
 
 ## Configuration
 
-Main configuration file:
-
-- `src/App.Web/appsettings.json`
+Main file: **`src/App.Web/appsettings.json`**
 
 Important sections:
 
-- `ConnectionStrings`
-- `Jwt`
-- `DemoUser`
+- **`ConnectionStrings`** — PostgreSQL
+- **`Jwt`** — signing key and token lifetime (JWT for MAUI / API)
+- **`DemoUser`** — email/password for the seeded guest
+- **`BoardMaintenanceOptions`** (or related) — idempotency / tombstone retention (if present)
 
-## Testing and Quality
+MAUI: **`src/App.MAUI/appsettings.json`** — **`Api:BaseUrl`**; environment **`HABITINATOR_API_BASE_URL`** overrides when set.
 
-- Build:
-  - `dotnet build Habitinator.slnx`
-- Automated tests (solution — unit, bUnit smoke, Testcontainers integration, Android UI tests **skipped** by default):
-  - `dotnet test Habitinator.slnx`
-  - Integration tests need **Docker** (Linux/macOS/Windows with Docker Desktop).
-- TRX files for CI / IDE:
-  - `dotnet test Habitinator.slnx --results-directory ./TestResults --logger trx`
-- Playwright E2E (optional, not in the solution file):
-  1. Start PostgreSQL and run `App.Web` (e.g. `dotnet run --project src/App.Web/App.Web.csproj --urls http://127.0.0.1:5050`).
-  2. Install browsers once: `pwsh tests/App.Web.E2E/bin/Debug/net10.0/playwright.ps1 install chromium` (path matches your configuration).
+---
+
+## Documentation automation (local)
+
+Committed assets for architecture and UI references live under **`docs/automation/`**:
+
+| Output | Description |
+|--------|-------------|
+| [`docs/automation/solution-graph.mmd`](docs/automation/solution-graph.mmd) | Mermaid **flowchart** of project references (from `Habitinator.slnx` + `.csproj` files). |
+| [`docs/automation/database-schema.mmd`](docs/automation/database-schema.mmd) | Mermaid **erDiagram** of EF Core FKs (from the latest `ApplicationDbContextModelSnapshot`). |
+| [`docs/automation/openapi-v1.json`](docs/automation/openapi-v1.json) | OpenAPI **3.1** document from `GET /openapi/v1.json` (paths and schemas for HTTP APIs). |
+| [`docs/automation/screenshots/`](docs/automation/screenshots/) | Playwright **PNG** captures (login, board, statistics, settings). |
+
+**Regenerate everything locally:** start **`App.Web`** with PostgreSQL (e.g. standalone or Aspire), using the same **URL** you pass as `-BaseUrl` (default `http://127.0.0.1:5050`). Then run:
+
+```powershell
+pwsh ./scripts/Refresh-AutomationAssets.ps1
+# If the app uses another URL (e.g. Aspire http profile on 5031):
+pwsh ./scripts/Refresh-AutomationAssets.ps1 -BaseUrl "http://127.0.0.1:5031"
+```
+
+The script writes into `docs/automation/`, installs Chromium for Playwright if needed, and runs only the documentation screenshot test. Review diffs, then commit.
+
+The **`servers`** entry inside `openapi-v1.json` reflects the base URL used when the file was exported; it does not affect how the app runs.
+
+---
+
+## Testing and quality
+
+- **Build:** `dotnet build Habitinator.slnx`
+- **All automated tests (solution):** `dotnet test Habitinator.slnx`  
+  - **Integration** tests need **Docker** (Testcontainers).  
+  - **MAUI Android UI** tests are **skipped** unless `ANDROID_UI_TESTS=1` (or Windows `$env:ANDROID_UI_TESTS='1'`).
+- **TRX (local / IDE):**  
+  `dotnet test Habitinator.slnx --results-directory ./TestResults --logger trx`
+- **Playwright E2E** (project `tests/App.Web.E2E`; not part of `Habitinator.slnx`):
+  1. Start PostgreSQL and `App.Web` (e.g. `http://127.0.0.1:5050`).  
+  2. Install browsers once: `pwsh tests/App.Web.E2E/bin/Debug/net10.0/playwright.ps1 install chromium` (path matches your configuration).  
   3. `dotnet test tests/App.Web.E2E/App.Web.E2E.csproj` (defaults to `E2E_BASE_URL=http://127.0.0.1:5050` if unset).
-- **Android UI tests (Appium)** — opt-in so normal `dotnet test` stays fast:
-  1. Build the app: `dotnet build src/App.MAUI/App.MAUI.csproj -f net10.0-android -c Debug`
-  2. Start an **Android emulator** (or device) with `adb devices` showing it as connected.
-  3. Install and run **Appium 2** with the **UiAutomator2** driver (`npm i -g appium`, `appium driver install uiautomator2`, then `appium`).
-  4. Run tests:  
-     `ANDROID_UI_TESTS=1 dotnet test tests/App.MAUI.UITests/App.MAUI.UITests.csproj`  
-     On Windows PowerShell: `$env:ANDROID_UI_TESTS='1'; dotnet test tests/App.MAUI.UITests/App.MAUI.UITests.csproj`  
-     Optional: `ANDROID_APP_PATH` (full path to APK), `APPIUM_SERVER_URL` (default `http://127.0.0.1:4723`).
-  5. Manual CI: workflow [`.github/workflows/android-uitest.yml`](.github/workflows/android-uitest.yml) (`workflow_dispatch`).
-- **GitHub Actions**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) builds the solution, runs tests with TRX, publishes results, runs E2E against a job service PostgreSQL.
-- Linting/IDE diagnostics:
-  - keep zero errors in changed files
+- **Android UI (Appium)** — build APK, emulator/device, **Appium 2** + **UiAutomator2**, then opt-in `dotnet test` with `ANDROID_UI_TESTS`; optional `ANDROID_APP_PATH`, `APPIUM_SERVER_URL`. Optional workflow: [`.github/workflows/android-uitest.yml`](.github/workflows/android-uitest.yml) (`workflow_dispatch`).
+- **CI:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — **`dotnet build`** and **`dotnet test`** on the solution only (no Playwright, no committed-asset generation).
 
-## Current Limitations and Next Steps
+---
 
-- Current board model is simplified and demo-focused.
-- Next planned expansions:
-  - full domain tables for categories/habits/tasks/schedules/logs
-  - recurrence engine persistence and advanced streak/statistics queries
-  - more bUnit coverage for MudBlazor dialogs (JSInterop / provider setup)
-  - More Android UI coverage (WebView context, flows) and optional device matrix in CI
-  - full notification and cross-platform sync implementation
+## Roadmap and limitations
+
+- The domain is **rich enough** for real use (tags, checklists, schedules, activity events) but can grow further: full **recurrence** persistence edge cases, deeper **streak** analytics, more **bUnit** coverage for MudBlazor + JS interop, broader **E2E** and **device matrix**, and any additional **push** or **Background Tasks** for sync on mobile OSes.
+
+For detailed **sync contract** and **troubleshooting** client behavior, treat the [Cross-platform sync](#cross-platform-sync-and-local-first-behavior) section above and the **integration tests** in `App.Web.IntegrationTests` as the contract tests for the server.

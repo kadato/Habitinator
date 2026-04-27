@@ -17,3 +17,6 @@ _tmp_apphost/
 
 # dotnet test TRX / coverage output
 TestResults/
+
+# CI / local automation outputs (diagrams, screenshots, OpenAPI export)
+artifacts/

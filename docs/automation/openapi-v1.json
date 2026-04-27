@@ -1,0 +1,892 @@
+﻿{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "App.Web | v1",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "App.Web"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": [
+          "App.Web"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "App.Web"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/auth/guest-jwt": {
+      "post": {
+        "tags": [
+          "App.Web"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "App.Web"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/auth/guest-login": {
+      "post": {
+        "tags": [
+          "App.Web"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/auth/cookie-login": {
+      "post": {
+        "tags": [
+          "App.Web"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/auth/cookie-logout": {
+      "post": {
+        "tags": [
+          "App.Web"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/auth/register-form": {
+      "post": {
+        "tags": [
+          "App.Web"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/board": {
+      "get": {
+        "tags": [
+          "App.Web"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/board/sync": {
+      "get": {
+        "tags": [
+          "App.Web"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/board/{section}": {
+      "post": {
+        "tags": [
+          "App.Web"
+        ],
+        "parameters": [
+          {
+            "name": "section",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/BoardSection"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ItemTitleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/board/{section}/{itemId}": {
+      "put": {
+        "tags": [
+          "App.Web"
+        ],
+        "parameters": [
+          {
+            "name": "section",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/BoardSection"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ItemTitleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "App.Web"
+        ],
+        "parameters": [
+          {
+            "name": "section",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/BoardSection"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/board/{section}/{itemId}/toggle": {
+      "post": {
+        "tags": [
+          "App.Web"
+        ],
+        "parameters": [
+          {
+            "name": "section",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/BoardSection"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/board/habits/{itemId}/increment": {
+      "post": {
+        "tags": [
+          "App.Web"
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/board/habits/{itemId}/decrement": {
+      "post": {
+        "tags": [
+          "App.Web"
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/board/habits/{itemId}": {
+      "put": {
+        "tags": [
+          "App.Web"
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HabitUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/board/todos/{itemId}": {
+      "put": {
+        "tags": [
+          "App.Web"
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TodoUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/board/dailies/{itemId}": {
+      "put": {
+        "tags": [
+          "App.Web"
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DailyUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/board/dailies/{itemId}/complete-for-date": {
+      "post": {
+        "tags": [
+          "App.Web"
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DailyCompleteForDateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/activity/dashboard": {
+      "get": {
+        "tags": [
+          "App.Web"
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/activity/daily-contributions": {
+      "get": {
+        "tags": [
+          "App.Web"
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/activity/day": {
+      "get": {
+        "tags": [
+          "App.Web"
+        ],
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/settings/notifications": {
+      "get": {
+        "tags": [
+          "App.Web"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "App.Web"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BoardSection": {
+        "type": "integer"
+      },
+      "DailyCompleteForDateRequest": {
+        "required": [
+          "completedOn"
+        ],
+        "type": "object",
+        "properties": {
+          "completedOn": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "DailyRepeatType": {
+        "type": "integer"
+      },
+      "DailyUpdateRequest": {
+        "required": [
+          "title",
+          "notes",
+          "tags",
+          "startDate",
+          "repeat",
+          "repeatInterval",
+          "checklistJson"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tags": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "startDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "repeat": {
+            "$ref": "#/components/schemas/DailyRepeatType"
+          },
+          "repeatInterval": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "checklistJson": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "streak": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          }
+        }
+      },
+      "HabitResetPeriod": {
+        "type": "integer"
+      },
+      "HabitUpdateRequest": {
+        "required": [
+          "title",
+          "notes",
+          "tags",
+          "trackPlus",
+          "trackMinus",
+          "resetPeriod",
+          "counter",
+          "negativeCounter"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tags": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "trackPlus": {
+            "type": "boolean"
+          },
+          "trackMinus": {
+            "type": "boolean"
+          },
+          "resetPeriod": {
+            "$ref": "#/components/schemas/HabitResetPeriod"
+          },
+          "counter": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "negativeCounter": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "checklistJson": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ItemTitleRequest": {
+        "required": [
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "LoginRequest": {
+        "required": [
+          "email",
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "rememberMe": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "NotificationSettings": {
+        "type": "object",
+        "properties": {
+          "inAppMessagesEnabled": {
+            "type": "boolean"
+          },
+          "showSuccessToasts": {
+            "type": "boolean"
+          },
+          "showWarningToasts": {
+            "type": "boolean"
+          },
+          "showErrorToasts": {
+            "type": "boolean"
+          },
+          "toastDuration": {
+            "$ref": "#/components/schemas/NotificationToastDuration"
+          },
+          "dailyReminderEnabled": {
+            "type": "boolean"
+          },
+          "dailyReminderTime": {
+            "pattern": "^-?(\\d+\\.)?\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,7})?$",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "focusTimerAlertsEnabled": {
+            "type": "boolean"
+          },
+          "syncFailureAlertsEnabled": {
+            "type": "boolean"
+          },
+          "soundEnabledForDeviceNotifications": {
+            "type": "boolean"
+          },
+          "quietHoursEnabled": {
+            "type": "boolean"
+          },
+          "quietHoursStartUtc": {
+            "pattern": "^-?(\\d+\\.)?\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,7})?$",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quietHoursEndUtc": {
+            "pattern": "^-?(\\d+\\.)?\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,7})?$",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "NotificationToastDuration": {
+        "type": "integer"
+      },
+      "RegisterRequest": {
+        "required": [
+          "email",
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "TodoUpdateRequest": {
+        "required": [
+          "title",
+          "notes",
+          "tags",
+          "checklistJson",
+          "dueDate"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tags": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "checklistJson": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dueDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "App.Web"
+    }
+  ]
+}

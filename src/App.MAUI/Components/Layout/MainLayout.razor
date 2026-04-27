@@ -10,16 +10,16 @@
 <MudSnackbarProvider/>
 
 <MudLayout>
-    <MudAppBar Elevation="0" Dense="false" Class="app-top-bar" ToolBarClass="app-top-bar-toolbar">
-        <div class="app-top-bar__row d-flex">
-            <div class="app-top-bar__left d-flex flex-wrap align-center">
-                <MudText Typo="Typo.h6" Class="app-top-bar__title">Habitinator</MudText>
-                <NavMenu/>
-            </div>
-            <div class="app-top-bar__flex-spacer" aria-hidden="true"></div>
-            <div class="app-top-bar__right d-flex flex-wrap align-center">
-                @if (Session.IsLoggedIn)
-                {
+    @if (Session.IsLoggedIn)
+    {
+        <MudAppBar Elevation="0" Dense="false" Class="app-top-bar" ToolBarClass="app-top-bar-toolbar">
+            <div class="app-top-bar__row d-flex">
+                <div class="app-top-bar__left d-flex flex-wrap align-center">
+                    <MudText Typo="Typo.h6" Class="app-top-bar__title">Habitinator</MudText>
+                    <NavMenu/>
+                </div>
+                <div class="app-top-bar__flex-spacer" aria-hidden="true"></div>
+                <div class="app-top-bar__right d-flex flex-wrap align-center">
                     <div class="app-header-user-rail d-flex flex-wrap align-center">
                         <MudChip T="string"
                                  Icon="@Icons.Material.Filled.AccountCircle"
@@ -39,10 +39,10 @@
                             Log out
                         </MudButton>
                     </div>
-                }
+                </div>
             </div>
-        </div>
-    </MudAppBar>
+        </MudAppBar>
+    }
     <MudMainContent>
         <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4 px-4 px-sm-5 board-main-container">
             @if (!_sessionInitialized)
@@ -58,6 +58,16 @@
 </MudLayout>
 
 @code {
+    private static bool IsAuthPath(string path) =>
+        path.Equals("/auth/login", StringComparison.OrdinalIgnoreCase) ||
+        path.Equals("/auth/register", StringComparison.OrdinalIgnoreCase) ||
+        path.Equals("/login", StringComparison.OrdinalIgnoreCase) ||
+        path.Equals("/register", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsHomePath(string path) => string.IsNullOrEmpty(path);
+
+    private static bool IsPublicWhenLoggedOut(string path) => IsAuthPath(path) || IsHomePath(path);
+
     private bool _sessionInitialized;
 
     protected override void OnInitialized()
@@ -80,11 +90,9 @@
         if (_sessionInitialized && !Session.IsLoggedIn)
         {
             var path = new Uri(Nav.Uri).LocalPath.TrimEnd('/');
-            var onAuth = path.Equals("/login", StringComparison.OrdinalIgnoreCase) ||
-                         path.Equals("/register", StringComparison.OrdinalIgnoreCase);
-            if (!onAuth)
+            if (!IsPublicWhenLoggedOut(path))
             {
-                Nav.NavigateTo("/login", replace: true);
+                Nav.NavigateTo("/auth/login", replace: true);
             }
         }
 
@@ -105,7 +113,7 @@
     private async Task LogoutAsync()
     {
         await Session.ClearSessionAsync();
-        Nav.NavigateTo("/login", replace: true);
+        Nav.NavigateTo("/", replace: true);
     }
 
     protected override async Task OnInitializedAsync()
@@ -114,11 +122,9 @@
         if (!Session.IsLoggedIn)
         {
             var path = new Uri(Nav.Uri).LocalPath.TrimEnd('/');
-            var onAuth = path.Equals("/login", StringComparison.OrdinalIgnoreCase) ||
-                         path.Equals("/register", StringComparison.OrdinalIgnoreCase);
-            if (!onAuth)
+            if (!IsPublicWhenLoggedOut(path))
             {
-                Nav.NavigateTo("/login", replace: true);
+                Nav.NavigateTo("/auth/login", replace: true);
             }
         }
 

@@ -1,0 +1,68 @@
+@* Register: email, password, hint, timezone. <c>IsInteractive</c> for MAUI; <c>false</c> for web form POST. *@
+
+<div class="mb-3">
+    <label for="reg-email">Email</label>
+    @if (IsInteractive)
+    {
+        <input class="form-control" id="reg-email" type="email" required autocomplete="email" @bind="Email"
+               @bind:event="oninput" disabled="@Disabled"/>
+    }
+    else
+    {
+        <input class="form-control" id="reg-email" name="Email" type="email" required autocomplete="email"
+               value="@FormEmail"/>
+    }
+</div>
+<div class="mb-3">
+    <label for="reg-password">Password</label>
+    @* type=password + @bind across components is unreliable in Blazor WebView; use value + oninput. *@
+    @if (IsInteractive)
+    {
+        <input class="form-control" id="reg-password" type="password" required minlength="8" autocomplete="new-password"
+               title="At least 8 characters." value="@Password" @oninput="OnPasswordInput" disabled="@Disabled"/>
+    }
+    else
+    {
+        <input class="form-control" id="reg-password" name="Password" type="password" required minlength="8"
+               title="At least 8 characters." autocomplete="new-password" value=""/>
+    }
+</div>
+<p class="auth-form-hint">Use at least 8 characters. Avoid obvious passwords for your own account security.</p>
+<div class="mb-3">
+    <label for="reg-tz">Timezone</label>
+    @if (IsInteractive)
+    {
+        <input class="form-control" id="reg-tz" type="text" @bind="Timezone" @bind:event="oninput" disabled="@Disabled"/>
+    }
+    else
+    {
+        <input class="form-control" id="reg-tz" name="Timezone" type="text" value="@FormTimezone"/>
+    }
+</div>
+
+@code {
+    [Parameter] public bool IsInteractive { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Web form POST: pre-filled email from query string.</summary>
+    [Parameter] public string FormEmail { get; set; } = string.Empty;
+
+    /// <summary>Web form POST: timezone field value.</summary>
+    [Parameter] public string FormTimezone { get; set; } = "Europe/Budapest";
+
+    [Parameter] public string Email { get; set; } = string.Empty;
+
+    [Parameter] public EventCallback<string> EmailChanged { get; set; }
+
+    [Parameter] public string Password { get; set; } = string.Empty;
+
+    [Parameter] public EventCallback<string> PasswordChanged { get; set; }
+
+    [Parameter] public string Timezone { get; set; } = "Europe/Budapest";
+
+    [Parameter] public EventCallback<string> TimezoneChanged { get; set; }
+
+    private Task OnPasswordInput(ChangeEventArgs e) =>
+        PasswordChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
+}

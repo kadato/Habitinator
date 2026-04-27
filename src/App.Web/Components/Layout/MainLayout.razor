@@ -8,16 +8,16 @@
 <MudSnackbarProvider/>
 
 <MudLayout>
-    <MudAppBar Elevation="0" Dense="false" Class="app-top-bar" ToolBarClass="app-top-bar-toolbar">
-        <div class="app-top-bar__row d-flex">
-            <div class="app-top-bar__left d-flex flex-wrap align-center">
-                <MudText Typo="Typo.h6" Class="app-top-bar__title">Habitinator</MudText>
-                <NavMenu Mode="AppNavMode.Full"/>
-            </div>
-            <div class="app-top-bar__flex-spacer" aria-hidden="true"></div>
-            <div class="app-top-bar__right d-flex flex-wrap align-center">
-                <AuthorizeView>
-                    <Authorized Context="auth">
+    <AuthorizeView>
+        <Authorized Context="auth">
+            <MudAppBar Elevation="0" Dense="false" Class="app-top-bar" ToolBarClass="app-top-bar-toolbar">
+                <div class="app-top-bar__row d-flex">
+                    <div class="app-top-bar__left d-flex flex-wrap align-center">
+                        <MudText Typo="Typo.h6" Class="app-top-bar__title">Habitinator</MudText>
+                        <NavMenu Mode="AppNavMode.Full"/>
+                    </div>
+                    <div class="app-top-bar__flex-spacer" aria-hidden="true"></div>
+                    <div class="app-top-bar__right d-flex flex-wrap align-center">
                         <div class="app-header-user-rail d-flex flex-wrap align-center">
                             <MudChip T="string"
                                      Icon="@Icons.Material.Filled.AccountCircle"
@@ -39,11 +39,11 @@
                                 </MudButton>
                             </form>
                         </div>
-                    </Authorized>
-                </AuthorizeView>
-            </div>
-        </div>
-    </MudAppBar>
+                    </div>
+                </div>
+            </MudAppBar>
+        </Authorized>
+    </AuthorizeView>
     <MudMainContent>
         <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4 px-4 px-sm-5 board-main-container">
             @Body

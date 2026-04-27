@@ -4,38 +4,44 @@
 
 <PageTitle>Register</PageTitle>
 
-<h1>Register</h1>
+<AuthPageShell MaxWidth="24rem">
+    <h1>Register</h1>
 
-@if (!string.IsNullOrWhiteSpace(_message))
-{
-    <div class="alert alert-warning" role="alert">@_message</div>
-}
+    @if (!string.IsNullOrWhiteSpace(_message))
+    {
+        <div class="alert alert-warning" role="alert">@_message</div>
+    }
 
-<form method="post" action="/api/auth/register-form">
-    <div class="mb-3">
-        <label for="reg-email">Email</label>
-        <input class="form-control" id="reg-email" name="Email" type="email" required autocomplete="username" value=""/>
+    <form method="post" action="/api/auth/register-form">
+        <RegisterFormFields IsInteractive="false" FormEmail="@_email" FormTimezone="@_timezone"/>
+        <button class="btn btn-primary" type="submit">Create account</button>
+    </form>
+    <div class="mt-3">
+        <a class="btn btn-link p-0" href="/auth/login">Back to sign in</a>
     </div>
-    <div class="mb-3">
-        <label for="reg-password">Password</label>
-        <input class="form-control" id="reg-password" name="Password" type="password" required minlength="8" autocomplete="new-password" value=""/>
-    </div>
-    <div class="mb-3">
-        <label for="reg-tz">Timezone</label>
-        <input class="form-control" id="reg-tz" name="Timezone" type="text" value="Europe/Budapest"/>
-    </div>
-    <button class="btn btn-primary" type="submit">Create account</button>
-</form>
+</AuthPageShell>
 
 @code {
     private string? _message;
+    private string _email = string.Empty;
+    private string _timezone = "Europe/Budapest";
 
     protected override void OnInitialized()
     {
         var q = QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
+        if (q.TryGetValue("email", out var email) && !string.IsNullOrWhiteSpace(email))
+        {
+            _email = email.ToString();
+        }
+
+        if (q.TryGetValue("tz", out var tz) && !string.IsNullOrWhiteSpace(tz))
+        {
+            _timezone = tz.ToString();
+        }
+
         if (q.ContainsKey("error") && q["error"] == "1")
         {
-            _message = "Registration failed. Check password policy (8+ characters with upper, lower, and digit) and that the email is not already used.";
+            _message = "Registration could not be completed. Check the password length, or try another email if this one is already registered.";
         }
     }
 

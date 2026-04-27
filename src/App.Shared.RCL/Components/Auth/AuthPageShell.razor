@@ -1,0 +1,12 @@
+@* Shared wrapper for login and register pages (web + MAUI). *@
+
+<div class="content auth-form-page" style="max-width: @MaxWidth">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>CSS max-width value, e.g. <c>36rem</c> for login, <c>24rem</c> for register.</summary>
+    [Parameter] public string MaxWidth { get; set; } = "24rem";
+}

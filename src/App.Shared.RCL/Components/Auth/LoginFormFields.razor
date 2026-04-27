@@ -1,0 +1,60 @@
+@* Login: email, password, remember me. Use <c>IsInteractive</c> for MAUI (API); <c>false</c> for web form POST. *@
+
+<div class="mb-3">
+    <label for="email">Email</label>
+    @if (IsInteractive)
+    {
+        <input class="form-control" id="email" type="email" required autocomplete="email" @bind="Email"
+               @bind:event="oninput" disabled="@Disabled"/>
+    }
+    else
+    {
+        <input class="form-control" id="email" name="Email" type="email" required autocomplete="email" value=""/>
+    }
+</div>
+<div class="mb-3">
+    <label for="password">Password</label>
+    @* type=password + @bind across components is unreliable in Blazor WebView; use value + oninput. *@
+    @if (IsInteractive)
+    {
+        <input class="form-control" id="password" type="password" required autocomplete="current-password"
+               value="@Password" @oninput="OnPasswordInput" disabled="@Disabled"/>
+    }
+    else
+    {
+        <input class="form-control" id="password" name="Password" type="password" required
+               autocomplete="current-password" value=""/>
+    }
+</div>
+<div class="form-check mb-3">
+    @if (IsInteractive)
+    {
+        <input class="form-check-input" id="remember" type="checkbox" @bind="RememberMe" disabled="@Disabled"/>
+    }
+    else
+    {
+        <input class="form-check-input" id="remember" name="RememberMe" type="checkbox" value="true"/>
+    }
+    <label class="form-check-label" for="remember">Remember me</label>
+</div>
+
+@code {
+    [Parameter] public bool IsInteractive { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public string Email { get; set; } = string.Empty;
+
+    [Parameter] public EventCallback<string> EmailChanged { get; set; }
+
+    [Parameter] public string Password { get; set; } = string.Empty;
+
+    [Parameter] public EventCallback<string> PasswordChanged { get; set; }
+
+    [Parameter] public bool RememberMe { get; set; }
+
+    [Parameter] public EventCallback<bool> RememberMeChanged { get; set; }
+
+    private Task OnPasswordInput(ChangeEventArgs e) =>
+        PasswordChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
+}

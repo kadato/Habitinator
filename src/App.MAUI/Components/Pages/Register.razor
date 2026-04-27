@@ -1,34 +1,81 @@
+@page "/auth/register"
 @page "/register"
 @using global::App.Shared.RCL.Models
+@using Microsoft.AspNetCore.WebUtilities
 @inject ApiAuthService Auth
 @inject IApiSession Session
 @inject NavigationManager Nav
 
+@* 
+  Fields are inlined (not RegisterFormFields) so WebView does not drop updates across child 
+  [Parameter] binding. value + oninput updates fields on this page only. 
+*@
+
 <PageTitle>Register</PageTitle>
-<MudStack Spacing="2" Class="pt-2" Style="max-width: 24rem">
-    <MudText Typo="Typo.h5">Create account</MudText>
-    <MudTextField @bind-Value="_email" Label="Email" InputType="InputType.Email" Variant="Variant.Outlined"/>
-    <MudTextField @bind-Value="_password" Label="Password" InputType="InputType.Password" Variant="Variant.Outlined"/>
-    <MudTextField @bind-Value="_confirm" Label="Confirm password" InputType="InputType.Password" Variant="Variant.Outlined"/>
-    <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="_busy" OnClick="RegisterAsync">Register</MudButton>
-    <MudButton Variant="Variant.Text" Href="/login">Back to sign in</MudButton>
-    @if (!string.IsNullOrWhiteSpace(_error))
+
+<AuthPageShell MaxWidth="24rem">
+    <h1>Register</h1>
+
+    @if (!string.IsNullOrWhiteSpace(_message))
     {
-        <MudAlert Severity="Severity.Error">@_error</MudAlert>
+        <div class="alert alert-warning" role="alert">@_message</div>
     }
-    @if (!string.IsNullOrWhiteSpace(_ok))
-    {
-        <MudAlert Severity="Severity.Success">@_ok</MudAlert>
-    }
-</MudStack>
+
+    <div class="mb-3">
+        <label for="reg-email">Email</label>
+        <input class="form-control" id="reg-email" type="email" autocomplete="email"
+               value="@_email" @oninput="OnEmailInput" disabled="@_busy"/>
+    </div>
+    <div class="mb-3">
+        <label for="reg-password">Password</label>
+        <input class="form-control" id="reg-password" type="password" minlength="8" autocomplete="new-password"
+               title="At least 8 characters."
+               value="@_password" @oninput="OnPasswordInput" disabled="@_busy"/>
+    </div>
+    <p class="auth-form-hint">Use at least 8 characters. Avoid obvious passwords for your own account security.</p>
+    <div class="mb-3">
+        <label for="reg-tz">Timezone</label>
+        <input class="form-control" id="reg-tz" type="text" autocomplete="off"
+               value="@_timezone" @oninput="OnTimezoneInput" disabled="@_busy"/>
+    </div>
+    <button class="btn btn-primary" type="button" disabled="@_busy" @onclick="RegisterAsync">Create account</button>
+    <div class="mt-3">
+        <a class="btn btn-link p-0" href="/auth/login">Back to sign in</a>
+    </div>
+</AuthPageShell>
 
 @code {
     private string _email = string.Empty;
     private string _password = string.Empty;
-    private string _confirm = string.Empty;
-    private string? _error;
-    private string? _ok;
+    private string _timezone = "Europe/Budapest";
+    private string? _message;
     private bool _busy;
+
+    private void OnEmailInput(ChangeEventArgs e) => _email = e.Value?.ToString() ?? string.Empty;
+
+    private void OnPasswordInput(ChangeEventArgs e) => _password = e.Value?.ToString() ?? string.Empty;
+
+    private void OnTimezoneInput(ChangeEventArgs e) => _timezone = e.Value?.ToString() ?? string.Empty;
+
+    protected override void OnInitialized()
+    {
+        var q = QueryHelpers.ParseQuery(new Uri(Nav.Uri).Query);
+        if (q.TryGetValue("email", out var em) && !string.IsNullOrWhiteSpace(em))
+        {
+            _email = em.ToString();
+        }
+
+        if (q.TryGetValue("tz", out var tz) && !string.IsNullOrWhiteSpace(tz))
+        {
+            _timezone = tz.ToString();
+        }
+
+        if (q.ContainsKey("error") && q["error"] == "1")
+        {
+            _message =
+                "Registration could not be completed. Check the password length, or try another email if this one is already registered.";
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -36,28 +83,31 @@
         if (Session.IsLoggedIn)
         {
             Nav.NavigateTo("/");
+            return;
         }
     }
 
     private async Task RegisterAsync()
     {
-        _error = _ok = null;
-        if (_password != _confirm)
-        {
-            _error = "Passwords do not match.";
-            return;
-        }
-
         _busy = true;
         try
         {
-            if (!await Auth.RegisterAsync(new RegisterRequest(_email, _password)))
+            if (!RegistrationEmailValidation.IsValid(_email))
             {
-                _error = "Registration failed. The email may already be in use.";
+                _message = "Enter a valid email address.";
                 return;
             }
 
-            _ok = "You can sign in now.";
+            var tz = string.IsNullOrWhiteSpace(_timezone) ? "Europe/Budapest" : _timezone;
+            var result = await Auth.RegisterAsync(new RegisterRequest(_email, _password, tz));
+            if (!result.Succeeded)
+            {
+                _message = result.Message;
+                return;
+            }
+
+            _message = null;
+            Nav.NavigateTo("/auth/login?registered=1");
         }
         finally
         {

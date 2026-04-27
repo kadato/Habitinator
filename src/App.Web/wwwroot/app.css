@@ -95,6 +95,13 @@ a:hover, .btn-link:hover {
     padding-top: 1.1rem;
 }
 
+.auth-form-hint {
+    color: #cbd5e1;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    margin: 0 0 0.75rem 0;
+}
+
 .app-top-row {
     background: #111827;
     border-bottom: 1px solid #1f2937;

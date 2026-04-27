@@ -1,22 +1,22 @@
 @inject IBoardDataService BoardData
 @inject IUserNotifier Notifier
 
-<MudDialog Class="edit - daily - dialog"
-           ContentClass="edit - daily - dialog__content"
+<MudDialog Class="edit-daily-dialog"
+           ContentClass="edit-daily-dialog__content"
            Style="width: min(24rem, calc(100vw - 2rem));">
     <DialogContent>
         <div class="edit-daily-shell" @onclick="OnShellClick">
             <div class="edit-daily-header">
                 <div class="edit-daily-header__toolbar">
-                    <MudText Typo="Typo.subtitle1" Class="edit - daily - header__title">Edit To Do</MudText>
+                    <MudText Typo="Typo.subtitle1" Class="edit-daily-header__title">Edit To Do</MudText>
                     <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
                         <MudButton Variant="Variant.Text"
-                                   Class="edit - daily - header__cancel"
+                                   Class="edit-daily-header__cancel"
                                    OnClick="Cancel">
                             Cancel
                         </MudButton>
                         <MudButton Variant="Variant.Filled"
-                                   Class="edit - daily - header__save"
+                                   Class="edit-daily-header__save"
                                    OnClick="SaveAsync"
                                    Disabled="@_saving">
                             Save
@@ -25,20 +25,20 @@
                 </div>
 
                 <MudStack Spacing="0">
-                    <MudText Typo="Typo.caption" Class="edit - daily - label - header">Title*</MudText>
+                    <MudText Typo="Typo.caption" Class="edit-daily-label-header">Title*</MudText>
                     <MudTextField @bind-Value="_title"
                                   Variant="Variant.Outlined"
-                                  Class="edit - daily - field - header"
+                                  Class="edit-daily-field-header"
                                   Placeholder="To -do title"
                                   Immediate="true"
                                   Margin="Margin.Dense"/>
 
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mt - 2 mb - 1">
-                        <MudText Typo="Typo.caption" Class="edit - daily - label - header">Notes</MudText>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mt-2 mb-1">
+                        <MudText Typo="Typo.caption" Class="edit-daily-label-header">Notes</MudText>
                     </MudStack>
                     <MudTextField @bind-Value="_notes"
                                   Variant="Variant.Outlined"
-                                  Class="edit - daily - field - header"
+                                  Class="edit-daily-field-header"
                                   Placeholder="Add notes"
                                   Lines="3"
                                   Margin="Margin.Dense"/>
@@ -46,10 +46,10 @@
             </div>
 
             <div class="edit-daily-body">
-                <MudExpansionPanels Class="edit - daily - checklist - panels" Elevation="0">
+                <MudExpansionPanels Class="edit-daily-checklist-panels" Elevation="0">
                     <MudExpansionPanel @bind-Expanded="_checklistOpen">
                         <TitleContent>
-                            <MudText Typo="Typo.body2" Class="edit - daily - label - body">Checklist</MudText>
+                            <MudText Typo="Typo.body2" Class="edit-daily-label-body">Checklist</MudText>
                         </TitleContent>
                         <ChildContent>
                             <div class="edit-daily-checklist">
@@ -61,18 +61,18 @@
                                         <MudCheckBox T="bool"
                                                      Value="row.IsDone"
                                                      ValueChanged="@(v => SetChecklistDone(idx, v))"
-                                                     Class="ma - 0"
+                                                     Class="ma-0"
                                                      Color="Color.Primary"/>
                                         <MudTextField @bind-Value="row.Text"
                                                       Variant="Variant.Text"
-                                                      Class="edit - daily - checklist__input flex - grow - 1"
+                                                      Class="edit-daily-checklist__input flex-grow-1"
                                                       Placeholder="Checklist item"
                                                       Margin="Margin.Dense"
                                                       Immediate="true"/>
                                         <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline"
                                                        Size="Size.Small"
                                                        title="Remove checklist item"
-                                                       Class="ma - 0 edit - daily - checklist__remove"
+                                                       Class="ma-0 edit-daily-checklist__remove"
                                                        OnClick="@(() => RemoveChecklistLine(idx))"/>
                                     </div>
                                 }
@@ -85,17 +85,17 @@
                     </MudExpansionPanel>
                 </MudExpansionPanels>
 
-                <MudText Typo="Typo.caption" Class="edit - daily - label - body d - block mb - 1 mt - 2">Due date (optional)</MudText>
+                <MudText Typo="Typo.caption" Class="edit-daily-label-body d-block mb-1 mt-2">Due date (optional)</MudText>
                 <MudDatePicker @bind-Date="_dueDate"
                                Variant="Variant.Outlined"
                                Editable="true"
-                               Class="edit - daily - field - body edit - daily - date"
+                               Class="edit-daily-field-body edit-daily-date"
                                DateFormat="dd MMM yyyy"
                                Placeholder="No due date"
                                Clearable="true"
                                Margin="Margin.Dense"/>
 
-                <MudText Typo="Typo.caption" Class="edit - daily - label - body d - block mb - 1 mt - 2">Tags</MudText>
+                <MudText Typo="Typo.caption" Class="edit-daily-label-body d-block mb-1 mt-2">Tags</MudText>
                 <div class="habit-tag-picker @(_tagPickerOpen ? "habit-tag-picker--open" : null)"
                      @onclick:stopPropagation="true">
                     <div class="habit-tag-picker__control"

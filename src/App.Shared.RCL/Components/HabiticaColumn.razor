@@ -6,43 +6,43 @@
 @inject IUserNotifier Notifier
 
 <MudCard Class="@($"habitica-column {GetAccentClass()}")" Elevation="0" Outlined="false">
-    <MudCardHeader Class="pb - 2">
+    <MudCardHeader Class="pb-2">
         <CardHeaderContent>
             <MudStack Spacing="2">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="habitica - title - stack">
+                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="habitica-title-stack">
                         <MudIcon Icon="@BoardSectionVisuals.GetMudIcon(Section)"
-                                 Class="habitica - col - type - icon"
+                                 Class="habitica-col-type-icon"
                                  Size="Size.Small"
                                  Color="Color.Primary"/>
-                        <MudText Typo="Typo.subtitle1" Class="habitica - title">@GetTitle()</MudText>
+                        <MudText Typo="Typo.subtitle1" Class="habitica-title">@GetTitle()</MudText>
                     </MudStack>
                     <MudChip T="string"
                              Text="@VisibleItems().Count.ToString()"
-                             Class="habitica - count - chip"
+                             Class="habitica-count-chip"
                              Color="Color.Secondary"
                              Size="Size.Small"
                              Variant="Variant.Filled"/>
                 </MudStack>
-                <MudStack Row="true" Spacing="1" Class="flex - wrap habitica - filter - toolbar" role="toolbar">
+                <MudStack Row="true" Spacing="1" Class="flex-wrap habitica-filter-toolbar" role="toolbar">
                     @if (Section == BoardSection.Habit)
                     {
                         <MudButton Size="Size.Small"
-                                   Class="habitica - filter - btn"
+                                   Class="habitica-filter-btn"
                                    Variant="@FilterVariant(_habitFilter == HabitListFilter.All)"
                                    Color="Color.Primary"
                                    OnClick="@(() => { _habitFilter = HabitListFilter.All; })">
                             All
                         </MudButton>
                         <MudButton Size="Size.Small"
-                                   Class="habitica - filter - btn"
+                                   Class="habitica-filter-btn"
                                    Variant="@FilterVariant(_habitFilter == HabitListFilter.Weak)"
                                    Color="Color.Primary"
                                    OnClick="@(() => { _habitFilter = HabitListFilter.Weak; })">
                             Weak
                         </MudButton>
                         <MudButton Size="Size.Small"
-                                   Class="habitica - filter - btn"
+                                   Class="habitica-filter-btn"
                                    Variant="@FilterVariant(_habitFilter == HabitListFilter.Strong)"
                                    Color="Color.Primary"
                                    OnClick="@(() => { _habitFilter = HabitListFilter.Strong; })">
@@ -52,21 +52,21 @@
                     else if (Section == BoardSection.Daily)
                     {
                         <MudButton Size="Size.Small"
-                                   Class="habitica - filter - btn"
+                                   Class="habitica-filter-btn"
                                    Variant="@FilterVariant(_dailyFilter == DailyListFilter.All)"
                                    Color="Color.Primary"
                                    OnClick="@(() => { _dailyFilter = DailyListFilter.All; })">
                             All
                         </MudButton>
                         <MudButton Size="Size.Small"
-                                   Class="habitica - filter - btn"
+                                   Class="habitica-filter-btn"
                                    Variant="@FilterVariant(_dailyFilter == DailyListFilter.Due)"
                                    Color="Color.Primary"
                                    OnClick="@(() => { _dailyFilter = DailyListFilter.Due; })">
                             Due
                         </MudButton>
                         <MudButton Size="Size.Small"
-                                   Class="habitica - filter - btn"
+                                   Class="habitica-filter-btn"
                                    Variant="@FilterVariant(_dailyFilter == DailyListFilter.NotDue)"
                                    Color="Color.Primary"
                                    OnClick="@(() => { _dailyFilter = DailyListFilter.NotDue; })">
@@ -76,21 +76,21 @@
                     else
                     {
                         <MudButton Size="Size.Small"
-                                   Class="habitica - filter - btn"
+                                   Class="habitica-filter-btn"
                                    Variant="@FilterVariant(_todoFilter == TodoListFilter.Active)"
                                    Color="Color.Primary"
                                    OnClick="@(() => { _todoFilter = TodoListFilter.Active; })">
                             Active
                         </MudButton>
                         <MudButton Size="Size.Small"
-                                   Class="habitica - filter - btn"
+                                   Class="habitica-filter-btn"
                                    Variant="@FilterVariant(_todoFilter == TodoListFilter.Scheduled)"
                                    Color="Color.Primary"
                                    OnClick="@(() => { _todoFilter = TodoListFilter.Scheduled; })">
                             Scheduled
                         </MudButton>
                         <MudButton Size="Size.Small"
-                                   Class="habitica - filter - btn"
+                                   Class="habitica-filter-btn"
                                    Variant="@FilterVariant(_todoFilter == TodoListFilter.Complete)"
                                    Color="Color.Primary"
                                    OnClick="@(() => { _todoFilter = TodoListFilter.Complete; })">
@@ -106,7 +106,7 @@
                                Variant="Variant.Text"
                                Color="Color.Error"
                                StartIcon="@Icons.Material.Filled.DeleteSweep"
-                               Class="align - self - start"
+                               Class="align-self-start"
                                OnClick="DeleteAllCompletedTodosAsync">
                         Delete all completed
                     </MudButton>
@@ -115,10 +115,10 @@
         </CardHeaderContent>
     </MudCardHeader>
 
-    <MudCardContent Class="pt - 0">
+    <MudCardContent Class="pt-0">
         <div @onkeydown="OnDraftKeyAsync" class="habitica-add-wrap">
             <MudTextField @bind-Value="_draft"
-                          Class="habitica - add - field"
+                          Class="habitica-add-field"
                           Placeholder="@GetAddPlaceholder()"
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
@@ -131,7 +131,7 @@
         <div class="habitica-list mt-3">
             @if (VisibleItems().Count == 0)
             {
-                <MudAlert Severity="Severity.Normal" Variant="Variant.Text" Dense="true" Class="ma - 0" NoIcon="true">
+                <MudAlert Severity="Severity.Normal" Variant="Variant.Text" Dense="true" Class="ma-0" NoIcon="true">
                     @GetEmptyMessage()
                 </MudAlert>
             }
@@ -202,7 +202,7 @@
                             <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline"
                                            Size="Size.Small"
                                            title="Delete"
-                                           Class="ma - 0 habitica - card__delete"
+                                           Class="ma-0 habitica-card__delete"
                                            OnClick="@(async () => await DeleteAsync(item.Id))"/>
                         </div>
                         @if (hasBodyExtra)
@@ -210,7 +210,7 @@
                             <div class="habitica-card__extra">
                                 @if (!string.IsNullOrWhiteSpace(item.Notes))
                                 {
-                                    <MudText Typo="Typo.caption" Class="habitica - card__notes" Color="Color.Secondary">@item.Notes</MudText>
+                                    <MudText Typo="Typo.caption" Class="habitica-card__notes" Color="Color.Secondary">@item.Notes</MudText>
                                 }
                                 @if (subTotal > 0)
                                 {
@@ -218,9 +218,9 @@
                                             class="habitica-subtask-pill"
                                             @onclick="@(() => ToggleSubtasksExpand(item.Id))"
                                             @onclick:stopPropagation="true">
-                                        <MudIcon Icon="@Icons.Material.Filled.List" Size="Size.Small" Class="me - 1"/>
+                                        <MudIcon Icon="@Icons.Material.Filled.List" Size="Size.Small" Class="me-1"/>
                                         <span class="habitica-subtask-pill__count">@subDone / @subTotal</span>
-                                        <MudIcon Icon="@(IsSubtasksExpanded(item.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small" Class="ms - 1"/>
+                                        <MudIcon Icon="@(IsSubtasksExpanded(item.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small" Class="ms-1"/>
                                     </button>
                                 }
                                 @if (subTotal > 0 && IsSubtasksExpanded(item.Id))
@@ -233,7 +233,7 @@
                                                              Value="line.IsDone"
                                                              ValueChanged="@(v => SetChecklistItemDoneAsync(item, line.Id, v))"
                                                              Label="@line.Text"
-                                                             Class="ma - 0 habitica - subtask - cb"
+                                                             Class="ma-0 habitica-subtask-cb"
                                                              Color="Color.Secondary"
                                                              Dense="true"/>
                                             </li>
@@ -249,7 +249,7 @@
                                     @if (Section == BoardSection.Todo && item.TodoDueDate is { } due)
                                     {
                                         <div class="habitica-todo-due" title="Due date">
-                                            <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Class="me - 1" Size="Size.Small"/>
+                                            <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Class="me-1" Size="Size.Small"/>
                                             <span class="habitica-todo-due__text">@due.ToString("yyyy/MM/dd", CultureInfo.InvariantCulture)</span>
                                         </div>
                                     }
@@ -258,14 +258,14 @@
                                     @if (Section == BoardSection.Habit)
                                     {
                                         <div class="habitica-streak" title="@HabitCounterTitle(item)">
-                                            <MudIcon Icon="@Icons.Material.Filled.FastForward" Size="Size.Small" Class="me - 1"/>
+                                            <MudIcon Icon="@Icons.Material.Filled.FastForward" Size="Size.Small" Class="me-1"/>
                                             <span class="habitica-streak__text">@HabitStreakLabel(item)</span>
                                         </div>
                                     }
                                     else if (Section == BoardSection.Daily)
                                     {
                                         <div class="habitica-streak" title="Streak">
-                                            <MudIcon Icon="@Icons.Material.Filled.FastForward" Size="Size.Small" Class="me - 1"/>
+                                            <MudIcon Icon="@Icons.Material.Filled.FastForward" Size="Size.Small" Class="me-1"/>
                                             <span class="habitica-streak__text">@item.Counter</span>
                                         </div>
                                     }
@@ -278,7 +278,7 @@
         </div>
     </MudCardContent>
 
-    <MudCardActions Class="habitica - col - foot px - 4 pb - 3 pt - 0">
+    <MudCardActions Class="habitica-col-foot px-4 pb-3 pt-0">
         <MudText Typo="Typo.caption" Color="Color.Secondary">@GetFooterText()</MudText>
     </MudCardActions>
 </MudCard>

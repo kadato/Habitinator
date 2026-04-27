@@ -7,7 +7,7 @@
 @inject BoardRemoteNotifyBridge BoardNotifyBridge
 @inject IJSRuntime JS
 
-<MudStack Class="board - shell mud - width - full" Spacing="1">
+<MudStack Class="board-shell w-100" Spacing="2">
     @if (_isLoading)
     {
         <MudProgressLinear Color="Color.Primary" Indeterminate="true"/>
@@ -30,32 +30,6 @@
         </MudAlert>
     }
 
-    @if (_initialLoadComplete && _loadError is null)
-    {
-        <MudPaper Class="px - 3 py - 2 board - stat - strip" Outlined="false" Elevation="0">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="flex - wrap">
-                <MudChip T="string"
-                         Icon="@BoardSectionVisuals.GetMudIcon(BoardSection.Habit)"
-                         Text="@($"{FilteredHabits.Count} habits")"
-                         Size="Size.Small"
-                         Variant="Variant.Text"
-                         Color="Color.Success"/>
-                <MudChip T="string"
-                         Icon="@BoardSectionVisuals.GetMudIcon(BoardSection.Daily)"
-                         Text="@($"{DailiesDueOpenCount} dailies left")"
-                         Size="Size.Small"
-                         Variant="Variant.Text"
-                         Color="Color.Primary"/>
-                <MudChip T="string"
-                         Icon="@BoardSectionVisuals.GetMudIcon(BoardSection.Todo)"
-                         Text="@($"{FilteredTodos.Count(t => !t.IsCompleted)} to-dos open")"
-                         Size="Size.Small"
-                         Variant="Variant.Text"
-                         Color="Color.Warning"/>
-            </MudStack>
-        </MudPaper>
-    }
-
     <GlobalTimerPanel OnLogSaved="HandleTimerLogSavedAsync"
                       Habits="Habits"
                       Dailies="Dailies"
@@ -63,76 +37,102 @@
 
     @if (_initialLoadComplete && _loadError is null)
     {
-        <MudPaper Class="px - 3 py - 2 board - search - panel" Outlined="false" Elevation="0">
-            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Stretch" Class="board - search - row">
-                <MudTextField @bind-Value="_searchText"
-                              Placeholder="Search"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.Search"
-                              Class="board - search - field flex - grow - 1"
-                              InputType="InputType.Text"
-                              Immediate="true"/>
-                <div class="board-tags-menu-activator">
-                    <MudMenu AnchorOrigin="Origin.BottomRight"
-                             TransformOrigin="Origin.TopRight"
-                             PopoverFixed="true"
-                             MaxHeight="500"
-                             RelativeWidth="DropdownWidth.Ignore"
-                             PopoverClass="board - tags - menu - popover">
-                        <ActivatorContent Context="tagMenu">
-                            <MudButton Variant="Variant.Outlined"
-                                       Color="Color.Default"
-                                       Class="board - tags - trigger"
-                                       StartIcon="@Icons.Material.Filled.Tune"
-                                       EndIcon="@Icons.Material.Filled.ArrowDropDown"
-                                       OnClick="@(e => tagMenu.ToggleAsync(e))">
-                                @(SelectedFilterTagCount > 0 ? $"Tags ({SelectedFilterTagCount})" : "Tags")
-                            </MudButton>
-                        </ActivatorContent>
-                        <ChildContent>
-                            <MudPaper Class="board - tags - menu - panel pa - 3" Elevation="0" Style="min - width: 17rem; max - width: 24rem;">
-                                <MudText Typo="Typo.subtitle1" Class="mb - 1">Tags</MudText>
-                                @if (AllTagNamesForMenu.Count == 0)
-                                {
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">No tags on the board yet. Add tags in an item&rsquo;s details.</MudText>
-                                }
-                                else
-                                {
-                                    <div class="board-tag-filter-grid board-tags-menu-body">
-                                        @foreach (var tag in AllTagNamesForMenu)
-                                        {
-                                            <MudCheckBox Value="IsFilterTagSelected(tag)"
-                                                         ValueChanged="@((bool b) => OnFilterTagChanged(tag, b))"
-                                                         Label="@tag"
-                                                         Color="Color.Primary"
-                                                         Dense="true"
-                                                         Class="ma - 0"/>
-                                        }
-                                    </div>
-                                }
-                                <MudStack Row="true" Spacing="1" Justify="Justify.SpaceBetween" Class="mt - 2 pt - 2" Style="border - top: 1px solid var(--mud - palette - divider);">
-                                    <MudButton Variant="Variant.Text"
-                                               Color="Color.Error"
-                                               Size="Size.Small"
-                                               OnClick="ClearBoardFilters"
-                                               Disabled="@(string.IsNullOrWhiteSpace(_searchText) && SelectedFilterTagCount == 0)">
-                                        Clear all filters
-                                    </MudButton>
-                                </MudStack>
-                            </MudPaper>
-                        </ChildContent>
-                    </MudMenu>
+        <MudPaper Class="px-3 py-2 board-stat-strip" Outlined="false" Elevation="0">
+            <div class="board-stat-strip-row">
+                <MudStack Row="true"
+                          AlignItems="AlignItems.Center"
+                          Spacing="2"
+                          Class="board-stat-chips flex-wrap">
+                    <MudChip T="string"
+                             Icon="@BoardSectionVisuals.GetMudIcon(BoardSection.Habit)"
+                             Text="@($"{FilteredHabits.Count} habits")"
+                             Size="Size.Small"
+                             Variant="Variant.Text"
+                             Color="Color.Success"/>
+                    <MudChip T="string"
+                             Icon="@BoardSectionVisuals.GetMudIcon(BoardSection.Daily)"
+                             Text="@($"{DailiesDueOpenCount} dailies left")"
+                             Size="Size.Small"
+                             Variant="Variant.Text"
+                             Color="Color.Primary"/>
+                    <MudChip T="string"
+                             Icon="@BoardSectionVisuals.GetMudIcon(BoardSection.Todo)"
+                             Text="@($"{FilteredTodos.Count(t => !t.IsCompleted)} to-dos open")"
+                             Size="Size.Small"
+                             Variant="Variant.Text"
+                             Color="Color.Warning"/>
+                </MudStack>
+                <div class="board-stat-filters">
+                    <MudTextField @bind-Value="_searchText"
+                                  Placeholder="Search"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  Class="board-search-field board-search-pill"
+                                  InputType="InputType.Text"
+                                  Immediate="true"/>
+                    <div class="board-tags-menu-activator">
+                        <MudMenu AnchorOrigin="Origin.BottomRight"
+                                 TransformOrigin="Origin.TopRight"
+                                 PopoverFixed="true"
+                                 MaxHeight="500"
+                                 RelativeWidth="DropdownWidth.Ignore"
+                                 PopoverClass="board-tags-menu-popover">
+                            <ActivatorContent Context="tagMenu">
+                                <MudButton Variant="Variant.Outlined"
+                                           Color="Color.Default"
+                                           Class="board-tags-trigger board-tags-trigger--strip"
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.Tune"
+                                           EndIcon="@Icons.Material.Filled.ArrowDropDown"
+                                           OnClick="@(e => tagMenu.ToggleAsync(e))">
+                                    @(SelectedFilterTagCount > 0 ? $"Tags ({SelectedFilterTagCount})" : "Tags")
+                                </MudButton>
+                            </ActivatorContent>
+                            <ChildContent>
+                                <MudPaper Class="board-tags-menu-panel pa-3" Elevation="0" Style="min-width: 17rem; max-width: 24rem;">
+                                    <MudText Typo="Typo.subtitle1" Class="mb-1">Tags</MudText>
+                                    @if (AllTagNamesForMenu.Count == 0)
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">No tags on the board yet. Add tags in an item&rsquo;s details.</MudText>
+                                    }
+                                    else
+                                    {
+                                        <div class="board-tag-filter-grid board-tags-menu-body">
+                                            @foreach (var tag in AllTagNamesForMenu)
+                                            {
+                                                <MudCheckBox Value="IsFilterTagSelected(tag)"
+                                                             ValueChanged="@((bool b) => OnFilterTagChanged(tag, b))"
+                                                             Label="@tag"
+                                                             Color="Color.Primary"
+                                                             Dense="true"
+                                                             Class="ma-0"/>
+                                            }
+                                        </div>
+                                    }
+                                    <MudStack Row="true" Spacing="1" Justify="Justify.SpaceBetween" Class="mt-2 pt-2" Style="border-top: 1px solid var(--mud-palette-divider);">
+                                        <MudButton Variant="Variant.Text"
+                                                   Color="Color.Error"
+                                                   Size="Size.Small"
+                                                   OnClick="ClearBoardFilters"
+                                                   Disabled="@(string.IsNullOrWhiteSpace(_searchText) && SelectedFilterTagCount == 0)">
+                                            Clear all filters
+                                        </MudButton>
+                                    </MudStack>
+                                </MudPaper>
+                            </ChildContent>
+                        </MudMenu>
+                    </div>
                 </div>
-            </MudStack>
+            </div>
         </MudPaper>
     }
 
     @if (_loadError is null)
     {
         <div class="board-columns-stage">
-            <MudGrid Spacing="3" Class="board - columns - grid mt - 0 mud - width - full">
+            <MudGrid Spacing="4" Class="board-columns-grid mt-0 w-100">
                 <MudItem xs="12" md="4">
                     <HabiticaColumn Section="BoardSection.Habit"
                                     Items="FilteredHabits"

@@ -1,10 +1,20 @@
 .timer-panel {
-    margin: 0.35rem 0 0.35rem;
+    margin: 0.35rem 0 0.6rem;
     border-radius: 16px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 80%, transparent);
     position: relative;
     overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.timer-panel__content {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .timer-panel::before {
@@ -22,77 +32,138 @@
     );
 }
 
-/* Single horizontal flow: label block | time + target | actions. */
+/*
+ * Toolbar: CSS grid so the middle column always consumes space between clock and buttons.
+ * (Nested flex + width:0 was still leaving a gap with Mud’s markup.)
+ */
 .timer-compact {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
+    display: grid;
     gap: 0.5rem 0.75rem;
     min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
+@media (min-width: 600px) {
+    .timer-compact {
+        grid-template-columns: max-content minmax(0, 1fr) auto;
+        /* Single vertical band: clock, field row, and actions share a common center (WebView + browser) */
+        align-items: center;
+    }
+}
+
+@media (max-width: 599.98px) {
+    .timer-compact {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .timer-compact__actions {
+        justify-self: end;
+    }
+}
+
+/* MudStack.timer-clock-header */
 .timer-clock-header {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: center;
-    gap: 0.45rem;
-    flex: 0 0 auto;
     min-width: 0;
+    flex-shrink: 0;
+    align-self: center;
+    width: max-content;
 }
 
 .timer-clock-icon {
     flex-shrink: 0;
     opacity: 0.92;
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* Clock + field share one row (wrap only when needed). */
-.timer-compact__main {
-    display: flex;
-    flex: 1 1 14rem;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.35rem 0.75rem;
+.timer-clock-icon ::deep svg {
+    width: 2rem;
+    height: 2rem;
+    display: block;
+}
+
+/*
+ * Digits: MudText Typo + theme color; add tabular + monospace (Chromium can render
+ * unhinted system fonts harshly; stack matches Mud theme + monospaced figures).
+ */
+.timer-value {
+    font-family: "Roboto Mono", "JetBrains Mono", ui-monospace, "Cascadia Code", "Segoe UI Mono",
+        Consolas, monospace !important;
+    font-size: 1.75rem !important;
+    line-height: 1.2 !important;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    font-weight: 600 !important;
+    letter-spacing: 0.04em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    flex: 0 0 auto;
+    margin: 0 !important;
+    padding: 0;
+}
+
+.timer-clock-header ::deep .timer-value {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* Timer inputs rebuilt from a clean base: desktop 3:2, mobile stacked. */
+.timer-compact > .timer-inputs-pair {
+    min-width: 0;
+    width: 100%;
+}
+
+.timer-inputs-pair {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 0.75rem;
+    align-items: end;
+    width: 100%;
     min-width: 0;
 }
 
-.timer-value {
-    color: var(--mud-palette-tertiary);
-    font-family: ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
-    font-variant-numeric: tabular-nums;
-    font-weight: 700;
-    font-size: 1.5rem;
-    letter-spacing: 0.04em;
-    line-height: 1.1;
-    flex: 0 0 auto;
-    margin: 0;
-}
-
-/* Session target + "Time's up": vertically center with each other and with the clock row. */
-.timer-inputs-pair {
-    display: flex;
-    flex: 1 1 14rem;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    align-content: center;
-    gap: 0.35rem 0.75rem;
+.timer-target-input-row,
+.timer-focus-field {
     min-width: 0;
 }
 
 .timer-target-input-row {
-    display: flex;
-    flex: 1 1 8rem;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.35rem;
+    display: block;
+}
+
+.timer-focus-field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 0.3rem;
+    align-items: end;
+}
+
+@media (max-width: 599.98px) {
+    .timer-inputs-pair {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* Force both controls to occupy full column width and same baseline behavior. */
+.timer-target-field,
+.timer-focus-textfield {
+    width: 100%;
     min-width: 0;
 }
 
 .timer-target-field ::deep .mud-input-control,
-.timer-target-field ::deep .mud-input {
+.timer-target-field ::deep .mud-input,
+.timer-focus-textfield ::deep .mud-input-control,
+.timer-focus-textfield ::deep .mud-input,
+.timer-focus-textfield ::deep .mud-input-outlined {
+    width: 100%;
+    min-width: 0;
     margin-top: 0;
     margin-bottom: 0;
 }
@@ -102,24 +173,26 @@
     min-height: 0;
 }
 
-.timer-target-type-icon {
-    flex-shrink: 0;
-    opacity: 0.88;
-    align-self: center;
+.timer-target-field ::deep .mud-input-adornment-start {
+    margin-right: 0.35rem;
+    opacity: 0.85;
 }
 
-/* Focus duration (free-text minutes or h:mm); keep compact next to the session target. */
-.timer-focus-field {
-    display: flex;
-    align-items: center;
-    flex: 0 1 10.5rem;
-    min-width: 7.5rem;
-    max-width: 12.5rem;
+.timer-focus-field ::deep .mud-input > input.mud-input-root,
+.timer-focus-field ::deep .mud-input-slot input {
+    font-variant-numeric: tabular-nums;
 }
 
 .timer-focus-input-row {
-    min-width: 0;
-    width: 100%;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    align-items: end !important;
+}
+
+.timer-focus-info-icon {
+    align-self: end;
+    margin-bottom: 0.42rem;
 }
 
 .focus-duration-help-text {
@@ -129,32 +202,17 @@
     display: block;
 }
 
-.timer-focus-field ::deep .mud-input-control,
-.timer-focus-field ::deep .mud-input,
-.timer-focus-field ::deep .mud-input-outlined {
-    margin-top: 0;
-    margin-bottom: 0;
-}
-
-.timer-focus-field ::deep .mud-input > input.mud-input-root,
-.timer-focus-field ::deep .mud-input-slot input {
-    font-variant-numeric: tabular-nums;
-}
-
-.timer-target-field {
-    border-radius: 12px;
-    min-width: 0;
-}
-
-/* Actions in one horizontal group. */
+/* Actions: line up with the outlined field row (Mud small buttons vs dense inputs). */
 .timer-compact__actions {
     display: flex;
-    flex: 0 0 auto;
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.35rem;
     justify-content: flex-end;
+    align-self: center;
+    min-height: 2.875rem;
+    box-sizing: border-box;
 }
 
 .timer-btn {

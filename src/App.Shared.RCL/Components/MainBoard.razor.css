@@ -13,31 +13,67 @@
     flex-direction: column;
     justify-content: flex-start;
     min-height: 0;
+    padding: 0.15rem 0.25rem 0.75rem;
 }
 
 .board-columns-grid {
     flex-shrink: 0;
 }
 
-.board-stat-strip,
-.board-search-panel {
+.board-stat-strip {
     border-radius: 0.875rem;
     background: color-mix(in srgb, var(--mud-palette-surface) 88%, transparent);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(8px);
+    margin-bottom: 0.1rem;
 }
 
-.board-search-panel {
-    background: color-mix(in srgb, var(--mud-palette-surface) 92%, transparent);
-}
-
-.board-search-row {
+/* Count chips (left) + search & tags (right) in one bar. */
+.board-stat-strip-row {
+    display: flex;
+    flex-direction: row;
     flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem 1rem;
+    min-width: 0;
 }
 
-.board-search-field {
-    min-width: min(100%, 12rem);
+.board-stat-chips {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.board-stat-filters {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    min-width: min(100%, 11rem);
+}
+
+.board-search-field.board-search-pill {
+    flex: 1 1 8rem;
+    min-width: 0;
+    max-width: 14rem;
+}
+
+.board-search-pill ::deep .mud-input-outlined {
+    border-radius: 9999px;
+}
+
+.board-search-pill ::deep .mud-input-control {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.board-search-pill ::deep .mud-input-slot input {
+    font-size: 0.8125rem;
+    min-height: 1.85rem;
 }
 
 .board-tags-menu-activator {
@@ -58,6 +94,14 @@
 
 .board-tags-trigger {
     flex-shrink: 0;
+}
+
+.board-tags-trigger--strip {
+    min-height: 2rem;
+    padding-top: 0.15rem !important;
+    padding-bottom: 0.15rem !important;
+    font-size: 0.8rem;
+    border-radius: 9999px !important;
 }
 
 .board-tag-filter-grid {

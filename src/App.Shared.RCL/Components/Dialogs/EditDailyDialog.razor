@@ -1,22 +1,22 @@
 @inject IBoardDataService BoardData
 @inject IUserNotifier Notifier
 
-<MudDialog Class="edit - daily - dialog"
-           ContentClass="edit - daily - dialog__content"
+<MudDialog Class="edit-daily-dialog"
+           ContentClass="edit-daily-dialog__content"
            Style="width: min(24rem, calc(100vw - 2rem));">
 <DialogContent>
     <div class="edit-daily-shell" @onclick="OnShellClick">
         <div class="edit-daily-header">
             <div class="edit-daily-header__toolbar">
-                <MudText Typo="Typo.subtitle1" Class="edit - daily - header__title">Edit Daily</MudText>
+                <MudText Typo="Typo.subtitle1" Class="edit-daily-header__title">Edit Daily</MudText>
                 <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
                     <MudButton Variant="Variant.Text"
-                               Class="edit - daily - header__cancel"
+                               Class="edit-daily-header__cancel"
                                OnClick="Cancel">
                         Cancel
                     </MudButton>
                     <MudButton Variant="Variant.Filled"
-                               Class="edit - daily - header__save"
+                               Class="edit-daily-header__save"
                                OnClick="SaveAsync"
                                Disabled="@_saving">
                         Save
@@ -25,20 +25,20 @@
             </div>
 
             <MudStack Spacing="0">
-                <MudText Typo="Typo.caption" Class="edit - daily - label - header">Title*</MudText>
+                <MudText Typo="Typo.caption" Class="edit-daily-label-header">Title*</MudText>
                 <MudTextField @bind-Value="_title"
                               Variant="Variant.Outlined"
-                              Class="edit - daily - field - header"
+                              Class="edit-daily-field-header"
                               Placeholder="Daily title"
                               Immediate="true"
                               Margin="Margin.Dense"/>
 
-                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mt - 2 mb - 1">
-                    <MudText Typo="Typo.caption" Class="edit - daily - label - header">Notes</MudText>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mt-2 mb-1">
+                    <MudText Typo="Typo.caption" Class="edit-daily-label-header">Notes</MudText>
                 </MudStack>
                 <MudTextField @bind-Value="_notes"
                               Variant="Variant.Outlined"
-                              Class="edit - daily - field - header"
+                              Class="edit-daily-field-header"
                               Placeholder="Add notes"
                               Lines="3"
                               Margin="Margin.Dense"/>
@@ -46,10 +46,10 @@
         </div>
 
         <div class="edit-daily-body">
-            <MudExpansionPanels Class="edit - daily - checklist - panels" Elevation="0">
+            <MudExpansionPanels Class="edit-daily-checklist-panels" Elevation="0">
                 <MudExpansionPanel @bind-Expanded="_checklistOpen">
                     <TitleContent>
-                        <MudText Typo="Typo.body2" Class="edit - daily - label - body">Checklist</MudText>
+                        <MudText Typo="Typo.body2" Class="edit-daily-label-body">Checklist</MudText>
                     </TitleContent>
                     <ChildContent>
                         <div class="edit-daily-checklist">
@@ -61,18 +61,18 @@
                                     <MudCheckBox T="bool"
                                                  Value="row.IsDone"
                                                  ValueChanged="@(v => SetChecklistDone(idx, v))"
-                                                 Class="ma - 0"
+                                                 Class="ma-0"
                                                  Color="Color.Primary"/>
                                     <MudTextField @bind-Value="row.Text"
                                                   Variant="Variant.Text"
-                                                  Class="edit - daily - checklist__input flex - grow - 1"
+                                                  Class="edit-daily-checklist__input flex-grow-1"
                                                   Placeholder="Checklist item"
                                                   Margin="Margin.Dense"
                                                   Immediate="true"/>
                                     <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline"
                                                    Size="Size.Small"
                                                    title="Remove checklist item"
-                                                   Class="ma - 0 edit - daily - checklist__remove"
+                                                   Class="ma-0 edit-daily-checklist__remove"
                                                    OnClick="@(() => RemoveChecklistLine(idx))"/>
                                 </div>
                             }
@@ -85,19 +85,19 @@
                 </MudExpansionPanel>
             </MudExpansionPanels>
 
-            <MudText Typo="Typo.caption" Class="edit - daily - label - body d - block mb - 1 mt - 2">Start date</MudText>
+            <MudText Typo="Typo.caption" Class="edit-daily-label-body d-block mb-1 mt-2">Start date</MudText>
             <MudDatePicker @bind-Date="_startDate"
                            Variant="Variant.Outlined"
                            Editable="true"
-                           Class="edit - daily - field - body edit - daily - date"
+                           Class="edit-daily-field-body edit-daily-date"
                            DateFormat="dd MMM yyyy"
                            Margin="Margin.Dense"/>
 
-            <MudText Typo="Typo.caption" Class="edit - daily - label - body d - block mb - 1 mt - 2">Repeats</MudText>
+            <MudText Typo="Typo.caption" Class="edit-daily-label-body d-block mb-1 mt-2">Repeats</MudText>
             <MudSelect T="DailyRepeatType"
                        @bind-Value="_repeat"
                        Variant="Variant.Outlined"
-                       Class="edit - daily - field - body edit - daily - repeat - select"
+                       Class="edit-daily-field-body edit-daily-repeat-select"
                        Margin="Margin.Dense"
                        Dense="true"
                        AnchorOrigin="Origin.BottomLeft"
@@ -108,19 +108,19 @@
                 <MudSelectItem T="DailyRepeatType" Value="DailyRepeatType.Yearly">Yearly</MudSelectItem>
             </MudSelect>
 
-            <MudText Typo="Typo.caption" Class="edit - daily - label - body d - block mb - 1 mt - 2">Repeat every</MudText>
+            <MudText Typo="Typo.caption" Class="edit-daily-label-body d-block mb-1 mt-2">Repeat every</MudText>
             <div class="edit-daily-repeat-every">
                 <MudNumericField @bind-Value="_repeatInterval"
                                  Variant="Variant.Outlined"
-                                 Class="edit - daily - repeat - every__n"
+                                 Class="edit-daily-repeat-every__n"
                                  Min="1"
                                  Max="999"
                                  HideSpinButtons="true"
                                  Margin="Margin.Dense"/>
-                <MudText Typo="Typo.body2" Class="edit - daily - repeat - every__unit">@RepeatUnitLabel()</MudText>
+                <MudText Typo="Typo.body2" Class="edit-daily-repeat-every__unit">@RepeatUnitLabel()</MudText>
             </div>
 
-            <MudText Typo="Typo.caption" Class="edit - daily - label - body d - block mb - 1 mt - 2">Tags</MudText>
+            <MudText Typo="Typo.caption" Class="edit-daily-label-body d-block mb-1 mt-2">Tags</MudText>
             <div class="habit-tag-picker @(_tagPickerOpen ? "habit-tag-picker--open" : null)"
                  @onclick:stopPropagation="true">
                 <div class="habit-tag-picker__control"
@@ -201,20 +201,24 @@
                 }
             </div>
 
-            <MudExpansionPanels Class="edit - daily - advanced mt - 2" Elevation="0">
+            <MudExpansionPanels Class="edit-daily-advanced mt-2" Elevation="0">
                 <MudExpansionPanel @bind-Expanded="_advancedOpen">
                     <TitleContent>
-                        <MudText Typo="Typo.body2" Class="edit - daily - label - body">Advanced settings</MudText>
+                        <MudText Typo="Typo.body2" Class="edit-daily-label-body">Advanced settings</MudText>
                     </TitleContent>
                     <ChildContent>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb - 2 d - block">Adjust Streak</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">
+                            Consecutive scheduled days (UTC) ending yesterday — e.g. 3 is the last three eligible days
+                            before today. Today stays unchecked unless you already checked it; saving backfills
+                            activity for those days only.
+                        </MudText>
                         <div class="edit-daily-streak-input">
                             <span class="edit-daily-streak-input__icon" aria-hidden="true">
                                 <MudIcon Icon="@Icons.Material.Filled.KeyboardDoubleArrowRight" Size="Size.Small"/>
                             </span>
                             <MudNumericField @bind-Value="_streak"
                                              Variant="Variant.Outlined"
-                                             Class="edit - daily - streak - input__field"
+                                             Class="edit-daily-streak-input__field"
                                              Min="0"
                                              Max="9999"
                                              HideSpinButtons="true"

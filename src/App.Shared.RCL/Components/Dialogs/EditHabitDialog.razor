@@ -1,22 +1,22 @@
 @inject IBoardDataService BoardData
 @inject IUserNotifier Notifier
 
-<MudDialog Class="edit - habit - dialog"
-           ContentClass="edit - habit - dialog__content"
+<MudDialog Class="edit-habit-dialog"
+           ContentClass="edit-habit-dialog__content"
            Style="width: min(24rem, calc(100vw - 2rem));">
 <DialogContent>
 <div class="edit-habit-shell" @onclick="OnShellClick">
 <div class="edit-habit-header">
     <div class="edit-habit-header__toolbar">
-        <MudText Typo="Typo.subtitle1" Class="edit - habit - header__title">Edit Habit</MudText>
+        <MudText Typo="Typo.subtitle1" Class="edit-habit-header__title">Edit Habit</MudText>
         <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
             <MudButton Variant="Variant.Text"
-                       Class="edit - habit - header__cancel"
+                       Class="edit-habit-header__cancel"
                        OnClick="Cancel">
                 Cancel
             </MudButton>
             <MudButton Variant="Variant.Filled"
-                       Class="edit - habit - header__save"
+                       Class="edit-habit-header__save"
                        OnClick="SaveAsync"
                        Disabled="@_saving">
                 Save
@@ -25,20 +25,20 @@
     </div>
 
     <MudStack Spacing="0">
-        <MudText Typo="Typo.caption" Class="edit - habit - label - header">Title*</MudText>
+        <MudText Typo="Typo.caption" Class="edit-habit-label-header">Title*</MudText>
         <MudTextField @bind-Value="_title"
                       Variant="Variant.Outlined"
-                      Class="edit - habit - field - header"
+                      Class="edit-habit-field-header"
                       Placeholder="Habit title"
                       Immediate="true"
                       Margin="Margin.Dense"/>
 
-        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mt - 2 mb - 1">
-            <MudText Typo="Typo.caption" Class="edit - habit - label - header">Notes</MudText>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mt-2 mb-1">
+            <MudText Typo="Typo.caption" Class="edit-habit-label-header">Notes</MudText>
         </MudStack>
         <MudTextField @bind-Value="_notes"
                       Variant="Variant.Outlined"
-                      Class="edit - habit - field - header"
+                      Class="edit-habit-field-header"
                       Placeholder="Add notes"
                       Lines="3"
                       Margin="Margin.Dense"/>
@@ -46,10 +46,10 @@
 </div>
 
 <div class="edit-habit-body">
-    <MudExpansionPanels Class="edit - daily - checklist - panels" Elevation="0">
+    <MudExpansionPanels Class="edit-daily-checklist-panels" Elevation="0">
         <MudExpansionPanel @bind-Expanded="_checklistOpen">
             <TitleContent>
-                <MudText Typo="Typo.body2" Class="edit - habit - label - body">Checklist</MudText>
+                <MudText Typo="Typo.body2" Class="edit-habit-label-body">Checklist</MudText>
             </TitleContent>
             <ChildContent>
                 <div class="edit-daily-checklist">
@@ -61,18 +61,18 @@
                             <MudCheckBox T="bool"
                                          Value="row.IsDone"
                                          ValueChanged="@(v => SetChecklistDone(idx, v))"
-                                         Class="ma - 0"
+                                         Class="ma-0"
                                          Color="Color.Primary"/>
                             <MudTextField @bind-Value="row.Text"
                                           Variant="Variant.Text"
-                                          Class="edit - daily - checklist__input flex - grow - 1"
+                                          Class="edit-daily-checklist__input flex-grow-1"
                                           Placeholder="Checklist item"
                                           Margin="Margin.Dense"
                                           Immediate="true"/>
                             <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline"
                                            Size="Size.Small"
                                            title="Remove checklist item"
-                                           Class="ma - 0 edit - daily - checklist__remove"
+                                           Class="ma-0 edit-daily-checklist__remove"
                                            OnClick="@(() => RemoveChecklistLine(idx))"/>
                         </div>
                     }
@@ -85,7 +85,7 @@
         </MudExpansionPanel>
     </MudExpansionPanels>
 
-    <MudText Typo="Typo.caption" Class="edit - habit - label - body d - block mb - 2">Which counters to show</MudText>
+    <MudText Typo="Typo.caption" Class="edit-habit-label-body d-block mb-2">Which counters to show</MudText>
     <div class="habit-track">
         <button type="button"
                 class="habit-track__option @(_trackPlus ? "habit-track__option--on-good" : string.Empty)"
@@ -100,9 +100,9 @@
             <span class="habit-track__label">Minus (−)</span>
         </button>
     </div>
-    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt - 1 mb - 0">Turn on one or both. At least one must stay on when you save.</MudText>
+    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1 mb-0">Turn on one or both. At least one must stay on when you save.</MudText>
 
-    <MudText Typo="Typo.caption" Class="edit - habit - label - body d - block mb - 1">Tags</MudText>
+    <MudText Typo="Typo.caption" Class="edit-habit-label-body d-block mb-1">Tags</MudText>
     <div class="habit-tag-picker @(_tagPickerOpen ? "habit-tag-picker--open" : null)"
          @onclick:stopPropagation="true">
         <div class="habit-tag-picker__control"
@@ -183,11 +183,11 @@
         }
     </div>
 
-    <MudText Typo="Typo.caption" Class="edit - habit - label - body d - block mb - 1 mt - 2">Reset counter</MudText>
+    <MudText Typo="Typo.caption" Class="edit-habit-label-body d-block mb-1 mt-2">Reset counter</MudText>
     <MudSelect T="HabitResetPeriod"
                @bind-Value="_resetPeriod"
                Variant="Variant.Outlined"
-               Class="edit - habit - field - body edit - habit - select"
+               Class="edit-habit-field-body edit-habit-select"
                Margin="Margin.Dense"
                AnchorOrigin="Origin.BottomLeft"
                TransformOrigin="Origin.TopLeft"
@@ -197,43 +197,43 @@
         <MudSelectItem T="HabitResetPeriod" Value="HabitResetPeriod.Monthly">Monthly</MudSelectItem>
     </MudSelect>
 
-    <MudExpansionPanels Class="edit - habit - advanced mt - 2" Elevation="0">
+    <MudExpansionPanels Class="edit-habit-advanced mt-2" Elevation="0">
         <MudExpansionPanel @bind-Expanded="_advancedOpen">
             <TitleContent>
-                <MudText Typo="Typo.body2" Class="edit - habit - label - body">Advanced settings</MudText>
+                <MudText Typo="Typo.body2" Class="edit-habit-label-body">Advanced settings</MudText>
             </TitleContent>
             <ChildContent>
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb - 2 d - block">Adjust + count</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">Adjust + count</MudText>
                 <div class="counter-adjust mb-3">
                     <MudIconButton Icon="@Icons.Material.Filled.Remove"
-                                   Class="counter - adjust__btn"
+                                   Class="counter-adjust__btn"
                                    OnClick="DecrementPlusLocal"
                                    Disabled="@(_counter < 1 || _saving)"/>
                     <MudNumericField @bind-Value="_counter"
                                      Variant="Variant.Outlined"
-                                     Class="counter - adjust__field"
+                                     Class="counter-adjust__field"
                                      Min="0"
                                      HideSpinButtons="true"
                                      Margin="Margin.Dense"/>
                     <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                   Class="counter - adjust__btn"
+                                   Class="counter-adjust__btn"
                                    OnClick="IncrementPlusLocal"
                                    Disabled="@_saving"/>
                 </div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb - 2 d - block">Adjust − count</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">Adjust − count</MudText>
                 <div class="counter-adjust">
                     <MudIconButton Icon="@Icons.Material.Filled.Remove"
-                                   Class="counter - adjust__btn"
+                                   Class="counter-adjust__btn"
                                    OnClick="DecrementMinusLocal"
                                    Disabled="@(_negativeCounter < 1 || _saving)"/>
                     <MudNumericField @bind-Value="_negativeCounter"
                                      Variant="Variant.Outlined"
-                                     Class="counter - adjust__field"
+                                     Class="counter-adjust__field"
                                      Min="0"
                                      HideSpinButtons="true"
                                      Margin="Margin.Dense"/>
                     <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                   Class="counter - adjust__btn"
+                                   Class="counter-adjust__btn"
                                    OnClick="IncrementMinusLocal"
                                    Disabled="@_saving"/>
                 </div>

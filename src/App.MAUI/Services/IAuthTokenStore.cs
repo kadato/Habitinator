@@ -11,35 +11,107 @@ public interface IAuthTokenStore
     Task SetEmailAsync(string? email, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+///     Unpackaged Windows <see cref="SecureStorage" /> uses a single <c>securestorage.dat</c> with exclusive create;
+///     parallel HTTP 401s (see <see cref="ClearSessionOnUnauthorizedHandler" />) must not run
+///     <c>Remove</c>/<c>Set</c> concurrently.
+/// </summary>
 public sealed class AuthTokenStore : IAuthTokenStore
 {
+    private const int IoRetries = 3;
     private const string TokenKey = "habitinator.jwt";
     private const string EmailKey = "habitinator.email";
+    private static readonly SemaphoreSlim StorageLock = new(1, 1);
 
-    public async Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default)
+    public Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default)
     {
-        var t = await SecureStorage.GetAsync(TokenKey);
-        return string.IsNullOrWhiteSpace(t) ? null : t;
+        return GetAsyncInternal(TokenKey, cancellationToken);
     }
 
-    public async Task SetAccessTokenAsync(string? token, CancellationToken cancellationToken = default)
+    public Task SetAccessTokenAsync(string? token, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrEmpty(token))
-            SecureStorage.Remove(TokenKey);
-        else
-            await SecureStorage.SetAsync(TokenKey, token);
+        return SetOrRemoveAsync(TokenKey, token, cancellationToken);
     }
 
     public async Task<string?> GetEmailAsync(CancellationToken cancellationToken = default)
     {
-        return await SecureStorage.GetAsync(EmailKey);
+        return await GetAsyncInternal(EmailKey, cancellationToken);
     }
 
-    public async Task SetEmailAsync(string? email, CancellationToken cancellationToken = default)
+    public Task SetEmailAsync(string? email, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrEmpty(email))
-            SecureStorage.Remove(EmailKey);
+        return SetOrRemoveAsync(EmailKey, email, cancellationToken);
+    }
+
+    private static Task<string?> GetAsyncInternal(string key, CancellationToken cancellationToken)
+    {
+        return RunSerializedAsync(
+            async () =>
+            {
+                var t = await SecureStorage.GetAsync(key);
+                return string.IsNullOrWhiteSpace(t) ? null : t;
+            },
+            cancellationToken);
+    }
+
+    private static async Task SetOrRemoveAsync(string key, string? value, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(value))
+            await RunSerializedAsync(
+                () =>
+                {
+                    SecureStorage.Remove(key);
+                    return Task.CompletedTask;
+                },
+                cancellationToken);
         else
-            await SecureStorage.SetAsync(EmailKey, email);
+            await RunSerializedAsync(() => SecureStorage.SetAsync(key, value), cancellationToken);
+    }
+
+    private static async Task<T> RunSerializedAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken)
+    {
+        await StorageLock.WaitAsync(cancellationToken);
+        try
+        {
+            for (var attempt = 0;; attempt++)
+            {
+                try
+                {
+                    return await action();
+                }
+                catch (IOException) when (attempt < IoRetries)
+                {
+                    await Task.Delay(20 * (attempt + 1), cancellationToken);
+                }
+            }
+        }
+        finally
+        {
+            StorageLock.Release();
+        }
+    }
+
+    private static async Task RunSerializedAsync(Func<Task> action, CancellationToken cancellationToken)
+    {
+        await StorageLock.WaitAsync(cancellationToken);
+        try
+        {
+            for (var attempt = 0;; attempt++)
+            {
+                try
+                {
+                    await action();
+                    return;
+                }
+                catch (IOException) when (attempt < IoRetries)
+                {
+                    await Task.Delay(20 * (attempt + 1), cancellationToken);
+                }
+            }
+        }
+        finally
+        {
+            StorageLock.Release();
+        }
     }
 }

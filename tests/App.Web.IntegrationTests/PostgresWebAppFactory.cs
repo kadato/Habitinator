@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Npgsql;
 using Testcontainers.PostgreSql;
 
 namespace App.Web.IntegrationTests;
@@ -12,7 +13,11 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
         .WithImage("postgres:16-alpine")
         .Build();
 
-    public async Task InitializeAsync() => await _postgres.StartAsync();
+    public async Task InitializeAsync()
+    {
+        await _postgres.StartAsync();
+        await WaitUntilDatabaseAcceptsConnectionsAsync();
+    }
 
     async Task IAsyncLifetime.DisposeAsync()
     {
@@ -37,5 +42,29 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
                 ["DemoUser:Password"] = "Guest123!",
             });
         });
+    }
+
+    private async Task WaitUntilDatabaseAcceptsConnectionsAsync(CancellationToken cancellationToken = default)
+    {
+        var lastError = (Exception?)null;
+        const int maxAttempts = 20;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                await using var connection = new NpgsqlConnection(_postgres.GetConnectionString());
+                await connection.OpenAsync(cancellationToken);
+                await connection.CloseAsync();
+                return;
+            }
+            catch (NpgsqlException ex) when (attempt < maxAttempts)
+            {
+                lastError = ex;
+                await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken);
+            }
+        }
+
+        throw new InvalidOperationException("PostgreSQL container did not become ready in time.", lastError);
     }
 }

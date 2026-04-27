@@ -9,20 +9,32 @@ namespace App.Web.IntegrationTests;
 /// <summary>Shared factory: PostgreSQL in Docker + web app with the same provider as production.</summary>
 public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    private readonly string? _externalConnectionString =
+        Environment.GetEnvironmentVariable("APPWEB_INTEGRATIONTESTS_CONNECTION_STRING");
+
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
         .WithImage("postgres:16-alpine")
         .Build();
 
     public async Task InitializeAsync()
     {
+        var connectionString = _externalConnectionString;
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            await WaitUntilDatabaseAcceptsConnectionsAsync(connectionString);
+            return;
+        }
+
         await _postgres.StartAsync();
-        await WaitUntilDatabaseAcceptsConnectionsAsync();
+        await WaitUntilDatabaseAcceptsConnectionsAsync(_postgres.GetConnectionString());
     }
 
     async Task IAsyncLifetime.DisposeAsync()
     {
         await base.DisposeAsync();
-        await _postgres.DisposeAsync();
+
+        if (string.IsNullOrWhiteSpace(_externalConnectionString))
+            await _postgres.DisposeAsync();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -30,9 +42,13 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
         builder.UseEnvironment("Testing");
         builder.ConfigureAppConfiguration((_, config) =>
         {
+            var connectionString = string.IsNullOrWhiteSpace(_externalConnectionString)
+                ? _postgres.GetConnectionString()
+                : _externalConnectionString;
+
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:DefaultConnection"] = _postgres.GetConnectionString(),
+                ["ConnectionStrings:DefaultConnection"] = connectionString,
                 ["Jwt:Issuer"] = "Habitinator",
                 ["Jwt:Audience"] = "HabitinatorClients",
                 ["Jwt:SigningKey"] =
@@ -44,16 +60,17 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
         });
     }
 
-    private async Task WaitUntilDatabaseAcceptsConnectionsAsync(CancellationToken cancellationToken = default)
+    private static async Task WaitUntilDatabaseAcceptsConnectionsAsync(string connectionString,
+        CancellationToken cancellationToken = default)
     {
         var lastError = (Exception?)null;
-        const int maxAttempts = 20;
+        const int maxAttempts = 60;
 
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
             try
             {
-                await using var connection = new NpgsqlConnection(_postgres.GetConnectionString());
+                await using var connection = new NpgsqlConnection(connectionString);
                 await connection.OpenAsync(cancellationToken);
                 await connection.CloseAsync();
                 return;

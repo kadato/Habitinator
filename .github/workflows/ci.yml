@@ -12,10 +12,25 @@ permissions:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: habitinator_integration
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d habitinator_integration"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     env:
       DOTNET_NO_LOGO: true
       DOTNET_CLI_TELEMETRY_OPTOUT: true
       TestResultsDir: ${{ github.workspace }}/TestResults
+      APPWEB_INTEGRATIONTESTS_CONNECTION_STRING: Host=127.0.0.1;Port=5432;Database=habitinator_integration;Username=postgres;Password=postgres;Pooling=false;Timeout=15;Command Timeout=60
 
     steps:
       - uses: actions/checkout@v4

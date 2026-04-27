@@ -48,13 +48,56 @@ jobs:
       - name: Build
         run: dotnet build Habitinator.slnx --configuration Release
 
-      - name: Test
+      - name: Test App.Shared.Tests
+        id: test_shared
+        continue-on-error: true
         run: >
-          dotnet test Habitinator.slnx
+          dotnet test tests/App.Shared.Tests/App.Shared.Tests.csproj
           --configuration Release
           --no-build
           --results-directory "$TestResultsDir"
-          --logger trx
+          --logger "trx;LogFileName=App.Shared.Tests.trx"
+
+      - name: Test App.Shared.RCL.Tests
+        id: test_shared_rcl
+        continue-on-error: true
+        run: >
+          dotnet test tests/App.Shared.RCL.Tests/App.Shared.RCL.Tests.csproj
+          --configuration Release
+          --no-build
+          --results-directory "$TestResultsDir"
+          --logger "trx;LogFileName=App.Shared.RCL.Tests.trx"
+
+      - name: Test App.Web.IntegrationTests
+        id: test_web_integration
+        continue-on-error: true
+        run: >
+          dotnet test tests/App.Web.IntegrationTests/App.Web.IntegrationTests.csproj
+          --configuration Release
+          --no-build
+          --results-directory "$TestResultsDir"
+          --logger "trx;LogFileName=App.Web.IntegrationTests.trx"
+
+      - name: Test App.MAUI.UITests
+        id: test_maui_ui
+        continue-on-error: true
+        run: >
+          dotnet test tests/App.MAUI.UITests/App.MAUI.UITests.csproj
+          --configuration Release
+          --no-build
+          --results-directory "$TestResultsDir"
+          --logger "trx;LogFileName=App.MAUI.UITests.trx"
+
+      - name: Fail job if any test suite failed
+        if: always()
+        run: |
+          if [ "${{ steps.test_shared.outcome }}" != "success" ] || \
+             [ "${{ steps.test_shared_rcl.outcome }}" != "success" ] || \
+             [ "${{ steps.test_web_integration.outcome }}" != "success" ] || \
+             [ "${{ steps.test_maui_ui.outcome }}" != "success" ]; then
+            echo "One or more test suites failed."
+            exit 1
+          fi
 
       - name: Upload test results (TRX)
         if: always()
@@ -67,6 +110,6 @@ jobs:
         if: always()
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
-          check_name: Test results
+          check_name: Test results by suite
           files: TestResults/**/*.trx
-          comment_mode: off
+          comment_mode: failures

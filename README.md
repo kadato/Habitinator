@@ -13,6 +13,34 @@ This document is the project’s source of truth for **architecture**, **feature
 - **Insight without games**: an **activity heatmap**, period summaries, per-day drill-down, and tag filtering are built on **UserActivity** events (completions, timer logs, etc.) stored in PostgreSQL on the server.
 - **Web and native**: use the **Blazor web** app in the browser (online, server-backed), or the **.NET MAUI** Blazor Hybrid app on **Android, iOS, Mac Catalyst, or Windows** with **local-first** board data and background sync to the same API the web uses.
 
+## Web UI screenshots
+
+These are produced by the **Playwright** test in `DocumentationScreenshotsTests` into [`docs/automation/screenshots/`](docs/automation/screenshots/): a **signed-out** home view, then the **demo guest** board, **edit-daily** and **activity day detail** modals, and the rest. Regenerate with [`scripts/Refresh-AutomationAssets.ps1`](scripts/Refresh-AutomationAssets.ps1) (see [Documentation automation (local)](#documentation-automation-local)).
+
+**Welcome (signed out)**
+
+![Welcome — signed-out home](docs/automation/screenshots/01-welcome.png)
+
+**Board (demo guest)**
+
+![Board — habits, dailies, to-dos](docs/automation/screenshots/02-board.png)
+
+**Edit daily (modal)**
+
+![Edit daily](docs/automation/screenshots/03-edit-daily.png)
+
+**Statistics — activity heatmap and summaries**
+
+![Statistics](docs/automation/screenshots/04-statistics.png)
+
+**Activity day detail (modal)**
+
+![Activity day detail — heatmap drill-down](docs/automation/screenshots/05-activity-day-detail.png)
+
+**Settings**
+
+![Settings — notification preferences](docs/automation/screenshots/06-settings.png)
+
 ---
 
 ## Product features (current)
@@ -298,7 +326,7 @@ Committed assets for architecture and UI references live under **`docs/automatio
 | [`docs/automation/solution-graph.mmd`](docs/automation/solution-graph.mmd) | Mermaid **flowchart** of project references (from `Habitinator.slnx` + `.csproj` files). |
 | [`docs/automation/database-schema.mmd`](docs/automation/database-schema.mmd) | Mermaid **erDiagram** of EF Core FKs (from the latest `ApplicationDbContextModelSnapshot`). |
 | [`docs/automation/openapi-v1.json`](docs/automation/openapi-v1.json) | OpenAPI **3.1** document from `GET /openapi/v1.json` (paths and schemas for HTTP APIs). |
-| [`docs/automation/screenshots/`](docs/automation/screenshots/) | Playwright **PNG** captures (login, board, statistics, settings). |
+| [`docs/automation/screenshots/`](docs/automation/screenshots/) | Playwright **PNG** captures (welcome, board, **edit-daily** modal, statistics, **activity day detail** modal, settings). |
 
 ### Architecture diagrams (Mermaid)
 
@@ -345,27 +373,9 @@ erDiagram
 ```
 <!-- HABITINATOR_MERMAID_END:database-schema -->
 
-### Web UI screenshots
+**Web UI gallery:** see [Web UI screenshots](#web-ui-screenshots) near the top of this file.
 
-Captured with the **demo guest** board after sign-in (same files as in `docs/automation/screenshots/`).
-
-**Login**
-
-![Login — Habitinator web](docs/automation/screenshots/01-login.png)
-
-**Board**
-
-![Board — habits, dailies, to-dos](docs/automation/screenshots/02-board.png)
-
-**Statistics**
-
-![Statistics — activity heatmap and summaries](docs/automation/screenshots/03-statistics.png)
-
-**Settings**
-
-![Settings — notification preferences](docs/automation/screenshots/04-settings.png)
-
-**Regenerate everything locally:** start **`App.Web`** with PostgreSQL (e.g. standalone or Aspire), using the same **URL** you pass as `-BaseUrl` (default `http://127.0.0.1:5050`). Then run:
+**Regenerate local automation assets (diagrams, OpenAPI, Playwright):** start **`App.Web`** with PostgreSQL (e.g. standalone or Aspire), using the same **URL** you pass as `-BaseUrl` (default `http://127.0.0.1:5050`). Then run:
 
 ```powershell
 pwsh ./scripts/Refresh-AutomationAssets.ps1

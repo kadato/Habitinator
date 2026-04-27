@@ -26,8 +26,10 @@ public sealed class DocumentationScreenshotsTests
         await using var browser = await pw.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
         var page = await browser.NewPageAsync(new BrowserNewPageOptions { ViewportSize = new ViewportSize { Width = 1280, Height = 720 } });
 
-        await page.GotoAsync($"{BaseUrl}/auth/login", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
-        await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(ScreenshotDir, "01-login.png"), FullPage = false });
+        await page.GotoAsync($"{BaseUrl}/", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.GetByText("Welcome to Habitinator").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
+        await page.WaitForTimeoutAsync(400);
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(ScreenshotDir, "01-welcome.png"), FullPage = false });
 
         await page.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("demo guest", RegexOptions.IgnoreCase) })
             .ClickAsync();
@@ -42,13 +44,40 @@ public sealed class DocumentationScreenshotsTests
         await page.WaitForTimeoutAsync(500);
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(ScreenshotDir, "02-board.png"), FullPage = true });
 
+        await page.Locator(".habitica-column--daily").GetByRole(AriaRole.Button, new() { Name = "All" }).ClickAsync();
+        await page.WaitForTimeoutAsync(200);
+        await page.Locator(".habitica-column--daily .habitica-card__title").First.ClickAsync();
+        await page.Locator(".edit-daily-dialog").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
+        await page.WaitForTimeoutAsync(400);
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(ScreenshotDir, "03-edit-daily.png"), FullPage = false });
+
+        await page.Locator(".edit-daily-dialog").GetByRole(AriaRole.Button, new() { Name = "Cancel" }).ClickAsync();
+        await page.Locator(".edit-daily-dialog").WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 15_000 });
+
         await page.GotoAsync($"{BaseUrl}/stats", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
         await page.WaitForTimeoutAsync(500);
-        await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(ScreenshotDir, "03-statistics.png"), FullPage = true });
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(ScreenshotDir, "04-statistics.png"), FullPage = true });
+
+        var heatmapWithActivity = page.Locator("button.stats-heatmap-day-btn:not(.stats-lvl-0)");
+        if (await heatmapWithActivity.CountAsync() > 0)
+        {
+            await heatmapWithActivity.First.ClickAsync();
+        }
+        else
+        {
+            await page.Locator("button.stats-heatmap-day-btn").First.ClickAsync();
+        }
+
+        await page.Locator(".activity-day-detail-dialog").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
+        await page.WaitForTimeoutAsync(1000);
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(ScreenshotDir, "05-activity-day-detail.png"), FullPage = false });
+
+        await page.Locator(".activity-day-detail-dialog").GetByRole(AriaRole.Button, new() { Name = "Close" }).ClickAsync();
+        await page.Locator(".activity-day-detail-dialog").WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 15_000 });
 
         await page.GotoAsync($"{BaseUrl}/settings", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
         await page.WaitForTimeoutAsync(500);
-        await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(ScreenshotDir, "04-settings.png"), FullPage = true });
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(ScreenshotDir, "06-settings.png"), FullPage = true });
     }
 
     private static async Task DismissCatchUpDialogIfPresentAsync(IPage page)

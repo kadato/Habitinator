@@ -61,4 +61,5 @@ public sealed record ActivityDashboardDto(
     DateOnly RangeEnd,
     int HeatmapDataDayCount,
     DateOnly WeekBarsRangeStart,
-    DateOnly WeekBarsRangeEnd);
+    DateOnly WeekBarsRangeEnd,
+    IReadOnlyList<string> AvailableTags);

@@ -20,25 +20,25 @@ public sealed class WebActivityStatisticsReader : IActivityStatisticsReader
         _statisticsService = statisticsService;
     }
 
-    public async Task<ActivityDashboardDto> GetDashboardAsync(string? periodKey,
+    public async Task<ActivityDashboardDto> GetDashboardAsync(string? periodKey, string? tag = null,
         CancellationToken cancellationToken = default)
     {
         var userId = await RequireUserIdAsync(cancellationToken);
-        return await _statisticsService.GetDashboardAsync(userId, periodKey, cancellationToken);
+        return await _statisticsService.GetDashboardAsync(userId, periodKey, tag, cancellationToken);
     }
 
-    public async Task<DailyContributionsViewDto> GetDailyContributionsAsync(string? periodKey,
+    public async Task<DailyContributionsViewDto> GetDailyContributionsAsync(string? periodKey, string? tag = null,
         CancellationToken cancellationToken = default)
     {
         var userId = await RequireUserIdAsync(cancellationToken);
-        return await _statisticsService.GetDailyContributionsAsync(userId, periodKey, cancellationToken);
+        return await _statisticsService.GetDailyContributionsAsync(userId, periodKey, tag, cancellationToken);
     }
 
-    public async Task<ActivityDayDetailDto> GetActivityDayDetailAsync(DateOnly day,
+    public async Task<ActivityDayDetailDto> GetActivityDayDetailAsync(DateOnly day, string? tag = null,
         CancellationToken cancellationToken = default)
     {
         var userId = await RequireUserIdAsync(cancellationToken);
-        return await _statisticsService.GetActivityDayDetailAsync(userId, day, cancellationToken);
+        return await _statisticsService.GetActivityDayDetailAsync(userId, day, tag, cancellationToken);
     }
 
     private async Task<Guid> RequireUserIdAsync(CancellationToken cancellationToken)

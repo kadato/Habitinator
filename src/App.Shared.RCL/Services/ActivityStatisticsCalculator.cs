@@ -66,13 +66,29 @@ public static class ActivityStatisticsCalculator
         DateOnly utcToday)
     {
         var perDay = new Dictionary<DateOnly, (int count, int focusSec)>();
+        var netDailyItemDay = BuildNetDailyItemDayMap(rows);
         foreach (var r in rows)
         {
+            if (r.BoardItemId is { }
+                && r.EventType is ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete)
+            {
+                continue;
+            }
+
             var d = DateOnly.FromDateTime(r.OccurredAtUtc.UtcDateTime);
             if (!perDay.TryGetValue(d, out var acc)) acc = (0, 0);
 
             var focus = r is { EventType: ActivityEventType.TimerSession, DurationSeconds: int s } ? s : 0;
             perDay[d] = (acc.count + 1, acc.focusSec + focus);
+        }
+
+        foreach (var kvp in netDailyItemDay)
+        {
+            if (!kvp.Value) continue;
+
+            var d = kvp.Key.d;
+            if (!perDay.TryGetValue(d, out var acc)) acc = (0, 0);
+            perDay[d] = (acc.count + 1, acc.focusSec);
         }
 
         var maxDayCount = 0;
@@ -159,7 +175,8 @@ public static class ActivityStatisticsCalculator
             end,
             heatmapSpanDays,
             weekBarsRangeStart,
-            weekBarsRangeEnd);
+            weekBarsRangeEnd,
+            []);
     }
 
     public static DailyContributionsViewDto BuildDailyContributions(
@@ -180,25 +197,33 @@ public static class ActivityStatisticsCalculator
                 rangeEnd);
 
         var dailyIds = dailyItemRows.Select(x => x.Id).ToHashSet();
-        var filtered = eventRowsInRange
+        var inRange = eventRowsInRange
             .Where(e =>
-                e.EventType == ActivityEventType.DailyComplete &&
-                e.BoardItemId != null &&
-                dailyIds.Contains(e.BoardItemId.Value))
+                e.BoardItemId is { } bid &&
+                dailyIds.Contains(bid) &&
+                (e.EventType == ActivityEventType.DailyComplete ||
+                 e.EventType == ActivityEventType.DailyUncomplete))
             .ToList();
 
         var byItem = new Dictionary<Guid, Dictionary<DateOnly, int>>();
-        foreach (var r in filtered)
+        var netByItemDay = new Dictionary<(Guid id, DateOnly d), bool>();
+        foreach (var g in inRange.GroupBy(e =>
+                 (e.BoardItemId!.Value, DateOnly.FromDateTime(e.OccurredAtUtc.UtcDateTime))))
         {
-            var id = r.BoardItemId!.Value;
-            var d = DateOnly.FromDateTime(r.OccurredAtUtc.UtcDateTime);
+            var last = g.OrderBy(e => e.OccurredAtUtc).Last();
+            netByItemDay[g.Key] = last.EventType == ActivityEventType.DailyComplete;
+        }
+
+        foreach (var ((id, d), isDone) in netByItemDay)
+        {
+            if (!isDone) continue;
             if (!byItem.TryGetValue(id, out var map))
             {
                 map = [];
                 byItem[id] = map;
             }
 
-            map[d] = map.GetValueOrDefault(d) + 1;
+            map[d] = 1;
         }
 
         var graphs = new List<DailyContributionGraphDto>(dailyItemRows.Count);
@@ -294,6 +319,39 @@ public static class ActivityStatisticsCalculator
         }
 
         return heat;
+    }
+
+    /// <summary>
+    ///     For each (board item, UTC calendar day), last event wins: daily is "done" for that day in stats
+    ///     only if the last DailyComplete/DailyUncomplete for that pair is <see cref="ActivityEventType.DailyComplete" />.
+    /// </summary>
+    private static Dictionary<(Guid id, DateOnly d), bool> BuildNetDailyItemDayMap(
+        IReadOnlyList<UserActivityEventRecord> rows)
+    {
+        var byKey = new Dictionary<(Guid id, DateOnly d), List<UserActivityEventRecord>>();
+        foreach (var r in rows)
+        {
+            if (r.BoardItemId is not { } id) continue;
+            if (r.EventType is not (ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete)) continue;
+            var d = DateOnly.FromDateTime(r.OccurredAtUtc.UtcDateTime);
+            var key = (id, d);
+            if (!byKey.TryGetValue(key, out var list))
+            {
+                list = [];
+                byKey[key] = list;
+            }
+
+            list.Add(r);
+        }
+
+        var result = new Dictionary<(Guid id, DateOnly d), bool>(byKey.Count);
+        foreach (var (key, list) in byKey)
+        {
+            var last = list.OrderBy(x => x.OccurredAtUtc).Last();
+            result[key] = last.EventType == ActivityEventType.DailyComplete;
+        }
+
+        return result;
     }
 
     private static string MapEventTypeLabel(ActivityEventType t)

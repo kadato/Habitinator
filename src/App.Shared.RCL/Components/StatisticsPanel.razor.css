@@ -187,3 +187,72 @@ button.stats-heatmap-day-btn:focus-visible {
     border-radius: 3px;
     box-sizing: border-box;
 }
+
+/* Summary KPI cards — use ::deep because classes are merged onto MudBlazor’s root. */
+::deep .stats-kpi-card {
+    position: relative;
+    padding: 1.1rem 1.15rem 1.2rem 1.15rem;
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 18%, var(--mud-palette-table-lines) 72%);
+    background: color-mix(in srgb, var(--mud-palette-surface) 88%, var(--mud-palette-primary) 6%);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
+    overflow: hidden;
+}
+
+::deep .stats-kpi-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    border-radius: 10px 0 0 10px;
+    background: var(--kpi-accent, var(--mud-palette-primary));
+}
+
+::deep .stats-kpi-card--events {
+    --kpi-accent: var(--mud-palette-primary);
+}
+
+::deep .stats-kpi-card--focus {
+    --kpi-accent: color-mix(in srgb, var(--mud-palette-info) 85%, var(--mud-palette-primary) 15%);
+}
+
+::deep .stats-kpi-card--peak {
+    --kpi-accent: color-mix(in srgb, var(--mud-palette-success) 70%, var(--mud-palette-primary) 30%);
+}
+
+::deep .stats-kpi-card__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+    padding-left: 0.15rem;
+}
+
+::deep .stats-kpi-card__label {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    font-size: 0.72rem;
+    line-height: 1.35;
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 90%, var(--mud-palette-text-primary) 10%);
+    opacity: 0.95;
+}
+
+::deep .stats-kpi-card__icon {
+    flex-shrink: 0;
+    color: color-mix(in srgb, var(--kpi-accent) 55%, var(--mud-palette-text-secondary) 45%);
+    opacity: 0.9;
+}
+
+::deep .stats-kpi-card__value {
+    display: block;
+    padding-left: 0.15rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    color: var(--mud-palette-text-primary);
+}

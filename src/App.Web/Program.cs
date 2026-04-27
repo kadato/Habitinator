@@ -35,7 +35,15 @@ var dbConnectionString =
     ?? throw new InvalidOperationException(
         "No PostgreSQL connection string configured. Set ConnectionStrings:DefaultConnection or run through Aspire (habitinatordb).");
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+// Options must be singleton so IDbContextFactory (singleton) can be constructed; the DbContext
+// instance remains scoped. Same pattern: https://learn.microsoft.com/en-us/ef/core/dbcontext-configuration/#using-a-dbcontext-factory-eg-for-blazor
+builder.Services.AddDbContext<ApplicationDbContext>(
+    options => options.UseNpgsql(dbConnectionString),
+    contextLifetime: ServiceLifetime.Scoped,
+    optionsLifetime: ServiceLifetime.Singleton);
+// Isolates read queries from the scoped context so Blazor + SignalR cannot interleave
+// two operations on the same instance (e.g. GetSnapshot from BoardChanged while CreateItem awaits).
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseNpgsql(dbConnectionString));
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
@@ -117,32 +125,51 @@ builder.Services.AddAuthorizationBuilder()
     });
 
 var app = builder.Build();
-try
+
+const int maxSeedAttempts = 4;
+for (var attempt = 1; attempt <= maxSeedAttempts; attempt++)
 {
-    await DemoDataSeeder.SeedAsync(app.Services);
-}
-catch (NpgsqlException ex)
-{
-    var logger = app.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogError(ex,
-        "Skipping startup demo data seeding because PostgreSQL is unreachable. Check ConnectionStrings:DefaultConnection and ensure PostgreSQL is running.");
+    try
+    {
+        await DemoDataSeeder.SeedAsync(app.Services);
+        break;
+    }
+    catch (NpgsqlException ex) when (attempt < maxSeedAttempts)
+    {
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogWarning(ex,
+            "Database not ready for migration/seeding (attempt {Attempt}/{Max}). Retrying after delay…",
+            attempt, maxSeedAttempts);
+        await Task.Delay(TimeSpan.FromSeconds(2));
+    }
+    catch (NpgsqlException ex)
+    {
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex,
+            "Skipping startup demo data seeding because PostgreSQL is unreachable. Check ConnectionStrings:DefaultConnection and ensure PostgreSQL is running.");
+    }
 }
 
 // Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"))
 {
     app.UseExceptionHandler("/Error", true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+    app.UseHttpsRedirection();
+    app.UseAntiforgery();
+}
 
-app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Used by AppHost WithHttpHealthCheck; anonymous, no auth required.
+app.MapGet("/health", () => Results.Text("OK", "text/plain"));
 app.MapStaticAssets();
 app.MapRazorComponents<App.Web.Components.App>()
     .AddInteractiveServerRenderMode();
@@ -423,27 +450,28 @@ var activityApi = app.MapGroup("/api/activity")
     .RequireAuthorization("BoardOrJwt");
 
 activityApi.MapGet("dashboard",
-    async (ClaimsPrincipal user, ActivityStatisticsService stats, string? period,
+    async (ClaimsPrincipal user, ActivityStatisticsService stats, string? period, string? tag,
         CancellationToken cancellationToken) =>
     {
         if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
-        return Results.Ok(await stats.GetDashboardAsync(userId, period, cancellationToken));
+        return Results.Ok(await stats.GetDashboardAsync(userId, period, tag, cancellationToken));
     });
 activityApi.MapGet("daily-contributions",
-    async (ClaimsPrincipal user, ActivityStatisticsService stats, string? period,
+    async (ClaimsPrincipal user, ActivityStatisticsService stats, string? period, string? tag,
         CancellationToken cancellationToken) =>
     {
         if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
-        return Results.Ok(await stats.GetDailyContributionsAsync(userId, period, cancellationToken));
+        return Results.Ok(await stats.GetDailyContributionsAsync(userId, period, tag, cancellationToken));
     });
 activityApi.MapGet("day",
-    async (ClaimsPrincipal user, ActivityStatisticsService stats, DateOnly date, CancellationToken cancellationToken) =>
+    async (ClaimsPrincipal user, ActivityStatisticsService stats, DateOnly date, string? tag,
+        CancellationToken cancellationToken) =>
     {
         if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
-        return Results.Ok(await stats.GetActivityDayDetailAsync(userId, date, cancellationToken));
+        return Results.Ok(await stats.GetActivityDayDetailAsync(userId, date, tag, cancellationToken));
     });
 
 var settingsApi = app.MapGroup("/api/settings")
@@ -478,3 +506,6 @@ settingsApi.MapPut("/notifications",
     });
 
 app.Run();
+
+/// <summary>Enables <see cref="Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory{TEntryPoint}"/> in integration tests.</summary>
+public partial class Program { }

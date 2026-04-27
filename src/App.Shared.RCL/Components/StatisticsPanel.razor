@@ -3,7 +3,7 @@
 @inject IDialogService DialogService
 
 <MudStack Spacing="3">
-    <MudText Typo="Typo.h4">Statistics</MudText>
+    <MudText Typo="Typo.h4" Class="app-page-title">Statistics</MudText>
 
     @if (_error is not null)
     {
@@ -19,16 +19,33 @@
     }
     else
     {
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="stats - period - bar" Style="flex - wrap: wrap;">
-            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ma - 0">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="stats-period-bar" Style="flex-wrap: wrap;">
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ma-0">
                 @FormatRange(_data.RangeStart, _data.RangeEnd) · @(_data.HeatmapDataDayCount) days
             </MudText>
             <MudSpacer/>
+            @if ((_data.AvailableTags?.Count ?? 0) > 0)
+            {
+                <MudSelect T="string"
+                           Label="Tag"
+                           Variant="Variant.Outlined"
+                           Dense="true"
+                           Class="stats-tag-select"
+                           Value="_tagFilter"
+                           ValueChanged="OnTagFilterChanged"
+                           Disabled="_periodBusy">
+                    <MudSelectItem T="string" Value="@("")">All tags</MudSelectItem>
+                    @foreach (var t in _data.AvailableTags ?? [])
+                    {
+                        <MudSelectItem T="string" Value="@t">@t</MudSelectItem>
+                    }
+                </MudSelect>
+            }
             <MudSelect T="string"
                        Label="Period"
                        Variant="Variant.Outlined"
                        Dense="true"
-                       Class="stats - year - select"
+                       Class="stats-year-select"
                        Value="_selectedPeriodKey"
                        ValueChanged="OnStatsPeriodChanged"
                        Disabled="_periodBusy">
@@ -43,11 +60,11 @@
         </MudStack>
         @if (_periodBusy)
         {
-            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt - 0"/>
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-0"/>
         }
 
-        <MudText Typo="Typo.subtitle1" Class="mt - 1">Activity heatmap</MudText>
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb - 1">Click a day to see all logged events for that day.</MudText>
+        <MudText Typo="Typo.subtitle1" Class="mt-1">Activity heatmap</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">Click a day to see all logged events for that day.</MudText>
         <div class="stats-heatmap-wrap stats-heatmap--large">
             <div class="stats-heatmap-rowlabels">
                 <span>Mon</span>
@@ -87,34 +104,43 @@
             </div>
         </div>
 
-        <MudGrid Spacing="2" Class="mt - 4">
+        <MudGrid Spacing="3" Class="mt-4 stats-kpi-grid">
             <MudItem xs="12" sm="4">
-                <MudPaper Class="pa - 3" Outlined="true" Elevation="0">
-                    <MudText Typo="Typo.overline" Color="Color.Secondary">Events in range</MudText>
-                    <MudText Typo="Typo.h5">@_data.TotalEvents</MudText>
+                <MudPaper Class="stats-kpi-card stats-kpi-card--events" Elevation="0" Outlined="false">
+                    <div class="stats-kpi-card__head">
+                        <MudText Typo="Typo.caption" Class="stats-kpi-card__label">Events in range</MudText>
+                        <MudIcon Icon="@Icons.Material.Filled.ViewTimeline" Class="stats-kpi-card__icon" Size="Size.Medium" aria-hidden="true"/>
+                    </div>
+                    <MudText Typo="Typo.h4" Class="stats-kpi-card__value">@_data.TotalEvents</MudText>
                 </MudPaper>
             </MudItem>
             <MudItem xs="12" sm="4">
-                <MudPaper Class="pa - 3" Outlined="true" Elevation="0">
-                    <MudText Typo="Typo.overline" Color="Color.Secondary">Focus time (timer)</MudText>
-                    <MudText Typo="Typo.h5">@FormatFocus(_data.TotalFocusMinutes)</MudText>
+                <MudPaper Class="stats-kpi-card stats-kpi-card--focus" Elevation="0" Outlined="false">
+                    <div class="stats-kpi-card__head">
+                        <MudText Typo="Typo.caption" Class="stats-kpi-card__label">Focus time (timer)</MudText>
+                        <MudIcon Icon="@Icons.Material.Filled.Timer" Class="stats-kpi-card__icon" Size="Size.Medium" aria-hidden="true"/>
+                    </div>
+                    <MudText Typo="Typo.h4" Class="stats-kpi-card__value">@FormatFocus(_data.TotalFocusMinutes)</MudText>
                 </MudPaper>
             </MudItem>
             <MudItem xs="12" sm="4">
-                <MudPaper Class="pa - 3" Outlined="true" Elevation="0">
-                    <MudText Typo="Typo.overline" Color="Color.Secondary">Busiest day (count)</MudText>
-                    <MudText Typo="Typo.h5">@(_data.MaxDayCount == 0 ? "—" : _data.MaxDayCount.ToString())</MudText>
+                <MudPaper Class="stats-kpi-card stats-kpi-card--peak" Elevation="0" Outlined="false">
+                    <div class="stats-kpi-card__head">
+                        <MudText Typo="Typo.caption" Class="stats-kpi-card__label">Busiest day (count)</MudText>
+                        <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Class="stats-kpi-card__icon" Size="Size.Medium" aria-hidden="true"/>
+                    </div>
+                    <MudText Typo="Typo.h4" Class="stats-kpi-card__value">@(_data.MaxDayCount == 0 ? "—" : _data.MaxDayCount.ToString())</MudText>
                 </MudPaper>
             </MudItem>
         </MudGrid>
 
         @if (_data.TotalEvents == 0)
         {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt - 2">No activity logged yet. Use habits, dailies, to-dos, or the focus timer on the board.</MudAlert>
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-2">No activity logged yet. Use habits, dailies, to-dos, or the focus timer on the board.</MudAlert>
         }
 
-        <MudText Typo="Typo.subtitle1" Class="mt - 2">All activity by week</MudText>
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb - 1">
+        <MudText Typo="Typo.subtitle1" Class="mt-2">All activity by week</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
             @FormatRange(_data.WeekBarsRangeStart, _data.WeekBarsRangeEnd) · @(_data.WeekBars.Count) week(s)
         </MudText>
         <div class="stats-week-bars" style="--stats-week-bar-max: @(_weekBarMax == 0 ? 1 : _weekBarMax);">
@@ -127,15 +153,15 @@
             }
         </div>
 
-        <MudText Typo="Typo.subtitle1" Class="mt - 4">Dailies graphs</MudText>
+        <MudText Typo="Typo.subtitle1" Class="mt-4">Dailies graphs</MudText>
 
         @if (_loadingDailies)
         {
-            <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="mt - 2"/>
+            <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="mt-2"/>
         }
         else if (_dailyError is not null)
         {
-            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt - 2">@_dailyError</MudAlert>
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-2">@_dailyError</MudAlert>
         }
         else if (_dailyView is not null)
         {
@@ -150,7 +176,7 @@
                     {
                         var cellIx = daily.Heatmap.ToDictionary(x => (x.DayRow, x.WeekCol));
                         <div class="stats-daily-block">
-                            <MudText Typo="Typo.h6" Class="stats - daily - title">@daily.Title</MudText>
+                            <MudText Typo="Typo.h6" Class="stats-daily-title">@daily.Title</MudText>
                             <div class="stats-heatmap-wrap stats-heatmap--large">
                                 <div class="stats-heatmap-rowlabels">
                                     <span>Mon</span>
@@ -188,9 +214,9 @@
                                 </div>
                             </div>
                             <div class="stats-contrib-legend stats-contrib-legend--binary">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ma - 0">Not done</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ma-0">Not done</MudText>
                                 <div class="stats-cell stats-legend-swatch stats-daily-missed"></div>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ma - 0">Done</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ma-0">Done</MudText>
                                 <div class="stats-cell stats-legend-swatch stats-daily-done"></div>
                             </div>
                         </div>
@@ -212,6 +238,7 @@
 
     private DailyContributionsViewDto? _dailyView;
     private string _selectedPeriodKey = DailyGraphPeriods.Rolling370Days;
+    private string _tagFilter = "";
     private bool _loadingDailies;
     private string? _dailyError;
 
@@ -238,9 +265,17 @@
         _dailyError = null;
         try
         {
-            _data = await Stats.GetDashboardAsync(periodKey);
-            _dailyView = await Stats.GetDailyContributionsAsync(periodKey);
+            var tag = string.IsNullOrEmpty(_tagFilter) ? null : _tagFilter;
+            _data = await Stats.GetDashboardAsync(periodKey, tag);
+            _dailyView = await Stats.GetDailyContributionsAsync(periodKey, tag);
             _selectedPeriodKey = _data.PeriodKey;
+            var tagList = _data.AvailableTags ?? [];
+            if (!string.IsNullOrEmpty(_tagFilter) && (tagList.Count == 0 || tagList.All(
+                    t => !t.Equals(_tagFilter, StringComparison.OrdinalIgnoreCase))))
+            {
+                _tagFilter = "";
+            }
+
             _periodOptions = _dailyView.PeriodOptions;
             _cellIndex = _data.Heatmap.ToDictionary(x => (x.DayRow, x.WeekCol));
             _weekBarMax = _data.WeekBars.Count == 0
@@ -287,6 +322,31 @@
         }
     }
 
+    private async Task OnTagFilterChanged(string? value)
+    {
+        if (_loading)
+        {
+            return;
+        }
+
+        _tagFilter = value ?? "";
+        _periodBusy = true;
+        _error = null;
+        _dailyError = null;
+        try
+        {
+            await LoadStatisticsAsync(_selectedPeriodKey);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _periodBusy = false;
+        }
+    }
+
     private async Task OpenDayDetailAsync(DateOnly date)
     {
         var options = new DialogOptions
@@ -295,11 +355,13 @@
             FullWidth = true,
             CloseOnEscapeKey = true
         };
+        var filterTag = string.IsNullOrEmpty(_tagFilter) ? null : _tagFilter;
         var parameters = new DialogParameters<ActivityDayDetailDialog>
         {
-            { x => x.Date, date }
+            { x => x.Date, date },
+            { x => x.TagFilter, filterTag }
         };
-        await DialogService.ShowAsync<ActivityDayDetailDialog>($"{date:yyyy-MM-dd}", parameters, options);
+        await DialogService.ShowAsync<ActivityDayDetailDialog>(date.ToString("yyyy-MM-dd (dddd)"), parameters, options);
     }
 
     private static string FormatFocus(int totalMinutes)

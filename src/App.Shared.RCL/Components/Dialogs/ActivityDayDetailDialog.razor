@@ -1,11 +1,11 @@
 @inject IActivityStatisticsReader Stats
 
-<MudDialog>
+<MudDialog Class="activity-day-detail-dialog"
+           ContentClass="activity-day-detail-dialog__content">
     <DialogContent>
-        <MudText Typo="Typo.h6" Class="mb - 2">@_title</MudText>
         @if (_loading)
         {
-            <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb - 2"/>
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-2"/>
         }
         else if (_error is not null)
         {
@@ -17,7 +17,13 @@
         }
         else if (_detail is not null)
         {
-            <MudTable Items="_detail.Events" Dense="true" Hover="true" Bordered="false" Striped="true" Elevation="0" Class="activity - day - table">
+            <MudTable Items="_detail.Events"
+                      Dense="true"
+                      Hover="true"
+                      Bordered="false"
+                      Striped="false"
+                      Elevation="0"
+                      Class="activity-day-detail-table">
                 <HeaderContent>
                     <MudTh>Time (UTC)</MudTh>
                     <MudTh>Event</MudTh>
@@ -32,7 +38,7 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Close">Close</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">Close</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -41,15 +47,11 @@
 
     [Parameter] [EditorRequired] public DateOnly Date { get; set; }
 
+    [Parameter] public string? TagFilter { get; set; }
+
     private ActivityDayDetailDto? _detail;
     private bool _loading = true;
     private string? _error;
-    private string _title = "";
-
-    protected override void OnParametersSet()
-    {
-        _title = Date.ToString("yyyy-MM-dd (dddd)");
-    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -57,7 +59,8 @@
         _error = null;
         try
         {
-            _detail = await Stats.GetActivityDayDetailAsync(Date);
+            var tag = string.IsNullOrWhiteSpace(TagFilter) ? null : TagFilter;
+            _detail = await Stats.GetActivityDayDetailAsync(Date, tag);
         }
         catch (Exception ex)
         {

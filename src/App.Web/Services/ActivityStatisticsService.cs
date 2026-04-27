@@ -18,13 +18,20 @@ public sealed class ActivityStatisticsService
     public async Task<ActivityDayDetailDto> GetActivityDayDetailAsync(
         Guid userId,
         DateOnly day,
+        string? tag,
         CancellationToken cancellationToken = default)
     {
         var fromUtc = day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var toUtc = day.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
-        var rows = await _db.UserActivityEvents.AsNoTracking()
-            .Where(e => e.UserId == userId && e.OccurredAtUtc >= fromUtc && e.OccurredAtUtc < toUtc)
+        var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(userId, tag, cancellationToken);
+
+        IQueryable<UserActivityEventEntity> ev = _db.UserActivityEvents.AsNoTracking()
+            .Where(e => e.UserId == userId && e.OccurredAtUtc >= fromUtc && e.OccurredAtUtc < toUtc);
+        if (allowedIds is not null)
+            ev = ev.Where(e => e.BoardItemId != null && allowedIds.Contains(e.BoardItemId.Value));
+
+        var rows = await ev
             .OrderBy(e => e.OccurredAtUtc)
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds))
             .ToListAsync(cancellationToken);
@@ -48,6 +55,7 @@ public sealed class ActivityStatisticsService
     public async Task<ActivityDashboardDto> GetDashboardAsync(
         Guid userId,
         string? periodKey,
+        string? tag,
         CancellationToken cancellationToken = default)
     {
         var utcToday = DailySchedule.UtcToday;
@@ -57,17 +65,26 @@ public sealed class ActivityStatisticsService
         var fromUtc = start.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var toUtc = end.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
-        var rows = await _db.UserActivityEvents.AsNoTracking()
-            .Where(e => e.UserId == userId && e.OccurredAtUtc >= fromUtc && e.OccurredAtUtc < toUtc)
+        var availableTags = await GetDistinctTagsForUserAsync(userId, cancellationToken);
+        var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(userId, tag, cancellationToken);
+
+        IQueryable<UserActivityEventEntity> evq = _db.UserActivityEvents.AsNoTracking()
+            .Where(e => e.UserId == userId && e.OccurredAtUtc >= fromUtc && e.OccurredAtUtc < toUtc);
+        if (allowedIds is not null)
+            evq = evq.Where(e => e.BoardItemId != null && allowedIds.Contains(e.BoardItemId.Value));
+
+        var rows = await evq
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds))
             .ToListAsync(cancellationToken);
 
-        return ActivityStatisticsCalculator.BuildDashboard(rows, key, start, end, utcToday);
+        var built = ActivityStatisticsCalculator.BuildDashboard(rows, key, start, end, utcToday);
+        return built with { AvailableTags = availableTags };
     }
 
     public async Task<DailyContributionsViewDto> GetDailyContributionsAsync(
         Guid userId,
         string? periodKey,
+        string? tag,
         CancellationToken cancellationToken = default)
     {
         var utcToday = DailySchedule.UtcToday;
@@ -78,17 +95,27 @@ public sealed class ActivityStatisticsService
         var fromUtc = rangeStart.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var toUtc = rangeEnd.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
-        var dailyItemRows = await _db.BoardItems.AsNoTracking()
-            .Where(b => b.UserId == userId && b.Section == BoardSection.Daily)
+        var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(userId, tag, cancellationToken);
+
+        IQueryable<BoardItemEntity> dailyQ = _db.BoardItems.AsNoTracking()
+            .Where(b => b.UserId == userId && b.Section == BoardSection.Daily);
+        if (allowedIds is not null)
+            dailyQ = dailyQ.Where(b => allowedIds.Contains(b.Id));
+
+        var dailyItemRows = await dailyQ
             .OrderBy(b => b.Title)
             .Select(b => new { b.Id, b.Title })
             .ToListAsync(cancellationToken);
 
-        var eventRows = await _db.UserActivityEvents.AsNoTracking()
+        IQueryable<UserActivityEventEntity> evQ = _db.UserActivityEvents.AsNoTracking()
             .Where(e =>
                 e.UserId == userId &&
                 e.OccurredAtUtc >= fromUtc &&
-                e.OccurredAtUtc < toUtc)
+                e.OccurredAtUtc < toUtc);
+        if (allowedIds is not null)
+            evQ = evQ.Where(e => e.BoardItemId != null && allowedIds.Contains(e.BoardItemId.Value));
+
+        var eventRows = await evQ
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds))
             .ToListAsync(cancellationToken);
 
@@ -102,6 +129,46 @@ public sealed class ActivityStatisticsService
             rangeStart,
             rangeEnd,
             utcToday);
+    }
+
+    private async Task<IReadOnlyList<string>> GetDistinctTagsForUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var tagStrings = await _db.BoardItems.AsNoTracking()
+            .Where(b => b.UserId == userId)
+            .Select(b => b.Tags)
+            .ToListAsync(cancellationToken);
+
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var ts in tagStrings)
+        foreach (var t in BoardTagUtil.ParseTags(ts))
+            set.Add(t);
+
+        return set.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private async Task<HashSet<Guid>?> GetBoardItemIdsMatchingTagOrNullAsync(
+        Guid userId,
+        string? tag,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(tag)) return null;
+
+        var wanted = tag.Trim();
+        var rows = await _db.BoardItems.AsNoTracking()
+            .Where(b => b.UserId == userId)
+            .Select(b => new { b.Id, b.Tags })
+            .ToListAsync(cancellationToken);
+
+        var set = new HashSet<Guid>();
+        foreach (var r in rows)
+        {
+            if (BoardTagUtil.ParseTags(r.Tags).Any(t => t.Equals(wanted, StringComparison.OrdinalIgnoreCase)))
+                set.Add(r.Id);
+        }
+
+        return set;
     }
 
     private async Task<IReadOnlyList<DailyGraphPeriodOption>> BuildDailyPeriodOptionsAsync(

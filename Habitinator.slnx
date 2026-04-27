@@ -6,6 +6,9 @@
     <Project Path="src/AppHost/AppHost.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/App.MAUI.UITests/App.MAUI.UITests.csproj" />
+    <Project Path="tests/App.Shared.RCL.Tests/App.Shared.RCL.Tests.csproj" />
     <Project Path="tests/App.Shared.Tests/App.Shared.Tests.csproj" />
+    <Project Path="tests/App.Web.IntegrationTests/App.Web.IntegrationTests.csproj" />
   </Folder>
 </Solution>

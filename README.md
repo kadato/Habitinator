@@ -78,7 +78,15 @@ This document is the single source of truth for current architecture, features, 
 - `src/App.Shared.RCL`
   - Shared Razor components, models, services
 - `tests/App.Shared.Tests`
-  - Unit tests for shared logic
+  - Unit tests for shared logic (services, schedules, notifications)
+- `tests/App.Shared.RCL.Tests`
+  - bUnit component smoke tests (Razor test project)
+- `tests/App.Web.IntegrationTests`
+  - API + PostgreSQL integration tests (Docker required — Testcontainers)
+- `tests/App.Web.E2E`
+  - Playwright browser smoke tests (requires running `App.Web`; set `E2E_BASE_URL`)
+- `tests/App.MAUI.UITests`
+  - **Android** UI smoke tests (Appium + UiAutomator2); skipped unless you opt in (see below)
 
 ## Aspire and PostgreSQL
 
@@ -98,7 +106,7 @@ Aspire is the recommended way to run locally.
 
 ```powershell
 dotnet build Habitinator.slnx
-dotnet test tests/App.Shared.Tests/App.Shared.Tests.csproj
+dotnet test Habitinator.slnx
 dotnet run --project src/AppHost/AppHost.csproj
 ```
 
@@ -174,8 +182,25 @@ Important sections:
 
 - Build:
   - `dotnet build Habitinator.slnx`
-- Unit tests:
-  - `dotnet test tests/App.Shared.Tests/App.Shared.Tests.csproj`
+- Automated tests (solution — unit, bUnit smoke, Testcontainers integration, Android UI tests **skipped** by default):
+  - `dotnet test Habitinator.slnx`
+  - Integration tests need **Docker** (Linux/macOS/Windows with Docker Desktop).
+- TRX files for CI / IDE:
+  - `dotnet test Habitinator.slnx --results-directory ./TestResults --logger trx`
+- Playwright E2E (optional, not in the solution file):
+  1. Start PostgreSQL and run `App.Web` (e.g. `dotnet run --project src/App.Web/App.Web.csproj --urls http://127.0.0.1:5050`).
+  2. Install browsers once: `pwsh tests/App.Web.E2E/bin/Debug/net10.0/playwright.ps1 install chromium` (path matches your configuration).
+  3. `dotnet test tests/App.Web.E2E/App.Web.E2E.csproj` (defaults to `E2E_BASE_URL=http://127.0.0.1:5050` if unset).
+- **Android UI tests (Appium)** — opt-in so normal `dotnet test` stays fast:
+  1. Build the app: `dotnet build src/App.MAUI/App.MAUI.csproj -f net10.0-android -c Debug`
+  2. Start an **Android emulator** (or device) with `adb devices` showing it as connected.
+  3. Install and run **Appium 2** with the **UiAutomator2** driver (`npm i -g appium`, `appium driver install uiautomator2`, then `appium`).
+  4. Run tests:  
+     `ANDROID_UI_TESTS=1 dotnet test tests/App.MAUI.UITests/App.MAUI.UITests.csproj`  
+     On Windows PowerShell: `$env:ANDROID_UI_TESTS='1'; dotnet test tests/App.MAUI.UITests/App.MAUI.UITests.csproj`  
+     Optional: `ANDROID_APP_PATH` (full path to APK), `APPIUM_SERVER_URL` (default `http://127.0.0.1:4723`).
+  5. Manual CI: workflow [`.github/workflows/android-uitest.yml`](.github/workflows/android-uitest.yml) (`workflow_dispatch`).
+- **GitHub Actions**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) builds the solution, runs tests with TRX, publishes results, runs E2E against a job service PostgreSQL.
 - Linting/IDE diagnostics:
   - keep zero errors in changed files
 
@@ -185,5 +210,6 @@ Important sections:
 - Next planned expansions:
   - full domain tables for categories/habits/tasks/schedules/logs
   - recurrence engine persistence and advanced streak/statistics queries
-  - integration tests for auth + per-user isolation + API flows
+  - more bUnit coverage for MudBlazor dialogs (JSInterop / provider setup)
+  - More Android UI coverage (WebView context, flows) and optional device matrix in CI
   - full notification and cross-platform sync implementation

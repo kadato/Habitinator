@@ -14,3 +14,6 @@ Thumbs.db
 
 # Local temp
 _tmp_apphost/
+
+# dotnet test TRX / coverage output
+TestResults/

@@ -1,0 +1,64 @@
+# Manual Android UI tests (Appium + emulator). Heavy; run when changing MAUI Android UI.
+# Prereqs on the runner: MAUI Android workload, Node (Appium 2), emulator — may need tuning per SDK updates.
+
+name: Android UI tests
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  uitest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            10.0.x
+          include-prerelease: true
+
+      - name: Setup Node.js (Appium)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui-android
+
+      - name: Build Android app and test project
+        run: |
+          dotnet build src/App.MAUI/App.MAUI.csproj -f net10.0-android -c Debug
+          dotnet build tests/App.MAUI.UITests/App.MAUI.UITests.csproj -c Debug
+
+      - name: Emulator + Appium + dotnet test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          disable-animations: true
+          script: |
+            set -eux
+            npm install -g appium
+            appium driver install uiautomator2
+            appium --log-level error &
+            sleep 8
+            APK="$(ls -1 src/App.MAUI/bin/Debug/net10.0-android/*-Signed.apk 2>/dev/null | head -1 || true)"
+            if [ -z "$APK" ]; then APK="$(ls -1 src/App.MAUI/bin/Debug/net10.0-android/*.apk | head -1)"; fi
+            test -f "$APK"
+            export ANDROID_UI_TESTS=1
+            export ANDROID_APP_PATH="$(readlink -f "$APK")"
+            dotnet test tests/App.MAUI.UITests/App.MAUI.UITests.csproj -c Debug --no-build --logger trx --results-directory "$GITHUB_WORKSPACE/TestResults-android"
+
+      - name: Upload TRX
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-uitest-trx
+          path: TestResults-android/**/*.trx

@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: habitinatordb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d habitinatordb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DOTNET_NO_LOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      TestResultsDir: ${{ github.workspace }}/TestResults
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            10.0.x
+          include-prerelease: true
+
+      - name: Restore and build
+        run: dotnet build Habitinator.slnx --configuration Release
+
+      - name: Test (unit, integration, bUnit, MAUI placeholder)
+        run: >
+          dotnet test Habitinator.slnx
+          --configuration Release
+          --no-build
+          --results-directory "$TestResultsDir"
+          --logger trx
+
+      - name: Build E2E project
+        run: dotnet build tests/App.Web.E2E/App.Web.E2E.csproj --configuration Release
+
+      - name: Install Playwright CLI browsers
+        run: |
+          PW_SH="tests/App.Web.E2E/bin/Release/net10.0/playwright.sh"
+          if [ -f "$PW_SH" ]; then
+            chmod +x "$PW_SH"
+            "$PW_SH" install chromium --with-deps
+          else
+            echo "playwright.sh not found; listing output dir:" && ls -la tests/App.Web.E2E/bin/Release/net10.0/ && exit 1
+          fi
+
+      - name: Start App.Web for E2E
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          ConnectionStrings__DefaultConnection: >-
+            Host=127.0.0.1;Port=5432;Database=habitinatordb;Username=postgres;Password=postgres
+          ASPNETCORE_URLS: http://127.0.0.1:5050
+        run: |
+          dotnet run --project src/App.Web/App.Web.csproj --configuration Release --no-build --urls http://127.0.0.1:5050 &
+          echo $! > /tmp/habitinator-web.pid
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:5050/ >/dev/null; then echo "Web ready"; break; fi
+            sleep 2
+            if [ "$i" -eq 60 ]; then echo "Web failed to start"; exit 1; fi
+          done
+
+      - name: E2E (Playwright)
+        env:
+          E2E_BASE_URL: http://127.0.0.1:5050
+        run: >
+          dotnet test tests/App.Web.E2E/App.Web.E2E.csproj
+          --configuration Release
+          --no-build
+          --results-directory "$TestResultsDir"
+          --logger trx
+
+      - name: Stop App.Web
+        if: always()
+        run: |
+          if [ -f /tmp/habitinator-web.pid ]; then kill "$(cat /tmp/habitinator-web.pid)" || true; fi
+
+      - name: Upload TRX artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-trx
+          path: TestResults/**/*.trx
+
+      - name: Publish test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          check_name: Test results
+          files: TestResults/**/*.trx
+          comment_mode: off

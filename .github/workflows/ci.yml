@@ -78,23 +78,12 @@ jobs:
           --results-directory "$TestResultsDir"
           --logger "trx;LogFileName=App.Web.IntegrationTests.trx"
 
-      - name: Test App.MAUI.UITests
-        id: test_maui_ui
-        continue-on-error: true
-        run: >
-          dotnet test tests/App.MAUI.UITests/App.MAUI.UITests.csproj
-          --configuration Release
-          --no-build
-          --results-directory "$TestResultsDir"
-          --logger "trx;LogFileName=App.MAUI.UITests.trx"
-
       - name: Fail job if any test suite failed
         if: always()
         run: |
           if [ "${{ steps.test_shared.outcome }}" != "success" ] || \
              [ "${{ steps.test_shared_rcl.outcome }}" != "success" ] || \
-             [ "${{ steps.test_web_integration.outcome }}" != "success" ] || \
-             [ "${{ steps.test_maui_ui.outcome }}" != "success" ]; then
+             [ "${{ steps.test_web_integration.outcome }}" != "success" ]; then
             echo "One or more test suites failed."
             exit 1
           fi

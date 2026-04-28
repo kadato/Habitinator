@@ -1,13 +1,82 @@
 # Habitinator
 
-Habitinator is a productivity app organized like **Habits**, **Dailies**, and **To-Dos** (the same three pillars as Habitica), but **without** RPG characters, avatars, or other game-style gamification. The focus is on a clear board, a single focus timer, optional analytics, and reliable sync when you use the mobile client.
+<div align="center">
 
-This document is the project’s source of truth for **architecture**, **features**, **APIs**, **stack**, and **run / test** workflows.
+![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)
+![.NET MAUI](https://img.shields.io/badge/.NET_MAUI-Blazor_Hybrid-512BD4?logo=dotnet)
+![Blazor](https://img.shields.io/badge/Blazor-Interactive_Server-512BD4?logo=blazor)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17.6-4169E1?logo=postgresql)
+![SQLite](https://img.shields.io/badge/SQLite-Local--First-003B57?logo=sqlite)
+![Platforms](https://img.shields.io/badge/Platforms-Android%20%7C%20Windows%20%7C%20iOS%20%7C%20macOS-blue)
+[![GitHub Release](https://img.shields.io/github/v/release/tothKarolyDavid/Habitinator)](https://github.com/tothKarolyDavid/Habitinator/releases/latest)
 
-## Live demo and downloads
+A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits, dailies, and to-dos with a focus timer, analytics, and reliable sync across web and mobile.
 
-- **Web demo (hosted Blazor app):** [https://app-web-yjel4obo2lalu.azurewebsites.net](https://app-web-yjel4obo2lalu.azurewebsites.net)
-- **Windows and Android releases:** [https://github.com/tothKarolyDavid/Habitinator/releases](https://github.com/tothKarolyDavid/Habitinator/releases)
+**Live Demo:** [app-web-yjel4obo2lalu.azurewebsites.net](https://app-web-yjel4obo2lalu.azurewebsites.net)
+
+[Demo](https://app-web-yjel4obo2lalu.azurewebsites.net) • [Preview](#-preview) • [Download](#-download--install) • [Features](#product-features-current) • [Tech Stack](#technology-stack) • [Getting Started](#run-and-debug)
+
+</div>
+
+---
+
+## 📸 Preview
+
+<div align="center">
+
+<img src="docs/automation/screenshots/01-welcome.png" width="48%" alt="Welcome page (signed out)"/> <img src="docs/automation/screenshots/02-board.png" width="48%" alt="Board view with habits, dailies, and to-dos"/>
+
+<img src="docs/automation/screenshots/03-edit-daily.png" width="48%" alt="Edit daily modal"/> <img src="docs/automation/screenshots/04-statistics.png" width="48%" alt="Statistics heatmap and summaries"/>
+
+<img src="docs/automation/screenshots/05-activity-day-detail.png" width="48%" alt="Activity day detail modal"/> <img src="docs/automation/screenshots/06-settings.png" width="48%" alt="Settings page"/>
+
+</div>
+
+---
+
+## 📥 Download & Install
+
+### Available builds
+
+**Live Demo (Web):** [https://app-web-yjel4obo2lalu.azurewebsites.net](https://app-web-yjel4obo2lalu.azurewebsites.net)  
+**Latest Release:** [![GitHub Release](https://img.shields.io/github/v/release/tothKarolyDavid/Habitinator)](https://github.com/tothKarolyDavid/Habitinator/releases/latest)
+
+| Platform | Package | Notes |
+|----------|---------|-------|
+| 🤖 Android | [Habitinator-android.apk](https://github.com/tothKarolyDavid/Habitinator/releases/latest/download/Habitinator-android.apk) | Install on-device (unknown sources required) |
+| 🪟 Windows | [Habitinator-windows-x64.zip](https://github.com/tothKarolyDavid/Habitinator/releases/latest/download/Habitinator-windows-x64.zip) | Portable app, extract and run |
+
+**Windows runtime note:** if your release is framework-dependent, install [.NET Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) once.
+
+#### Option 1: Use prebuilt release assets (recommended)
+
+1. Open [latest releases](https://github.com/tothKarolyDavid/Habitinator/releases/latest)
+2. Download your platform package
+3. Follow platform steps below
+
+#### Option 2: Build locally with .NET SDK
+
+```powershell
+# Windows
+dotnet build -t:Run -f net10.0-windows10.0.19041.0
+
+# Android (requires Android SDK)
+dotnet build -t:Run -f net10.0-android
+```
+
+### Installation instructions
+
+#### Android
+
+1. Enable Install from unknown sources in system settings
+2. Transfer the APK to your phone
+3. Open the APK and install
+
+#### Windows
+
+1. Extract the ZIP file
+2. Run `Habitinator.exe`
+3. If prompted, install .NET Desktop Runtime
 
 ---
 
@@ -20,31 +89,7 @@ This document is the project’s source of truth for **architecture**, **feature
 
 ## Web UI screenshots
 
-These are produced by the **Playwright** test in `DocumentationScreenshotsTests` into [`docs/automation/screenshots/`](docs/automation/screenshots/): a **signed-out** home view, then the **demo guest** board, **edit-daily** and **activity day detail** modals, and the rest. Regenerate with [`scripts/Refresh-AutomationAssets.ps1`](scripts/Refresh-AutomationAssets.ps1) (see [Documentation automation (local)](#documentation-automation-local)).
-
-**Welcome (signed out)**
-
-![Welcome — signed-out home](docs/automation/screenshots/01-welcome.png)
-
-**Board (demo guest)**
-
-![Board — habits, dailies, to-dos](docs/automation/screenshots/02-board.png)
-
-**Edit daily (modal)**
-
-![Edit daily](docs/automation/screenshots/03-edit-daily.png)
-
-**Statistics — activity heatmap and summaries**
-
-![Statistics](docs/automation/screenshots/04-statistics.png)
-
-**Activity day detail (modal)**
-
-![Activity day detail — heatmap drill-down](docs/automation/screenshots/05-activity-day-detail.png)
-
-**Settings**
-
-![Settings — notification preferences](docs/automation/screenshots/06-settings.png)
+These are produced by the **Playwright** test in `DocumentationScreenshotsTests` into [`docs/automation/screenshots/`](docs/automation/screenshots/). Regenerate with [`scripts/Refresh-AutomationAssets.ps1`](scripts/Refresh-AutomationAssets.ps1) (see [Documentation automation (local)](#documentation-automation-local)).
 
 ---
 

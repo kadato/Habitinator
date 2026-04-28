@@ -21,10 +21,6 @@ jobs:
       - name: Validate required Android secrets and variables
         run: |
           test -n "${{ vars.PRODUCTION_API_BASE_URL }}"
-          test -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}"
-          test -n "${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}"
-          test -n "${{ secrets.ANDROID_SIGNING_STORE_PASS }}"
-          test -n "${{ secrets.ANDROID_SIGNING_KEY_PASS }}"
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -52,36 +48,13 @@ jobs:
           Path("src/App.MAUI/appsettings.Release.json").write_text(tpl.replace("__API_BASE_URL__", api), encoding="utf-8")
           PY
 
-      - name: Decode Android keystore
-        shell: bash
-        run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "$RUNNER_TEMP/release.keystore"
-
-      - name: Validate Android signing keystore and alias
-        shell: bash
-        run: |
-          keytool -list \
-            -keystore "$RUNNER_TEMP/release.keystore" \
-            -storepass "${{ secrets.ANDROID_SIGNING_STORE_PASS }}" \
-            >/dev/null
-          keytool -list \
-            -keystore "$RUNNER_TEMP/release.keystore" \
-            -alias "${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}" \
-            -storepass "${{ secrets.ANDROID_SIGNING_STORE_PASS }}" \
-            >/dev/null
-
-      - name: Build signed Android APK (Release)
+      - name: Build Android APK (Release, unsigned)
         shell: bash
         run: |
           dotnet publish src/App.MAUI/App.MAUI.csproj \
             -f net10.0-android \
             -c Release \
-            -p:AndroidPackageFormat=apk \
-            -p:AndroidKeyStore=true \
-            -p:AndroidSigningKeyStore="$RUNNER_TEMP/release.keystore" \
-            -p:AndroidSigningStorePass="${{ secrets.ANDROID_SIGNING_STORE_PASS }}" \
-            -p:AndroidSigningKeyAlias="${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}" \
-            -p:AndroidSigningKeyPass="${{ secrets.ANDROID_SIGNING_KEY_PASS }}"
+            -p:AndroidPackageFormat=apk
 
       - name: Collect Android artifacts
         shell: bash

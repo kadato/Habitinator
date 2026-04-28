@@ -24,11 +24,15 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 
 <div align="center">
 
-<img src="docs/automation/screenshots/01-welcome.png" width="48%" alt="Welcome page (signed out)"/> <img src="docs/automation/screenshots/02-board.png" width="48%" alt="Board view with habits, dailies, and to-dos"/>
-
-<img src="docs/automation/screenshots/03-edit-daily.png" width="48%" alt="Edit daily modal"/> <img src="docs/automation/screenshots/04-statistics.png" width="48%" alt="Statistics heatmap and summaries"/>
-
-<img src="docs/automation/screenshots/05-activity-day-detail.png" width="48%" alt="Activity day detail modal"/> <img src="docs/automation/screenshots/06-settings.png" width="48%" alt="Settings page"/>
+<p>
+  <img src="docs/automation/screenshots/02-board.png" width="32%" alt="Board view with habits, dailies, and to-dos"/>
+  <img src="docs/automation/screenshots/03-edit-daily.png" width="32%" alt="Edit daily modal"/>
+  <img src="docs/automation/screenshots/04-statistics.png" width="32%" alt="Statistics heatmap and summaries"/>
+</p>
+<p>
+  <img src="docs/automation/screenshots/05-activity-day-detail.png" width="48%" alt="Activity day detail modal"/>
+  <img src="docs/automation/screenshots/06-settings.png" width="48%" alt="Settings page"/>
+</p>
 
 </div>
 
@@ -440,7 +444,7 @@ Committed assets for architecture and UI references live under **`docs/automatio
 | [`docs/automation/solution-graph.mmd`](docs/automation/solution-graph.mmd) | Mermaid **flowchart** of project references (from `Habitinator.slnx` + `.csproj` files). |
 | [`docs/automation/database-schema.mmd`](docs/automation/database-schema.mmd) | Mermaid **erDiagram** of EF Core FKs (from the latest `ApplicationDbContextModelSnapshot`). |
 | [`docs/automation/openapi-v1.json`](docs/automation/openapi-v1.json) | OpenAPI **3.1** document from `GET /openapi/v1.json` (paths and schemas for HTTP APIs). |
-| [`docs/automation/screenshots/`](docs/automation/screenshots/) | Playwright **PNG** captures (welcome, board, **edit-daily** modal, statistics, **activity day detail** modal, settings). |
+| [`docs/automation/screenshots/`](docs/automation/screenshots/) | Playwright **PNG** captures (board, **edit-daily** modal, statistics, **activity day detail** modal, settings). |
 
 ### Architecture diagrams (Mermaid)
 

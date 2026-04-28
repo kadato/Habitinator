@@ -20,6 +20,17 @@ $shotDir = Join-Path $docsAutomation "screenshots"
 
 New-Item -ItemType Directory -Path $shotDir -Force | Out-Null
 
+$obsoleteScreenshots = @(
+    "01-welcome.png"
+)
+
+foreach ($obsoleteScreenshot in $obsoleteScreenshots) {
+    $obsoletePath = Join-Path $shotDir $obsoleteScreenshot
+    if (Test-Path $obsoletePath) {
+        Remove-Item $obsoletePath -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Sync-ReadmeMermaidEmbeds {
     param(
         [Parameter(Mandatory = $true)]

@@ -51,6 +51,9 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Configure azd to use Azure CLI auth
+        run: azd config set auth.useAzCliAuth "true"
+
       - name: Validate required variables and secrets
         shell: bash
         run: |

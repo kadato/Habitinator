@@ -52,16 +52,17 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "$RUNNER_TEMP/release.keystore"
 
       - name: Build signed Android APK (Release)
-        run: >
-          dotnet publish src/App.MAUI/App.MAUI.csproj
-          -f net10.0-android
-          -c Release
-          -p:AndroidPackageFormat=apk
-          -p:AndroidKeyStore=true
-          -p:AndroidSigningKeyStore=$RUNNER_TEMP/release.keystore
-          -p:AndroidSigningStorePass=${{ secrets.ANDROID_SIGNING_STORE_PASS }}
-          -p:AndroidSigningKeyAlias=${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
-          -p:AndroidSigningKeyPass=${{ secrets.ANDROID_SIGNING_KEY_PASS }}
+        shell: bash
+        run: |
+          dotnet publish src/App.MAUI/App.MAUI.csproj \
+            -f net10.0-android \
+            -c Release \
+            -p:AndroidPackageFormat=apk \
+            -p:AndroidKeyStore=true \
+            -p:AndroidSigningKeyStore="$RUNNER_TEMP/release.keystore" \
+            -p:AndroidSigningStorePass="${{ secrets.ANDROID_SIGNING_STORE_PASS }}" \
+            -p:AndroidSigningKeyAlias="${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}" \
+            -p:AndroidSigningKeyPass="${{ secrets.ANDROID_SIGNING_KEY_PASS }}"
 
       - name: Collect Android artifacts
         shell: bash
@@ -115,7 +116,7 @@ jobs:
           -f net10.0-windows10.0.19041.0
           -c Release
           -p:WindowsPackageType=None
-          -p:RuntimeIdentifier=win10-x64
+          -p:RuntimeIdentifier=win-x64
           -o artifacts/windows/publish
 
       - name: Package Windows artifact

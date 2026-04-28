@@ -68,6 +68,7 @@
 
     <ItemGroup>
         <EmbeddedResource Include="appsettings.json" />
+        <EmbeddedResource Include="appsettings.Release.json" Condition="Exists('appsettings.Release.json')" />
     </ItemGroup>
 
     <ItemGroup>

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
     <ProjectReference Include="..\App.Shared.RCL\App.Shared.RCL.csproj" />
@@ -26,6 +26,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <UserSecretsId>c0c26a95-11d1-492c-ab6e-559ddb4124cc</UserSecretsId>
   </PropertyGroup>
 
 </Project>

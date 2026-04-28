@@ -99,12 +99,19 @@ public static class MauiProgram
     private static void AddEmbeddedAppSettings(MauiAppBuilder builder)
     {
         var assembly = typeof(MauiProgram).Assembly;
-        var resName = assembly
-            .GetManifestResourceNames()
-            .FirstOrDefault(static n => n.EndsWith("appsettings.json", StringComparison.OrdinalIgnoreCase));
-        if (resName is null) return;
+        AddEmbeddedJsonIfPresent(assembly, builder, "appsettings.json");
+        AddEmbeddedJsonIfPresent(assembly, builder, "appsettings.Release.json");
+    }
 
-        using var stream = assembly.GetManifestResourceStream(resName);
+    private static void AddEmbeddedJsonIfPresent(System.Reflection.Assembly assembly, MauiAppBuilder builder,
+        string suffix)
+    {
+        var resourceName = assembly
+            .GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));
+        if (resourceName is null) return;
+
+        using var stream = assembly.GetManifestResourceStream(resourceName);
         if (stream is not null) builder.Configuration.AddJsonStream(stream);
     }
 }

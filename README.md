@@ -4,6 +4,11 @@ Habitinator is a productivity app organized like **Habits**, **Dailies**, and **
 
 This document is the project’s source of truth for **architecture**, **features**, **APIs**, **stack**, and **run / test** workflows.
 
+## Live demo and downloads
+
+- **Web demo (hosted Blazor app):** [https://app-web-yjel4obo2lalu.azurewebsites.net](https://app-web-yjel4obo2lalu.azurewebsites.net)
+- **Windows and Android releases:** [https://github.com/tothKarolyDavid/Habitinator/releases](https://github.com/tothKarolyDavid/Habitinator/releases)
+
 ---
 
 ## What the app is for
@@ -314,6 +319,70 @@ Important sections:
 - **`BoardMaintenanceOptions`** (or related) — idempotency / tombstone retention (if present)
 
 MAUI: **`src/App.MAUI/appsettings.json`** — **`Api:BaseUrl`**; environment **`HABITINATOR_API_BASE_URL`** overrides when set.
+
+---
+
+## Deployment and releases (Azure + GitHub)
+
+For cloud setup and deployment, use **Azure Developer CLI**:
+
+- **`azure.yaml`** — azd project definition (`web` service -> `src/App.Web`)
+- **`infra/main.bicep`** + **`infra/main.parameters.json`** — low-cost Azure infrastructure defaults
+- **`deploy-azure-web.yml`** — GitHub Actions deploy using **`azd`**
+- **`release-clients.yml`** — MAUI Android/Windows release artifacts on tags
+
+Aspire is still recommended for **local development orchestration** (PostgreSQL + web + MAUI), while Azure hosting runs only `App.Web` + PostgreSQL for lower recurring cost.
+
+### Low-cost defaults in infra
+
+- App Service Plan SKU: **`B1`**
+- PostgreSQL Flexible Server SKU: **`Standard_B1ms`**
+- PostgreSQL storage: **32 GB**
+- No geo-redundant backup
+
+These are demo-oriented defaults; tune up only if load grows.
+
+### One-time azd local setup
+
+```powershell
+azd auth login
+azd env new demo
+azd env set AZURE_LOCATION westeurope
+azd env set POSTGRES_ADMIN_LOGIN pgadmin
+azd env set POSTGRES_ADMIN_PASSWORD "<strong-password>"
+azd env set JWT_ISSUER "https://<your-app>.azurewebsites.net"
+azd env set JWT_SIGNING_KEY "<long-random-secret>"
+azd env set DEMO_USER_EMAIL "guest@habitinator.local"
+azd env set DEMO_USER_PASSWORD "<demo-password>"
+azd up
+```
+
+### Required GitHub variables (deploy workflow)
+
+- **`AZURE_ENV_NAME`** — azd environment name (for example: `demo` or `prod`)
+- **`AZURE_LOCATION`** — Azure region
+- **`POSTGRES_ADMIN_LOGIN`**
+- **`JWT_ISSUER`**
+- **`DEMO_USER_EMAIL`** (optional; falls back to default in workflow)
+
+### Required GitHub secrets (deploy workflow)
+
+- **`AZURE_CREDENTIALS`** — service principal JSON
+- **`POSTGRES_ADMIN_PASSWORD`**
+- **`JWT_SIGNING_KEY`**
+- **`DEMO_USER_PASSWORD`**
+
+### Required GitHub variables/secrets (MAUI release workflow)
+
+- Variables: **`PRODUCTION_API_BASE_URL`**, **`PRODUCTION_WEB_URL`** (optional if same as API URL)
+- Secrets: **`ANDROID_KEYSTORE_BASE64`**, **`ANDROID_SIGNING_KEY_ALIAS`**, **`ANDROID_SIGNING_STORE_PASS`**, **`ANDROID_SIGNING_KEY_PASS`**
+
+### Release process
+
+1. Deploy/update backend (`azd up` locally or deploy workflow).
+2. Set `PRODUCTION_API_BASE_URL` to the deployed web URL.
+3. Push a tag like **`v1.2.0`**.
+4. Workflow publishes Android APK + Windows ZIP + checksums and includes the hosted web URL in release notes.
 
 ---
 

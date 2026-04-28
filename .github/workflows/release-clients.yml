@@ -1,0 +1,183 @@
+name: Release MAUI clients
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NO_LOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate required Android secrets and variables
+        run: |
+          test -n "${{ vars.PRODUCTION_API_BASE_URL }}"
+          test -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}"
+          test -n "${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}"
+          test -n "${{ secrets.ANDROID_SIGNING_STORE_PASS }}"
+          test -n "${{ secrets.ANDROID_SIGNING_KEY_PASS }}"
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            10.0.x
+          include-prerelease: true
+
+      - name: Install MAUI Android workload
+        run: dotnet workload install maui-android
+
+      - name: Prepare MAUI release API config
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          tpl = Path("src/App.MAUI/appsettings.Release.template.json").read_text(encoding="utf-8")
+          api = "${{ vars.PRODUCTION_API_BASE_URL }}".rstrip("/")
+          Path("src/App.MAUI/appsettings.Release.json").write_text(tpl.replace("__API_BASE_URL__", api), encoding="utf-8")
+          PY
+
+      - name: Decode Android keystore
+        shell: bash
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "$RUNNER_TEMP/release.keystore"
+
+      - name: Build signed Android APK (Release)
+        run: >
+          dotnet publish src/App.MAUI/App.MAUI.csproj
+          -f net10.0-android
+          -c Release
+          -p:AndroidPackageFormat=apk
+          -p:AndroidKeyStore=true
+          -p:AndroidSigningKeyStore=$RUNNER_TEMP/release.keystore
+          -p:AndroidSigningStorePass=${{ secrets.ANDROID_SIGNING_STORE_PASS }}
+          -p:AndroidSigningKeyAlias=${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
+          -p:AndroidSigningKeyPass=${{ secrets.ANDROID_SIGNING_KEY_PASS }}
+
+      - name: Collect Android artifacts
+        shell: bash
+        run: |
+          mkdir -p artifacts/android
+          APK="$(ls -1 src/App.MAUI/bin/Release/net10.0-android/*-Signed.apk 2>/dev/null | head -1 || true)"
+          if [ -z "$APK" ]; then APK="$(ls -1 src/App.MAUI/bin/Release/net10.0-android/*.apk | head -1)"; fi
+          cp "$APK" "artifacts/android/Habitinator-android.apk"
+          (cd artifacts/android && sha256sum "Habitinator-android.apk" > "Habitinator-android.apk.sha256")
+
+      - name: Upload Android release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release
+          path: artifacts/android/*
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate required variables
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace("${{ vars.PRODUCTION_API_BASE_URL }}")) {
+            throw "Repository variable PRODUCTION_API_BASE_URL must be set."
+          }
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            10.0.x
+          include-prerelease: true
+
+      - name: Install MAUI workload
+        shell: pwsh
+        run: dotnet workload install maui
+
+      - name: Prepare MAUI release API config
+        shell: pwsh
+        run: |
+          $template = Get-Content "src/App.MAUI/appsettings.Release.template.json" -Raw
+          $apiBaseUrl = "${{ vars.PRODUCTION_API_BASE_URL }}".TrimEnd("/")
+          $template.Replace("__API_BASE_URL__", $apiBaseUrl) | Set-Content "src/App.MAUI/appsettings.Release.json"
+
+      - name: Publish Windows app (Release)
+        shell: pwsh
+        run: >
+          dotnet publish src/App.MAUI/App.MAUI.csproj
+          -f net10.0-windows10.0.19041.0
+          -c Release
+          -p:WindowsPackageType=None
+          -p:RuntimeIdentifier=win10-x64
+          -o artifacts/windows/publish
+
+      - name: Package Windows artifact
+        shell: pwsh
+        run: |
+          Compress-Archive -Path artifacts/windows/publish/* -DestinationPath artifacts/windows/Habitinator-windows-x64.zip -Force
+          $hash = Get-FileHash artifacts/windows/Habitinator-windows-x64.zip -Algorithm SHA256
+          "$($hash.Hash.ToLower())  Habitinator-windows-x64.zip" | Set-Content artifacts/windows/Habitinator-windows-x64.zip.sha256
+
+      - name: Upload Windows release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: artifacts/windows/*
+
+  publish-release:
+    needs: [build-android, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Android artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-release
+          path: artifacts/android
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+          path: artifacts/windows
+
+      - name: Build release notes
+        shell: bash
+        run: |
+          WEB_URL="${{ vars.PRODUCTION_WEB_URL }}"
+          if [ -z "$WEB_URL" ]; then
+            WEB_URL="${{ vars.PRODUCTION_API_BASE_URL }}"
+          fi
+          if [ -z "$WEB_URL" ]; then
+            WEB_URL="(set repository variable PRODUCTION_WEB_URL or PRODUCTION_API_BASE_URL)"
+          fi
+          cat > release-notes.md <<EOF
+          ## Downloads
+          - Android APK: \`Habitinator-android.apk\`
+          - Windows ZIP: \`Habitinator-windows-x64.zip\`
+          - Checksums: included as \`.sha256\` files
+
+          ## Hosted web app
+          ${WEB_URL}
+
+          ## Notes
+          - MAUI builds in this release are configured for API base URL: \`${{ vars.PRODUCTION_API_BASE_URL }}\`
+          EOF
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release-notes.md
+          files: |
+            artifacts/android/Habitinator-android.apk
+            artifacts/android/Habitinator-android.apk.sha256
+            artifacts/windows/Habitinator-windows-x64.zip
+            artifacts/windows/Habitinator-windows-x64.zip.sha256

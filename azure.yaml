@@ -1,0 +1,13 @@
+name: habitinator
+metadata:
+  template: habitinator-azd@0.0.1
+
+infra:
+  provider: bicep
+  path: infra
+
+services:
+  web:
+    project: ./src/App.Web
+    language: dotnet
+    host: appservice

@@ -131,6 +131,15 @@
                            Size="Size.Small">
                     Stop &amp; log
                 </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Error"
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           Class="timer-btn timer-btn--reset"
+                           OnClick="Reset"
+                           Size="Size.Small"
+                           Disabled="@(!CanReset)">
+                    Reset
+                </MudButton>
             </div>
         </div>
     </MudCardContent>
@@ -182,6 +191,11 @@
         !TimerService.IsRunning
         && !TimerService.AwaitingFocusTimeUpPrompt
         && !string.IsNullOrWhiteSpace(TimerService.TargetId);
+
+    /// <summary>Reset is allowed when timer is not running and there's elapsed time or a target set.</summary>
+    private bool CanReset =>
+        !TimerService.IsRunning
+        && (!string.IsNullOrWhiteSpace(TimerService.TargetId) || TimerService.Elapsed > TimeSpan.Zero);
 
     private readonly List<string> _sessionTargetOptions = [];
     private readonly Dictionary<string, (string TargetType, string TargetTitle, Guid ItemId)> _sessionLabelToTarget = new(StringComparer.Ordinal);
@@ -454,6 +468,11 @@
         TimerService.Pause();
     }
 
+    private void Reset()
+    {
+        TimerService.Reset();
+    }
+
     /// <summary>
     ///     The timer is already paused at the milestone. Logging only if the user confirms; "not done" resumes counting.
     /// </summary>
@@ -515,6 +534,9 @@
         {
             await OnLogSaved.InvokeAsync(elapsed);
         }
+        TimerService.ClearTargetAndFocus();
+        _sessionTargetText = string.Empty;
+        FocusDurationText = string.Empty;
     }
 
     private async Task StopAndLog()
@@ -524,6 +546,9 @@
         {
             await OnLogSaved.InvokeAsync(elapsed);
         }
+        TimerService.ClearTargetAndFocus();
+        _sessionTargetText = string.Empty;
+        FocusDurationText = string.Empty;
     }
 
     public void Dispose()

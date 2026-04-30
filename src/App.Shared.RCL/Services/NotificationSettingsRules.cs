@@ -4,10 +4,25 @@ using MudBlazor;
 
 namespace App.Shared.RCL.Services;
 
-public static class NotificationSettingsRules
+public interface INotificationSettingsRules
 {
+    bool ShouldShowToast(NotificationSettings settings, Severity severity, DateTime utcNow);
+    int VisibleStateDurationMs(NotificationToastDuration preset);
+    bool ShouldShowFocusTimerEndNotification(NotificationSettings settings);
+    bool IsInQuietHours(NotificationSettings settings, DateTime utcNow);
+}
+
+public sealed class NotificationSettingsRules : INotificationSettingsRules
+{
+    private readonly IUserTimeZoneService _timeZoneService;
+
+    public NotificationSettingsRules(IUserTimeZoneService timeZoneService)
+    {
+        _timeZoneService = timeZoneService;
+    }
+
     /// <summary>Whether a MudSnackbar with the given severity should be shown.</summary>
-    public static bool ShouldShowToast(NotificationSettings settings, Severity severity, DateTime utcNow)
+    public bool ShouldShowToast(NotificationSettings settings, Severity severity, DateTime utcNow)
     {
         if (!settings.InAppMessagesEnabled) return false;
 
@@ -22,7 +37,7 @@ public static class NotificationSettingsRules
         };
     }
 
-    public static int VisibleStateDurationMs(NotificationToastDuration preset)
+    public int VisibleStateDurationMs(NotificationToastDuration preset)
     {
         return preset switch
         {
@@ -39,26 +54,37 @@ public static class NotificationSettingsRules
     ///     does not require <see cref="NotificationSettings.ShowSuccessToasts" /> so the timer can surface even when
     ///     general success toasts are muted.
     /// </summary>
-    public static bool ShouldShowFocusTimerEndNotification(NotificationSettings settings)
+    public bool ShouldShowFocusTimerEndNotification(NotificationSettings settings)
     {
         return settings.FocusTimerAlertsEnabled
                && settings.InAppMessagesEnabled;
     }
 
-    public static bool IsInQuietHours(NotificationSettings settings, DateTime utcNow)
+    public bool IsInQuietHours(NotificationSettings settings, DateTime utcNow)
     {
         if (!settings.QuietHoursEnabled
             || !settings.QuietHoursStartUtc.HasValue
             || !settings.QuietHoursEndUtc.HasValue)
             return false;
 
-        var t = utcNow.TimeOfDay;
-        var a = settings.QuietHoursStartUtc.Value;
-        var b = settings.QuietHoursEndUtc.Value;
-        if (a == b) return false;
+        // Convert current UTC time to local time for comparison with quiet hours
+        var localTime = _timeZoneService.ConvertToLocal(new DateTimeOffset(utcNow, TimeSpan.Zero));
+        var localTimeOfDay = localTime.TimeOfDay;
 
-        if (a < b) return t >= a && t < b;
+        // Quiet hours are stored in UTC, so convert them to local for comparison
+        var quietStartLocal = _timeZoneService.ConvertUtcTimeToLocal(settings.QuietHoursStartUtc.Value);
+        var quietEndLocal = _timeZoneService.ConvertUtcTimeToLocal(settings.QuietHoursEndUtc.Value);
 
-        return t >= a || t < b;
+        if (quietStartLocal == quietEndLocal) return false;
+
+        // Check if current local time falls within quiet hours window
+        if (quietStartLocal < quietEndLocal)
+        {
+            // Window doesn't cross midnight (e.g., 10 PM to 6 AM would be start > end)
+            return localTimeOfDay >= quietStartLocal && localTimeOfDay < quietEndLocal;
+        }
+
+        // Window crosses midnight (e.g., 10 PM to 6 AM)
+        return localTimeOfDay >= quietStartLocal || localTimeOfDay < quietEndLocal;
     }
 }

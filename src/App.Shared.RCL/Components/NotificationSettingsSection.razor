@@ -1,6 +1,7 @@
 @inject INotificationSettingsService NotificationSettingsService
 @inject IRemoteBoardRefreshService RemoteBoardRefresh
 @inject ISnackbar Snackbar
+@inject IUserTimeZoneService TimeZoneService
 @implements IDisposable
 
 <MudStack Spacing="3">
@@ -118,17 +119,17 @@
                            Color="Color.Primary"
                            Value="_model.QuietHoursEnabled"
                            ValueChanged="OnQuietHoursEnabledChanged"
-                           Label="Quiet hours(UTC)"/>
+                           Label="Quiet hours"/>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">
-                    In this window, in-app success and warning messages are hidden so the app stays calmer. Error messages are still shown so you do not miss real problems. The start and end use Universal Time (UTC), not your device's local time — convert if you want these to match particular local hours.
+                    In this window, in-app success and warning messages are hidden so the app stays calmer. Error messages are still shown so you do not miss real problems. Times are in your local timezone (@GetTimeZoneDisplay()).
                 </MudText>
                 <MudStack Row="true" Spacing="2" Style="flex-wrap: wrap;">
-                    <MudTimePicker Label="Quiet start(UTC)"
+                    <MudTimePicker Label="Quiet start"
                                    Time="_quietStart"
                                    TimeChanged="OnQuietStartChanged"
                                    Disabled="!_model.QuietHoursEnabled"
                                    TimeEditMode="TimeEditMode.Normal"/>
-                    <MudTimePicker Label="Quiet end(UTC)"
+                    <MudTimePicker Label="Quiet end"
                                    Time="_quietEnd"
                                    TimeChanged="OnQuietEndChanged"
                                    Disabled="!_model.QuietHoursEnabled"
@@ -205,8 +206,14 @@
     {
         _model = Clone(s);
         _dailyReminderTime = s.DailyReminderTime ?? TimeSpan.FromHours(7);
-        _quietStart = s.QuietHoursStartUtc ?? TimeSpan.FromHours(22);
-        _quietEnd = s.QuietHoursEndUtc ?? TimeSpan.FromHours(7);
+
+        // Convert UTC times to local for display
+        _quietStart = s.QuietHoursStartUtc.HasValue
+            ? TimeZoneService.ConvertUtcTimeToLocal(s.QuietHoursStartUtc.Value)
+            : TimeSpan.FromHours(22);
+        _quietEnd = s.QuietHoursEndUtc.HasValue
+            ? TimeZoneService.ConvertUtcTimeToLocal(s.QuietHoursEndUtc.Value)
+            : TimeSpan.FromHours(7);
     }
 
     private static NotificationSettings Clone(NotificationSettings s)
@@ -278,7 +285,10 @@
         }
 
         _quietStart = t;
-        _model.QuietHoursStartUtc = t;
+        // Convert local time to UTC for storage
+        _model.QuietHoursStartUtc = t.HasValue
+            ? TimeZoneService.ConvertLocalTimeToUtc(t.Value)
+            : null;
         return AutoSaveAsync();
     }
 
@@ -290,7 +300,10 @@
         }
 
         _quietEnd = t;
-        _model.QuietHoursEndUtc = t;
+        // Convert local time to UTC for storage
+        _model.QuietHoursEndUtc = t.HasValue
+            ? TimeZoneService.ConvertLocalTimeToUtc(t.Value)
+            : null;
         return AutoSaveAsync();
     }
 
@@ -346,14 +359,29 @@
         _model.DailyReminderTime = _model.DailyReminderEnabled ? _dailyReminderTime : null;
         if (_model.QuietHoursEnabled)
         {
-            _model.QuietHoursStartUtc = _quietStart;
-            _model.QuietHoursEndUtc = _quietEnd;
+            // Convert local times to UTC for storage
+            _model.QuietHoursStartUtc = _quietStart.HasValue
+                ? TimeZoneService.ConvertLocalTimeToUtc(_quietStart.Value)
+                : null;
+            _model.QuietHoursEndUtc = _quietEnd.HasValue
+                ? TimeZoneService.ConvertLocalTimeToUtc(_quietEnd.Value)
+                : null;
         }
         else
         {
             _model.QuietHoursStartUtc = null;
             _model.QuietHoursEndUtc = null;
         }
+    }
+
+    private string GetTimeZoneDisplay()
+    {
+        if (!TimeZoneService.IsDetected)
+        {
+            return "UTC";
+        }
+
+        return TimeZoneService.TimeZoneId ?? TimeZoneService.GetTimeZoneAbbreviation();
     }
 
 }

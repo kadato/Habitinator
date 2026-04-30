@@ -1,0 +1,10 @@
+@inject IUserTimeZoneService TimeZoneService
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize timezone detection from browser/device
+        await TimeZoneService.InitializeAsync();
+        await base.OnInitializedAsync();
+    }
+}

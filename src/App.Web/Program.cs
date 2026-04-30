@@ -88,6 +88,8 @@ builder.Services.AddScoped<INotificationSettingsService, WebNotificationSettings
 builder.Services.AddScoped<IUserNotifier, UserNotifier>();
 builder.Services.AddScoped<IFocusTimerClientAlerts, FocusTimerClientAlerts>();
 builder.Services.AddScoped<IDailyRetroPromptStore, JsDailyRetroPromptStore>();
+builder.Services.AddScoped<IUserTimeZoneService, UserTimeZoneService>();
+builder.Services.AddScoped<INotificationSettingsRules, NotificationSettingsRules>();
 builder.Services.AddHttpClient();
 
 var authBuilder = builder.Services

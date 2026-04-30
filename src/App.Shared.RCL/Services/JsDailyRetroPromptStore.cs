@@ -9,13 +9,15 @@ namespace App.Shared.RCL.Services;
 public sealed class JsDailyRetroPromptStore : IDailyRetroPromptStore
 {
     private readonly IJSRuntime _js;
+    private readonly IUserTimeZoneService _timeZoneService;
 
-    public JsDailyRetroPromptStore(IJSRuntime js)
+    public JsDailyRetroPromptStore(IJSRuntime js, IUserTimeZoneService timeZoneService)
     {
         _js = js;
+        _timeZoneService = timeZoneService;
     }
 
-    public async Task<DateOnly?> GetLastPromptResolvedUtcDateAsync(CancellationToken cancellationToken = default)
+    public async Task<DateOnly?> GetLastPromptResolvedLocalDateAsync(CancellationToken cancellationToken = default)
     {
         string? s;
         try
@@ -36,9 +38,13 @@ public sealed class JsDailyRetroPromptStore : IDailyRetroPromptStore
         return d;
     }
 
+    [Obsolete("Use GetLastPromptResolvedLocalDateAsync for timezone-aware date tracking")]
+    public Task<DateOnly?> GetLastPromptResolvedUtcDateAsync(CancellationToken cancellationToken = default)
+        => GetLastPromptResolvedLocalDateAsync(cancellationToken);
+
     public async Task SetPromptResolvedForTodayAsync(CancellationToken cancellationToken = default)
     {
-        var ymd = DailySchedule.UtcToday.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var ymd = DailySchedule.LocalToday(_timeZoneService).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         try
         {
             await _js.InvokeVoidAsync("habitinatorSetDailyRetroResolved", ymd).ConfigureAwait(false);

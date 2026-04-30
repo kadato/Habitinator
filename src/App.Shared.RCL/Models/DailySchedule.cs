@@ -1,14 +1,50 @@
+using App.Shared.RCL.Services;
+
 namespace App.Shared.RCL.Models;
 
 /// <summary>
-///     due dates for dailies from start date, repeat type, and interval. Uses UTC <see cref="DateOnly" /> (calendar)
-///     throughout.
+///     Due dates for dailies from start date, repeat type, and interval. Uses local <see cref="DateOnly" /> (calendar)
+///     based on the user's detected timezone, falling back to UTC if unavailable.
 /// </summary>
 public static class DailySchedule
 {
+    /// <summary>
+    ///     Gets today's date in the user's local timezone, or UTC if no timezone service is available.
+    ///     This is the primary "today" for daily scheduling.
+    /// </summary>
+    public static DateOnly LocalToday(IUserTimeZoneService? tz = null)
+    {
+        if (tz is { IsDetected: true })
+        {
+            return tz.LocalToday;
+        }
+
+        // Fallback to UTC
+        return DateOnly.FromDateTime(DateTime.UtcNow);
+    }
+
+    /// <summary>
+    ///     Gets yesterday's date in the user's local timezone, or UTC if no timezone service is available.
+    /// </summary>
+    public static DateOnly LocalYesterday(IUserTimeZoneService? tz = null)
+    {
+        if (tz is { IsDetected: true })
+        {
+            return tz.LocalYesterday;
+        }
+
+        // Fallback to UTC
+        return DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+    }
+
+    /// <summary>
+    ///     Legacy property for backward compatibility - returns UTC today.
+    ///     New code should use <see cref="LocalToday" /> with IUserTimeZoneService.
+    /// </summary>
+    [Obsolete("Use LocalToday(IUserTimeZoneService) for proper timezone support")]
     public static DateOnly UtcToday => DateOnly.FromDateTime(DateTime.UtcNow);
 
-    /// <summary>When no start is stored, treat "today" (UTC) as the anchor so a new item is due immediately.</summary>
+    /// <summary>When no start is stored, treat "today" (local timezone) as the anchor so a new item is due immediately.</summary>
     public static DateOnly ResolveStartDateOrToday(DateOnly? dailyStart)
     {
         return dailyStart ?? UtcToday;
@@ -23,6 +59,7 @@ public static class DailySchedule
     ///     <see cref="App.Shared.RCL.Services.DailyStreakCalculator" />.
     /// </summary>
     /// <remarks>
+    ///     All dates use the user's local timezone for scheduling. The board resets at local midnight.
     ///     If <paramref name="dailyStart" /> is after <paramref name="notAfter" /> (e.g. item created today but
     ///     streak backfill targets yesterday), we treat it like a missing start so history is not empty.
     ///     If <paramref name="dailyStart" /> <strong>equals</strong> <paramref name="notAfter" />, using it as
@@ -93,7 +130,7 @@ public static class DailySchedule
         return IsScheduledOn(daily.DailyStartDate, daily.DailyRepeat, daily.DailyRepeatInterval, on);
     }
 
-    /// <summary>Whether this daily is checked off for the given calendar day (UTC).</summary>
+    /// <summary>Whether this daily is checked off for the given calendar day (local timezone).</summary>
     public static bool IsCompleteForDate(BoardItem daily, DateOnly on)
     {
         return daily.DailyLastCompletedOn == on;
@@ -111,7 +148,7 @@ public static class DailySchedule
     }
 
     /// <summary>
-    ///     Dailies that were due on the previous calendar day (UTC) and not completed for that day, excluding
+    ///     Dailies that were due on the previous calendar day (local timezone) and not completed for that day, excluding
     ///     items already checked for <paramref name="today" /> to avoid clobbering a same-day check when backfilling.
     /// </summary>
     public static IReadOnlyList<BoardItem> GetYesterdayUncompletedDailies(

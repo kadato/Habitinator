@@ -7,6 +7,7 @@
 @inject BoardRemoteNotifyBridge BoardNotifyBridge
 @inject IBoardSyncStatus BoardSync
 @inject IJSRuntime JS
+@inject IUserTimeZoneService TimeZoneService
 
 <MudStack Class="board-shell w-100" Spacing="2">
     @if (_isLoading)
@@ -218,7 +219,7 @@
     private IReadOnlyList<BoardItem> FilteredDailies => FilterItems(Dailies);
 
     private int DailiesDueOpenCount =>
-        FilterItems(Dailies).Count(d => DailySchedule.IsDueOnDate(d, DailySchedule.UtcToday));
+        FilterItems(Dailies).Count(d => DailySchedule.IsDueOnDate(d, DailySchedule.LocalToday(TimeZoneService)));
 
     private IReadOnlyList<BoardItem> FilteredTodos => FilterItems(Todos);
 
@@ -506,7 +507,7 @@
                 else if (targetType == "Daily")
                 {
                     var daily = Dailies.FirstOrDefault(d => d.Id == id);
-                    var today = DailySchedule.UtcToday;
+                    var today = DailySchedule.LocalToday(TimeZoneService);
                     if (daily is not null && !DailySchedule.IsCompleteForDate(daily, today))
                     {
                         var updated = await BoardDataService.ToggleItemAsync(BoardSection.Daily, id);
@@ -589,11 +590,11 @@
             return;
         }
 
-        var today = DailySchedule.UtcToday;
+        var today = DailySchedule.LocalToday(TimeZoneService);
         DateOnly? lastResolved;
         try
         {
-            lastResolved = await DailyRetroStore.GetLastPromptResolvedUtcDateAsync();
+            lastResolved = await DailyRetroStore.GetLastPromptResolvedLocalDateAsync();
         }
         catch (Exception)
         {

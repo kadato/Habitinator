@@ -4,6 +4,7 @@
 @inject IBoardDataService BoardData
 @inject IDialogService DialogService
 @inject IUserNotifier Notifier
+@inject IUserTimeZoneService TimeZoneService
 
 <MudCard Class="@($"habitica-column {GetAccentClass()}")" Elevation="0" Outlined="false">
     <MudCardHeader Class="pb-2">
@@ -351,7 +352,7 @@
 
     private IReadOnlyList<BoardItem> FilterDailies()
     {
-        var today = DailySchedule.UtcToday;
+        var today = DailySchedule.LocalToday(TimeZoneService);
         return _dailyFilter switch
         {
             DailyListFilter.Due => Items.Where(d => DailySchedule.IsDueOnDate(d, today)).ToList(),

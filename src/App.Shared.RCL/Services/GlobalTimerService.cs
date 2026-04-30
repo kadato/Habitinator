@@ -73,6 +73,10 @@ public sealed class GlobalTimerService
 
     public void SelectTarget(string targetType, string targetId, Guid? boardItemId = null)
     {
+        // Don't change target while timer is running - preserve the session target
+        if (IsRunning)
+            return;
+
         TargetType = targetType;
         TargetId = targetId;
         BoardItemId = boardItemId;
@@ -155,6 +159,30 @@ public sealed class GlobalTimerService
         _runningSince = null;
         _nextFocusMilestoneAtElapsed = null;
         return duration;
+    }
+
+    /// <summary>
+    ///     Resets the timer without logging. Clears elapsed time but preserves target.
+    /// </summary>
+    public void Reset()
+    {
+        AwaitingFocusTimeUpPrompt = false;
+        Pause();
+        _accumulated = TimeSpan.Zero;
+        _runningSince = null;
+        _nextFocusMilestoneAtElapsed = null;
+    }
+
+    /// <summary>
+    ///     Clears the target and focus alert settings. Call after logging a completed session.
+    /// </summary>
+    public void ClearTargetAndFocus()
+    {
+        _focusAlertAfter = null;
+        _nextFocusMilestoneAtElapsed = null;
+        TargetType = null;
+        TargetId = null;
+        BoardItemId = null;
     }
 
     public void RestoreFromPersistedStart(DateTimeOffset persistedStartUtc)

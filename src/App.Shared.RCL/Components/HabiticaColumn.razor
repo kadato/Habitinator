@@ -84,13 +84,6 @@
                         </MudButton>
                         <MudButton Size="Size.Small"
                                    Class="habitica-filter-btn"
-                                   Variant="@FilterVariant(_todoFilter == TodoListFilter.Scheduled)"
-                                   Color="Color.Primary"
-                                   OnClick="@(() => { _todoFilter = TodoListFilter.Scheduled; })">
-                            Scheduled
-                        </MudButton>
-                        <MudButton Size="Size.Small"
-                                   Class="habitica-filter-btn"
                                    Variant="@FilterVariant(_todoFilter == TodoListFilter.Complete)"
                                    Color="Color.Primary"
                                    OnClick="@(() => { _todoFilter = TodoListFilter.Complete; })">
@@ -317,7 +310,6 @@
     private enum TodoListFilter
     {
         Active,
-        Scheduled,
         Complete
     }
 
@@ -374,7 +366,6 @@
         {
             TodoListFilter.Active => Items.Where(x => !x.IsCompleted).ToList(),
             TodoListFilter.Complete => Items.Where(x => x.IsCompleted).ToList(),
-            TodoListFilter.Scheduled => [],
             _ => Items.ToList()
         };
     }
@@ -408,11 +399,7 @@
             return "No items match your search or tag filters.";
         }
 
-        return Section switch
-        {
-            BoardSection.Todo when _todoFilter == TodoListFilter.Scheduled => "No scheduled to-dos in this build — use the list to track one-off work.",
-            _ => "No items here yet. Add one above."
-        };
+        return "No items here yet. Add one above.";
     }
 
     private string GetFooterText()
@@ -569,13 +556,11 @@
 
     private async Task HabitUpAsync(BoardItem item)
     {
-        TimerService.SelectTarget("Habit", item.Title, item.Id);
         await TryMutateAsync(() => BoardData.IncrementHabitPlusAsync(item.Id));
     }
 
     private async Task HabitDownAsync(BoardItem item)
     {
-        TimerService.SelectTarget("Habit", item.Title, item.Id);
         await TryMutateAsync(() => BoardData.IncrementHabitMinusAsync(item.Id));
     }
 
@@ -603,7 +588,6 @@
 
     private async Task ToggleAsync(BoardItem item)
     {
-        TimerService.SelectTarget(Section.ToString(), item.Title, item.Id);
         await TryMutateAsync(() => BoardData.ToggleItemAsync(Section, item.Id));
     }
 

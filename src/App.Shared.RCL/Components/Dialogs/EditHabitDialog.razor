@@ -409,6 +409,7 @@
         if (_tagPickerOpen)
         {
             _tagSearch = string.Empty;
+            await LoadTagSuggestionsAsync();
             await Task.Yield();
             try
             {

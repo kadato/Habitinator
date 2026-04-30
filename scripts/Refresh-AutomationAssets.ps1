@@ -20,9 +20,8 @@ $shotDir = Join-Path $docsAutomation "screenshots"
 
 New-Item -ItemType Directory -Path $shotDir -Force | Out-Null
 
-$obsoleteScreenshots = @(
-    "01-welcome.png"
-)
+# Clean up any old obsolete screenshots from previous runs
+$obsoleteScreenshots = @()
 
 foreach ($obsoleteScreenshot in $obsoleteScreenshots) {
     $obsoletePath = Join-Path $shotDir $obsoleteScreenshot
@@ -110,12 +109,21 @@ else {
 }
 
 try {
+    # Run all documentation screenshot tests (not just the original one)
     dotnet test (Join-Path $repoRoot "tests" "App.Web.E2E" "App.Web.E2E.csproj") `
         --configuration Release --no-build `
         --filter "FullyQualifiedName~DocumentationScreenshotsTests"
 }
 catch {
     Write-Warning "Screenshot tests failed (is App.Web running with seeded demo guest?): $_"
+}
+
+# List all generated screenshots
+if (Test-Path $shotDir) {
+    Write-Host "`n== Generated screenshots:"
+    Get-ChildItem -Path $shotDir -Filter "*.png" | ForEach-Object {
+        Write-Host "   - $($_.Name)"
+    }
 }
 finally {
     Remove-Item Env:E2E_BASE_URL -ErrorAction SilentlyContinue

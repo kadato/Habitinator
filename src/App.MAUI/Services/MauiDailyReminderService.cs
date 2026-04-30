@@ -60,7 +60,9 @@ public sealed class MauiDailyReminderService : IDisposable
             var next = NextLocalNotificationTime(timeOfDay);
 
             var snapshot = await _board.GetSnapshotAsync(cancellationToken);
-            var (title, body) = DailyReminderText.Build(snapshot, DailySchedule.UtcToday);
+            // Use device's local timezone for the daily reminder
+            var localToday = DateOnly.FromDateTime(DateTime.Now);
+            var (title, body) = DailyReminderText.Build(snapshot, localToday);
 
             var perm = new NotificationPermission { AskPermission = true };
             if (!await center.AreNotificationsEnabled(perm).ConfigureAwait(false))

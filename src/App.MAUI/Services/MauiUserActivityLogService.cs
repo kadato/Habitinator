@@ -16,7 +16,6 @@ public sealed class MauiUserActivityLogService : IUserActivityLogService
         ActivityEventType eventType,
         Guid? boardItemId,
         int? durationSeconds = null,
-        string? customLabel = null,
         CancellationToken cancellationToken = default)
     {
         await _store.AppendAsync(new StoredUserActivityEvent
@@ -26,17 +25,25 @@ public sealed class MauiUserActivityLogService : IUserActivityLogService
             OccurredAtUtc = DateTimeOffset.UtcNow,
             EventType = eventType,
             BoardItemId = boardItemId,
-            DurationSeconds = eventType == ActivityEventType.TimerSession ? durationSeconds : null,
-            CustomLabel = eventType == ActivityEventType.TimerSession ? customLabel : null
+            DurationSeconds = eventType == ActivityEventType.TimerSession ? durationSeconds : null
         }, cancellationToken);
     }
 
-    public Task LogTimerSessionAsync(TimeSpan duration, Guid? boardItemId, string? customLabel = null,
+    public async Task LogTimerSessionAsync(TimeSpan duration, Guid? boardItemId, string? customLabel = null,
         CancellationToken cancellationToken = default)
     {
         var sec = (int)Math.Min(int.MaxValue, Math.Max(0, duration.TotalSeconds));
-        if (sec == 0) return Task.CompletedTask;
+        if (sec == 0) return;
 
-        return LogActivityAsync(ActivityEventType.TimerSession, boardItemId, sec, customLabel, cancellationToken);
+        await _store.AppendAsync(new StoredUserActivityEvent
+        {
+            Id = Guid.NewGuid(),
+            UserId = MauiLocalUser.Id,
+            OccurredAtUtc = DateTimeOffset.UtcNow,
+            EventType = ActivityEventType.TimerSession,
+            BoardItemId = boardItemId,
+            DurationSeconds = sec,
+            CustomLabel = customLabel
+        }, cancellationToken);
     }
 }

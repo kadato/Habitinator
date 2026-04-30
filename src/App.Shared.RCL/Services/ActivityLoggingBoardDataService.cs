@@ -63,7 +63,7 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
             : snap.Todos.FirstOrDefault(x => x.Id == itemId);
         if (before is null) return await _inner.ToggleItemAsync(section, itemId, cancellationToken);
 
-        var today = DailySchedule.UtcToday;
+        var today = DateOnly.FromDateTime(DateTime.Now); // Use local timezone for consistency
         var wasComplete = section == BoardSection.Daily
             ? before.DailyLastCompletedOn == today || (before.DailyLastCompletedOn is null && before.IsCompleted)
             : before.IsCompleted;

@@ -4,6 +4,9 @@ namespace App.Shared.RCL.Services;
 
 public sealed class LocalBoardDataService : IBoardDataService
 {
+    // Use local date for demo data to be consistent with timezone-aware scheduling
+    private static DateOnly DemoStartDate => DateOnly.FromDateTime(DateTime.Now);
+
     private readonly List<BoardItem> _dailies =
     [
         new(
@@ -17,7 +20,7 @@ public sealed class LocalBoardDataService : IBoardDataService
             true,
             0,
             HabitResetPeriod.Daily,
-            DailySchedule.UtcToday),
+            DemoStartDate),
         new(
             Guid.NewGuid(),
             "Deep work block",
@@ -29,11 +32,11 @@ public sealed class LocalBoardDataService : IBoardDataService
             true,
             0,
             HabitResetPeriod.Daily,
-            DailySchedule.UtcToday,
+            DemoStartDate,
             DailyRepeatType.Daily,
             1,
             null,
-            DailySchedule.UtcToday),
+            DemoStartDate),
         new(
             Guid.NewGuid(),
             "Progress thesis",
@@ -45,7 +48,7 @@ public sealed class LocalBoardDataService : IBoardDataService
             true,
             0,
             HabitResetPeriod.Daily,
-            DailySchedule.UtcToday)
+            DemoStartDate)
     ];
 
     private readonly List<BoardItem> _habits =
@@ -61,9 +64,12 @@ public sealed class LocalBoardDataService : IBoardDataService
         new(Guid.NewGuid(), "Call advisor")
     ];
 
+    // Local demo service uses device local time for date scheduling
+    private static DateOnly LocalToday => DateOnly.FromDateTime(DateTime.Now);
+
     public Task<BoardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
     {
-        var today = DailySchedule.UtcToday;
+        var today = LocalToday;
         return Task.FromResult(new BoardSnapshot(
             _habits.ToList(),
             _dailies
@@ -82,7 +88,7 @@ public sealed class LocalBoardDataService : IBoardDataService
     public Task<BoardItem> CreateItemAsync(BoardSection section, string title,
         CancellationToken cancellationToken = default)
     {
-        var today = DailySchedule.UtcToday;
+        var today = LocalToday;
         var item = section == BoardSection.Daily
             ? new BoardItem(
                 Guid.NewGuid(),
@@ -112,7 +118,7 @@ public sealed class LocalBoardDataService : IBoardDataService
         var index = list.IndexOf(existing);
         list[index] = updated;
         return Task.FromResult<BoardItem?>(section == BoardSection.Daily
-            ? ProjectDailyForDisplay(updated, DailySchedule.UtcToday)
+            ? ProjectDailyForDisplay(updated, LocalToday)
             : updated);
     }
 
@@ -125,7 +131,7 @@ public sealed class LocalBoardDataService : IBoardDataService
     public Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn,
         CancellationToken cancellationToken = default)
     {
-        var today = DailySchedule.UtcToday;
+        var today = LocalToday;
         if (completedOn >= today) return Task.FromResult<BoardItem?>(null);
 
         var list = _dailies;
@@ -158,7 +164,7 @@ public sealed class LocalBoardDataService : IBoardDataService
         BoardItem updated;
         if (section == BoardSection.Daily)
         {
-            var today = DailySchedule.UtcToday;
+            var today = LocalToday;
             if (ProjectDailyForDisplay(existing, today).IsCompleted)
                 updated = existing with { DailyLastCompletedOn = null, IsCompleted = false };
             else
@@ -172,7 +178,7 @@ public sealed class LocalBoardDataService : IBoardDataService
         var index = list.IndexOf(existing);
         list[index] = updated;
         return Task.FromResult<BoardItem?>(section == BoardSection.Daily
-            ? ProjectDailyForDisplay(updated, DailySchedule.UtcToday)
+            ? ProjectDailyForDisplay(updated, LocalToday)
             : updated);
     }
 
@@ -280,7 +286,7 @@ public sealed class LocalBoardDataService : IBoardDataService
 
         var n = Math.Max(1, Math.Min(999, repeatInterval));
         var streakClamped = Math.Max(0, Math.Min(9999, streak));
-        var today = DailySchedule.UtcToday;
+        var today = LocalToday;
         var wasCompleteForToday = existing.DailyLastCompletedOn == today
                                   || (existing.DailyLastCompletedOn is null && existing.IsCompleted);
         DateOnly? startD = startDate is { } sd ? DateOnly.FromDateTime(sd) : null;

@@ -8,10 +8,10 @@ public static class ActivityStatisticsCalculator
     private const int HeatmapDataDays = 370;
 
     public static IReadOnlyList<DailyGraphPeriodOption> BuildPeriodOptions(
-        DateOnly utcToday,
+        DateOnly referenceToday,
         IReadOnlyList<UserActivityEventRecord> allUserEvents)
     {
-        var maxYear = utcToday.Year;
+        var maxYear = referenceToday.Year;
         UserActivityEventRecord? first = allUserEvents
             .Where(e => e.EventType == ActivityEventType.DailyComplete)
             .OrderBy(e => e.OccurredAtUtc)
@@ -32,7 +32,7 @@ public static class ActivityStatisticsCalculator
 
     public static (string Key, DateOnly Start, DateOnly End) ResolveActivityPeriod(
         string? periodKey,
-        DateOnly utcToday,
+        DateOnly referenceToday,
         IReadOnlyList<DailyGraphPeriodOption> options)
     {
         HashSet<string> optionKeys = [.. options.Select(o => o.Key)];
@@ -46,7 +46,7 @@ public static class ActivityStatisticsCalculator
 
         if (string.Equals(key, DailyGraphPeriods.Rolling370Days, StringComparison.Ordinal))
         {
-            var rangeEnd = utcToday;
+            var rangeEnd = referenceToday;
             var rangeStart = rangeEnd.AddDays(-(HeatmapDataDays - 1));
             return (key, rangeStart, rangeEnd);
         }
@@ -55,7 +55,7 @@ public static class ActivityStatisticsCalculator
             int.TryParse(key.AsSpan(DailyGraphPeriods.YearPrefix.Length), out var y))
             return (key, new DateOnly(y, 1, 1), new DateOnly(y, 12, 31));
 
-        return (DailyGraphPeriods.Rolling370Days, utcToday.AddDays(-(HeatmapDataDays - 1)), utcToday);
+        return (DailyGraphPeriods.Rolling370Days, referenceToday.AddDays(-(HeatmapDataDays - 1)), referenceToday);
     }
 
     public static ActivityDashboardDto BuildDashboard(
@@ -63,7 +63,7 @@ public static class ActivityStatisticsCalculator
         string periodKey,
         DateOnly start,
         DateOnly end,
-        DateOnly utcToday)
+        DateOnly todayCutoff)
     {
         var perDay = new Dictionary<DateOnly, (int count, int focusSec)>();
         var netDailyItemDay = BuildNetDailyItemDayMap(rows);
@@ -150,7 +150,7 @@ public static class ActivityStatisticsCalculator
         for (var r = 0; r < 7; r++)
         {
             var date = gridStartMonday.AddDays(c * 7 + r);
-            var inRange = date >= start && date <= end && date <= utcToday;
+            var inRange = date >= start && date <= end && date <= todayCutoff;
             if (!inRange)
             {
                 heat.Add(new ActivityHeatmapCellDto(r, c, date, 0, 0, false));
@@ -186,7 +186,7 @@ public static class ActivityStatisticsCalculator
         IReadOnlyList<DailyGraphPeriodOption> options,
         DateOnly rangeStart,
         DateOnly rangeEnd,
-        DateOnly utcToday)
+        DateOnly todayCutoff)
     {
         if (dailyItemRows.Count == 0)
             return new DailyContributionsViewDto(
@@ -235,7 +235,7 @@ public static class ActivityStatisticsCalculator
             var maxInRange = 0;
             for (var d = rangeStart; d <= rangeEnd; d = d.AddDays(1))
             {
-                if (d > utcToday) break;
+                if (d > todayCutoff) break;
 
                 if (countByDay.TryGetValue(d, out var c) && c > maxInRange) maxInRange = c;
             }
@@ -243,7 +243,7 @@ public static class ActivityStatisticsCalculator
             IReadOnlyList<ActivityHeatmapCellDto> graphHeat = BuildRangeContributionHeatmap(
                 rangeStart,
                 rangeEnd,
-                utcToday,
+                todayCutoff,
                 countByDay,
                 maxInRange);
 
@@ -287,7 +287,7 @@ public static class ActivityStatisticsCalculator
     private static List<ActivityHeatmapCellDto> BuildRangeContributionHeatmap(
         DateOnly rangeStart,
         DateOnly rangeEnd,
-        DateOnly utcToday,
+        DateOnly todayCutoff,
         IReadOnlyDictionary<DateOnly, int> countByDay,
         int maxInRange)
     {
@@ -308,7 +308,7 @@ public static class ActivityStatisticsCalculator
                 continue;
             }
 
-            if (date > utcToday)
+            if (date > todayCutoff)
             {
                 heat.Add(new ActivityHeatmapCellDto(r, c, date, 0, 0, false));
                 continue;
@@ -325,6 +325,7 @@ public static class ActivityStatisticsCalculator
     /// <summary>
     ///     For each (board item, UTC calendar day), last event wins: daily is "done" for that day in stats
     ///     only if the last DailyComplete/DailyUncomplete for that pair is <see cref="ActivityEventType.DailyComplete" />.
+    ///     Events are stored and grouped by UTC calendar day.
     /// </summary>
     private static Dictionary<(Guid id, DateOnly d), bool> BuildNetDailyItemDayMap(
         IReadOnlyList<UserActivityEventRecord> rows)

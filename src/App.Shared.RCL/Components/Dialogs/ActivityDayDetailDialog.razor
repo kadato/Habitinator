@@ -1,4 +1,5 @@
 @inject IActivityStatisticsReader Stats
+@inject IUserTimeZoneService TimeZoneService
 
 <MudDialog Class="activity-day-detail-dialog"
            ContentClass="activity-day-detail-dialog__content">
@@ -25,12 +26,12 @@
                       Elevation="0"
                       Class="activity-day-detail-table">
                 <HeaderContent>
-                    <MudTh>Time (UTC)</MudTh>
+                    <MudTh>Time</MudTh>
                     <MudTh>Event</MudTh>
                     <MudTh>Item</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="Time(UTC)">@context.OccurredAtUtc.ToString("HH:mm:ss")</MudTd>
+                    <MudTd DataLabel="Time">@FormatLocalTime(context.OccurredAtUtc)</MudTd>
                     <MudTd DataLabel="Event">@context.Label@FormatTimerSuffix(context)</MudTd>
                     <MudTd DataLabel="Item">@(context.BoardItemTitle ?? context.CustomLabel ?? "—")</MudTd>
                 </RowTemplate>
@@ -75,6 +76,12 @@
     private void Close()
     {
         MudDialog?.Cancel();
+    }
+
+    private string FormatLocalTime(DateTimeOffset utcTime)
+    {
+        var localTime = TimeZoneService.ConvertToLocal(utcTime);
+        return localTime.ToString("HH:mm:ss");
     }
 
     private static string FormatTimerSuffix(ActivityDayEventDto e)

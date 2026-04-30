@@ -33,7 +33,7 @@ public sealed class ActivityStatisticsService
 
         var rows = await ev
             .OrderBy(e => e.OccurredAtUtc)
-            .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds))
+            .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
             .ToListAsync(cancellationToken);
 
         IReadOnlyList<Guid> boardIds = rows
@@ -74,7 +74,7 @@ public sealed class ActivityStatisticsService
             evq = evq.Where(e => e.BoardItemId != null && allowedIds.Contains(e.BoardItemId.Value));
 
         var rows = await evq
-            .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds))
+            .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
             .ToListAsync(cancellationToken);
 
         var built = ActivityStatisticsCalculator.BuildDashboard(rows, key, start, end, utcToday);
@@ -116,7 +116,7 @@ public sealed class ActivityStatisticsService
             evQ = evQ.Where(e => e.BoardItemId != null && allowedIds.Contains(e.BoardItemId.Value));
 
         var eventRows = await evQ
-            .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds))
+            .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
             .ToListAsync(cancellationToken);
 
         IReadOnlyList<(Guid Id, string Title)> dailies = dailyItemRows.Select(x => (x.Id, x.Title)).ToList();

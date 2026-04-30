@@ -32,7 +32,7 @@
                 <RowTemplate>
                     <MudTd DataLabel="Time(UTC)">@context.OccurredAtUtc.ToString("HH:mm:ss")</MudTd>
                     <MudTd DataLabel="Event">@context.Label@FormatTimerSuffix(context)</MudTd>
-                    <MudTd DataLabel="Item">@(context.BoardItemTitle ?? "—")</MudTd>
+                    <MudTd DataLabel="Item">@(context.BoardItemTitle ?? context.CustomLabel ?? "—")</MudTd>
                 </RowTemplate>
             </MudTable>
         }

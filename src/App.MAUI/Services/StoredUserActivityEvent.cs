@@ -15,4 +15,6 @@ public sealed class StoredUserActivityEvent
     public Guid? BoardItemId { get; set; }
 
     public int? DurationSeconds { get; set; }
+
+    public string? CustomLabel { get; set; }
 }

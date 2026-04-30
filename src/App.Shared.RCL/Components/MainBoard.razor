@@ -537,7 +537,8 @@
 
         try
         {
-            await UserActivityLog.LogTimerSessionAsync(duration, boardId);
+            var customLabel = boardId is null ? targetId : null;
+            await UserActivityLog.LogTimerSessionAsync(duration, boardId, customLabel);
         }
         catch (Exception)
         {

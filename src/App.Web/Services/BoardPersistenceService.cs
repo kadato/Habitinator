@@ -262,7 +262,7 @@ public sealed class BoardPersistenceService
             DateTimeKind.Utc);
         entity.IsCompleted = true;
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
-        AddActivityEvent(userId, ActivityEventType.DailyComplete, itemId, null,
+        AddActivityEvent(userId, ActivityEventType.DailyComplete, itemId, null, null,
             DailyStreakCalculator.BackdatedDailyEventOccurredAt(completedOn));
         await _dbContext.SaveChangesAsync(cancellationToken);
         await SyncDailyStreakCounterToComputedAsync(userId, entity, cancellationToken);
@@ -361,12 +361,13 @@ public sealed class BoardPersistenceService
         Guid userId,
         TimeSpan duration,
         Guid? boardItemId,
+        string? customLabel = null,
         CancellationToken cancellationToken = default)
     {
         var sec = (int)Math.Min(int.MaxValue, Math.Max(0, duration.TotalSeconds));
         if (sec == 0) return;
 
-        AddActivityEvent(userId, ActivityEventType.TimerSession, boardItemId, sec);
+        AddActivityEvent(userId, ActivityEventType.TimerSession, boardItemId, sec, customLabel);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -1171,6 +1172,7 @@ public sealed class BoardPersistenceService
         ActivityEventType type,
         Guid? boardItemId,
         int? durationSeconds = null,
+        string? customLabel = null,
         DateTimeOffset? occurredAtUtc = null)
     {
         _dbContext.UserActivityEvents.Add(new UserActivityEventEntity
@@ -1180,7 +1182,8 @@ public sealed class BoardPersistenceService
             OccurredAtUtc = occurredAtUtc ?? DateTimeOffset.UtcNow,
             EventType = type,
             BoardItemId = boardItemId,
-            DurationSeconds = type == ActivityEventType.TimerSession ? durationSeconds : null
+            DurationSeconds = type == ActivityEventType.TimerSession ? durationSeconds : null,
+            CustomLabel = type == ActivityEventType.TimerSession ? customLabel : null
         });
     }
 }

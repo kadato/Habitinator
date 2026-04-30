@@ -6,4 +6,5 @@ public readonly record struct UserActivityEventRecord(
     DateTimeOffset OccurredAtUtc,
     ActivityEventType EventType,
     Guid? BoardItemId,
-    int? DurationSeconds);
+    int? DurationSeconds,
+    string? CustomLabel = null);

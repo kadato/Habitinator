@@ -277,7 +277,8 @@ public static class ActivityStatisticsCalculator
                 r.EventType,
                 MapEventTypeLabel(r.EventType),
                 itemTitle,
-                r.DurationSeconds));
+                r.DurationSeconds,
+                r.CustomLabel));
         }
 
         return new ActivityDayDetailDto(day, list);

@@ -13,7 +13,7 @@ public sealed class NoOpUserActivityLogService : IUserActivityLogService
         return Task.CompletedTask;
     }
 
-    public Task LogTimerSessionAsync(TimeSpan duration, Guid? boardItemId,
+    public Task LogTimerSessionAsync(TimeSpan duration, Guid? boardItemId, string? customLabel = null,
         CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;

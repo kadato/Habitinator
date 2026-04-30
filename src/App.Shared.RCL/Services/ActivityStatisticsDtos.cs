@@ -45,7 +45,8 @@ public sealed record ActivityDayEventDto(
     ActivityEventType EventType,
     string Label,
     string? BoardItemTitle,
-    int? DurationSeconds);
+    int? DurationSeconds,
+    string? CustomLabel = null);
 
 public sealed record ActivityDayDetailDto(DateOnly Date, IReadOnlyList<ActivityDayEventDto> Events);
 

@@ -19,4 +19,7 @@ public sealed class UserActivityEventEntity
 
     /// <summary>Only for <see cref="ActivityEventType.TimerSession" />: focus duration in whole seconds.</summary>
     public int? DurationSeconds { get; set; }
+
+    /// <summary>Custom label for free-text sessions not linked to a board item.</summary>
+    public string? CustomLabel { get; set; }
 }

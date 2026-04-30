@@ -8,6 +8,7 @@ public sealed class UserNotifier : IUserNotifier, IDisposable
 {
     private readonly IClock _clock;
     private readonly Func<Task> _onRemoteRefresh;
+    private readonly INotificationSettingsRules _notificationRules;
     private readonly IRemoteBoardRefreshService _remoteBoardRefresh;
     private readonly INotificationSettingsService _settingsService;
     private readonly ISnackbar _snackbar;
@@ -17,12 +18,14 @@ public sealed class UserNotifier : IUserNotifier, IDisposable
         ISnackbar snackbar,
         INotificationSettingsService settingsService,
         IRemoteBoardRefreshService remoteBoardRefresh,
-        IClock clock)
+        IClock clock,
+        INotificationSettingsRules notificationRules)
     {
         _snackbar = snackbar;
         _settingsService = settingsService;
         _remoteBoardRefresh = remoteBoardRefresh;
         _clock = clock;
+        _notificationRules = notificationRules;
         _settingsService.Changed += OnSettingsChanged;
         _onRemoteRefresh = OnRemoteBoardRefreshInvalidateCacheAsync;
         _remoteBoardRefresh.RegisterForRemoteRefresh(_onRemoteRefresh);
@@ -37,18 +40,18 @@ public sealed class UserNotifier : IUserNotifier, IDisposable
     public async ValueTask NotifyAsync(string message, Severity severity, CancellationToken cancellationToken = default)
     {
         var settings = await GetCachedAsync(cancellationToken).ConfigureAwait(false);
-        if (!NotificationSettingsRules.ShouldShowToast(settings, severity, _clock.UtcNow.UtcDateTime)) return;
+        if (!_notificationRules.ShouldShowToast(settings, severity, _clock.UtcNow.UtcDateTime)) return;
 
-        var ms = NotificationSettingsRules.VisibleStateDurationMs(settings.ToastDuration);
+        var ms = _notificationRules.VisibleStateDurationMs(settings.ToastDuration);
         _snackbar.Add(message, severity, config => config.VisibleStateDuration = ms);
     }
 
     public async ValueTask NotifyFocusTimerEndAsync(string message, CancellationToken cancellationToken = default)
     {
         var settings = await GetCachedAsync(cancellationToken).ConfigureAwait(false);
-        if (!NotificationSettingsRules.ShouldShowFocusTimerEndNotification(settings)) return;
+        if (!_notificationRules.ShouldShowFocusTimerEndNotification(settings)) return;
 
-        var ms = NotificationSettingsRules.VisibleStateDurationMs(settings.ToastDuration);
+        var ms = _notificationRules.VisibleStateDurationMs(settings.ToastDuration);
         _snackbar.Add(message, Severity.Success, config => config.VisibleStateDuration = ms);
     }
 

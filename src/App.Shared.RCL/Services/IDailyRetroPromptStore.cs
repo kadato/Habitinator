@@ -12,12 +12,6 @@ public interface IDailyRetroPromptStore
     /// </summary>
     Task<DateOnly?> GetLastPromptResolvedLocalDateAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>
-    ///     [Obsolete] Use <see cref="GetLastPromptResolvedLocalDateAsync" /> for timezone-aware date tracking.
-    /// </summary>
-    [Obsolete("Use GetLastPromptResolvedLocalDateAsync for timezone-aware date tracking")]
-    Task<DateOnly?> GetLastPromptResolvedUtcDateAsync(CancellationToken cancellationToken = default);
-
     /// <summary>Records that the user has seen or dismissed the prompt for the current local day.</summary>
     Task SetPromptResolvedForTodayAsync(CancellationToken cancellationToken = default);
 }

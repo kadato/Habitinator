@@ -38,10 +38,6 @@ public sealed class JsDailyRetroPromptStore : IDailyRetroPromptStore
         return d;
     }
 
-    [Obsolete("Use GetLastPromptResolvedLocalDateAsync for timezone-aware date tracking")]
-    public Task<DateOnly?> GetLastPromptResolvedUtcDateAsync(CancellationToken cancellationToken = default)
-        => GetLastPromptResolvedLocalDateAsync(cancellationToken);
-
     public async Task SetPromptResolvedForTodayAsync(CancellationToken cancellationToken = default)
     {
         var ymd = DailySchedule.LocalToday(_timeZoneService).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);

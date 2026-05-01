@@ -49,6 +49,7 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 |----------|---------|-------|
 | 🤖 Android | [Habitinator-android.apk](https://github.com/tothKarolyDavid/Habitinator/releases/latest/download/Habitinator-android.apk) | Install on-device (unknown sources required) |
 | 🪟 Windows | [Habitinator-windows-x64.zip](https://github.com/tothKarolyDavid/Habitinator/releases/latest/download/Habitinator-windows-x64.zip) | Portable app, extract and run |
+| 🍎 iOS / macOS | *Source only* | Build from source using .NET MAUI workload |
 
 **Windows runtime note:** if your release is framework-dependent, install [.NET Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) once.
 
@@ -173,12 +174,12 @@ These are produced by the **Playwright** test in `DocumentationScreenshotsTests`
 ### Real-time and sync
 
 - **SignalR** hub at `/hubs/board` notifies the current user’s group when the board (or related settings) should refresh; the **web** Blazor app reconnects and reloads; **MAUI** uses the .NET **SignalR client** and then refreshes from local SQLite / server as implemented.
-- **Web** is **online-only** for the board: reads and writes go straight to PostgreSQL through `WebBoardDataService`.
+- **Web** is **online-only**: the board is read and written through `WebBoardDataService` directly against PostgreSQL in the same process.
 - **MAUI** is **local-first**: SQLite mirror, **outbox** of mutations, **sync coordinator** with retries, **incremental sync** when a cursor is known, and **idempotency** + **optimistic concurrency** on the API (see [Cross-platform sync](#cross-platform-sync-and-local-first-behavior) below).
 
 ### Demo and developer experience
 
-- **Aspire AppHost** starts PostgreSQL (with **pgAdmin** and a data volume in the default template), the **web** project, and optionally the **MAUI** project with the API base URL **injected** for device/emulator use.
+- **Aspire AppHost** starts PostgreSQL (with **pgAdmin** and a data volume in the default template), the **web** project (e.g. port **5031**), and optionally the **MAUI** project with the API base URL **injected** for device/emulator use.
 - **Health endpoint**: `GET /health` (plain `OK`) for orchestration and CI.
 - **Seeded guest** account and **demo board / activity** data when appropriate so you can explore without manual setup.
 
@@ -190,7 +191,7 @@ These are produced by the **Playwright** test in `DocumentationScreenshotsTests`
 |------|------------|
 | Runtime | **.NET 10** |
 | Web UI | **Blazor Web App** with **Interactive Server** components, **MudBlazor** |
-| Mobile / desktop shell | **.NET MAUI** + **BlazorWebView** (Android, iOS, Mac Catalyst, Windows where enabled in the project) |
+| Mobile / desktop shell | **.NET MAUI** + **BlazorWebView** (Android, iOS, Mac Catalyst, Windows) |
 | Shared UI | **Razor Class Library** (`App.Shared.RCL`) consumed by **App.Web** and **App.MAUI** |
 | API host | **ASP.NET Core** minimal APIs, **SignalR** |
 | Auth | **ASP.NET Core Identity**, **cookie** + **JWT Bearer** (`Microsoft.AspNetCore.Authentication.JwtBearer`) |
@@ -209,7 +210,7 @@ These are produced by the **Playwright** test in `DocumentationScreenshotsTests`
 
 ## Solution structure
 
-- **`src/AppHost`** — Aspire orchestration: PostgreSQL, database `habitinatordb`, `app-web` (HTTP launch profile, endpoint **not** proxied so **Blazor + SignalR WebSockets** work with Kestrel), **`app-maui`** with `HABITINATOR_API_BASE_URL` set to the web app’s HTTP endpoint, **WaitFor** database and web.
+- **`src/AppHost`** — Aspire orchestration: PostgreSQL, database `habitinatordb`, `app-web` (HTTP launch profile, port **5031**, endpoint **not** proxied so **Blazor + SignalR WebSockets** work with Kestrel), **`app-maui`** with `HABITINATOR_API_BASE_URL` set to the web app’s HTTP endpoint, **WaitFor** database and web.
 - **`src/App.Web`** — Blazor app, minimal APIs, Identity, EF Core, SignalR `BoardHub`, health check, static assets, hosted board maintenance.
 - **`src/App.MAUI`** — MAUI Blazor host, SQLite, outbox sync, SignalR client, resilient `HttpClient`, local notifications.
 - **`src/App.Shared.RCL`** — Shared Razor components (board, columns, timer, statistics, settings, dialogs), models, and services (board abstractions, activity stats calculator, timer, notifier).
@@ -224,7 +225,7 @@ These are produced by the **Playwright** test in `DocumentationScreenshotsTests`
 ## Cross-platform sync and local-first behavior
 
 - **PostgreSQL** is the **source of truth** for synchronized user data.
-- **Web (`App.Web`)** is **online-only**: the board is read and written through `WebBoardDataService` against PostgreSQL in the same process.
+- **Web (`App.Web`)** is **online-only**: the board is read and written through `WebBoardDataService` against PostgreSQL directly (no local caching or outbox).
 - **MAUI (`App.MAUI`)** is **local-first** for the productivity board:
   - Board data is mirrored in **SQLite** on the device.
   - Edits apply locally and append to an **outbox** for the REST board API under `/api/board`.

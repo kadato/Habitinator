@@ -1,0 +1,65 @@
+%% Project Dependency Graph
+%% Visual representation of project references
+
+flowchart LR
+    subgraph Legend["Legend"]
+        direction TB
+        App["📱 Application<br/>Executables"]
+        Library["📦 Library<br/>Shared Components"]
+        Test["🧪 Test<br/>Testing Projects"]
+        Infra["☁️ Infrastructure<br/>Orchestration"]
+    end
+    
+    subgraph Projects["Project Dependencies"]
+        direction TB
+        
+        subgraph Applications["Applications"]
+            Web["🌐 App.Web<br/>Blazor Server + API"]
+            MAUI["📱 App.MAUI<br/>Mobile/Desktop"]
+        end
+        
+        subgraph Shared["Shared Components"]
+            RCL["📦 App.Shared.RCL<br/>Razor Class Library"]
+            SharedTests["🧪 App.Shared.Tests<br/>Unit Tests"]
+            RCLTests["🧪 App.Shared.RCL.Tests<br/>Component Tests"]
+        end
+        
+        subgraph WebProjects["Web Layer"]
+            WebIntTests["🧪 App.Web.IntegrationTests<br/>API + DB Tests"]
+            WebE2E["🧪 App.Web.E2E<br/>Playwright Tests"]
+        end
+        
+        subgraph Mobile["Mobile Layer"]
+            MauiUITests["🧪 App.MAUI.UITests<br/>Appium Tests"]
+        end
+        
+        subgraph Orchestration["Orchestration"]
+            AppHost["☁️ AppHost<br/>.NET Aspire"]
+        end
+    end
+    
+    %% Dependencies
+    Web --> RCL
+    MAUI --> RCL
+    
+    RCLTests --> RCL
+    SharedTests --> RCL
+    
+    WebIntTests --> Web
+    WebE2E --> Web
+    
+    MauiUITests --> MAUI
+    
+    AppHost --> Web
+    
+    %% Styling
+    classDef appClass fill:#e3f2fd,stroke:#1565c0
+    classDef libClass fill:#fff3e0,stroke:#ef6c00
+    classDef testClass fill:#e8f5e9,stroke:#2e7d32
+    classDef infraClass fill:#fce4ec,stroke:#c2185b
+    
+    class Web,MAUI,App appClass
+    class RCL libClass
+    class SharedTests,RCLTests,WebIntTests,WebE2E,MauiUITests testClass
+    class AppHost infraClass
+    class Legend,Applications,Shared,WebProjects,Mobile,Orchestration libClass

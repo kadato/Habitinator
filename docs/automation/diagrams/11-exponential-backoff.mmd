@@ -1,0 +1,53 @@
+%% Exponential Backoff Retry Algorithm
+%% Handling transient failures with progressive delays
+
+flowchart TD
+    Start([Failed operation]) --> FirstAttempt
+    
+    FirstAttempt[attempt = 0<br/>maxDelay = 300s<br/>maxAttempts = 8] --> CalcDelay
+    
+    CalcDelay[delay = Min(300, 2^Min(attempt, 8))]<br/>CalcDelay --> ShowDelay
+    
+    subgraph Delays["Backoff Delays (seconds)"]
+        direction LR
+        
+        A0["Attempt 0:<br/>2^0 = 1s"]
+        A1["Attempt 1:<br/>2^1 = 2s"]
+        A2["Attempt 2:<br/>2^2 = 4s"]
+        A3["Attempt 3:<br/>2^3 = 8s"]
+        A4["Attempt 4:<br/>2^4 = 16s"]
+        A5["Attempt 5:<br/>2^5 = 32s"]
+        A6["Attempt 6:<br/>2^6 = 64s"]
+        A7["Attempt 7:<br/>2^7 = 128s"]
+        A8["Attempt 8+:<br/>2^8 = 256s"]
+        Max["Max cap:<br/>300s"]
+    end
+    
+    ShowDelay --> Wait
+    
+    Wait["Wait for delay duration"] --> Retry
+    
+    Retry["Retry operation"] --> Success{Success?}
+    
+    Success -->|Yes| Reset["Reset attempt counter<br/>Status = OK"]
+    Success -->|No| Increment["attempt++<br/>Log error"]
+    
+    Increment --> StuckCheck{attempt >= 8?}
+    
+    StuckCheck -->|Yes| MarkStuck["Mark as STUCK<br/>Notify user<br/>Stop auto-retry"]
+    StuckCheck -->|No| CalcDelay
+    
+    MarkStuck --> EndStuck([End - Manual intervention needed])
+    Reset --> EndSuccess([End - Operation completed])
+    
+    %% Styling
+    classDef startEnd fill:#e3f2fd,stroke:#1565c0
+    classDef process fill:#e8f5e9,stroke:#2e7d32
+    classDef decision fill:#fff3e0,stroke:#ef6c00
+    classDef result fill:#f3e5f5,stroke:#7b1fa2
+    classDef delayBox fill:#fce4ec,stroke:#c2185b
+    
+    class Start,EndSuccess,EndStuck startEnd
+    class FirstAttempt,CalcDelay,ShowDelay,Wait,Retry,Increment,Reset,MarkStuck process
+    class Success,StuckCheck decision
+    class Delays,A0,A1,A2,A3,A4,A5,A6,A7,A8,Max delayBox

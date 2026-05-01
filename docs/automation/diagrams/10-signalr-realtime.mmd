@@ -1,0 +1,68 @@
+%% SignalR Real-Time Communication Flow
+%% Multi-device synchronization via WebSocket
+
+sequenceDiagram
+    autonumber
+    participant Device1 as 📱 Device 1<br/>(MAUI)
+    participant Device2 as 💻 Device 2<br/>(Web)
+    participant Hub as 📡 SignalR Hub<br/>/hubs/board
+    participant Notifier as 🔔 BoardChangeNotifier
+    participant API as 🔌 Board API
+    participant DB as 🐘 PostgreSQL
+
+    Note over Device1,DB: Connection Establishment
+    
+    Device1->>Hub: Connect with JWT
+    Hub->>Hub: AuthenticateUserId()
+    Hub->>Hub: AddToGroup("board-user:{userId}")
+    Hub-->>Device1: Connection Established
+    
+    Device2->>Hub: Connect with Cookie
+    Hub->>Hub: AuthenticateUserId()
+    Hub->>Hub: AddToGroup("board-user:{userId}")
+    Hub-->>Device2: Connection Established
+    
+    Note over Device1,DB: Mutation Flow
+    
+    Device2->>API: POST /api/board/dailies/{id}/complete
+    API->>DB: UPDATE BoardItems
+    API->>DB: INSERT UserActivityEvents
+    API->>Notifier: NotifyBoardChangedAsync(userId)
+    
+    Notifier->>Hub: Clients.Group("board-user:{userId}")
+              .SendAsync("BoardChanged")
+    
+    Hub->>Device1: BoardChanged event
+    Hub->>Device2: BoardChanged event
+    
+    Device1->>Device1: Refresh from SQLite/local
+    Device2->>Device2: Refresh from server
+    
+    Note over Device1,DB: Settings Change Propagation
+    
+    Device1->>API: PUT /api/user/settings
+    API->>DB: UPDATE UserNotificationSettings
+    API->>Notifier: NotifySettingsChangedAsync(userId)
+    
+    Notifier->>Hub: Clients.Group("board-user:{userId}")
+              .SendAsync("SettingsChanged")
+    
+    Hub->>Device1: SettingsChanged event
+    Hub->>Device2: SettingsChanged event
+    
+    Note over Device1,DB: Disconnection Handling
+    
+    Device1->>Hub: Disconnect (app closed)
+    Hub->>Hub: OnDisconnectedAsync
+    Hub->>Hub: RemoveFromGroup("board-user:{userId}")
+    
+    Note right of Hub: Reconnection Logic:
+    Device1 will auto-reconnect
+    with exponential backoff
+    and replay missed events
+
+    %% Styling
+    Note right of Device1: Client-side handling:
+    - Reconnect with backoff
+    - Buffer mutations during disconnect
+    - Replay on reconnection

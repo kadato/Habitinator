@@ -1,0 +1,75 @@
+%% Outbox Pattern - Local-First Sync Architecture
+%% Shows the complete data flow from user action to server synchronization
+
+sequenceDiagram
+    autonumber
+    participant User as 👤 User
+    participant UI as 🎨 Blazor UI
+    participant LocalSvc as 📱 LocalFirstBoardDataService
+    participant SQLite as 🗃️ SQLite
+    participant Outbox as 📤 Outbox Queue
+    participant Sync as 🔄 SyncCoordinator
+    participant API as 🔌 Server API
+    participant PG as 🐘 PostgreSQL
+
+    Note over User,PG: Create New Habit Flow
+
+    User->>UI: Create Habit "Exercise"
+    UI->>LocalSvc: CreateAsync(dto)
+    
+    LocalSvc->>SQLite: INSERT BoardItems
+    LocalSvc->>Outbox: INSERT OutboxOperation<br/>(Kind: Create, Payload: {...})
+    LocalSvc->>UI: Return CreatedItem
+    UI->>User: Show Success
+    
+    Note right of Sync: Background Sync Loop
+    
+    Sync->>Outbox: TryDrainOneOutboxOperationAsync()
+    Outbox-->>Sync: OutboxOperation
+    
+    Sync->>API: POST /api/board/habits<br/>(with IdempotencyKey)
+    API->>PG: INSERT BoardItem
+    API-->>Sync: 200 OK (ServerItem with new ID)
+    
+    Sync->>SQLite: UPDATE BoardItems<br/>SET ServerId = {newId}
+    Sync->>SQLite: DELETE OutboxOperation
+    
+    Note over Sync,API: Exponential Backoff on Failure
+    
+    alt Network Error
+        API--xSync: 500 Error / Timeout
+        Sync->>Sync: Backoff(attempt) = 2^attempt seconds<br/>Max: 300 seconds
+        Sync->>Sync: Schedule retry
+    else Conflict Detected (409)
+        API-->>Sync: 409 Conflict<br/>(Server has newer version)
+        Sync->>SQLite: Mark for manual review
+    end
+
+    Note over User,PG: Update Flow with Coalescing
+    
+    User->>UI: Edit Habit Title
+    UI->>LocalSvc: UpdateAsync(dto)
+    LocalSvc->>SQLite: UPDATE BoardItems
+    LocalSvc->>Outbox: INSERT OutboxOperation<br/>(Kind: Update)
+    
+    User->>UI: Delete Habit (immediately after create)
+    UI->>LocalSvc: DeleteAsync(id)
+    
+    LocalSvc->>Outbox: Check for pending Create
+    Outbox-->>LocalSvc: Found pending Create
+    LocalSvc->>SQLite: DELETE Outbox (Create operation)
+    LocalSvc->>SQLite: DELETE BoardItems (local entity)
+    Note right of LocalSvc: Coalesced! No server call needed
+
+    Note over User,PG: Conflict Resolution Flow
+    
+    Sync->>API: Update with ExpectedUpdatedAtUtc
+    API->>PG: Check current UpdatedAt
+    alt Timestamp Match
+        PG->>PG: Apply update
+        API-->>Sync: 200 OK
+    else Timestamp Mismatch
+        API-->>Sync: 409 Conflict
+        Sync->>SQLite: Store conflict for resolution
+        Sync->>Sync: Stop auto-sync, notify user
+    end

@@ -1,0 +1,58 @@
+%% Daily Recurrence Decision Algorithm
+%% Determines if a recurring task is scheduled for a specific date
+
+flowchart TD
+    Start([Input: startDate, repeatType, interval, checkDate]) --> Validate
+    
+    Validate{checkDate < startDate?} -->|Yes| NotScheduled[Return: NOT SCHEDULED]
+    Validate -->|No| CheckType{repeatType?}
+    
+    %% Daily branch
+    CheckType -->|DAILY| DailyCalc
+    DailyCalc[daysDiff = (checkDate - startDate).Days]
+    DailyCalc --> DailyMod{daysDiff % interval == 0?}
+    DailyMod -->|Yes| Scheduled[Return: SCHEDULED]
+    DailyMod -->|No| NotScheduled
+    
+    %% Weekly branch
+    CheckType -->|WEEKLY| WeeklyDOW{checkDate.DayOfWeek ==<br/>startDate.DayOfWeek?}
+    WeeklyDOW -->|No| NotScheduled
+    WeeklyDOW -->|Yes| WeeklyCalc
+    WeeklyCalc[weeksDiff = daysDiff / 7]
+    WeeklyCalc --> WeeklyMod{weeksDiff % interval == 0?}
+    WeeklyMod -->|Yes| Scheduled
+    WeeklyMod -->|No| NotScheduled
+    
+    %% Monthly branch
+    CheckType -->|MONTHLY| MonthlyDay
+    MonthlyDay[adjustedDay = Min(startDate.Day,<br/>DaysInMonth(checkDate.Year, checkDate.Month))]
+    MonthlyDay --> MonthlyCheck{checkDate.Day ==<br/>adjustedDay?}
+    MonthlyCheck -->|No| NotScheduled
+    MonthlyCheck -->|Yes| MonthlyCalc
+    MonthlyCalc[monthsDiff = (checkDate.Year * 12 + checkDate.Month) -<br/>(startDate.Year * 12 + startDate.Month)]
+    MonthlyCalc --> MonthlyMod{monthsDiff % interval == 0?}
+    MonthlyMod -->|Yes| Scheduled
+    MonthlyMod -->|No| NotScheduled
+    
+    %% Yearly branch
+    CheckType -->|YEARLY| YearlyMonth{checkDate.Month ==<br/>startDate.Month?}
+    YearlyMonth -->|No| NotScheduled
+    YearlyMonth -->|Yes| YearlyDay
+    YearlyDay[adjustedDay = Min(startDate.Day,<br/>DaysInMonth(checkDate.Year, checkDate.Month))]
+    YearlyDay --> YearlyCheck{checkDate.Day ==<br/>adjustedDay?}
+    YearlyCheck -->|No| NotScheduled
+    YearlyCheck -->|Yes| YearlyCalc
+    YearlyCalc[yearsDiff = checkDate.Year - startDate.Year]
+    YearlyCalc --> YearlyMod{yearsDiff % interval == 0?}
+    YearlyMod -->|Yes| Scheduled
+    YearlyMod -->|No| NotScheduled
+    
+    %% Styling
+    classDef startEnd fill:#e3f2fd,stroke:#1565c0
+    classDef decision fill:#fff3e0,stroke:#ef6c00
+    classDef action fill:#e8f5e9,stroke:#2e7d32
+    classDef result fill:#f3e5f5,stroke:#7b1fa2
+    
+    class Start,NotScheduled,Scheduled startEnd
+    class Validate,CheckType,DailyMod,WeeklyDOW,WeeklyMod,MonthlyCheck,MonthlyMod,YearlyMonth,YearlyCheck,YearlyMod decision
+    class DailyCalc,WeeklyCalc,MonthlyDay,MonthlyCalc,YearlyDay,YearlyCalc action

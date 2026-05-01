@@ -1,0 +1,60 @@
+%% Testing Pyramid Architecture
+%% Comprehensive testing strategy for cross-platform application
+
+flowchart TB
+    subgraph TestingPyramid["🧪 Testing Strategy"]
+        direction TB
+        
+        subgraph E2E["E2E Tests (Top)"]
+            direction TB
+            Playwright["🎭 Playwright Tests<br/>Browser Automation"]
+            Appium["📱 Appium Tests<br/>Mobile UI Automation"]
+            
+            Playwright --> Screenshots["📸 Auto-Generated<br/>Documentation Screenshots"]
+        end
+        
+        subgraph Integration["Integration Tests (Middle)"]
+            direction TB
+            TestContainers["🐘 TestContainers<br/>PostgreSQL in Docker"]
+            APIIntegration["🔌 API Integration Tests<br/>HTTP Pipeline"]
+            SignalRTests["📡 SignalR Tests<br/>Real-time Communication"]
+        end
+        
+        subgraph Unit["Unit Tests (Base)"]
+            direction TB
+            SharedUnit["⚙️ Shared Services Tests<br/>xUnit"]
+            bUnitTests["🎨 Component Tests<br/>bUnit + Razor"]
+            AlgorithmTests["🔢 Algorithm Tests<br/>Streak, Schedule, Timer"]
+        end
+    end
+    
+    subgraph Codebase["📁 Codebase Coverage"]
+        RCL["📦 App.Shared.RCL<br/>Razor Components"]
+        Services["⚙️ Shared Services<br/>Timer, Statistics"]
+        WebAPI["🔌 App.Web API<br/>Controllers & Hubs"]
+        MAUI["📱 App.MAUI<br/>Mobile Platform"]
+        Database["🗄️ PostgreSQL<br/>EF Core Migrations"]
+    end
+    
+    %% Connections
+    bUnitTests --> RCL
+    AlgorithmTests --> Services
+    
+    TestContainers --> Database
+    APIIntegration --> WebAPI
+    SignalRTests --> WebAPI
+    
+    Playwright --> WebAPI
+    Playwright --> RCL
+    Appium --> MAUI
+    
+    %% Styling
+    classDef e2eClass fill:#fce4ec,stroke:#c2185b
+    classDef integrationClass fill:#fff3e0,stroke:#f57c00
+    classDef unitClass fill:#e8f5e9,stroke:#388e3c
+    classDef codebaseClass fill:#e3f2fd,stroke:#1565c0
+    
+    class Playwright,Appium,Screenshots e2eClass
+    class TestContainers,APIIntegration,SignalRTests integrationClass
+    class SharedUnit,bUnitTests,AlgorithmTests unitClass
+    class RCL,Services,WebAPI,MAUI,Database codebaseClass

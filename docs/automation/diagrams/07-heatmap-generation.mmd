@@ -1,0 +1,85 @@
+%% Activity Heatmap Generation Algorithm
+%% 2D grid visualization aligned to ISO weeks
+
+flowchart TD
+    Start([Input: startDate, endDate, today]) --> CalcGridStart
+    
+    CalcGridStart[gridStartMonday = StartOfIsoWeek(startDate)]
+    CalcGridStart --> CalcGridEnd
+    
+    CalcGridEnd[endMonday = StartOfIsoWeek(endDate)]
+    CalcGridEnd --> CalcColumns
+    
+    CalcColumns[weekColumns = (endMonday.DayNumber - gridStartMonday.DayNumber) / 7 + 1]
+    CalcColumns --> InitGrid
+    
+    InitGrid[Initialize heatmapCells array<br/>Size: weekColumns × 7]
+    InitGrid --> FindMax
+    
+    FindMax[Find maxDayCount from perDay dictionary]
+    FindMax --> LoopStart
+    
+    LoopStart{{column = 0 to weekColumns-1}} --> DayLoop
+    
+    DayLoop{{row = 0 to 6}} --> CalcDate
+    
+    CalcDate[date = gridStartMonday.AddDays<br/>(column × 7 + row)]
+    CalcDate --> InRange
+    
+    InRange{date >= start AND<br/>date <= end AND<br/>date <= today?}
+    
+    InRange -->|Yes| GetCount
+    GetCount[count = perDay[date] or 0]
+    GetCount --> CalcIntensity
+    
+    CalcIntensity{count?}
+    CalcIntensity -->|0| Intensity0[intensity = 0]
+    CalcIntensity -->|1| Intensity1[intensity = 1]
+    CalcIntensity -->|2-3| Intensity2[intensity = 2]
+    CalcIntensity -->|4-5| Intensity3[intensity = 3]
+    CalcIntensity -->|6+| Intensity4[intensity = 4]
+    
+    Intensity0 & Intensity1 & Intensity2 & Intensity3 & Intensity4 --> AddCellIn
+    
+    AddCellIn[Add cell:<br/>row, column, date, count, intensity, inRange=true]
+    
+    InRange -->|No| AddCellOut[Add cell:<br/>row, column, date, 0, 0, inRange=false]
+    
+    AddCellIn --> NextDay
+    AddCellOut --> NextDay
+    
+    NextDay{more rows?} -->|Yes| DayLoop
+    NextDay -->|No| NextColumn
+    
+    NextColumn{more columns?} -->|Yes| LoopStart
+    NextColumn -->|No| Return[Return heatmapCells]
+    
+    Return --> End([End])
+    
+    %% Visual representation of the grid
+    subgraph GridVisualization["📊 Grid Visualization"]
+        direction LR
+        
+        Day0["Monday"]
+        Day1["Tuesday"]
+        Day2["Wednesday"]
+        Day3["Thursday"]
+        Day4["Friday"]
+        Day5["Saturday"]
+        Day6["Sunday"]
+        
+        Note["Each cell shows:<br/>• Count (actual value)<br/>• Intensity (0-4)<br/>• Color (CSS class)"]
+    end
+    
+    %% Styling
+    classDef startEnd fill:#e3f2fd,stroke:#1565c0
+    classDef process fill:#e8f5e9,stroke:#2e7d32
+    classDef decision fill:#fff3e0,stroke:#ef6c00
+    classDef result fill:#f3e5f5,stroke:#7b1fa2
+    classDef visual fill:#fce4ec,stroke:#c2185b
+    
+    class Start,End startEnd
+    class CalcGridStart,CalcGridEnd,CalcColumns,InitGrid,FindMax,CalcDate,GetCount,AddCellIn,AddCellOut,Return process
+    class InRange,LoopStart,DayLoop,CalcIntensity,NextDay,NextColumn decision
+    class Intensity0,Intensity1,Intensity2,Intensity3,Intensity4 result
+    class GridVisualization,Day0,Day1,Day2,Day3,Day4,Day5,Day6,Note visual

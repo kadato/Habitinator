@@ -1125,6 +1125,16 @@ public sealed class LocalFirstBoardDataService(
         HashSet<Guid> skipIds,
         CancellationToken cancellationToken)
     {
+        var syncIds = delta.Items
+            .Select(x => x.Item.Id)
+            .Where(id => !skipIds.Contains(id))
+            .ToList();
+        var existingRows = syncIds.Count == 0
+            ? new Dictionary<Guid, LocalBoardItemRow>()
+            : await db.BoardItems
+                .Where(x => x.UserKey == userKey && syncIds.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id, cancellationToken);
+
         foreach (var id in delta.DeletedItemIds)
         {
             if (skipIds.Contains(id)) continue;
@@ -1134,9 +1144,7 @@ public sealed class LocalFirstBoardDataService(
         foreach (var entry in delta.Items)
         {
             if (skipIds.Contains(entry.Item.Id)) continue;
-            var row = await db.BoardItems.FirstOrDefaultAsync(
-                x => x.UserKey == userKey && x.Id == entry.Item.Id,
-                cancellationToken);
+            existingRows.TryGetValue(entry.Item.Id, out var row);
             if (row is null)
             {
                 db.BoardItems.Add(LocalBoardItemRow.FromModel(entry.Section, userKey, entry.Item, false));

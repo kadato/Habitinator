@@ -1,5 +1,6 @@
 @inject IBoardDataService BoardData
 @inject IUserNotifier Notifier
+@inject IUserDateFormatService DateFormatService
 
 <MudDialog Class="edit-daily-dialog"
            ContentClass="edit-daily-dialog__content"
@@ -90,7 +91,7 @@
                            Variant="Variant.Outlined"
                            Editable="true"
                            Class="edit-daily-field-body edit-daily-date"
-                           DateFormat="dd MMM yyyy"
+                           DateFormat="@DateFormatService.DateFormat"
                            Margin="Margin.Dense"/>
 
             <MudText Typo="Typo.caption" Class="edit-daily-label-body d-block mb-1 mt-2">Repeats</MudText>
@@ -274,6 +275,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await DateFormatService.InitializeAsync();
         _title = Item.Title;
         _notes = Item.Notes;
         _selectedTags = BoardTagUtil.ParseTags(Item.Tags).ToList();

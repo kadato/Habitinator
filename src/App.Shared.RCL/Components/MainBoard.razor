@@ -9,6 +9,7 @@
 @inject IJSRuntime JS
 @inject IUserTimeZoneService TimeZoneService
 @inject IUserPreferencesService PreferencesService
+@inject IUserDateFormatService DateFormatService
 
 <MudStack Class="board-shell w-100" Spacing="2">
     @if (_isLoading)
@@ -59,7 +60,7 @@
             @if (BoardSync.LastSyncedUtc is { } syncedAt && !BoardSync.IsOffline && !_isLoading)
             {
                 <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                    Last synced @syncedAt.LocalDateTime.ToString("g")
+                    Last synced @DateFormatService.Format(syncedAt.LocalDateTime)
                 </MudText>
             }
         </MudStack>
@@ -261,6 +262,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await DateFormatService.InitializeAsync();
         BoardSync.Changed += OnBoardSyncStatusChanged;
         RemoteBoardRefresh.RegisterForRemoteRefresh(HandleRemoteBoardRefreshedAsync);
         await InitialLoadAsync();

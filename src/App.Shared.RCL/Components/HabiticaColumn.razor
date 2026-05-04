@@ -5,6 +5,7 @@
 @inject IDialogService DialogService
 @inject IUserNotifier Notifier
 @inject IUserTimeZoneService TimeZoneService
+@inject IUserDateFormatService DateFormatService
 
 <MudCard Class="@($"habitica-column {GetAccentClass()}")" Elevation="0" Outlined="false">
     <MudCardHeader Class="pb-2">
@@ -244,7 +245,7 @@
                                     {
                                         <div class="habitica-todo-due" title="Due date">
                                             <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Class="me-1" Size="Size.Small"/>
-                                            <span class="habitica-todo-due__text">@due.ToString("yyyy/MM/dd", CultureInfo.InvariantCulture)</span>
+                                            <span class="habitica-todo-due__text">@DateFormatService.Format(due)</span>
                                         </div>
                                     }
                                 </div>
@@ -293,6 +294,11 @@
     private TodoListFilter _todoFilter = TodoListFilter.Active;
 
     private readonly Dictionary<Guid, bool> _subtasksExpand = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await DateFormatService.InitializeAsync();
+    }
 
     private enum HabitListFilter
     {

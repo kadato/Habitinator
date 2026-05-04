@@ -2,6 +2,7 @@
 @using App.Shared.RCL.Components.Dialogs
 @inject IActivityStatisticsReader Stats
 @inject IDialogService DialogService
+@inject IUserDateFormatService DateFormatService
 
 <MudStack Spacing="3">
     <MudText Typo="Typo.h4" Class="app-page-title">Statistics</MudText>
@@ -87,7 +88,7 @@
                             {
                                 <button type="button"
                                         class="stats-heatmap-day-btn stats-cell @($"stats-lvl-{cell.Intensity}")"
-                                        title="@($"{cell.Date:yyyy-MM-dd}: {cell.Count} event(s) — view details")"
+                                        title="@($"{DateFormatService.Format(cell.Date)}: {cell.Count} event(s) — view details")"
                                         @onclick="() => OpenDayDetailAsync(cell.Date)">
                                 </button>
                             }
@@ -148,7 +149,7 @@
             @foreach (var w in _data.WeekBars)
             {
                 var h = _weekBarMax == 0 ? 0 : (int)Math.Round(100.0 * w.EventCount / _weekBarMax);
-                <div class="stats-week-bar-wrap" title="@($"{w.WeekStart:yyyy-MM-dd} week: {w.EventCount} events, {w.FocusMinutes} min focus")">
+                <div class="stats-week-bar-wrap" title="@($"{DateFormatService.Format(w.WeekStart)} week: {w.EventCount} events, {w.FocusMinutes} min focus")">
                     <div class="stats-week-bar" style="height: @(h)%"></div>
                 </div>
             }
@@ -198,7 +199,7 @@
                                                 if (cell.InDataRange)
                                                 {
                                                     <div class="stats-cell @(cell.Count > 0 ? "stats-daily-done" : "stats-daily-missed")"
-                                                         title="@($"{cell.Date:yyyy-MM-dd}: {(cell.Count > 0 ? $"{cell.Count} complete(s)" : "not completed")}")">
+                                                         title="@($"{DateFormatService.Format(cell.Date)}: {(cell.Count > 0 ? $"{cell.Count} complete(s)" : "not completed")}")">
                                                     </div>
                                                 }
                                                 else
@@ -247,6 +248,7 @@
     {
         try
         {
+            await DateFormatService.InitializeAsync();
             await LoadStatisticsAsync(_selectedPeriodKey);
         }
         catch (Exception ex)
@@ -363,7 +365,7 @@
             { x => x.TagFilter, filterTag }
         };
         await DialogService.ShowAsync<ActivityDayDetailDialog>(
-            date.ToString("yyyy-MM-dd (dddd)", CultureInfo.InvariantCulture),
+            FormatDateWithWeekday(date),
             parameters,
             options);
     }
@@ -383,9 +385,15 @@
         return $"{totalMinutes / 60}h {totalMinutes % 60}m";
     }
 
-    private static string FormatRange(DateOnly from, DateOnly to)
+    private string FormatRange(DateOnly from, DateOnly to)
     {
-        return $"{from:yyyy-MM-dd} → {to:yyyy-MM-dd}";
+        return $"{DateFormatService.Format(from)} → {DateFormatService.Format(to)}";
+    }
+
+    private string FormatDateWithWeekday(DateOnly date)
+    {
+        var formatted = DateFormatService.Format(date);
+        return $"{formatted} ({date:dddd})";
     }
 
 }

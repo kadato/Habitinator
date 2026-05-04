@@ -8,6 +8,7 @@
 @inject IBoardSyncStatus BoardSync
 @inject IJSRuntime JS
 @inject IUserTimeZoneService TimeZoneService
+@inject IUserPreferencesService PreferencesService
 
 <MudStack Class="board-shell w-100" Spacing="2">
     @if (_isLoading)
@@ -590,7 +591,8 @@
             return;
         }
 
-        var today = DailySchedule.LocalToday(TimeZoneService);
+        var prefs = await PreferencesService.GetAsync();
+        var today = DailySchedule.LocalToday(TimeZoneService, prefs.DayStartLocalTime);
         DateOnly? lastResolved;
         try
         {

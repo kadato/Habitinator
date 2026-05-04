@@ -1,0 +1,96 @@
+@inject IUserNotifier Notifier
+@inject IAccountActionsService AccountActions
+
+<MudStack Spacing="3">
+    <MudText Typo="Typo.h5">Account actions</MudText>
+
+    <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.subtitle1" Class="mb-1">Change password</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
+                Update your password. You will stay signed in after the change.
+            </MudText>
+            <MudTextField T="string" Label="Current password" InputType="InputType.Password" Variant="Variant.Outlined" Dense="true"
+                          Value="_currentPassword" ValueChanged="v => _currentPassword = v" />
+            <MudTextField T="string" Label="New password" InputType="InputType.Password" Variant="Variant.Outlined" Dense="true"
+                          Value="_newPassword" ValueChanged="v => _newPassword = v" />
+            <MudTextField T="string" Label="Confirm new password" InputType="InputType.Password" Variant="Variant.Outlined" Dense="true"
+                          Value="_confirmPassword" ValueChanged="v => _confirmPassword = v" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_savingPassword" OnClick="ChangePasswordAsync">
+                Change password
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.subtitle1" Class="mb-1">Delete account</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
+                Permanently delete your account and all of your data. This cannot be undone.
+            </MudText>
+            <MudButton Variant="Variant.Outlined" Color="Color.Error" Disabled="_deleting" OnClick="DeleteAccountAsync">
+                Delete account
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+</MudStack>
+
+@code {
+    private string _currentPassword = string.Empty;
+    private string _newPassword = string.Empty;
+    private string _confirmPassword = string.Empty;
+    private bool _savingPassword;
+    private bool _deleting;
+
+    private async Task ChangePasswordAsync()
+    {
+        if (_savingPassword) return;
+        if (string.IsNullOrWhiteSpace(_currentPassword) || string.IsNullOrWhiteSpace(_newPassword))
+        {
+            await Notifier.NotifyAsync("Enter your current password and a new password.", Severity.Warning);
+            return;
+        }
+
+        if (!_newPassword.Equals(_confirmPassword, StringComparison.Ordinal))
+        {
+            await Notifier.NotifyAsync("New password confirmation does not match.", Severity.Warning);
+            return;
+        }
+
+        _savingPassword = true;
+        try
+        {
+            await AccountActions.ChangePasswordAsync(_currentPassword, _newPassword);
+            _currentPassword = string.Empty;
+            _newPassword = string.Empty;
+            _confirmPassword = string.Empty;
+            await Notifier.NotifyAsync("Password updated.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            await Notifier.NotifyAsync(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _savingPassword = false;
+        }
+    }
+
+    private async Task DeleteAccountAsync()
+    {
+        if (_deleting) return;
+        _deleting = true;
+        try
+        {
+            await AccountActions.DeleteAccountAsync();
+        }
+        catch (Exception ex)
+        {
+            await Notifier.NotifyAsync(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _deleting = false;
+        }
+    }
+}

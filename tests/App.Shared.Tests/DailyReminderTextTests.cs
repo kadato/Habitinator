@@ -51,9 +51,9 @@ public class DailyReminderTextTests
         var oldDue = new DateOnly(2026, 4, 1);
         var t = new BoardItem(Guid.NewGuid(), "Late", false, 0, null, null, true, true, 0, HabitResetPeriod.Daily, null, DailyRepeatType.Daily, 1, null, null, oldDue);
         var snapshot = new BoardSnapshot([], [], [t]);
-        (string _, string body) = DailyReminderText.Build(snapshot, today);
+        (string _, string body) = DailyReminderText.Build(snapshot, today, "dd/MM/yyyy");
         Assert.Contains("overdue", body, StringComparison.Ordinal);
-        Assert.Contains("2026-04-01", body);
+        Assert.Contains("01/04/2026", body);
     }
 
     [Fact]

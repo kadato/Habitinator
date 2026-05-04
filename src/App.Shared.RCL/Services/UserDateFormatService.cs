@@ -30,7 +30,19 @@ public sealed class UserDateFormatService : IUserDateFormatService
     public string Format(DateOnly date)
     {
         var format = _initialized ? _dateFormat : UserPreferences.CreateDefault().DateFormat;
-        return date.ToString(format, CultureInfo.CurrentCulture);
+        return date.ToString(format, CultureInfo.InvariantCulture);
+    }
+
+    public string Format(DateTime dateTime)
+    {
+        var format = _initialized ? _dateFormat : UserPreferences.CreateDefault().DateFormat;
+        return dateTime.ToString($"{format} HH:mm", CultureInfo.InvariantCulture);
+    }
+
+    public string Format(DateTimeOffset dateTimeOffset)
+    {
+        var format = _initialized ? _dateFormat : UserPreferences.CreateDefault().DateFormat;
+        return dateTimeOffset.ToString($"{format} HH:mm", CultureInfo.InvariantCulture);
     }
 
     private async void OnPreferencesChanged()
@@ -48,8 +60,20 @@ public sealed class UserDateFormatService : IUserDateFormatService
 
     private static string NormalizeFormat(string? format)
     {
-        return string.IsNullOrWhiteSpace(format)
-            ? UserPreferences.CreateDefault().DateFormat
-            : format;
+        if (string.IsNullOrWhiteSpace(format))
+        {
+            return UserPreferences.CreateDefault().DateFormat;
+        }
+
+        try
+        {
+            // Validate format string
+            _ = DateTime.Now.ToString(format, CultureInfo.InvariantCulture);
+            return format;
+        }
+        catch
+        {
+            return UserPreferences.CreateDefault().DateFormat;
+        }
     }
 }

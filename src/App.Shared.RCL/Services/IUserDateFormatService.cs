@@ -9,4 +9,8 @@ public interface IUserDateFormatService
     Task InitializeAsync(CancellationToken cancellationToken = default);
 
     string Format(DateOnly date);
+
+    string Format(DateTime dateTime);
+
+    string Format(DateTimeOffset dateTimeOffset);
 }

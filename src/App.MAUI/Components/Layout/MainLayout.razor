@@ -1,7 +1,10 @@
 ﻿@inherits LayoutComponentBase
 @using global::App.Shared.RCL.Themes
+@using global::App.Shared.RCL.Models
+@using global::App.Shared.RCL.Services
 @implements IDisposable
 @inject IApiSession Session
+@inject IUserPreferencesService PreferencesService
 @inject NavigationManager Nav
 
 <MudThemeProvider Theme="@HabitinatorMudTheme.Default" IsDarkMode="true"/>
@@ -28,8 +31,8 @@
                                  Variant="Variant.Filled"
                                  Size="Size.Medium"
                                  Class="app-header-username-chip text-truncate"
-                                 title="@(Session.Email ?? "User")">
-                            @DisplayNameFromEmail(Session.Email)
+                                 title="@GetFullIdentity()">
+                            @GetDisplayName()
                         </MudChip>
                         <MudButton Variant="Variant.Outlined"
                                    Color="Color.Error"
@@ -70,20 +73,28 @@
     private static bool IsPublicWhenLoggedOut(string path) => IsAuthPath(path) || IsHomePath(path);
 
     private bool _sessionInitialized;
+    private UserPreferences? _preferences;
 
     protected override void OnInitialized()
     {
         Session.Changed += OnSessionChanged;
+        PreferencesService.Changed += OnPreferencesChanged;
     }
 
     public void Dispose()
     {
         Session.Changed -= OnSessionChanged;
+        PreferencesService.Changed -= OnPreferencesChanged;
     }
 
     private void OnSessionChanged(object? sender, EventArgs e)
     {
         _ = InvokeAsync(OnSessionChangedAsync);
+    }
+
+    private void OnPreferencesChanged()
+    {
+        _ = InvokeAsync(LoadPreferencesAsync);
     }
 
     private async Task OnSessionChangedAsync()
@@ -97,18 +108,43 @@
             }
         }
 
+        if (Session.IsLoggedIn)
+        {
+            await LoadPreferencesAsync();
+        }
+
         await InvokeAsync(StateHasChanged);
     }
 
-    private static string DisplayNameFromEmail(string? email)
+    private async Task LoadPreferencesAsync()
     {
-        if (string.IsNullOrEmpty(email))
+        _preferences = await PreferencesService.GetAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string GetFullIdentity()
+    {
+        var email = Session.Email ?? "User";
+        var displayName = _preferences?.DisplayName;
+        if (string.IsNullOrWhiteSpace(displayName))
         {
-            return "guest";
+            return email;
         }
 
-        var at = email.IndexOf('@');
-        return at > 0 ? email[..at] : email;
+        return $"{displayName} ({email})";
+    }
+
+    private string GetDisplayName()
+    {
+        var displayName = _preferences?.DisplayName;
+        if (!string.IsNullOrWhiteSpace(displayName))
+        {
+            return displayName;
+        }
+
+        var full = GetFullIdentity();
+        var at = full.IndexOf('@');
+        return at > 0 ? full[..at] : full;
     }
 
     private async Task LogoutAsync()
@@ -127,6 +163,10 @@
             {
                 Nav.NavigateTo("/auth/login", replace: true);
             }
+        }
+        else
+        {
+            await LoadPreferencesAsync();
         }
 
         _sessionInitialized = true;

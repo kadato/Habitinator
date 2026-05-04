@@ -20,6 +20,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
         builder.Entity<ApplicationUser>(entity =>
         {
             entity.Property(x => x.NotificationSettingsJson).HasColumnType("text");
+            entity.Property(x => x.UserPreferencesJson).HasColumnType("text");
         });
 
         builder.Entity<UserActivityEventEntity>(entity =>

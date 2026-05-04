@@ -7,6 +7,7 @@ using App.Web;
 using App.Web.Auth;
 using App.Web.Data;
 using App.Web.Hubs;
+using App.Web.Models;
 using App.Web.Services;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -85,11 +86,14 @@ builder.Services.AddScoped<ActivityStatisticsService>();
 builder.Services.AddScoped<IActivityStatisticsReader, WebActivityStatisticsReader>();
 builder.Services.AddScoped<IUserActivityLogService, WebUserActivityLogService>();
 builder.Services.AddScoped<INotificationSettingsService, WebNotificationSettingsService>();
+builder.Services.AddScoped<IUserPreferencesService, WebUserPreferencesService>();
 builder.Services.AddScoped<IUserNotifier, UserNotifier>();
 builder.Services.AddScoped<IFocusTimerClientAlerts, FocusTimerClientAlerts>();
 builder.Services.AddScoped<IDailyRetroPromptStore, JsDailyRetroPromptStore>();
 builder.Services.AddScoped<IUserTimeZoneService, UserTimeZoneService>();
 builder.Services.AddScoped<INotificationSettingsRules, NotificationSettingsRules>();
+builder.Services.AddScoped<IUserDateFormatService, UserDateFormatService>();
+builder.Services.AddScoped<IAccountActionsService, WebAccountActionsService>();
 builder.Services.AddHttpClient();
 
 var authBuilder = builder.Services
@@ -314,6 +318,41 @@ app.MapPost("/api/auth/cookie-logout", async (SignInManager<ApplicationUser> sig
     .RequireAuthorization()
     .DisableAntiforgery();
 
+app.MapPost("/api/account/change-password", async (
+    ClaimsPrincipal user,
+    UserManager<ApplicationUser> userManager,
+    SignInManager<ApplicationUser> signInManager,
+    ChangePasswordRequest body) =>
+{
+    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+
+    var appUser = await userManager.FindByIdAsync(userId.ToString());
+    if (appUser is null) return Results.NotFound();
+
+    var result = await userManager.ChangePasswordAsync(appUser, body.CurrentPassword, body.NewPassword);
+    if (!result.Succeeded) return Results.BadRequest();
+
+    await signInManager.RefreshSignInAsync(appUser);
+    return Results.NoContent();
+}).RequireAuthorization().DisableAntiforgery();
+
+app.MapPost("/api/account/delete", async (
+    ClaimsPrincipal user,
+    UserManager<ApplicationUser> userManager,
+    SignInManager<ApplicationUser> signInManager) =>
+{
+    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+
+    var appUser = await userManager.FindByIdAsync(userId.ToString());
+    if (appUser is null) return Results.NotFound();
+
+    var result = await userManager.DeleteAsync(appUser);
+    if (!result.Succeeded) return Results.BadRequest();
+
+    await signInManager.SignOutAsync();
+    return Results.NoContent();
+}).RequireAuthorization().DisableAntiforgery();
+
 app.MapPost("/api/auth/register-form", async (HttpContext httpContext, UserManager<ApplicationUser> userManager) =>
 {
     var form = await httpContext.Request.ReadFormAsync();
@@ -399,6 +438,33 @@ settingsApi.MapPut("/notifications",
         if (row is null) return Results.NotFound();
 
         row.NotificationSettingsJson = NotificationSettingsJson.Serialize(body);
+        await db.SaveChangesAsync(cancellationToken);
+        await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+        return Results.NoContent();
+    });
+
+settingsApi.MapGet("/preferences",
+    async (ClaimsPrincipal user, ApplicationDbContext db, CancellationToken cancellationToken) =>
+    {
+        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+
+        var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (row is null) return Results.NotFound();
+
+        var settings = UserPreferencesJson.DeserializeOrDefault(row.UserPreferencesJson);
+        return Results.Ok(settings);
+    });
+
+settingsApi.MapPut("/preferences",
+    async (ClaimsPrincipal user, ApplicationDbContext db, IBoardChangeNotifier boardChangeNotifier,
+        UserPreferences body, CancellationToken cancellationToken) =>
+    {
+        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+
+        var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (row is null) return Results.NotFound();
+
+        row.UserPreferencesJson = UserPreferencesJson.Serialize(body);
         await db.SaveChangesAsync(cancellationToken);
         await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         return Results.NoContent();

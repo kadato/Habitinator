@@ -28,7 +28,8 @@ public static class DemoDataSeeder
             {
                 UserName = demo.Email,
                 Email = demo.Email,
-                EmailConfirmed = true
+                EmailConfirmed = true,
+                UserPreferencesJson = "{}"
             };
 
             var createResult = await userManager.CreateAsync(guest, demo.Password);
@@ -51,6 +52,7 @@ public static class DemoDataSeeder
 
             await ClearGuestDataAsync(dbContext, guest.Id, cancellationToken);
             guest.NotificationSettingsJson = null;
+            guest.UserPreferencesJson = "{}";
             await userManager.UpdateAsync(guest);
 
             await boardPersistence.InsertDemoBoardDataAsync(guest.Id, cancellationToken);

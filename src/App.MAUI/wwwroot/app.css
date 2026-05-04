@@ -238,6 +238,11 @@ h1:focus {
     margin-left: 0 !important;
 }
 
+.text-transform-none {
+    text-transform: none !important;
+}
+
+
 .status-bar-safe-area {
     display: none;
 }

@@ -217,3 +217,7 @@ h1:focus {
     flex: 0 0 auto !important;
     margin-left: 0 !important;
 }
+
+.text-transform-none {
+    text-transform: none !important;
+}

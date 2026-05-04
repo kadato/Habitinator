@@ -32,24 +32,18 @@
                               ErrorText="@_displayNameError"
                               Value="_displayName"
                               ValueChanged="OnDisplayNameChanged"/>
-                <MudSelect T="string"
-                           Label="Date format"
-                           Variant="Variant.Outlined"
-                           Dense="true"
-                           Value="_model.DateFormat"
-                           ValueChanged="OnDateFormatChanged">
-                    @foreach (var item in _dateFormats)
-                    {
-                        <MudSelectItem Value="@item.Format">@item.Label</MudSelectItem>
-                    }
-                </MudSelect>
+                <MudTextField T="string"
+                              Label="Date format"
+                              Variant="Variant.Outlined"
+                              Dense="true"
+                              Value="_model.DateFormat"
+                              ValueChanged="OnDateFormatChanged"
+                              Immediate="true"
+                              Error="@(_dateFormatError is not null)"
+                              ErrorText="@_dateFormatError"/>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">
                     Preview: @_datePreview
                 </MudText>
-                @if (_dateFormatError is not null)
-                {
-                    <MudText Typo="Typo.caption" Color="Color.Error">@_dateFormatError</MudText>
-                }
             </MudStack>
         </MudPaper>
 
@@ -107,15 +101,6 @@
     private string? _dateFormatError;
     private string? _dayStartError;
 
-    private readonly List<(string Format, string Label)> _dateFormats = new()
-    {
-        ("MMM d, yyyy", "Jan 5, 2025"),
-        ("d MMM yyyy", "5 Jan 2025"),
-        ("yyyy-MM-dd", "2025-01-05"),
-        ("MM/dd/yyyy", "01/05/2025"),
-        ("dd/MM/yyyy", "05/01/2025")
-    };
-
     private readonly List<(string Id, string Label)> _timeZones = new();
 
     protected override async Task OnInitializedAsync()
@@ -166,13 +151,15 @@
     private void UpdateDatePreview()
     {
         if (_model is null) return;
+        _dateFormatError = null;
         try
         {
-            _datePreview = DateTime.Now.ToString(_model.DateFormat, CultureInfo.CurrentCulture);
+            _datePreview = DateTime.Now.ToString(_model.DateFormat, CultureInfo.InvariantCulture);
         }
         catch (FormatException)
         {
             _datePreview = "Invalid format";
+            _dateFormatError = "Date format is not valid.";
         }
     }
 
@@ -235,6 +222,7 @@
         UpdateDatePreview();
     }
 
+
     private void OnDayStartChanged(TimeSpan? value)
     {
         if (_model is null || value is null) return;
@@ -265,7 +253,7 @@
 
         try
         {
-            _ = DateTime.Now.ToString(_model.DateFormat, CultureInfo.CurrentCulture);
+            _ = DateTime.Now.ToString(_model.DateFormat, CultureInfo.InvariantCulture);
         }
         catch (FormatException)
         {

@@ -1,6 +1,10 @@
 ﻿@using System.Security.Claims
+@using global::App.Shared.RCL.Models
+@using global::App.Shared.RCL.Services
 @using global::App.Shared.RCL.Themes
+@implements IDisposable
 @inherits LayoutComponentBase
+@inject IUserPreferencesService PreferencesService
 
 <MudThemeProvider Theme="@HabitinatorMudTheme.Default" IsDarkMode="true"/>
 <MudPopoverProvider/>
@@ -20,14 +24,14 @@
                     <div class="app-top-bar__flex-spacer" aria-hidden="true"></div>
                     <div class="app-top-bar__right d-flex flex-wrap align-center">
                         <div class="app-header-user-rail d-flex flex-wrap align-center">
-                            <MudChip T="string"
+                             <MudChip T="string"
                                      Icon="@Icons.Material.Filled.AccountCircle"
                                      Color="Color.Primary"
                                      Variant="Variant.Filled"
                                      Size="Size.Medium"
                                      Class="app-header-username-chip text-truncate"
                                      title="@GetFullIdentity(auth)">
-                                @GetEmailLocalPart(auth)
+                                @GetDisplayName(auth)
                             </MudChip>
                             <form method="post" action="/api/auth/cookie-logout" class="d-inline m-0 app-header-logout-form">
                                 <MudButton ButtonType="ButtonType.Submit"
@@ -66,15 +70,52 @@
 
 @code {
 
-    private static string GetFullIdentity(AuthenticationState auth)
+    private UserPreferences? _preferences;
+
+    protected override async Task OnInitializedAsync()
     {
-        return auth.User.FindFirst(ClaimTypes.Email)?.Value
-               ?? auth.User.Identity?.Name
-               ?? "User";
+        PreferencesService.Changed += OnPreferencesChanged;
+        await LoadPreferencesAsync();
     }
 
-    private static string GetEmailLocalPart(AuthenticationState auth)
+    public void Dispose()
     {
+        PreferencesService.Changed -= OnPreferencesChanged;
+    }
+
+    private void OnPreferencesChanged()
+    {
+        _ = InvokeAsync(LoadPreferencesAsync);
+    }
+
+    private async Task LoadPreferencesAsync()
+    {
+        _preferences = await PreferencesService.GetAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string GetFullIdentity(AuthenticationState auth)
+    {
+        var email = auth.User.FindFirst(ClaimTypes.Email)?.Value
+                    ?? auth.User.Identity?.Name
+                    ?? "User";
+        var displayName = _preferences?.DisplayName;
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            return email;
+        }
+
+        return $"{displayName} ({email})";
+    }
+
+    private string GetDisplayName(AuthenticationState auth)
+    {
+        var displayName = _preferences?.DisplayName;
+        if (!string.IsNullOrWhiteSpace(displayName))
+        {
+            return displayName;
+        }
+
         var full = GetFullIdentity(auth);
         var at = full.IndexOf('@');
         return at > 0 ? full[..at] : full;

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 using App.Shared.RCL.Models;
@@ -14,6 +15,16 @@ public static class DailyReminderText
 
     /// <param name="todayUtc">Calendar day in UTC, e.g. <see cref="DailySchedule.UtcToday" />.</param>
     public static (string Title, string Body) Build(BoardSnapshot snapshot, DateOnly todayUtc, int maxBodyLength = 1800)
+    {
+        return Build(snapshot, todayUtc, null, maxBodyLength);
+    }
+
+    /// <param name="todayUtc">Calendar day in UTC, e.g. <see cref="DailySchedule.UtcToday" />.</param>
+    public static (string Title, string Body) Build(
+        BoardSnapshot snapshot,
+        DateOnly todayUtc,
+        string? dateFormat,
+        int maxBodyLength = 1800)
     {
         var dailies = snapshot.Dailies
             .Where(d => DailySchedule.IsDueOnDate(d, todayUtc))
@@ -56,7 +67,7 @@ public static class DailyReminderText
                 if (due != todayUtc)
                 {
                     sb.Append(" — ");
-                    sb.Append(due.ToString("yyyy-MM-dd"));
+                    sb.Append(FormatDate(due, dateFormat));
                 }
 
                 sb.Append(suffix);
@@ -67,5 +78,11 @@ public static class DailyReminderText
         if (body.Length > maxBodyLength) body = body[..(maxBodyLength - 1)] + "…";
 
         return (DefaultTitle, body);
+    }
+
+    private static string FormatDate(DateOnly date, string? dateFormat)
+    {
+        var format = string.IsNullOrWhiteSpace(dateFormat) ? "yyyy-MM-dd" : dateFormat;
+        return date.ToString(format, CultureInfo.CurrentCulture);
     }
 }

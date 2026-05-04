@@ -12,6 +12,9 @@ public interface IUserTimeZoneService
     /// <summary>Whether the timezone has been successfully detected.</summary>
     bool IsDetected { get; }
 
+    /// <summary>Overrides the timezone ID used for conversions (null to use detected).</summary>
+    void SetOverride(string? timeZoneId);
+
     /// <summary>
     ///     Initializes the timezone service by detecting the user's timezone.
     ///     Should be called once at app startup.

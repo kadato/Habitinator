@@ -9,6 +9,7 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
     private readonly IJSRuntime _jsRuntime;
     private readonly IClock _clock;
     private string? _timeZoneId;
+    private string? _overrideTimeZoneId;
     private int _utcOffsetMinutes;
     private TimeZoneInfo? _timeZoneInfo;
     private bool _initialized;
@@ -22,6 +23,17 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
     public string? TimeZoneId => _timeZoneId;
     public int UtcOffsetMinutes => _utcOffsetMinutes;
     public bool IsDetected => _initialized && _timeZoneInfo is not null;
+
+    public void SetOverride(string? timeZoneId)
+    {
+        _overrideTimeZoneId = string.IsNullOrWhiteSpace(timeZoneId) ? null : timeZoneId;
+        if (!_initialized)
+        {
+            return;
+        }
+
+        ApplyOverrideIfNeeded();
+    }
 
     public DateOnly LocalToday => GetLocalDate(_clock.UtcNow);
     public DateOnly LocalYesterday => GetLocalDate(_clock.UtcNow.AddDays(-1));
@@ -124,6 +136,7 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
         }
 
         _initialized = true;
+        ApplyOverrideIfNeeded();
     }
 
     /// <summary>
@@ -188,6 +201,26 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
         }
 
         _initialized = true;
+        ApplyOverrideIfNeeded();
+    }
+
+    private void ApplyOverrideIfNeeded()
+    {
+        if (string.IsNullOrWhiteSpace(_overrideTimeZoneId))
+        {
+            return;
+        }
+
+        try
+        {
+            _timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(_overrideTimeZoneId);
+            _timeZoneId = _overrideTimeZoneId;
+            _utcOffsetMinutes = (int)_timeZoneInfo.BaseUtcOffset.TotalMinutes;
+        }
+        catch
+        {
+            // Ignore invalid override and keep detected timezone.
+        }
     }
 
     /// <summary>

@@ -12,29 +12,17 @@ public static class DailySchedule
     ///     Gets today's date in the user's local timezone, or UTC if no timezone service is available.
     ///     This is the primary "today" for daily scheduling.
     /// </summary>
-    public static DateOnly LocalToday(IUserTimeZoneService? tz = null)
+    public static DateOnly LocalToday(IUserTimeZoneService? tz = null, TimeSpan? dayStartLocalTime = null)
     {
-        if (tz is { IsDetected: true })
-        {
-            return tz.LocalToday;
-        }
-
-        // Fallback to UTC
-        return DateOnly.FromDateTime(DateTime.UtcNow);
+        return GetLocalDate(tz, DateTimeOffset.UtcNow, dayStartLocalTime);
     }
 
     /// <summary>
     ///     Gets yesterday's date in the user's local timezone, or UTC if no timezone service is available.
     /// </summary>
-    public static DateOnly LocalYesterday(IUserTimeZoneService? tz = null)
+    public static DateOnly LocalYesterday(IUserTimeZoneService? tz = null, TimeSpan? dayStartLocalTime = null)
     {
-        if (tz is { IsDetected: true })
-        {
-            return tz.LocalYesterday;
-        }
-
-        // Fallback to UTC
-        return DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+        return LocalToday(tz, dayStartLocalTime).AddDays(-1);
     }
 
     /// <summary>
@@ -43,6 +31,24 @@ public static class DailySchedule
     /// </summary>
     [Obsolete("Use LocalToday(IUserTimeZoneService) for proper timezone support")]
     public static DateOnly UtcToday => DateOnly.FromDateTime(DateTime.UtcNow);
+
+    private static DateOnly GetLocalDate(IUserTimeZoneService? tz, DateTimeOffset utcNow, TimeSpan? dayStartLocalTime)
+    {
+        var local = tz is { IsDetected: true }
+            ? tz.ConvertToLocal(utcNow)
+            : utcNow;
+
+        var localDateTime = local.DateTime;
+        if (dayStartLocalTime is { } start && start > TimeSpan.Zero && start < TimeSpan.FromDays(1))
+        {
+            if (localDateTime.TimeOfDay < start)
+            {
+                localDateTime = localDateTime.AddDays(-1);
+            }
+        }
+
+        return DateOnly.FromDateTime(localDateTime);
+    }
 
     /// <summary>When no start is stored, treat "today" (local timezone) as the anchor so a new item is due immediately.</summary>
     public static DateOnly ResolveStartDateOrToday(DateOnly? dailyStart)

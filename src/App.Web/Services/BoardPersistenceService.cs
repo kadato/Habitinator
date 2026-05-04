@@ -1019,6 +1019,9 @@ public sealed class BoardPersistenceService
         CancellationToken cancellationToken = default)
     {
         var today = DailySchedule.UtcToday;
+        if (entity.Section != BoardSection.Daily)
+            return ToModelWithToday(entity, today, EmptyDailyStreaks);
+
         await using var readDb = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         var dailies = await LiveBoardItems(readDb, userId)
             .AsNoTracking()
@@ -1037,12 +1040,39 @@ public sealed class BoardPersistenceService
     {
         if (dailies.Count == 0) return new Dictionary<Guid, int>();
         var ids = dailies.Select(x => x.Id).ToList();
+        DateOnly? minHistoryStart = null;
+        foreach (var daily in dailies)
+        {
+            GetDailyEntitySchedule(daily, out var start, out var repeat, out var interval);
+            var historyStart = DailySchedule.StreakHistoryScheduleStart(
+                start,
+                today,
+                repeat,
+                interval,
+                DailyStreakCalculator.MaxStreak);
+            minHistoryStart = minHistoryStart is null || historyStart < minHistoryStart
+                ? historyStart
+                : minHistoryStart;
+        }
+
+        var historyStartUtc = new DateTimeOffset(
+            minHistoryStart!.Value.Year,
+            minHistoryStart.Value.Month,
+            minHistoryStart.Value.Day,
+            0,
+            0,
+            0,
+            TimeSpan.Zero);
+        var endUtcExclusive = new DateTimeOffset(today.Year, today.Month, today.Day, 0, 0, 0, TimeSpan.Zero)
+            .AddDays(1);
         var eventRows = await forQueries.UserActivityEvents.AsNoTracking()
             .Where(e => e.UserId == userId
                         && e.BoardItemId != null
                         && ids.Contains(e.BoardItemId.Value)
                         && (e.EventType == ActivityEventType.DailyComplete
-                            || e.EventType == ActivityEventType.DailyUncomplete))
+                            || e.EventType == ActivityEventType.DailyUncomplete)
+                        && e.OccurredAtUtc >= historyStartUtc
+                        && e.OccurredAtUtc < endUtcExclusive)
             .Select(e => new { e.BoardItemId, e.OccurredAtUtc, e.EventType })
             .ToListAsync(cancellationToken);
         var byItem = new Dictionary<Guid, List<(DateTimeOffset, ActivityEventType)>>();

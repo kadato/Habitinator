@@ -22,13 +22,16 @@ public sealed class MauiDailyReminderService : IDisposable
     private readonly ILogger<MauiDailyReminderService> _logger;
 
     private readonly INotificationSettingsService _notificationSettings;
+    private readonly IUserDateFormatService _dateFormatService;
 
     public MauiDailyReminderService(
         INotificationSettingsService notificationSettings,
+        IUserDateFormatService dateFormatService,
         IBoardDataService board,
         ILogger<MauiDailyReminderService> logger)
     {
         _notificationSettings = notificationSettings;
+        _dateFormatService = dateFormatService;
         _board = board;
         _logger = logger;
         _notificationSettings.Changed += OnSettingsChanged;
@@ -56,13 +59,15 @@ public sealed class MauiDailyReminderService : IDisposable
             var settings = await _notificationSettings.GetAsync(cancellationToken);
             if (!settings.DailyReminderEnabled || !settings.DailyReminderTime.HasValue) return;
 
+            await _dateFormatService.InitializeAsync(cancellationToken).ConfigureAwait(false);
+
             var timeOfDay = settings.DailyReminderTime.Value;
             var next = NextLocalNotificationTime(timeOfDay);
 
             var snapshot = await _board.GetSnapshotAsync(cancellationToken);
             // Use device's local timezone for the daily reminder
             var localToday = DateOnly.FromDateTime(DateTime.Now);
-            var (title, body) = DailyReminderText.Build(snapshot, localToday);
+            var (title, body) = DailyReminderText.Build(snapshot, localToday, _dateFormatService.DateFormat);
 
             var perm = new NotificationPermission { AskPermission = true };
             if (!await center.AreNotificationsEnabled(perm).ConfigureAwait(false))

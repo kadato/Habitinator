@@ -1,4 +1,4 @@
-﻿using App.MAUI.Data;
+using App.MAUI.Data;
 using App.MAUI.Services;
 using App.MAUI.Services.LocalBoard;
 using App.Shared.RCL.Services;
@@ -82,6 +82,7 @@ public static class MauiProgram
         });
         builder.Services.AddSingleton<IActivityStatisticsReader, MauiApiActivityStatisticsReader>();
         builder.Services.AddSingleton<INotificationSettingsService, MauiApiNotificationSettingsService>();
+        builder.Services.AddSingleton<IUserPreferencesService, MauiApiUserPreferencesService>();
         builder.Services.AddSingleton<MauiDailyReminderService>();
         // Scoped: UserNotifier -> ISnackbar uses NavigationManager, which is only valid inside the Blazor WebView scope (not root/singleton).
         builder.Services.AddScoped<IUserNotifier, UserNotifier>();
@@ -89,6 +90,8 @@ public static class MauiProgram
         builder.Services.AddScoped<IDailyRetroPromptStore, JsDailyRetroPromptStore>();
         builder.Services.AddScoped<IUserTimeZoneService, UserTimeZoneService>();
         builder.Services.AddScoped<INotificationSettingsRules, NotificationSettingsRules>();
+        builder.Services.AddScoped<IUserDateFormatService, UserDateFormatService>();
+        builder.Services.AddSingleton<IAccountActionsService, MauiApiAccountActionsService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

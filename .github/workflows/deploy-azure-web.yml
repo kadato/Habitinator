@@ -21,8 +21,7 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
   AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
-  POSTGRES_ADMIN_LOGIN: ${{ vars.POSTGRES_ADMIN_LOGIN }}
-  POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+  POSTGRES_CONNECTION_STRING: ${{ secrets.POSTGRES_CONNECTION_STRING }}
   JWT_ISSUER: ${{ vars.JWT_ISSUER }}
   JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}
   DEMO_USER_EMAIL: ${{ vars.DEMO_USER_EMAIL }}
@@ -67,8 +66,7 @@ jobs:
           test -n "${AZURE_SUBSCRIPTION_ID}"
           test -n "${AZURE_ENV_NAME}"
           test -n "${AZURE_LOCATION}"
-          test -n "${POSTGRES_ADMIN_LOGIN}"
-          test -n "${POSTGRES_ADMIN_PASSWORD}"
+          test -n "${POSTGRES_CONNECTION_STRING}"
           test -n "${JWT_ISSUER}"
           test -n "${JWT_SIGNING_KEY}"
           test -n "${DEMO_USER_PASSWORD}"

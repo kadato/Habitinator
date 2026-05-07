@@ -57,6 +57,7 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
   kind: 'app,linux'
   tags: {
     'azd-service-name': 'web'
+    'azd-env-name': environmentName
   }
   identity: {
     type: 'SystemAssigned'

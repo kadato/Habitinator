@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Npgsql;
 using Testcontainers.PostgreSql;
 
@@ -37,27 +38,42 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
             await _postgres.DisposeAsync();
     }
 
+    /// <summary>
+    /// With minimal hosting, <see cref="ConfigureWebHost" /> app configuration runs after
+    /// <c>Program.cs</c> already read <see cref="Microsoft.Extensions.Configuration.IConfiguration" />
+    /// for EF registration. Host configuration is merged early enough for connection strings to apply.
+    /// See https://github.com/dotnet/aspnetcore/issues/37680
+    /// </summary>
+    protected override IHost CreateHost(IHostBuilder builder)
+    {
+        builder.ConfigureHostConfiguration(cfg => cfg.AddInMemoryCollection(GetIntegrationConfiguration()));
+        return base.CreateHost(builder);
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
-        builder.ConfigureAppConfiguration((_, config) =>
-        {
-            var connectionString = string.IsNullOrWhiteSpace(_externalConnectionString)
-                ? _postgres.GetConnectionString()
-                : _externalConnectionString;
+        builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(GetIntegrationConfiguration()));
+    }
 
-            config.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:DefaultConnection"] = connectionString,
-                ["Jwt:Issuer"] = "Habitinator",
-                ["Jwt:Audience"] = "HabitinatorClients",
-                ["Jwt:SigningKey"] =
-                    "integration-test-signing-key-must-be-long-enough-for-hmac-sha256-validation-0123456789",
-                ["Jwt:ExpirationMinutes"] = "60",
-                ["DemoUser:Email"] = "guest@habitinator.local",
-                ["DemoUser:Password"] = "Guest123!",
-            });
-        });
+    private Dictionary<string, string?> GetIntegrationConfiguration()
+    {
+        var connectionString = string.IsNullOrWhiteSpace(_externalConnectionString)
+            ? _postgres.GetConnectionString()
+            : _externalConnectionString;
+
+        return new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:DefaultConnection"] = connectionString,
+            ["ConnectionStrings:habitinatordb"] = connectionString,
+            ["Jwt:Issuer"] = "Habitinator",
+            ["Jwt:Audience"] = "HabitinatorClients",
+            ["Jwt:SigningKey"] =
+                "integration-test-signing-key-must-be-long-enough-for-hmac-sha256-validation-0123456789",
+            ["Jwt:ExpirationMinutes"] = "60",
+            ["DemoUser:Email"] = "guest@habitinator.local",
+            ["DemoUser:Password"] = "Guest123!",
+        };
     }
 
     private static async Task WaitUntilDatabaseAcceptsConnectionsAsync(string connectionString,

@@ -11,22 +11,9 @@ param location string = resourceGroup().location
 ])
 param appServicePlanSkuName string = 'B1'
 
-@description('PostgreSQL Flexible Server SKU. Standard_B1ms is low-cost for demos.')
-param postgresSkuName string = 'Standard_B1ms'
-
-@description('PostgreSQL storage in GB.')
-@minValue(32)
-param postgresStorageGb int = 32
-
-@description('PostgreSQL admin username.')
-param postgresAdminLogin string
-
 @secure()
-@description('PostgreSQL admin password.')
-param postgresAdminPassword string
-
-@description('PostgreSQL database name for the app.')
-param postgresDatabaseName string = 'habitinator'
+@description('Full PostgreSQL connection string (e.g. from Neon or any Postgres provider).')
+param postgresConnectionString string
 
 @description('JWT issuer for App.Web.')
 param jwtIssuer string
@@ -46,9 +33,8 @@ param demoUserEmail string = 'guest@habitinator.local'
 param demoUserPassword string
 
 var normalizedEnv = toLower(replace(environmentName, '_', '-'))
-var webAppName = 'app-web-${uniqueString(resourceGroup().id, normalizedEnv)}'
-var appServicePlanName = 'asp-${normalizedEnv}-${uniqueString(resourceGroup().id)}'
-var postgresServerName = 'pg-${normalizedEnv}-${uniqueString(resourceGroup().id)}'
+var webAppName = 'app-habitinator-${normalizedEnv}'
+var appServicePlanName = 'asp-habitinator-${normalizedEnv}'
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: appServicePlanName
@@ -62,48 +48,6 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   kind: 'linux'
   properties: {
     reserved: true
-  }
-}
-
-resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2023-12-01-preview' = {
-  name: postgresServerName
-  location: location
-  sku: {
-    name: postgresSkuName
-    tier: 'Burstable'
-  }
-  properties: {
-    version: '16'
-    administratorLogin: postgresAdminLogin
-    administratorLoginPassword: postgresAdminPassword
-    storage: {
-      storageSizeGB: postgresStorageGb
-    }
-    backup: {
-      backupRetentionDays: 7
-      geoRedundantBackup: 'Disabled'
-    }
-    network: {
-      publicNetworkAccess: 'Enabled'
-    }
-  }
-}
-
-resource postgresAllowAzureIps 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2023-12-01-preview' = {
-  name: 'AllowAzureServices'
-  parent: postgres
-  properties: {
-    startIpAddress: '0.0.0.0'
-    endIpAddress: '0.0.0.0'
-  }
-}
-
-resource postgresDb 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-12-01-preview' = {
-  name: postgresDatabaseName
-  parent: postgres
-  properties: {
-    charset: 'UTF8'
-    collation: 'en_US.utf8'
   }
 }
 
@@ -123,6 +67,7 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
     siteConfig: {
       linuxFxVersion: 'DOTNETCORE|10.0'
       minTlsVersion: '1.2'
+      alwaysOn: true
       appSettings: [
         {
           name: 'ASPNETCORE_ENVIRONMENT'
@@ -130,7 +75,7 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'ConnectionStrings__DefaultConnection'
-          value: 'Host=${postgres.properties.fullyQualifiedDomainName};Port=5432;Database=${postgresDatabaseName};Username=${postgresAdminLogin};Password=${postgresAdminPassword};Ssl Mode=Require;Trust Server Certificate=False'
+          value: postgresConnectionString
         }
         {
           name: 'Jwt__Issuer'
@@ -159,7 +104,5 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
 
 output AZURE_WEBAPP_NAME string = web.name
 output AZURE_WEBAPP_URL string = 'https://${web.properties.defaultHostName}'
-output AZURE_POSTGRESQL_SERVER string = postgres.name
-output AZURE_POSTGRESQL_DATABASE string = postgresDatabaseName
 output PRODUCTION_API_BASE_URL string = 'https://${web.properties.defaultHostName}'
 output PRODUCTION_WEB_URL string = 'https://${web.properties.defaultHostName}'

@@ -8,11 +8,8 @@
     "location": {
       "value": "${AZURE_LOCATION}"
     },
-    "postgresAdminLogin": {
-      "value": "${POSTGRES_ADMIN_LOGIN}"
-    },
-    "postgresAdminPassword": {
-      "value": "${POSTGRES_ADMIN_PASSWORD}"
+    "postgresConnectionString": {
+      "value": "${POSTGRES_CONNECTION_STRING}"
     },
     "jwtIssuer": {
       "value": "${JWT_ISSUER}"

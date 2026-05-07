@@ -26,3 +26,7 @@ src/App.MAUI/appsettings.Release.json
 
 # azd local environment state
 .azure/
+
+# Local Cursor / agent skill copies and lock (not part of the app build)
+.agents/
+skills-lock.json

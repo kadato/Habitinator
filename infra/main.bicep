@@ -33,7 +33,7 @@ param demoUserEmail string = 'guest@habitinator.local'
 param demoUserPassword string
 
 var normalizedEnv = toLower(replace(environmentName, '_', '-'))
-var webAppName = 'app-habitinator-${normalizedEnv}'
+var webAppName = 'app-habitinator-${normalizedEnv}-${uniqueString(resourceGroup().id)}'
 var appServicePlanName = 'asp-habitinator-${normalizedEnv}'
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {

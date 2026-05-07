@@ -12,9 +12,9 @@
 
 A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits, dailies, and to-dos with a focus timer, analytics, and reliable sync across web and mobile.
 
-**Live Demo:** [app-web-yjel4obo2lalu.azurewebsites.net](https://app-web-yjel4obo2lalu.azurewebsites.net)
+**Live Demo:** [app-habitinator-demo.azurewebsites.net](https://app-habitinator-demo.azurewebsites.net)
 
-[Demo](https://app-web-yjel4obo2lalu.azurewebsites.net) • [Preview](#-preview) • [Download](#-download--install) • [Features](#product-features-current) • [Tech Stack](#technology-stack) • [Getting Started](#run-and-debug)
+[Demo](https://app-habitinator-demo.azurewebsites.net) • [Preview](#-preview) • [Download](#-download--install) • [Features](#product-features-current) • [Tech Stack](#technology-stack) • [Getting Started](#run-and-debug)
 
 </div>
 
@@ -42,7 +42,7 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 
 ### Available builds
 
-**Live Demo (Web):** [https://app-web-yjel4obo2lalu.azurewebsites.net](https://app-web-yjel4obo2lalu.azurewebsites.net)  
+**Live Demo (Web):** [https://app-habitinator-demo.azurewebsites.net](https://app-habitinator-demo.azurewebsites.net)  
 **Latest Release:** [![GitHub Release](https://img.shields.io/github/v/release/tothKarolyDavid/Habitinator)](https://github.com/tothKarolyDavid/Habitinator/releases/latest)
 
 | Platform | Package | Notes |
@@ -195,7 +195,7 @@ These are produced by the **Playwright** test in `DocumentationScreenshotsTests`
 | Shared UI | **Razor Class Library** (`App.Shared.RCL`) consumed by **App.Web** and **App.MAUI** |
 | API host | **ASP.NET Core** minimal APIs, **SignalR** |
 | Auth | **ASP.NET Core Identity**, **cookie** + **JWT Bearer** (`Microsoft.AspNetCore.Authentication.JwtBearer`) |
-| Server database | **PostgreSQL** via **EF Core** + **Npgsql** |
+| Server database | **Neon serverless PostgreSQL** via **EF Core** + **Npgsql** |
 | MAUI local store | **SQLite** + **EF Core Sqlite** for mirrored board and sync metadata |
 | Orchestration (local) | **.NET Aspire** AppHost (e.g. **Aspire.Hosting.Postgres**, **13.x**), PostgreSQL **17.6** image, **pgAdmin** in the default AppHost project |
 | HTTP resilience (MAUI) | **Microsoft.Extensions.Http.Resilience** (timeouts, transient retries) |
@@ -386,20 +386,20 @@ Aspire is still recommended for **local development orchestration** (PostgreSQL 
 ### Low-cost defaults in infra
 
 - App Service Plan SKU: **`B1`**
-- PostgreSQL Flexible Server SKU: **`Standard_B1ms`**
-- PostgreSQL storage: **32 GB**
-- No geo-redundant backup
+- Database: **Neon serverless PostgreSQL** (external to Azure, configured via connection string)
 
-These are demo-oriented defaults; tune up only if load grows.
+These are demo-oriented defaults.
 
 ### One-time azd local setup
+
+1. Create a free PostgreSQL database at [neon.tech](https://neon.tech) and copy your connection string.
+2. Configure azd:
 
 ```powershell
 azd auth login
 azd env new demo
-azd env set AZURE_LOCATION westeurope
-azd env set POSTGRES_ADMIN_LOGIN pgadmin
-azd env set POSTGRES_ADMIN_PASSWORD "<strong-password>"
+azd env set AZURE_LOCATION polandcentral
+azd env set POSTGRES_CONNECTION_STRING "<your-neon-connection-string>"
 azd env set JWT_ISSUER "https://<your-app>.azurewebsites.net"
 azd env set JWT_SIGNING_KEY "<long-random-secret>"
 azd env set DEMO_USER_EMAIL "guest@habitinator.local"
@@ -411,14 +411,13 @@ azd up
 
 - **`AZURE_ENV_NAME`** — azd environment name (for example: `demo` or `prod`)
 - **`AZURE_LOCATION`** — Azure region
-- **`POSTGRES_ADMIN_LOGIN`**
 - **`JWT_ISSUER`**
 - **`DEMO_USER_EMAIL`** (optional; falls back to default in workflow)
 
 ### Required GitHub secrets (deploy workflow)
 
 - **`AZURE_CREDENTIALS`** — service principal JSON
-- **`POSTGRES_ADMIN_PASSWORD`**
+- **`POSTGRES_CONNECTION_STRING`**
 - **`JWT_SIGNING_KEY`**
 - **`DEMO_USER_PASSWORD`**
 

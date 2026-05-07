@@ -1,16 +1,7 @@
-name: Deploy App.Web with azd
+name: Deploy Web app to Azure
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main, master]
-    paths:
-      - ".github/workflows/deploy-azure-web.yml"
-      - "azure.yaml"
-      - "infra/**"
-      - "src/App.Web/**"
-      - "src/App.Shared.RCL/**"
-      - "Directory.Build.props"
 
 permissions:
   contents: read
@@ -40,7 +31,7 @@ jobs:
         with:
           dotnet-version: |
             10.0.x
-          include-prerelease: true
+          dotnet-quality: 'preview'
 
       - name: Setup Azure Developer CLI
         uses: Azure/setup-azd@v2

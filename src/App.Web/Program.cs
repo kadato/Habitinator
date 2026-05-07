@@ -170,7 +170,9 @@ for (var attempt = 1; attempt <= maxSeedAttempts; attempt++)
     {
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex,
-            "Skipping startup demo data seeding because PostgreSQL is unreachable or an error occurred. Check ConnectionStrings:DefaultConnection and ensure PostgreSQL is running.");
+            "Skipping startup demo data seeding because PostgreSQL is unreachable or an error occurred. " +
+            "Check ConnectionStrings:DefaultConnection. If you use Neon with a pooled (-pooler) host, migrations now use a direct host automatically; " +
+            "you can also set ConnectionStrings:MigrationConnection to a direct connection string.");
     }
 }
 

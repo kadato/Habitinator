@@ -2,6 +2,7 @@ using App.Web.Data;
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -12,13 +13,29 @@ public static class DemoDataSeeder
     public static async Task SeedAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken = default)
     {
         using var scope = serviceProvider.CreateScope();
+        var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var options = scope.ServiceProvider.GetRequiredService<IOptions<DemoUserOptions>>();
         var boardPersistence = scope.ServiceProvider.GetRequiredService<BoardPersistenceService>();
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DemoDataSeeder");
 
-        await dbContext.Database.MigrateAsync(cancellationToken);
+        var primaryCs = PostgresMigrationConnectionStrings.ResolvePrimary(configuration);
+        var migrationCs = PostgresMigrationConnectionStrings.ResolveForMigrations(configuration);
+        if (!string.Equals(migrationCs, primaryCs, StringComparison.Ordinal))
+        {
+            logger.LogInformation(
+                "Applying EF migrations on a dedicated connection (not the primary app string). " +
+                "This avoids Neon PgBouncer transaction-pooling issues during schema updates.");
+        }
+
+        var migrationOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseNpgsql(migrationCs)
+            .Options;
+        await using (var migrationContext = new ApplicationDbContext(migrationOptions))
+        {
+            await migrationContext.Database.MigrateAsync(cancellationToken);
+        }
 
         var demo = options.Value;
         var guest = await userManager.FindByEmailAsync(demo.Email);

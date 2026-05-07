@@ -150,7 +150,7 @@ List<string> MapRegistrationErrorsToUserFacing(IEnumerable<IdentityError> errors
             "Username", "Email", StringComparison.OrdinalIgnoreCase)
     }).ToList();
 
-const int maxSeedAttempts = 4;
+const int maxSeedAttempts = 6;
 for (var attempt = 1; attempt <= maxSeedAttempts; attempt++)
 {
     try
@@ -158,19 +158,19 @@ for (var attempt = 1; attempt <= maxSeedAttempts; attempt++)
         await DemoDataSeeder.SeedAsync(app.Services);
         break;
     }
-    catch (NpgsqlException ex) when (attempt < maxSeedAttempts)
+    catch (Exception ex) when (attempt < maxSeedAttempts)
     {
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
         logger.LogWarning(ex,
             "Database not ready for migration/seeding (attempt {Attempt}/{Max}). Retrying after delay…",
             attempt, maxSeedAttempts);
-        await Task.Delay(TimeSpan.FromSeconds(2));
+        await Task.Delay(TimeSpan.FromSeconds(5));
     }
-    catch (NpgsqlException ex)
+    catch (Exception ex)
     {
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex,
-            "Skipping startup demo data seeding because PostgreSQL is unreachable. Check ConnectionStrings:DefaultConnection and ensure PostgreSQL is running.");
+            "Skipping startup demo data seeding because PostgreSQL is unreachable or an error occurred. Check ConnectionStrings:DefaultConnection and ensure PostgreSQL is running.");
     }
 }
 

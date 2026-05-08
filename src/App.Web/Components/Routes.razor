@@ -1,5 +1,5 @@
 ﻿@using global::App.Web.Components.Pages
-@* Avoid prerender + interactive using different DI scopes (auth, DbContext) which can fault the Blazor Server circuit. *@
+@* Interactive-only (no prerender). IdentityRevalidatingAuthenticationStateProvider supplies auth on the circuit; prerender+interactive can still split DI scopes for DbContext. *@
 @rendermode @(new InteractiveServerRenderMode(false))
 <Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(NotFound)">
     <Found Context="routeData">

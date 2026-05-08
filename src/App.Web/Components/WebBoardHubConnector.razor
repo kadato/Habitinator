@@ -1,5 +1,6 @@
 @inject IJSRuntime JS
 @inject BoardRemoteNotifyBridge RefreshBridge
+@using Microsoft.JSInterop
 @using global::App.Shared.RCL.Services
 @implements IAsyncDisposable
 
@@ -14,7 +15,22 @@
         }
 
         _dotNetRef = DotNetObjectReference.Create(RefreshBridge);
-        await JS.InvokeVoidAsync("HabitinatorBoardHub.start", _dotNetRef);
+        try
+        {
+            await JS.InvokeVoidAsync("HabitinatorBoardHub.start", _dotNetRef);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (TaskCanceledException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+        catch (JSException)
+        {
+        }
     }
 
     public async ValueTask DisposeAsync()

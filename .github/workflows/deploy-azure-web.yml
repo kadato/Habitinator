@@ -29,7 +29,7 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Validate Azure OIDC variables
         if: ${{ vars.AZURE_CLIENT_ID != '' }}
@@ -41,7 +41,7 @@ jobs:
           test -n "${SUBSCRIPTION_ID}" || { echo "::error::Set repository variable AZURE_SUBSCRIPTION_ID when AZURE_CLIENT_ID (OIDC) is set."; exit 1; }
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             10.0.x

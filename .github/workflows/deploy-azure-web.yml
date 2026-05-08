@@ -61,12 +61,6 @@ jobs:
       - name: Configure azd to use Azure CLI auth
         run: azd config set auth.useAzCliAuth "true"
 
-      - name: Pin azd resource group
-        if: ${{ vars.AZURE_RESOURCE_GROUP != '' }}
-        run: |
-          azd env set AZURE_RESOURCE_GROUP "${AZURE_RESOURCE_GROUP}"
-          echo "Pinned AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}"
-
       - name: Resolve Azure subscription for azd
         shell: bash
         env:
@@ -82,6 +76,26 @@ jobs:
             test -n "${AZ_SUBSCRIPTION_ID}"
             echo "AZURE_SUBSCRIPTION_ID=${AZ_SUBSCRIPTION_ID}" >> "$GITHUB_ENV"
           fi
+
+      - name: Ensure azd environment exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${AZURE_ENV_NAME}"
+          test -n "${AZURE_LOCATION}"
+          test -n "${AZURE_SUBSCRIPTION_ID}"
+          if [ ! -d ".azure/${AZURE_ENV_NAME}" ]; then
+            echo "Creating azd environment '${AZURE_ENV_NAME}' (no local .azure/ on CI)."
+            azd env new "${AZURE_ENV_NAME}" -l "${AZURE_LOCATION}" --subscription "${AZURE_SUBSCRIPTION_ID}" --no-prompt
+          else
+            echo "Using existing azd environment '.azure/${AZURE_ENV_NAME}'."
+          fi
+
+      - name: Pin azd resource group
+        if: ${{ vars.AZURE_RESOURCE_GROUP != '' }}
+        run: |
+          azd env set AZURE_RESOURCE_GROUP "${AZURE_RESOURCE_GROUP}"
+          echo "Pinned AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}"
 
       - name: Validate required variables and secrets
         shell: bash

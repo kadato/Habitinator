@@ -10,19 +10,12 @@ namespace App.Web.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "UserPreferencesJson",
-                table: "AspNetUsers",
-                type: "text",
-                nullable: true);
+            // No-op: InitialIdentityAndBoard already defines AspNetUsers.UserPreferencesJson.
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "UserPreferencesJson",
-                table: "AspNetUsers");
         }
     }
 }

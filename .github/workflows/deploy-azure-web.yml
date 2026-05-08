@@ -3,6 +3,10 @@ name: Deploy Web app to Azure
 on:
   workflow_dispatch:
 
+concurrency:
+  group: deploy-azure-web-${{ github.repository }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
   id-token: write
@@ -12,6 +16,7 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
   AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
   POSTGRES_CONNECTION_STRING: ${{ secrets.POSTGRES_CONNECTION_STRING }}
   JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}
   DEMO_USER_EMAIL: ${{ vars.DEMO_USER_EMAIL }}
@@ -21,9 +26,19 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: production
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate Azure OIDC variables
+        if: ${{ vars.AZURE_CLIENT_ID != '' }}
+        env:
+          TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          test -n "${TENANT_ID}" || { echo "::error::Set repository variable AZURE_TENANT_ID when AZURE_CLIENT_ID (OIDC) is set."; exit 1; }
+          test -n "${SUBSCRIPTION_ID}" || { echo "::error::Set repository variable AZURE_SUBSCRIPTION_ID when AZURE_CLIENT_ID (OIDC) is set."; exit 1; }
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -36,23 +51,37 @@ jobs:
         uses: Azure/setup-azd@v2
 
       - name: Azure login
-        uses: azure/login@v2
+        uses: ./.github/actions/azure-login
         with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Configure azd to use Azure CLI auth
         run: azd config set auth.useAzCliAuth "true"
 
-      - name: Pin azd resource group (optional)
+      - name: Pin azd resource group
         if: ${{ vars.AZURE_RESOURCE_GROUP != '' }}
-        run: azd env set AZURE_RESOURCE_GROUP "${{ vars.AZURE_RESOURCE_GROUP }}"
+        run: |
+          azd env set AZURE_RESOURCE_GROUP "${AZURE_RESOURCE_GROUP}"
+          echo "Pinned AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}"
 
       - name: Resolve Azure subscription for azd
         shell: bash
+        env:
+          SUB_FROM_VAR: ${{ vars.AZURE_SUBSCRIPTION_ID }}
         run: |
-          AZ_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
-          test -n "${AZ_SUBSCRIPTION_ID}"
-          echo "AZURE_SUBSCRIPTION_ID=${AZ_SUBSCRIPTION_ID}" >> "$GITHUB_ENV"
+          set -euo pipefail
+          if [ -n "${SUB_FROM_VAR}" ]; then
+            echo "Using AZURE_SUBSCRIPTION_ID from repository variable."
+            echo "AZURE_SUBSCRIPTION_ID=${SUB_FROM_VAR}" >> "$GITHUB_ENV"
+            az account set --subscription "${SUB_FROM_VAR}"
+          else
+            AZ_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+            test -n "${AZ_SUBSCRIPTION_ID}"
+            echo "AZURE_SUBSCRIPTION_ID=${AZ_SUBSCRIPTION_ID}" >> "$GITHUB_ENV"
+          fi
 
       - name: Validate required variables and secrets
         shell: bash
@@ -60,6 +89,11 @@ jobs:
           test -n "${AZURE_SUBSCRIPTION_ID}"
           test -n "${AZURE_ENV_NAME}"
           test -n "${AZURE_LOCATION}"
+          if [ -z "${AZURE_RESOURCE_GROUP:-}" ]; then
+            echo "::warning title=AZURE_RESOURCE_GROUP::Repository variable AZURE_RESOURCE_GROUP is unset; azd may infer rg-\${AZURE_ENV_NAME}. Set it for deterministic deploys."
+          else
+            echo "Using AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}"
+          fi
           test -n "${POSTGRES_CONNECTION_STRING}"
           test -n "${JWT_SIGNING_KEY}"
           test -n "${DEMO_USER_PASSWORD}"

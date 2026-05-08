@@ -5,27 +5,46 @@ on:
     tags:
       - "v*"
 
+concurrency:
+  group: release-clients-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
+  id-token: write
 
 env:
   DOTNET_NO_LOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  # Use PRODUCTION_API_BASE_URL / PRODUCTION_WEB_URL when set; otherwise discover the
-  # App Service default host from Azure (same tags as infra/main.bicep). This keeps
-  # MAUI releases aligned with the real deployment without manual variable updates.
   resolve-production-url:
     runs-on: ubuntu-latest
+    # Same GitHub Environment as deploy-azure-web so OIDC subject is
+    # repo:OWNER/REPO:environment:production (one Entra federated credential for CI + tag releases).
+    environment: production
     outputs:
       api_base_url: ${{ steps.resolve.outputs.api_base_url }}
       web_url: ${{ steps.resolve.outputs.web_url }}
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Azure OIDC variables
+        if: ${{ vars.PRODUCTION_API_BASE_URL == '' && vars.AZURE_CLIENT_ID != '' }}
+        env:
+          TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          test -n "${TENANT_ID}" || { echo "::error::Set AZURE_TENANT_ID when AZURE_CLIENT_ID (OIDC) is set."; exit 1; }
+          test -n "${SUBSCRIPTION_ID}" || { echo "::error::Set AZURE_SUBSCRIPTION_ID when AZURE_CLIENT_ID (OIDC) is set."; exit 1; }
+
       - name: Azure login (discover web app URL)
         if: ${{ vars.PRODUCTION_API_BASE_URL == '' }}
-        uses: azure/login@v2
+        uses: ./.github/actions/azure-login
         with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Resolve production API and web base URLs
@@ -51,12 +70,15 @@ jobs:
             exit 0
           fi
           if [ -z "${AZURE_ENV_NAME}" ]; then
-            echo "Either set repository variable PRODUCTION_API_BASE_URL, or set AZURE_ENV_NAME (and AZURE_CREDENTIALS) so the workflow can find the App Service."
+            echo "Either set PRODUCTION_API_BASE_URL, or set AZURE_ENV_NAME plus Azure auth (OIDC variables or AZURE_CREDENTIALS secret) to discover the App Service."
             exit 1
           fi
           RG="${AZURE_RG_VAR:-}"
           if [ -z "${RG}" ]; then RG="rg-${AZURE_ENV_NAME}"; fi
           echo "Resolving App Service in resource group: $RG (azd-env-name=$AZURE_ENV_NAME)"
+          if [ -n "${{ vars.AZURE_SUBSCRIPTION_ID }}" ]; then
+            az account set --subscription "${{ vars.AZURE_SUBSCRIPTION_ID }}"
+          fi
           NAMES="$(az resource list -g "$RG" --resource-type "Microsoft.Web/sites" \
             --query "[?tags.\"azd-env-name\"=='${AZURE_ENV_NAME}' && tags.\"azd-service-name\"=='web'].name" -o tsv || true)"
           if [ -z "${NAMES}" ]; then
@@ -78,6 +100,7 @@ jobs:
   build-android:
     needs: [resolve-production-url]
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -138,6 +161,7 @@ jobs:
   build-windows:
     needs: [resolve-production-url]
     runs-on: windows-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 

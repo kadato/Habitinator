@@ -44,6 +44,10 @@ jobs:
       - name: Configure azd to use Azure CLI auth
         run: azd config set auth.useAzCliAuth "true"
 
+      - name: Pin azd resource group (optional)
+        if: ${{ vars.AZURE_RESOURCE_GROUP != '' }}
+        run: azd env set AZURE_RESOURCE_GROUP "${{ vars.AZURE_RESOURCE_GROUP }}"
+
       - name: Resolve Azure subscription for azd
         shell: bash
         run: |

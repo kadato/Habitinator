@@ -33,7 +33,8 @@ param demoUserEmail string = 'guest@habitinator.local'
 param demoUserPassword string
 
 var normalizedEnv = toLower(replace(environmentName, '_', '-'))
-var webAppName = 'app-habitinator-${normalizedEnv}-${uniqueString(resourceGroup().id)}'
+// App Service names are globally unique. Use a distinct AZURE_ENV_NAME if provisioning fails (name taken).
+var webAppName = 'app-habitinator-${normalizedEnv}'
 var appServicePlanName = 'asp-habitinator-${normalizedEnv}'
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {

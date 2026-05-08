@@ -8,8 +8,8 @@ public sealed class SampleEchoTests
     [Fact]
     public void Renders_ParameterText()
     {
-        using var ctx = new TestContext();
-        var cut = ctx.RenderComponent<SampleEcho>(p => p.Add(x => x.Message, "hello-bunit"));
+        using var ctx = new BunitContext();
+        var cut = ctx.Render<SampleEcho>(p => p.Add(x => x.Message, "hello-bunit"));
         Assert.Contains("hello-bunit", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("sample-echo", cut.Markup, StringComparison.Ordinal);
     }

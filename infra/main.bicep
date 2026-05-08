@@ -30,10 +30,8 @@ param demoUserEmail string = 'guest@habitinator.local'
 param demoUserPassword string
 
 var normalizedEnv = toLower(replace(environmentName, '_', '-'))
-// App Service hostnames are globally unique across Azure. A plain env-based name (e.g. app-habitinator-demo)
-// often collides; derive a stable suffix from subscription + resource group + env so redeploys stay idempotent.
-var webAppNameHash = take(uniqueString(subscription().subscriptionId, resourceGroup().id, environmentName), 8)
-var webAppName = 'app-habitinator-${normalizedEnv}-${webAppNameHash}'
+// App Service app names are globally unique. Delete any other site using this name before provisioning.
+var webAppName = 'app-habitinator-${normalizedEnv}'
 // Must match the App Service default hostname so tokens validate for this deployment.
 var jwtIssuerUrl = 'https://${webAppName}.azurewebsites.net'
 var appServicePlanName = 'asp-habitinator-${normalizedEnv}'

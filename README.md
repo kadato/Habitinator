@@ -410,13 +410,37 @@ azd up
 
 - **`AZURE_ENV_NAME`** — azd environment name (for example: `demo` or `prod`)
 - **`AZURE_LOCATION`** — Azure region
+- **`AZURE_RESOURCE_GROUP`** — resource group that holds the App Service (explicit pin; avoids relying only on `rg-<AZURE_ENV_NAME>`)
+- **`AZURE_SUBSCRIPTION_ID`** — subscription the pipelines should use (deterministic `az account set`)
+- **`AZURE_TENANT_ID`** — Microsoft Entra tenant ID (required when using OIDC below)
 - **`DEMO_USER_EMAIL`** (optional; falls back to default in workflow)
 
 `Jwt__Issuer` is set automatically in Azure to match the deployed App Service URL (`https://<webapp-name>.azurewebsites.net`). For local tooling you can read the URL with `azd env get-value AZURE_WEBAPP_URL`.
 
+### Azure authentication in GitHub Actions (recommended: OIDC)
+
+Long-lived **`AZURE_CREDENTIALS`** JSON works but rotating client secrets and storing them in GitHub is weaker than **OpenID Connect (workload identity federation)**.
+
+**Recommended setup:**
+
+1. In Microsoft Entra ID, create an **App registration** (single tenant is typical for one subscription).
+2. Add a **Federated credential** for GitHub:
+   - **Issuer:** `https://token.actions.githubusercontent.com`
+   - **Subject:** `repo:<YOUR_GITHUB_ORG_OR_USER>/<REPO_NAME>:environment:production` so workflows that use the GitHub **[environment](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment)** named **`production`** (both **Deploy Web app to Azure** and **Release MAUI clients** discovery) receive OIDC tokens Azure accepts.
+3. Grant the app **least privilege** on Azure, for example **Contributor** on the resource group scope only:  
+   `/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<AZURE_RESOURCE_GROUP>`
+4. Set these **repository variables** (IDs are not secrets; they still identify your tenant and subscription):
+   - **`AZURE_CLIENT_ID`** — application (client) ID of the app registration
+   - **`AZURE_TENANT_ID`** — directory (tenant) ID
+   - **`AZURE_SUBSCRIPTION_ID`** — subscription ID
+
+The workflows use the composite action **`.github/actions/azure-login`**: if **`AZURE_CLIENT_ID`** is set, they log in with OIDC; otherwise they fall back to the legacy secret below.
+
+Official overview: [Use GitHub Actions to connect to Azure](https://learn.microsoft.com/azure/developer/github/connect-from-azure).
+
 ### Required GitHub secrets (deploy workflow)
 
-- **`AZURE_CREDENTIALS`** — service principal JSON
+- **`AZURE_CREDENTIALS`** (optional if OIDC variables above are set) — service principal JSON from `az ad sp create-for-rbac --sdk-auth` or equivalent; remove after migrating to OIDC
 - **`POSTGRES_CONNECTION_STRING`**
 - **`JWT_SIGNING_KEY`**
 - **`DEMO_USER_PASSWORD`**
@@ -425,7 +449,7 @@ azd up
 
 **Production URL (pick one approach):**
 
-- **Automatic (recommended):** leave **`PRODUCTION_API_BASE_URL`** empty. The release workflow logs into Azure with **`AZURE_CREDENTIALS`**, finds the `web` App Service tagged like **`infra/main.bicep`** (`azd-service-name=web`, `azd-env-name=<AZURE_ENV_NAME>`), and uses its default hostname. Use the same **`AZURE_ENV_NAME`** (and optional **`AZURE_RESOURCE_GROUP`**) as the deploy workflow; if the resource group is unset, the workflow assumes **`rg-<AZURE_ENV_NAME>`** (azd default).
+- **Automatic (recommended):** leave **`PRODUCTION_API_BASE_URL`** empty. The release workflow signs into Azure (OIDC if **`AZURE_CLIENT_ID`** is set, otherwise **`AZURE_CREDENTIALS`**), finds the `web` App Service tagged like **`infra/main.bicep`** (`azd-service-name=web`, `azd-env-name=<AZURE_ENV_NAME>`), and uses its default hostname. Use the same **`AZURE_ENV_NAME`**, **`AZURE_RESOURCE_GROUP`**, and **`AZURE_SUBSCRIPTION_ID`** as the deploy workflow when discovering resources.
 - **Manual override:** set **`PRODUCTION_API_BASE_URL`** and optionally **`PRODUCTION_WEB_URL`** when you want the clients pinned to a specific URL regardless of Azure.
 
 Signing (only if you add signing steps later): **`ANDROID_KEYSTORE_BASE64`**, **`ANDROID_SIGNING_KEY_ALIAS`**, **`ANDROID_SIGNING_STORE_PASS`**, **`ANDROID_SIGNING_KEY_PASS`**.

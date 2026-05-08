@@ -73,7 +73,15 @@ public static class DemoDataSeeder
             await userManager.UpdateAsync(guest);
 
             await boardPersistence.InsertDemoBoardDataAsync(guest.Id, cancellationToken);
-            await GuestActivityDemoSeeder.SeedIfMissingAsync(dbContext, guest.Id, cancellationToken);
+            try
+            {
+                await GuestActivityDemoSeeder.SeedIfMissingAsync(dbContext, guest.Id, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Guest activity demo seed skipped after ForceReseed.");
+            }
+
             logger.LogWarning(
                 "Demo guest reseeded (ForceReseed). Turn off {Section}:{Flag} in configuration or environment when finished.",
                 DemoUserOptions.SectionName, nameof(demo.ForceReseed));
@@ -81,7 +89,14 @@ public static class DemoDataSeeder
         }
 
         await boardPersistence.SeedBoardDataIfMissingAsync(guest.Id, cancellationToken);
-        await GuestActivityDemoSeeder.SeedIfMissingAsync(dbContext, guest.Id, cancellationToken);
+        try
+        {
+            await GuestActivityDemoSeeder.SeedIfMissingAsync(dbContext, guest.Id, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Guest activity demo seed skipped.");
+        }
     }
 
     private static async Task ClearGuestDataAsync(ApplicationDbContext db, Guid guestUserId,

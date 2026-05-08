@@ -65,6 +65,12 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 builder.Services.Configure<DemoUserOptions>(builder.Configuration.GetSection(DemoUserOptions.SectionName));
+builder.Services.PostConfigure<DemoUserOptions>(static o =>
+{
+    var defaults = new DemoUserOptions();
+    if (string.IsNullOrWhiteSpace(o.Email)) o.Email = defaults.Email;
+    if (string.IsNullOrWhiteSpace(o.Password)) o.Password = defaults.Password;
+});
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddScoped<GlobalTimerService>();
@@ -78,6 +84,13 @@ builder.Services.AddScoped<BoardPersistenceService>();
 builder.Services.AddScoped<BoardIdempotencyService>();
 builder.Services.Configure<BoardMaintenanceOptions>(
     builder.Configuration.GetSection(BoardMaintenanceOptions.SectionName));
+builder.Services.Configure<DemoInitializationOptions>(
+    builder.Configuration.GetSection(DemoInitializationOptions.SectionName));
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddHostedService<DemoDataInitializationHostedService>();
+}
+
 builder.Services.AddHostedService<BoardMaintenanceHostedService>();
 builder.Services.AddScoped<IBoardDataService, WebBoardDataService>();
 builder.Services.AddSignalR();
@@ -141,6 +154,23 @@ builder.Services.AddAuthorizationBuilder()
 
 var app = builder.Build();
 
+async Task TryRecoverDemoGuestAsync(ILogger logger, CancellationToken cancellationToken = default)
+{
+    try
+    {
+        await DemoDataSeeder.SeedAsync(app.Services, cancellationToken);
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "On-demand demo data seeding failed.");
+    }
+}
+
+if (app.Environment.IsEnvironment("Testing"))
+{
+    await DemoDataSeeder.SeedAsync(app.Services);
+}
+
 List<string> MapRegistrationErrorsToUserFacing(IEnumerable<IdentityError> errors) =>
     errors.Select(static e => e.Code switch
     {
@@ -149,32 +179,6 @@ List<string> MapRegistrationErrorsToUserFacing(IEnumerable<IdentityError> errors
         _ => (e.Description ?? "Registration could not be completed.").Replace(
             "Username", "Email", StringComparison.OrdinalIgnoreCase)
     }).ToList();
-
-const int maxSeedAttempts = 6;
-for (var attempt = 1; attempt <= maxSeedAttempts; attempt++)
-{
-    try
-    {
-        await DemoDataSeeder.SeedAsync(app.Services);
-        break;
-    }
-    catch (Exception ex) when (attempt < maxSeedAttempts)
-    {
-        var logger = app.Services.GetRequiredService<ILogger<Program>>();
-        logger.LogWarning(ex,
-            "Database not ready for migration/seeding (attempt {Attempt}/{Max}). Retrying after delay…",
-            attempt, maxSeedAttempts);
-        await Task.Delay(TimeSpan.FromSeconds(5));
-    }
-    catch (Exception ex)
-    {
-        var logger = app.Services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex,
-            "Skipping startup demo data seeding because PostgreSQL is unreachable or an error occurred. " +
-            "Check ConnectionStrings:DefaultConnection. If you use Neon with a pooled (-pooler) host, migrations now use a direct host automatically; " +
-            "you can also set ConnectionStrings:MigrationConnection to a direct connection string.");
-    }
-}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"))
@@ -245,13 +249,21 @@ app.MapPost("/api/auth/login", async (
 
 /// <summary>Same demo guest as cookie guest-login, but returns a JWT for native/API clients (MAUI).</summary>
 app.MapPost("/api/auth/guest-jwt", async (
+    HttpContext httpContext,
     SignInManager<ApplicationUser> signInManager,
     UserManager<ApplicationUser> userManager,
     JwtTokenService jwtTokenService,
-    IOptions<DemoUserOptions> demoOptions) =>
+    IOptions<DemoUserOptions> demoOptions,
+    ILogger<Program> logger) =>
 {
     var email = demoOptions.Value.Email;
     var user = await userManager.FindByEmailAsync(email);
+    if (user is null)
+    {
+        await TryRecoverDemoGuestAsync(logger, httpContext.RequestAborted);
+        user = await userManager.FindByEmailAsync(email);
+    }
+
     if (user is null) return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
 
     var loginResult = await signInManager.PasswordSignInAsync(
@@ -276,11 +288,20 @@ app.MapPost("/api/auth/logout", async (SignInManager<ApplicationUser> signInMana
 
 // Full browser POST so Set-Cookie runs before the response is committed (works with Blazor; interactive components cannot set cookies after streaming starts).
 app.MapPost("/api/auth/guest-login", async (
+    HttpContext httpContext,
     SignInManager<ApplicationUser> signInManager,
     UserManager<ApplicationUser> userManager,
-    IOptions<DemoUserOptions> demoOptions) =>
+    IOptions<DemoUserOptions> demoOptions,
+    ILogger<Program> logger) =>
 {
-    var guestUser = await userManager.FindByEmailAsync(demoOptions.Value.Email);
+    var email = demoOptions.Value.Email;
+    var guestUser = await userManager.FindByEmailAsync(email);
+    if (guestUser is null)
+    {
+        await TryRecoverDemoGuestAsync(logger, httpContext.RequestAborted);
+        guestUser = await userManager.FindByEmailAsync(email);
+    }
+
     if (guestUser is null) return Results.LocalRedirect("/auth/login?guest=missing");
 
     await signInManager.SignInAsync(guestUser, true);

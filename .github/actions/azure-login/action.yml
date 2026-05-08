@@ -1,0 +1,37 @@
+# Prefer OIDC workload federation (repo variables AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID).
+# Fallback: secret AZURE_CREDENTIALS (service principal JSON). Rotate off JSON once OIDC is configured.
+name: Azure login
+description: OIDC when AZURE_CLIENT_ID is set; otherwise legacy AZURE_CREDENTIALS.
+inputs:
+  client-id:
+    description: App registration (application) ID for federated login
+    required: false
+    default: ""
+  tenant-id:
+    description: Microsoft Entra tenant ID
+    required: false
+    default: ""
+  subscription-id:
+    description: Azure subscription ID
+    required: false
+    default: ""
+  creds:
+    description: Legacy service principal JSON (same shape as az ad sp create-for-rbac -sdk-auth)
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - name: Azure login (OIDC / workload federation)
+      if: ${{ inputs.client-id != '' }}
+      uses: azure/login@v2
+      with:
+        client-id: ${{ inputs.client-id }}
+        tenant-id: ${{ inputs.tenant-id }}
+        subscription-id: ${{ inputs.subscription-id }}
+
+    - name: Azure login (service principal JSON)
+      if: ${{ inputs.client-id == '' }}
+      uses: azure/login@v2
+      with:
+        creds: ${{ inputs.creds }}

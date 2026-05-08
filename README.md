@@ -400,7 +400,6 @@ azd auth login
 azd env new demo
 azd env set AZURE_LOCATION polandcentral
 azd env set POSTGRES_CONNECTION_STRING "<your-neon-connection-string>"
-azd env set JWT_ISSUER "https://<your-app>.azurewebsites.net"
 azd env set JWT_SIGNING_KEY "<long-random-secret>"
 azd env set DEMO_USER_EMAIL "guest@habitinator.local"
 azd env set DEMO_USER_PASSWORD "<demo-password>"
@@ -411,8 +410,9 @@ azd up
 
 - **`AZURE_ENV_NAME`** — azd environment name (for example: `demo` or `prod`)
 - **`AZURE_LOCATION`** — Azure region
-- **`JWT_ISSUER`**
 - **`DEMO_USER_EMAIL`** (optional; falls back to default in workflow)
+
+`Jwt__Issuer` is set automatically in Azure to match the deployed App Service URL (`https://<webapp-name>.azurewebsites.net`). For local tooling you can read the URL with `azd env get-value AZURE_WEBAPP_URL`.
 
 ### Required GitHub secrets (deploy workflow)
 
@@ -423,15 +423,18 @@ azd up
 
 ### Required GitHub variables/secrets (MAUI release workflow)
 
-- Variables: **`PRODUCTION_API_BASE_URL`**, **`PRODUCTION_WEB_URL`** (optional if same as API URL)
-- Secrets: **`ANDROID_KEYSTORE_BASE64`**, **`ANDROID_SIGNING_KEY_ALIAS`**, **`ANDROID_SIGNING_STORE_PASS`**, **`ANDROID_SIGNING_KEY_PASS`**
+**Production URL (pick one approach):**
+
+- **Automatic (recommended):** leave **`PRODUCTION_API_BASE_URL`** empty. The release workflow logs into Azure with **`AZURE_CREDENTIALS`**, finds the `web` App Service tagged like **`infra/main.bicep`** (`azd-service-name=web`, `azd-env-name=<AZURE_ENV_NAME>`), and uses its default hostname. Use the same **`AZURE_ENV_NAME`** (and optional **`AZURE_RESOURCE_GROUP`**) as the deploy workflow; if the resource group is unset, the workflow assumes **`rg-<AZURE_ENV_NAME>`** (azd default).
+- **Manual override:** set **`PRODUCTION_API_BASE_URL`** and optionally **`PRODUCTION_WEB_URL`** when you want the clients pinned to a specific URL regardless of Azure.
+
+Signing (only if you add signing steps later): **`ANDROID_KEYSTORE_BASE64`**, **`ANDROID_SIGNING_KEY_ALIAS`**, **`ANDROID_SIGNING_STORE_PASS`**, **`ANDROID_SIGNING_KEY_PASS`**.
 
 ### Release process
 
 1. Deploy/update backend (`azd up` locally or deploy workflow).
-2. Set `PRODUCTION_API_BASE_URL` to the deployed web URL.
-3. Push a tag like **`v1.2.0`**.
-4. Workflow publishes Android APK + Windows ZIP + checksums and includes the hosted web URL in release notes.
+2. Push a tag like **`v1.2.0`**.
+3. The workflow resolves the API base URL (from Azure or from **`PRODUCTION_API_BASE_URL`**), builds MAUI Android + Windows artifacts, and publishes a GitHub release with checksums and the hosted web URL in the notes.
 
 ---
 

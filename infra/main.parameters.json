@@ -11,9 +11,6 @@
     "postgresConnectionString": {
       "value": "${POSTGRES_CONNECTION_STRING}"
     },
-    "jwtIssuer": {
-      "value": "${JWT_ISSUER}"
-    },
     "jwtSigningKey": {
       "value": "${JWT_SIGNING_KEY}"
     },

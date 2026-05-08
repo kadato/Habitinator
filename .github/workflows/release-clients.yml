@@ -13,14 +13,73 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
+  # Use PRODUCTION_API_BASE_URL / PRODUCTION_WEB_URL when set; otherwise discover the
+  # App Service default host from Azure (same tags as infra/main.bicep). This keeps
+  # MAUI releases aligned with the real deployment without manual variable updates.
+  resolve-production-url:
+    runs-on: ubuntu-latest
+    outputs:
+      api_base_url: ${{ steps.resolve.outputs.api_base_url }}
+      web_url: ${{ steps.resolve.outputs.web_url }}
+    steps:
+      - name: Azure login (discover web app URL)
+        if: ${{ vars.PRODUCTION_API_BASE_URL == '' }}
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Resolve production API and web base URLs
+        id: resolve
+        env:
+          MANUAL_API: ${{ vars.PRODUCTION_API_BASE_URL }}
+          MANUAL_WEB: ${{ vars.PRODUCTION_WEB_URL }}
+          AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
+          AZURE_RG_VAR: ${{ vars.AZURE_RESOURCE_GROUP }}
+        run: |
+          set -euo pipefail
+          trim_slash() { echo -n "$1" | sed 's:/*$::'; }
+          if [ -n "${MANUAL_API}" ]; then
+            api="$(trim_slash "$MANUAL_API")"
+            if [ -n "${MANUAL_WEB}" ]; then
+              web="$(trim_slash "$MANUAL_WEB")"
+            else
+              web="$api"
+            fi
+            echo "api_base_url=$api" >> "$GITHUB_OUTPUT"
+            echo "web_url=$web" >> "$GITHUB_OUTPUT"
+            echo "Using repository variables PRODUCTION_API_BASE_URL / PRODUCTION_WEB_URL."
+            exit 0
+          fi
+          if [ -z "${AZURE_ENV_NAME}" ]; then
+            echo "Either set repository variable PRODUCTION_API_BASE_URL, or set AZURE_ENV_NAME (and AZURE_CREDENTIALS) so the workflow can find the App Service."
+            exit 1
+          fi
+          RG="${AZURE_RG_VAR:-}"
+          if [ -z "${RG}" ]; then RG="rg-${AZURE_ENV_NAME}"; fi
+          echo "Resolving App Service in resource group: $RG (azd-env-name=$AZURE_ENV_NAME)"
+          NAMES="$(az resource list -g "$RG" --resource-type "Microsoft.Web/sites" \
+            --query "[?tags.\"azd-env-name\"=='${AZURE_ENV_NAME}' && tags.\"azd-service-name\"=='web'].name" -o tsv || true)"
+          if [ -z "${NAMES}" ]; then
+            echo "No Microsoft.Web/sites in '$RG' with tags azd-env-name='${AZURE_ENV_NAME}' and azd-service-name='web'."
+            echo "Set PRODUCTION_API_BASE_URL, or fix AZURE_RESOURCE_GROUP / AZURE_ENV_NAME."
+            exit 1
+          fi
+          NAME="$(echo "$NAMES" | head -1)"
+          HOST="$(az webapp show -g "$RG" -n "$NAME" --query defaultHostName -o tsv)"
+          if [ -z "${HOST}" ]; then
+            echo "Could not read defaultHostName for web app '$NAME'."
+            exit 1
+          fi
+          url="https://${HOST}"
+          echo "api_base_url=$url" >> "$GITHUB_OUTPUT"
+          echo "web_url=$url" >> "$GITHUB_OUTPUT"
+          echo "Resolved from Azure: $url"
+
   build-android:
+    needs: [resolve-production-url]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Validate required Android secrets and variables
-        run: |
-          test -n "${{ vars.PRODUCTION_API_BASE_URL }}"
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -40,12 +99,17 @@ jobs:
 
       - name: Prepare MAUI release API config
         shell: bash
+        env:
+          API_BASE_URL: ${{ needs.resolve-production-url.outputs.api_base_url }}
         run: |
           python - <<'PY'
+          import os
           from pathlib import Path
+          api = os.environ["API_BASE_URL"].rstrip("/")
           tpl = Path("src/App.MAUI/appsettings.Release.template.json").read_text(encoding="utf-8")
-          api = "${{ vars.PRODUCTION_API_BASE_URL }}".rstrip("/")
-          Path("src/App.MAUI/appsettings.Release.json").write_text(tpl.replace("__API_BASE_URL__", api), encoding="utf-8")
+          Path("src/App.MAUI/appsettings.Release.json").write_text(
+              tpl.replace("__API_BASE_URL__", api), encoding="utf-8"
+          )
           PY
 
       - name: Build Android APK (Release, unsigned)
@@ -72,16 +136,10 @@ jobs:
           path: artifacts/android/*
 
   build-windows:
+    needs: [resolve-production-url]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Validate required variables
-        shell: pwsh
-        run: |
-          if ([string]::IsNullOrWhiteSpace("${{ vars.PRODUCTION_API_BASE_URL }}")) {
-            throw "Repository variable PRODUCTION_API_BASE_URL must be set."
-          }
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -96,9 +154,11 @@ jobs:
 
       - name: Prepare MAUI release API config
         shell: pwsh
+        env:
+          API_BASE_URL: ${{ needs.resolve-production-url.outputs.api_base_url }}
         run: |
+          $apiBaseUrl = $env:API_BASE_URL.TrimEnd("/")
           $template = Get-Content "src/App.MAUI/appsettings.Release.template.json" -Raw
-          $apiBaseUrl = "${{ vars.PRODUCTION_API_BASE_URL }}".TrimEnd("/")
           $template.Replace("__API_BASE_URL__", $apiBaseUrl) | Set-Content "src/App.MAUI/appsettings.Release.json"
 
       - name: Publish Windows app (Release)
@@ -124,7 +184,7 @@ jobs:
           path: artifacts/windows/*
 
   publish-release:
-    needs: [build-android, build-windows]
+    needs: [resolve-production-url, build-android, build-windows]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -143,14 +203,10 @@ jobs:
 
       - name: Build release notes
         shell: bash
+        env:
+          WEB_URL: ${{ needs.resolve-production-url.outputs.web_url }}
+          API_URL: ${{ needs.resolve-production-url.outputs.api_base_url }}
         run: |
-          WEB_URL="${{ vars.PRODUCTION_WEB_URL }}"
-          if [ -z "$WEB_URL" ]; then
-            WEB_URL="${{ vars.PRODUCTION_API_BASE_URL }}"
-          fi
-          if [ -z "$WEB_URL" ]; then
-            WEB_URL="(set repository variable PRODUCTION_WEB_URL or PRODUCTION_API_BASE_URL)"
-          fi
           cat > release-notes.md <<EOF
           ## Downloads
           - Android APK: \`Habitinator-android.apk\`
@@ -161,7 +217,7 @@ jobs:
           ${WEB_URL}
 
           ## Notes
-          - MAUI builds in this release are configured for API base URL: \`${{ vars.PRODUCTION_API_BASE_URL }}\`
+          - MAUI builds in this release are configured for API base URL: \`${API_URL}\`
           EOF
 
       - name: Create GitHub release

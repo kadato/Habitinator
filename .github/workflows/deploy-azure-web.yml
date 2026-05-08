@@ -13,7 +13,6 @@ env:
   AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
   AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
   POSTGRES_CONNECTION_STRING: ${{ secrets.POSTGRES_CONNECTION_STRING }}
-  JWT_ISSUER: ${{ vars.JWT_ISSUER }}
   JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}
   DEMO_USER_EMAIL: ${{ vars.DEMO_USER_EMAIL }}
   DEMO_USER_PASSWORD: ${{ secrets.DEMO_USER_PASSWORD }}
@@ -62,7 +61,6 @@ jobs:
           test -n "${AZURE_ENV_NAME}"
           test -n "${AZURE_LOCATION}"
           test -n "${POSTGRES_CONNECTION_STRING}"
-          test -n "${JWT_ISSUER}"
           test -n "${JWT_SIGNING_KEY}"
           test -n "${DEMO_USER_PASSWORD}"
           if [ -z "${DEMO_USER_EMAIL}" ]; then

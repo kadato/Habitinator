@@ -15,9 +15,6 @@ param appServicePlanSkuName string = 'B1'
 @description('Full PostgreSQL connection string (e.g. from Neon or any Postgres provider).')
 param postgresConnectionString string
 
-@description('JWT issuer for App.Web.')
-param jwtIssuer string
-
 @description('JWT audience for App.Web.')
 param jwtAudience string = 'habitinator-clients'
 
@@ -33,8 +30,12 @@ param demoUserEmail string = 'guest@habitinator.local'
 param demoUserPassword string
 
 var normalizedEnv = toLower(replace(environmentName, '_', '-'))
-// App Service names are globally unique. Use a distinct AZURE_ENV_NAME if provisioning fails (name taken).
-var webAppName = 'app-habitinator-${normalizedEnv}'
+// App Service hostnames are globally unique across Azure. A plain env-based name (e.g. app-habitinator-demo)
+// often collides; derive a stable suffix from subscription + resource group + env so redeploys stay idempotent.
+var webAppNameHash = take(uniqueString(subscription().subscriptionId, resourceGroup().id, environmentName), 8)
+var webAppName = 'app-habitinator-${normalizedEnv}-${webAppNameHash}'
+// Must match the App Service default hostname so tokens validate for this deployment.
+var jwtIssuerUrl = 'https://${webAppName}.azurewebsites.net'
 var appServicePlanName = 'asp-habitinator-${normalizedEnv}'
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
@@ -81,7 +82,7 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'Jwt__Issuer'
-          value: jwtIssuer
+          value: jwtIssuerUrl
         }
         {
           name: 'Jwt__Audience'

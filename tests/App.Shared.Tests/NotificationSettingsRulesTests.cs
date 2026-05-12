@@ -1,6 +1,8 @@
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 
+using FluentAssertions;
+
 using MudBlazor;
 
 namespace App.Shared.Tests;
@@ -37,9 +39,9 @@ public sealed class NotificationSettingsRulesTests
         var s = NotificationSettings.CreateDefault();
         s.InAppMessagesEnabled = false;
 
-        Assert.False(_rules.ShouldShowToast(s, Severity.Success, UtcNoon));
-        Assert.False(_rules.ShouldShowToast(s, Severity.Warning, UtcNoon));
-        Assert.False(_rules.ShouldShowToast(s, Severity.Error, UtcNoon));
+        _rules.ShouldShowToast(s, Severity.Success, UtcNoon).Should().BeFalse();
+        _rules.ShouldShowToast(s, Severity.Warning, UtcNoon).Should().BeFalse();
+        _rules.ShouldShowToast(s, Severity.Error, UtcNoon).Should().BeFalse();
     }
 
     [Theory]
@@ -51,7 +53,7 @@ public sealed class NotificationSettingsRulesTests
         var s = NotificationSettings.CreateDefault();
         s.ShowSuccessToasts = false;
 
-        Assert.False(_rules.ShouldShowToast(s, severity, UtcNoon));
+        _rules.ShouldShowToast(s, severity, UtcNoon).Should().BeFalse();
     }
 
     [Fact]
@@ -60,7 +62,7 @@ public sealed class NotificationSettingsRulesTests
         var s = NotificationSettings.CreateDefault();
         s.ShowWarningToasts = false;
 
-        Assert.False(_rules.ShouldShowToast(s, Severity.Warning, UtcNoon));
+        _rules.ShouldShowToast(s, Severity.Warning, UtcNoon).Should().BeFalse();
     }
 
     [Fact]
@@ -69,7 +71,7 @@ public sealed class NotificationSettingsRulesTests
         var s = NotificationSettings.CreateDefault();
         s.ShowErrorToasts = false;
 
-        Assert.False(_rules.ShouldShowToast(s, Severity.Error, UtcNoon));
+        _rules.ShouldShowToast(s, Severity.Error, UtcNoon).Should().BeFalse();
     }
 
     [Fact]
@@ -81,9 +83,9 @@ public sealed class NotificationSettingsRulesTests
         s.QuietHoursEndUtc = TimeSpan.FromHours(14);
         DateTime utc = new(2026, 4, 26, 11, 0, 0, DateTimeKind.Utc);
 
-        Assert.True(_rules.IsInQuietHours(s, utc));
-        Assert.False(_rules.ShouldShowToast(s, Severity.Success, utc));
-        Assert.True(_rules.ShouldShowToast(s, Severity.Error, utc));
+        _rules.IsInQuietHours(s, utc).Should().BeTrue();
+        _rules.ShouldShowToast(s, Severity.Success, utc).Should().BeFalse();
+        _rules.ShouldShowToast(s, Severity.Error, utc).Should().BeTrue();
     }
 
     [Fact]
@@ -94,9 +96,9 @@ public sealed class NotificationSettingsRulesTests
         s.QuietHoursStartUtc = TimeSpan.FromHours(22);
         s.QuietHoursEndUtc = TimeSpan.FromHours(7);
 
-        Assert.True(_rules.IsInQuietHours(s, new DateTime(2026, 4, 26, 23, 0, 0, DateTimeKind.Utc)));
-        Assert.True(_rules.IsInQuietHours(s, new DateTime(2026, 4, 26, 3, 0, 0, DateTimeKind.Utc)));
-        Assert.False(_rules.IsInQuietHours(s, new DateTime(2026, 4, 26, 12, 0, 0, DateTimeKind.Utc)));
+        _rules.IsInQuietHours(s, new DateTime(2026, 4, 26, 23, 0, 0, DateTimeKind.Utc)).Should().BeTrue();
+        _rules.IsInQuietHours(s, new DateTime(2026, 4, 26, 3, 0, 0, DateTimeKind.Utc)).Should().BeTrue();
+        _rules.IsInQuietHours(s, new DateTime(2026, 4, 26, 12, 0, 0, DateTimeKind.Utc)).Should().BeFalse();
     }
 
     [Theory]
@@ -105,7 +107,7 @@ public sealed class NotificationSettingsRulesTests
     [InlineData(NotificationToastDuration.Long, 10_000)]
     public void Duration_presets_map_to_milliseconds(NotificationToastDuration preset, int expectedMs)
     {
-        Assert.Equal(expectedMs, _rules.VisibleStateDurationMs(preset));
+        _rules.VisibleStateDurationMs(preset).Should().Be(expectedMs);
     }
 
     [Fact]
@@ -115,18 +117,18 @@ public sealed class NotificationSettingsRulesTests
         s.FocusTimerAlertsEnabled = true;
         s.InAppMessagesEnabled = true;
         s.ShowSuccessToasts = true;
-        Assert.True(_rules.ShouldShowFocusTimerEndNotification(s));
+        _rules.ShouldShowFocusTimerEndNotification(s).Should().BeTrue();
 
         s.InAppMessagesEnabled = false;
-        Assert.False(_rules.ShouldShowFocusTimerEndNotification(s));
+        _rules.ShouldShowFocusTimerEndNotification(s).Should().BeFalse();
         s.InAppMessagesEnabled = true;
 
         s.FocusTimerAlertsEnabled = false;
-        Assert.False(_rules.ShouldShowFocusTimerEndNotification(s));
+        _rules.ShouldShowFocusTimerEndNotification(s).Should().BeFalse();
         s.FocusTimerAlertsEnabled = true;
 
         s.ShowSuccessToasts = false;
-        Assert.True(_rules.ShouldShowFocusTimerEndNotification(s));
+        _rules.ShouldShowFocusTimerEndNotification(s).Should().BeTrue();
     }
 
     [Fact]
@@ -140,7 +142,7 @@ public sealed class NotificationSettingsRulesTests
         s.FocusTimerAlertsEnabled = true;
         s.InAppMessagesEnabled = true;
         var utc = new DateTime(2026, 4, 26, 12, 0, 0, DateTimeKind.Utc);
-        Assert.True(_rules.IsInQuietHours(s, utc));
-        Assert.True(_rules.ShouldShowFocusTimerEndNotification(s));
+        _rules.IsInQuietHours(s, utc).Should().BeTrue();
+        _rules.ShouldShowFocusTimerEndNotification(s).Should().BeTrue();
     }
 }

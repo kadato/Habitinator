@@ -1,5 +1,6 @@
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+using FluentAssertions;
 
 namespace App.Shared.RCL.Tests;
 
@@ -25,7 +26,7 @@ public sealed class DailyStreakCalculatorTests
             today,
             grouped,
             today);
-        Assert.Equal(3, n);
+        n.Should().Be(3);
     }
 
     [Fact]
@@ -47,7 +48,7 @@ public sealed class DailyStreakCalculatorTests
             today,
             grouped,
             y);
-        Assert.Equal(2, n);
+        n.Should().Be(2);
     }
 
     [Fact]
@@ -69,7 +70,7 @@ public sealed class DailyStreakCalculatorTests
             today,
             grouped,
             y);
-        Assert.Equal(2, n);
+        n.Should().Be(2);
     }
 
     [Fact]
@@ -91,7 +92,7 @@ public sealed class DailyStreakCalculatorTests
             today,
             grouped,
             y);
-        Assert.Equal(2, n);
+        n.Should().Be(2);
     }
 
     [Fact]
@@ -113,7 +114,7 @@ public sealed class DailyStreakCalculatorTests
             today,
             grouped,
             null);
-        Assert.Equal(1, n);
+        n.Should().Be(1);
     }
 
     [Fact]
@@ -133,7 +134,7 @@ public sealed class DailyStreakCalculatorTests
             d,
             grouped,
             null);
-        Assert.Equal(0, n);
+        n.Should().Be(0);
     }
 
     private static DateTimeOffset At(DateOnly day, int hourUtc) =>

@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using App.Shared.RCL.Models;
+using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace App.Web.IntegrationTests;
@@ -17,7 +18,7 @@ public sealed class BoardApiIsolationTests(PostgresWebAppFactory factory)
     {
         var client = factory.CreateClient();
         var res = await client.GetAsync("/api/board/");
-        Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
+        res.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -30,10 +31,10 @@ public sealed class BoardApiIsolationTests(PostgresWebAppFactory factory)
         var emailB = $"user-b-{suffix}@integration.test";
         const string password = "TestUser1!Aa";
 
-        Assert.True((await client.PostAsJsonAsync("/api/auth/register",
-            new RegisterRequest(emailA, password))).IsSuccessStatusCode);
-        Assert.True((await client.PostAsJsonAsync("/api/auth/register",
-            new RegisterRequest(emailB, password))).IsSuccessStatusCode);
+        (await client.PostAsJsonAsync("/api/auth/register",
+            new RegisterRequest(emailA, password))).IsSuccessStatusCode.Should().BeTrue();
+        (await client.PostAsJsonAsync("/api/auth/register",
+            new RegisterRequest(emailB, password))).IsSuccessStatusCode.Should().BeTrue();
 
         var loginA = await client.PostAsJsonAsync("/api/auth/login",
             new LoginRequest(emailA, password, RememberMe: false));
@@ -51,20 +52,20 @@ public sealed class BoardApiIsolationTests(PostgresWebAppFactory factory)
         var createRes = await client.SendAsync(requestCreate);
         createRes.EnsureSuccessStatusCode();
         var created = await createRes.Content.ReadFromJsonAsync<BoardItem>(s_json);
-        Assert.NotNull(created);
+        created.Should().NotBeNull();
 
         using var requestBList = new HttpRequestMessage(HttpMethod.Get, "/api/board/");
         requestBList.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenB);
         var listB = await client.SendAsync(requestBList);
         listB.EnsureSuccessStatusCode();
         var snapshotB = await listB.Content.ReadFromJsonAsync<BoardSnapshot>(s_json);
-        Assert.NotNull(snapshotB);
-        Assert.DoesNotContain(snapshotB.Todos, t => t.Id == created.Id);
+        snapshotB.Should().NotBeNull();
+        snapshotB!.Todos.Should().NotContain(t => t.Id == created!.Id);
 
         using var requestToggle = new HttpRequestMessage(HttpMethod.Post, $"/api/board/Todo/{created.Id}/toggle");
         requestToggle.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenB);
         var toggleRes = await client.SendAsync(requestToggle);
-        Assert.Equal(HttpStatusCode.NotFound, toggleRes.StatusCode);
+        toggleRes.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 }
 

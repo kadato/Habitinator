@@ -1,5 +1,6 @@
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+using FluentAssertions;
 
 namespace App.Shared.RCL.Tests;
 
@@ -12,10 +13,10 @@ public sealed class DailyStreakBackfillTests
         var start = new DateOnly(2026, 4, 1);
         var days = DailyStreakBackfill.GetLastNScheduledCompletionDays(
             start, DailyRepeatType.Daily, 1, 3, notAfter);
-        Assert.Equal(3, days.Count);
-        Assert.Equal(notAfter, days[0]);
-        Assert.Equal(new DateOnly(2026, 4, 26), days[1]);
-        Assert.Equal(new DateOnly(2026, 4, 25), days[2]);
+        days.Should().HaveCount(3);
+        days[0].Should().Be(notAfter);
+        days[1].Should().Be(new DateOnly(2026, 4, 26));
+        days[2].Should().Be(new DateOnly(2026, 4, 25));
     }
 
     [Fact]
@@ -26,10 +27,10 @@ public sealed class DailyStreakBackfillTests
         var start = new DateOnly(2026, 4, 1);
         var days = DailyStreakBackfill.GetLastNScheduledCompletionDays(
             start, DailyRepeatType.Daily, 1, 3, notAfter);
-        Assert.Equal(3, days.Count);
-        Assert.Equal(notAfter, days[0]);
-        Assert.Equal(new DateOnly(2026, 4, 25), days[1]);
-        Assert.Equal(new DateOnly(2026, 4, 24), days[2]);
+        days.Should().HaveCount(3);
+        days[0].Should().Be(notAfter);
+        days[1].Should().Be(new DateOnly(2026, 4, 25));
+        days[2].Should().Be(new DateOnly(2026, 4, 24));
     }
 
     [Fact]
@@ -41,10 +42,10 @@ public sealed class DailyStreakBackfillTests
         var startSameAsNotAfter = notAfter;
         var days = DailyStreakBackfill.GetLastNScheduledCompletionDays(
             startSameAsNotAfter, DailyRepeatType.Daily, 1, 3, notAfter);
-        Assert.Equal(3, days.Count);
-        Assert.Equal(notAfter, days[0]);
-        Assert.Equal(new DateOnly(2026, 4, 25), days[1]);
-        Assert.Equal(new DateOnly(2026, 4, 24), days[2]);
+        days.Should().HaveCount(3);
+        days[0].Should().Be(notAfter);
+        days[1].Should().Be(new DateOnly(2026, 4, 25));
+        days[2].Should().Be(new DateOnly(2026, 4, 24));
     }
 
     [Fact]
@@ -52,7 +53,7 @@ public sealed class DailyStreakBackfillTests
     {
         var days = DailyStreakBackfill.GetLastNScheduledCompletionDays(
             new DateOnly(2026, 1, 1), DailyRepeatType.Daily, 1, 0, new DateOnly(2026, 4, 27));
-        Assert.Empty(days);
+        days.Should().BeEmpty();
     }
 
     [Fact]
@@ -63,9 +64,9 @@ public sealed class DailyStreakBackfillTests
         var notAfter = new DateOnly(2026, 4, 26);
         var days = DailyStreakBackfill.GetLastNScheduledCompletionDays(
             null, DailyRepeatType.Daily, 1, 2, notAfter);
-        Assert.Equal(2, days.Count);
-        Assert.Equal(notAfter, days[0]);
-        Assert.Equal(new DateOnly(2026, 4, 25), days[1]);
+        days.Should().HaveCount(2);
+        days[0].Should().Be(notAfter);
+        days[1].Should().Be(new DateOnly(2026, 4, 25));
     }
 
     [Fact]
@@ -76,17 +77,17 @@ public sealed class DailyStreakBackfillTests
         var startTooLate = new DateOnly(2026, 4, 27);
         var days = DailyStreakBackfill.GetLastNScheduledCompletionDays(
             startTooLate, DailyRepeatType.Daily, 1, 2, notAfter);
-        Assert.Equal(2, days.Count);
-        Assert.Equal(notAfter, days[0]);
-        Assert.Equal(new DateOnly(2026, 4, 25), days[1]);
+        days.Should().HaveCount(2);
+        days[0].Should().Be(notAfter);
+        days[1].Should().Be(new DateOnly(2026, 4, 25));
     }
 
     [Fact]
     public void StreakBackfillTimestamp_Detects_Noon_Utc()
     {
         var ts = new DateTimeOffset(2026, 3, 10, 12, 0, 0, TimeSpan.Zero);
-        Assert.True(DailyStreakBackfill.IsStreakBackfillTimestamp(ts));
-        Assert.False(DailyStreakBackfill.IsStreakBackfillTimestamp(ts.AddSeconds(1)));
-        Assert.False(DailyStreakBackfill.IsStreakBackfillTimestamp(ts.AddHours(1)));
+        DailyStreakBackfill.IsStreakBackfillTimestamp(ts).Should().BeTrue();
+        DailyStreakBackfill.IsStreakBackfillTimestamp(ts.AddSeconds(1)).Should().BeFalse();
+        DailyStreakBackfill.IsStreakBackfillTimestamp(ts.AddHours(1)).Should().BeFalse();
     }
 }

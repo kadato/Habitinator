@@ -1,4 +1,5 @@
 using App.Shared.RCL.Models;
+using FluentAssertions;
 using Xunit;
 
 namespace App.Shared.Tests;
@@ -9,33 +10,33 @@ public class DailyScheduleTests
     public void EveryNDays_Interval1_HitsAllDaysOnOrAfterStart()
     {
         var start = new DateOnly(2024, 1, 1);
-        Assert.True(DailySchedule.IsScheduledOn(start, DailyRepeatType.Daily, 1, new DateOnly(2024, 1, 1)));
-        Assert.True(DailySchedule.IsScheduledOn(start, DailyRepeatType.Daily, 1, new DateOnly(2024, 1, 2)));
-        Assert.True(DailySchedule.IsScheduledOn(start, DailyRepeatType.Daily, 1, new DateOnly(2024, 1, 3)));
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Daily, 1, new DateOnly(2024, 1, 1)).Should().BeTrue();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Daily, 1, new DateOnly(2024, 1, 2)).Should().BeTrue();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Daily, 1, new DateOnly(2024, 1, 3)).Should().BeTrue();
     }
 
     [Fact]
     public void EveryNDays_Interval2_SkipsAlternateDays()
     {
         var start = new DateOnly(2024, 1, 1);
-        Assert.True(DailySchedule.IsScheduledOn(start, DailyRepeatType.Daily, 2, new DateOnly(2024, 1, 1)));
-        Assert.False(DailySchedule.IsScheduledOn(start, DailyRepeatType.Daily, 2, new DateOnly(2024, 1, 2)));
-        Assert.True(DailySchedule.IsScheduledOn(start, DailyRepeatType.Daily, 2, new DateOnly(2024, 1, 3)));
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Daily, 2, new DateOnly(2024, 1, 1)).Should().BeTrue();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Daily, 2, new DateOnly(2024, 1, 2)).Should().BeFalse();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Daily, 2, new DateOnly(2024, 1, 3)).Should().BeTrue();
     }
 
     [Fact]
     public void BeforeStart_NeverScheduled()
     {
         var start = new DateOnly(2024, 2, 1);
-        Assert.False(DailySchedule.IsScheduledOn(start, DailyRepeatType.Daily, 1, new DateOnly(2024, 1, 31)));
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Daily, 1, new DateOnly(2024, 1, 31)).Should().BeFalse();
     }
 
     [Fact]
     public void Weekly_SameDow_Interval1()
     {
         var start = new DateOnly(2024, 1, 8);
-        Assert.True(DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, new DateOnly(2024, 1, 15)));
-        Assert.False(DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, new DateOnly(2024, 1, 9)));
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, new DateOnly(2024, 1, 15)).Should().BeTrue();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, new DateOnly(2024, 1, 9)).Should().BeFalse();
     }
 
     [Fact]
@@ -59,8 +60,8 @@ public class DailyScheduleTests
             null,
             null);
         DateOnly t = new(2024, 1, 1);
-        Assert.True(DailySchedule.IsDueOnDate(d, t));
+        DailySchedule.IsDueOnDate(d, t).Should().BeTrue();
         var done = d with { DailyLastCompletedOn = t };
-        Assert.False(DailySchedule.IsDueOnDate(done, t));
+        DailySchedule.IsDueOnDate(done, t).Should().BeFalse();
     }
 }

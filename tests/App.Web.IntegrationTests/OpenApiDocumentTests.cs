@@ -1,4 +1,5 @@
 using System.Net;
+using FluentAssertions;
 
 namespace App.Web.IntegrationTests;
 
@@ -10,9 +11,9 @@ public sealed class OpenApiDocumentTests(PostgresWebAppFactory factory)
     {
         var client = factory.CreateClient();
         var res = await client.GetAsync("/openapi/v1.json");
-        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
         var json = await res.Content.ReadAsStringAsync();
-        Assert.Contains("\"openapi\"", json, StringComparison.Ordinal);
-        Assert.Contains("/api/board", json, StringComparison.Ordinal);
+        json.Should().Contain("\"openapi\"");
+        json.Should().Contain("/api/board");
     }
 }

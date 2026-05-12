@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using App.Shared.RCL.Models;
+using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace App.Web.IntegrationTests;
@@ -36,8 +37,8 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
         r2.EnsureSuccessStatusCode();
         var after2 = (await r2.Content.ReadFromJsonAsync<BoardItem>(s_json))!;
 
-        Assert.Equal(after1.Counter, after2.Counter);
-        Assert.Equal(after1.ServerUpdatedAtUtc, after2.ServerUpdatedAtUtc);
+        after2.Counter.Should().Be(after1.Counter);
+        after2.ServerUpdatedAtUtc.Should().Be(after1.ServerUpdatedAtUtc);
     }
 
     [Fact]
@@ -59,7 +60,7 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
         second.Headers.TryAddWithoutValidation("Idempotency-Key", idem);
         second.Content = JsonContent.Create(new ItemTitleRequest("Different title"), options: s_json);
         var secondRes = await client.SendAsync(second);
-        Assert.Equal(HttpStatusCode.Conflict, secondRes.StatusCode);
+        secondRes.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     [Fact]
@@ -94,8 +95,8 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
         var snapRes = await client.SendAsync(snapReq);
         snapRes.EnsureSuccessStatusCode();
         var snap = (await snapRes.Content.ReadFromJsonAsync<BoardSnapshot>(s_json))!;
-        var row = Assert.Single(snap.Habits, h => h.Id == created.Id);
-        Assert.Equal(1, row.Counter);
+        snap.Habits.Should().ContainSingle(h => h.Id == created.Id)
+            .Which.Counter.Should().Be(1);
     }
 
     [Fact]
@@ -122,14 +123,14 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
         var syncRes = await client.SendAsync(syncReq);
         syncRes.EnsureSuccessStatusCode();
         var delta = (await syncRes.Content.ReadFromJsonAsync<BoardSyncDelta>(s_json))!;
-        Assert.Contains(created.Id, delta.DeletedItemIds);
+        delta.DeletedItemIds.Should().Contain(created.Id);
 
         using var snapReq = new HttpRequestMessage(HttpMethod.Get, "/api/board/");
         snapReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var snapRes = await client.SendAsync(snapReq);
         snapRes.EnsureSuccessStatusCode();
         var snap = (await snapRes.Content.ReadFromJsonAsync<BoardSnapshot>(s_json))!;
-        Assert.DoesNotContain(snap.Todos, t => t.Id == created.Id);
+        snap.Todos.Should().NotContain(t => t.Id == created.Id);
     }
 
     [Fact]
@@ -152,9 +153,9 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
         put.Headers.TryAddWithoutValidation("If-Match", $"\"{stale:o}\"");
         put.Content = JsonContent.Create(new ItemTitleRequest("Evening"), options: s_json);
         var putRes = await client.SendAsync(put);
-        Assert.Equal(HttpStatusCode.Conflict, putRes.StatusCode);
+        putRes.StatusCode.Should().Be(HttpStatusCode.Conflict);
         var body = await putRes.Content.ReadAsStringAsync();
-        Assert.Contains("version_conflict", body, StringComparison.OrdinalIgnoreCase);
+        body.Should().ContainEquivalentOf("version_conflict");
     }
 
     private static HttpRequestMessage IncrementRequest(string token, Guid itemId, string idempotencyKey)

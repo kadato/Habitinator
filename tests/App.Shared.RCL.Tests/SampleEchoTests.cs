@@ -1,4 +1,5 @@
 using Bunit;
+using FluentAssertions;
 
 namespace App.Shared.RCL.Tests;
 
@@ -10,7 +11,7 @@ public sealed class SampleEchoTests
     {
         using var ctx = new BunitContext();
         var cut = ctx.Render<SampleEcho>(p => p.Add(x => x.Message, "hello-bunit"));
-        Assert.Contains("hello-bunit", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("sample-echo", cut.Markup, StringComparison.Ordinal);
+        cut.Markup.Should().Contain("hello-bunit");
+        cut.Markup.Should().Contain("sample-echo");
     }
 }

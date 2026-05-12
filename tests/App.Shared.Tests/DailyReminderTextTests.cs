@@ -1,5 +1,6 @@
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+using FluentAssertions;
 
 namespace App.Shared.Tests;
 
@@ -28,9 +29,9 @@ public class DailyReminderTextTests
             null);
         var snapshot = new BoardSnapshot([], [d], []);
         (string t, string body) = DailyReminderText.Build(snapshot, today, maxBodyLength: 4000);
-        Assert.Equal(DailyReminderText.DefaultTitle, t);
-        Assert.Contains("Dailies due:", body);
-        Assert.Contains("Morning run", body);
+        t.Should().Be(DailyReminderText.DefaultTitle);
+        body.Should().Contain("Dailies due:");
+        body.Should().Contain("Morning run");
     }
 
     [Fact]
@@ -40,8 +41,8 @@ public class DailyReminderTextTests
         var todoDueToday = new BoardItem(Guid.NewGuid(), "Hand in form", false, 0, null, null, true, true, 0, HabitResetPeriod.Daily, null, DailyRepeatType.Daily, 1, null, null, today);
         var snapshot = new BoardSnapshot([], [], [todoDueToday]);
         (string _, string body) = DailyReminderText.Build(snapshot, today);
-        Assert.Contains("To-dos (deadline):", body);
-        Assert.Contains("Hand in form", body);
+        body.Should().Contain("To-dos (deadline):");
+        body.Should().Contain("Hand in form");
     }
 
     [Fact]
@@ -52,8 +53,8 @@ public class DailyReminderTextTests
         var t = new BoardItem(Guid.NewGuid(), "Late", false, 0, null, null, true, true, 0, HabitResetPeriod.Daily, null, DailyRepeatType.Daily, 1, null, null, oldDue);
         var snapshot = new BoardSnapshot([], [], [t]);
         (string _, string body) = DailyReminderText.Build(snapshot, today, "dd/MM/yyyy");
-        Assert.Contains("overdue", body, StringComparison.Ordinal);
-        Assert.Contains("01/04/2026", body);
+        body.Should().Contain("overdue");
+        body.Should().Contain("01/04/2026");
     }
 
     [Fact]
@@ -79,7 +80,7 @@ public class DailyReminderTextTests
             null);
         var snapshot = new BoardSnapshot([], [done], [new BoardItem(Guid.NewGuid(), "No date", false)]);
         (string t, string body) = DailyReminderText.Build(snapshot, today);
-        Assert.Equal(DailyReminderText.DefaultTitle, t);
-        Assert.Contains("no dailies due", body, StringComparison.OrdinalIgnoreCase);
+        t.Should().Be(DailyReminderText.DefaultTitle);
+        body.Should().ContainEquivalentOf("no dailies due");
     }
 }

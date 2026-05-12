@@ -1,5 +1,7 @@
 using App.Web.Services;
 
+using FluentAssertions;
+
 using Microsoft.Extensions.Configuration;
 
 namespace App.Web.IntegrationTests;
@@ -18,8 +20,8 @@ public sealed class PostgresMigrationConnectionStringsTests
 
         var migration = PostgresMigrationConnectionStrings.ResolveForMigrations(cfg);
 
-        Assert.Contains("Host=ep-fake-123456.us-east-2.aws.neon.tech", migration, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("-pooler", migration, StringComparison.OrdinalIgnoreCase);
+        migration.Should().ContainEquivalentOf("Host=ep-fake-123456.us-east-2.aws.neon.tech");
+        migration.Should().NotContainEquivalentOf("-pooler");
     }
 
     [Fact]
@@ -37,7 +39,7 @@ public sealed class PostgresMigrationConnectionStringsTests
 
         var migration = PostgresMigrationConnectionStrings.ResolveForMigrations(cfg);
 
-        Assert.Contains("ep-explicit.region.aws.neon.tech", migration, StringComparison.OrdinalIgnoreCase);
+        migration.Should().ContainEquivalentOf("ep-explicit.region.aws.neon.tech");
     }
 
     [Fact]
@@ -51,6 +53,6 @@ public sealed class PostgresMigrationConnectionStringsTests
 
         var migration = PostgresMigrationConnectionStrings.ResolveForMigrations(cfg);
 
-        Assert.Equal(local, migration);
+        migration.Should().Be(local);
     }
 }

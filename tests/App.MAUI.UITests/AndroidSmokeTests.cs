@@ -1,6 +1,7 @@
 using OpenQA.Selenium.Appium;
 using OpenQA.Selenium.Appium.Android;
 using OpenQA.Selenium.Support.UI;
+using FluentAssertions;
 using Xunit;
 
 namespace App.MAUI.UITests;
@@ -27,7 +28,7 @@ public sealed class AndroidSmokeTests
         using var driver = CreateDriver(apk);
         var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(45));
         var webView = wait.Until(d => d.FindElement(MobileBy.AccessibilityId("uitest-blazor-webview")));
-        Assert.NotNull(webView);
+        webView.Should().NotBeNull();
     }
 
     [SkippableFact]
@@ -38,6 +39,6 @@ public sealed class AndroidSmokeTests
         using var driver = CreateDriver(apk);
         var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
         var page = wait.Until(d => d.FindElement(MobileBy.AccessibilityId("uitest-main-page")));
-        Assert.NotNull(page);
+        page.Should().NotBeNull();
     }
 }

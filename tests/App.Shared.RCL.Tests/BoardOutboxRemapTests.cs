@@ -2,6 +2,7 @@ using System.Text.Json;
 
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+using FluentAssertions;
 
 namespace App.Shared.RCL.Tests;
 
@@ -23,9 +24,9 @@ public sealed class BoardOutboxRemapTests
             server);
 
         var parsed = JsonSerializer.Deserialize<RenameOutboxPayload>(remapped, BoardOutboxJson.Options);
-        Assert.NotNull(parsed);
-        Assert.Equal(server, parsed.ItemId);
-        Assert.Equal("x", parsed.Title);
+        parsed.Should().NotBeNull();
+        parsed!.ItemId.Should().Be(server);
+        parsed.Title.Should().Be("x");
     }
 
     [Fact]
@@ -45,7 +46,7 @@ public sealed class BoardOutboxRemapTests
             server);
 
         var parsed = JsonSerializer.Deserialize<RenameOutboxPayload>(remapped, BoardOutboxJson.Options);
-        Assert.NotNull(parsed);
-        Assert.Equal(other, parsed.ItemId);
+        parsed.Should().NotBeNull();
+        parsed!.ItemId.Should().Be(other);
     }
 }

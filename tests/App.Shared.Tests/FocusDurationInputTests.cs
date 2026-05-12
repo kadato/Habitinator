@@ -1,4 +1,5 @@
 using App.Shared.RCL.Services;
+using FluentAssertions;
 
 namespace App.Shared.Tests;
 
@@ -20,9 +21,8 @@ public sealed class FocusDurationInputTests
     [InlineData("1h2m", 3600 + 120)]
     public void TryParse_AcceptedFormats_ProducesTotalSeconds(string raw, int expectedSec)
     {
-        Assert.True(FocusDurationInput.TryParse(raw, out TimeSpan? d));
-        Assert.NotNull(d);
-        Assert.Equal(TimeSpan.FromSeconds(expectedSec), d);
+        FocusDurationInput.TryParse(raw, out TimeSpan? d).Should().BeTrue();
+        d.Should().Be(TimeSpan.FromSeconds(expectedSec));
     }
 
     [Theory]
@@ -30,8 +30,8 @@ public sealed class FocusDurationInputTests
     [InlineData("   ")]
     public void TryParse_Whitespace_YieldsNullAndValid(string raw)
     {
-        Assert.True(FocusDurationInput.TryParse(raw, out TimeSpan? d));
-        Assert.Null(d);
+        FocusDurationInput.TryParse(raw, out TimeSpan? d).Should().BeTrue();
+        d.Should().BeNull();
     }
 
     [Theory]
@@ -42,20 +42,20 @@ public sealed class FocusDurationInputTests
     [InlineData("0:0:0:0")]
     public void TryParse_Rejected(string raw)
     {
-        Assert.False(FocusDurationInput.TryParse(raw, out _));
+        FocusDurationInput.TryParse(raw, out _).Should().BeFalse();
     }
 
     [Fact]
     public void FormatForField_And_FormatForAlertLabel_RoundTripExamples()
     {
         TimeSpan t = TimeSpan.FromSeconds(45);
-        Assert.Equal("45s", FocusDurationInput.FormatForField(t));
-        Assert.Equal("45s", FocusDurationInput.FormatForAlertLabel(t));
+        FocusDurationInput.FormatForField(t).Should().Be("45s");
+        FocusDurationInput.FormatForAlertLabel(t).Should().Be("45s");
 
         t = TimeSpan.FromMinutes(5) + TimeSpan.FromSeconds(30);
-        Assert.Equal("5m30s", FocusDurationInput.FormatForField(t));
+        FocusDurationInput.FormatForField(t).Should().Be("5m30s");
 
         t = TimeSpan.FromHours(1) + TimeSpan.FromMinutes(1) + TimeSpan.FromSeconds(1);
-        Assert.Equal("1:01:01", FocusDurationInput.FormatForField(t));
+        FocusDurationInput.FormatForField(t).Should().Be("1:01:01");
     }
 }

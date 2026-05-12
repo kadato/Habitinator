@@ -1,7 +1,7 @@
 #Requires -Version 7
 <#
   Regenerates committed documentation assets under docs/automation/.
-  - Mermaid: solution graph + ER diagram (no running server).
+  - Mermaid: solution graph + database FK flowchart (no running server).
   - OpenAPI JSON + Playwright PNGs: require App.Web reachable at -BaseUrl (PostgreSQL must match appsettings).
 
   Example:

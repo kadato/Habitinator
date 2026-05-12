@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Net.Http;
 using Microsoft.Playwright;
 
 namespace App.Web.E2E;
@@ -17,9 +18,31 @@ public sealed class DocumentationScreenshotsTests
         Environment.GetEnvironmentVariable("E2E_SCREENSHOT_DIR")?.Trim()
         ?? Path.Combine(Path.GetTempPath(), "habitinator-e2e-screenshots");
 
+    private static async Task EnsureBaseUrlReachableAsync()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
+        try
+        {
+            using var res = await client.GetAsync($"{BaseUrl}/health", cts.Token);
+            if (res.IsSuccessStatusCode)
+            {
+                return;
+            }
+        }
+        catch
+        {
+            // Ignore and fall through to skip.
+        }
+
+        throw new Xunit.Sdk.SkipException(
+            $"E2E_BASE_URL '{BaseUrl}' is not reachable. Start App.Web before running Playwright tests.");
+    }
+
     [Fact]
     public async Task Capture_key_pages_as_png()
     {
+        await EnsureBaseUrlReachableAsync();
         Directory.CreateDirectory(ScreenshotDir);
 
         using var pw = await Playwright.CreateAsync();
@@ -82,6 +105,7 @@ public sealed class DocumentationScreenshotsTests
     [Fact]
     public async Task Capture_welcome_login_register_pages()
     {
+        await EnsureBaseUrlReachableAsync();
         Directory.CreateDirectory(ScreenshotDir);
 
         using var pw = await Playwright.CreateAsync();
@@ -112,6 +136,7 @@ public sealed class DocumentationScreenshotsTests
     [Fact]
     public async Task Capture_all_modals()
     {
+        await EnsureBaseUrlReachableAsync();
         Directory.CreateDirectory(ScreenshotDir);
 
         using var pw = await Playwright.CreateAsync();
@@ -151,6 +176,7 @@ public sealed class DocumentationScreenshotsTests
     [Fact]
     public async Task Capture_yesterday_checkin_modal()
     {
+        await EnsureBaseUrlReachableAsync();
         Directory.CreateDirectory(ScreenshotDir);
 
         using var pw = await Playwright.CreateAsync();
@@ -193,6 +219,7 @@ public sealed class DocumentationScreenshotsTests
     [Fact]
     public async Task Capture_timer_times_up_modal()
     {
+        await EnsureBaseUrlReachableAsync();
         Directory.CreateDirectory(ScreenshotDir);
 
         using var pw = await Playwright.CreateAsync();

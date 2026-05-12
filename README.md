@@ -542,6 +542,7 @@ The **`servers`** entry inside `openapi-v1.json` reflects the base URL used when
   - **MAUI Android UI** tests are **skipped** unless `ANDROID_UI_TESTS=1` (or Windows `$env:ANDROID_UI_TESTS='1'`).
 - **TRX (local / IDE):**  
   `dotnet test Habitinator.slnx --results-directory ./TestResults --logger trx`
+- **VS Code tasks:** run **Test: Solution** from the command palette.
 - **Playwright E2E** (project `tests/App.Web.E2E`; not part of `Habitinator.slnx`):
   1. Start PostgreSQL and `App.Web` (e.g. `http://127.0.0.1:5050`).  
   2. Install browsers once: `pwsh tests/App.Web.E2E/bin/Debug/net10.0/playwright.ps1 install chromium` (path matches your configuration).  

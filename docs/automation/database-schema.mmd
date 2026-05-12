@@ -1,0 +1,21 @@
+﻿flowchart TB
+%% Auto-generated from EF Core ApplicationDbContextModelSnapshot
+  AspNetRoleClaims["AspNetRoleClaims"]
+  AspNetRoles["AspNetRoles"]
+  AspNetUserClaims["AspNetUserClaims"]
+  AspNetUserLogins["AspNetUserLogins"]
+  AspNetUserRoles["AspNetUserRoles"]
+  AspNetUserTokens["AspNetUserTokens"]
+  AspNetUsers["AspNetUsers"]
+  BoardItems["BoardItems"]
+  BoardRequestIdempotencies["BoardRequestIdempotencies"]
+  UserActivityEvents["UserActivityEvents"]
+  AspNetRoles -->|fk| AspNetRoleClaims
+  AspNetRoles -->|fk| AspNetUserRoles
+  AspNetUsers -->|fk| AspNetUserClaims
+  AspNetUsers -->|fk| AspNetUserLogins
+  AspNetUsers -->|fk| AspNetUserRoles
+  AspNetUsers -->|fk| AspNetUserTokens
+  AspNetUsers -->|fk| BoardItems
+  AspNetUsers -->|fk| BoardRequestIdempotencies
+  AspNetUsers -->|fk| UserActivityEvents

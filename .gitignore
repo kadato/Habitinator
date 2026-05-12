@@ -7,6 +7,7 @@ obj/
 .vscode/
 *.user
 *.suo
+*.lscache
 
 # OS
 .DS_Store

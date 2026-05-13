@@ -1,3 +1,5 @@
+using App.Web.Services;
+
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -22,12 +24,14 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
         var connectionString = _externalConnectionString;
         if (!string.IsNullOrWhiteSpace(connectionString))
         {
-            await WaitUntilDatabaseAcceptsConnectionsAsync(connectionString);
+            await WaitUntilDatabaseAcceptsConnectionsAsync(
+                PostgresResilienceConnectionString.EnsureColdStartTimeouts(connectionString));
             return;
         }
 
         await _postgres.StartAsync();
-        await WaitUntilDatabaseAcceptsConnectionsAsync(_postgres.GetConnectionString());
+        await WaitUntilDatabaseAcceptsConnectionsAsync(
+            PostgresResilienceConnectionString.EnsureColdStartTimeouts(_postgres.GetConnectionString()));
     }
 
     async Task IAsyncLifetime.DisposeAsync()
@@ -58,9 +62,10 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
 
     private Dictionary<string, string?> GetIntegrationConfiguration()
     {
-        var connectionString = string.IsNullOrWhiteSpace(_externalConnectionString)
-            ? _postgres.GetConnectionString()
-            : _externalConnectionString;
+        var connectionString = PostgresResilienceConnectionString.EnsureColdStartTimeouts(
+            string.IsNullOrWhiteSpace(_externalConnectionString)
+                ? _postgres.GetConnectionString()
+                : _externalConnectionString);
 
         return new Dictionary<string, string?>
         {
@@ -79,6 +84,7 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
     private static async Task WaitUntilDatabaseAcceptsConnectionsAsync(string connectionString,
         CancellationToken cancellationToken = default)
     {
+        connectionString = PostgresResilienceConnectionString.EnsureColdStartTimeouts(connectionString);
         var lastError = (Exception?)null;
         const int maxAttempts = 60;
 

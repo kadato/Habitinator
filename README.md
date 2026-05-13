@@ -180,7 +180,7 @@ These are produced by the **Playwright** test in `DocumentationScreenshotsTests`
 ### Demo and developer experience
 
 - **Aspire AppHost** starts PostgreSQL (with **pgAdmin** and a data volume in the default template), the **web** project (e.g. port **5031**), and optionally the **MAUI** project with the API base URL **injected** for device/emulator use.
-- **Health endpoint**: `GET /health` (plain `OK`) for orchestration and CI.
+- **Health endpoint**: `GET /health` (plain `OK`) for orchestration and CI. It does **not** open PostgreSQL; the process can be “healthy” while the database is down (liveness only).
 - **Seeded guest** account and **demo board / activity** data when appropriate so you can explore without manual setup.
 
 ---
@@ -195,10 +195,11 @@ These are produced by the **Playwright** test in `DocumentationScreenshotsTests`
 | Shared UI | **Razor Class Library** (`App.Shared.RCL`) consumed by **App.Web** and **App.MAUI** |
 | API host | **ASP.NET Core** minimal APIs, **SignalR** |
 | Auth | **ASP.NET Core Identity**, **cookie** + **JWT Bearer** (`Microsoft.AspNetCore.Authentication.JwtBearer`) |
-| Server database | **Neon serverless PostgreSQL** via **EF Core** + **Npgsql** |
+| Server database | **Neon serverless PostgreSQL** (or any Postgres) via **EF Core** + **Npgsql** |
+| Server Postgres resilience (`App.Web`) | **Connection timeout** floor (15s), **EF `EnableRetryOnFailure`**, **Polly** around startup migrations (see [Server PostgreSQL resilience](#server-postgresql-resilience-appweb)) |
 | MAUI local store | **SQLite** + **EF Core Sqlite** for mirrored board and sync metadata |
 | Orchestration (local) | **.NET Aspire** AppHost (e.g. **Aspire.Hosting.Postgres**, **13.x**), PostgreSQL **17.6** image, **pgAdmin** in the default AppHost project |
-| HTTP resilience (MAUI) | **Microsoft.Extensions.Http.Resilience** (timeouts, transient retries) |
+| HTTP resilience (MAUI) | **Microsoft.Extensions.Http.Resilience** on the API `HttpClient` only (timeouts, transient retries)—**not** the same layer as server-side Postgres retries in `App.Web` |
 | Local notifications (MAUI) | **Plugin.LocalNotification** |
 | Test data (server) | **Bogus** (guest activity demo seeding, etc.) |
 | Unit / component tests | **xUnit**, **bUnit** (RCL smoke tests) |
@@ -236,7 +237,7 @@ These are produced by the **Playwright** test in `DocumentationScreenshotsTests`
   - **`Idempotency-Key`**: optional on web; **MAUI** sends it from the outbox `OperationId`. Duplicate same key + same request **fingerprint** replays the stored result; same key with a **different** body returns **409** with `problem: idempotency_key_reuse`.
   - **Optimistic concurrency**: **`X-Board-Expected-Updated-At-Utc`** or **`If-Match`** (item `ServerUpdatedAtUtc`, ISO-8601). Mismatch returns **409** with `problem: version_conflict` and current `item` JSON. **MAUI** policy: drop conflicting outbox op and **resync** (server wins).
   - **Incremental sync**: `GET /api/board/sync?cursor=` returns upserts, **`deletedItemIds`**, **`nextCursor`**. Invalid cursors: **400**; MAUI clears cursor and does a full snapshot.
-  - **HTTP resilience**: MAUI’s API `HttpClient` uses **Microsoft.Extensions.Http.Resilience** (timeouts + transient retries). **401** still clears the session as implemented.
+  - **HTTP resilience**: MAUI’s API `HttpClient` uses **Microsoft.Extensions.Http.Resilience** (timeouts + transient retries for **HTTP**). **Server-side** PostgreSQL retries live in **`App.Web`** (EF Core + Polly around migrations); do not confuse the two layers. **401** still clears the session as implemented.
   - **Maintenance**: a hosted service purges old idempotency rows and prunes old tombstones per configuration.
 
 **MAUI base URL** — configure `Api:BaseUrl`, **`HABITINATOR_API_BASE_URL`**, or `MauiAppSettings` (see [Run and debug](#run-and-debug)). When you start from **AppHost**, the MAUI process receives the web URL automatically.
@@ -252,6 +253,29 @@ These are produced by the **Playwright** test in `DocumentationScreenshotsTests`
 - **`App.Web`** accepts:
   - `ConnectionStrings:habitinatordb` (from Aspire), or
   - `ConnectionStrings:DefaultConnection` (standalone with your own PostgreSQL)
+
+**Local vs hosted:** Aspire and the repo badges describe **PostgreSQL 17.x** for **local** Docker/Aspire runs. **Azure** (and similar) deployments usually point `ConnectionStrings` / `POSTGRES_CONNECTION_STRING` at **Neon** or another managed Postgres host.
+
+### Server PostgreSQL resilience (`App.Web`)
+
+The web app tolerates transient Postgres failures (Neon compute restarts, scale-to-zero cold starts, pooler quirks). Implementation lives under `src/App.Web/Services/` (`PostgresResilienceConnectionString`, `PostgresDbContextOptions`, `PostgresPollyRetry`, `PostgresTransientErrors`, `PostgresMigrationConnectionStrings`).
+
+- **Connection timeout:** `PostgresResilienceConnectionString` raises Npgsql `Timeout` to at least **15 seconds** when the configured value is lower. The sample [`src/App.Web/appsettings.json`](src/App.Web/appsettings.json) includes `Timeout=15`.
+- **EF Core retries:** `EnableRetryOnFailure` (5 retries, max delay 16 seconds, extra SQLSTATE codes `57P01`, `08006`, `08003`) is applied to the main `DbContext` and `IDbContextFactory` via `PostgresDbContextOptions.UseNpgsqlWithResilience` in [`Program.cs`](src/App.Web/Program.cs).
+- **Migrations:** `MigrateAsync` runs inside **Polly** (exponential backoff, jitter, same caps) with a **fresh `DbContext` per attempt**; the migration `DbContext` also registers the same EF execution strategy so individual migration commands can retry. Polly uses `PostgresTransientErrors` (SQLSTATE + Neon-style message matching). [`DemoDataSeeder`](src/App.Web/Services/DemoDataSeeder.cs) passes an `ILogger` so each Polly retry is logged at **Warning**.
+- **Neon pooler vs direct:** when the primary connection string uses Neon’s `-pooler` hostname, migrations prefer a **direct** compute hostname when it can be derived safely; set `ConnectionStrings:MigrationConnection` to override (`PostgresMigrationConnectionStrings`).
+- **EF vs Polly transient matching:** EF’s strategy uses Npgsql/EF transience plus the added SQLSTATE list; **Polly** uses the explicit `PostgresTransientErrors` rules (including message substrings). That split is intentional.
+- **Idempotency:** EF migrations are safe to retry thanks to `__EFMigrationsHistory`. For **board writes**, use the existing idempotency and concurrency rules in [Cross-platform sync](#cross-platform-sync-and-local-first-behavior).
+
+**Validating resilience:** in Neon, trigger a **compute restart** (or suspend/resume) while the app is running; database operations should recover without restarting the web process.
+
+**Tests:** [`tests/App.Web.IntegrationTests/PostgresResilienceTests.cs`](tests/App.Web.IntegrationTests/PostgresResilienceTests.cs) exercises connection-string enrichment, transient detection, and Polly retries.
+
+| README / stack note | Detail |
+|---------------------|--------|
+| Technology stack | **Polly** is an `App.Web` dependency for migration retries; **Microsoft.Extensions.Http.Resilience** in the table applies to **MAUI HTTP** only. |
+| `GET /health` | Liveness only—does **not** probe PostgreSQL. |
+| Postgres 17.6 + Aspire | Typical **local** dev; **production** connection strings often target **Neon** (see [Deployment and releases](#deployment-and-releases-azure--github)). |
 
 ---
 
@@ -363,7 +387,7 @@ Main file: **`src/App.Web/appsettings.json`**
 
 Important sections:
 
-- **`ConnectionStrings`** — PostgreSQL
+- **`ConnectionStrings`** — PostgreSQL (`DefaultConnection` / `habitinatordb`, optional `MigrationConnection` for Neon migrations); see [Server PostgreSQL resilience](#server-postgresql-resilience-appweb)
 - **`Jwt`** — signing key and token lifetime (JWT for MAUI / API)
 - **`DemoUser`** — email/password for the seeded guest
 - **`BoardMaintenanceOptions`** (or related) — idempotency / tombstone retention (if present)

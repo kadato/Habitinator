@@ -19,8 +19,6 @@ using Microsoft.IdentityModel.Tokens;
 
 using MudBlazor.Services;
 
-using Npgsql;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -34,22 +32,22 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 builder.Services.AddMudServices();
 
-var dbConnectionString =
+var dbConnectionString = PostgresResilienceConnectionString.EnsureColdStartTimeouts(
     builder.Configuration.GetConnectionString("DefaultConnection")
     ?? builder.Configuration.GetConnectionString("habitinatordb")
     ?? throw new InvalidOperationException(
-        "No PostgreSQL connection string configured. Set ConnectionStrings:DefaultConnection or run through Aspire (habitinatordb).");
+        "No PostgreSQL connection string configured. Set ConnectionStrings:DefaultConnection or run through Aspire (habitinatordb)."));
 
 // Options must be singleton so IDbContextFactory (singleton) can be constructed; the DbContext
 // instance remains scoped. Same pattern: https://learn.microsoft.com/en-us/ef/core/dbcontext-configuration/#using-a-dbcontext-factory-eg-for-blazor
 builder.Services.AddDbContext<ApplicationDbContext>(
-    options => options.UseNpgsql(dbConnectionString),
+    options => options.UseNpgsqlWithResilience(dbConnectionString),
     contextLifetime: ServiceLifetime.Scoped,
     optionsLifetime: ServiceLifetime.Singleton);
 // Isolates read queries from the scoped context so Blazor + SignalR cannot interleave
 // two operations on the same instance (e.g. GetSnapshot from BoardChanged while CreateItem awaits).
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
-    options.UseNpgsql(dbConnectionString));
+    options.UseNpgsqlWithResilience(dbConnectionString));
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {

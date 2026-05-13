@@ -20,8 +20,10 @@ public static class DemoDataSeeder
         var boardPersistence = scope.ServiceProvider.GetRequiredService<BoardPersistenceService>();
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DemoDataSeeder");
 
-        var primaryCs = PostgresMigrationConnectionStrings.ResolvePrimary(configuration);
-        var migrationCs = PostgresMigrationConnectionStrings.ResolveForMigrations(configuration);
+        var primaryCs = PostgresResilienceConnectionString.EnsureColdStartTimeouts(
+            PostgresMigrationConnectionStrings.ResolvePrimary(configuration));
+        var migrationCs = PostgresResilienceConnectionString.EnsureColdStartTimeouts(
+            PostgresMigrationConnectionStrings.ResolveForMigrations(configuration));
         if (!string.Equals(migrationCs, primaryCs, StringComparison.Ordinal))
         {
             logger.LogInformation(
@@ -29,13 +31,16 @@ public static class DemoDataSeeder
                 "This avoids Neon PgBouncer transaction-pooling issues during schema updates.");
         }
 
-        var migrationOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseNpgsql(migrationCs)
-            .Options;
-        await using (var migrationContext = new ApplicationDbContext(migrationOptions))
-        {
-            await migrationContext.Database.MigrateAsync(cancellationToken);
-        }
+        await PostgresPollyRetry.ExecuteAsync(
+            async ct =>
+            {
+                var migrationOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+                    .UseNpgsql(migrationCs)
+                    .Options;
+                await using var migrationContext = new ApplicationDbContext(migrationOptions);
+                await migrationContext.Database.MigrateAsync(ct);
+            },
+            cancellationToken);
 
         var demo = options.Value;
         var guest = await userManager.FindByEmailAsync(demo.Email);

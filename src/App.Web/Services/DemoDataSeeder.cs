@@ -35,11 +35,12 @@ public static class DemoDataSeeder
             async ct =>
             {
                 var migrationOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
-                    .UseNpgsql(migrationCs)
+                    .UseNpgsql(migrationCs, PostgresDbContextOptions.ConfigureNpgsqlResilience)
                     .Options;
                 await using var migrationContext = new ApplicationDbContext(migrationOptions);
                 await migrationContext.Database.MigrateAsync(ct);
             },
+            logger,
             cancellationToken);
 
         var demo = options.Value;

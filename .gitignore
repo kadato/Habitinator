@@ -5,6 +5,7 @@ obj/
 # IDE
 .vs/
 .vscode/
+.cursor/
 *.user
 *.suo
 *.lscache

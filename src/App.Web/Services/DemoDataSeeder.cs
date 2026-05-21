@@ -78,14 +78,13 @@ public static class DemoDataSeeder
             guest.UserPreferencesJson = "{}";
             await userManager.UpdateAsync(guest);
 
-            await boardPersistence.InsertDemoBoardDataAsync(guest.Id, cancellationToken);
             try
             {
-                await GuestActivityDemoSeeder.SeedIfMissingAsync(dbContext, guest.Id, cancellationToken);
+                await DemoGuestSeeder.ReseedAllAsync(dbContext, boardPersistence, guest.Id, cancellationToken);
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Guest activity demo seed skipped after ForceReseed.");
+                logger.LogWarning(ex, "Demo guest seed skipped after ForceReseed.");
             }
 
             logger.LogWarning(
@@ -94,14 +93,33 @@ public static class DemoDataSeeder
             return;
         }
 
-        await boardPersistence.SeedBoardDataIfMissingAsync(guest.Id, cancellationToken);
+        if (demo.ForceReseedActivity)
+        {
+            try
+            {
+                await boardPersistence.SeedBoardDataIfMissingAsync(guest.Id, cancellationToken);
+                await DemoGuestSeeder.ReseedActivityAsync(dbContext, guest.Id, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Demo guest activity reseed skipped.");
+            }
+
+            logger.LogWarning(
+                "Demo guest activity reseeded ({Flag}). Turn off {Section}:{Flag} when finished.",
+                nameof(demo.ForceReseedActivity),
+                DemoUserOptions.SectionName,
+                nameof(demo.ForceReseedActivity));
+            return;
+        }
+
         try
         {
-            await GuestActivityDemoSeeder.SeedIfMissingAsync(dbContext, guest.Id, cancellationToken);
+            await DemoGuestSeeder.SeedIfMissingAsync(dbContext, boardPersistence, guest.Id, cancellationToken);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Guest activity demo seed skipped.");
+            logger.LogWarning(ex, "Demo guest seed skipped.");
         }
     }
 

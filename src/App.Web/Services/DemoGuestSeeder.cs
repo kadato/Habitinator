@@ -7,25 +7,76 @@ using Microsoft.EntityFrameworkCore;
 
 namespace App.Web.Services;
 
-public static class GuestActivityDemoSeeder
+/// <summary>Seeds the demo guest board and synthetic activity history for statistics.</summary>
+public static class DemoGuestSeeder
 {
     private const int DemoRandomSeed = 2026_04_24;
     private const int HeatmapDataDays = 370;
+    private const int HeatmapPresentThreshold = 2_000;
 
-    public static async Task SeedIfMissingAsync(ApplicationDbContext db, Guid guestUserId,
+    /// <summary>Inserts demo board items when missing, then fills activity when the heatmap is sparse.</summary>
+    public static async Task SeedIfMissingAsync(
+        ApplicationDbContext db,
+        BoardPersistenceService board,
+        Guid guestUserId,
         CancellationToken cancellationToken = default)
+    {
+        await board.SeedBoardDataIfMissingAsync(guestUserId, cancellationToken);
+        await SeedDemoActivityIfMissingAsync(db, guestUserId, cancellationToken);
+    }
+
+    /// <summary>Replaces the full demo board and activity log (caller must clear guest data first).</summary>
+    public static async Task ReseedAllAsync(
+        ApplicationDbContext db,
+        BoardPersistenceService board,
+        Guid guestUserId,
+        CancellationToken cancellationToken = default)
+    {
+        await board.InsertDemoBoardDataAsync(guestUserId, cancellationToken);
+        await ReseedActivityAsync(db, guestUserId, cancellationToken);
+    }
+
+    /// <summary>Removes all guest activity events and inserts a fresh year-long demo series.</summary>
+    public static async Task ReseedActivityAsync(
+        ApplicationDbContext db,
+        Guid guestUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var existing = await db.UserActivityEvents.Where(e => e.UserId == guestUserId).ToListAsync(cancellationToken);
+        if (existing.Count > 0)
+        {
+            db.UserActivityEvents.RemoveRange(existing);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        await SeedDemoActivityCoreAsync(db, guestUserId, cancellationToken);
+    }
+
+    private static async Task SeedDemoActivityIfMissingAsync(
+        ApplicationDbContext db,
+        Guid guestUserId,
+        CancellationToken cancellationToken)
     {
         // Board demo seed adds a few activity rows (e.g. daily streak backfill). A full guest heatmap is
         // thousands of events — if we have that many, skip. Otherwise fill in the year-long demo series.
-        const int heatmapPresentThreshold = 2_000;
         var n = await db.UserActivityEvents.CountAsync(e => e.UserId == guestUserId, cancellationToken);
-        if (n > heatmapPresentThreshold) return;
+        if (n > HeatmapPresentThreshold) return;
 
+        await SeedDemoActivityCoreAsync(db, guestUserId, cancellationToken);
+    }
+
+    private static async Task SeedDemoActivityCoreAsync(
+        ApplicationDbContext db,
+        Guid guestUserId,
+        CancellationToken cancellationToken)
+    {
         var boardItems = await db.BoardItems
             .AsNoTracking()
             .Where(x => x.UserId == guestUserId && x.DeletedAtUtc == null)
             .Select(x => new { x.Id, x.Section, x.Title })
             .ToListAsync(cancellationToken);
+
+        if (boardItems.Count == 0) return;
 
         var titlesById = boardItems.ToDictionary(x => x.Id, x => x.Title);
         var habitIds = boardItems.Where(x => x.Section == BoardSection.Habit).Select(x => x.Id).ToList();
@@ -55,14 +106,11 @@ public static class GuestActivityDemoSeeder
                 var occurred = new DateTimeOffset(utc, TimeSpan.Zero);
 
                 var eventType = PickEventType(faker);
-                Guid? boardItemId = PickBoardItemId(eventType, habitIds, dailyIds, todoIds, anyBoardItemIds, faker);
+                var boardItemId = PickBoardItemId(eventType, habitIds, dailyIds, todoIds, anyBoardItemIds, faker);
+                var title = titlesById[boardItemId];
 
                 int? durationSec = eventType == ActivityEventType.TimerSession
                     ? faker.Random.Int(120, 5400)
-                    : null;
-
-                string? customLabel = boardItemId is { } id && titlesById.TryGetValue(id, out var title)
-                    ? title
                     : null;
 
                 events.Add(new UserActivityEventEntity
@@ -73,7 +121,7 @@ public static class GuestActivityDemoSeeder
                     EventType = eventType,
                     BoardItemId = boardItemId,
                     DurationSeconds = durationSec,
-                    CustomLabel = customLabel
+                    CustomLabel = title
                 });
             }
         }
@@ -82,7 +130,7 @@ public static class GuestActivityDemoSeeder
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    private static Guid? PickBoardItemId(
+    private static Guid PickBoardItemId(
         ActivityEventType eventType,
         IReadOnlyList<Guid> habitIds,
         IReadOnlyList<Guid> dailyIds,
@@ -90,9 +138,6 @@ public static class GuestActivityDemoSeeder
         IReadOnlyList<Guid> anyBoardItemIds,
         Faker faker)
     {
-        if (anyBoardItemIds.Count == 0 || !faker.Random.Bool(0.85f))
-            return null;
-
         IReadOnlyList<Guid> pool = eventType switch
         {
             ActivityEventType.HabitPlus or ActivityEventType.HabitMinus => habitIds,

@@ -1008,7 +1008,8 @@ public sealed class BoardPersistenceService
                 UserId = userId,
                 OccurredAtUtc = DailyStreakCalculator.BackdatedDailyEventOccurredAt(d),
                 EventType = ActivityEventType.DailyComplete,
-                BoardItemId = dailyDeepId
+                BoardItemId = dailyDeepId,
+                CustomLabel = "Deep work block"
             });
         }
 

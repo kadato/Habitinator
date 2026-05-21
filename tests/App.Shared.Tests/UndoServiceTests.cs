@@ -22,8 +22,8 @@ public sealed class UndoServiceTests
     {
         _settingsService.GetAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new NotificationSettings()));
-        _notificationRules.VisibleStateDurationMs(Arg.Any<NotificationToastDuration>())
-            .Returns(3000);
+        _notificationRules.UndoVisibleStateDurationMs(Arg.Any<NotificationToastDuration>())
+            .Returns(12_000);
 
         _undoService = new UndoService(_snackbar, _settingsService, _notificationRules);
     }
@@ -113,6 +113,34 @@ public sealed class UndoServiceTests
         _undoService.Clear();
 
         _undoService.CanUndo.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UndoAsync_by_id_should_undo_that_action_not_the_most_recent()
+    {
+        var undone = new List<string>();
+
+        var firstId = _undoService.RegisterUndo("First", () =>
+        {
+            undone.Add("first");
+            return Task.CompletedTask;
+        });
+        _undoService.RegisterUndo("Second", () =>
+        {
+            undone.Add("second");
+            return Task.CompletedTask;
+        });
+        _undoService.RegisterUndo("Third", () =>
+        {
+            undone.Add("third");
+            return Task.CompletedTask;
+        });
+
+        await _undoService.UndoAsync(firstId);
+
+        undone.Should().Equal(["first"]);
+        _undoService.CanUndo.Should().BeTrue();
+        _undoService.LastActionDescription.Should().Be("Third");
     }
 }
 

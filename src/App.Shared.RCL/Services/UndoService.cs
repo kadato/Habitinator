@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using App.Shared.RCL.Components;
 using App.Shared.RCL.Models;
 using MudBlazor;
 
@@ -9,7 +10,9 @@ namespace App.Shared.RCL.Services;
 
 public sealed class UndoService : IUndoService
 {
-    private readonly Stack<UndoAction> _undoStack = new();
+    private const string UndoSnackbarKeyPrefix = "habitinator-undo";
+
+    private readonly List<UndoAction> _undoStack = new();
     private readonly ISnackbar _snackbar;
     private readonly INotificationSettingsService _settingsService;
     private readonly INotificationSettingsRules _notificationRules;
@@ -19,7 +22,7 @@ public sealed class UndoService : IUndoService
 
     public bool IsUndoing { get; private set; }
     public bool CanUndo => _undoStack.Count > 0;
-    public string? LastActionDescription => _undoStack.Count > 0 ? _undoStack.Peek().Description : null;
+    public string? LastActionDescription => _undoStack.Count > 0 ? _undoStack[^1].Description : null;
 
     public event Action? OnStateChanged;
     public event Action? OnUndoPerformed;
@@ -34,19 +37,21 @@ public sealed class UndoService : IUndoService
         _notificationRules = notificationRules;
     }
 
-    public void RegisterUndo(string description, Func<Task> undoFunc)
+    public Guid RegisterUndo(string description, Func<Task> undoFunc)
     {
-        if (IsUndoing) return;
+        if (IsUndoing) return Guid.Empty;
 
         if (_currentBatch is not null)
         {
             _currentBatch.Add(undoFunc);
-            return;
+            return Guid.Empty;
         }
 
-        _undoStack.Push(new UndoAction(description, undoFunc));
+        var action = new UndoAction(description, undoFunc);
+        _undoStack.Add(action);
         OnStateChanged?.Invoke();
-        _ = ShowUndoSnackbarAsync(description);
+        _ = ShowUndoSnackbarAsync(action);
+        return action.Id;
     }
 
     public IDisposable BeginBatch(string description)
@@ -74,23 +79,35 @@ public sealed class UndoService : IUndoService
             batch.Reverse();
             RegisterUndo(desc, async () =>
             {
-                foreach (var action in batch)
+                foreach (var batchAction in batch)
                 {
-                    await action();
+                    await batchAction().ConfigureAwait(false);
                 }
             });
         }
     }
 
-    public async Task UndoAsync()
+    public Task UndoAsync() => UndoAsync(null);
+
+    public Task UndoAsync(Guid actionId) => UndoAsync((Guid?)actionId);
+
+    private async Task UndoAsync(Guid? actionId)
     {
         if (_undoStack.Count == 0 || IsUndoing) return;
 
+        var index = actionId is null
+            ? _undoStack.Count - 1
+            : _undoStack.FindIndex(a => a.Id == actionId);
+
+        if (index < 0) return;
+
+        var action = _undoStack[index];
+        _undoStack.RemoveAt(index);
+
         IsUndoing = true;
-        var action = _undoStack.Pop();
         try
         {
-            await action.UndoFunc();
+            await action.UndoFunc().ConfigureAwait(false);
             OnUndoPerformed?.Invoke();
         }
         catch (Exception)
@@ -100,6 +117,7 @@ public sealed class UndoService : IUndoService
         finally
         {
             IsUndoing = false;
+            DismissSnackbar(action);
             OnStateChanged?.Invoke();
         }
     }
@@ -110,26 +128,56 @@ public sealed class UndoService : IUndoService
         OnStateChanged?.Invoke();
     }
 
-    private async Task ShowUndoSnackbarAsync(string description)
+    private async Task ShowUndoSnackbarAsync(UndoAction action)
     {
         try
         {
             var settings = await _settingsService.GetAsync(CancellationToken.None).ConfigureAwait(false);
-            var ms = _notificationRules.VisibleStateDurationMs(settings.ToastDuration);
+            var ms = _notificationRules.UndoVisibleStateDurationMs(settings.ToastDuration);
+            var key = $"{UndoSnackbarKeyPrefix}-{action.Id:N}";
+            action.SnackbarKey = key;
 
-            _snackbar.Add($"Action: {description}", Severity.Normal, config =>
-            {
-                config.VisibleStateDuration = ms;
-                config.Action = "Undo";
-                config.ActionColor = Color.Warning;
-                config.Icon = Icons.Material.Filled.Undo;
-                config.IconColor = Color.Warning;
-                config.ShowCloseIcon = false;
-                config.OnClick = async snackbar =>
+            Snackbar? toast = null;
+            toast = _snackbar.Add<UndoToastContent>(
+                new Dictionary<string, object>
                 {
-                    await UndoAsync().ConfigureAwait(false);
-                };
-            });
+                    [nameof(UndoToastContent.Description)] = action.Description,
+                    [nameof(UndoToastContent.OnUndo)] = new Func<Task>(async () =>
+                    {
+                        await UndoAsync(action.Id).ConfigureAwait(false);
+                        toast?.ForceClose();
+                    }),
+                    [nameof(UndoToastContent.OnDismiss)] = new Func<Task>(() =>
+                    {
+                        toast?.ForceClose();
+                        return Task.CompletedTask;
+                    }),
+                },
+                Severity.Normal,
+                config =>
+                {
+                    config.VisibleStateDuration = ms;
+                    config.HideIcon = true;
+                    config.ShowCloseIcon = false;
+                    config.SnackbarTypeClass = "habitinator-undo-toast";
+                    config.SnackbarVariant = Variant.Text;
+                    config.DuplicatesBehavior = SnackbarDuplicatesBehavior.Allow;
+                },
+                key);
+        }
+        catch (Exception)
+        {
+            // best-effort
+        }
+    }
+
+    private void DismissSnackbar(UndoAction action)
+    {
+        if (action.SnackbarKey is null) return;
+
+        try
+        {
+            _snackbar.RemoveByKey(action.SnackbarKey);
         }
         catch (Exception)
         {
@@ -139,8 +187,10 @@ public sealed class UndoService : IUndoService
 
     private sealed class UndoAction
     {
+        public Guid Id { get; } = Guid.NewGuid();
         public string Description { get; }
         public Func<Task> UndoFunc { get; }
+        public string? SnackbarKey { get; set; }
 
         public UndoAction(string description, Func<Task> undoFunc)
         {

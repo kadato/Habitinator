@@ -265,16 +265,67 @@ h1:focus {
 
 /* ── Undo toast (bottom-left snackbar) ─────────────────────────────────── */
 .habitinator-undo-toast {
-    border-left: 3px solid var(--mud-palette-warning);
-    border-radius: 0.5rem !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.14) !important;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    padding: 0 !important;
+    background: var(--mud-palette-surface) !important;
+    color: var(--mud-palette-text-primary) !important;
+    border-radius: 0.75rem !important;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 8%, transparent) !important;
+    box-shadow:
+        0 12px 40px color-mix(in srgb, var(--mud-palette-text-primary) 10%, transparent),
+        0 2px 10px color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent) !important;
+    cursor: pointer;
+    animation: toast-slide-in 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.habitinator-undo-toast .mud-snackbar-action button {
-    font-weight: 700;
+@keyframes toast-slide-in {
+    from { opacity: 0; transform: translateY(0.75rem); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.habitinator-undo-toast .mud-snackbar-icon,
+.habitinator-undo-toast .mud-snackbar-action,
+.habitinator-undo-toast .mud-snackbar-close-button {
+    display: none !important;
+}
+
+.habitinator-undo-toast .mud-snackbar-content {
+    width: 100%;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.undo-toast-body {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.5rem 0.875rem;
+}
+
+.undo-toast-message {
+    flex: 1;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--mud-palette-text-primary);
+    line-height: 1.4;
+}
+
+.undo-toast-btn {
+    flex-shrink: 0;
+    background: var(--mud-palette-error);
+    color: var(--mud-palette-error-contrast-text, #fff);
+    border: none;
+    border-radius: var(--mud-default-borderradius, 0.375rem);
+    padding: 0.35rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    font-size: 0.72rem;
+    cursor: pointer;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.undo-toast-btn:hover {
+    opacity: 0.9;
+    background: color-mix(in srgb, var(--mud-palette-error) 88%, var(--mud-palette-black));
 }

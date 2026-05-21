@@ -110,6 +110,18 @@ public sealed class NotificationSettingsRulesTests
         _rules.VisibleStateDurationMs(preset).Should().Be(expectedMs);
     }
 
+    [Theory]
+    [InlineData(NotificationToastDuration.Short, 6000)]
+    [InlineData(NotificationToastDuration.Normal, 12_000)]
+    [InlineData(NotificationToastDuration.Long, 20_000)]
+    public void Undo_duration_presets_are_longer_than_general_toasts(
+        NotificationToastDuration preset,
+        int expectedMs)
+    {
+        _rules.UndoVisibleStateDurationMs(preset).Should().Be(expectedMs);
+        _rules.UndoVisibleStateDurationMs(preset).Should().BeGreaterThan(_rules.VisibleStateDurationMs(preset));
+    }
+
     [Fact]
     public void Focus_timer_end_requires_in_app_alerts_and_focus_toggle_not_success_group()
     {

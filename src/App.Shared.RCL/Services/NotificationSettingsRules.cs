@@ -8,6 +8,7 @@ public interface INotificationSettingsRules
 {
     bool ShouldShowToast(NotificationSettings settings, Severity severity, DateTime utcNow);
     int VisibleStateDurationMs(NotificationToastDuration preset);
+    int UndoVisibleStateDurationMs(NotificationToastDuration preset);
     bool ShouldShowFocusTimerEndNotification(NotificationSettings settings);
     bool IsInQuietHours(NotificationSettings settings, DateTime utcNow);
 }
@@ -45,6 +46,18 @@ public sealed class NotificationSettingsRules : INotificationSettingsRules
             NotificationToastDuration.Normal => 5000,
             NotificationToastDuration.Long => 10_000,
             _ => 5000
+        };
+    }
+
+    /// <summary>Longer auto-dismiss for undo snackbars so stacked toasts stay readable.</summary>
+    public int UndoVisibleStateDurationMs(NotificationToastDuration preset)
+    {
+        return preset switch
+        {
+            NotificationToastDuration.Short => 6000,
+            NotificationToastDuration.Normal => 12_000,
+            NotificationToastDuration.Long => 20_000,
+            _ => 12_000
         };
     }
 

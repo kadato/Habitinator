@@ -8,9 +8,10 @@ public interface IUndoService
     bool CanUndo { get; }
     bool IsUndoing { get; }
     string? LastActionDescription { get; }
-    void RegisterUndo(string description, Func<Task> undoFunc);
+    Guid RegisterUndo(string description, Func<Task> undoFunc);
     IDisposable BeginBatch(string description);
     Task UndoAsync();
+    Task UndoAsync(Guid actionId);
     void Clear();
     event Action? OnStateChanged;
     event Action? OnUndoPerformed;

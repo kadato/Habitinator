@@ -21,18 +21,24 @@ public static class GuestActivityDemoSeeder
         var n = await db.UserActivityEvents.CountAsync(e => e.UserId == guestUserId, cancellationToken);
         if (n > heatmapPresentThreshold) return;
 
-        var boardItemIds = await db.BoardItems
+        var boardItems = await db.BoardItems
             .AsNoTracking()
             .Where(x => x.UserId == guestUserId && x.DeletedAtUtc == null)
-            .Select(x => x.Id)
+            .Select(x => new { x.Id, x.Section, x.Title })
             .ToListAsync(cancellationToken);
+
+        var titlesById = boardItems.ToDictionary(x => x.Id, x => x.Title);
+        var habitIds = boardItems.Where(x => x.Section == BoardSection.Habit).Select(x => x.Id).ToList();
+        var dailyIds = boardItems.Where(x => x.Section == BoardSection.Daily).Select(x => x.Id).ToList();
+        var todoIds = boardItems.Where(x => x.Section == BoardSection.Todo).Select(x => x.Id).ToList();
+        var anyBoardItemIds = boardItems.Select(x => x.Id).ToList();
 
         var faker = new Faker
         {
             Random = new Randomizer(DemoRandomSeed)
         };
 
-        var end = DailySchedule.UtcToday;
+        var end = DailySchedule.LocalToday();
         var start = end.AddDays(-(HeatmapDataDays - 1));
 
         var events = new List<UserActivityEventEntity>();
@@ -49,12 +55,14 @@ public static class GuestActivityDemoSeeder
                 var occurred = new DateTimeOffset(utc, TimeSpan.Zero);
 
                 var eventType = PickEventType(faker);
-                Guid? boardItemId = boardItemIds.Count > 0 && faker.Random.Bool(0.45f)
-                    ? faker.PickRandom(boardItemIds)
-                    : null;
+                Guid? boardItemId = PickBoardItemId(eventType, habitIds, dailyIds, todoIds, anyBoardItemIds, faker);
 
                 int? durationSec = eventType == ActivityEventType.TimerSession
                     ? faker.Random.Int(120, 5400)
+                    : null;
+
+                string? customLabel = boardItemId is { } id && titlesById.TryGetValue(id, out var title)
+                    ? title
                     : null;
 
                 events.Add(new UserActivityEventEntity
@@ -64,13 +72,39 @@ public static class GuestActivityDemoSeeder
                     OccurredAtUtc = occurred,
                     EventType = eventType,
                     BoardItemId = boardItemId,
-                    DurationSeconds = durationSec
+                    DurationSeconds = durationSec,
+                    CustomLabel = customLabel
                 });
             }
         }
 
         db.UserActivityEvents.AddRange(events);
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static Guid? PickBoardItemId(
+        ActivityEventType eventType,
+        IReadOnlyList<Guid> habitIds,
+        IReadOnlyList<Guid> dailyIds,
+        IReadOnlyList<Guid> todoIds,
+        IReadOnlyList<Guid> anyBoardItemIds,
+        Faker faker)
+    {
+        if (anyBoardItemIds.Count == 0 || !faker.Random.Bool(0.85f))
+            return null;
+
+        IReadOnlyList<Guid> pool = eventType switch
+        {
+            ActivityEventType.HabitPlus or ActivityEventType.HabitMinus => habitIds,
+            ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete => dailyIds,
+            ActivityEventType.TodoComplete or ActivityEventType.TodoUncomplete => todoIds,
+            _ => anyBoardItemIds
+        };
+
+        if (pool.Count == 0)
+            pool = anyBoardItemIds;
+
+        return pool[faker.Random.Int(0, pool.Count - 1)];
     }
 
     private static ActivityEventType PickEventType(Faker faker)

@@ -307,7 +307,7 @@ public static class ActivityStatisticsCalculator
             list.Add(new ActivityDayEventDto(
                 r.OccurredAtUtc,
                 r.EventType,
-                MapDayDetailEventLabel(r.EventType, itemTitle, r.CustomLabel),
+                FormatDayDetailEventLabel(r.EventType, itemTitle, r.CustomLabel),
                 itemTitle,
                 r.DurationSeconds,
                 r.CustomLabel));
@@ -441,7 +441,7 @@ public static class ActivityStatisticsCalculator
         return result;
     }
 
-    private static string MapDayDetailEventLabel(
+    public static string FormatDayDetailEventLabel(
         ActivityEventType eventType,
         string? itemTitle,
         string? customLabel)
@@ -455,21 +455,6 @@ public static class ActivityStatisticsCalculator
             ActivityEventType.HabitMinus => name is not null ? $"Habit −: {name}" : "Habit −",
             ActivityEventType.TimerSession => name is not null ? $"Focus session: {name}" : "Focus session",
             _ => name ?? eventType.ToString()
-        };
-    }
-
-    private static string MapEventTypeLabel(ActivityEventType t)
-    {
-        return t switch
-        {
-            ActivityEventType.HabitPlus => "Habit +",
-            ActivityEventType.HabitMinus => "Habit −",
-            ActivityEventType.DailyComplete => "Daily done",
-            ActivityEventType.DailyUncomplete => "Daily undone",
-            ActivityEventType.TodoComplete => "To-do done",
-            ActivityEventType.TodoUncomplete => "To-do undone",
-            ActivityEventType.TimerSession => "Focus session",
-            _ => t.ToString()
         };
     }
 

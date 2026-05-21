@@ -43,7 +43,11 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
         if (updated is not null)
             try
             {
-                await _activityLog.LogActivityAsync(ActivityEventType.DailyComplete, itemId, null, cancellationToken);
+                await _activityLog.LogActivityAsync(
+                    ActivityEventType.DailyComplete,
+                    itemId,
+                    itemTitleSnapshot: updated.Title,
+                    cancellationToken: cancellationToken);
             }
             catch (Exception)
             {
@@ -78,7 +82,7 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
                     : ActivityEventType.TodoComplete;
             try
             {
-                await _activityLog.LogActivityAsync(type, itemId, null, cancellationToken);
+                await _activityLog.LogActivityAsync(type, itemId, itemTitleSnapshot: updated.Title, cancellationToken: cancellationToken);
             }
             catch (Exception)
             {
@@ -95,7 +99,11 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
         if (updated is not null)
             try
             {
-                await _activityLog.LogActivityAsync(ActivityEventType.HabitPlus, itemId, null, cancellationToken);
+                await _activityLog.LogActivityAsync(
+                    ActivityEventType.HabitPlus,
+                    itemId,
+                    itemTitleSnapshot: updated.Title,
+                    cancellationToken: cancellationToken);
             }
             catch (Exception)
             {
@@ -110,7 +118,11 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
         if (updated is not null)
             try
             {
-                await _activityLog.LogActivityAsync(ActivityEventType.HabitMinus, itemId, null, cancellationToken);
+                await _activityLog.LogActivityAsync(
+                    ActivityEventType.HabitMinus,
+                    itemId,
+                    itemTitleSnapshot: updated.Title,
+                    cancellationToken: cancellationToken);
             }
             catch (Exception)
             {

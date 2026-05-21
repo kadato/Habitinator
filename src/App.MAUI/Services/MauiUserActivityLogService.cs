@@ -16,6 +16,7 @@ public sealed class MauiUserActivityLogService : IUserActivityLogService
         ActivityEventType eventType,
         Guid? boardItemId,
         int? durationSeconds = null,
+        string? itemTitleSnapshot = null,
         CancellationToken cancellationToken = default)
     {
         await _store.AppendAsync(new StoredUserActivityEvent
@@ -25,7 +26,8 @@ public sealed class MauiUserActivityLogService : IUserActivityLogService
             OccurredAtUtc = DateTimeOffset.UtcNow,
             EventType = eventType,
             BoardItemId = boardItemId,
-            DurationSeconds = eventType == ActivityEventType.TimerSession ? durationSeconds : null
+            DurationSeconds = eventType == ActivityEventType.TimerSession ? durationSeconds : null,
+            CustomLabel = itemTitleSnapshot
         }, cancellationToken);
     }
 

@@ -62,7 +62,7 @@ public sealed class BoardApiIsolationTests(PostgresWebAppFactory factory)
         snapshotB.Should().NotBeNull();
         snapshotB!.Todos.Should().NotContain(t => t.Id == created!.Id);
 
-        using var requestToggle = new HttpRequestMessage(HttpMethod.Post, $"/api/board/Todo/{created.Id}/toggle");
+        using var requestToggle = new HttpRequestMessage(HttpMethod.Post, $"/api/board/Todo/{created!.Id}/toggle");
         requestToggle.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenB);
         var toggleRes = await client.SendAsync(requestToggle);
         toggleRes.StatusCode.Should().Be(HttpStatusCode.NotFound);

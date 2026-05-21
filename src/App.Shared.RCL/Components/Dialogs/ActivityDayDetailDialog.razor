@@ -50,7 +50,7 @@
                     <MudTd DataLabel="Time">@FormatLocalTime(context.OccurredAtUtc)</MudTd>
                     <MudTd DataLabel="Activity">
                         <span class="activity-day-detail-activity @GetActivityClass(context.EventType)">
-                            @context.Label@FormatTimerSuffix(context)
+                            @FormatActivityLabel(context)@FormatTimerSuffix(context)
                         </span>
                     </MudTd>
                 </RowTemplate>
@@ -112,6 +112,12 @@
         var localTime = TimeZoneService.ConvertToLocal(utcTime);
         return localTime.ToString("HH:mm");
     }
+
+    private static string FormatActivityLabel(ActivityDayEventDto e) =>
+        ActivityStatisticsCalculator.FormatDayDetailEventLabel(
+            e.EventType,
+            e.BoardItemTitle,
+            e.CustomLabel);
 
     private static string FormatTimerSuffix(ActivityDayEventDto e)
     {

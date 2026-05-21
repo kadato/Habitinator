@@ -53,7 +53,7 @@ public static class DailySchedule
     /// <summary>When no start is stored, treat "today" (local timezone) as the anchor so a new item is due immediately.</summary>
     public static DateOnly ResolveStartDateOrToday(DateOnly? dailyStart)
     {
-        return dailyStart ?? UtcToday;
+        return dailyStart ?? LocalToday();
     }
 
     /// <summary>

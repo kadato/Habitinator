@@ -13,11 +13,11 @@
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
                 Update your password. You will stay signed in after the change.
             </MudText>
-            <MudTextField T="string" Label="Current password" InputType="InputType.Password" Variant="Variant.Outlined" Dense="true"
+            <MudTextField T="string" Label="Current password" InputType="InputType.Password" Variant="Variant.Outlined" dense="true"
                           Value="_currentPassword" ValueChanged="v => _currentPassword = v" />
-            <MudTextField T="string" Label="New password" InputType="InputType.Password" Variant="Variant.Outlined" Dense="true"
+            <MudTextField T="string" Label="New password" InputType="InputType.Password" Variant="Variant.Outlined" dense="true"
                           Value="_newPassword" ValueChanged="v => _newPassword = v" />
-            <MudTextField T="string" Label="Confirm new password" InputType="InputType.Password" Variant="Variant.Outlined" Dense="true"
+            <MudTextField T="string" Label="Confirm new password" InputType="InputType.Password" Variant="Variant.Outlined" dense="true"
                           Value="_confirmPassword" ValueChanged="v => _confirmPassword = v" />
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_savingPassword" OnClick="ChangePasswordAsync">
                 Change password

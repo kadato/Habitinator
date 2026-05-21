@@ -28,7 +28,7 @@
                 </MudText>
                 <MudTextField T="string" Label="Display name"
                               Variant="Variant.Outlined"
-                              Dense="true"
+                              dense="true"
                               MaxLength="40"
                               Immediate="true"
                               Error="@(_displayNameError is not null)"
@@ -39,7 +39,7 @@
                 <MudTextField T="string"
                               Label="Date format"
                               Variant="Variant.Outlined"
-                              Dense="true"
+                              dense="true"
                               Value="_model.DateFormat"
                               ValueChanged="OnDateFormatChanged"
                               Immediate="true"
@@ -66,7 +66,7 @@
                 {
                     <MudText Typo="Typo.caption" Color="Color.Error">@_dayStartError</MudText>
                 }
-                <MudSelect T="string" Label="Timezone" Variant="Variant.Outlined" Dense="true"
+                <MudSelect T="string" Label="Timezone" Variant="Variant.Outlined" dense="true"
                            Value="_timeZoneSelection" ValueChanged="OnTimeZoneChanged">
                     <MudSelectItem Value="@AutoTimeZoneValue">Auto (@_detectedTimeZoneLabel)</MudSelectItem>
                     @foreach (var tz in _timeZones)
@@ -86,7 +86,7 @@
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
                     Choose your visual theme or sync with system preferences.
                 </MudText>
-                <MudSelect T="AppTheme" Label="Theme mode" Variant="Variant.Outlined" Dense="true"
+                <MudSelect T="AppTheme" Label="Theme mode" Variant="Variant.Outlined" dense="true"
                            Value="_themeSelection" ValueChanged="OnThemeChanged">
                     <MudSelectItem Value="@AppTheme.System">System default</MudSelectItem>
                     <MudSelectItem Value="@AppTheme.Light">Light mode</MudSelectItem>

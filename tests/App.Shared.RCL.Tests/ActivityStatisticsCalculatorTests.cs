@@ -137,6 +137,17 @@ public sealed class ActivityStatisticsCalculatorTests
     }
 
     [Fact]
+    public void BuildDayDetail_uses_custom_label_when_board_title_missing()
+    {
+        var rows = new[] { Row(Day, 9, ActivityEventType.HabitPlus, HabitId, customLabel: "Meditate") };
+
+        var detail = ActivityStatisticsCalculator.BuildDayDetail(Day, rows, new Dictionary<Guid, string>());
+
+        detail.Events.Should().ContainSingle();
+        detail.Events[0].Label.Should().Be("Habit +: Meditate");
+    }
+
+    [Fact]
     public void BuildDayDetail_sums_focus_minutes_from_aggregated_timer_rows()
     {
         var rows = new[]
@@ -167,8 +178,9 @@ public sealed class ActivityStatisticsCalculatorTests
         int hourUtc,
         ActivityEventType type,
         Guid? boardItemId,
-        int? durationSeconds = null) =>
-        new(At(day, hourUtc), type, boardItemId, durationSeconds);
+        int? durationSeconds = null,
+        string? customLabel = null) =>
+        new(At(day, hourUtc), type, boardItemId, durationSeconds, customLabel);
 
     private static DateTimeOffset At(DateOnly day, int hourUtc) =>
         new(day.Year, day.Month, day.Day, hourUtc, 0, 0, TimeSpan.Zero);

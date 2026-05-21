@@ -15,6 +15,7 @@ public sealed class LocalFirstBoardDataService(
     IAuthTokenStore tokens,
     RemoteBoardDataService remote,
     IServiceProvider services,
+    IUserTimeZoneService timeZone,
     ILogger<LocalFirstBoardDataService> logger)
     : IBoardDataService, IMauiBoardLocalStoreLifecycle
 {
@@ -862,7 +863,7 @@ public sealed class LocalFirstBoardDataService(
         }
     }
 
-    private static void ApplyLocalToggle(BoardSection section, LocalBoardItemRow row)
+    private void ApplyLocalToggle(BoardSection section, LocalBoardItemRow row)
     {
         switch (section)
         {
@@ -871,7 +872,7 @@ public sealed class LocalFirstBoardDataService(
                 break;
             case BoardSection.Daily:
             {
-                var today = DailySchedule.UtcToday;
+                var today = DailySchedule.LocalToday(timeZone);
                 var done = row.DailyLastCompletedOn == today || (row.DailyLastCompletedOn is null && row.IsCompleted);
                 if (done)
                 {
@@ -1012,9 +1013,9 @@ public sealed class LocalFirstBoardDataService(
     private async Task<bool> HasAuthAsync(CancellationToken cancellationToken) =>
         !string.IsNullOrEmpty(await tokens.GetAccessTokenAsync(cancellationToken));
 
-    private static BoardSnapshot ReadSnapshot(LocalBoardDbContext db, string userKey)
+    private BoardSnapshot ReadSnapshot(LocalBoardDbContext db, string userKey)
     {
-        var today = DailySchedule.UtcToday;
+        var today = DailySchedule.LocalToday(timeZone);
         var items = db.BoardItems.AsNoTracking().Where(x => x.UserKey == userKey).ToList();
         // Match BoardPersistenceService.GetSnapshotAsync ordering (web app).
         var habits = items.Where(x => x.Section == BoardSection.Habit)

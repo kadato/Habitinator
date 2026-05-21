@@ -25,6 +25,7 @@ public sealed class WebUserActivityLogService : IUserActivityLogService
         ActivityEventType eventType,
         Guid? boardItemId,
         int? durationSeconds = null,
+        string? itemTitleSnapshot = null,
         CancellationToken cancellationToken = default)
     {
         var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
@@ -32,7 +33,13 @@ public sealed class WebUserActivityLogService : IUserActivityLogService
         if (user.Identity?.IsAuthenticated != true) return;
 
         var userId = await _demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
-        await _persistence.LogActivityAsync(userId, eventType, boardItemId, durationSeconds, cancellationToken);
+        await _persistence.LogActivityAsync(
+            userId,
+            eventType,
+            boardItemId,
+            durationSeconds,
+            itemTitleSnapshot,
+            cancellationToken);
     }
 
     public async Task LogTimerSessionAsync(TimeSpan duration, Guid? boardItemId, string? customLabel = null,

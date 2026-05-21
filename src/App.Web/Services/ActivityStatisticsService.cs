@@ -9,11 +9,17 @@ namespace App.Web.Services;
 public sealed class ActivityStatisticsService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
+    private readonly IUserTimeZoneService _timeZone;
 
-    public ActivityStatisticsService(IDbContextFactory<ApplicationDbContext> dbFactory)
+    public ActivityStatisticsService(
+        IDbContextFactory<ApplicationDbContext> dbFactory,
+        IUserTimeZoneService timeZone)
     {
         _dbFactory = dbFactory;
+        _timeZone = timeZone;
     }
+
+    private DateOnly Today() => DailySchedule.LocalToday(_timeZone);
 
     public async Task<ActivityDayDetailDto> GetActivityDayDetailAsync(
         Guid userId,
@@ -47,7 +53,7 @@ public sealed class ActivityStatisticsService
         IReadOnlyDictionary<Guid, string> titles = boardIds.Count == 0
             ? new Dictionary<Guid, string>()
             : await db.BoardItems.AsNoTracking()
-                .Where(b => b.UserId == userId && b.DeletedAtUtc == null && boardIds.Contains(b.Id))
+                .Where(b => b.UserId == userId && boardIds.Contains(b.Id))
                 .ToDictionaryAsync(b => b.Id, b => b.Title, cancellationToken);
 
         return ActivityStatisticsCalculator.BuildDayDetail(day, rows, titles);
@@ -59,7 +65,7 @@ public sealed class ActivityStatisticsService
         string? tag,
         CancellationToken cancellationToken = default)
     {
-        var utcToday = DailySchedule.UtcToday;
+        var utcToday = Today();
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         var options = await BuildDailyPeriodOptionsAsync(db, userId, utcToday, cancellationToken);
         var (key, start, end) = ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, utcToday, options);
@@ -89,7 +95,7 @@ public sealed class ActivityStatisticsService
         string? tag,
         CancellationToken cancellationToken = default)
     {
-        var utcToday = DailySchedule.UtcToday;
+        var utcToday = Today();
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         var options = await BuildDailyPeriodOptionsAsync(db, userId, utcToday, cancellationToken);
         var (key, rangeStart, rangeEnd) =

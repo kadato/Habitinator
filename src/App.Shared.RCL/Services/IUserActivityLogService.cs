@@ -8,6 +8,7 @@ public interface IUserActivityLogService
         ActivityEventType eventType,
         Guid? boardItemId,
         int? durationSeconds = null,
+        string? itemTitleSnapshot = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>Records a focus timer session for statistics (independent of board progress updates).</summary>

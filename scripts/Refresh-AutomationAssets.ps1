@@ -3,6 +3,7 @@
   Regenerates committed documentation assets under docs/automation/.
   - Mermaid: solution graph + database FK flowchart (no running server).
   - OpenAPI JSON + Playwright PNGs: require App.Web reachable at -BaseUrl (PostgreSQL must match appsettings).
+  - After screenshots, writes 04-statistics-readme.png (top-half crop of 04-statistics.png for README gallery).
 
   Example:
     pwsh ./scripts/Refresh-AutomationAssets.ps1
@@ -117,6 +118,8 @@ try {
 catch {
     Write-Warning "Screenshot tests failed (is App.Web running with seeded demo guest?): $_"
 }
+
+& (Join-Path $repoRoot "scripts" "Crop-StatisticsReadmeScreenshot.ps1") -RepoRoot $repoRoot
 
 # List all generated screenshots
 if (Test-Path $shotDir) {

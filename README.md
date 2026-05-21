@@ -24,15 +24,21 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 
 <div align="center">
 
-<p>
-  <img src="docs/automation/screenshots/02-board.png" width="32%" alt="Board view with habits, dailies, and to-dos"/>
-  <img src="docs/automation/screenshots/03-edit-daily.png" width="32%" alt="Edit daily modal"/>
-  <img src="docs/automation/screenshots/04-statistics.png" width="32%" alt="Statistics heatmap and summaries"/>
+<p align="center">
+  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/02-board.png" title="Open full-size image on GitHub"><img src="docs/automation/screenshots/02-board.png" width="275" alt="Board view with habits, dailies, and to-dos"/></a>
+  &nbsp;&nbsp;
+  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/03-edit-daily.png" title="Open full-size image on GitHub"><img src="docs/automation/screenshots/03-edit-daily.png" width="275" alt="Edit daily modal"/></a>
+  &nbsp;&nbsp;
+  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/04-statistics.png" title="Open full-size statistics screenshot on GitHub"><img src="docs/automation/screenshots/04-statistics-readme.png" width="275" alt="Statistics heatmap and summaries (preview shows top half of the page)"/></a>
 </p>
-<p>
-  <img src="docs/automation/screenshots/05-activity-day-detail.png" width="48%" alt="Activity day detail modal"/>
-  <img src="docs/automation/screenshots/06-settings.png" width="48%" alt="Settings page"/>
+<p align="center"><sub><b>Board</b> · <b>Edit daily</b> · <b>Statistics</b></sub></p>
+
+<p align="center">
+  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/05-activity-day-detail.png" title="Open full-size image on GitHub"><img src="docs/automation/screenshots/05-activity-day-detail.png" width="395" alt="Activity day detail modal"/></a>
+  &nbsp;&nbsp;
+  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/06-settings.png" title="Open full-size image on GitHub"><img src="docs/automation/screenshots/06-settings.png" width="395" alt="Settings page"/></a>
 </p>
+<p align="center"><sub><b>Day detail</b> · <b>Settings</b></sub></p>
 
 </div>
 
@@ -94,7 +100,7 @@ dotnet build -t:Run -f net10.0-android
 
 ## Web UI screenshots
 
-These are produced by the **Playwright** test in `DocumentationScreenshotsTests` into [`docs/automation/screenshots/`](docs/automation/screenshots/). Regenerate with [`scripts/Refresh-AutomationAssets.ps1`](scripts/Refresh-AutomationAssets.ps1) (see [Documentation automation (local)](#documentation-automation-local)).
+These are produced by the **Playwright** test in `DocumentationScreenshotsTests` into [`docs/automation/screenshots/`](docs/automation/screenshots/). Regenerate with [`scripts/Refresh-AutomationAssets.ps1`](scripts/Refresh-AutomationAssets.ps1) (see [Documentation automation (local)](#documentation-automation-local)). That script also writes **`04-statistics-readme.png`** (top half of **`04-statistics.png`**) for the README **Preview** gallery, via [`scripts/Crop-StatisticsReadmeScreenshot.ps1`](scripts/Crop-StatisticsReadmeScreenshot.ps1).
 
 ---
 

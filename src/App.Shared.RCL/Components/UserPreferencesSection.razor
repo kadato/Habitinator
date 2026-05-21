@@ -1,6 +1,6 @@
 @using System.Globalization
 @inject IUserPreferencesService PreferencesService
-@inject ISnackbar Snackbar
+@inject IUserNotifier Notifier
 @inject IUserTimeZoneService TimeZoneService
 @implements IDisposable
 
@@ -216,7 +216,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Could not save preferences: {ex.Message}", Severity.Error);
+            await Notifier.NotifyAsync($"Could not save preferences: {ex.Message}", Severity.Error);
         }
     }
 

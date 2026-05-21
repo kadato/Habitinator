@@ -1,6 +1,6 @@
 @inject INotificationSettingsService NotificationSettingsService
 @inject IRemoteBoardRefreshService RemoteBoardRefresh
-@inject ISnackbar Snackbar
+@inject IUserNotifier Notifier
 @inject IUserTimeZoneService TimeZoneService
 @implements IDisposable
 
@@ -320,7 +320,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Could not save settings: {ex.Message}", Severity.Error);
+            await Notifier.NotifyAsync($"Could not save settings: {ex.Message}", Severity.Error);
         }
     }
 

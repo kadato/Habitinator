@@ -43,9 +43,8 @@ public sealed class GlobalTimerService
     public bool IsRunning => _runningSince.HasValue;
 
     /// <summary>
-    ///     The timer is paused for a "time's up" dialog; the user must log, pick not done, or (if misrouted) use
-    ///     <see cref="Start" />
-    ///     which will resume the same as not done.
+    ///     A "time's up" dialog is showing; the stopwatch keeps running. The user must log, pick not done, or (if
+    ///     misrouted) use <see cref="Start" /> which dismisses the prompt the same as not done.
     /// </summary>
     public bool AwaitingFocusTimeUpPrompt { get; private set; }
 
@@ -63,6 +62,8 @@ public sealed class GlobalTimerService
     public bool TryConsumeFocusDurationReached()
     {
         if (!IsRunning) return false;
+
+        if (AwaitingFocusTimeUpPrompt) return false;
 
         if (!_focusAlertAfter.HasValue || _focusAlertAfter <= TimeSpan.Zero) return false;
 
@@ -117,28 +118,27 @@ public sealed class GlobalTimerService
     }
 
     /// <summary>
-    ///     Resumes the stopwatch after a "not done" result on a focus <c>time's up</c> prompt, arming the next
-    ///     milestone at one more <see cref="FocusAlertAfter" /> interval from the paused total.
+    ///     Dismisses a focus <c>time's up</c> prompt after "not done". The stopwatch keeps running; no further
+    ///     time's up alerts fire until <see cref="Stop" /> or <see cref="Reset" /> and a new session starts.
     /// </summary>
     public void ResumeAfterFocusPromptNotDone()
     {
-        if (IsRunning) return;
-
         if (!AwaitingFocusTimeUpPrompt) return;
 
         AwaitingFocusTimeUpPrompt = false;
-        if (_focusAlertAfter is { } f && f > TimeSpan.Zero) _nextFocusMilestoneAtElapsed = _accumulated + f;
+        _nextFocusMilestoneAtElapsed = null;
 
-        _runningSince = _clock.UtcNow;
+        if (!IsRunning) _runningSince = _clock.UtcNow;
     }
 
     /// <summary>
-    ///     Stops the clock at the end of a focus block; call <see cref="Stop" /> to log, or
-    ///     <see cref="ResumeAfterFocusPromptNotDone" /> after "not done".
+    ///     Enters the focus <c>time's up</c> prompt state. The stopwatch keeps running; call <see cref="Stop" /> to log,
+    ///     or <see cref="ResumeAfterFocusPromptNotDone" /> after "not done".
     /// </summary>
     public void PauseForFocusTimeUp()
     {
-        Pause();
+        if (!IsRunning) return;
+
         AwaitingFocusTimeUpPrompt = true;
     }
 

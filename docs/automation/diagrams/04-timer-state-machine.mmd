@@ -1,5 +1,5 @@
 %% Global Timer State Machine
-%% Focus timer with auto-pause and milestone detection
+%% Focus timer with one-shot milestone alert (clock keeps running during prompt)
 
 stateDiagram-v2
     [*] --> Stopped: Initialize
@@ -38,10 +38,11 @@ stateDiagram-v2
     end note
 
     note right of AwaitingPrompt
-        FocusAlertAfter reached
+        FocusAlertAfter reached (once per session)
         Show "Time's up!" prompt
-        Pause time accumulation
-        Wait for user response
+        Stopwatch keeps running (modal time counts)
+        Block duplicate alerts until user responds
+        NotDone: clear milestone, no re-alert this session
     end note
 
     %% Milestone logic detail

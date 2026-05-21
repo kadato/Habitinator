@@ -74,7 +74,7 @@ public sealed class GlobalTimerServiceTests
     }
 
     [Fact]
-    public void TryConsumeFocusDurationReached_TrueWhileRunningPastMilestone_PauseClearsReadyState()
+    public void TryConsumeFocusDurationReached_TrueWhileRunningPastMilestone_PromptBlocksRepeat()
     {
         var clock = new FakeClock(new DateTimeOffset(2026, 4, 24, 10, 0, 0, TimeSpan.Zero));
         var timer = new GlobalTimerService(clock);
@@ -89,12 +89,52 @@ public sealed class GlobalTimerServiceTests
         clock.Advance(TimeSpan.FromMinutes(10));
         Assert.True(timer.TryConsumeFocusDurationReached());
         timer.PauseForFocusTimeUp();
+        Assert.True(timer.IsRunning);
         Assert.False(timer.TryConsumeFocusDurationReached());
         clock.Advance(TimeSpan.FromMinutes(1));
         timer.ResumeAfterFocusPromptNotDone();
         Assert.False(timer.TryConsumeFocusDurationReached());
         clock.Advance(TimeSpan.FromMinutes(25));
+        Assert.False(timer.TryConsumeFocusDurationReached());
+    }
+
+    [Fact]
+    public void PauseForFocusTimeUp_KeepsRunning_ModalTimeCountsTowardElapsed()
+    {
+        var clock = new FakeClock(new DateTimeOffset(2026, 4, 24, 10, 0, 0, TimeSpan.Zero));
+        var timer = new GlobalTimerService(clock);
+        timer.FocusAlertAfter = TimeSpan.FromMinutes(25);
+
+        timer.Start();
+        clock.Advance(TimeSpan.FromMinutes(25));
+        timer.PauseForFocusTimeUp();
+
+        Assert.True(timer.IsRunning);
+        Assert.True(timer.AwaitingFocusTimeUpPrompt);
+        Assert.Equal(TimeSpan.FromMinutes(25), timer.Elapsed);
+
+        clock.Advance(TimeSpan.FromMinutes(2));
+        Assert.Equal(TimeSpan.FromMinutes(27), timer.Elapsed);
+    }
+
+    [Fact]
+    public void ResumeAfterFocusPromptNotDone_SuppressesFurtherAlertsForSession()
+    {
+        var clock = new FakeClock(new DateTimeOffset(2026, 4, 24, 10, 0, 0, TimeSpan.Zero));
+        var timer = new GlobalTimerService(clock);
+        timer.FocusAlertAfter = TimeSpan.FromMinutes(25);
+
+        timer.Start();
+        clock.Advance(TimeSpan.FromMinutes(25));
         Assert.True(timer.TryConsumeFocusDurationReached());
+        timer.PauseForFocusTimeUp();
+        clock.Advance(TimeSpan.FromMinutes(5));
+        timer.ResumeAfterFocusPromptNotDone();
+
+        Assert.False(timer.AwaitingFocusTimeUpPrompt);
+        Assert.True(timer.IsRunning);
+        clock.Advance(TimeSpan.FromHours(2));
+        Assert.False(timer.TryConsumeFocusDurationReached());
     }
 
     [Fact]

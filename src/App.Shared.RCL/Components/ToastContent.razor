@@ -1,0 +1,15 @@
+<div class="undo-toast-body" @onclick="HandleDismiss" @onclick:stopPropagation="true">
+    <span class="undo-toast-message">@Message</span>
+</div>
+
+@code {
+    [Parameter] public string Message { get; set; } = string.Empty;
+
+    [Parameter] public Func<Task>? OnDismiss { get; set; }
+
+    private async Task HandleDismiss()
+    {
+        if (OnDismiss is not null)
+            await OnDismiss();
+    }
+}

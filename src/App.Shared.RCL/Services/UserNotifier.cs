@@ -43,7 +43,7 @@ public sealed class UserNotifier : IUserNotifier, IDisposable
         if (!_notificationRules.ShouldShowToast(settings, severity, _clock.UtcNow.UtcDateTime)) return;
 
         var ms = _notificationRules.VisibleStateDurationMs(settings.ToastDuration);
-        _snackbar.Add(message, severity, config => config.VisibleStateDuration = ms);
+        AppSnackbar.AddMessage(_snackbar, message, ms);
     }
 
     private async ValueTask<NotificationSettings> GetCachedAsync(CancellationToken cancellationToken)

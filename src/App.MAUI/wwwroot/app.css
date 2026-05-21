@@ -263,8 +263,8 @@ h1:focus {
     }
 }
 
-/* ── Undo toast (bottom-left snackbar) ─────────────────────────────────── */
-.habitinator-undo-toast {
+/* ── App toasts (bottom-left snackbar) ───────────────────────────────────── */
+.habitinator-toast {
     padding: 0 !important;
     background: var(--mud-palette-surface) !important;
     color: var(--mud-palette-text-primary) !important;
@@ -282,13 +282,13 @@ h1:focus {
     to   { opacity: 1; transform: translateY(0); }
 }
 
-.habitinator-undo-toast .mud-snackbar-icon,
-.habitinator-undo-toast .mud-snackbar-action,
-.habitinator-undo-toast .mud-snackbar-close-button {
+.habitinator-toast .mud-snackbar-icon,
+.habitinator-toast .mud-snackbar-action,
+.habitinator-toast .mud-snackbar-close-button {
     display: none !important;
 }
 
-.habitinator-undo-toast .mud-snackbar-content {
+.habitinator-toast .mud-snackbar-content {
     width: 100%;
     padding: 0 !important;
     margin: 0 !important;

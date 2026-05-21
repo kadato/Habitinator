@@ -156,11 +156,7 @@ public sealed class UndoService : IUndoService
                 Severity.Normal,
                 config =>
                 {
-                    config.VisibleStateDuration = ms;
-                    config.HideIcon = true;
-                    config.ShowCloseIcon = false;
-                    config.SnackbarTypeClass = "habitinator-undo-toast";
-                    config.SnackbarVariant = Variant.Text;
+                    AppSnackbar.Configure(config, ms);
                     config.DuplicatesBehavior = SnackbarDuplicatesBehavior.Allow;
                 },
                 key);

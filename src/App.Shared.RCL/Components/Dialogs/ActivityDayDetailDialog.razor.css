@@ -47,3 +47,32 @@
 .activity-day-detail-dialog :deep(.mud-progress-linear) {
     border-radius: 0.25rem;
 }
+
+.activity-day-detail-summary {
+    color: var(--mud-palette-text-primary);
+}
+
+.activity-day-detail-tag {
+    font-style: italic;
+}
+
+.activity-day-detail-activity {
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.activity-day-detail-activity--done {
+    color: var(--mud-palette-success);
+}
+
+.activity-day-detail-activity--plus {
+    color: var(--mud-palette-primary);
+}
+
+.activity-day-detail-activity--minus {
+    color: var(--mud-palette-warning);
+}
+
+.activity-day-detail-activity--focus {
+    color: var(--mud-palette-info);
+}

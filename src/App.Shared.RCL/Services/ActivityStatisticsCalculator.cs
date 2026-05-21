@@ -67,10 +67,15 @@ public static class ActivityStatisticsCalculator
     {
         var perDay = new Dictionary<DateOnly, (int count, int focusSec)>();
         var netDailyItemDay = BuildNetDailyItemDayMap(rows);
+        var netTodoItemDay = BuildNetToggleItemDayMap(
+            rows,
+            ActivityEventType.TodoComplete,
+            ActivityEventType.TodoUncomplete);
         foreach (var r in rows)
         {
             if (r.BoardItemId is { }
-                && r.EventType is ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete)
+                && r.EventType is ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete
+                    or ActivityEventType.TodoComplete or ActivityEventType.TodoUncomplete)
             {
                 continue;
             }
@@ -82,14 +87,8 @@ public static class ActivityStatisticsCalculator
             perDay[d] = (acc.count + 1, acc.focusSec + focus);
         }
 
-        foreach (var kvp in netDailyItemDay)
-        {
-            if (!kvp.Value) continue;
-
-            var d = kvp.Key.d;
-            if (!perDay.TryGetValue(d, out var acc)) acc = (0, 0);
-            perDay[d] = (acc.count + 1, acc.focusSec);
-        }
+        ApplyNetToggleCountsToPerDay(perDay, netDailyItemDay);
+        ApplyNetToggleCountsToPerDay(perDay, netTodoItemDay);
 
         var maxDayCount = 0;
         foreach (var kv in perDay)
@@ -268,20 +267,73 @@ public static class ActivityStatisticsCalculator
         IReadOnlyList<UserActivityEventRecord> rows,
         IReadOnlyDictionary<Guid, string> titles)
     {
+        var lastDailyToggle = BuildLastToggleItemDayMap(
+            rows,
+            ActivityEventType.DailyComplete,
+            ActivityEventType.DailyUncomplete);
+        var lastTodoToggle = BuildLastToggleItemDayMap(
+            rows,
+            ActivityEventType.TodoComplete,
+            ActivityEventType.TodoUncomplete);
+
         var list = new List<ActivityDayEventDto>(rows.Count);
+        var focusSec = 0;
         foreach (var r in rows.OrderBy(x => x.OccurredAtUtc))
         {
+            if (r.EventType is ActivityEventType.DailyUncomplete or ActivityEventType.TodoUncomplete)
+                continue;
+
+            if (r.BoardItemId is { } boardId)
+            {
+                var utcDay = DateOnly.FromDateTime(r.OccurredAtUtc.UtcDateTime);
+                if (r.EventType is ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete)
+                {
+                    if (!ShouldIncludeNetToggleRow(r, lastDailyToggle, boardId, utcDay, ActivityEventType.DailyComplete))
+                        continue;
+                }
+                else if (r.EventType is ActivityEventType.TodoComplete or ActivityEventType.TodoUncomplete)
+                {
+                    if (!ShouldIncludeNetToggleRow(r, lastTodoToggle, boardId, utcDay, ActivityEventType.TodoComplete))
+                        continue;
+                }
+            }
+            else if (r.EventType is ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete
+                     or ActivityEventType.TodoComplete or ActivityEventType.TodoUncomplete)
+            {
+                continue;
+            }
+
             var itemTitle = r.BoardItemId is { } id ? titles.GetValueOrDefault(id) : null;
             list.Add(new ActivityDayEventDto(
                 r.OccurredAtUtc,
                 r.EventType,
-                MapEventTypeLabel(r.EventType),
+                MapDayDetailEventLabel(r.EventType, itemTitle, r.CustomLabel),
                 itemTitle,
                 r.DurationSeconds,
                 r.CustomLabel));
+
+            if (r is { EventType: ActivityEventType.TimerSession, DurationSeconds: int s })
+                focusSec += s;
         }
 
-        return new ActivityDayDetailDto(day, list);
+        var focusMinutesTotal = (focusSec + 30) / 60;
+        return new ActivityDayDetailDto(day, list, focusMinutesTotal);
+    }
+
+    private static bool ShouldIncludeNetToggleRow(
+        UserActivityEventRecord row,
+        IReadOnlyDictionary<(Guid id, DateOnly d), UserActivityEventRecord> lastToggleByItemDay,
+        Guid boardId,
+        DateOnly utcDay,
+        ActivityEventType completeType)
+    {
+        if (!lastToggleByItemDay.TryGetValue((boardId, utcDay), out var last))
+            return false;
+
+        if (last.OccurredAtUtc != row.OccurredAtUtc || last.EventType != row.EventType)
+            return false;
+
+        return last.EventType == completeType;
     }
 
     private static List<ActivityHeatmapCellDto> BuildRangeContributionHeatmap(
@@ -324,17 +376,53 @@ public static class ActivityStatisticsCalculator
 
     /// <summary>
     ///     For each (board item, UTC calendar day), last event wins: daily is "done" for that day in stats
-    ///     only if the last DailyComplete/DailyUncomplete for that pair is <see cref="ActivityEventType.DailyComplete" />.
+    ///     only if the last complete/uncomplete for that pair is <paramref name="completeType" />.
     ///     Events are stored and grouped by UTC calendar day.
     /// </summary>
+    private static Dictionary<(Guid id, DateOnly d), bool> BuildNetToggleItemDayMap(
+        IReadOnlyList<UserActivityEventRecord> rows,
+        ActivityEventType completeType,
+        ActivityEventType uncompleteType)
+    {
+        var lastByKey = BuildLastToggleItemDayMap(rows, completeType, uncompleteType);
+        var result = new Dictionary<(Guid id, DateOnly d), bool>(lastByKey.Count);
+        foreach (var (key, last) in lastByKey)
+            result[key] = last.EventType == completeType;
+
+        return result;
+    }
+
+    private static void ApplyNetToggleCountsToPerDay(
+        Dictionary<DateOnly, (int count, int focusSec)> perDay,
+        IReadOnlyDictionary<(Guid id, DateOnly d), bool> netItemDay)
+    {
+        foreach (var kvp in netItemDay)
+        {
+            if (!kvp.Value) continue;
+
+            var d = kvp.Key.d;
+            if (!perDay.TryGetValue(d, out var acc)) acc = (0, 0);
+            perDay[d] = (acc.count + 1, acc.focusSec);
+        }
+    }
+
     private static Dictionary<(Guid id, DateOnly d), bool> BuildNetDailyItemDayMap(
-        IReadOnlyList<UserActivityEventRecord> rows)
+        IReadOnlyList<UserActivityEventRecord> rows) =>
+        BuildNetToggleItemDayMap(
+            rows,
+            ActivityEventType.DailyComplete,
+            ActivityEventType.DailyUncomplete);
+
+    private static Dictionary<(Guid id, DateOnly d), UserActivityEventRecord> BuildLastToggleItemDayMap(
+        IReadOnlyList<UserActivityEventRecord> rows,
+        ActivityEventType completeType,
+        ActivityEventType uncompleteType)
     {
         var byKey = new Dictionary<(Guid id, DateOnly d), List<UserActivityEventRecord>>();
         foreach (var r in rows)
         {
             if (r.BoardItemId is not { } id) continue;
-            if (r.EventType is not (ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete)) continue;
+            if (r.EventType != completeType && r.EventType != uncompleteType) continue;
             var d = DateOnly.FromDateTime(r.OccurredAtUtc.UtcDateTime);
             var key = (id, d);
             if (!byKey.TryGetValue(key, out var list))
@@ -346,14 +434,28 @@ public static class ActivityStatisticsCalculator
             list.Add(r);
         }
 
-        var result = new Dictionary<(Guid id, DateOnly d), bool>(byKey.Count);
+        var result = new Dictionary<(Guid id, DateOnly d), UserActivityEventRecord>(byKey.Count);
         foreach (var (key, list) in byKey)
-        {
-            var last = list.OrderBy(x => x.OccurredAtUtc).Last();
-            result[key] = last.EventType == ActivityEventType.DailyComplete;
-        }
+            result[key] = list.OrderBy(x => x.OccurredAtUtc).Last();
 
         return result;
+    }
+
+    private static string MapDayDetailEventLabel(
+        ActivityEventType eventType,
+        string? itemTitle,
+        string? customLabel)
+    {
+        var name = itemTitle ?? customLabel;
+        return eventType switch
+        {
+            ActivityEventType.DailyComplete => name is not null ? $"Completed daily: {name}" : "Completed daily",
+            ActivityEventType.TodoComplete => name is not null ? $"Completed to-do: {name}" : "Completed to-do",
+            ActivityEventType.HabitPlus => name is not null ? $"Habit +: {name}" : "Habit +",
+            ActivityEventType.HabitMinus => name is not null ? $"Habit −: {name}" : "Habit −",
+            ActivityEventType.TimerSession => name is not null ? $"Focus session: {name}" : "Focus session",
+            _ => name ?? eventType.ToString()
+        };
     }
 
     private static string MapEventTypeLabel(ActivityEventType t)

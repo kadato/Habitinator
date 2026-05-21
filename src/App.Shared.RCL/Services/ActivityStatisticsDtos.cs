@@ -48,7 +48,10 @@ public sealed record ActivityDayEventDto(
     int? DurationSeconds,
     string? CustomLabel = null);
 
-public sealed record ActivityDayDetailDto(DateOnly Date, IReadOnlyList<ActivityDayEventDto> Events);
+public sealed record ActivityDayDetailDto(
+    DateOnly Date,
+    IReadOnlyList<ActivityDayEventDto> Events,
+    int FocusMinutesTotal);
 
 public sealed record ActivityDashboardDto(
     string PeriodKey,

@@ -14,10 +14,27 @@
         }
         else if (_detail is { Events.Count: 0 })
         {
-            <MudText Color="Color.Secondary">No logged events for this day.</MudText>
+            @if (!string.IsNullOrWhiteSpace(TagFilter))
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="activity-day-detail-tag mb-2">
+                    Filtered by tag: @TagFilter
+                </MudText>
+            }
+            <MudText Color="Color.Secondary">No activity counted for this day.</MudText>
         }
         else if (_detail is not null)
         {
+            <div class="activity-day-detail-summary mb-3">
+                <MudText Typo="Typo.body2">
+                    @FormatActivitySummary(_detail)
+                </MudText>
+                @if (!string.IsNullOrWhiteSpace(TagFilter))
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="activity-day-detail-tag mt-1">
+                        Filtered by tag: @TagFilter
+                    </MudText>
+                }
+            </div>
             <MudTable Items="_detail.Events"
                       Dense="true"
                       Hover="true"
@@ -27,13 +44,15 @@
                       Class="activity-day-detail-table">
                 <HeaderContent>
                     <MudTh>Time</MudTh>
-                    <MudTh>Event</MudTh>
-                    <MudTh>Item</MudTh>
+                    <MudTh>Activity</MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="Time">@FormatLocalTime(context.OccurredAtUtc)</MudTd>
-                    <MudTd DataLabel="Event">@context.Label@FormatTimerSuffix(context)</MudTd>
-                    <MudTd DataLabel="Item">@(context.BoardItemTitle ?? context.CustomLabel ?? "—")</MudTd>
+                    <MudTd DataLabel="Activity">
+                        <span class="activity-day-detail-activity @GetActivityClass(context.EventType)">
+                            @context.Label@FormatTimerSuffix(context)
+                        </span>
+                    </MudTd>
                 </RowTemplate>
             </MudTable>
         }
@@ -78,10 +97,20 @@
         MudDialog?.Cancel();
     }
 
+    private static string FormatActivitySummary(ActivityDayDetailDto detail)
+    {
+        var count = detail.Events.Count;
+        var label = count == 1 ? "activity" : "activities";
+        var summary = $"{count} {label}";
+        if (detail.FocusMinutesTotal > 0)
+            summary += $" · {detail.FocusMinutesTotal} min focus";
+        return summary;
+    }
+
     private string FormatLocalTime(DateTimeOffset utcTime)
     {
         var localTime = TimeZoneService.ConvertToLocal(utcTime);
-        return localTime.ToString("HH:mm:ss");
+        return localTime.ToString("HH:mm");
     }
 
     private static string FormatTimerSuffix(ActivityDayEventDto e)
@@ -94,5 +123,15 @@
         var m = (s + 30) / 60;
         return m < 1 ? " (< 1 min)" : $" ({m} min)";
     }
+
+    private static string GetActivityClass(ActivityEventType eventType) =>
+        eventType switch
+        {
+            ActivityEventType.DailyComplete or ActivityEventType.TodoComplete => "activity-day-detail-activity--done",
+            ActivityEventType.HabitPlus => "activity-day-detail-activity--plus",
+            ActivityEventType.HabitMinus => "activity-day-detail-activity--minus",
+            ActivityEventType.TimerSession => "activity-day-detail-activity--focus",
+            _ => string.Empty
+        };
 
 }

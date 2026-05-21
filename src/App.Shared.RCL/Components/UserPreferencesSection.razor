@@ -75,6 +75,21 @@
             </MudStack>
         </MudPaper>
 
+        <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.subtitle1" Class="mb-1">Theme</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
+                    Choose your visual theme or sync with system preferences.
+                </MudText>
+                <MudSelect T="AppTheme" Label="Theme mode" Variant="Variant.Outlined" Dense="true"
+                           Value="_themeSelection" ValueChanged="OnThemeChanged">
+                    <MudSelectItem Value="@AppTheme.System">System default</MudSelectItem>
+                    <MudSelectItem Value="@AppTheme.Light">Light mode</MudSelectItem>
+                    <MudSelectItem Value="@AppTheme.Dark">Dark mode</MudSelectItem>
+                </MudSelect>
+            </MudStack>
+        </MudPaper>
+
         <MudButton Variant="Variant.Filled"
                    Color="Color.Primary"
                    Disabled="_saving"
@@ -100,6 +115,7 @@
     private string? _displayNameError;
     private string? _dateFormatError;
     private string? _dayStartError;
+    private AppTheme _themeSelection = AppTheme.System;
 
     private readonly List<(string Id, string Label)> _timeZones = new();
 
@@ -133,6 +149,7 @@
         _timeZoneSelection = string.IsNullOrWhiteSpace(_model.TimeZoneOverrideId)
             ? AutoTimeZoneValue
             : _model.TimeZoneOverrideId;
+        _themeSelection = _model.Theme;
         _detectedTimeZoneLabel = TimeZoneService.TimeZoneId ?? "Unknown";
         UpdateTimeZoneList();
         UpdateDatePreview();
@@ -182,7 +199,8 @@
             DateFormat = s.DateFormat,
             DayStartLocalTime = s.DayStartLocalTime,
             TimeZoneOverrideId = s.TimeZoneOverrideId,
-            DisplayName = s.DisplayName
+            DisplayName = s.DisplayName,
+            Theme = s.Theme
         };
     }
 
@@ -236,6 +254,13 @@
         _timeZoneSelection = value;
         _model.TimeZoneOverrideId = value == AutoTimeZoneValue ? null : value;
         UpdateResolvedTimeZoneLabel();
+    }
+
+    private void OnThemeChanged(AppTheme value)
+    {
+        if (_model is null) return;
+        _themeSelection = value;
+        _model.Theme = value;
     }
 
     private bool ValidateInputs()

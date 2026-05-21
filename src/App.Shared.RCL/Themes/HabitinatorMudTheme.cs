@@ -3,12 +3,38 @@ using MudBlazor;
 namespace App.Shared.RCL.Themes;
 
 /// <summary>
-///     Dark palette aligned with app shell CSS (<c>#030712</c> background, <c>#111827</c> surfaces).
+///     Dark and light palettes aligned with premium styling requirements.
 /// </summary>
 public static class HabitinatorMudTheme
 {
     public static readonly MudTheme Default = new()
     {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#3b82f6",
+            PrimaryContrastText = "#ffffff",
+            Secondary = "#64748b",
+            SecondaryContrastText = "#ffffff",
+            Tertiary = "#a78bfa",
+            Black = "#0f172a",
+            Background = "#f8fafc",
+            BackgroundGray = "#f1f5f9",
+            Surface = "#ffffff",
+            DrawerBackground = "#ffffff",
+            DrawerText = "#1e293b",
+            AppbarBackground = "#ffffff",
+            AppbarText = "#1e293b",
+            TextPrimary = "#0f172a",
+            TextSecondary = "#475569",
+            TextDisabled = "#94a3b8",
+            ActionDefault = "#475569",
+            Divider = "#e2e8f0",
+            DividerLight = "#f1f5f9",
+            TableLines = "#e2e8f0",
+            LinesDefault = "#e2e8f0",
+            Dark = "#0f172a",
+            DarkContrastText = "#ffffff"
+        },
         PaletteDark = new PaletteDark
         {
             Primary = "#3b82f6",

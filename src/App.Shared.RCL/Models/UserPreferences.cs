@@ -13,6 +13,8 @@ public sealed class UserPreferences
 
     public string? DisplayName { get; set; }
 
+    public AppTheme Theme { get; set; } = AppTheme.System;
+
     public static UserPreferences CreateDefault()
     {
         return new UserPreferences();

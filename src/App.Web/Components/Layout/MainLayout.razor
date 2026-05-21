@@ -1,4 +1,4 @@
-﻿@using System.Security.Claims
+@using System.Security.Claims
 @using global::App.Shared.RCL.Models
 @using global::App.Shared.RCL.Services
 @using global::App.Shared.RCL.Themes
@@ -6,7 +6,7 @@
 @inherits LayoutComponentBase
 @inject IUserPreferencesService PreferencesService
 
-<MudThemeProvider Theme="@HabitinatorMudTheme.Default" IsDarkMode="true"/>
+<MudThemeProvider @ref="_mudThemeProvider" Theme="@HabitinatorMudTheme.Default" @bind-IsDarkMode="@_isDarkMode"/>
 <MudPopoverProvider/>
 <MudDialogProvider/>
 <MudSnackbarProvider/>
@@ -71,11 +71,22 @@
 @code {
 
     private UserPreferences? _preferences;
+    private bool _isDarkMode = true;
+    private MudThemeProvider? _mudThemeProvider;
 
     protected override async Task OnInitializedAsync()
     {
         PreferencesService.Changed += OnPreferencesChanged;
         await LoadPreferencesAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _mudThemeProvider != null)
+        {
+            await ResolveThemeAsync();
+            await _mudThemeProvider.WatchSystemDarkModeAsync(OnSystemPreferenceChanged);
+        }
     }
 
     public void Dispose()
@@ -85,13 +96,48 @@
 
     private void OnPreferencesChanged()
     {
-        _ = InvokeAsync(LoadPreferencesAsync);
+        _ = InvokeAsync(async () =>
+        {
+            await LoadPreferencesAsync();
+        });
     }
 
     private async Task LoadPreferencesAsync()
     {
         _preferences = await PreferencesService.GetAsync();
+        await ResolveThemeAsync();
+    }
+
+    private async Task ResolveThemeAsync()
+    {
+        if (_preferences is null) return;
+
+        if (_preferences.Theme == AppTheme.Light)
+        {
+            _isDarkMode = false;
+        }
+        else if (_preferences.Theme == AppTheme.Dark)
+        {
+            _isDarkMode = true;
+        }
+        else // System
+        {
+            if (_mudThemeProvider != null)
+            {
+                _isDarkMode = await _mudThemeProvider.GetSystemDarkModeAsync();
+            }
+        }
         await InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnSystemPreferenceChanged(bool isDarkMode)
+    {
+        if (_preferences?.Theme == AppTheme.System)
+        {
+            _isDarkMode = isDarkMode;
+            StateHasChanged();
+        }
+        return Task.CompletedTask;
     }
 
     private string GetFullIdentity(AuthenticationState auth)

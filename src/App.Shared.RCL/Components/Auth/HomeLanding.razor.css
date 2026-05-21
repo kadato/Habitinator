@@ -1,10 +1,10 @@
 /* Reinforce slate surface when global CSS sets a different default on cards. */
 .home-landing-card {
-    background: #111827;
-    border-color: #374151;
+    background: var(--mud-palette-surface);
+    border-color: var(--mud-palette-divider);
 }
 
 .guest-login-paper {
-    background: #0f172a;
-    border-color: #1f2937;
+    background: var(--mud-palette-surface);
+    border-color: var(--mud-palette-divider);
 }

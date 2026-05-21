@@ -5,21 +5,21 @@
     overflow: hidden;
     background: linear-gradient(
         165deg,
-        color-mix(in srgb, var(--mud-palette-surface) 94%, #0f172a) 0%,
-        color-mix(in srgb, var(--mud-palette-background) 96%, #18181b) 100%
+        color-mix(in srgb, var(--mud-palette-surface) 94%, var(--mud-palette-black)) 0%,
+        color-mix(in srgb, var(--mud-palette-background) 96%, var(--mud-palette-black)) 100%
     );
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 8%, transparent);
     box-shadow:
-        0 12px 40px rgba(0, 0, 0, 0.35),
-        0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+        0 12px 40px color-mix(in srgb, var(--mud-palette-text-primary) 10%, transparent),
+        0 0 0 1px color-mix(in srgb, var(--mud-palette-text-primary) 4%, transparent) inset;
     transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
 .habitica-column:hover {
-    border-color: rgba(255, 255, 255, 0.12);
+    border-color: color-mix(in srgb, var(--mud-palette-text-primary) 15%, transparent);
     box-shadow:
-        0 16px 48px rgba(0, 0, 0, 0.4),
-        0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+        0 16px 48px color-mix(in srgb, var(--mud-palette-text-primary) 15%, transparent),
+        0 0 0 1px color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent) inset;
 }
 
 .habitica-column ::deep .mud-card-header,
@@ -62,12 +62,12 @@
 
 /* Column filter toggles: softer than default primary blue (filled + outlined). */
 .habitica-column ::deep .habitica-filter-btn.mud-button-outlined.mud-button-outlined-primary {
-    color: color-mix(in srgb, var(--mud-palette-primary) 50%, #94a3b8) !important;
+    color: color-mix(in srgb, var(--mud-palette-primary) 60%, var(--mud-palette-text-secondary)) !important;
     --mud-ripple-color: color-mix(in srgb, var(--mud-palette-primary) 40%, transparent) !important;
     border-color: color-mix(
         in srgb,
         var(--mud-palette-primary) 32%,
-        rgba(255, 255, 255, 0.14)
+        color-mix(in srgb, var(--mud-palette-text-primary) 14%, transparent)
     ) !important;
 }
 
@@ -76,35 +76,35 @@
 }
 
 .habitica-column ::deep .habitica-filter-btn.mud-button-filled.mud-button-filled-primary {
-    color: #e2e8f0 !important;
-    --mud-ripple-color: color-mix(in srgb, var(--mud-palette-primary) 35%, #e2e8f0) !important;
+    color: var(--mud-palette-primary-contrast-text) !important;
+    --mud-ripple-color: color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-primary-contrast-text)) !important;
     background-color: color-mix(
         in srgb,
         var(--mud-palette-primary) 38%,
-        #1e293b
+        color-mix(in srgb, var(--mud-palette-black) 80%, transparent)
     ) !important;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset !important;
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--mud-palette-surface) 15%, transparent) inset !important;
 }
 
 .habitica-column ::deep .habitica-filter-btn.mud-button-filled.mud-button-filled-primary:hover {
     background-color: color-mix(
         in srgb,
         var(--mud-palette-primary) 50%,
-        #1e293b
+        color-mix(in srgb, var(--mud-palette-black) 80%, transparent)
     ) !important;
 }
 
 .habitica-add-wrap ::deep .mud-input-outlined {
-    background: color-mix(in srgb, var(--mud-palette-black) 85%, transparent);
+    background: var(--mud-palette-surface);
     border-radius: 0.65rem;
 }
 
 .habitica-add-wrap ::deep .mud-input-outlined:hover {
-    border-color: rgba(255, 255, 255, 0.14) !important;
+    border-color: color-mix(in srgb, var(--mud-palette-text-primary) 14%, transparent) !important;
 }
 
 .habitica-list {
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-top: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
     padding: 0.5rem 0 0.25rem;
     display: flex;
     flex-direction: column;
@@ -119,17 +119,21 @@
     align-items: start;
     min-height: 2.85rem;
     padding: 0.5rem 0.65rem;
-    background: color-mix(in srgb, #18181b 92%, var(--mud-palette-surface));
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: color-mix(in srgb, var(--mud-palette-background) 30%, var(--mud-palette-surface));
+    border: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 8%, transparent);
     border-radius: 0.75rem;
     overflow: hidden;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow:
+        0 1px 0 color-mix(in srgb, var(--mud-palette-surface) 10%, transparent) inset,
+        0 2px 8px color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .habitica-card:hover {
-    border-color: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.07) inset, 0 4px 14px rgba(0, 0, 0, 0.28);
+    border-color: color-mix(in srgb, var(--mud-palette-text-primary) 15%, transparent);
+    box-shadow:
+        0 1px 0 color-mix(in srgb, var(--mud-palette-surface) 15%, transparent) inset,
+        0 4px 14px color-mix(in srgb, var(--mud-palette-text-primary) 12%, transparent);
 }
 
 /* Row 1: check/habit and title on the same row so they share one vertical center. */
@@ -223,9 +227,9 @@
     margin: 0.1rem 0 0.1rem 0;
     padding: 0.1rem 0.4rem 0.1rem 0.3rem;
     font-size: 0.7rem;
-    color: #d4d4d8;
-    background: #27272a;
-    border: 1px solid #3f3f46;
+    color: var(--mud-palette-text-secondary);
+    background: var(--mud-palette-background-gray);
+    border: 1px solid var(--mud-palette-divider);
     border-radius: 999px;
     cursor: pointer;
     font-variant-numeric: tabular-nums;
@@ -248,7 +252,7 @@
 .habitica-subtask-list__row ::deep .mud-typography,
 .habitica-subtask-list__row ::deep label {
     font-size: 0.82rem;
-    color: #d4d4d8;
+    color: var(--mud-palette-text-primary);
     line-height: 1.35;
 }
 
@@ -277,7 +281,7 @@
     justify-content: space-between;
     margin-top: 0.1rem;
     padding-top: 0.2rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    border-top: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 7%, transparent);
     min-height: 0;
 }
 
@@ -287,7 +291,7 @@
     align-items: center;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #f87171;
+    color: var(--mud-palette-error);
 }
 
 .habitica-todo-due__text {
@@ -299,7 +303,7 @@
     flex-direction: row;
     align-items: center;
     font-size: 0.75rem;
-    color: #a1a1aa;
+    color: var(--mud-palette-text-secondary);
     font-variant-numeric: tabular-nums;
     margin-left: auto;
 }
@@ -420,28 +424,28 @@
     min-height: 1.65rem;
     box-sizing: border-box;
     border-radius: 0.4rem;
-    border: 1.5px solid #52525b;
+    border: 1.5px solid var(--mud-palette-text-secondary);
     flex-shrink: 0;
     cursor: pointer;
     padding: 0;
     background-clip: padding-box;
-    color: #86efac;
+    color: var(--mud-palette-success-contrast-text);
     transition: border-color 0.12s ease, background-color 0.12s ease;
 }
 
 .habitica-check--daily {
-    background: #172554;
-    border-color: #60a5fa;
+    background: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, transparent);
 }
 
 .habitica-check--todo {
-    background: #451a03;
-    border-color: #fbbf24;
+    background: color-mix(in srgb, var(--mud-palette-warning) 12%, transparent);
+    border-color: color-mix(in srgb, var(--mud-palette-warning) 40%, transparent);
 }
 
 .habitica-check--ok {
-    background: #14532d;
-    border-color: #22c55e;
+    background: var(--mud-palette-success);
+    border-color: var(--mud-palette-success);
 }
 
 .habitica-check-glyph {
@@ -456,7 +460,7 @@
 }
 
 .habitica-col-foot {
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-top: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
     margin-top: 0.25rem;
     padding-top: 0.75rem !important;
 }

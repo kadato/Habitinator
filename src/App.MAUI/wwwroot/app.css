@@ -1,16 +1,16 @@
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    background: #030712;
-    color: #e5e7eb;
+    background: var(--mud-palette-background);
+    color: var(--mud-palette-text-primary);
     -webkit-tap-highlight-color: transparent;
 }
 
 a, .btn-link {
-    color: #60a5fa;
+    color: var(--mud-palette-primary);
 }
 
 a:hover, .btn-link:hover {
-    color: #93c5fd;
+    color: var(--mud-palette-primary-darken);
 }
 
 .btn-primary {
@@ -20,70 +20,70 @@ a:hover, .btn-link:hover {
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem #111827, 0 0 0 0.25rem #3b82f6;
+  box-shadow: 0 0 0 0.1rem var(--mud-palette-surface), 0 0 0 0.25rem var(--mud-palette-primary);
 }
 
 .form-control {
-    background-color: #1f2937;
-    color: #f3f4f6;
-    border-color: #374151;
+    background-color: var(--mud-palette-surface);
+    color: var(--mud-palette-text-primary);
+    border-color: var(--mud-palette-divider);
 }
 
 .form-control::placeholder {
-    color: #6b7280;
+    color: var(--mud-palette-text-disabled);
 }
 
 .form-control:focus {
-    background-color: #111827;
-    color: #f9fafb;
-    border-color: #3b82f6;
+    background-color: var(--mud-palette-background);
+    color: var(--mud-palette-text-primary);
+    border-color: var(--mud-palette-primary);
 }
 
 .form-control:disabled,
 .form-control[readonly] {
-    background-color: #111827;
-    opacity: 1;
+    background-color: var(--mud-palette-background-gray);
+    opacity: 0.7;
 }
 
 .content label,
 .form-label {
-    color: #d1d5db;
+    color: var(--mud-palette-text-secondary);
 }
 
 .form-check-label {
-    color: #d1d5db;
+    color: var(--mud-palette-text-secondary);
 }
 
 .form-check-input {
-    background-color: #1f2937;
-    border-color: #4b5563;
+    background-color: var(--mud-palette-surface);
+    border-color: var(--mud-palette-divider);
 }
 
 .form-check-input:checked {
-    background-color: #2563eb;
-    border-color: #2563eb;
+    background-color: var(--mud-palette-primary);
+    border-color: var(--mud-palette-primary);
 }
 
 .btn-outline-secondary {
-    color: #d1d5db;
-    border-color: #4b5563;
+    color: var(--mud-palette-text-secondary);
+    border-color: var(--mud-palette-divider);
 }
 
 .btn-outline-secondary:hover {
-    color: #f9fafb;
-    background-color: #374151;
-    border-color: #6b7280;
+    color: var(--mud-palette-text-primary);
+    background-color: var(--mud-palette-action-hover);
+    border-color: var(--mud-palette-text-secondary);
 }
 
 .demo-account-card {
-    background: #111827;
-    border: 1px solid #374151;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
     border-radius: 0.375rem;
     padding: 1rem;
 }
 
 .demo-account-title {
-    color: #9ca3af;
+    color: var(--mud-palette-text-secondary);
     font-size: 0.8125rem;
     font-weight: 600;
     letter-spacing: 0.04em;
@@ -96,16 +96,16 @@ a:hover, .btn-link:hover {
 }
 
 .auth-form-hint {
-    color: #cbd5e1;
+    color: var(--mud-palette-text-secondary);
     font-size: 0.875rem;
     line-height: 1.45;
     margin: 0 0 0.75rem 0;
 }
 
 .app-top-row {
-    background: #111827;
-    border-bottom: 1px solid #1f2937;
-    color: #9ca3af;
+    background: var(--mud-palette-surface);
+    border-bottom: 1px solid var(--mud-palette-divider);
+    color: var(--mud-palette-text-secondary);
     justify-content: flex-start;
 }
 
@@ -193,8 +193,8 @@ h1:focus {
 .app-page-title {
     font-weight: 700;
     letter-spacing: -0.02em;
-    color: #f3f4f6;
-    border-bottom: 1px solid color-mix(in srgb, #3b82f6 25%, #374151 75%);
+    color: var(--mud-palette-text-primary);
+    border-bottom: 1px solid var(--mud-palette-divider);
     padding-bottom: 0.5rem;
     margin-bottom: 1rem;
 }
@@ -253,7 +253,7 @@ h1:focus {
         position: sticky;
         top: 0;
         height: env(safe-area-inset-top);
-        background-color: #111827;
+        background-color: var(--mud-palette-surface);
         width: 100%;
         z-index: 1;
     }

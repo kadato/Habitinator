@@ -1,5 +1,5 @@
 .board-shell {
-    color: #e5e7eb;
+    color: var(--mud-palette-text-primary);
     display: flex;
     flex-direction: column;
     /* App bar + MudMainContent padding */
@@ -23,8 +23,8 @@
 .board-stat-strip {
     border-radius: 0.875rem;
     background: color-mix(in srgb, var(--mud-palette-surface) 88%, transparent);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 8%, transparent);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18), inset 0 1px 0 color-mix(in srgb, var(--mud-palette-text-primary) 5%, transparent);
     backdrop-filter: blur(8px);
     margin-bottom: 0.1rem;
 }

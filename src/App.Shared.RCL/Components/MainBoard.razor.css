@@ -1,10 +1,17 @@
 .board-shell {
+    --board-sticky-top: 4.5rem;
     color: var(--mud-palette-text-primary);
     display: flex;
     flex-direction: column;
     /* App bar + MudMainContent padding */
     min-height: calc(100vh - 7rem);
     min-height: calc(100dvh - 7rem);
+}
+
+@media (max-width: 959.98px) {
+    .board-shell {
+        min-height: auto;
+    }
 }
 
 .board-columns-stage {
@@ -14,6 +21,33 @@
     justify-content: flex-start;
     min-height: 0;
     padding: 0.15rem 0.25rem 0.75rem;
+}
+
+/* Mobile: MudTabs with one column per panel. Desktop: three-column grid only. */
+.board-columns-mobile {
+    display: none !important;
+}
+
+.board-columns-desktop {
+    display: block;
+}
+
+.board-section-tabs {
+    width: 100%;
+}
+
+.board-section-tabs ::deep .mud-tab-panel-content {
+    padding-top: 0.5rem;
+}
+
+@media (max-width: 959.98px) {
+    .board-columns-mobile {
+        display: block !important;
+    }
+
+    .board-columns-desktop {
+        display: none !important;
+    }
 }
 
 .board-columns-grid {
@@ -62,6 +96,36 @@
     max-width: 14rem;
 }
 
+@media (max-width: 599.98px) {
+    .board-stat-strip-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .board-stat-chips {
+        width: 100%;
+    }
+
+    .board-stat-filters {
+        width: 100%;
+        justify-content: stretch;
+        min-width: 0;
+    }
+
+    .board-search-field.board-search-pill {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+
+    .board-tags-menu-activator {
+        width: 100%;
+    }
+
+    .board-tags-menu-activator ::deep .board-tags-trigger {
+        width: 100%;
+    }
+}
+
 .board-search-pill ::deep .mud-input-outlined {
     border-radius: 9999px;
 }
@@ -104,11 +168,22 @@
     border-radius: 9999px !important;
 }
 
+.board-tags-menu-panel {
+    min-width: min(17rem, 100vw - 2rem);
+    max-width: min(24rem, 100vw - 2rem);
+}
+
 .board-tag-filter-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.25rem 1rem;
     align-items: start;
+}
+
+@media (max-width: 399.98px) {
+    .board-tag-filter-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .habitica-board-wrap {

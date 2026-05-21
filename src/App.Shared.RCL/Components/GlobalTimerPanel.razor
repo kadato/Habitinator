@@ -1,144 +1,161 @@
 @inject GlobalTimerService TimerService
 @implements IDisposable
 
-<MudCard Class="timer-panel w-100" Elevation="0" Outlined="true">
+<MudCard Class="@GetTimerPanelClass()" Elevation="0" Outlined="true">
     <MudCardContent Class="pa-2 pa-sm-3 timer-panel__content">
-        <div class="timer-compact">
-            <MudStack Row="true"
-                      Spacing="2"
-                      AlignItems="AlignItems.Center"
-                      Class="timer-clock-header"
-                      Wrap="Wrap.NoWrap"
-                      role="group"
-                      aria-label="Session timer">
-                <MudIcon Icon="@Icons.Material.Filled.AccessTime"
-                         Color="Color.Tertiary"
-                         Size="Size.Large"
-                         Class="timer-clock-icon"
-                         title="Session timer"/>
-                <MudText Typo="Typo.h4"
-                         Color="Color.Default"
-                         GutterBottom="false"
-                         Class="timer-value"
-                         role="timer"
-                         aria-live="polite">
-                    @TimerService.Elapsed.ToString(@"hh\:mm\:ss")
-                </MudText>
-            </MudStack>
-            <div class="timer-inputs-pair">
-                <div class="timer-target-input-row">
-                    <MudAutocomplete T="string"
-                                     Value="@_sessionTargetText"
-                                     ValueChanged="OnSessionTargetValueChanged"
-                                     SearchFunc="SearchSessionTargetsAsync"
-                                     Label="Session target"
-                                     Placeholder="Search board or type a custom label"
-                                     Variant="Variant.Outlined"
-                                     Margin="Margin.Dense"
-                                     Class="timer-target-field flex-grow-1"
-                                      Immediate="true"
-                                      CoerceValue="true"
-                                      Strict="false"
-                                     MinCharacters="0"
-                                     Clearable="true"
-                                     Adornment="Adornment.Start"
-                                     AdornmentIcon="@GetTimerTargetLeadIcon()"
-                                     ResetValueOnEmptyText="true">
-                        <ItemTemplate Context="rowKey">
-                            @{
-                                _sessionLabelToTarget.TryGetValue(rowKey, out (string TargetType, string TargetTitle, Guid _) entry);
-                            }
-                            <MudStack Row="true"
-                                      Spacing="2"
-                                      AlignItems="AlignItems.Center"
-                                      Class="w-100">
-                                <MudIcon Color="Color.Default"
-                                         Icon="@BoardSectionVisuals.GetMudIconForTargetType(entry.TargetType)"
-                                         Size="Size.Small"/>
-                                <MudText Typo="Typo.body2" Class="flex-grow-1 text-truncate">@rowKey</MudText>
-                            </MudStack>
-                        </ItemTemplate>
-                    </MudAutocomplete>
-                </div>
-                <div class="timer-focus-field" @onkeydown="OnFocusDurationKeyDown">
+        @if (IsSessionActive)
+        {
+            <div class="timer-running-strip" role="group" aria-label="Active session timer">
+                <div class="timer-running-strip__main">
                     <MudStack Row="true"
-                              Spacing="0"
+                              Spacing="2"
                               AlignItems="AlignItems.Center"
-                              Class="timer-focus-input-row">
-                        <MudTextField T="string"
-                                      @bind-Text="FocusDurationText"
-                                      OnBlur="OnFocusDurationBlur"
-                                      Label="Time's up after"
-                                      Placeholder="e.g. 25, 1:20, 90s, 0:0:30"
-                                      Clearable="true"
-                                      Variant="Variant.Outlined"
-                                      Margin="Margin.Dense"
-                                      Class="timer-focus-textfield w-100 flex-grow-1"
-                                      Immediate="true"
-                                      Error="@_focusDurationParseError"
-                                      ErrorText="@_focusDurationErrorText"/>
-                        <MudTooltip ShowOnHover="true"
-                                    ShowOnClick="true"
-                                    ShowOnFocus="true"
-                                    Delay="100"
-                                    Arrow="true"
-                                    Placement="Placement.Top">
-                            <ChildContent>
-                                <MudIconButton Icon="@Icons.Material.Filled.Info"
-                                               Variant="Variant.Text"
-                                               Size="Size.Small"
-                                               Color="Color.Default"
-                                               Class="timer-focus-info-icon"
-                                               aria-label="How time's up alert works"/>
-                            </ChildContent>
-                            <TooltipContent>
-                                <MudText Typo="Typo.caption" Class="focus-duration-help-text">
-                                    @FocusDurationInput.HelpTooltip
-                                </MudText>
-                            </TooltipContent>
-                        </MudTooltip>
+                              Justify="Justify.Center"
+                              Class="timer-clock-header timer-clock-header--strip"
+                              Wrap="Wrap.NoWrap">
+                        <MudIcon Icon="@Icons.Material.Filled.AccessTime"
+                                 Color="Color.Tertiary"
+                                 Size="Size.Medium"
+                                 Class="timer-clock-icon timer-clock-icon--strip"
+                                 title="Session timer"/>
+                        <MudText Typo="Typo.h5"
+                                 Color="Color.Default"
+                                 GutterBottom="false"
+                                 Class="timer-value timer-value--strip"
+                                 role="timer"
+                                 aria-live="polite">
+                            @TimerService.Elapsed.ToString(@"hh\:mm\:ss")
+                        </MudText>
                     </MudStack>
+                    @if (!string.IsNullOrWhiteSpace(GetRunningTargetLabel()))
+                    {
+                        <MudText Typo="Typo.body2"
+                                 Class="timer-running-target mud-text-secondary"
+                                 title="@GetRunningTargetLabel()">
+                            @GetRunningTargetLabel()
+                        </MudText>
+                    }
+                </div>
+                <div class="timer-running-strip__actions">
+                    @if (TimerService.IsRunning)
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Warning"
+                                   StartIcon="@Icons.Material.Filled.Pause"
+                                   Class="timer-btn timer-btn--pause"
+                                   OnClick="Pause"
+                                   Size="Size.Small"
+                                   aria-label="Pause timer">
+                            Pause
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Success"
+                                   StartIcon="@Icons.Material.Filled.PlayArrow"
+                                   Class="timer-btn timer-btn--start"
+                                   OnClick="Start"
+                                   Size="Size.Small"
+                                   Disabled="@(!CanStart)"
+                                   aria-label="Resume timer">
+                            Resume
+                        </MudButton>
+                    }
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Stop"
+                               Class="timer-btn timer-btn--stop"
+                               OnClick="StopAndLog"
+                               Size="Size.Small"
+                               aria-label="Stop and log session">
+                        Stop &amp; log
+                    </MudButton>
                 </div>
             </div>
 
-            <div class="timer-compact__actions">
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Success"
-                           StartIcon="@Icons.Material.Filled.PlayArrow"
-                           Class="timer-btn timer-btn--start"
-                           OnClick="Start"
-                           Size="Size.Small"
-                           Disabled="@(!CanStart)">
-                    Start
-                </MudButton>
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Warning"
-                           StartIcon="@Icons.Material.Filled.Pause"
-                           Class="timer-btn timer-btn--pause"
-                           OnClick="Pause"
-                           Size="Size.Small"
-                           Disabled="@(!TimerService.IsRunning)">
-                    Pause
-                </MudButton>
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Stop"
-                           Class="timer-btn timer-btn--stop"
-                           OnClick="StopAndLog"
-                           Size="Size.Small">
-                    Stop &amp; log
-                </MudButton>
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Error"
-                           StartIcon="@Icons.Material.Filled.Refresh"
-                           Class="timer-btn timer-btn--reset"
-                           OnClick="Reset"
-                           Size="Size.Small"
-                           Disabled="@(!CanReset)">
-                    Reset
-                </MudButton>
+            <MudExpansionPanels Class="timer-settings-panels mt-2" Elevation="0">
+                <MudExpansionPanel @bind-Expanded="_settingsExpanded" Text="Timer settings">
+                    @RenderTimerInputs
+                    <div class="timer-compact__actions timer-compact__actions--settings mt-2">
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Error"
+                                   StartIcon="@Icons.Material.Filled.Refresh"
+                                   Class="timer-btn timer-btn--reset"
+                                   OnClick="Reset"
+                                   Size="Size.Small"
+                                   Disabled="@(!CanReset)">
+                            Reset
+                        </MudButton>
+                    </div>
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        }
+        else
+        {
+            <div class="timer-compact timer-compact--idle">
+                <MudStack Row="true"
+                          Spacing="2"
+                          AlignItems="AlignItems.Center"
+                          Justify="Justify.Center"
+                          Class="timer-clock-header"
+                          Wrap="Wrap.NoWrap"
+                          role="group"
+                          aria-label="Session timer">
+                    <MudIcon Icon="@Icons.Material.Filled.AccessTime"
+                             Color="Color.Tertiary"
+                             Size="Size.Large"
+                             Class="timer-clock-icon"
+                             title="Session timer"/>
+                    <MudText Typo="Typo.h4"
+                             Color="Color.Default"
+                             GutterBottom="false"
+                             Class="timer-value"
+                             role="timer"
+                             aria-live="polite">
+                        @TimerService.Elapsed.ToString(@"hh\:mm\:ss")
+                    </MudText>
+                </MudStack>
+                @RenderTimerInputs
+                <div class="timer-compact__actions">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Success"
+                               StartIcon="@Icons.Material.Filled.PlayArrow"
+                               Class="timer-btn timer-btn--start"
+                               OnClick="Start"
+                               Size="Size.Small"
+                               Disabled="@(!CanStart)">
+                        Start
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Warning"
+                               StartIcon="@Icons.Material.Filled.Pause"
+                               Class="timer-btn timer-btn--pause"
+                               OnClick="Pause"
+                               Size="Size.Small"
+                               Disabled="@(!TimerService.IsRunning)">
+                        Pause
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Stop"
+                               Class="timer-btn timer-btn--stop"
+                               OnClick="StopAndLog"
+                               Size="Size.Small">
+                        Stop &amp; log
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Error"
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               Class="timer-btn timer-btn--reset"
+                               OnClick="Reset"
+                               Size="Size.Small"
+                               Disabled="@(!CanReset)">
+                        Reset
+                    </MudButton>
+                </div>
             </div>
-        </div>
+        }
     </MudCardContent>
 </MudCard>
 
@@ -159,6 +176,11 @@
     private bool _focusDurationFieldInitialized;
     private TimeSpan? _lastSyncedFocusAlertAfter;
     private string _focusDurationText = string.Empty;
+    private bool _settingsExpanded;
+    private bool _wasRunning;
+
+    private bool IsSessionActive =>
+        TimerService.IsRunning || TimerService.Elapsed > TimeSpan.Zero;
 
     private string FocusDurationText
     {
@@ -199,6 +221,98 @@
     private readonly List<string> _sessionTargetOptions = [];
     private readonly Dictionary<string, (string TargetType, string TargetTitle, Guid ItemId)> _sessionLabelToTarget = new(StringComparer.Ordinal);
 
+    private string GetTimerPanelClass() =>
+        IsSessionActive ? "timer-panel w-100 timer-panel--active" : "timer-panel w-100";
+
+    private string GetRunningTargetLabel()
+    {
+        if (string.IsNullOrWhiteSpace(_sessionTargetText))
+        {
+            return FormatTargetForField(TimerService);
+        }
+
+        return _sessionTargetText;
+    }
+
+    private RenderFragment RenderTimerInputs => __builder =>
+    {
+        <div class="timer-inputs-pair">
+            <div class="timer-target-input-row">
+                <MudAutocomplete T="string"
+                                 Value="@_sessionTargetText"
+                                 ValueChanged="OnSessionTargetValueChanged"
+                                 SearchFunc="SearchSessionTargetsAsync"
+                                 Label="Session target"
+                                 Placeholder="Search board or type a custom label"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Class="timer-target-field flex-grow-1"
+                                 Immediate="true"
+                                 CoerceValue="true"
+                                 Strict="false"
+                                 MinCharacters="0"
+                                 Clearable="true"
+                                 Adornment="Adornment.Start"
+                                 AdornmentIcon="@GetTimerTargetLeadIcon()"
+                                 ResetValueOnEmptyText="true">
+                    <ItemTemplate Context="rowKey">
+                        @{
+                            _sessionLabelToTarget.TryGetValue(rowKey, out (string TargetType, string TargetTitle, Guid _) entry);
+                        }
+                        <MudStack Row="true"
+                                  Spacing="2"
+                                  AlignItems="AlignItems.Center"
+                                  Class="w-100">
+                            <MudIcon Color="Color.Default"
+                                     Icon="@BoardSectionVisuals.GetMudIconForTargetType(entry.TargetType)"
+                                     Size="Size.Small"/>
+                            <MudText Typo="Typo.body2" Class="flex-grow-1 text-truncate">@rowKey</MudText>
+                        </MudStack>
+                    </ItemTemplate>
+                </MudAutocomplete>
+            </div>
+            <div class="timer-focus-field" @onkeydown="OnFocusDurationKeyDown">
+                <MudStack Row="true"
+                          Spacing="0"
+                          AlignItems="AlignItems.Center"
+                          Class="timer-focus-input-row">
+                    <MudTextField T="string"
+                                  @bind-Text="FocusDurationText"
+                                  OnBlur="OnFocusDurationBlur"
+                                  Label="Time's up after"
+                                  Placeholder="e.g. 25, 1:20, 90s, 0:0:30"
+                                  Clearable="true"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Class="timer-focus-textfield w-100 flex-grow-1"
+                                  Immediate="true"
+                                  Error="@_focusDurationParseError"
+                                  ErrorText="@_focusDurationErrorText"/>
+                    <MudTooltip ShowOnHover="true"
+                                ShowOnClick="true"
+                                ShowOnFocus="true"
+                                Delay="100"
+                                Arrow="true"
+                                Placement="Placement.Top">
+                        <ChildContent>
+                            <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                           Variant="Variant.Text"
+                                           Size="Size.Small"
+                                           Color="Color.Default"
+                                           Class="timer-focus-info-icon"
+                                           aria-label="How time's up alert works"/>
+                        </ChildContent>
+                        <TooltipContent>
+                            <MudText Typo="Typo.caption" Class="focus-duration-help-text">
+                                @FocusDurationInput.HelpTooltip
+                            </MudText>
+                        </TooltipContent>
+                    </MudTooltip>
+                </MudStack>
+            </div>
+        </div>
+    };
+
     protected override void OnInitialized()
     {
         _uiTickCts = new CancellationTokenSource();
@@ -209,9 +323,6 @@
     protected override void OnParametersSet()
     {
         RebuildSessionTargetOptions();
-        // Only sync the text box from TimerService when the *service* target changes. Otherwise every
-        // MainBoard re-render (board refresh, remote update) overwrites the field while the user is
-        // still typing a label that has not yet been committed to the service.
         var key = (TimerService.TargetId, TimerService.TargetType, TimerService.BoardItemId);
         if (!_sessionTargetFieldInitialized || key != _lastSyncedSessionTarget)
         {
@@ -221,6 +332,13 @@
         }
 
         SyncFocusDurationFromServiceIfChanged();
+
+        if (TimerService.IsRunning && !_wasRunning)
+        {
+            _settingsExpanded = false;
+        }
+
+        _wasRunning = TimerService.IsRunning;
     }
 
     private void SyncFocusDurationFromServiceIfChanged()
@@ -247,6 +365,13 @@
         }
 
         SyncFocusDurationFromServiceIfChanged();
+
+        if (TimerService.IsRunning && !_wasRunning)
+        {
+            _settingsExpanded = false;
+        }
+
+        _wasRunning = TimerService.IsRunning;
     }
 
     private void OnFocusDurationBlur()
@@ -400,20 +525,6 @@
         return BoardSectionVisuals.GetMudIconForTargetType(TimerService.TargetType);
     }
 
-    private string GetTimerTargetLeadTitle()
-    {
-        return string.IsNullOrEmpty(TimerService.TargetId)
-            ? "No target"
-            : TimerService.TargetType switch
-            {
-                "Habit" => "Habit",
-                "Daily" => "Daily",
-                "Todo" => "To-do",
-                "Session" => "Session",
-                _ => "Session"
-            };
-    }
-
     private Task<IEnumerable<string>> SearchSessionTargetsAsync(string value, CancellationToken cancellationToken)
     {
         return Task.FromResult(SearchSessionTargets(value));
@@ -473,16 +584,20 @@
         }
 
         TimerService.Start();
+        _settingsExpanded = false;
+        _wasRunning = true;
     }
 
     private void Pause()
     {
         TimerService.Pause();
+        _wasRunning = false;
     }
 
     private void Reset()
     {
         TimerService.Reset();
+        _settingsExpanded = false;
     }
 
     private async Task StopAndLog()
@@ -498,6 +613,8 @@
         _focusDurationText = string.Empty;
         _lastSyncedFocusAlertAfter = null;
         _focusDurationFieldInitialized = true;
+        _settingsExpanded = false;
+        _wasRunning = false;
     }
 
     public void Dispose()
@@ -506,5 +623,4 @@
         _uiTick?.Dispose();
         _uiTickCts?.Dispose();
     }
-
 }

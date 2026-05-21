@@ -464,3 +464,24 @@
     margin-top: 0.25rem;
     padding-top: 0.75rem !important;
 }
+
+@media (max-width: 959.98px) {
+    .habitica-column {
+        min-height: auto;
+    }
+}
+
+@media (max-width: 599.98px) {
+    .habitica-check {
+        width: 2.25rem;
+        height: 2.25rem;
+        min-width: 2.25rem;
+        min-height: 2.25rem;
+    }
+
+    .habitica-sq,
+    .habitica-sq-spacer {
+        width: 2.25rem;
+        height: 2.25rem;
+    }
+}

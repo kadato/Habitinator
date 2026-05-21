@@ -4,10 +4,18 @@
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 80%, transparent);
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.timer-panel--active {
+    position: sticky;
+    top: var(--board-sticky-top, 4.5rem);
+    z-index: calc(var(--mud-zindex-appbar, 1100) - 2);
+    background: var(--mud-palette-surface);
 }
 
 .timer-panel__content {
@@ -30,11 +38,55 @@
         var(--mud-palette-tertiary),
         var(--mud-palette-secondary)
     );
+    border-radius: 16px 16px 0 0;
+}
+
+/* Active session: compact sticky strip */
+.timer-running-strip {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+    width: 100%;
+}
+
+.timer-running-strip__main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.timer-running-target {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+    font-weight: 500;
+}
+
+.timer-running-strip__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.timer-running-strip__actions .timer-btn {
+    width: 100%;
+    justify-content: center;
+}
+
+.timer-settings-panels {
+    border-radius: 0.65rem;
+}
+
+.timer-settings-panels ::deep .mud-expand-panel {
+    background: transparent;
 }
 
 /*
  * Toolbar: CSS grid so the middle column always consumes space between clock and buttons.
- * (Nested flex + width:0 was still leaving a gap with Mud’s markup.)
  */
 .timer-compact {
     display: grid;
@@ -45,30 +97,64 @@
     box-sizing: border-box;
 }
 
-@media (min-width: 600px) {
+@media (min-width: 960px) {
     .timer-compact {
         grid-template-columns: max-content minmax(0, 1fr) auto;
-        /* Single vertical band: clock, field row, and actions share a common center (WebView + browser) */
         align-items: center;
     }
 }
 
-@media (max-width: 599.98px) {
+@media (max-width: 959.98px) {
     .timer-compact {
         grid-template-columns: minmax(0, 1fr);
     }
 
+    .timer-compact .timer-clock-header {
+        justify-self: center;
+        width: 100% !important;
+        max-width: 100%;
+        justify-content: center !important;
+    }
+
     .timer-compact__actions {
-        justify-self: end;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        width: 100%;
+        justify-self: stretch;
+        justify-content: stretch;
+    }
+
+    .timer-compact__actions .timer-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .timer-running-strip__main {
+        align-items: center;
+        text-align: center;
+    }
+
+    .timer-running-strip__main .timer-clock-header {
+        width: 100% !important;
+        max-width: 100%;
+        justify-content: center !important;
+    }
+
+    .timer-running-target {
+        text-align: center;
     }
 }
 
-/* MudStack.timer-clock-header */
 .timer-clock-header {
     min-width: 0;
     flex-shrink: 0;
     align-self: center;
     width: max-content;
+}
+
+.timer-clock-header--strip {
+    width: auto;
 }
 
 .timer-clock-icon {
@@ -81,16 +167,22 @@
     justify-content: center;
 }
 
+.timer-clock-icon--strip {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
 .timer-clock-icon ::deep svg {
     width: 2rem;
     height: 2rem;
     display: block;
 }
 
-/*
- * Digits: MudText Typo + theme color; add tabular + monospace (Chromium can render
- * unhinted system fonts harshly; stack matches Mud theme + monospaced figures).
- */
+.timer-clock-icon--strip ::deep svg {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
 .timer-value {
     font-family: "Roboto Mono", "JetBrains Mono", ui-monospace, "Cascadia Code", "Segoe UI Mono",
         Consolas, monospace !important;
@@ -108,12 +200,15 @@
     padding: 0;
 }
 
+.timer-value--strip {
+    font-size: 1.35rem !important;
+}
+
 .timer-clock-header ::deep .timer-value {
     margin-top: 0 !important;
     margin-bottom: 0 !important;
 }
 
-/* Timer inputs rebuilt from a clean base: desktop 3:2, mobile stacked. */
 .timer-compact > .timer-inputs-pair {
     min-width: 0;
     width: 100%;
@@ -144,13 +239,22 @@
     align-items: end;
 }
 
-@media (max-width: 599.98px) {
+@media (max-width: 959.98px) {
     .timer-inputs-pair {
         grid-template-columns: minmax(0, 1fr);
     }
+
+    .timer-value {
+        font-size: 1.5rem !important;
+    }
 }
 
-/* Force both controls to occupy full column width and same baseline behavior. */
+@media (max-width: 399.98px) {
+    .timer-clock-icon:not(.timer-clock-icon--strip) {
+        display: none;
+    }
+}
+
 .timer-target-field,
 .timer-focus-textfield {
     width: 100%;
@@ -193,6 +297,8 @@
 .timer-focus-info-icon {
     align-self: end;
     margin-bottom: 0.42rem;
+    min-width: 2.75rem !important;
+    min-height: 2.75rem !important;
 }
 
 .focus-duration-help-text {
@@ -202,7 +308,6 @@
     display: block;
 }
 
-/* Actions: line up with the outlined field row (Mud small buttons vs dense inputs). */
 .timer-compact__actions {
     display: flex;
     flex-direction: row;
@@ -213,6 +318,10 @@
     align-self: center;
     min-height: 2.875rem;
     box-sizing: border-box;
+}
+
+.timer-compact__actions--settings {
+    justify-content: flex-start;
 }
 
 .timer-btn {
@@ -228,7 +337,13 @@
     white-space: nowrap;
 }
 
-@media (min-width: 600px) {
+@media (max-width: 959.98px) {
+    .timer-btn {
+        min-height: 2.75rem;
+    }
+}
+
+@media (min-width: 960px) {
     .timer-btn {
         min-width: 4.5rem;
     }
@@ -244,4 +359,31 @@
 
 .timer-btn--stop:not(:disabled) {
     box-shadow: 0 2px 12px color-mix(in srgb, var(--mud-palette-primary) 35%, transparent) !important;
+}
+
+@media (min-width: 960px) {
+    .timer-running-strip {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .timer-running-strip__main {
+        flex: 1 1 auto;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .timer-running-strip__actions {
+        display: flex;
+        flex-wrap: wrap;
+        width: auto;
+        flex: 0 0 auto;
+    }
+
+    .timer-running-strip__actions .timer-btn {
+        width: auto;
+    }
 }

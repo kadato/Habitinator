@@ -129,7 +129,7 @@
                                 </MudButton>
                             </ActivatorContent>
                             <ChildContent>
-                                <MudPaper Class="board-tags-menu-panel pa-3" Elevation="0" Style="min-width: 17rem; max-width: 24rem;">
+                                <MudPaper Class="board-tags-menu-panel pa-3" Elevation="0">
                                     <MudText Typo="Typo.subtitle1" Class="mb-1">Tags</MudText>
                                     @if (AllTagNamesForMenu.Count == 0)
                                     {
@@ -170,26 +170,57 @@
     @if (_loadError is null)
     {
         <div class="board-columns-stage">
-            <MudGrid Spacing="4" Class="board-columns-grid mt-0 w-100">
-                <MudItem xs="12" md="4">
-                    <HabiticaColumn Section="BoardSection.Habit"
-                                    Items="FilteredHabits"
-                                    IsBoardFilterExcludingAll="Habits.Count > 0 && FilteredHabits.Count == 0"
-                                    OnChanged="OnBoardChanged"/>
-                </MudItem>
-                <MudItem xs="12" md="4">
-                    <HabiticaColumn Section="BoardSection.Daily"
-                                    Items="FilteredDailies"
-                                    IsBoardFilterExcludingAll="Dailies.Count > 0 && FilteredDailies.Count == 0"
-                                    OnChanged="OnBoardChanged"/>
-                </MudItem>
-                <MudItem xs="12" md="4">
-                    <HabiticaColumn Section="BoardSection.Todo"
-                                    Items="FilteredTodos"
-                                    IsBoardFilterExcludingAll="Todos.Count > 0 && FilteredTodos.Count == 0"
-                                    OnChanged="OnBoardChanged"/>
-                </MudItem>
-            </MudGrid>
+            <div class="board-columns-mobile">
+                <MudTabs @bind-ActivePanelIndex="_mobileSectionIndex"
+                         Class="board-section-tabs"
+                         Centered="true"
+                         ApplyEffectsToContainer="true"
+                         Rounded="true"
+                         Color="Color.Primary"
+                         Elevation="0"
+                         Outlined="false">
+                    <MudTabPanel Text="@($"Habits ({FilteredHabits.Count})")">
+                        <HabiticaColumn Section="BoardSection.Habit"
+                                        Items="FilteredHabits"
+                                        IsBoardFilterExcludingAll="Habits.Count > 0 && FilteredHabits.Count == 0"
+                                        OnChanged="OnBoardChanged"/>
+                    </MudTabPanel>
+                    <MudTabPanel Text="@($"Dailies ({DailiesDueOpenCount})")">
+                        <HabiticaColumn Section="BoardSection.Daily"
+                                        Items="FilteredDailies"
+                                        IsBoardFilterExcludingAll="Dailies.Count > 0 && FilteredDailies.Count == 0"
+                                        OnChanged="OnBoardChanged"/>
+                    </MudTabPanel>
+                    <MudTabPanel Text="@($"To-dos ({OpenTodoCount})")">
+                        <HabiticaColumn Section="BoardSection.Todo"
+                                        Items="FilteredTodos"
+                                        IsBoardFilterExcludingAll="Todos.Count > 0 && FilteredTodos.Count == 0"
+                                        OnChanged="OnBoardChanged"/>
+                    </MudTabPanel>
+                </MudTabs>
+            </div>
+            <div class="board-columns-desktop">
+                <MudGrid Spacing="4" Class="board-columns-grid mt-0 w-100">
+                    <MudItem xs="12" md="4">
+                        <HabiticaColumn Section="BoardSection.Habit"
+                                        Items="FilteredHabits"
+                                        IsBoardFilterExcludingAll="Habits.Count > 0 && FilteredHabits.Count == 0"
+                                        OnChanged="OnBoardChanged"/>
+                    </MudItem>
+                    <MudItem xs="12" md="4">
+                        <HabiticaColumn Section="BoardSection.Daily"
+                                        Items="FilteredDailies"
+                                        IsBoardFilterExcludingAll="Dailies.Count > 0 && FilteredDailies.Count == 0"
+                                        OnChanged="OnBoardChanged"/>
+                    </MudItem>
+                    <MudItem xs="12" md="4">
+                        <HabiticaColumn Section="BoardSection.Todo"
+                                        Items="FilteredTodos"
+                                        IsBoardFilterExcludingAll="Todos.Count > 0 && FilteredTodos.Count == 0"
+                                        OnChanged="OnBoardChanged"/>
+                    </MudItem>
+                </MudGrid>
+            </div>
         </div>
     }
 
@@ -227,6 +258,10 @@
         FilterItems(Dailies).Count(d => DailySchedule.IsDueOnDate(d, DailySchedule.LocalToday(TimeZoneService)));
 
     private IReadOnlyList<BoardItem> FilteredTodos => FilterItems(Todos);
+
+    private int OpenTodoCount => FilteredTodos.Count(t => !t.IsCompleted);
+
+    private int _mobileSectionIndex;
 
     private IReadOnlyList<string> AllTagNamesForMenu
     {

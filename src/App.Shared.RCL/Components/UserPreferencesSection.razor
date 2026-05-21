@@ -31,7 +31,8 @@
                               Error="@(_displayNameError is not null)"
                               ErrorText="@_displayNameError"
                               Value="_displayName"
-                              ValueChanged="OnDisplayNameChanged"/>
+                              ValueChanged="OnDisplayNameChanged"
+                              OnBlur="AutoSaveAsync"/>
                 <MudTextField T="string"
                               Label="Date format"
                               Variant="Variant.Outlined"
@@ -40,7 +41,8 @@
                               ValueChanged="OnDateFormatChanged"
                               Immediate="true"
                               Error="@(_dateFormatError is not null)"
-                              ErrorText="@_dateFormatError"/>
+                              ErrorText="@_dateFormatError"
+                              OnBlur="AutoSaveAsync"/>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">
                     Preview: @_datePreview
                 </MudText>
@@ -90,20 +92,13 @@
             </MudStack>
         </MudPaper>
 
-        <MudButton Variant="Variant.Filled"
-                   Color="Color.Primary"
-                   Disabled="_saving"
-                   OnClick="SaveAsync"
-                   Class="text-transform-none">
-            Save now
-        </MudButton>
+        @* Settings are saved automatically on change or blur *@
     }
 </MudStack>
 
 @code {
     private UserPreferences? _model;
     private bool _loading = true;
-    private bool _saving;
     private string? _loadError;
     private TimeSpan? _dayStart;
     private string _displayName = string.Empty;
@@ -204,24 +199,18 @@
         };
     }
 
-    private async Task SaveAsync()
+    private async Task AutoSaveAsync()
     {
         if (_model is null) return;
         if (!ValidateInputs()) return;
-        _saving = true;
         try
         {
             await PreferencesService.SaveAsync(_model);
             ApplyTimeZoneOverride();
-            Snackbar.Add("Preferences saved.", Severity.Success);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            Snackbar.Add("Could not save preferences.", Severity.Error);
-        }
-        finally
-        {
-            _saving = false;
+            Snackbar.Add($"Could not save preferences: {ex.Message}", Severity.Error);
         }
     }
 
@@ -241,26 +230,29 @@
     }
 
 
-    private void OnDayStartChanged(TimeSpan? value)
+    private async Task OnDayStartChanged(TimeSpan? value)
     {
         if (_model is null || value is null) return;
         _dayStart = value;
         _model.DayStartLocalTime = value.Value;
+        await AutoSaveAsync();
     }
 
-    private void OnTimeZoneChanged(string value)
+    private async Task OnTimeZoneChanged(string value)
     {
         if (_model is null) return;
         _timeZoneSelection = value;
         _model.TimeZoneOverrideId = value == AutoTimeZoneValue ? null : value;
         UpdateResolvedTimeZoneLabel();
+        await AutoSaveAsync();
     }
 
-    private void OnThemeChanged(AppTheme value)
+    private async Task OnThemeChanged(AppTheme value)
     {
         if (_model is null) return;
         _themeSelection = value;
         _model.Theme = value;
+        await AutoSaveAsync();
     }
 
     private bool ValidateInputs()

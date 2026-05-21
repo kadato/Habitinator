@@ -138,13 +138,7 @@
             </MudStack>
         </MudPaper>
 
-        <MudButton Variant="Variant.Filled"
-                   Color="Color.Primary"
-                   Disabled="_saving"
-                   OnClick="SaveAsync"
-                   Class="text-transform-none">
-            Save now
-        </MudButton>
+        @* Settings are saved automatically on change *@
     }
 </MudStack>
 
@@ -154,7 +148,6 @@
     private TimeSpan? _quietStart;
     private TimeSpan? _quietEnd;
     private bool _loading = true;
-    private bool _saving;
     private string? _loadError;
 
     protected override async Task OnInitializedAsync()
@@ -322,30 +315,6 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Could not save settings: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task SaveAsync()
-    {
-        if (_model is null)
-        {
-            return;
-        }
-
-        _saving = true;
-        try
-        {
-            SyncTimePickersToModel();
-            await NotificationSettingsService.SaveAsync(_model);
-            Snackbar.Add("Settings saved.", Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Could not save settings: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _saving = false;
         }
     }
 

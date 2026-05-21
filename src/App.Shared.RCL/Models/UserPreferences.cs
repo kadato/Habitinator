@@ -6,7 +6,7 @@ public sealed class UserPreferences
     public string DateFormat { get; set; } = "yyyy/MM/dd";
 
     /// <summary>Local time-of-day when the user considers a new day to start.</summary>
-    public TimeSpan DayStartLocalTime { get; set; } = TimeSpan.FromHours(4);
+    public TimeSpan DayStartLocalTime { get; set; } = TimeSpan.Zero;
 
     /// <summary>Optional timezone override (IANA/Windows ID).</summary>
     public string? TimeZoneOverrideId { get; set; }

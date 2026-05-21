@@ -3,7 +3,7 @@
   Regenerates committed documentation assets under docs/automation/.
   - Mermaid: solution graph + database FK flowchart (no running server).
   - OpenAPI JSON + Playwright PNGs: require App.Web reachable at -BaseUrl (PostgreSQL must match appsettings).
-  - After screenshots, writes 04-statistics-readme.png (top-half crop of 04-statistics.png for README gallery).
+  - README preview crops (02-board-readme, 04-statistics-readme) are written by DocumentationScreenshotsTests.
 
   Example:
     pwsh ./scripts/Refresh-AutomationAssets.ps1
@@ -20,16 +20,6 @@ $docsAutomation = Join-Path $repoRoot "docs" "automation"
 $shotDir = Join-Path $docsAutomation "screenshots"
 
 New-Item -ItemType Directory -Path $shotDir -Force | Out-Null
-
-# Clean up any old obsolete screenshots from previous runs
-$obsoleteScreenshots = @()
-
-foreach ($obsoleteScreenshot in $obsoleteScreenshots) {
-    $obsoletePath = Join-Path $shotDir $obsoleteScreenshot
-    if (Test-Path $obsoletePath) {
-        Remove-Item $obsoletePath -Force -ErrorAction SilentlyContinue
-    }
-}
 
 function Sync-ReadmeMermaidEmbeds {
     param(
@@ -110,22 +100,21 @@ else {
 }
 
 try {
-    # Run all documentation screenshot tests (not just the original one)
-    dotnet test (Join-Path $repoRoot "tests" "App.Web.E2E" "App.Web.E2E.csproj") `
-        --configuration Release --no-build `
-        --filter "FullyQualifiedName~DocumentationScreenshotsTests"
-}
-catch {
-    Write-Warning "Screenshot tests failed (is App.Web running with seeded demo guest?): $_"
-}
+    try {
+        # Run all documentation screenshot tests (not just the original one)
+        dotnet test (Join-Path $repoRoot "tests" "App.Web.E2E" "App.Web.E2E.csproj") `
+            --configuration Release --no-build `
+            --filter "FullyQualifiedName~DocumentationScreenshotsTests"
+    }
+    catch {
+        Write-Warning "Screenshot tests failed (is App.Web running with seeded demo guest?): $_"
+    }
 
-& (Join-Path $repoRoot "scripts" "Crop-StatisticsReadmeScreenshot.ps1") -RepoRoot $repoRoot
-
-# List all generated screenshots
-if (Test-Path $shotDir) {
-    Write-Host "`n== Generated screenshots:"
-    Get-ChildItem -Path $shotDir -Filter "*.png" | ForEach-Object {
-        Write-Host "   - $($_.Name)"
+    if (Test-Path $shotDir) {
+        Write-Host "`n== Generated screenshots:"
+        Get-ChildItem -Path $shotDir -Filter "*.png" | ForEach-Object {
+            Write-Host "   - $($_.Name)"
+        }
     }
 }
 finally {

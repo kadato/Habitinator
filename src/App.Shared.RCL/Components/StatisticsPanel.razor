@@ -476,7 +476,8 @@
     private string FormatDateWithWeekday(DateOnly date)
     {
         var formatted = DateFormatService.Format(date);
-        return $"{formatted} ({date:dddd})";
+        var weekday = date.ToString("dddd", CultureInfo.InvariantCulture);
+        return $"{formatted} ({weekday})";
     }
 
 }

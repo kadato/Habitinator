@@ -29,7 +29,7 @@ public sealed class WebSmokeTests
             // Ignore and fall through to skip.
         }
 
-        throw new Xunit.Sdk.SkipException(
+        throw Xunit.Sdk.SkipException.ForSkip(
             $"E2E_BASE_URL '{BaseUrl}' is not reachable. Start App.Web before running Playwright tests.");
     }
 

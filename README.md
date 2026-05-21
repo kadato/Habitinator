@@ -25,18 +25,43 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 <div align="center">
 
 <p align="center">
-  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/02-board.png" title="Open full-size image on GitHub"><img src="docs/automation/screenshots/02-board.png" width="275" alt="Board view with habits, dailies, and to-dos"/></a>
+  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/02-board-light.png" title="Open full-size image on GitHub">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/readme/02-board-dark.png">
+      <img src="docs/automation/screenshots/readme/02-board-light.png" width="320" alt="Board view with habits, dailies, and to-dos (preview crops bottom half)"/>
+    </picture>
+  </a>
   &nbsp;&nbsp;
-  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/03-edit-daily.png" title="Open full-size image on GitHub"><img src="docs/automation/screenshots/03-edit-daily.png" width="275" alt="Edit daily modal"/></a>
+  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/03-edit-daily-light.png" title="Open full-size image on GitHub">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/03-edit-daily-dark.png">
+      <img src="docs/automation/screenshots/03-edit-daily-light.png" width="320" alt="Edit daily modal"/>
+    </picture>
+  </a>
   &nbsp;&nbsp;
-  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/04-statistics.png" title="Open full-size statistics screenshot on GitHub"><img src="docs/automation/screenshots/04-statistics-readme.png" width="275" alt="Statistics heatmap and summaries (preview shows top half of the page)"/></a>
+  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/04-statistics-light.png" title="Open full-size statistics screenshot on GitHub">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/readme/04-statistics-dark.png">
+      <img src="docs/automation/screenshots/readme/04-statistics-light.png" width="320" alt="Statistics heatmap and summaries (preview shows top half of the page)"/>
+    </picture>
+  </a>
 </p>
 <p align="center"><sub><b>Board</b> · <b>Edit daily</b> · <b>Statistics</b></sub></p>
 
 <p align="center">
-  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/05-activity-day-detail.png" title="Open full-size image on GitHub"><img src="docs/automation/screenshots/05-activity-day-detail.png" width="395" alt="Activity day detail modal"/></a>
+  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/05-activity-day-detail-light.png" title="Open full-size image on GitHub">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/05-activity-day-detail-dark.png">
+      <img src="docs/automation/screenshots/05-activity-day-detail-light.png" width="480" alt="Activity day detail modal"/>
+    </picture>
+  </a>
   &nbsp;&nbsp;
-  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/06-settings.png" title="Open full-size image on GitHub"><img src="docs/automation/screenshots/06-settings.png" width="395" alt="Settings page"/></a>
+  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/06-settings-light.png" title="Open full-size image on GitHub">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/06-settings-dark.png">
+      <img src="docs/automation/screenshots/06-settings-light.png" width="480" alt="Settings page"/>
+    </picture>
+  </a>
 </p>
 <p align="center"><sub><b>Day detail</b> · <b>Settings</b></sub></p>
 
@@ -100,7 +125,7 @@ dotnet build -t:Run -f net10.0-android
 
 ## Web UI screenshots
 
-These are produced by the **Playwright** test in `DocumentationScreenshotsTests` into [`docs/automation/screenshots/`](docs/automation/screenshots/). Regenerate with [`scripts/Refresh-AutomationAssets.ps1`](scripts/Refresh-AutomationAssets.ps1) (see [Documentation automation (local)](#documentation-automation-local)). That script also writes **`04-statistics-readme.png`** (top half of **`04-statistics.png`**) for the README **Preview** gallery, via [`scripts/Crop-StatisticsReadmeScreenshot.ps1`](scripts/Crop-StatisticsReadmeScreenshot.ps1).
+These are produced by the **Playwright** test in `DocumentationScreenshotsTests` into [`docs/automation/screenshots/`](docs/automation/screenshots/). Each capture is saved as **`{name}-light.png`** and **`{name}-dark.png`** (Chromium `prefers-color-scheme` emulation). Regenerate with [`scripts/Refresh-AutomationAssets.ps1`](scripts/Refresh-AutomationAssets.ps1) (see [Documentation automation (local)](#documentation-automation-local)). The same test writes **`docs/automation/screenshots/readme/02-board-{light|dark}.png`** and **`04-statistics-{light|dark}.png`** (top half of the full-page captures, bottom trimmed) for the README **Preview** gallery. The **Preview** section uses HTML `<picture>` so GitHub shows the variant that matches the viewer’s light/dark theme.
 
 ---
 
@@ -501,7 +526,7 @@ Committed assets for architecture and UI references live under **`docs/automatio
 | [`docs/automation/solution-graph.mmd`](docs/automation/solution-graph.mmd) | Mermaid **flowchart** of project references (from `Habitinator.slnx` + `.csproj` files). |
 | [`docs/automation/database-schema.mmd`](docs/automation/database-schema.mmd) | Mermaid **flowchart** of EF Core FKs / PostgreSQL tables (from the latest `ApplicationDbContextModelSnapshot`). |
 | [`docs/automation/openapi-v1.json`](docs/automation/openapi-v1.json) | OpenAPI **3.1** document from `GET /openapi/v1.json` (paths and schemas for HTTP APIs). |
-| [`docs/automation/screenshots/`](docs/automation/screenshots/) | Playwright **PNG** captures (board, **edit-daily** modal, statistics, **activity day detail** modal, settings). |
+| [`docs/automation/screenshots/`](docs/automation/screenshots/) | Playwright **PNG** captures in **light and dark** (`*-light.png` / `*-dark.png`): board, modals, statistics, settings, auth pages, etc. |
 
 ### Architecture diagrams (Mermaid)
 

@@ -2,7 +2,10 @@
 @inject IAccountActionsService AccountActions
 
 <MudStack Spacing="3">
-    <MudText Typo="Typo.h5">Account actions</MudText>
+    @if (ShowTitle)
+    {
+        <MudText Typo="Typo.h5">Account actions</MudText>
+    }
 
     <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
         <MudStack Spacing="2">
@@ -36,6 +39,9 @@
 </MudStack>
 
 @code {
+    [Parameter]
+    public bool ShowTitle { get; set; } = true;
+
     private string _currentPassword = string.Empty;
     private string _newPassword = string.Empty;
     private string _confirmPassword = string.Empty;

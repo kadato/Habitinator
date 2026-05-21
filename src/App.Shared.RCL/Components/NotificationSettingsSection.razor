@@ -5,7 +5,10 @@
 @implements IDisposable
 
 <MudStack Spacing="3">
-    <MudText Typo="Typo.h5">Notifications</MudText>
+    @if (ShowTitle)
+    {
+        <MudText Typo="Typo.h5">Notifications</MudText>
+    }
 
     @if (_loadError is not null)
     {
@@ -143,6 +146,9 @@
 </MudStack>
 
 @code {
+    [Parameter]
+    public bool ShowTitle { get; set; } = true;
+
     private NotificationSettings? _model;
     private TimeSpan? _dailyReminderTime;
     private TimeSpan? _quietStart;

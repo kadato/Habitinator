@@ -9,9 +9,19 @@
         <MudButton Href="auth/login" Variant="Variant.Filled" Color="Color.Primary">Log in</MudButton>
     </NotAuthorized>
     <Authorized>
-        <MudText Typo="Typo.h4" Class="app-page-title">Settings</MudText>
-        <UserPreferencesSection/>
-        <NotificationSettingsSection/>
-        <AccountActionsSection/>
+        <div class="settings-page-wrapper">
+            <MudText Typo="Typo.h4" Class="app-page-title">Settings</MudText>
+            <MudTabs Elevation="0" Outlined="false" Color="Color.Primary" Rounded="true" Class="settings-tabs">
+                <MudTabPanel Text="Profile &amp; Preferences" Icon="@Icons.Material.Filled.Person">
+                    <UserPreferencesSection ShowTitle="false"/>
+                </MudTabPanel>
+                <MudTabPanel Text="Notifications" Icon="@Icons.Material.Filled.Notifications">
+                    <NotificationSettingsSection ShowTitle="false"/>
+                </MudTabPanel>
+                <MudTabPanel Text="Security &amp; Account" Icon="@Icons.Material.Filled.Security">
+                    <AccountActionsSection ShowTitle="false"/>
+                </MudTabPanel>
+            </MudTabs>
+        </div>
     </Authorized>
 </AuthorizeView>

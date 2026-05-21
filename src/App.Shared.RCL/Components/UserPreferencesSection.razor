@@ -5,7 +5,10 @@
 @implements IDisposable
 
 <MudStack Spacing="3">
-    <MudText Typo="Typo.h5">Profile &amp; preferences</MudText>
+    @if (ShowTitle)
+    {
+        <MudText Typo="Typo.h5">Profile &amp; preferences</MudText>
+    }
 
     @if (_loadError is not null)
     {
@@ -97,6 +100,9 @@
 </MudStack>
 
 @code {
+    [Parameter]
+    public bool ShowTitle { get; set; } = true;
+
     private UserPreferences? _model;
     private bool _loading = true;
     private string? _loadError;

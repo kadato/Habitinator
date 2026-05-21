@@ -1,8 +1,10 @@
 @using System.Globalization
+@using Microsoft.JSInterop
 @using App.Shared.RCL.Components.Dialogs
 @inject IActivityStatisticsReader Stats
 @inject IDialogService DialogService
 @inject IUserDateFormatService DateFormatService
+@inject IJSRuntime JSRuntime
 
 <MudStack Spacing="3">
     <MudText Typo="Typo.h4" Class="app-page-title">Statistics</MudText>
@@ -21,92 +23,8 @@
     }
     else
     {
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="stats-period-bar" Style="flex-wrap: wrap;">
-            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ma-0">
-                @FormatRange(_data.RangeStart, _data.RangeEnd) · @(_data.HeatmapDataDayCount) days
-            </MudText>
-            <MudSpacer/>
-            @if ((_data.AvailableTags?.Count ?? 0) > 0)
-            {
-                <MudSelect T="string"
-                           Label="Tag"
-                           Variant="Variant.Outlined"
-                           Dense="true"
-                           Class="stats-tag-select"
-                           Value="_tagFilter"
-                           ValueChanged="OnTagFilterChanged"
-                           Disabled="_periodBusy">
-                    <MudSelectItem T="string" Value="@("")">All tags</MudSelectItem>
-                    @foreach (var t in _data.AvailableTags ?? [])
-                    {
-                        <MudSelectItem T="string" Value="@t">@t</MudSelectItem>
-                    }
-                </MudSelect>
-            }
-            <MudSelect T="string"
-                       Label="Period"
-                       Variant="Variant.Outlined"
-                       Dense="true"
-                       Class="stats-year-select"
-                       Value="_selectedPeriodKey"
-                       ValueChanged="OnStatsPeriodChanged"
-                       Disabled="_periodBusy">
-                @if (_periodOptions is not null)
-                {
-                    @foreach (var opt in _periodOptions)
-                    {
-                        <MudSelectItem T="string" Value="@opt.Key">@opt.Label</MudSelectItem>
-                    }
-                }
-            </MudSelect>
-        </MudStack>
-        @if (_periodBusy)
-        {
-            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-0"/>
-        }
-
-        <MudText Typo="Typo.subtitle1" Class="mt-1">Activity heatmap</MudText>
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">Click a day to see all logged events for that day.</MudText>
-        <div class="stats-heatmap-wrap stats-heatmap--large">
-            <div class="stats-heatmap-rowlabels">
-                <span>Mon</span>
-                <span></span>
-                <span>Wed</span>
-                <span></span>
-                <span>Fri</span>
-                <span></span>
-                <span>Sun</span>
-            </div>
-            <div class="stats-heatmap-grid" style="--stats-cols: @_data.GridWeekColumns;">
-                @for (var r = 0; r < 7; r++)
-                {
-                    @for (var c = 0; c < _data.GridWeekColumns; c++)
-                    {
-                        if (_cellIndex.TryGetValue((r, c), out var cell))
-                        {
-                            if (cell.InDataRange)
-                            {
-                                <button type="button"
-                                        class="stats-heatmap-day-btn stats-cell @($"stats-lvl-{cell.Intensity}")"
-                                        title="@($"{DateFormatService.Format(cell.Date)}: {cell.Count} event(s) — view details")"
-                                        @onclick="() => OpenDayDetailAsync(cell.Date)">
-                                </button>
-                            }
-                            else
-                            {
-                                <div class="stats-cell stats-lvl-na" title=""></div>
-                            }
-                        }
-                        else
-                        {
-                            <div class="stats-cell stats-lvl-na" title=""></div>
-                        }
-                    }
-                }
-            </div>
-        </div>
-
-        <MudGrid Spacing="3" Class="mt-4 stats-kpi-grid">
+        <!-- KPI Row at the top of the dashboard -->
+        <MudGrid Spacing="3" Class="stats-kpi-grid">
             <MudItem xs="12" sm="4">
                 <MudPaper Class="stats-kpi-card stats-kpi-card--events" Elevation="0" Outlined="false">
                     <div class="stats-kpi-card__head">
@@ -141,91 +59,238 @@
             <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-2">No activity logged yet. Use habits, dailies, to-dos, or the focus timer on the board.</MudAlert>
         }
 
-        <MudText Typo="Typo.subtitle1" Class="mt-2">All activity by week</MudText>
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
-            @FormatRange(_data.WeekBarsRangeStart, _data.WeekBarsRangeEnd) · @(_data.WeekBars.Count) week(s)
-        </MudText>
-        <div class="stats-week-bars" style="--stats-week-bar-max: @(_weekBarMax == 0 ? 1 : _weekBarMax);">
-            @foreach (var w in _data.WeekBars)
-            {
-                var h = _weekBarMax == 0 ? 0 : (int)Math.Round(100.0 * w.EventCount / _weekBarMax);
-                <div class="stats-week-bar-wrap" title="@($"{DateFormatService.Format(w.WeekStart)} week: {w.EventCount} events, {w.FocusMinutes} min focus")">
-                    <div class="stats-week-bar" style="height: @(h)%"></div>
-                </div>
-            }
-        </div>
+        <!-- Main Dashboard Layout Grid -->
+        <MudGrid Spacing="3" Class="mt-2">
+            <!-- Left Main Column (Charts & Heatmaps) -->
+            <MudItem xs="12" lg="9" Class="order-2 order-lg-1">
+                <!-- Activity Heatmap Card -->
+                <MudPaper Class="pa-4 stats-dashboard-card" Elevation="0" Outlined="true">
+                    <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-2">
+                        <div>
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Activity heatmap</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">Click a day to see all logged events for that day.</MudText>
+                        </div>
+                        <div class="stats-heatmap-legend-inline d-flex align-center gap-1">
+                            <span class="text-secondary-caption mr-1" style="font-size: 0.72rem; color: var(--mud-palette-text-secondary);">Less</span>
+                            <div class="stats-cell stats-legend-swatch stats-lvl-0"></div>
+                            <div class="stats-cell stats-legend-swatch stats-lvl-1"></div>
+                            <div class="stats-cell stats-legend-swatch stats-lvl-2"></div>
+                            <div class="stats-cell stats-legend-swatch stats-lvl-3"></div>
+                            <div class="stats-cell stats-legend-swatch stats-lvl-4"></div>
+                            <span class="text-secondary-caption ml-1" style="font-size: 0.72rem; color: var(--mud-palette-text-secondary);">More</span>
+                        </div>
+                    </div>
 
-        <MudText Typo="Typo.subtitle1" Class="mt-4">Dailies graphs</MudText>
-
-        @if (_loadingDailies)
-        {
-            <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="mt-2"/>
-        }
-        else if (_dailyError is not null)
-        {
-            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-2">@_dailyError</MudAlert>
-        }
-        else if (_dailyView is not null)
-        {
-            @if (_dailyView.Graphs.Count == 0)
-            {
-                <MudText Typo="Typo.body2" Color="Color.Secondary">No daily activities on your board yet.</MudText>
-            }
-            else
-            {
-                <div class="stats-dailies">
-                    @foreach (var daily in _dailyView.Graphs)
-                    {
-                        var cellIx = daily.Heatmap.ToDictionary(x => (x.DayRow, x.WeekCol));
-                        <div class="stats-daily-block">
-                            <MudText Typo="Typo.h6" Class="stats-daily-title">@daily.Title</MudText>
-                            <div class="stats-heatmap-wrap stats-heatmap--large">
-                                <div class="stats-heatmap-rowlabels">
-                                    <span>Mon</span>
-                                    <span></span>
-                                    <span>Wed</span>
-                                    <span></span>
-                                    <span>Fri</span>
-                                    <span></span>
-                                    <span>Sun</span>
-                                </div>
-                                <div class="stats-heatmap-grid" style="--stats-cols: @daily.GridWeekColumns;">
-                                    @for (var r = 0; r < 7; r++)
+                    <div class="stats-heatmap-container stats-heatmap-container--large">
+                        <div class="stats-heatmap-rowlabels">
+                            <span>Mon</span>
+                            <span></span>
+                            <span>Wed</span>
+                            <span></span>
+                            <span>Fri</span>
+                            <span></span>
+                            <span>Sun</span>
+                        </div>
+                        <div class="stats-heatmap-wrap">
+                            <div class="stats-heatmap-grid" style="--stats-cols: @_data.GridWeekColumns;">
+                                @for (var r = 0; r < 7; r++)
+                                {
+                                    @for (var c = 0; c < _data.GridWeekColumns; c++)
                                     {
-                                        @for (var c = 0; c < daily.GridWeekColumns; c++)
+                                        if (_cellIndex.TryGetValue((r, c), out var cell))
                                         {
-                                            if (cellIx.TryGetValue((r, c), out var cell))
+                                            if (cell.InDataRange)
                                             {
-                                                if (cell.InDataRange)
-                                                {
-                                                    <div class="stats-cell @(cell.Count > 0 ? "stats-daily-done" : "stats-daily-missed")"
-                                                         title="@($"{DateFormatService.Format(cell.Date)}: {(cell.Count > 0 ? $"{cell.Count} complete(s)" : "not completed")}")">
-                                                    </div>
-                                                }
-                                                else
-                                                {
-                                                    <div class="stats-cell stats-lvl-na" title=""></div>
-                                                }
+                                                <button type="button"
+                                                        class="stats-heatmap-day-btn stats-cell @($"stats-lvl-{cell.Intensity}")"
+                                                        title="@($"{DateFormatService.Format(cell.Date)}: {cell.Count} event(s) — view details")"
+                                                        @onclick="() => OpenDayDetailAsync(cell.Date)">
+                                                </button>
                                             }
                                             else
                                             {
                                                 <div class="stats-cell stats-lvl-na" title=""></div>
                                             }
                                         }
+                                        else
+                                        {
+                                            <div class="stats-cell stats-lvl-na" title=""></div>
+                                        }
                                     }
-                                </div>
-                            </div>
-                            <div class="stats-contrib-legend stats-contrib-legend--binary">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ma-0">Not done</MudText>
-                                <div class="stats-cell stats-legend-swatch stats-daily-missed"></div>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ma-0">Done</MudText>
-                                <div class="stats-cell stats-legend-swatch stats-daily-done"></div>
+                                }
                             </div>
                         </div>
+                    </div>
+                </MudPaper>
+
+                <!-- Weekly Activity Card -->
+                <MudPaper Class="pa-4 stats-dashboard-card mt-4" Elevation="0" Outlined="true">
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold mb-1">All activity by week</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-3">
+                        @FormatRange(_data.WeekBarsRangeStart, _data.WeekBarsRangeEnd) · @(_data.WeekBars.Count) week(s)
+                    </MudText>
+                    
+                    <div class="stats-week-bars" style="--stats-week-bar-max: @(_weekBarMax == 0 ? 1 : _weekBarMax);">
+                        @foreach (var w in _data.WeekBars)
+                        {
+                            var h = _weekBarMax == 0 ? 0 : (int)Math.Round(100.0 * w.EventCount / _weekBarMax);
+                            <div class="stats-week-bar-wrap" title="@($"{DateFormatService.Format(w.WeekStart)} week: {w.EventCount} events, {w.FocusMinutes} min focus")">
+                                <div class="stats-week-bar" style="height: @(h)%"></div>
+                            </div>
+                        }
+                    </div>
+                </MudPaper>
+
+                <!-- Dailies performance Card -->
+                <MudPaper Class="pa-4 stats-dashboard-card mt-4" Elevation="0" Outlined="true">
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold mb-3">Dailies graphs</MudText>
+
+                    @if (_loadingDailies)
+                    {
+                        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="mt-2"/>
                     }
-                </div>
-            }
-        }
+                    else if (_dailyError is not null)
+                    {
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-2">@_dailyError</MudAlert>
+                    }
+                    else if (_dailyView is not null)
+                    {
+                        @if (_dailyView.Graphs.Count == 0)
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">No daily activities on your board yet.</MudText>
+                        }
+                        else
+                        {
+                            <MudGrid Spacing="3" Class="stats-dailies-grid">
+                                @foreach (var daily in _dailyView.Graphs)
+                                {
+                                    var cellIx = daily.Heatmap.ToDictionary(x => (x.DayRow, x.WeekCol));
+                                    <MudItem xs="12" md="6">
+                                        <div class="stats-daily-block pa-3 border rounded mud-border-lines-default" style="background: var(--mud-palette-background-gray);">
+                                            <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-2">
+                                                <MudText Typo="Typo.subtitle2" Class="font-weight-bold stats-daily-title ma-0">@daily.Title</MudText>
+                                                <div class="stats-contrib-legend stats-contrib-legend--binary ma-0 d-flex align-center gap-1">
+                                                    <span class="text-secondary-caption" style="font-size: 0.65rem; color: var(--mud-palette-text-secondary);">Missed</span>
+                                                    <div class="stats-cell stats-legend-swatch stats-daily-missed" style="width: 10px; height: 10px; min-width: 10px;"></div>
+                                                    <span class="text-secondary-caption" style="font-size: 0.65rem; color: var(--mud-palette-text-secondary);">Done</span>
+                                                    <div class="stats-cell stats-legend-swatch stats-daily-done" style="width: 10px; height: 10px; min-width: 10px;"></div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="stats-heatmap-container">
+                                                <div class="stats-heatmap-rowlabels">
+                                                    <span>Mon</span>
+                                                    <span></span>
+                                                    <span>Wed</span>
+                                                    <span></span>
+                                                    <span>Fri</span>
+                                                    <span></span>
+                                                    <span>Sun</span>
+                                                </div>
+                                                <div class="stats-heatmap-wrap">
+                                                    <div class="stats-heatmap-grid" style="--stats-cols: @daily.GridWeekColumns;">
+                                                        @for (var r = 0; r < 7; r++)
+                                                        {
+                                                            @for (var c = 0; c < daily.GridWeekColumns; c++)
+                                                            {
+                                                                if (cellIx.TryGetValue((r, c), out var cell))
+                                                                {
+                                                                    if (cell.InDataRange)
+                                                                    {
+                                                                        <div class="stats-cell @(cell.Count > 0 ? "stats-daily-done" : "stats-daily-missed")"
+                                                                             title="@($"{DateFormatService.Format(cell.Date)}: {(cell.Count > 0 ? $"{cell.Count} complete(s)" : "not completed")}")">
+                                                                        </div>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <div class="stats-cell stats-lvl-na" title=""></div>
+                                                                    }
+                                                                }
+                                                                else
+                                                                {
+                                                                    <div class="stats-cell stats-lvl-na" title=""></div>
+                                                                }
+                                                            }
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </MudItem>
+                                }
+                            </MudGrid>
+                        }
+                    }
+                </MudPaper>
+            </MudItem>
+
+            <!-- Right Sidebar Column (Controls / Info) -->
+            <MudItem xs="12" lg="3" Class="order-1 order-lg-2">
+                <MudPaper Class="pa-4 stats-dashboard-card stats-sidebar-controls" Elevation="0" Outlined="true" Style="position: sticky; top: 80px;">
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold mb-3">Dashboard Controls</MudText>
+                    
+                    <MudStack Spacing="3">
+                        @if ((_data.AvailableTags?.Count ?? 0) > 0)
+                        {
+                            <MudSelect T="string"
+                                       Label="Tag Filter"
+                                       Variant="Variant.Outlined"
+                                       Dense="true"
+                                       Value="_tagFilter"
+                                       ValueChanged="OnTagFilterChanged"
+                                       Disabled="_periodBusy"
+                                       Class="stats-tag-select-sidebar">
+                                <MudSelectItem T="string" Value="@("")">All tags</MudSelectItem>
+                                @foreach (var t in _data.AvailableTags ?? [])
+                                {
+                                    <MudSelectItem T="string" Value="@t">@t</MudSelectItem>
+                                }
+                            </MudSelect>
+                        }
+                        
+                        <MudSelect T="string"
+                                   Label="Time Period"
+                                   Variant="Variant.Outlined"
+                                   Dense="true"
+                                   Value="_selectedPeriodKey"
+                                   ValueChanged="OnStatsPeriodChanged"
+                                   Disabled="_periodBusy"
+                                   Class="stats-year-select-sidebar">
+                            @if (_periodOptions is not null)
+                            {
+                                @foreach (var opt in _periodOptions)
+                                {
+                                    <MudSelectItem T="string" Value="@opt.Key">@opt.Label</MudSelectItem>
+                                }
+                            }
+                        </MudSelect>
+
+                        @if (_periodBusy)
+                        {
+                            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-1"/>
+                        }
+
+                        <MudDivider Class="my-2"/>
+
+                        <div>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-1">
+                                <strong>Date Range:</strong>
+                            </MudText>
+                            <MudText Typo="Typo.body2" Class="mb-3">
+                                @FormatRange(_data.RangeStart, _data.RangeEnd)
+                            </MudText>
+                            
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-1">
+                                <strong>Duration:</strong>
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                @(_data.HeatmapDataDayCount) days
+                            </MudText>
+                        </div>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
     }
 </MudStack>
 
@@ -243,6 +308,23 @@
     private string _tagFilter = "";
     private bool _loadingDailies;
     private string? _dailyError;
+    private bool _shouldScrollToEnd;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_shouldScrollToEnd)
+        {
+            _shouldScrollToEnd = false;
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("scrollHeatmapsToEnd");
+            }
+            catch (Exception)
+            {
+                // Ignore JS errors if components disappear or JS isn't ready
+            }
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -284,6 +366,7 @@
             _weekBarMax = _data.WeekBars.Count == 0
                 ? 0
                 : _data.WeekBars.Max(x => x.EventCount);
+            _shouldScrollToEnd = true;
         }
         catch (Exception dex)
         {

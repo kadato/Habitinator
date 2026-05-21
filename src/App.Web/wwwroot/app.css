@@ -221,3 +221,16 @@ h1:focus {
 .text-transform-none {
     text-transform: none !important;
 }
+
+/* Page containers to limit width on big screens */
+.settings-page-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.stats-page-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}

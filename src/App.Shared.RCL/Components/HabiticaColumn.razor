@@ -6,6 +6,7 @@
 @inject IUserNotifier Notifier
 @inject IUserTimeZoneService TimeZoneService
 @inject IUserDateFormatService DateFormatService
+@inject IUndoService UndoService
 
 <MudCard Class="@($"habitica-column {GetAccentClass()}")" Elevation="0" Outlined="false">
     <MudCardHeader Class="pb-2">
@@ -696,11 +697,14 @@
         var deleted = 0;
         try
         {
-            foreach (var item in toDelete)
+            using (UndoService.BeginBatch($"Delete {toDelete.Count} completed to-dos"))
             {
-                if (await BoardData.DeleteItemAsync(BoardSection.Todo, item.Id))
+                foreach (var item in toDelete)
                 {
-                    deleted++;
+                    if (await BoardData.DeleteItemAsync(BoardSection.Todo, item.Id))
+                    {
+                        deleted++;
+                    }
                 }
             }
 

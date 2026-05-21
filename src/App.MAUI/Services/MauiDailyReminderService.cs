@@ -1,3 +1,4 @@
+using App.MAUI.Services.LocalBoard;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 
@@ -18,7 +19,7 @@ public sealed class MauiDailyReminderService : IDisposable
     public const int NotificationId = 42_001;
 
     public const string AndroidChannelId = "habitinator.daily";
-    private readonly IBoardDataService _board;
+    private readonly LocalFirstBoardDataService _board;
     private readonly ILogger<MauiDailyReminderService> _logger;
 
     private readonly INotificationSettingsService _notificationSettings;
@@ -27,7 +28,7 @@ public sealed class MauiDailyReminderService : IDisposable
     public MauiDailyReminderService(
         INotificationSettingsService notificationSettings,
         IUserDateFormatService dateFormatService,
-        IBoardDataService board,
+        LocalFirstBoardDataService board,
         ILogger<MauiDailyReminderService> logger)
     {
         _notificationSettings = notificationSettings;

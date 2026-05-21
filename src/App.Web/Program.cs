@@ -17,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
+using MudBlazor;
 using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,7 +31,13 @@ builder.Services.AddRazorComponents()
     });
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
-builder.Services.AddMudServices();
+builder.Services.AddMudServices(config =>
+{
+    config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomLeft;
+    config.SnackbarConfiguration.ShowTransitionDuration = 250;
+    config.SnackbarConfiguration.HideTransitionDuration = 200;
+    config.SnackbarConfiguration.NewestOnTop = true;
+});
 
 var dbConnectionString = PostgresResilienceConnectionString.EnsureColdStartTimeouts(
     builder.Configuration.GetConnectionString("DefaultConnection")
@@ -94,7 +101,14 @@ if (!builder.Environment.IsEnvironment("Testing"))
 }
 
 builder.Services.AddHostedService<BoardMaintenanceHostedService>();
-builder.Services.AddScoped<IBoardDataService, WebBoardDataService>();
+builder.Services.AddScoped<IUndoService, UndoService>();
+builder.Services.AddScoped<WebBoardDataService>();
+builder.Services.AddScoped<IBoardDataService>(sp =>
+{
+    var inner = sp.GetRequiredService<WebBoardDataService>();
+    var undoService = sp.GetRequiredService<IUndoService>();
+    return new UndoableBoardDataService(inner, undoService);
+});
 builder.Services.AddSignalR();
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<ActivityStatisticsService>();

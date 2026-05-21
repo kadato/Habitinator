@@ -10,6 +10,7 @@
 @inject IUserTimeZoneService TimeZoneService
 @inject IUserPreferencesService PreferencesService
 @inject IUserDateFormatService DateFormatService
+@inject IUndoService UndoService
 
 <MudStack Class="board-shell w-100" Spacing="2">
     @if (_isLoading)
@@ -97,6 +98,7 @@
                              Size="Size.Small"
                              Variant="Variant.Text"
                              Color="Color.Warning"/>
+
                 </MudStack>
                 <div class="board-stat-filters">
                     <MudTextField @bind-Value="_searchText"
@@ -216,6 +218,7 @@
     private bool _dailyRetroSessionOffered;
     private bool _dailyRetroClientReady;
     private DotNetObjectReference<BoardRemoteNotifyBridge>? _visibilityRef;
+    private DotNetObjectReference<MainBoard>? _selfRef;
 
     private IReadOnlyList<BoardItem> FilteredHabits => FilterItems(Habits);
     private IReadOnlyList<BoardItem> FilteredDailies => FilterItems(Dailies);
@@ -265,6 +268,8 @@
         await DateFormatService.InitializeAsync();
         BoardSync.Changed += OnBoardSyncStatusChanged;
         RemoteBoardRefresh.RegisterForRemoteRefresh(HandleRemoteBoardRefreshedAsync);
+        UndoService.OnStateChanged += HandleUndoStateChanged;
+        UndoService.OnUndoPerformed += HandleUndoPerformed;
         await InitialLoadAsync();
     }
 
@@ -300,6 +305,8 @@
     {
         BoardSync.Changed -= OnBoardSyncStatusChanged;
         RemoteBoardRefresh.UnregisterForRemoteRefresh(HandleRemoteBoardRefreshedAsync);
+        UndoService.OnStateChanged -= HandleUndoStateChanged;
+        UndoService.OnUndoPerformed -= HandleUndoPerformed;
         try
         {
             await JS.InvokeVoidAsync("HabitinatorBoardVisibility.stop");
@@ -311,8 +318,21 @@
         {
         }
 
+        try
+        {
+            await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.stop");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (TaskCanceledException)
+        {
+        }
+
         _visibilityRef?.Dispose();
         _visibilityRef = null;
+        _selfRef?.Dispose();
+        _selfRef = null;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -324,6 +344,18 @@
             {
                 _visibilityRef = DotNetObjectReference.Create(BoardNotifyBridge);
                 await JS.InvokeVoidAsync("HabitinatorBoardVisibility.start", _visibilityRef);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+            catch (InvalidOperationException)
+            {
+            }
+
+            try
+            {
+                _selfRef = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.start", _selfRef);
             }
             catch (JSDisconnectedException)
             {
@@ -660,4 +692,31 @@
         }
     }
 
+    private void HandleUndoStateChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleUndoPerformed()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await LoadBoardAsync();
+            StateHasChanged();
+        });
+    }
+
+    private async Task HandleUndoAsync()
+    {
+        await UndoService.UndoAsync();
+    }
+
+    [JSInvokable]
+    public async Task OnCtrlZPressed()
+    {
+        if (UndoService.CanUndo)
+        {
+            await HandleUndoAsync();
+        }
+    }
 }

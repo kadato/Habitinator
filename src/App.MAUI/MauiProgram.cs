@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Logging;
 
+using MudBlazor;
 using MudBlazor.Services;
 
 using Plugin.LocalNotification;
@@ -35,7 +36,13 @@ public static class MauiProgram
         });
 
         builder.Services.AddMauiBlazorWebView();
-        builder.Services.AddMudServices();
+        builder.Services.AddMudServices(config =>
+        {
+            config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomLeft;
+            config.SnackbarConfiguration.ShowTransitionDuration = 250;
+            config.SnackbarConfiguration.HideTransitionDuration = 200;
+            config.SnackbarConfiguration.NewestOnTop = true;
+        });
         var apiBase = MauiAppSettings.ResolveApiBaseUrl(builder.Configuration).TrimEnd('/') + "/";
         builder.Services.AddSingleton(_ => new MauiApiEndpointOptions(apiBase));
         builder.Services.AddSingleton<IAuthTokenStore, AuthTokenStore>();
@@ -74,11 +81,14 @@ public static class MauiProgram
         builder.Services.AddSingleton<GlobalTimerService>();
         builder.Services.AddSingleton<MauiActivityEventStore>();
         builder.Services.AddSingleton<IUserActivityLogService, MauiUserActivityLogService>();
-        builder.Services.AddSingleton<IBoardDataService>(sp =>
+        builder.Services.AddScoped<IUndoService, UndoService>();
+        builder.Services.AddScoped<IBoardDataService>(sp =>
         {
             var inner = sp.GetRequiredService<LocalFirstBoardDataService>();
             var log = sp.GetRequiredService<IUserActivityLogService>();
-            return new ActivityLoggingBoardDataService(inner, log);
+            var loggingService = new ActivityLoggingBoardDataService(inner, log);
+            var undoService = sp.GetRequiredService<IUndoService>();
+            return new UndoableBoardDataService(loggingService, undoService);
         });
         builder.Services.AddSingleton<IActivityStatisticsReader, MauiApiActivityStatisticsReader>();
         builder.Services.AddSingleton<INotificationSettingsService, MauiApiNotificationSettingsService>();

@@ -262,3 +262,19 @@ h1:focus {
         padding-left: env(safe-area-inset-left);
     }
 }
+
+/* ── Undo toast (bottom-left snackbar) ─────────────────────────────────── */
+.habitinator-undo-toast {
+    border-left: 3px solid var(--mud-palette-warning);
+    border-radius: 0.5rem !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.14) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.habitinator-undo-toast .mud-snackbar-action button {
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+}

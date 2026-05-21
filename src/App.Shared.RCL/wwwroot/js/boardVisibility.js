@@ -20,3 +20,38 @@ window.HabitinatorBoardVisibility = (function () {
     }
   };
 })();
+
+window.HabitinatorKeyboardShortcuts = (function () {
+  let dotNetHelper = null;
+
+  function onKeyDown(e) {
+    if (!dotNetHelper) return;
+
+    const isUndo = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z';
+    if (!isUndo) return;
+
+    const activeElement = document.activeElement;
+    if (activeElement) {
+      const tagName = activeElement.tagName.toLowerCase();
+      const isInput = tagName === 'input' || tagName === 'textarea' || activeElement.isContentEditable;
+      if (isInput) {
+        return;
+      }
+    }
+
+    e.preventDefault();
+    dotNetHelper.invokeMethodAsync("OnCtrlZPressed").catch(function () {});
+  }
+
+  return {
+    start: function (dotNetRef) {
+      dotNetHelper = dotNetRef;
+      window.addEventListener("keydown", onKeyDown);
+    },
+    stop: function () {
+      window.removeEventListener("keydown", onKeyDown);
+      dotNetHelper = null;
+    }
+  };
+})();
+

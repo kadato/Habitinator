@@ -61,6 +61,11 @@
     </MudMainContent>
 </MudLayout>
 
+@if (Session.IsLoggedIn)
+{
+    <GlobalTimerFocusAlertHost/>
+}
+
 @code {
     private static bool IsAuthPath(string path) =>
         path.Equals("/auth/login", StringComparison.OrdinalIgnoreCase) ||

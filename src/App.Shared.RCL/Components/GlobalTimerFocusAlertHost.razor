@@ -1,0 +1,110 @@
+@inject GlobalTimerService TimerService
+@inject IUserNotifier UserNotifier
+@inject IFocusTimerClientAlerts FocusClientAlerts
+@inject IDialogService DialogService
+@inject ITimerSessionLogService TimerSessionLog
+@implements IDisposable
+
+@* Runs on every authenticated page so "time's up" dialogs are not tied to the board timer panel. *@
+
+@code {
+    private PeriodicTimer? _focusTick;
+    private CancellationTokenSource? _focusTickCts;
+
+    protected override void OnInitialized()
+    {
+        _focusTickCts = new CancellationTokenSource();
+        _focusTick = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        _ = RunFocusTickAsync(_focusTickCts.Token);
+    }
+
+    private async Task RunFocusTickAsync(CancellationToken cancellationToken)
+    {
+        if (_focusTick is null)
+        {
+            return;
+        }
+
+        try
+        {
+            while (await _focusTick.WaitForNextTickAsync(cancellationToken))
+            {
+                if (TimerService.IsRunning && TimerService.TryConsumeFocusDurationReached())
+                {
+                    var label = string.IsNullOrEmpty(TimerService.TargetId) ? "Open session" : TimerService.TargetId;
+                    var dur = FocusDurationInput.FormatForAlertLabel(TimerService.FocusAlertAfter!.Value);
+                    var message = $"Time's up ({dur}) — {label}";
+                    TimerService.PauseForFocusTimeUp();
+                    _ = InvokeAsync(async () =>
+                    {
+                        await OnFocusDurationReachedAsync(message, dur, label, cancellationToken);
+                    });
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during disposal.
+        }
+    }
+
+    private async Task OnFocusDurationReachedAsync(
+        string notifyMessage,
+        string durationLabel,
+        string targetLabel,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await FocusClientAlerts.NotifyTimeUpAsync("Time's up", notifyMessage, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            TimerService.ResumeAfterFocusPromptNotDone();
+            return;
+        }
+
+        bool? confirmed;
+        try
+        {
+            confirmed = await DialogService.ShowMessageBoxAsync(
+                "Time's up",
+                "(" + durationLabel + ") is up for \"" + targetLabel + "\". "
+                + "The timer is paused. If you actually finished, log this session and update the board. "
+                + "If you are not done yet, choose Not done — the timer will continue from this time.",
+                "Yes, log session",
+                "Not done");
+        }
+        catch (Exception)
+        {
+            await UserNotifier.NotifyAsync(
+                "Time's up — open the board to log your session, or use Stop & log on the timer.",
+                Severity.Info,
+                cancellationToken);
+            TimerService.ResumeAfterFocusPromptNotDone();
+            return;
+        }
+
+        if (confirmed != true)
+        {
+            TimerService.ResumeAfterFocusPromptNotDone();
+            return;
+        }
+
+        var elapsed = TimerService.Stop();
+        if (elapsed > TimeSpan.Zero)
+        {
+            var result = await TimerSessionLog.LogStoppedSessionAsync(elapsed, cancellationToken);
+            await UserNotifier.NotifyAsync(result.UserMessage, Severity.Success, cancellationToken);
+        }
+
+        TimerService.ClearTargetAndFocus();
+    }
+
+    public void Dispose()
+    {
+        _focusTickCts?.Cancel();
+        _focusTick?.Dispose();
+        _focusTickCts?.Dispose();
+    }
+}

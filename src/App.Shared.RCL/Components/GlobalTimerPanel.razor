@@ -1,7 +1,4 @@
 @inject GlobalTimerService TimerService
-@inject IUserNotifier UserNotifier
-@inject IFocusTimerClientAlerts FocusClientAlerts
-@inject IDialogService DialogService
 @implements IDisposable
 
 <MudCard Class="timer-panel w-100" Elevation="0" Outlined="true">
@@ -159,6 +156,8 @@
     private string _sessionTargetText = string.Empty;
     private bool _sessionTargetFieldInitialized;
     private (string? TargetId, string? TargetType, Guid? BoardItemId) _lastSyncedSessionTarget;
+    private bool _focusDurationFieldInitialized;
+    private TimeSpan? _lastSyncedFocusAlertAfter;
     private string _focusDurationText = string.Empty;
 
     private string FocusDurationText
@@ -221,13 +220,33 @@
             _sessionTargetText = FormatTargetForField(TimerService);
         }
 
-        SyncFocusDurationFromService();
+        SyncFocusDurationFromServiceIfChanged();
     }
 
-    private void SyncFocusDurationFromService()
+    private void SyncFocusDurationFromServiceIfChanged()
     {
+        if (_focusDurationFieldInitialized && TimerService.FocusAlertAfter == _lastSyncedFocusAlertAfter)
+        {
+            return;
+        }
+
+        _focusDurationFieldInitialized = true;
+        _lastSyncedFocusAlertAfter = TimerService.FocusAlertAfter;
         _focusDurationText = FocusDurationInput.FormatForField(TimerService.FocusAlertAfter);
         _focusDurationParseError = false;
+    }
+
+    private void SyncTimerFieldsFromServiceIfNeeded()
+    {
+        var key = (TimerService.TargetId, TimerService.TargetType, TimerService.BoardItemId);
+        if (key != _lastSyncedSessionTarget)
+        {
+            _lastSyncedSessionTarget = key;
+            _sessionTargetFieldInitialized = true;
+            _sessionTargetText = FormatTargetForField(TimerService);
+        }
+
+        SyncFocusDurationFromServiceIfChanged();
     }
 
     private void OnFocusDurationBlur()
@@ -250,6 +269,7 @@
             TimerService.FocusAlertAfter = null;
             _focusDurationText = string.Empty;
             _focusDurationParseError = false;
+            _lastSyncedFocusAlertAfter = null;
             return;
         }
 
@@ -264,6 +284,7 @@
         _focusDurationParseError = false;
         TimerService.FocusAlertAfter = parsed;
         _focusDurationText = FocusDurationInput.FormatForField(parsed);
+        _lastSyncedFocusAlertAfter = parsed;
     }
 
     private async Task RunUiTickAsync(CancellationToken cancellationToken)
@@ -277,16 +298,7 @@
         {
             while (await _uiTick.WaitForNextTickAsync(cancellationToken))
             {
-                if (TimerService.IsRunning && TimerService.TryConsumeFocusDurationReached())
-                {
-                    var label = string.IsNullOrEmpty(TimerService.TargetId) ? "Open session" : TimerService.TargetId;
-                    var dur = FocusDurationInput.FormatForAlertLabel(TimerService.FocusAlertAfter!.Value);
-                    var message = $"Time's up ({dur}) — {label}";
-                    TimerService.PauseForFocusTimeUp();
-                    // Do not await: show prompt without blocking the UI tick (display stays on the frozen time).
-                    _ = InvokeAsync(async () => { await OnFocusDurationReachedAsync(message, dur, label, cancellationToken); });
-                }
-
+                SyncTimerFieldsFromServiceIfNeeded();
                 await InvokeAsync(StateHasChanged);
             }
         }
@@ -473,72 +485,6 @@
         TimerService.Reset();
     }
 
-    /// <summary>
-    ///     The timer is already paused at the milestone. Logging only if the user confirms; "not done" resumes counting.
-    /// </summary>
-    private async Task OnFocusDurationReachedAsync(
-        string notifyMessage,
-        string durationLabel,
-        string targetLabel,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            await FocusClientAlerts.NotifyTimeUpAsync("Time's up", notifyMessage, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            TimerService.ResumeAfterFocusPromptNotDone();
-            return;
-        }
-
-        try
-        {
-            await UserNotifier.NotifyFocusTimerEndAsync(notifyMessage, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            TimerService.ResumeAfterFocusPromptNotDone();
-            return;
-        }
-
-        bool? confirmed;
-        try
-        {
-            confirmed = await DialogService.ShowMessageBoxAsync(
-                "Time's up",
-                "(" + durationLabel + ") is up for \"" + targetLabel + "\". "
-                + "The timer is paused. If you actually finished, log this session and update the board. "
-                + "If you are not done yet, choose Not done — the timer will continue from this time.",
-                "Yes, log session",
-                "Not done");
-        }
-        catch (Exception)
-        {
-            await UserNotifier.NotifyAsync(
-                "Time's up — open the timer panel to log your session, or use Stop & log.",
-                Severity.Info,
-                cancellationToken);
-            TimerService.ResumeAfterFocusPromptNotDone();
-            return;
-        }
-
-        if (confirmed != true)
-        {
-            TimerService.ResumeAfterFocusPromptNotDone();
-            return;
-        }
-
-        var elapsed = TimerService.Stop();
-        if (elapsed > TimeSpan.Zero)
-        {
-            await OnLogSaved.InvokeAsync(elapsed);
-        }
-        TimerService.ClearTargetAndFocus();
-        _sessionTargetText = string.Empty;
-        FocusDurationText = string.Empty;
-    }
-
     private async Task StopAndLog()
     {
         var elapsed = TimerService.Stop();
@@ -548,7 +494,10 @@
         }
         TimerService.ClearTargetAndFocus();
         _sessionTargetText = string.Empty;
-        FocusDurationText = string.Empty;
+        _lastSyncedSessionTarget = (null, null, null);
+        _focusDurationText = string.Empty;
+        _lastSyncedFocusAlertAfter = null;
+        _focusDurationFieldInitialized = true;
     }
 
     public void Dispose()

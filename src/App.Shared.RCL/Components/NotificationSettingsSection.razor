@@ -99,7 +99,7 @@
                            ValueChanged="v => { _model.FocusTimerAlertsEnabled = v; _ = AutoSaveAsync(); }"
                            Label="Focus timer alerts"/>
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
-                    On the board, the session timer can show &quot;time's up&quot; after a duration you choose (hours and minutes in the time picker). Leave the field empty to use a plain stopwatch with no alert.
+                    When the session timer reaches the duration you set on the board, shows a dialog (and optional sound or browser notification). Leave the duration empty for a plain stopwatch with no alert.
                 </MudText>
                 <MudSwitch T="bool"
                            Color="Color.Primary"

@@ -122,39 +122,4 @@ public sealed class NotificationSettingsRulesTests
         _rules.UndoVisibleStateDurationMs(preset).Should().BeGreaterThan(_rules.VisibleStateDurationMs(preset));
     }
 
-    [Fact]
-    public void Focus_timer_end_requires_in_app_alerts_and_focus_toggle_not_success_group()
-    {
-        var s = NotificationSettings.CreateDefault();
-        s.FocusTimerAlertsEnabled = true;
-        s.InAppMessagesEnabled = true;
-        s.ShowSuccessToasts = true;
-        _rules.ShouldShowFocusTimerEndNotification(s).Should().BeTrue();
-
-        s.InAppMessagesEnabled = false;
-        _rules.ShouldShowFocusTimerEndNotification(s).Should().BeFalse();
-        s.InAppMessagesEnabled = true;
-
-        s.FocusTimerAlertsEnabled = false;
-        _rules.ShouldShowFocusTimerEndNotification(s).Should().BeFalse();
-        s.FocusTimerAlertsEnabled = true;
-
-        s.ShowSuccessToasts = false;
-        _rules.ShouldShowFocusTimerEndNotification(s).Should().BeTrue();
-    }
-
-    [Fact]
-    public void Focus_timer_end_ignores_quiet_hours()
-    {
-        var s = NotificationSettings.CreateDefault();
-        s.QuietHoursEnabled = true;
-        s.QuietHoursStartUtc = TimeSpan.FromHours(0);
-        s.QuietHoursEndUtc = TimeSpan.FromHours(24);
-        s.ShowSuccessToasts = true;
-        s.FocusTimerAlertsEnabled = true;
-        s.InAppMessagesEnabled = true;
-        var utc = new DateTime(2026, 4, 26, 12, 0, 0, DateTimeKind.Utc);
-        _rules.IsInQuietHours(s, utc).Should().BeTrue();
-        _rules.ShouldShowFocusTimerEndNotification(s).Should().BeTrue();
-    }
 }

@@ -9,7 +9,6 @@ public interface INotificationSettingsRules
     bool ShouldShowToast(NotificationSettings settings, Severity severity, DateTime utcNow);
     int VisibleStateDurationMs(NotificationToastDuration preset);
     int UndoVisibleStateDurationMs(NotificationToastDuration preset);
-    bool ShouldShowFocusTimerEndNotification(NotificationSettings settings);
     bool IsInQuietHours(NotificationSettings settings, DateTime utcNow);
 }
 
@@ -59,18 +58,6 @@ public sealed class NotificationSettingsRules : INotificationSettingsRules
             NotificationToastDuration.Long => 20_000,
             _ => 12_000
         };
-    }
-
-    /// <summary>
-    ///     In-app alert when a focus "time's up" is reached. Does not use quiet hours so a scheduled
-    ///     focus block can still signal completion at night. Uses <see cref="NotificationSettings.FocusTimerAlertsEnabled" />;
-    ///     does not require <see cref="NotificationSettings.ShowSuccessToasts" /> so the timer can surface even when
-    ///     general success toasts are muted.
-    /// </summary>
-    public bool ShouldShowFocusTimerEndNotification(NotificationSettings settings)
-    {
-        return settings.FocusTimerAlertsEnabled
-               && settings.InAppMessagesEnabled;
     }
 
     public bool IsInQuietHours(NotificationSettings settings, DateTime utcNow)

@@ -46,15 +46,6 @@ public sealed class UserNotifier : IUserNotifier, IDisposable
         _snackbar.Add(message, severity, config => config.VisibleStateDuration = ms);
     }
 
-    public async ValueTask NotifyFocusTimerEndAsync(string message, CancellationToken cancellationToken = default)
-    {
-        var settings = await GetCachedAsync(cancellationToken).ConfigureAwait(false);
-        if (!_notificationRules.ShouldShowFocusTimerEndNotification(settings)) return;
-
-        var ms = _notificationRules.VisibleStateDurationMs(settings.ToastDuration);
-        _snackbar.Add(message, Severity.Success, config => config.VisibleStateDuration = ms);
-    }
-
     private async ValueTask<NotificationSettings> GetCachedAsync(CancellationToken cancellationToken)
     {
         if (_cache is not null) return _cache;

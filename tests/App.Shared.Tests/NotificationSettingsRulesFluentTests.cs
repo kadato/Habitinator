@@ -34,17 +34,4 @@ public sealed class NotificationSettingsRulesFluentTests
             .Should().BeTrue();
     }
 
-    [Fact]
-    public void Should_allow_focus_timer_toast_when_enabled()
-    {
-        var timeZoneService = Substitute.For<IUserTimeZoneService>();
-        var rules = new NotificationSettingsRules(timeZoneService);
-
-        var settings = NotificationSettings.CreateDefault();
-        settings.FocusTimerAlertsEnabled = true;
-        settings.InAppMessagesEnabled = true;
-
-        rules.ShouldShowFocusTimerEndNotification(settings)
-            .Should().BeTrue();
-    }
 }

@@ -12,7 +12,11 @@ public static class DemoGuestSeeder
 {
     private const int DemoRandomSeed = 2026_04_24;
     private const int HeatmapDataDays = 370;
-    private const int HeatmapPresentThreshold = 2_000;
+    /// <summary>Seeded heatmap is ~1.8k events.</summary>
+    private const int HeatmapPresentThreshold = 1_500;
+
+    /// <summary>Board insert adds only a few streak backfill rows before the heatmap is generated.</summary>
+    private const int BoardBackfillEventMax = 10;
 
     /// <summary>Inserts demo board items when missing, then fills activity when the heatmap is sparse.</summary>
     public static async Task SeedIfMissingAsync(
@@ -57,10 +61,11 @@ public static class DemoGuestSeeder
         Guid guestUserId,
         CancellationToken cancellationToken)
     {
-        // Board demo seed adds a few activity rows (e.g. daily streak backfill). A full guest heatmap is
-        // thousands of events — if we have that many, skip. Otherwise fill in the year-long demo series.
+        // Only fill an empty (or board-only backfill) log. Never append a second year on startup.
+        // Full replace is ReseedActivityAsync (ForceReseed / ForceReseedActivity only).
         var n = await db.UserActivityEvents.CountAsync(e => e.UserId == guestUserId, cancellationToken);
-        if (n > HeatmapPresentThreshold) return;
+        if (n >= HeatmapPresentThreshold) return;
+        if (n > BoardBackfillEventMax) return;
 
         await SeedDemoActivityCoreAsync(db, guestUserId, cancellationToken);
     }

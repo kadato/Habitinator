@@ -12,20 +12,20 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
 {
     private readonly AuthenticationStateProvider _authenticationStateProvider;
     private readonly IBoardChangeNotifier _boardChangeNotifier;
-    private readonly ApplicationDbContext _db;
+    private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
     private readonly DemoUserResolver _demoUserResolver;
     private readonly ILogger<WebUserPreferencesService> _logger;
 
     public WebUserPreferencesService(
         AuthenticationStateProvider authenticationStateProvider,
         DemoUserResolver demoUserResolver,
-        ApplicationDbContext db,
+        IDbContextFactory<ApplicationDbContext> dbFactory,
         IBoardChangeNotifier boardChangeNotifier,
         ILogger<WebUserPreferencesService> logger)
     {
         _authenticationStateProvider = authenticationStateProvider;
         _demoUserResolver = demoUserResolver;
-        _db = db;
+        _dbFactory = dbFactory;
         _boardChangeNotifier = boardChangeNotifier;
         _logger = logger;
     }
@@ -41,7 +41,8 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
             if (user.Identity?.IsAuthenticated != true) return UserPreferences.CreateDefault();
 
             var userId = await _demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
-            var row = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
             if (row is null) return UserPreferences.CreateDefault();
 
             return UserPreferencesJson.DeserializeOrDefault(row.UserPreferencesJson);
@@ -60,11 +61,12 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
         if (user.Identity?.IsAuthenticated != true) return;
 
         var userId = await _demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
-        var row = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
         if (row is null) return;
 
         row.UserPreferencesJson = UserPreferencesJson.Serialize(preferences);
-        await _db.SaveChangesAsync(cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
         Changed?.Invoke();
         await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
     }

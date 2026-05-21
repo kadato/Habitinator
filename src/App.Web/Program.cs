@@ -83,6 +83,7 @@ builder.Services.PostConfigure<DemoUserOptions>(static o =>
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddScoped<GlobalTimerService>();
+builder.Services.AddScoped<ITimerSessionLogService, TimerSessionLogService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<DemoUserResolver>();
 builder.Services.AddScoped<IRemoteBoardRefreshService, RemoteBoardRefreshService>();

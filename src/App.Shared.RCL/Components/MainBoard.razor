@@ -1,6 +1,6 @@
 @inject GlobalTimerService TimerService
 @inject IBoardDataService BoardDataService
-@inject IUserActivityLogService UserActivityLog
+@inject ITimerSessionLogService TimerSessionLog
 @inject IDialogService DialogService
 @inject IDailyRetroPromptStore DailyRetroStore
 @inject IRemoteBoardRefreshService RemoteBoardRefresh
@@ -525,86 +525,9 @@
 
     private async Task HandleTimerLogSavedAsync(TimeSpan duration)
     {
-        var targetType = TimerService.TargetType;
-        var targetId = TimerService.TargetId;
-        var boardId = TimerService.BoardItemId ?? ResolveBoardItemIdFromTitle(targetType, targetId);
-        var boardError = false;
-        if (boardId is Guid id && targetType is "Habit" or "Daily" or "Todo")
-        {
-            try
-            {
-                var progressed = false;
-                if (targetType == "Habit")
-                {
-                    var updated = await BoardDataService.IncrementHabitPlusAsync(id);
-                    progressed = updated is not null;
-                }
-                else if (targetType == "Daily")
-                {
-                    var daily = Dailies.FirstOrDefault(d => d.Id == id);
-                    var today = DailySchedule.LocalToday(TimeZoneService);
-                    if (daily is not null && !DailySchedule.IsCompleteForDate(daily, today))
-                    {
-                        var updated = await BoardDataService.ToggleItemAsync(BoardSection.Daily, id);
-                        progressed = updated is not null;
-                    }
-                }
-                else if (targetType == "Todo")
-                {
-                    var todo = Todos.FirstOrDefault(t => t.Id == id);
-                    if (todo is { IsCompleted: false })
-                    {
-                        var updated = await BoardDataService.ToggleItemAsync(BoardSection.Todo, id);
-                        progressed = updated is not null;
-                    }
-                }
-
-                if (progressed)
-                {
-                    await LoadBoardAsync();
-                    TimerService.SetManualTarget(null);
-                }
-            }
-            catch (Exception)
-            {
-                boardError = true;
-            }
-        }
-
-        try
-        {
-            var customLabel = boardId is null ? targetId : null;
-            await UserActivityLog.LogTimerSessionAsync(duration, boardId, customLabel);
-        }
-        catch (Exception)
-        {
-            // Statistics persistence is best-effort; the board and LastEvent are primary feedback.
-        }
-
-        if (boardError)
-        {
-            LastEvent =
-                $"Timer stopped ({duration:hh\\:mm\\:ss}), but the board could not be updated. Check your connection and try again.";
-            return;
-        }
-
-        LastEvent = $"Timer log saved for {targetType ?? "Unassigned"} '{targetId ?? "-"}' with duration {duration:hh\\:mm\\:ss}.";
-    }
-
-    private Guid? ResolveBoardItemIdFromTitle(string? targetType, string? title)
-    {
-        if (string.IsNullOrEmpty(title))
-        {
-            return null;
-        }
-
-        return targetType switch
-        {
-            "Habit" => Habits.FirstOrDefault(h => string.Equals(h.Title, title, StringComparison.Ordinal))?.Id,
-            "Daily" => Dailies.FirstOrDefault(d => string.Equals(d.Title, title, StringComparison.Ordinal))?.Id,
-            "Todo" => Todos.FirstOrDefault(t => string.Equals(t.Title, title, StringComparison.Ordinal))?.Id,
-            _ => null
-        };
+        var result = await TimerSessionLog.LogStoppedSessionAsync(duration);
+        LastEvent = result.UserMessage;
+        await LoadBoardAsync();
     }
 
     private static string EmailLocalPart(string? email)

@@ -79,6 +79,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IApiSession, ApiSession>();
         builder.Services.AddSingleton<IClock, SystemClock>();
         builder.Services.AddSingleton<GlobalTimerService>();
+        builder.Services.AddScoped<ITimerSessionLogService, TimerSessionLogService>();
         builder.Services.AddSingleton<MauiActivityEventStore>();
         builder.Services.AddSingleton<IUserActivityLogService, MauiUserActivityLogService>();
         builder.Services.AddScoped<IUndoService, UndoService>();

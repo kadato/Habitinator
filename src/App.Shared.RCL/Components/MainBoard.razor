@@ -543,7 +543,7 @@
             }
         }
 
-        if (firstRender && _initialLoadComplete && _loadError is null)
+        if (_initialLoadComplete && _loadError is null)
         {
             await TryOpenDailyYesterdayRetroIfNeededAsync();
         }
@@ -726,46 +726,38 @@
             return;
         }
 
-        var prefs = await PreferencesService.GetAsync();
-        var today = DailySchedule.LocalToday(TimeZoneService, prefs.DayStartLocalTime);
-        DateOnly? lastResolved;
-        try
-        {
-            lastResolved = await DailyRetroStore.GetLastPromptResolvedLocalDateAsync();
-        }
-        catch (Exception)
-        {
-            return;
-        }
-
-        if (lastResolved == today)
-        {
-            return;
-        }
-
-        var missed = DailySchedule.GetYesterdayUncompletedDailies(Dailies, today);
-        if (missed.Count == 0)
-        {
-            return;
-        }
-
-        var y = today.AddDays(-1);
-        var options = new DialogOptions
-        {
-            MaxWidth = MaxWidth.Small,
-            FullWidth = false,
-            CloseButton = false,
-            CloseOnEscapeKey = true
-        };
-        var parameters = new DialogParameters<DailyYesterdayRetroDialog>
-        {
-            { x => x.DueOn, y },
-            { x => x.Items, missed }
-        };
-
         _dailyRetroSessionOffered = true;
         try
         {
+            var prefs = await PreferencesService.GetAsync();
+            var today = DailySchedule.LocalToday(TimeZoneService, prefs.DayStartLocalTime);
+            DateOnly? lastResolved = await DailyRetroStore.GetLastPromptResolvedLocalDateAsync();
+
+            if (lastResolved == today)
+            {
+                return;
+            }
+
+            var missed = DailySchedule.GetYesterdayUncompletedDailies(Dailies, today);
+            if (missed.Count == 0)
+            {
+                return;
+            }
+
+            var y = today.AddDays(-1);
+            var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Small,
+                FullWidth = false,
+                CloseButton = false,
+                CloseOnEscapeKey = true
+            };
+            var parameters = new DialogParameters<DailyYesterdayRetroDialog>
+            {
+                { x => x.DueOn, y },
+                { x => x.Items, missed }
+            };
+
             var dialog = await DialogService.ShowAsync<DailyYesterdayRetroDialog>(
                 "Catch up: yesterday’s dailies", parameters, options);
             _ = await dialog.Result;

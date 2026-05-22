@@ -12,9 +12,9 @@
 
 A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits, dailies, and to-dos with a focus timer, analytics, and reliable sync across web and mobile.
 
-**Live Demo:** [app-habitinator-demo.azurewebsites.net](https://app-habitinator-demo.azurewebsites.net)
+**Live Demo:** [habitinator.app](https://habitinator.app)
 
-[Demo](https://app-habitinator-demo.azurewebsites.net) • [Preview](#-preview) • [Download](#-download--install) • [Features](#product-features-current) • [Tech Stack](#technology-stack) • [Getting Started](#run-and-debug)
+[Demo](https://habitinator.app) • [Preview](#-preview) • [Download](#-download--install) • [Features](#product-features-current) • [Tech Stack](#technology-stack) • [Getting Started](#run-and-debug)
 
 </div>
 
@@ -73,7 +73,7 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 
 ### Available builds
 
-**Live Demo (Web):** [https://app-habitinator-demo.azurewebsites.net](https://app-habitinator-demo.azurewebsites.net)  
+**Live Demo (Web):** [https://habitinator.app](https://habitinator.app)  
 **Latest Release:** [![GitHub Release](https://img.shields.io/github/v/release/tothKarolyDavid/Habitinator)](https://github.com/tothKarolyDavid/Habitinator/releases/latest)
 
 | Platform | Package | Notes |

@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://127.0.0.1:5031/"
+      "url": "http://localhost:5031/"
     }
   ],
   "paths": {
@@ -830,6 +830,13 @@
         "properties": {
           "title": {
             "type": "string"
+          },
+          "itemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },

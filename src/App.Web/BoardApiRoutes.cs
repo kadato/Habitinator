@@ -66,7 +66,7 @@ internal static class BoardApiRoutes
                         BoardIdempotencyService.ComputeFingerprintHex("POST", path, bodyJson),
                         async () =>
                         {
-                            var item = await board.CreateItemAsync(userId, section, request.Title.Trim(), cancellationToken);
+                            var item = await board.CreateItemAsync(userId, section, request.Title.Trim(), request.ItemId, cancellationToken);
                             return (200, JsonSerializer.Serialize(item, Json), "application/json");
                         },
                         cancellationToken);

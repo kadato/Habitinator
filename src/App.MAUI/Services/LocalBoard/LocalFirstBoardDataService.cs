@@ -90,13 +90,13 @@ public sealed class LocalFirstBoardDataService(
         }
     }
 
-    public Task<BoardItem> CreateItemAsync(BoardSection section, string title,
+    public Task<BoardItem> CreateItemAsync(BoardSection section, string title, Guid? itemId = null,
         CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
             cancellationToken,
             async (db, userKey) =>
             {
-                var id = Guid.NewGuid();
+                var id = itemId ?? Guid.NewGuid();
                 var now = DateTimeOffset.UtcNow;
                 var item = new BoardItem(id, title.Trim(), CreatedAtUtc: now);
                 db.BoardItems.Add(LocalBoardItemRow.FromModel(section, userKey, item, true));
@@ -653,7 +653,7 @@ public sealed class LocalFirstBoardDataService(
             {
                 var p = System.Text.Json.JsonSerializer.Deserialize<CreateOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
                         ?? throw new InvalidOperationException("Invalid create payload.");
-                var serverItem = await api.CreateItemAsync(p.Section, p.Title, head.OperationId, cancellationToken);
+                var serverItem = await api.CreateItemAsync(p.Section, p.Title, p.ClientItemId, head.OperationId, cancellationToken);
                 await CommitCreateSuccessAsync(p.ClientItemId, p.Section, serverItem, head.UserKey, cancellationToken);
                 return;
             }

@@ -92,19 +92,20 @@ public sealed class RemoteBoardDataService : IBoardDataService
         }
     }
 
-    public Task<BoardItem> CreateItemAsync(BoardSection section, string title,
+    public Task<BoardItem> CreateItemAsync(BoardSection section, string title, Guid? itemId = null,
         CancellationToken cancellationToken = default) =>
-        CreateItemAsync(section, title, Guid.Empty, cancellationToken);
+        CreateItemAsync(section, title, itemId, Guid.Empty, cancellationToken);
 
     public async Task<BoardItem> CreateItemAsync(
         BoardSection section,
         string title,
+        Guid? itemId,
         Guid operationId,
         CancellationToken cancellationToken = default)
     {
         using var req = new HttpRequestMessage(HttpMethod.Post, $"api/board/{section}")
         {
-            Content = JsonContent.Create(new ItemTitleRequest(title), options: Serializer)
+            Content = JsonContent.Create(new ItemTitleRequest(title, itemId), options: Serializer)
         };
         AddMutationHeaders(req, operationId, null);
         using var res = await Client.SendAsync(req, cancellationToken);

@@ -117,12 +117,29 @@ public sealed class BoardPersistenceService
     }
 
     public async Task<BoardItem> CreateItemAsync(Guid userId, BoardSection section, string title,
+        Guid? itemId = null,
         CancellationToken cancellationToken = default)
     {
         var utcNow = DateTimeOffset.UtcNow;
+        if (itemId is { } id)
+        {
+            var existing = await _dbContext.BoardItems
+                .FirstOrDefaultAsync(x => x.UserId == userId && x.Id == id, cancellationToken);
+            if (existing is not null)
+            {
+                existing.DeletedAtUtc = null;
+                existing.Title = title;
+                existing.UpdatedAtUtc = utcNow;
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                var restored = await ToModelWithDailyStreaksAsync(userId, existing, cancellationToken);
+                await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+                return restored;
+            }
+        }
+
         var entity = new BoardItemEntity
         {
-            Id = Guid.NewGuid(),
+            Id = itemId ?? Guid.NewGuid(),
             UserId = userId,
             Section = section,
             Title = title,

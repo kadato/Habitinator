@@ -19,8 +19,10 @@ public sealed class UndoService : IUndoService
 
     private List<Func<Task>>? _currentBatch;
     private string? _currentBatchDescription;
+    private int _undoingCount;
+    private readonly SemaphoreSlim _undoLock = new(1, 1);
 
-    public bool IsUndoing { get; private set; }
+    public bool IsUndoing => _undoingCount > 0;
     public bool CanUndo => _undoStack.Count > 0;
     public string? LastActionDescription => _undoStack.Count > 0 ? _undoStack[^1].Description : null;
 
@@ -93,7 +95,7 @@ public sealed class UndoService : IUndoService
 
     private async Task UndoAsync(Guid? actionId)
     {
-        if (_undoStack.Count == 0 || IsUndoing) return;
+        if (_undoStack.Count == 0) return;
 
         var index = actionId is null
             ? _undoStack.Count - 1
@@ -104,7 +106,8 @@ public sealed class UndoService : IUndoService
         var action = _undoStack[index];
         _undoStack.RemoveAt(index);
 
-        IsUndoing = true;
+        Interlocked.Increment(ref _undoingCount);
+        await _undoLock.WaitAsync().ConfigureAwait(false);
         try
         {
             await action.UndoFunc().ConfigureAwait(false);
@@ -116,7 +119,8 @@ public sealed class UndoService : IUndoService
         }
         finally
         {
-            IsUndoing = false;
+            _undoLock.Release();
+            Interlocked.Decrement(ref _undoingCount);
             DismissSnackbar(action);
             OnStateChanged?.Invoke();
         }

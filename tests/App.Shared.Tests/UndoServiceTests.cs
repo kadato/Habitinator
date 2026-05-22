@@ -142,6 +142,57 @@ public sealed class UndoServiceTests
         _undoService.CanUndo.Should().BeTrue();
         _undoService.LastActionDescription.Should().Be("Third");
     }
+
+    [Fact]
+    public async Task UndoAsync_older_then_newer_action()
+    {
+        var undone = new List<string>();
+
+        var firstId = _undoService.RegisterUndo("First", () =>
+        {
+            undone.Add("first");
+            return Task.CompletedTask;
+        });
+        var secondId = _undoService.RegisterUndo("Second", () =>
+        {
+            undone.Add("second");
+            return Task.CompletedTask;
+        });
+
+        await _undoService.UndoAsync(firstId);
+        await _undoService.UndoAsync(secondId);
+
+        undone.Should().Equal(["first", "second"]);
+    }
+
+    [Fact]
+    public async Task UndoAsync_concurrent_calls_should_not_block()
+    {
+        var tcs1 = new TaskCompletionSource();
+        var tcs2 = new TaskCompletionSource();
+        var undone = new List<string>();
+
+        _undoService.RegisterUndo("First", async () =>
+        {
+            await tcs1.Task;
+            undone.Add("first");
+        });
+        _undoService.RegisterUndo("Second", async () =>
+        {
+            await tcs2.Task;
+            undone.Add("second");
+        });
+
+        var task2 = _undoService.UndoAsync();
+        var task1 = _undoService.UndoAsync();
+
+        tcs2.SetResult();
+        tcs1.SetResult();
+
+        await Task.WhenAll(task1, task2);
+
+        undone.Should().Equal(["second", "first"]);
+    }
 }
 
 public sealed class UndoableBoardDataServiceTests
@@ -159,7 +210,7 @@ public sealed class UndoableBoardDataServiceTests
     public async Task CreateItemAsync_should_register_undo_with_delete()
     {
         var item = new BoardItem(Guid.NewGuid(), "New Task");
-        _inner.CreateItemAsync(BoardSection.Todo, "New Task", Arg.Any<CancellationToken>())
+        _inner.CreateItemAsync(BoardSection.Todo, "New Task", Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(item));
         _undoService.IsUndoing.Returns(false);
 
@@ -221,5 +272,228 @@ public sealed class UndoableBoardDataServiceTests
         _undoService.Received(1).RegisterUndo(
             Arg.Is("Complete \"Task\""),
             Arg.Any<Func<Task>>());
+    }
+
+    [Fact]
+    public async Task Delete_then_Edit_Undo_sequence_should_preserve_original_guid()
+    {
+        // Arrange
+        var itemId = Guid.NewGuid();
+        var originalItem = new BoardItem(itemId, "Original Name");
+        var editedItem = new BoardItem(itemId, "Edited Name");
+        
+        // Mock snapshot to return our items when requested
+        _inner.GetSnapshotAsync(Arg.Any<CancellationToken>())
+            .Returns(
+                Task.FromResult(new BoardSnapshot(new[] { originalItem }, Array.Empty<BoardItem>(), Array.Empty<BoardItem>())), // For the rename call
+                Task.FromResult(new BoardSnapshot(new[] { editedItem }, Array.Empty<BoardItem>(), Array.Empty<BoardItem>()))  // For the delete call
+            );
+
+        // Track registered callbacks
+        Func<Task>? renameUndoCallback = null;
+        Func<Task>? deleteUndoCallback = null;
+
+        _undoService.RegisterUndo(Arg.Any<string>(), Arg.Any<Func<Task>>())
+            .Returns(x =>
+            {
+                var desc = (string)x[0];
+                var callback = (Func<Task>)x[1];
+                if (desc.StartsWith("Rename"))
+                {
+                    renameUndoCallback = callback;
+                }
+                else if (desc.StartsWith("Delete"))
+                {
+                    deleteUndoCallback = callback;
+                }
+                return Guid.NewGuid();
+            });
+
+        // 1. Rename item from "Original Name" to "Edited Name"
+        _inner.RenameItemAsync(BoardSection.Habit, itemId, "Edited Name", Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<BoardItem?>(editedItem));
+            
+        await _undoableService.RenameItemAsync(BoardSection.Habit, itemId, "Edited Name");
+
+        // 2. Delete item
+        _inner.DeleteItemAsync(BoardSection.Habit, itemId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(true));
+        _inner.CreateItemAsync(BoardSection.Habit, "Edited Name", itemId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(editedItem));
+            
+        await _undoableService.DeleteItemAsync(BoardSection.Habit, itemId);
+
+        // Assert: We captured both callbacks
+        renameUndoCallback.Should().NotBeNull();
+        deleteUndoCallback.Should().NotBeNull();
+
+        // 3. Simulate undoing delete first, which should recreate the item using its original Guid
+        await deleteUndoCallback!();
+        
+        // Verify that CreateItemAsync was called with the original itemId
+        await _inner.Received(1).CreateItemAsync(
+            BoardSection.Habit,
+            "Edited Name",
+            itemId,
+            Arg.Any<CancellationToken>());
+
+        // 4. Simulate undoing the edit (rename) second, which should rename the restored item using the original Guid
+        await renameUndoCallback!();
+
+        // Verify that RenameItemAsync was called on the original itemId to restore the original name
+        await _inner.Received(1).RenameItemAsync(
+            BoardSection.Habit,
+            itemId,
+            "Original Name",
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task IncrementHabitPlusAsync_undo_should_perform_relative_decrement()
+    {
+        // Arrange
+        var itemId = Guid.NewGuid();
+        var initialItem = new BoardItem(itemId, "Habit", Counter: 3);
+        var itemAfterFirstIncrement = new BoardItem(itemId, "Habit", Counter: 4);
+        var itemAfterSecondIncrement = new BoardItem(itemId, "Habit", Counter: 5);
+
+        // Snapshot and Increment setup
+        _inner.GetSnapshotAsync(Arg.Any<CancellationToken>())
+            .Returns(
+                Task.FromResult(new BoardSnapshot(new[] { initialItem }, Array.Empty<BoardItem>(), Array.Empty<BoardItem>())), // First find before increment
+                Task.FromResult(new BoardSnapshot(new[] { itemAfterFirstIncrement }, Array.Empty<BoardItem>(), Array.Empty<BoardItem>())), // Find during first undo registration or second increment
+                Task.FromResult(new BoardSnapshot(new[] { itemAfterSecondIncrement }, Array.Empty<BoardItem>(), Array.Empty<BoardItem>())), // Find during first undo execution
+                Task.FromResult(new BoardSnapshot(new[] { itemAfterFirstIncrement }, Array.Empty<BoardItem>(), Array.Empty<BoardItem>())) // Find during second undo execution (if counter is now 4)
+            );
+
+        _inner.IncrementHabitPlusAsync(itemId, Arg.Any<CancellationToken>())
+            .Returns(
+                Task.FromResult<BoardItem?>(itemAfterFirstIncrement),
+                Task.FromResult<BoardItem?>(itemAfterSecondIncrement)
+            );
+
+        Func<Task>? firstUndoCallback = null;
+        Func<Task>? secondUndoCallback = null;
+
+        _undoService.RegisterUndo(Arg.Any<string>(), Arg.Any<Func<Task>>())
+            .Returns(x =>
+            {
+                var callback = (Func<Task>)x[1];
+                if (firstUndoCallback is null)
+                {
+                    firstUndoCallback = callback;
+                }
+                else
+                {
+                    secondUndoCallback = callback;
+                }
+                return Guid.NewGuid();
+            });
+
+        // 1. Perform first increment (Counter goes 3 -> 4)
+        await _undoableService.IncrementHabitPlusAsync(itemId);
+
+        // 2. Perform second increment (Counter goes 4 -> 5)
+        await _undoableService.IncrementHabitPlusAsync(itemId);
+
+        firstUndoCallback.Should().NotBeNull();
+        secondUndoCallback.Should().NotBeNull();
+
+        // 3. Simulate undoing the first increment first (out of order).
+        // The current state is Counter = 5. Undoing first increment should decrement Counter to 4.
+        await firstUndoCallback!();
+
+        await _inner.Received(1).UpdateHabitAsync(
+            itemId,
+            "Habit",
+            null,
+            null,
+            true,
+            true,
+            HabitResetPeriod.Daily,
+            4, // 5 - 1 = 4
+            0,
+            null,
+            Arg.Any<CancellationToken>());
+
+        // 4. Simulate undoing the second increment.
+        // The current state in this scenario is Counter = 4. Undoing second increment should decrement Counter to 3.
+        await secondUndoCallback!();
+
+        await _inner.Received(1).UpdateHabitAsync(
+            itemId,
+            "Habit",
+            null,
+            null,
+            true,
+            true,
+            HabitResetPeriod.Daily,
+            3, // 4 - 1 = 3
+            0,
+            null,
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task IncrementHabitPlusAsync_concurrent_undos_should_decrement_relatively_to_correct_value()
+    {
+        // Arrange
+        var itemId = Guid.NewGuid();
+        var counter = 3;
+        var title = "Habit";
+
+        _inner.GetSnapshotAsync(Arg.Any<CancellationToken>())
+            .Returns(x =>
+            {
+                var item = new BoardItem(itemId, title, Counter: counter);
+                return Task.FromResult(new BoardSnapshot(new[] { item }, Array.Empty<BoardItem>(), Array.Empty<BoardItem>()));
+            });
+
+        _inner.IncrementHabitPlusAsync(itemId, Arg.Any<CancellationToken>())
+            .Returns(x =>
+            {
+                counter++;
+                var item = new BoardItem(itemId, title, Counter: counter);
+                return Task.FromResult<BoardItem?>(item);
+            });
+
+        _inner.UpdateHabitAsync(
+            itemId, Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string?>(),
+            Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<HabitResetPeriod>(),
+            Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(x =>
+            {
+                counter = (int)x[7];
+                var item = new BoardItem(itemId, title, Counter: counter);
+                return Task.FromResult<BoardItem?>(item);
+            });
+
+        var snackbar = Substitute.For<ISnackbar>();
+        var settingsService = Substitute.For<INotificationSettingsService>();
+        var notificationRules = Substitute.For<INotificationSettingsRules>();
+        settingsService.GetAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new NotificationSettings()));
+        notificationRules.UndoVisibleStateDurationMs(Arg.Any<NotificationToastDuration>())
+            .Returns(12_000);
+
+        var realUndoService = new UndoService(snackbar, settingsService, notificationRules);
+        var undoableService = new UndoableBoardDataService(_inner, realUndoService);
+
+        // Act
+        // 1. Increment twice: 3 -> 4, then 4 -> 5
+        await undoableService.IncrementHabitPlusAsync(itemId);
+        await undoableService.IncrementHabitPlusAsync(itemId);
+
+        counter.Should().Be(5);
+        realUndoService.CanUndo.Should().BeTrue();
+
+        // 2. Trigger both undos concurrently
+        var task1 = realUndoService.UndoAsync();
+        var task2 = realUndoService.UndoAsync();
+
+        await Task.WhenAll(task1, task2);
+
+        // Assert
+        counter.Should().Be(3);
     }
 }

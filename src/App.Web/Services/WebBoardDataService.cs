@@ -27,11 +27,11 @@ public sealed class WebBoardDataService : IBoardDataService
         return await _boardPersistenceService.GetSnapshotAsync(userId, cancellationToken);
     }
 
-    public async Task<BoardItem> CreateItemAsync(BoardSection section, string title,
+    public async Task<BoardItem> CreateItemAsync(BoardSection section, string title, Guid? itemId = null,
         CancellationToken cancellationToken = default)
     {
         var userId = await GetCurrentUserIdAsync(cancellationToken);
-        return await _boardPersistenceService.CreateItemAsync(userId, section, title, cancellationToken);
+        return await _boardPersistenceService.CreateItemAsync(userId, section, title, itemId, cancellationToken);
     }
 
     public async Task<BoardItem?> RenameItemAsync(BoardSection section, Guid itemId, string title,

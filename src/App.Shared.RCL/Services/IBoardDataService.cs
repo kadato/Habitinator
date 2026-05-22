@@ -6,7 +6,7 @@ public interface IBoardDataService
 {
     Task<BoardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default);
 
-    Task<BoardItem> CreateItemAsync(BoardSection section, string title, CancellationToken cancellationToken = default);
+    Task<BoardItem> CreateItemAsync(BoardSection section, string title, Guid? itemId = null, CancellationToken cancellationToken = default);
 
     Task<BoardItem?> RenameItemAsync(BoardSection section, Guid itemId, string title,
         CancellationToken cancellationToken = default);

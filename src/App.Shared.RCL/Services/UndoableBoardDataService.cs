@@ -22,9 +22,9 @@ public sealed class UndoableBoardDataService : IBoardDataService
         return _inner.GetSnapshotAsync(cancellationToken);
     }
 
-    public async Task<BoardItem> CreateItemAsync(BoardSection section, string title, CancellationToken cancellationToken = default)
+    public async Task<BoardItem> CreateItemAsync(BoardSection section, string title, Guid? itemId = null, CancellationToken cancellationToken = default)
     {
-        var item = await _inner.CreateItemAsync(section, title, cancellationToken);
+        var item = await _inner.CreateItemAsync(section, title, itemId, cancellationToken);
         if (!_undoService.IsUndoing)
         {
             _undoService.RegisterUndo($"Add \"{title}\"", async () =>
@@ -62,7 +62,7 @@ public sealed class UndoableBoardDataService : IBoardDataService
         {
             _undoService.RegisterUndo($"Delete \"{item.Title}\"", async () =>
             {
-                var recreated = await _inner.CreateItemAsync(section, item.Title, CancellationToken.None);
+                var recreated = await _inner.CreateItemAsync(section, item.Title, item.Id, CancellationToken.None);
                 if (section == BoardSection.Habit)
                 {
                     await _inner.UpdateHabitAsync(
@@ -145,18 +145,22 @@ public sealed class UndoableBoardDataService : IBoardDataService
         {
             _undoService.RegisterUndo($"Increment + for \"{item.Title}\"", async () =>
             {
-                await _inner.UpdateHabitAsync(
-                    itemId,
-                    item.Title,
-                    item.Notes,
-                    item.Tags,
-                    item.TrackPlus,
-                    item.TrackMinus,
-                    item.ResetPeriod,
-                    item.Counter,
-                    item.NegativeCounter,
-                    item.ChecklistJson,
-                    CancellationToken.None);
+                var current = await FindItemAsync(itemId, CancellationToken.None);
+                if (current is not null)
+                {
+                    await _inner.UpdateHabitAsync(
+                        itemId,
+                        current.Title,
+                        current.Notes,
+                        current.Tags,
+                        current.TrackPlus,
+                        current.TrackMinus,
+                        current.ResetPeriod,
+                        Math.Max(0, current.Counter - 1),
+                        current.NegativeCounter,
+                        current.ChecklistJson,
+                        CancellationToken.None);
+                }
             });
         }
         return result;
@@ -172,18 +176,22 @@ public sealed class UndoableBoardDataService : IBoardDataService
         {
             _undoService.RegisterUndo($"Increment − for \"{item.Title}\"", async () =>
             {
-                await _inner.UpdateHabitAsync(
-                    itemId,
-                    item.Title,
-                    item.Notes,
-                    item.Tags,
-                    item.TrackPlus,
-                    item.TrackMinus,
-                    item.ResetPeriod,
-                    item.Counter,
-                    item.NegativeCounter,
-                    item.ChecklistJson,
-                    CancellationToken.None);
+                var current = await FindItemAsync(itemId, CancellationToken.None);
+                if (current is not null)
+                {
+                    await _inner.UpdateHabitAsync(
+                        itemId,
+                        current.Title,
+                        current.Notes,
+                        current.Tags,
+                        current.TrackPlus,
+                        current.TrackMinus,
+                        current.ResetPeriod,
+                        current.Counter,
+                        Math.Max(0, current.NegativeCounter - 1),
+                        current.ChecklistJson,
+                        CancellationToken.None);
+                }
             });
         }
         return result;

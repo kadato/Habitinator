@@ -1,6 +1,6 @@
 namespace App.Shared.RCL.Models;
 
-public sealed record ItemTitleRequest(string Title);
+public sealed record ItemTitleRequest(string Title, Guid? ItemId = null);
 
 public sealed record HabitUpdateRequest(
     string Title,

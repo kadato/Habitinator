@@ -19,10 +19,10 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
         return _inner.GetSnapshotAsync(cancellationToken);
     }
 
-    public Task<BoardItem> CreateItemAsync(BoardSection section, string title,
+    public Task<BoardItem> CreateItemAsync(BoardSection section, string title, Guid? itemId = null,
         CancellationToken cancellationToken = default)
     {
-        return _inner.CreateItemAsync(section, title, cancellationToken);
+        return _inner.CreateItemAsync(section, title, itemId, cancellationToken);
     }
 
     public Task<BoardItem?> RenameItemAsync(BoardSection section, Guid itemId, string title,

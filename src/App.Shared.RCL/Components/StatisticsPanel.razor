@@ -15,7 +15,81 @@
     }
     else if (_loading)
     {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true"/>
+        <!-- KPI Row Skeleton -->
+        <MudGrid Spacing="3" Class="stats-kpi-grid">
+            @for (int i = 0; i < 3; i++)
+            {
+                <MudItem xs="12" sm="4">
+                    <MudPaper Class="stats-kpi-card pa-4" Elevation="0" Outlined="false">
+                        <div class="stats-kpi-card__head d-flex justify-space-between align-center mb-2">
+                            <MudSkeleton Width="120px" Height="20px" />
+                            <MudSkeleton Width="24px" Height="24px" SkeletonType="SkeletonType.Circle" />
+                        </div>
+                        <MudSkeleton Width="80px" Height="40px" />
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+
+        <!-- Main Dashboard Layout Grid Skeleton -->
+        <MudGrid Spacing="3" Class="mt-2">
+            <!-- Left Main Column (Charts & Heatmaps) -->
+            <MudItem xs="12" lg="9" Class="order-2 order-lg-1">
+                <!-- Activity Heatmap Card Skeleton -->
+                <MudPaper Class="pa-4 stats-dashboard-card" Elevation="0" Outlined="true">
+                    <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-4">
+                        <div>
+                            <MudSkeleton Width="140px" Height="24px" Class="mb-1" />
+                            <MudSkeleton Width="280px" Height="16px" />
+                        </div>
+                        <MudSkeleton Width="150px" Height="16px" />
+                    </div>
+                    <MudSkeleton Width="100%" Height="120px" SkeletonType="SkeletonType.Rectangle" />
+                </MudPaper>
+
+                <!-- Weekly Activity Card Skeleton -->
+                <MudPaper Class="pa-4 stats-dashboard-card mt-4" Elevation="0" Outlined="true">
+                    <MudSkeleton Width="180px" Height="24px" Class="mb-1" />
+                    <MudSkeleton Width="220px" Height="16px" Class="mb-4" />
+                    <MudSkeleton Width="100%" Height="100px" SkeletonType="SkeletonType.Rectangle" />
+                </MudPaper>
+
+                <!-- Dailies performance Card Skeleton -->
+                <MudPaper Class="pa-4 stats-dashboard-card mt-4" Elevation="0" Outlined="true">
+                    <MudSkeleton Width="150px" Height="24px" Class="mb-4" />
+                    <MudGrid Spacing="3">
+                        @for (int i = 0; i < 2; i++)
+                        {
+                            <MudItem xs="12" md="6">
+                                <div class="pa-3 border rounded mud-border-lines-default" style="background: var(--mud-palette-background-gray);">
+                                    <div class="d-flex align-center justify-space-between mb-3">
+                                        <MudSkeleton Width="120px" Height="20px" />
+                                        <MudSkeleton Width="100px" Height="16px" />
+                                    </div>
+                                    <MudSkeleton Width="100%" Height="60px" SkeletonType="SkeletonType.Rectangle" />
+                                </div>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Right Sidebar Column (Controls / Info) -->
+            <MudItem xs="12" lg="3" Class="order-1 order-lg-2">
+                <MudPaper Class="pa-4 stats-dashboard-card stats-sidebar-controls" Elevation="0" Outlined="true">
+                    <MudSkeleton Width="150px" Height="24px" Class="mb-4" />
+                    <MudStack Spacing="3">
+                        <MudSkeleton Width="100%" Height="40px" />
+                        <MudSkeleton Width="100%" Height="40px" />
+                        <MudDivider Class="my-2"/>
+                        <MudSkeleton Width="100px" Height="16px" />
+                        <MudSkeleton Width="150px" Height="20px" Class="mb-3" />
+                        <MudSkeleton Width="80px" Height="16px" />
+                        <MudSkeleton Width="100px" Height="20px" />
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
     }
     else if (_data is null)
     {
@@ -147,7 +221,20 @@
 
                     @if (_loadingDailies)
                     {
-                        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="mt-2"/>
+                        <MudGrid Spacing="3" Class="stats-dailies-grid">
+                            @for (int i = 0; i < 2; i++)
+                            {
+                                <MudItem xs="12" md="6">
+                                    <div class="pa-3 border rounded mud-border-lines-default" style="background: var(--mud-palette-background-gray);">
+                                        <div class="d-flex align-center justify-space-between mb-3">
+                                            <MudSkeleton Width="120px" Height="20px" />
+                                            <MudSkeleton Width="100px" Height="16px" />
+                                        </div>
+                                        <MudSkeleton Width="100%" Height="60px" SkeletonType="SkeletonType.Rectangle" />
+                                    </div>
+                                </MudItem>
+                            }
+                        </MudGrid>
                     }
                     else if (_dailyError is not null)
                     {

@@ -6,7 +6,25 @@
     <DialogContent>
         @if (_loading)
         {
-            <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-2"/>
+            <div class="activity-day-detail-summary mb-3">
+                <MudSkeleton Width="120px" Height="20px" />
+            </div>
+            <MudTable Items="new byte[4]"
+                      Dense="true"
+                      Hover="false"
+                      Bordered="false"
+                      Striped="false"
+                      Elevation="0"
+                      Class="activity-day-detail-table">
+                <HeaderContent>
+                    <MudTh><MudSkeleton Width="40px" Height="20px" /></MudTh>
+                    <MudTh><MudSkeleton Width="100px" Height="20px" /></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd><MudSkeleton Width="50px" Height="16px" /></MudTd>
+                    <MudTd><MudSkeleton Width="150px" Height="16px" /></MudTd>
+                </RowTemplate>
+            </MudTable>
         }
         else if (_error is not null)
         {

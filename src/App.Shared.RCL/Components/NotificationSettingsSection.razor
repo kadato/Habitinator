@@ -16,7 +16,67 @@
     }
     else if (_loading)
     {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true"/>
+        <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+            <MudStack Spacing="3">
+                <MudSkeleton Width="150px" Height="24px" Class="mb-1" />
+                <MudSkeleton Width="90%" Height="32px" Class="mb-2" />
+                
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudSkeleton Width="200px" Height="20px" />
+                    <MudSkeleton Width="40px" Height="24px" SkeletonType="SkeletonType.Rectangle" Class="rounded-pill" />
+                </MudStack>
+                <MudSkeleton Width="80%" Height="16px" Class="mb-2" />
+
+                @for (int j = 0; j < 3; j++)
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudSkeleton Width="160px" Height="20px" />
+                        <MudSkeleton Width="40px" Height="24px" SkeletonType="SkeletonType.Rectangle" Class="rounded-pill" />
+                    </MudStack>
+                }
+                <MudSkeleton Width="85%" Height="32px" Class="my-2" />
+                
+                <MudSkeleton Width="100%" Height="40px" />
+                <MudSkeleton Width="70%" Height="16px" />
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+            <MudStack Spacing="3">
+                <MudSkeleton Width="220px" Height="24px" Class="mb-1" />
+                <MudSkeleton Width="95%" Height="48px" Class="mb-2" />
+                
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudSkeleton Width="150px" Height="20px" />
+                    <MudSkeleton Width="40px" Height="24px" SkeletonType="SkeletonType.Rectangle" Class="rounded-pill" />
+                </MudStack>
+                <MudSkeleton Width="90%" Height="32px" />
+                
+                <MudSkeleton Width="100%" Height="40px" Class="mb-2" />
+                <MudDivider Class="my-2" />
+
+                @for (int j = 0; j < 3; j++)
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudSkeleton Width="180px" Height="20px" />
+                        <MudSkeleton Width="40px" Height="24px" SkeletonType="SkeletonType.Rectangle" Class="rounded-pill" />
+                    </MudStack>
+                    <MudSkeleton Width="85%" Height="16px" Class="mb-2" />
+                }
+                <MudDivider Class="my-2" />
+
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudSkeleton Width="120px" Height="20px" />
+                    <MudSkeleton Width="40px" Height="24px" SkeletonType="SkeletonType.Rectangle" Class="rounded-pill" />
+                </MudStack>
+                <MudSkeleton Width="90%" Height="32px" />
+
+                <MudStack Row="true" Spacing="2">
+                    <MudSkeleton Width="50%" Height="40px" />
+                    <MudSkeleton Width="50%" Height="40px" />
+                </MudStack>
+            </MudStack>
+        </MudPaper>
     }
     else if (_model is not null)
     {

@@ -16,7 +16,33 @@
     }
     else if (_loading)
     {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true"/>
+        <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
+                <MudSkeleton Width="120px" Height="24px" Class="mb-1" />
+                <MudSkeleton Width="250px" Height="16px" Class="mb-3" />
+                <MudSkeleton Width="100%" Height="40px" />
+                <MudSkeleton Width="100%" Height="40px" Class="mt-2" />
+                <MudSkeleton Width="150px" Height="16px" />
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
+                <MudSkeleton Width="160px" Height="24px" Class="mb-1" />
+                <MudSkeleton Width="350px" Height="16px" Class="mb-3" />
+                <MudSkeleton Width="100%" Height="40px" />
+                <MudSkeleton Width="100%" Height="40px" Class="mt-2" />
+                <MudSkeleton Width="180px" Height="16px" />
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
+                <MudSkeleton Width="80px" Height="24px" Class="mb-1" />
+                <MudSkeleton Width="280px" Height="16px" Class="mb-3" />
+                <MudSkeleton Width="100%" Height="40px" />
+            </MudStack>
+        </MudPaper>
     }
     else if (_model is not null)
     {

@@ -606,7 +606,8 @@
             MaxWidth = MaxWidth.Small,
             FullWidth = false,
             CloseButton = false,
-            CloseOnEscapeKey = true
+            CloseOnEscapeKey = true,
+            NoHeader = true
         };
         var parameters = new DialogParameters<EditHabitDialog> { { x => x.Item, item } };
         var dialog = await DialogService.ShowAsync<EditHabitDialog>(string.Empty, parameters, options);
@@ -624,7 +625,8 @@
             MaxWidth = MaxWidth.Small,
             FullWidth = false,
             CloseButton = false,
-            CloseOnEscapeKey = true
+            CloseOnEscapeKey = true,
+            NoHeader = true
         };
         var parameters = new DialogParameters<EditDailyDialog> { { x => x.Item, item } };
         var dialog = await DialogService.ShowAsync<EditDailyDialog>(string.Empty, parameters, options);
@@ -642,7 +644,8 @@
             MaxWidth = MaxWidth.Small,
             FullWidth = false,
             CloseButton = false,
-            CloseOnEscapeKey = true
+            CloseOnEscapeKey = true,
+            NoHeader = true
         };
         var parameters = new DialogParameters<EditTodoDialog> { { x => x.Item, item } };
         var dialog = await DialogService.ShowAsync<EditTodoDialog>(string.Empty, parameters, options);

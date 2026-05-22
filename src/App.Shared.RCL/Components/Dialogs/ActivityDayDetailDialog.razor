@@ -13,16 +13,19 @@
                       Dense="true"
                       Hover="false"
                       Bordered="false"
-                      Striped="false"
+                      Striped="true"
                       Elevation="0"
                       Class="activity-day-detail-table">
-                <HeaderContent>
-                    <MudTh><MudSkeleton Width="40px" Height="20px" /></MudTh>
-                    <MudTh><MudSkeleton Width="100px" Height="20px" /></MudTh>
-                </HeaderContent>
                 <RowTemplate>
-                    <MudTd><MudSkeleton Width="50px" Height="16px" /></MudTd>
-                    <MudTd><MudSkeleton Width="150px" Height="16px" /></MudTd>
+                    <MudTd Class="activity-time-cell">
+                        <span class="activity-time-text"><MudSkeleton Width="35px" Height="14px" /></span>
+                    </MudTd>
+                    <MudTd Class="activity-desc-cell">
+                        <div class="activity-desc-wrap">
+                            <span class="activity-indicator" style="background-color: var(--mud-palette-divider);"></span>
+                            <MudSkeleton Width="160px" Height="16px" />
+                        </div>
+                    </MudTd>
                 </RowTemplate>
             </MudTable>
         }
@@ -55,21 +58,22 @@
             </div>
             <MudTable Items="_detail.Events"
                       Dense="true"
-                      Hover="true"
+                      Hover="false"
                       Bordered="false"
-                      Striped="false"
+                      Striped="true"
                       Elevation="0"
                       Class="activity-day-detail-table">
-                <HeaderContent>
-                    <MudTh>Time</MudTh>
-                    <MudTh>Activity</MudTh>
-                </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="Time">@FormatLocalTime(context.OccurredAtUtc)</MudTd>
-                    <MudTd DataLabel="Activity">
-                        <span class="activity-day-detail-activity @GetActivityClass(context.EventType)">
-                            @FormatActivityLabel(context)@FormatTimerSuffix(context)
-                        </span>
+                    <MudTd Class="activity-time-cell">
+                        <span class="activity-time-text">@FormatLocalTime(context.OccurredAtUtc)</span>
+                    </MudTd>
+                    <MudTd Class="activity-desc-cell">
+                        <div class="activity-desc-wrap">
+                            <span class="activity-indicator @GetActivityClass(context.EventType)"></span>
+                            <span class="activity-text">
+                                @FormatActivityLabel(context)@FormatTimerSuffix(context)
+                            </span>
+                        </div>
                     </MudTd>
                 </RowTemplate>
             </MudTable>

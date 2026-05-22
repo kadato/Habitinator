@@ -8,17 +8,20 @@
     width: 100%;
     max-width: min(24rem, 100%);
     max-height: min(90dvh, calc(100dvh - 3rem));
-    border-radius: 0.5rem;
-    overflow-x: hidden;
-    overflow-y: auto;
-    border: 1px solid var(--mud-palette-divider);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     background: var(--mud-palette-surface);
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 0.5rem;
+    box-shadow: 
+        0 20px 25px -5px rgba(0, 0, 0, 0.15), 
+        0 8px 10px -6px rgba(0, 0, 0, 0.15);
 }
 
 .edit-daily-header {
-    background: color-mix(in srgb, var(--mud-palette-surface) 95%, var(--mud-palette-text-primary) 5%);
-    padding: 0.75rem 1rem 0.85rem;
+    background: linear-gradient(to bottom, var(--mud-palette-surface), color-mix(in srgb, var(--mud-palette-surface) 95%, var(--mud-palette-text-primary) 5%));
+    padding: 1rem 1.25rem 0.85rem;
     color: var(--mud-palette-text-primary);
     border-bottom: 1px solid var(--mud-palette-divider);
 }
@@ -40,27 +43,34 @@
 
 .edit-daily-header__cancel {
     color: var(--mud-palette-text-secondary) !important;
-    text-transform: none;
+    text-transform: none !important;
     min-width: auto;
-    padding-inline: 0.5rem;
-    font-weight: 500;
+    padding: 0.45rem 0.85rem !important;
+    font-weight: 550 !important;
+    border-radius: 6px !important;
+    transition: background-color 0.15s ease, color 0.15s ease !important;
 }
 
 .edit-daily-header__cancel:hover {
     color: var(--mud-palette-text-primary) !important;
+    background-color: var(--mud-palette-action-hover) !important;
 }
 
 .edit-daily-header__save {
     background: var(--mud-palette-primary) !important;
     color: var(--mud-palette-primary-contrast-text) !important;
-    text-transform: none;
-    font-weight: 600;
-    padding-inline: 0.85rem;
-    box-shadow: none !important;
+    text-transform: none !important;
+    font-weight: 600 !important;
+    padding: 0.45rem 1.1rem !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 10px color-mix(in srgb, var(--mud-palette-primary) 25%, transparent) !important;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease !important;
 }
 
 .edit-daily-header__save:hover {
     background: var(--mud-palette-primary-darken) !important;
+    box-shadow: 0 6px 14px color-mix(in srgb, var(--mud-palette-primary) 35%, transparent) !important;
+    transform: translateY(-1px) !important;
 }
 
 .edit-daily-label-header {
@@ -96,8 +106,10 @@
 
 .edit-daily-body {
     background: var(--mud-palette-surface);
-    padding: 0.85rem 1rem 0.9rem;
+    padding: 0.85rem 1rem 1.25rem;
     color: var(--mud-palette-text-primary);
+    flex: 1;
+    overflow-y: auto;
 }
 
 .edit-daily-label-body {

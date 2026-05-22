@@ -124,8 +124,9 @@
     border-radius: 0.75rem;
     overflow: hidden;
     box-shadow:
-        0 1px 0 color-mix(in srgb, var(--mud-palette-surface) 10%, transparent) inset,
-        0 2px 8px color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
+        0 1px 0 color-mix(in srgb, var(--mud-palette-surface) 12%, transparent) inset,
+        0 4px 12px color-mix(in srgb, var(--mud-palette-text-primary) 8%, transparent),
+        0 1px 3px color-mix(in srgb, var(--mud-palette-text-primary) 4%, transparent);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -133,7 +134,8 @@
     border-color: color-mix(in srgb, var(--mud-palette-text-primary) 15%, transparent);
     box-shadow:
         0 1px 0 color-mix(in srgb, var(--mud-palette-surface) 15%, transparent) inset,
-        0 4px 14px color-mix(in srgb, var(--mud-palette-text-primary) 12%, transparent);
+        0 8px 20px color-mix(in srgb, var(--mud-palette-text-primary) 12%, transparent),
+        0 2px 6px color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
 }
 
 /* Row 1: check/habit and title on the same row so they share one vertical center. */

@@ -155,10 +155,12 @@ h1:focus {
 .mud-dialog:has(.edit-daily-shell) {
     background: transparent !important;
     box-shadow: none !important;
+    border: none !important;
     padding: 0 !important;
     overflow: visible !important;
     overflow-y: visible !important;
     max-height: none !important;
+    width: min(24rem, calc(100vw - 2rem)) !important;
 }
 
 .mud-dialog.edit-habit-dialog .mud-dialog-content,
@@ -300,4 +302,190 @@ h1:focus {
 .undo-toast-btn:hover {
     opacity: 0.9;
     background: color-mix(in srgb, var(--mud-palette-error) 88%, var(--mud-palette-black));
+}
+
+/* ── Premium Dialog Styling Overrides ────────────────────────────────────── */
+
+/* Upgraded Backdrop blur on all dialog overlays */
+.mud-dialog-container {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background-color: rgba(10, 15, 30, 0.4) !important;
+    transition: background-color 0.2s ease, backdrop-filter 0.2s ease;
+}
+
+/* Base dialog style (all dialogs) */
+.mud-dialog {
+    border-radius: 0.5rem !important;
+    border: 1px solid var(--mud-palette-divider) !important;
+    background: var(--mud-palette-surface) !important;
+    box-shadow: 
+        0 20px 25px -5px rgba(0, 0, 0, 0.15), 
+        0 8px 10px -6px rgba(0, 0, 0, 0.15) !important;
+    overflow: hidden !important;
+}
+
+/* Consistent Title Bar */
+.mud-dialog .mud-dialog-title {
+    background: linear-gradient(to bottom, var(--mud-palette-surface), color-mix(in srgb, var(--mud-palette-surface) 95%, var(--mud-palette-text-primary) 5%)) !important;
+    border-bottom: 1px solid var(--mud-palette-divider) !important;
+    padding: 1rem 1.25rem !important;
+}
+
+.mud-dialog .mud-dialog-title .mud-typography {
+    font-weight: 650 !important;
+    font-size: 1.05rem !important;
+    color: var(--mud-palette-text-primary) !important;
+    letter-spacing: 0.01em;
+}
+
+/* Consistent Dialog Actions (Footer) */
+.mud-dialog .mud-dialog-actions {
+    border-top: 1px solid var(--mud-palette-divider) !important;
+    padding: 0.85rem 1.25rem !important;
+    background: var(--mud-palette-surface) !important;
+    gap: 0.75rem !important;
+}
+
+/* Consistent Close Button style on base dialogs */
+.mud-dialog-title .mud-button-close {
+    color: var(--mud-palette-text-secondary) !important;
+    margin-top: -0.15rem;
+    margin-right: -0.15rem;
+}
+
+.mud-dialog-title .mud-button-close:hover {
+    color: var(--mud-palette-text-primary) !important;
+}
+
+/* ── Activity Day Detail Dialog (Heatmap Details) Redesign ──────────────── */
+
+/* Dialog content container custom spacing */
+.activity-day-detail-dialog .activity-day-detail-dialog__content {
+    padding: 1.25rem !important;
+}
+
+/* Dashboard Summary Card Widget */
+.activity-day-detail-summary {
+    background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 15%, var(--mud-palette-divider));
+    border-radius: 0.5rem;
+    padding: 0.85rem 1.15rem;
+    margin-bottom: 1.25rem;
+    color: var(--mud-palette-text-primary);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.activity-day-detail-summary .mud-typography-body2 {
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+    letter-spacing: 0.01em;
+    color: var(--mud-palette-text-primary) !important;
+}
+
+.activity-day-detail-tag {
+    font-style: italic;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* Modern Timeline/List Table Layout */
+.activity-day-detail-table.mud-table {
+    background: transparent !important;
+}
+
+.activity-day-detail-table .mud-table-root {
+    background: transparent !important;
+    border: 1px solid var(--mud-palette-divider) !important;
+    border-radius: 0.5rem !important;
+    overflow: hidden !important;
+    border-collapse: separate !important;
+}
+
+.activity-day-detail-table .mud-table-container {
+    background: transparent !important;
+}
+
+.activity-day-detail-table .mud-table-body .mud-table-row {
+    background: var(--mud-palette-surface) !important;
+    transition: background-color 0.15s ease;
+}
+
+/* Stripes: Alternating row background using theme gray (nth-of-type even) */
+.activity-day-detail-table .mud-table-body .mud-table-row:nth-of-type(even) {
+    background: var(--mud-palette-background-gray) !important;
+}
+
+
+.activity-day-detail-table .mud-table-body .mud-table-cell {
+    color: var(--mud-palette-text-primary) !important;
+    border-bottom: 1px solid var(--mud-palette-divider) !important;
+    padding: 0.75rem 1rem !important;
+    font-size: 0.9rem !important;
+}
+
+.activity-day-detail-table .mud-table-body .mud-table-row:last-child .mud-table-cell {
+    border-bottom: none !important;
+}
+
+/* Time Badge Column */
+.activity-time-cell {
+    width: 90px;
+    font-weight: 600 !important;
+    color: var(--mud-palette-text-secondary) !important;
+    white-space: nowrap;
+}
+
+.activity-time-text {
+    font-family: monospace, monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+    background: color-mix(in srgb, var(--mud-palette-text-secondary) 10%, transparent);
+    padding: 0.2rem 0.45rem;
+    border-radius: 0.25rem;
+}
+
+/* Details Description & Status Indicator */
+.activity-desc-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.activity-text {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--mud-palette-text-primary);
+}
+
+/* Status Indicator Lights */
+.activity-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+    display: inline-block;
+}
+
+.activity-day-detail-activity--done {
+    background-color: var(--mud-palette-success) !important;
+}
+
+.activity-day-detail-activity--plus {
+    background-color: var(--mud-palette-primary) !important;
+}
+
+.activity-day-detail-activity--minus {
+    background-color: var(--mud-palette-warning) !important;
+}
+
+.activity-day-detail-activity--focus {
+    background-color: var(--mud-palette-info) !important;
+}
+
+.activity-day-detail-dialog .mud-progress-linear {
+    border-radius: 0.25rem;
 }

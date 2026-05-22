@@ -305,20 +305,7 @@ button.stats-heatmap-day-btn:focus-visible {
     box-shadow: 0 1px 3px color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
 }
 
-/* Weekly Activity Graph hover micro-animations */
-.stats-week-bar-wrap {
-    transition: background-color 0.2s ease, transform 0.2s ease;
-}
-.stats-week-bar-wrap:hover {
-    background: var(--mud-palette-action-hover);
-    transform: translateY(-2px);
-}
-.stats-week-bar {
-    transition: background-color 0.2s ease;
-}
-.stats-week-bar-wrap:hover .stats-week-bar {
-    background: var(--mud-palette-primary-darken);
-}
+
 
 /* Responsive Ordering classes */
 @media (min-width: 960px) {

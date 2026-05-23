@@ -76,6 +76,7 @@ public sealed class UndoableBoardDataService : IBoardDataService
                         item.Counter,
                         item.NegativeCounter,
                         item.ChecklistJson,
+                        item.SortOrder,
                         CancellationToken.None);
                 }
                 else if (section == BoardSection.Daily)
@@ -90,6 +91,7 @@ public sealed class UndoableBoardDataService : IBoardDataService
                         item.DailyRepeatInterval,
                         item.ChecklistJson,
                         item.Counter,
+                        item.SortOrder,
                         CancellationToken.None);
                     if (item.IsCompleted)
                     {
@@ -105,6 +107,7 @@ public sealed class UndoableBoardDataService : IBoardDataService
                         item.Tags,
                         item.ChecklistJson,
                         item.TodoDueDate?.ToDateTime(TimeOnly.MinValue),
+                        item.SortOrder,
                         CancellationToken.None);
                     if (item.IsCompleted)
                     {
@@ -159,6 +162,7 @@ public sealed class UndoableBoardDataService : IBoardDataService
                         Math.Max(0, current.Counter - 1),
                         current.NegativeCounter,
                         current.ChecklistJson,
+                        current.SortOrder,
                         CancellationToken.None);
                 }
             });
@@ -190,6 +194,7 @@ public sealed class UndoableBoardDataService : IBoardDataService
                         current.Counter,
                         Math.Max(0, current.NegativeCounter - 1),
                         current.ChecklistJson,
+                        current.SortOrder,
                         CancellationToken.None);
                 }
             });
@@ -208,6 +213,7 @@ public sealed class UndoableBoardDataService : IBoardDataService
         int counter,
         int negativeCounter,
         string? checklistJson = null,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default)
     {
         var item = await FindItemAsync(itemId, cancellationToken);
@@ -215,14 +221,15 @@ public sealed class UndoableBoardDataService : IBoardDataService
         {
             return await _inner.UpdateHabitAsync(
                 itemId, title, notes, tags, trackPlus, trackMinus, resetPeriod,
-                counter, negativeCounter, checklistJson, cancellationToken);
+                counter, negativeCounter, checklistJson, sortOrder, cancellationToken);
         }
 
         var result = await _inner.UpdateHabitAsync(
             itemId, title, notes, tags, trackPlus, trackMinus, resetPeriod,
-            counter, negativeCounter, checklistJson, cancellationToken);
+            counter, negativeCounter, checklistJson, sortOrder, cancellationToken);
 
-        if (result is not null && !_undoService.IsUndoing)
+        if (result is not null && !_undoService.IsUndoing
+            && !IsHabitReorderOnly(item, title, notes, tags, trackPlus, trackMinus, resetPeriod, counter, negativeCounter, checklistJson, sortOrder))
         {
             _undoService.RegisterUndo($"Edit \"{item.Title}\"", async () =>
             {
@@ -237,6 +244,7 @@ public sealed class UndoableBoardDataService : IBoardDataService
                     item.Counter,
                     item.NegativeCounter,
                     item.ChecklistJson,
+                    item.SortOrder,
                     CancellationToken.None);
             });
         }
@@ -250,17 +258,19 @@ public sealed class UndoableBoardDataService : IBoardDataService
         string? tags,
         string? checklistJson,
         DateTime? dueDate,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default)
     {
         var item = await FindItemAsync(itemId, cancellationToken);
         if (item is null)
         {
-            return await _inner.UpdateTodoAsync(itemId, title, notes, tags, checklistJson, dueDate, cancellationToken);
+            return await _inner.UpdateTodoAsync(itemId, title, notes, tags, checklistJson, dueDate, sortOrder, cancellationToken);
         }
 
-        var result = await _inner.UpdateTodoAsync(itemId, title, notes, tags, checklistJson, dueDate, cancellationToken);
+        var result = await _inner.UpdateTodoAsync(itemId, title, notes, tags, checklistJson, dueDate, sortOrder, cancellationToken);
 
-        if (result is not null && !_undoService.IsUndoing)
+        if (result is not null && !_undoService.IsUndoing
+            && !IsTodoReorderOnly(item, title, notes, tags, checklistJson, dueDate, sortOrder))
         {
             _undoService.RegisterUndo($"Edit \"{item.Title}\"", async () =>
             {
@@ -271,6 +281,7 @@ public sealed class UndoableBoardDataService : IBoardDataService
                     item.Tags,
                     item.ChecklistJson,
                     item.TodoDueDate?.ToDateTime(TimeOnly.MinValue),
+                    item.SortOrder,
                     CancellationToken.None);
             });
         }
@@ -287,19 +298,21 @@ public sealed class UndoableBoardDataService : IBoardDataService
         int repeatInterval,
         string? checklistJson,
         int streak,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default)
     {
         var item = await FindItemAsync(itemId, cancellationToken);
         if (item is null)
         {
             return await _inner.UpdateDailyAsync(
-                itemId, title, notes, tags, startDate, repeatType, repeatInterval, checklistJson, streak, cancellationToken);
+                itemId, title, notes, tags, startDate, repeatType, repeatInterval, checklistJson, streak, sortOrder, cancellationToken);
         }
 
         var result = await _inner.UpdateDailyAsync(
-            itemId, title, notes, tags, startDate, repeatType, repeatInterval, checklistJson, streak, cancellationToken);
+            itemId, title, notes, tags, startDate, repeatType, repeatInterval, checklistJson, streak, sortOrder, cancellationToken);
 
-        if (result is not null && !_undoService.IsUndoing)
+        if (result is not null && !_undoService.IsUndoing
+            && !IsDailyReorderOnly(item, title, notes, tags, startDate, repeatType, repeatInterval, checklistJson, streak, sortOrder))
         {
             _undoService.RegisterUndo($"Edit \"{item.Title}\"", async () =>
             {
@@ -313,10 +326,77 @@ public sealed class UndoableBoardDataService : IBoardDataService
                     item.DailyRepeatInterval,
                     item.ChecklistJson,
                     item.Counter,
+                    item.SortOrder,
                     CancellationToken.None);
             });
         }
         return result;
+    }
+
+    private static bool IsHabitReorderOnly(
+        BoardItem item,
+        string title,
+        string? notes,
+        string? tags,
+        bool trackPlus,
+        bool trackMinus,
+        HabitResetPeriod resetPeriod,
+        int counter,
+        int negativeCounter,
+        string? checklistJson,
+        double? sortOrder) =>
+        sortOrder.HasValue
+        && item.Title == title
+        && item.Notes == notes
+        && item.Tags == tags
+        && item.TrackPlus == trackPlus
+        && item.TrackMinus == trackMinus
+        && item.ResetPeriod == resetPeriod
+        && item.Counter == counter
+        && item.NegativeCounter == negativeCounter
+        && item.ChecklistJson == checklistJson;
+
+    private static bool IsTodoReorderOnly(
+        BoardItem item,
+        string title,
+        string? notes,
+        string? tags,
+        string? checklistJson,
+        DateTime? dueDate,
+        double? sortOrder) =>
+        sortOrder.HasValue
+        && item.Title == title
+        && item.Notes == notes
+        && item.Tags == tags
+        && item.ChecklistJson == checklistJson
+        && DatesEqual(item.TodoDueDate, dueDate);
+
+    private static bool IsDailyReorderOnly(
+        BoardItem item,
+        string title,
+        string? notes,
+        string? tags,
+        DateTime? startDate,
+        DailyRepeatType repeatType,
+        int repeatInterval,
+        string? checklistJson,
+        int streak,
+        double? sortOrder) =>
+        sortOrder.HasValue
+        && item.Title == title
+        && item.Notes == notes
+        && item.Tags == tags
+        && DatesEqual(item.DailyStartDate, startDate)
+        && item.DailyRepeat == repeatType
+        && item.DailyRepeatInterval == repeatInterval
+        && item.ChecklistJson == checklistJson
+        && item.Counter == streak;
+
+    private static bool DatesEqual(DateOnly? itemDate, DateTime? dateTime)
+    {
+        if (itemDate is null && dateTime is null) return true;
+        if (itemDate is null || dateTime is null) return false;
+        return itemDate == DateOnly.FromDateTime(dateTime.Value);
     }
 
     private async Task<BoardItem?> FindItemAsync(Guid id, CancellationToken cancellationToken)

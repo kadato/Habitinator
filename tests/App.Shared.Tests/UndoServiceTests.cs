@@ -275,6 +275,50 @@ public sealed class UndoableBoardDataServiceTests
     }
 
     [Fact]
+    public async Task UpdateHabitAsync_sort_only_should_not_register_undo()
+    {
+        var item = new BoardItem(Guid.NewGuid(), "Habit", SortOrder: 1.0);
+        _inner.GetSnapshotAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new BoardSnapshot(new[] { item }, [], [])));
+        _inner.UpdateHabitAsync(
+                item.Id, item.Title, item.Notes, item.Tags,
+                item.TrackPlus, item.TrackMinus, item.ResetPeriod,
+                item.Counter, item.NegativeCounter, item.ChecklistJson, 2.0, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<BoardItem?>(item with { SortOrder = 2.0 }));
+        _undoService.IsUndoing.Returns(false);
+
+        await _undoableService.UpdateHabitAsync(
+            item.Id, item.Title, item.Notes, item.Tags,
+            item.TrackPlus, item.TrackMinus, item.ResetPeriod,
+            item.Counter, item.NegativeCounter, item.ChecklistJson, sortOrder: 2.0);
+
+        _undoService.DidNotReceive().RegisterUndo(Arg.Any<string>(), Arg.Any<Func<Task>>());
+    }
+
+    [Fact]
+    public async Task UpdateHabitAsync_with_title_change_should_register_undo()
+    {
+        var item = new BoardItem(Guid.NewGuid(), "Habit", SortOrder: 1.0);
+        _inner.GetSnapshotAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new BoardSnapshot(new[] { item }, [], [])));
+        _inner.UpdateHabitAsync(
+                Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string?>(),
+                Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<HabitResetPeriod>(),
+                Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<double?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<BoardItem?>(item with { Title = "Renamed" }));
+        _undoService.IsUndoing.Returns(false);
+
+        await _undoableService.UpdateHabitAsync(
+            item.Id, "Renamed", item.Notes, item.Tags,
+            item.TrackPlus, item.TrackMinus, item.ResetPeriod,
+            item.Counter, item.NegativeCounter, item.ChecklistJson, sortOrder: 2.0);
+
+        _undoService.Received(1).RegisterUndo(
+            Arg.Is("Edit \"Habit\""),
+            Arg.Any<Func<Task>>());
+    }
+
+    [Fact]
     public async Task Delete_then_Edit_Undo_sequence_should_preserve_original_guid()
     {
         // Arrange
@@ -414,6 +458,7 @@ public sealed class UndoableBoardDataServiceTests
             4, // 5 - 1 = 4
             0,
             null,
+            Arg.Any<double?>(),
             Arg.Any<CancellationToken>());
 
         // 4. Simulate undoing the second increment.
@@ -431,6 +476,7 @@ public sealed class UndoableBoardDataServiceTests
             3, // 4 - 1 = 3
             0,
             null,
+            Arg.Any<double?>(),
             Arg.Any<CancellationToken>());
     }
 
@@ -460,7 +506,7 @@ public sealed class UndoableBoardDataServiceTests
         _inner.UpdateHabitAsync(
             itemId, Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string?>(),
             Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<HabitResetPeriod>(),
-            Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<double?>(), Arg.Any<CancellationToken>())
             .Returns(x =>
             {
                 counter = (int)x[7];

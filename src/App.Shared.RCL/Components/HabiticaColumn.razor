@@ -139,7 +139,17 @@
                     var subDone = checklist.Count(x => x.IsDone);
                     var subTotal = checklist.Count;
                     var hasBodyExtra = !string.IsNullOrWhiteSpace(item.Notes) || subTotal > 0;
-                    <div @key="item.Id" class="@GetCardItemClass(item)">
+                    var isDragOver = _dragOverId == item.Id && _draggingId != item.Id;
+                    <div @key="item.Id"
+                         class="@GetCardItemClass(item, isDragOver)"
+                         draggable="true"
+                         @ondragstart="@(() => OnDragStart(item.Id))"
+                         @ondragover="@(e => OnDragOver(e, item.Id))"
+                         @ondragover:preventDefault="true"
+                         @ondrop="@(e => OnDropAsync(item.Id))"
+                         @ondrop:preventDefault="true"
+                         @ondragleave="@OnDragLeave"
+                         @ondragend="@OnDragEnd">
                         @if (Section == BoardSection.Habit)
                         {
                             <div class="habitica-card__habit-btns habitica-card__left">
@@ -340,12 +350,15 @@
     {
         return Section switch
         {
-            BoardSection.Habit => FilterHabits(),
-            BoardSection.Daily => FilterDailies(),
-            BoardSection.Todo => FilterTodos(),
-            _ => Items.ToList()
+            BoardSection.Habit => OrderBySort(FilterHabits()),
+            BoardSection.Daily => OrderBySort(FilterDailies()),
+            BoardSection.Todo => OrderBySort(FilterTodos()),
+            _ => OrderBySort(Items)
         };
     }
+
+    private static IReadOnlyList<BoardItem> OrderBySort(IEnumerable<BoardItem> items) =>
+        items.OrderBy(x => x.SortOrder ?? double.MaxValue).ThenBy(x => x.Id).ToList();
 
     private IReadOnlyList<BoardItem> FilterHabits()
     {
@@ -443,9 +456,147 @@
         };
     }
 
-    private string GetCardItemClass(BoardItem item)
+    private string GetCardItemClass(BoardItem item, bool isDragOver = false)
     {
-        return $"habitica-card {GetRowClass(item)}";
+        var dragClass = isDragOver ? " habitica-card--drag-over" : string.Empty;
+        return $"habitica-card {GetRowClass(item)}{dragClass}";
+    }
+
+    // ── Drag-and-drop reordering ──────────────────────────────────────────────
+
+    private Guid? _draggingId;
+    private Guid? _dragOverId;
+
+    private void OnDragStart(Guid id)
+    {
+        _draggingId = id;
+        _dragOverId = null;
+    }
+
+    private void OnDragOver(DragEventArgs _, Guid targetId)
+    {
+        if (_draggingId.HasValue && _draggingId.Value != targetId)
+        {
+            _dragOverId = targetId;
+        }
+    }
+
+    private void OnDragLeave()
+    {
+        _dragOverId = null;
+    }
+
+    private void OnDragEnd()
+    {
+        _draggingId = null;
+        _dragOverId = null;
+    }
+
+    private async Task OnDropAsync(Guid targetId)
+    {
+        if (_draggingId is not { } sourceId || sourceId == targetId)
+        {
+            OnDragEnd();
+            return;
+        }
+
+        await ReorderItemAsync(sourceId, targetId);
+        OnDragEnd();
+    }
+
+    /// <summary>
+    /// Moves <paramref name="sourceId"/> relative to <paramref name="targetId"/> in the visible list.
+    /// Dragging up inserts before the target; dragging down inserts after it (so dropping the first
+    /// item onto the second actually moves it down one slot). Only the dragged item's
+    /// <see cref="BoardItem.SortOrder"/> is updated to the midpoint of its neighbours.
+    /// </summary>
+    private async Task ReorderItemAsync(Guid sourceId, Guid targetId)
+    {
+        var visible = VisibleItems();
+        var sourceItem = visible.FirstOrDefault(x => x.Id == sourceId);
+        var targetItem = visible.FirstOrDefault(x => x.Id == targetId);
+
+        if (sourceItem is null || targetItem is null)
+        {
+            return;
+        }
+
+        var reordered = visible.ToList();
+        var sourceIndex = reordered.IndexOf(sourceItem);
+        var targetIndex = reordered.IndexOf(targetItem);
+        reordered.RemoveAt(sourceIndex);
+
+        // After removal, target index shifts down when source was above it.
+        var targetIndexAfterRemove = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+        var insertAt = sourceIndex < targetIndex
+            ? targetIndexAfterRemove + 1
+            : targetIndexAfterRemove;
+        reordered.Insert(insertAt, sourceItem);
+
+        var prevOrder = insertAt > 0 ? reordered[insertAt - 1].SortOrder : null;
+        var nextOrder = insertAt < reordered.Count - 1 ? reordered[insertAt + 1].SortOrder : null;
+
+        double newSortOrder;
+        if (prevOrder is null && nextOrder is not null)
+        {
+            newSortOrder = nextOrder.Value - 1.0;
+        }
+        else if (nextOrder is null && prevOrder is not null)
+        {
+            newSortOrder = prevOrder.Value + 1.0;
+        }
+        else if (prevOrder is not null && nextOrder is not null)
+        {
+            newSortOrder = (prevOrder.Value + nextOrder.Value) / 2.0;
+        }
+        else
+        {
+            return;
+        }
+
+        await TryMutateAsync(() => PersistReorderAsync(sourceItem, newSortOrder));
+    }
+
+    private Task PersistReorderAsync(BoardItem item, double newSortOrder)
+    {
+        return Section switch
+        {
+            BoardSection.Habit => BoardData.UpdateHabitAsync(
+                item.Id,
+                item.Title,
+                item.Notes,
+                item.Tags,
+                item.TrackPlus,
+                item.TrackMinus,
+                item.ResetPeriod,
+                item.Counter,
+                item.NegativeCounter,
+                item.ChecklistJson,
+                sortOrder: newSortOrder),
+
+            BoardSection.Daily => BoardData.UpdateDailyAsync(
+                item.Id,
+                item.Title,
+                item.Notes,
+                item.Tags,
+                item.DailyStartDate?.ToDateTime(TimeOnly.MinValue),
+                item.DailyRepeat,
+                item.DailyRepeatInterval,
+                item.ChecklistJson,
+                item.Counter,
+                sortOrder: newSortOrder),
+
+            BoardSection.Todo => BoardData.UpdateTodoAsync(
+                item.Id,
+                item.Title,
+                item.Notes,
+                item.Tags,
+                item.ChecklistJson,
+                item.TodoDueDate?.ToDateTime(TimeOnly.MinValue),
+                sortOrder: newSortOrder),
+
+            _ => Task.CompletedTask
+        };
     }
 
     private static string HabitStreakLabel(BoardItem item)
@@ -559,7 +710,6 @@
         }
 
         _draft = string.Empty;
-        await Notifier.NotifyAsync("Item added.", Severity.Success);
     }
 
     private async Task HabitUpAsync(BoardItem item)

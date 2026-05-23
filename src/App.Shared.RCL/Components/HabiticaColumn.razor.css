@@ -5,21 +5,21 @@
     overflow: hidden;
     background: linear-gradient(
         165deg,
-        color-mix(in srgb, var(--mud-palette-surface) 94%, var(--mud-palette-black)) 0%,
-        color-mix(in srgb, var(--mud-palette-background) 96%, var(--mud-palette-black)) 100%
+        color-mix(in srgb, var(--mud-palette-background) 70%, var(--mud-palette-surface) 30%) 0%,
+        color-mix(in srgb, var(--mud-palette-background) 90%, var(--mud-palette-surface) 10%) 100%
     );
-    border: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
     box-shadow:
-        0 12px 40px color-mix(in srgb, var(--mud-palette-text-primary) 10%, transparent),
+        0 12px 40px color-mix(in srgb, var(--mud-palette-black) 15%, transparent),
         0 0 0 1px color-mix(in srgb, var(--mud-palette-text-primary) 4%, transparent) inset;
-    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
 }
 
 .habitica-column:hover {
-    border-color: color-mix(in srgb, var(--mud-palette-text-primary) 15%, transparent);
+    border-color: color-mix(in srgb, var(--mud-palette-text-primary) 12%, transparent);
     box-shadow:
-        0 16px 48px color-mix(in srgb, var(--mud-palette-text-primary) 15%, transparent),
-        0 0 0 1px color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent) inset;
+        0 16px 48px color-mix(in srgb, var(--mud-palette-black) 20%, transparent),
+        0 0 0 1px color-mix(in srgb, var(--mud-palette-text-primary) 5%, transparent) inset;
 }
 
 .habitica-column ::deep .mud-card-header,
@@ -118,24 +118,51 @@
     row-gap: 0.3rem;
     align-items: start;
     min-height: 2.85rem;
-    padding: 0.5rem 0.65rem;
-    background: color-mix(in srgb, var(--mud-palette-background) 30%, var(--mud-palette-surface));
-    border: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 8%, transparent);
+    padding: 0.525rem 0.7rem;
+    background: var(--mud-palette-surface);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 10%, transparent);
     border-radius: 0.75rem;
     overflow: hidden;
     box-shadow:
-        0 1px 0 color-mix(in srgb, var(--mud-palette-surface) 12%, transparent) inset,
-        0 4px 12px color-mix(in srgb, var(--mud-palette-text-primary) 8%, transparent),
-        0 1px 3px color-mix(in srgb, var(--mud-palette-text-primary) 4%, transparent);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        0 1px 0 color-mix(in srgb, var(--mud-palette-surface) 15%, transparent) inset,
+        0 4px 16px color-mix(in srgb, var(--mud-palette-black) 16%, transparent),
+        0 1px 3px color-mix(in srgb, var(--mud-palette-black) 10%, transparent);
+    transition: border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.habitica-card {
+    cursor: grab;
+}
+
+.habitica-card:active {
+    cursor: grabbing;
 }
 
 .habitica-card:hover {
-    border-color: color-mix(in srgb, var(--mud-palette-text-primary) 15%, transparent);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, transparent);
+}
+
+/* Visual feedback while dragging over a sibling card */
+.habitica-card--drag-over {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 70%, transparent) !important;
     box-shadow:
-        0 1px 0 color-mix(in srgb, var(--mud-palette-surface) 15%, transparent) inset,
-        0 8px 20px color-mix(in srgb, var(--mud-palette-text-primary) 12%, transparent),
-        0 2px 6px color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
+        0 0 0 2px color-mix(in srgb, var(--mud-palette-primary) 30%, transparent),
+        0 4px 16px color-mix(in srgb, var(--mud-palette-black) 16%, transparent) !important;
+    transform: translateY(2px);
+}
+
+.habitica-card.habitica-row--done {
+    background: color-mix(in srgb, var(--mud-palette-surface) 40%, var(--mud-palette-background));
+    border-color: color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
+    box-shadow: none;
+}
+
+.habitica-card.habitica-row--done:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: color-mix(in srgb, var(--mud-palette-text-primary) 10%, transparent);
 }
 
 /* Row 1: check/habit and title on the same row so they share one vertical center. */
@@ -316,7 +343,6 @@
 
 .habitica-row--done .habitica-card__title {
     opacity: 0.75;
-    text-decoration: line-through;
 }
 
 .habitica-row--done .habitica-card__notes,
@@ -458,7 +484,6 @@
 
 .habitica-row--done .habitica-row-title {
     opacity: 0.72;
-    text-decoration: line-through;
 }
 
 .habitica-col-foot {

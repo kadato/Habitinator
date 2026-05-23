@@ -1,15 +1,14 @@
 namespace App.Shared.RCL.Models;
 
 /// <summary>
-/// Sort helpers for to-do list tabs. Items without a due date always appear first.
+/// Sort helpers for to-do list tabs.
 /// </summary>
 public static class TodoOrdering
 {
-    /// <summary>Active tab: manual order via <see cref="BoardItem.SortOrder"/>.</summary>
+    /// <summary>Active tab: manual order via <see cref="BoardItem.SortOrder"/> only.</summary>
     public static IReadOnlyList<BoardItem> OrderForActiveTab(IEnumerable<BoardItem> items) =>
         items
-            .OrderBy(x => x.TodoDueDate.HasValue ? 1 : 0)
-            .ThenBy(x => x.SortOrder ?? double.MaxValue)
+            .OrderBy(x => x.SortOrder ?? double.MaxValue)
             .ThenBy(x => x.Id)
             .ToList();
 

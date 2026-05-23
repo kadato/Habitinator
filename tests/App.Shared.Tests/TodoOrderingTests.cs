@@ -5,7 +5,7 @@ namespace App.Shared.Tests;
 public sealed class TodoOrderingTests
 {
     [Fact]
-    public void OrderForActiveTab_puts_undated_first_then_sort_order()
+    public void OrderForActiveTab_sorts_by_sort_order_only()
     {
         var dated = new BoardItem(Guid.NewGuid(), "Dated", SortOrder: 1.0, TodoDueDate: new DateOnly(2026, 5, 1));
         var undatedLate = new BoardItem(Guid.NewGuid(), "Undated B", SortOrder: 5.0);
@@ -13,7 +13,7 @@ public sealed class TodoOrderingTests
 
         var ordered = TodoOrdering.OrderForActiveTab([dated, undatedLate, undatedEarly]);
 
-        Assert.Equal([undatedEarly, undatedLate, dated], ordered);
+        Assert.Equal([dated, undatedEarly, undatedLate], ordered);
     }
 
     [Fact]

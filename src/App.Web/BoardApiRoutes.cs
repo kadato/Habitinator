@@ -283,6 +283,7 @@ internal static class BoardApiRoutes
                                 request.Counter,
                                 request.NegativeCounter,
                                 request.ChecklistJson,
+                                request.SortOrder,
                                 expected,
                                 cancellationToken);
                             return MutationToOutcome(r);
@@ -325,6 +326,7 @@ internal static class BoardApiRoutes
                                 request.Tags,
                                 request.ChecklistJson,
                                 request.DueDate,
+                                request.SortOrder,
                                 expected,
                                 cancellationToken);
                             return MutationToOutcome(r);
@@ -370,6 +372,7 @@ internal static class BoardApiRoutes
                                 request.RepeatInterval,
                                 request.ChecklistJson,
                                 request.Streak,
+                                request.SortOrder,
                                 expected,
                                 cancellationToken);
                             return MutationToOutcome(r);

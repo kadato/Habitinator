@@ -50,8 +50,10 @@ public sealed class LocalBoardItemRow
     /// <summary>Last known server <c>UpdatedAtUtc</c> for If-Match; null for purely local rows.</summary>
     public DateTimeOffset? ServerUpdatedAtUtc { get; set; }
 
-    /// <summary>Server <c>CreatedAtUtc</c> for list ordering (aligns with web board snapshot ordering).</summary>
+    /// <summary>Server creation time (display/audit only; not used for list ordering).</summary>
     public DateTimeOffset? CreatedAtUtc { get; set; }
+
+    public double? SortOrder { get; set; }
 
     public BoardItem ToModel() => new(
         Id,
@@ -71,7 +73,8 @@ public sealed class LocalBoardItemRow
         DailyLastCompletedOn,
         TodoDueDate,
         ServerUpdatedAtUtc,
-        CreatedAtUtc);
+        CreatedAtUtc,
+        SortOrder);
 
     public static LocalBoardItemRow FromModel(BoardSection section, string userKey, BoardItem item, bool awaitingCreate)
     {
@@ -97,7 +100,8 @@ public sealed class LocalBoardItemRow
             TodoDueDate = item.TodoDueDate,
             AwaitingServerCreate = awaitingCreate,
             ServerUpdatedAtUtc = item.ServerUpdatedAtUtc,
-            CreatedAtUtc = item.CreatedAtUtc
+            CreatedAtUtc = item.CreatedAtUtc,
+            SortOrder = item.SortOrder
         };
     }
 }

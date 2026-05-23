@@ -46,7 +46,8 @@ public sealed record UpdateHabitOutboxPayload(
     int Counter,
     int NegativeCounter,
     string? ChecklistJson,
-    DateTimeOffset? ExpectedServerUpdatedAtUtc = null);
+    DateTimeOffset? ExpectedServerUpdatedAtUtc = null,
+    double? SortOrder = null);
 
 public sealed record UpdateTodoOutboxPayload(
     Guid ItemId,
@@ -55,7 +56,8 @@ public sealed record UpdateTodoOutboxPayload(
     string? Tags,
     string? ChecklistJson,
     DateTime? DueDate,
-    DateTimeOffset? ExpectedServerUpdatedAtUtc = null);
+    DateTimeOffset? ExpectedServerUpdatedAtUtc = null,
+    double? SortOrder = null);
 
 public sealed record UpdateDailyOutboxPayload(
     Guid ItemId,
@@ -67,7 +69,8 @@ public sealed record UpdateDailyOutboxPayload(
     int RepeatInterval,
     string? ChecklistJson,
     int Streak,
-    DateTimeOffset? ExpectedServerUpdatedAtUtc = null);
+    DateTimeOffset? ExpectedServerUpdatedAtUtc = null,
+    double? SortOrder = null);
 
 public static class BoardOutboxPayloadMapper
 {

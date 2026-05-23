@@ -83,13 +83,11 @@ public sealed class BoardPersistenceService
 
     public async Task<BoardSnapshot> GetSnapshotAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        // Snapshot must reflect the database, not a long-lived scoped context's tracked copies (Blazor Server circuit).
-        // Use a fresh context for reads so this cannot interleave on the same instance as a concurrent write
-        // (Blazor re-entrancy: BoardChanged can trigger GetSnapshot while CreateItem is still in progress).
         await using var readDb = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         var items = await LiveBoardItems(readDb, userId)
             .AsNoTracking()
-            .OrderBy(x => x.CreatedAtUtc)
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.CreatedAtUtc)
             .ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);
 
@@ -98,18 +96,21 @@ public sealed class BoardPersistenceService
         var dailyStreaks = await BuildDailyStreakMapAsync(userId, dailies, today, readDb, cancellationToken);
         return new BoardSnapshot(
             items.Where(x => x.Section == BoardSection.Habit)
-                .OrderBy(x => x.CreatedAtUtc)
+                .OrderBy(x => x.SortOrder)
+                .ThenBy(x => x.CreatedAtUtc)
                 .ThenBy(x => x.Id)
                 .Select(x => ToModelWithToday(x, today, dailyStreaks))
                 .ToList(),
             dailies
                 .OrderBy(x => IsDailyEntityCompleteForToday(x, today) ? 1 : 0)
+                .ThenBy(x => x.SortOrder)
                 .ThenBy(x => x.CreatedAtUtc)
                 .ThenBy(x => x.Id)
                 .Select(x => ToModelWithToday(x, today, dailyStreaks))
                 .ToList(),
             items.Where(x => x.Section == BoardSection.Todo)
                 .OrderBy(x => x.IsCompleted)
+                .ThenBy(x => x.SortOrder)
                 .ThenBy(x => x.CreatedAtUtc)
                 .ThenBy(x => x.Id)
                 .Select(x => ToModelWithToday(x, today, dailyStreaks))
@@ -158,7 +159,8 @@ public sealed class BoardPersistenceService
             ChecklistJson = null,
             DailyLastCompletedOn = null,
             CreatedAtUtc = utcNow,
-            UpdatedAtUtc = utcNow
+            UpdatedAtUtc = utcNow,
+            SortOrder = await GetNextSortOrderAsync(userId, section, cancellationToken)
         };
 
         _dbContext.BoardItems.Add(entity);
@@ -479,6 +481,7 @@ public sealed class BoardPersistenceService
         int counter,
         int negativeCounter,
         string? checklistJson = null,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default)
     {
         var r = await UpdateHabitForApiAsync(
@@ -493,6 +496,7 @@ public sealed class BoardPersistenceService
             counter,
             negativeCounter,
             checklistJson,
+            sortOrder,
             null,
             cancellationToken);
         return r.Status == BoardMutationStatus.Ok ? r.Item : null;
@@ -510,6 +514,7 @@ public sealed class BoardPersistenceService
         int counter,
         int negativeCounter,
         string? checklistJson = null,
+        double? sortOrder = null,
         DateTimeOffset? expectedUpdatedAtUtc = null,
         CancellationToken cancellationToken = default)
     {
@@ -540,6 +545,10 @@ public sealed class BoardPersistenceService
         entity.Counter = Math.Max(0, counter);
         entity.NegativeCounter = Math.Max(0, negativeCounter);
         entity.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson) ? null : checklistJson.Trim();
+        if (sortOrder.HasValue)
+        {
+            entity.SortOrder = sortOrder.Value;
+        }
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
         var habit = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
@@ -555,6 +564,7 @@ public sealed class BoardPersistenceService
         string? tags,
         string? checklistJson,
         DateTime? dueDate,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default)
     {
         var r = await UpdateTodoForApiAsync(
@@ -565,6 +575,7 @@ public sealed class BoardPersistenceService
             tags,
             checklistJson,
             dueDate,
+            sortOrder,
             null,
             cancellationToken);
         return r.Status == BoardMutationStatus.Ok ? r.Item : null;
@@ -578,6 +589,7 @@ public sealed class BoardPersistenceService
         string? tags,
         string? checklistJson,
         DateTime? dueDate,
+        double? sortOrder = null,
         DateTimeOffset? expectedUpdatedAtUtc = null,
         CancellationToken cancellationToken = default)
     {
@@ -602,6 +614,10 @@ public sealed class BoardPersistenceService
         entity.Tags = string.IsNullOrWhiteSpace(tags) ? null : tags.Trim();
         entity.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson) ? null : checklistJson.Trim();
         entity.DailyStartDate = dueUtc;
+        if (sortOrder.HasValue)
+        {
+            entity.SortOrder = sortOrder.Value;
+        }
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
         var todo = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
@@ -620,6 +636,7 @@ public sealed class BoardPersistenceService
         int repeatInterval,
         string? checklistJson,
         int streak,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default)
     {
         var r = await UpdateDailyForApiAsync(
@@ -633,6 +650,7 @@ public sealed class BoardPersistenceService
             repeatInterval,
             checklistJson,
             streak,
+            sortOrder,
             null,
             cancellationToken);
         return r.Status == BoardMutationStatus.Ok ? r.Item : null;
@@ -649,6 +667,7 @@ public sealed class BoardPersistenceService
         int repeatInterval,
         string? checklistJson,
         int streak,
+        double? sortOrder = null,
         DateTimeOffset? expectedUpdatedAtUtc = null,
         CancellationToken cancellationToken = default)
     {
@@ -683,6 +702,10 @@ public sealed class BoardPersistenceService
         entity.DailyRepeatInterval = n;
         entity.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson) ? null : checklistJson.Trim();
         entity.Counter = streakClamped;
+        if (sortOrder.HasValue)
+        {
+            entity.SortOrder = sortOrder.Value;
+        }
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
 
         // Always reconcile streak backfill, not only when Counter/schedule appear to change. Otherwise a save
@@ -856,7 +879,9 @@ public sealed class BoardPersistenceService
         int order = 0;
         void AddBoardRow(BoardItemEntity row)
         {
-            var t = utcNow.AddSeconds(order++);
+            var seq = order++;
+            row.SortOrder = seq + 1.0;
+            var t = utcNow.AddSeconds(seq);
             row.CreatedAtUtc = t;
             row.UpdatedAtUtc = t;
             _dbContext.BoardItems.Add(row);
@@ -1203,7 +1228,8 @@ public sealed class BoardPersistenceService
             lastCompleted,
             todoDue,
             entity.UpdatedAtUtc,
-            entity.CreatedAtUtc);
+            entity.CreatedAtUtc,
+            entity.SortOrder);
     }
 
     private static bool IsDailyEntityCompleteForToday(BoardItemEntity entity, DateOnly today)
@@ -1211,6 +1237,15 @@ public sealed class BoardPersistenceService
         if (entity.DailyLastCompletedOn is { } t && DateOnly.FromDateTime(t) == today) return true;
 
         return entity.DailyLastCompletedOn is null && entity.IsCompleted;
+    }
+
+    private async Task<double> GetNextSortOrderAsync(Guid userId, BoardSection section, CancellationToken cancellationToken)
+    {
+        var max = await _dbContext.BoardItems
+            .Where(x => x.UserId == userId && x.Section == section && x.DeletedAtUtc == null)
+            .Select(x => (double?)x.SortOrder)
+            .MaxAsync(cancellationToken);
+        return (max ?? 0) + 1.0;
     }
 
     public async Task LogActivityAsync(

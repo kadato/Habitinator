@@ -55,8 +55,10 @@ public sealed record BoardItem(
     DateOnly? TodoDueDate = null,
     /// <summary>Server row version for optimistic concurrency and incremental sync (maps to <c>UpdatedAtUtc</c> on the server).</summary>
     DateTimeOffset? ServerUpdatedAtUtc = null,
-    /// <summary>Server creation time; used for stable list ordering (matches <c>CreatedAtUtc</c> in the board store).</summary>
-    DateTimeOffset? CreatedAtUtc = null);
+    /// <summary>Server creation time; kept for display/audit only — do not use for ordering.</summary>
+    DateTimeOffset? CreatedAtUtc = null,
+    /// <summary>Explicit user-defined sort position. New items get max+1; reorder sets midpoint between neighbours.</summary>
+    double? SortOrder = null);
 
 public sealed record BoardSnapshot(
     IReadOnlyList<BoardItem> Habits,

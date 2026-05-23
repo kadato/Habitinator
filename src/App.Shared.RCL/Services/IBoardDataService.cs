@@ -34,6 +34,7 @@ public interface IBoardDataService
         int counter,
         int negativeCounter,
         string? checklistJson = null,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default);
 
     Task<BoardItem?> UpdateTodoAsync(
@@ -43,6 +44,7 @@ public interface IBoardDataService
         string? tags,
         string? checklistJson,
         DateTime? dueDate,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default);
 
     Task<BoardItem?> UpdateDailyAsync(
@@ -55,5 +57,6 @@ public interface IBoardDataService
         int repeatInterval,
         string? checklistJson,
         int streak,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default);
 }

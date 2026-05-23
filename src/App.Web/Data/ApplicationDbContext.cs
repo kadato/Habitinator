@@ -51,6 +51,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(x => x.NegativeCounter).IsRequired();
             entity.Property(x => x.Section).HasConversion<string>().HasMaxLength(20);
             entity.Property(x => x.CreatedAtUtc).IsRequired();
+            entity.Property(x => x.SortOrder).IsRequired();
             entity.Property(x => x.UpdatedAtUtc).IsRequired();
             entity.HasIndex(x => new { x.UserId, x.Section });
             entity.HasOne(x => x.User)

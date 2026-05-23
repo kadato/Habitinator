@@ -234,6 +234,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
         int counter,
         int negativeCounter,
         string? checklistJson = null,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default) =>
         UpdateHabitAsync(
             itemId,
@@ -246,6 +247,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
             counter,
             negativeCounter,
             checklistJson,
+            sortOrder,
             Guid.Empty,
             null,
             cancellationToken);
@@ -261,6 +263,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
         int counter,
         int negativeCounter,
         string? checklistJson,
+        double? sortOrder,
         Guid operationId,
         DateTimeOffset? expectedServerUpdatedAtUtc,
         CancellationToken cancellationToken = default)
@@ -274,7 +277,8 @@ public sealed class RemoteBoardDataService : IBoardDataService
             resetPeriod,
             counter,
             negativeCounter,
-            checklistJson);
+            checklistJson,
+            sortOrder);
         using var req = new HttpRequestMessage(HttpMethod.Put, $"api/board/habits/{itemId}")
         {
             Content = JsonContent.Create(body, options: Serializer)
@@ -291,6 +295,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
         string? tags,
         string? checklistJson,
         DateTime? dueDate,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default) =>
         UpdateTodoAsync(
             itemId,
@@ -299,6 +304,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
             tags,
             checklistJson,
             dueDate,
+            sortOrder,
             Guid.Empty,
             null,
             cancellationToken);
@@ -310,11 +316,12 @@ public sealed class RemoteBoardDataService : IBoardDataService
         string? tags,
         string? checklistJson,
         DateTime? dueDate,
+        double? sortOrder,
         Guid operationId,
         DateTimeOffset? expectedServerUpdatedAtUtc,
         CancellationToken cancellationToken = default)
     {
-        var body = new TodoUpdateRequest(title, notes, tags, checklistJson, dueDate);
+        var body = new TodoUpdateRequest(title, notes, tags, checklistJson, dueDate, sortOrder);
         using var req = new HttpRequestMessage(HttpMethod.Put, $"api/board/todos/{itemId}")
         {
             Content = JsonContent.Create(body, options: Serializer)
@@ -334,6 +341,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
         int repeatInterval,
         string? checklistJson,
         int streak,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default) =>
         UpdateDailyAsync(
             itemId,
@@ -345,6 +353,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
             repeatInterval,
             checklistJson,
             streak,
+            sortOrder,
             Guid.Empty,
             null,
             cancellationToken);
@@ -359,6 +368,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
         int repeatInterval,
         string? checklistJson,
         int streak,
+        double? sortOrder,
         Guid operationId,
         DateTimeOffset? expectedServerUpdatedAtUtc,
         CancellationToken cancellationToken = default)
@@ -371,7 +381,8 @@ public sealed class RemoteBoardDataService : IBoardDataService
             repeatType,
             repeatInterval,
             checklistJson,
-            streak);
+            streak,
+            sortOrder);
         using var req = new HttpRequestMessage(HttpMethod.Put, $"api/board/dailies/{itemId}")
         {
             Content = JsonContent.Create(body, options: Serializer)

@@ -142,6 +142,7 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
         int counter,
         int negativeCounter,
         string? checklistJson = null,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default)
     {
         return _inner.UpdateHabitAsync(
@@ -155,6 +156,7 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
             counter,
             negativeCounter,
             checklistJson,
+            sortOrder,
             cancellationToken);
     }
 
@@ -165,9 +167,10 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
         string? tags,
         string? checklistJson,
         DateTime? dueDate,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default)
     {
-        return _inner.UpdateTodoAsync(itemId, title, notes, tags, checklistJson, dueDate, cancellationToken);
+        return _inner.UpdateTodoAsync(itemId, title, notes, tags, checklistJson, dueDate, sortOrder, cancellationToken);
     }
 
     public Task<BoardItem?> UpdateDailyAsync(
@@ -180,6 +183,7 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
         int repeatInterval,
         string? checklistJson,
         int streak,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default)
     {
         return _inner.UpdateDailyAsync(
@@ -192,6 +196,7 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
             repeatInterval,
             checklistJson,
             streak,
+            sortOrder,
             cancellationToken);
     }
 }

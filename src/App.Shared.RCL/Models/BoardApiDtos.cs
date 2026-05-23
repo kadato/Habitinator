@@ -11,7 +11,8 @@ public sealed record HabitUpdateRequest(
     HabitResetPeriod ResetPeriod,
     int Counter,
     int NegativeCounter,
-    string? ChecklistJson = null);
+    string? ChecklistJson = null,
+    double? SortOrder = null);
 
 public sealed record DailyUpdateRequest(
     string Title,
@@ -21,14 +22,16 @@ public sealed record DailyUpdateRequest(
     DailyRepeatType Repeat,
     int RepeatInterval,
     string? ChecklistJson,
-    int Streak = 0);
+    int Streak = 0,
+    double? SortOrder = null);
 
 public sealed record TodoUpdateRequest(
     string Title,
     string? Notes,
     string? Tags,
     string? ChecklistJson,
-    DateTime? DueDate);
+    DateTime? DueDate,
+    double? SortOrder = null);
 
 public sealed record BoardSectionRequest(BoardSection Section);
 

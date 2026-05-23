@@ -85,6 +85,7 @@ public sealed class WebBoardDataService : IBoardDataService
         int counter,
         int negativeCounter,
         string? checklistJson = null,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default)
     {
         var userId = await GetCurrentUserIdAsync(cancellationToken);
@@ -100,6 +101,7 @@ public sealed class WebBoardDataService : IBoardDataService
             counter,
             negativeCounter,
             checklistJson,
+            sortOrder,
             cancellationToken);
     }
 
@@ -110,6 +112,7 @@ public sealed class WebBoardDataService : IBoardDataService
         string? tags,
         string? checklistJson,
         DateTime? dueDate,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default)
     {
         var userId = await GetCurrentUserIdAsync(cancellationToken);
@@ -121,6 +124,7 @@ public sealed class WebBoardDataService : IBoardDataService
             tags,
             checklistJson,
             dueDate,
+            sortOrder,
             cancellationToken);
     }
 
@@ -134,6 +138,7 @@ public sealed class WebBoardDataService : IBoardDataService
         int repeatInterval,
         string? checklistJson,
         int streak,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default)
     {
         var userId = await GetCurrentUserIdAsync(cancellationToken);
@@ -148,6 +153,7 @@ public sealed class WebBoardDataService : IBoardDataService
             repeatInterval,
             checklistJson,
             streak,
+            sortOrder,
             cancellationToken);
     }
 

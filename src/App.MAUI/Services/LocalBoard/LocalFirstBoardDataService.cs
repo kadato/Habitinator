@@ -98,7 +98,8 @@ public sealed class LocalFirstBoardDataService(
             {
                 var id = itemId ?? Guid.NewGuid();
                 var now = DateTimeOffset.UtcNow;
-                var item = new BoardItem(id, title.Trim(), CreatedAtUtc: now);
+                var sortOrder = await GetNextLocalSortOrderAsync(db, userKey, section, cancellationToken);
+                var item = new BoardItem(id, title.Trim(), CreatedAtUtc: now, SortOrder: sortOrder);
                 db.BoardItems.Add(LocalBoardItemRow.FromModel(section, userKey, item, true));
                 var payload = new CreateOutboxPayload(section, item.Title, id);
                 Enqueue(db, userKey, BoardOutboxOperationKind.Create, payload);
@@ -253,6 +254,7 @@ public sealed class LocalFirstBoardDataService(
         int counter,
         int negativeCounter,
         string? checklistJson = null,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
             cancellationToken,
@@ -273,6 +275,10 @@ public sealed class LocalFirstBoardDataService(
                 row.Counter = counter;
                 row.NegativeCounter = negativeCounter;
                 row.ChecklistJson = checklistJson;
+                if (sortOrder.HasValue)
+                {
+                    row.SortOrder = sortOrder.Value;
+                }
                 Enqueue(
                     db,
                     userKey,
@@ -288,7 +294,8 @@ public sealed class LocalFirstBoardDataService(
                         row.Counter,
                         row.NegativeCounter,
                         row.ChecklistJson,
-                        expected));
+                        expected,
+                        sortOrder));
                 await db.SaveChangesAsync(cancellationToken);
                 return row.ToModel();
             });
@@ -300,6 +307,7 @@ public sealed class LocalFirstBoardDataService(
         string? tags,
         string? checklistJson,
         DateTime? dueDate,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
             cancellationToken,
@@ -316,6 +324,10 @@ public sealed class LocalFirstBoardDataService(
                 row.Tags = tags;
                 row.ChecklistJson = checklistJson;
                 row.TodoDueDate = dueDate.HasValue ? DateOnly.FromDateTime(dueDate.Value.Date) : null;
+                if (sortOrder.HasValue)
+                {
+                    row.SortOrder = sortOrder.Value;
+                }
                 Enqueue(
                     db,
                     userKey,
@@ -327,7 +339,8 @@ public sealed class LocalFirstBoardDataService(
                         row.Tags,
                         row.ChecklistJson,
                         dueDate,
-                        expectedTodo));
+                        expectedTodo,
+                        sortOrder));
                 await db.SaveChangesAsync(cancellationToken);
                 return row.ToModel();
             });
@@ -342,6 +355,7 @@ public sealed class LocalFirstBoardDataService(
         int repeatInterval,
         string? checklistJson,
         int streak,
+        double? sortOrder = null,
         CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
             cancellationToken,
@@ -361,6 +375,10 @@ public sealed class LocalFirstBoardDataService(
                 row.DailyRepeatInterval = repeatInterval;
                 row.ChecklistJson = checklistJson;
                 row.Counter = streak;
+                if (sortOrder.HasValue)
+                {
+                    row.SortOrder = sortOrder.Value;
+                }
                 Enqueue(
                     db,
                     userKey,
@@ -375,7 +393,8 @@ public sealed class LocalFirstBoardDataService(
                         repeatInterval,
                         row.ChecklistJson,
                         streak,
-                        expectedDaily));
+                        expectedDaily,
+                        sortOrder));
                 await db.SaveChangesAsync(cancellationToken);
                 return row.ToModel();
             });
@@ -748,6 +767,7 @@ public sealed class LocalFirstBoardDataService(
                     p.Counter,
                     p.NegativeCounter,
                     p.ChecklistJson,
+                    p.SortOrder,
                     head.OperationId,
                     p.ExpectedServerUpdatedAtUtc,
                     cancellationToken);
@@ -765,6 +785,7 @@ public sealed class LocalFirstBoardDataService(
                     p.Tags,
                     p.ChecklistJson,
                     p.DueDate,
+                    p.SortOrder,
                     head.OperationId,
                     p.ExpectedServerUpdatedAtUtc,
                     cancellationToken);
@@ -785,6 +806,7 @@ public sealed class LocalFirstBoardDataService(
                     p.RepeatInterval,
                     p.ChecklistJson,
                     p.Streak,
+                    p.SortOrder,
                     head.OperationId,
                     p.ExpectedServerUpdatedAtUtc,
                     cancellationToken);
@@ -855,6 +877,7 @@ public sealed class LocalFirstBoardDataService(
             row.TodoDueDate = updated.TodoDueDate;
             row.ServerUpdatedAtUtc = updated.ServerUpdatedAtUtc;
             row.CreatedAtUtc = updated.CreatedAtUtc;
+            row.SortOrder = updated.SortOrder;
             await db.SaveChangesAsync(cancellationToken);
         }
         finally
@@ -1019,18 +1042,21 @@ public sealed class LocalFirstBoardDataService(
         var items = db.BoardItems.AsNoTracking().Where(x => x.UserKey == userKey).ToList();
         // Match BoardPersistenceService.GetSnapshotAsync ordering (web app).
         var habits = items.Where(x => x.Section == BoardSection.Habit)
-            .OrderBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
+            .OrderBy(x => x.SortOrder ?? double.MaxValue)
+            .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
             .ThenBy(x => x.Id)
             .Select(x => x.ToModel())
             .ToList();
         var dailies = items.Where(x => x.Section == BoardSection.Daily)
             .OrderBy(x => IsDailyRowCompleteForToday(x, today) ? 1 : 0)
+            .ThenBy(x => x.SortOrder ?? double.MaxValue)
             .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
             .ThenBy(x => x.Id)
             .Select(x => x.ToModel())
             .ToList();
         var todos = items.Where(x => x.Section == BoardSection.Todo)
             .OrderBy(x => x.IsCompleted ? 1 : 0)
+            .ThenBy(x => x.SortOrder ?? double.MaxValue)
             .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
             .ThenBy(x => x.Id)
             .Select(x => x.ToModel())
@@ -1111,6 +1137,16 @@ public sealed class LocalFirstBoardDataService(
         try
         {
             await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE BoardItems ADD COLUMN SortOrder REAL NULL;",
+                cancellationToken);
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE Meta ADD COLUMN LastSyncCursorUtc TEXT NULL;",
                 cancellationToken);
         }
@@ -1172,6 +1208,20 @@ public sealed class LocalFirstBoardDataService(
             row.TodoDueDate = upd.TodoDueDate;
             row.ServerUpdatedAtUtc = upd.ServerUpdatedAtUtc;
             row.CreatedAtUtc = upd.CreatedAtUtc;
+            row.SortOrder = upd.SortOrder;
         }
+    }
+
+    private static async Task<double> GetNextLocalSortOrderAsync(
+        LocalBoardDbContext db,
+        string userKey,
+        BoardSection section,
+        CancellationToken cancellationToken)
+    {
+        var max = await db.BoardItems
+            .Where(x => x.UserKey == userKey && x.Section == section)
+            .Select(x => x.SortOrder)
+            .MaxAsync(cancellationToken);
+        return (max ?? 0) + 1.0;
     }
 }

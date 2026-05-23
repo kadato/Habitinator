@@ -21,7 +21,8 @@ internal static class BoardApiRoutes
     {
         var boardApi = app.MapGroup("/api/board")
             .DisableAntiforgery()
-            .RequireAuthorization("BoardOrJwt");
+            .RequireAuthorization("BoardOrJwt")
+            .RequireRateLimiting("api");
 
         boardApi.MapGet("/",
             async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService) =>

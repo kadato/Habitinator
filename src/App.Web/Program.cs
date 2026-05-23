@@ -17,6 +17,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
+
 using MudBlazor;
 using MudBlazor.Services;
 
@@ -126,6 +129,42 @@ builder.Services.AddScoped<IUserDateFormatService, UserDateFormatService>();
 builder.Services.AddScoped<IAccountActionsService, WebAccountActionsService>();
 builder.Services.AddHttpClient();
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsJsonAsync(new { detail = "Too many requests. Please try again later." }, token);
+    };
+
+    options.AddPolicy("auth", context =>
+    {
+        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown-ip";
+        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5,
+            Window = TimeSpan.FromSeconds(10),
+            QueueLimit = 0
+        });
+    });
+
+    options.AddPolicy("api", context =>
+    {
+        var key = AuthenticatedUserId.TryGet(context.User)?.ToString()
+                  ?? context.Connection.RemoteIpAddress?.ToString()
+                  ?? "unknown";
+                  
+        return RateLimitPartition.GetSlidingWindowLimiter(key, _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = 60,
+            Window = TimeSpan.FromMinutes(1),
+            SegmentsPerWindow = 6,
+            QueueLimit = 2
+        });
+    });
+});
+
 var authBuilder = builder.Services
     .AddAuthentication(options =>
     {
@@ -215,6 +254,11 @@ if (!app.Environment.IsEnvironment("Testing"))
 app.UseAuthentication();
 app.UseAuthorization();
 
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseRateLimiter();
+}
+
 // Used by AppHost WithHttpHealthCheck; anonymous, no auth required.
 app.MapGet("/health", () => Results.Text("OK", "text/plain"));
 app.MapOpenApi();
@@ -222,7 +266,7 @@ app.MapStaticAssets();
 app.MapRazorComponents<App.Web.Components.App>()
     .AddInteractiveServerRenderMode();
 
-app.MapHub<BoardHub>("/hubs/board");
+app.MapHub<BoardHub>("/hubs/board").RequireRateLimiting("api");
 
 app.MapPost("/api/auth/register", async (
     RegisterRequest request,
@@ -241,7 +285,7 @@ app.MapPost("/api/auth/register", async (
     if (!result.Succeeded) return Results.BadRequest(MapRegistrationErrorsToUserFacing(result.Errors));
 
     return Results.Ok(new { message = "Registration successful." });
-}).DisableAntiforgery();
+}).DisableAntiforgery().RequireRateLimiting("auth");
 
 app.MapPost("/api/auth/login", async (
     LoginRequest request,
@@ -262,7 +306,7 @@ app.MapPost("/api/auth/login", async (
 
     var token = jwtTokenService.CreateToken(user);
     return Results.Ok(new LoginResponse(token, user.Email ?? string.Empty));
-}).DisableAntiforgery();
+}).DisableAntiforgery().RequireRateLimiting("auth");
 
 /// <summary>Same demo guest as cookie guest-login, but returns a JWT for native/API clients (MAUI).</summary>
 app.MapPost("/api/auth/guest-jwt", async (
@@ -293,7 +337,7 @@ app.MapPost("/api/auth/guest-jwt", async (
 
     var token = jwtTokenService.CreateToken(user);
     return Results.Ok(new LoginResponse(token, user.Email ?? string.Empty));
-}).DisableAntiforgery();
+}).DisableAntiforgery().RequireRateLimiting("auth");
 
 app.MapPost("/api/auth/logout", async (SignInManager<ApplicationUser> signInManager) =>
     {
@@ -323,7 +367,7 @@ app.MapPost("/api/auth/guest-login", async (
 
     await signInManager.SignInAsync(guestUser, true);
     return Results.LocalRedirect("/");
-}).DisableAntiforgery();
+}).DisableAntiforgery().RequireRateLimiting("auth");
 
 app.MapPost("/api/auth/cookie-login", async (HttpContext httpContext, SignInManager<ApplicationUser> signInManager,
     UserManager<ApplicationUser> userManager) =>
@@ -348,7 +392,7 @@ app.MapPost("/api/auth/cookie-login", async (HttpContext httpContext, SignInMana
     if (!loginResult.Succeeded) return Results.LocalRedirect("/auth/login?error=1");
 
     return Results.LocalRedirect("/");
-}).DisableAntiforgery();
+}).DisableAntiforgery().RequireRateLimiting("auth");
 
 app.MapPost("/api/auth/cookie-logout", async (SignInManager<ApplicationUser> signInManager) =>
     {
@@ -419,13 +463,14 @@ app.MapPost("/api/auth/register-form", async (HttpContext httpContext, UserManag
     }
 
     return Results.LocalRedirect("/auth/login?registered=1");
-}).DisableAntiforgery();
+}).DisableAntiforgery().RequireRateLimiting("auth");
 
 app.MapBoardApi();
 
 var activityApi = app.MapGroup("/api/activity")
     .DisableAntiforgery()
-    .RequireAuthorization("BoardOrJwt");
+    .RequireAuthorization("BoardOrJwt")
+    .RequireRateLimiting("api");
 
 activityApi.MapGet("dashboard",
     async (ClaimsPrincipal user, ActivityStatisticsService stats, string? period, string? tag,
@@ -454,7 +499,8 @@ activityApi.MapGet("day",
 
 var settingsApi = app.MapGroup("/api/settings")
     .DisableAntiforgery()
-    .RequireAuthorization("BoardOrJwt");
+    .RequireAuthorization("BoardOrJwt")
+    .RequireRateLimiting("api");
 
 settingsApi.MapGet("/notifications",
     async (ClaimsPrincipal user, ApplicationDbContext db, CancellationToken cancellationToken) =>

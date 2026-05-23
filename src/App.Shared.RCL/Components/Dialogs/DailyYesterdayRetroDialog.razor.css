@@ -1,0 +1,234 @@
+.daily-yesterday-dialog :deep(.daily-yesterday-dialog__content) {
+    padding: 0 !important;
+    overflow: visible;
+}
+
+.daily-yesterday-shell {
+    width: 100%;
+    max-width: min(28rem, 100%);
+    max-height: min(90dvh, calc(100dvh - 3rem));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 0.75rem;
+    box-shadow: 
+        0 20px 25px -5px rgba(0, 0, 0, 0.15), 
+        0 8px 10px -6px rgba(0, 0, 0, 0.15);
+}
+
+.daily-yesterday-header {
+    background: linear-gradient(to bottom, var(--mud-palette-surface), color-mix(in srgb, var(--mud-palette-surface) 95%, var(--mud-palette-text-primary) 5%));
+    padding: 1.25rem 1.25rem 1rem;
+    color: var(--mud-palette-text-primary);
+    border-bottom: 1px solid var(--mud-palette-divider);
+}
+
+.daily-yesterday-header__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.daily-yesterday-header__title-wrap {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.daily-yesterday-header__icon {
+    flex-shrink: 0;
+}
+
+.daily-yesterday-header__title {
+    font-weight: 650;
+    font-size: 1.05rem;
+    letter-spacing: 0.015em;
+    color: var(--mud-palette-text-primary) !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.daily-yesterday-header__close-btn {
+    color: var(--mud-palette-text-secondary) !important;
+    padding: 4px !important;
+}
+
+.daily-yesterday-header__close-btn:hover {
+    color: var(--mud-palette-text-primary) !important;
+    background-color: var(--mud-palette-action-hover) !important;
+}
+
+.daily-yesterday-header__subtitle {
+    color: var(--mud-palette-text-secondary);
+    line-height: 1.45;
+}
+
+.daily-yesterday-date {
+    color: var(--mud-palette-primary);
+}
+
+.daily-yesterday-body {
+    background: var(--mud-palette-surface);
+    padding: 0.75rem 1rem;
+    color: var(--mud-palette-text-primary);
+    flex: 1;
+    overflow-y: auto;
+    max-height: 20rem;
+}
+
+.daily-yesterday-list {
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.65rem;
+}
+
+.daily-yesterday-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    background: color-mix(in srgb, var(--mud-palette-background) 30%, var(--mud-palette-surface));
+    border: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 8%, transparent);
+    border-radius: 0.65rem;
+    transition: all 0.2s ease;
+}
+
+.daily-yesterday-row:hover {
+    border-color: color-mix(in srgb, var(--mud-palette-text-primary) 12%, transparent);
+    background: color-mix(in srgb, var(--mud-palette-background) 40%, var(--mud-palette-surface));
+}
+
+.daily-yesterday-row__check-col {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 0.1rem;
+    flex-shrink: 0;
+}
+
+.daily-yesterday-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.65rem;
+    height: 1.65rem;
+    min-width: 1.65rem;
+    min-height: 1.65rem;
+    box-sizing: border-box;
+    border-radius: 0.4rem;
+    border: 1.5px solid var(--mud-palette-text-secondary);
+    flex-shrink: 0;
+    cursor: pointer;
+    padding: 0;
+    background-clip: padding-box;
+    color: var(--mud-palette-success-contrast-text);
+    transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s active;
+}
+
+.daily-yesterday-check:hover:not(:disabled) {
+    border-color: var(--mud-palette-primary);
+    transform: scale(1.05);
+}
+
+.daily-yesterday-check:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.daily-yesterday-check--daily {
+    background: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, transparent);
+}
+
+.daily-yesterday-check--ok {
+    background: var(--mud-palette-success) !important;
+    border-color: var(--mud-palette-success) !important;
+}
+
+.daily-yesterday-check-glyph {
+    display: block;
+    flex-shrink: 0;
+    pointer-events: none;
+    animation: checkmark-pop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.daily-yesterday-spinner {
+    animation: spin 1s linear infinite;
+}
+
+.daily-yesterday-row__title {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.daily-yesterday-row__title-text {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+    word-break: break-word;
+    transition: color 0.2s ease;
+}
+
+.daily-yesterday-row__notes {
+    font-size: 0.78rem;
+    color: var(--mud-palette-text-secondary);
+    line-height: 1.35;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Completed item states */
+.daily-yesterday-row--completed {
+    opacity: 0.6;
+    border-color: color-mix(in srgb, var(--mud-palette-success) 20%, transparent);
+    background: color-mix(in srgb, var(--mud-palette-success) 4%, var(--mud-palette-surface));
+    transform: translateY(1px);
+    transition: all 0.3s ease;
+}
+
+.daily-yesterday-row--completed .daily-yesterday-row__title-text {
+    text-decoration: line-through;
+    color: var(--mud-palette-text-secondary);
+}
+
+.daily-yesterday-row--completed .daily-yesterday-row__notes {
+    text-decoration: line-through;
+}
+
+.daily-yesterday-footer {
+    border-top: 1px solid var(--mud-palette-divider);
+    background: var(--mud-palette-surface);
+}
+
+.daily-yesterday-footer__close-btn {
+    text-transform: none !important;
+    font-weight: 600 !important;
+    border-radius: 0.5rem !important;
+    padding: 0.6rem 0 !important;
+}
+
+@keyframes checkmark-pop {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes spin {
+    100% {
+        transform: rotate(360deg);
+    }
+}

@@ -750,7 +750,8 @@
                 MaxWidth = MaxWidth.Small,
                 FullWidth = false,
                 CloseButton = false,
-                CloseOnEscapeKey = true
+                CloseOnEscapeKey = true,
+                NoHeader = true
             };
             var parameters = new DialogParameters<DailyYesterdayRetroDialog>
             {
@@ -759,7 +760,7 @@
             };
 
             var dialog = await DialogService.ShowAsync<DailyYesterdayRetroDialog>(
-                "Catch up: yesterday’s dailies", parameters, options);
+                string.Empty, parameters, options);
             _ = await dialog.Result;
         }
         catch (Exception)

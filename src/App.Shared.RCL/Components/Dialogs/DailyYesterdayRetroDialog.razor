@@ -3,35 +3,92 @@
 @inject IUserDateFormatService DateFormatService
 
 <MudDialog Class="daily-yesterday-dialog"
-           ContentClass="pa-0"
+           ContentClass="daily-yesterday-dialog__content"
            Style="width: min(28rem, calc(100vw - 2rem));">
     <DialogContent>
-        <div class="pa-4">
-            <MudText Typo="Typo.body2" Class="mb-2">
-                <strong>@_dueOnFormatted</strong> — dailies not done that day. Check off any you did.
-            </MudText>
-            <MudStack Spacing="1" Class="mt-2">
-                @foreach (var item in _pending)
-                {
-                    <MudPaper Class="pa-2" Outlined="true" Elevation="0">
-                        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                            <MudText Typo="Typo.body2" Class="flex-grow-1" Style="min-width: 0;">@item.Title</MudText>
-                            <MudButton Variant="Variant.Filled"
-                                       Color="Color.Primary"
-                                       Size="Size.Small"
-                                       OnClick="@(() => MarkForDueDateAsync(item))"
-                                       Disabled="_busyById.GetValueOrDefault(item.Id)">
-                                Mark done
-                            </MudButton>
-                        </MudStack>
-                    </MudPaper>
-                }
-            </MudStack>
+        <div class="daily-yesterday-shell">
+            <div class="daily-yesterday-header">
+                <div class="daily-yesterday-header__toolbar">
+                    <div class="daily-yesterday-header__title-wrap">
+                        <MudIcon Icon="@Icons.Material.Filled.History" Class="daily-yesterday-header__icon me-2" Color="Color.Primary" Size="Size.Medium" />
+                        <MudText Typo="Typo.subtitle1" Class="daily-yesterday-header__title">Catch up: Yesterday's Dailies</MudText>
+                    </div>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" 
+                                   Class="daily-yesterday-header__close-btn" 
+                                   OnClick="CloseAsync" 
+                                   Disabled="AnyRowBusy"
+                                   Size="Size.Small"
+                                   title="Close" />
+                </div>
+                <div class="daily-yesterday-header__subtitle-wrap mt-1">
+                    <MudText Typo="Typo.body2" Class="daily-yesterday-header__subtitle">
+                        Dailies not done on <strong class="daily-yesterday-date">@_dueOnFormatted</strong>. Check off any you completed that day.
+                    </MudText>
+                </div>
+            </div>
+
+            <div class="daily-yesterday-body">
+                <div class="daily-yesterday-list">
+                    @foreach (var item in _pending)
+                    {
+                        var isCompleted = _completedById.GetValueOrDefault(item.Id);
+                        var isBusy = _busyById.GetValueOrDefault(item.Id);
+                        var rowClass = isCompleted ? "daily-yesterday-row--completed" : "";
+                        
+                        <div class="daily-yesterday-row @rowClass" @key="item.Id">
+                            <div class="daily-yesterday-row__check-col">
+                                <button type="button"
+                                        class="daily-yesterday-check @(isCompleted ? "daily-yesterday-check--ok" : "daily-yesterday-check--daily")"
+                                        title="Toggle"
+                                        @onclick="@(() => MarkForDueDateAsync(item))"
+                                        disabled="@(isBusy || isCompleted)"
+                                        aria-checked="@(isCompleted ? "true" : "false")"
+                                        role="checkbox">
+                                    @if (isBusy)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Color="Color.Primary" Class="daily-yesterday-spinner" Style="width: 12px; height: 12px;" Indeterminate="true" />
+                                    }
+                                    else if (isCompleted)
+                                    {
+                                        <svg class="daily-yesterday-check-glyph"
+                                             viewBox="0 0 24 24"
+                                             width="12"
+                                             height="12"
+                                             fill="none"
+                                             xmlns="http://www.w3.org/2000/svg"
+                                             aria-hidden="true">
+                                            <path d="M5 12l5 5L19 5"
+                                                  stroke="currentColor"
+                                                  stroke-width="3"
+                                                  stroke-linecap="round"
+                                                  stroke-linejoin="round"/>
+                                        </svg>
+                                    }
+                                </button>
+                            </div>
+                            <div class="daily-yesterday-row__title">
+                                <span class="daily-yesterday-row__title-text">@item.Title</span>
+                                @if (!string.IsNullOrWhiteSpace(item.Notes))
+                                {
+                                    <span class="daily-yesterday-row__notes">@item.Notes</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            
+            <div class="daily-yesterday-footer pa-3">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           Class="daily-yesterday-footer__close-btn w-100" 
+                           OnClick="CloseAsync" 
+                           Disabled="AnyRowBusy">
+                    Done Catching Up
+                </MudButton>
+            </div>
         </div>
     </DialogContent>
-    <DialogActions>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CloseAsync" Disabled="AnyRowBusy">Close</MudButton>
-    </DialogActions>
 </MudDialog>
 
 @code {
@@ -44,6 +101,8 @@
     private string _dueOnFormatted = string.Empty;
     private List<BoardItem> _pending = [];
     private readonly Dictionary<Guid, bool> _busyById = new();
+    private readonly Dictionary<Guid, bool> _completedById = new();
+    private bool _anyChanged;
 
     private bool AnyRowBusy => _busyById.Values.Any(v => v);
 
@@ -62,45 +121,48 @@
 
     private async Task MarkForDueDateAsync(BoardItem item)
     {
-        if (_busyById.GetValueOrDefault(item.Id))
+        if (_busyById.GetValueOrDefault(item.Id) || _completedById.GetValueOrDefault(item.Id))
         {
             return;
         }
 
         _busyById[item.Id] = true;
+        await InvokeAsync(StateHasChanged);
         try
         {
             var updated = await BoardData.CompleteDailyForDateAsync(item.Id, DueOn);
             if (updated is null)
             {
                 await Notifier.NotifyAsync("Could not update that daily.", Severity.Error);
+                _busyById[item.Id] = false;
                 return;
             }
 
-            var removed = _pending.RemoveAll(x => x.Id == item.Id);
-            if (removed == 0)
-            {
-                return;
-            }
-
-            if (_pending.Count == 0)
-            {
-                MudDialog.Close(DialogResult.Ok(true));
-            }
+            _completedById[item.Id] = true;
+            _anyChanged = true;
+            _ = _busyById.Remove(item.Id);
         }
         catch (Exception)
         {
             await Notifier.NotifyAsync("Could not update that daily.", Severity.Error);
+            _ = _busyById.Remove(item.Id);
         }
         finally
         {
-            _ = _busyById.Remove(item.Id);
+            await InvokeAsync(StateHasChanged);
         }
     }
 
     private void CloseAsync()
     {
-        MudDialog.Close(DialogResult.Cancel());
+        if (_anyChanged)
+        {
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        else
+        {
+            MudDialog.Close(DialogResult.Cancel());
+        }
     }
 
 }

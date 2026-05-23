@@ -431,9 +431,9 @@ h1:focus {
     transition: background-color 0.15s ease;
 }
 
-/* Stripes: Alternating row background using theme gray (nth-of-type even) */
+/* Stripes: Alternating row background using a clearly visible 8% text-primary mix */
 .activity-day-detail-table .mud-table-body .mud-table-row:nth-of-type(even) {
-    background: var(--mud-palette-background-gray) !important;
+    background: color-mix(in srgb, var(--mud-palette-text-primary) 8%, var(--mud-palette-surface)) !important;
 }
 
 
@@ -478,31 +478,7 @@ h1:focus {
     color: var(--mud-palette-text-primary);
 }
 
-/* Status Indicator Lights */
-.activity-indicator {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    position: relative;
-    display: inline-block;
-}
 
-.activity-day-detail-activity--done {
-    background-color: var(--mud-palette-success) !important;
-}
-
-.activity-day-detail-activity--plus {
-    background-color: var(--mud-palette-primary) !important;
-}
-
-.activity-day-detail-activity--minus {
-    background-color: var(--mud-palette-warning) !important;
-}
-
-.activity-day-detail-activity--focus {
-    background-color: var(--mud-palette-info) !important;
-}
 
 .activity-day-detail-dialog .mud-progress-linear {
     border-radius: 0.25rem;

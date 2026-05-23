@@ -110,6 +110,8 @@ public sealed class BoardPersistenceService
                 .ToList(),
             items.Where(x => x.Section == BoardSection.Todo)
                 .OrderBy(x => x.IsCompleted)
+                .ThenBy(x => x.DailyStartDate == null ? 0 : 1)
+                .ThenBy(x => x.DailyStartDate ?? DateTime.MaxValue)
                 .ThenBy(x => x.SortOrder)
                 .ThenBy(x => x.CreatedAtUtc)
                 .ThenBy(x => x.Id)

@@ -87,6 +87,13 @@
                         </MudButton>
                         <MudButton Size="Size.Small"
                                    Class="habitica-filter-btn"
+                                   Variant="@FilterVariant(_todoFilter == TodoListFilter.Scheduled)"
+                                   Color="Color.Primary"
+                                   OnClick="@(() => { _todoFilter = TodoListFilter.Scheduled; })">
+                            Scheduled
+                        </MudButton>
+                        <MudButton Size="Size.Small"
+                                   Class="habitica-filter-btn"
                                    Variant="@FilterVariant(_todoFilter == TodoListFilter.Complete)"
                                    Color="Color.Primary"
                                    OnClick="@(() => { _todoFilter = TodoListFilter.Complete; })">
@@ -142,7 +149,7 @@
                     var isDragOver = _dragOverId == item.Id && _draggingId != item.Id;
                     <div @key="item.Id"
                          class="@GetCardItemClass(item, isDragOver)"
-                         draggable="true"
+                         draggable="@IsItemDraggable()"
                          @ondragstart="@(() => OnDragStart(item.Id))"
                          @ondragover="@(e => OnDragOver(e, item.Id))"
                          @ondragover:preventDefault="true"
@@ -328,6 +335,7 @@
     private enum TodoListFilter
     {
         Active,
+        Scheduled,
         Complete
     }
 
@@ -352,7 +360,7 @@
         {
             BoardSection.Habit => OrderBySort(FilterHabits()),
             BoardSection.Daily => OrderBySort(FilterDailies()),
-            BoardSection.Todo => OrderBySort(FilterTodos()),
+            BoardSection.Todo => OrderTodos(FilterTodos()),
             _ => OrderBySort(Items)
         };
     }
@@ -386,10 +394,22 @@
         return _todoFilter switch
         {
             TodoListFilter.Active => Items.Where(x => !x.IsCompleted).ToList(),
+            TodoListFilter.Scheduled => Items.Where(x => !x.IsCompleted && x.TodoDueDate is not null).ToList(),
             TodoListFilter.Complete => Items.Where(x => x.IsCompleted).ToList(),
             _ => Items.ToList()
         };
     }
+
+    private IReadOnlyList<BoardItem> OrderTodos(IReadOnlyList<BoardItem> items) =>
+        _todoFilter switch
+        {
+            TodoListFilter.Active => TodoOrdering.OrderForActiveTab(items),
+            TodoListFilter.Scheduled => TodoOrdering.OrderForScheduledTab(items),
+            _ => OrderBySort(items)
+        };
+
+    private bool IsItemDraggable() =>
+        Section != BoardSection.Todo || _todoFilter == TodoListFilter.Active;
 
     private string GetTitle()
     {
@@ -429,7 +449,7 @@
         {
             BoardSection.Habit => "These are your habits — use +/− to log a rep and undo. Click the title for notes and subtasks. The global timer can follow the habit you trigger.",
             BoardSection.Daily => "Dailies are for recurring work — use the square when you are done for today. Click the title to edit details, or the trash icon to delete.",
-            BoardSection.Todo => "To Do's are one-off. Click the title to edit notes, subtasks, and due date, or use the trash icon to delete.",
+            BoardSection.Todo => "To Do's are one-off. Use Active to drag and order freely; Scheduled shows dated items sorted by due date. Click the title to edit details.",
             _ => string.Empty
         };
     }
@@ -469,6 +489,11 @@
 
     private void OnDragStart(Guid id)
     {
+        if (!IsItemDraggable())
+        {
+            return;
+        }
+
         _draggingId = id;
         _dragOverId = null;
     }
@@ -494,7 +519,9 @@
 
     private async Task OnDropAsync(Guid targetId)
     {
-        if (_draggingId is not { } sourceId || sourceId == targetId)
+        if (!IsItemDraggable()
+            || _draggingId is not { } sourceId
+            || sourceId == targetId)
         {
             OnDragEnd();
             return;
@@ -512,6 +539,11 @@
     /// </summary>
     private async Task ReorderItemAsync(Guid sourceId, Guid targetId)
     {
+        if (!IsItemDraggable())
+        {
+            return;
+        }
+
         var visible = VisibleItems();
         var sourceItem = visible.FirstOrDefault(x => x.Id == sourceId);
         var targetItem = visible.FirstOrDefault(x => x.Id == targetId);

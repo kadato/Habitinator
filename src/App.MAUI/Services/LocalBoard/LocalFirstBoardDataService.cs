@@ -1056,6 +1056,8 @@ public sealed class LocalFirstBoardDataService(
             .ToList();
         var todos = items.Where(x => x.Section == BoardSection.Todo)
             .OrderBy(x => x.IsCompleted ? 1 : 0)
+            .ThenBy(x => x.TodoDueDate.HasValue ? 1 : 0)
+            .ThenBy(x => x.TodoDueDate ?? DateOnly.MaxValue)
             .ThenBy(x => x.SortOrder ?? double.MaxValue)
             .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
             .ThenBy(x => x.Id)

@@ -196,12 +196,7 @@
 }
 
 .daily-yesterday-row--completed .daily-yesterday-row__title-text {
-    text-decoration: line-through;
     color: var(--mud-palette-text-secondary);
-}
-
-.daily-yesterday-row--completed .daily-yesterday-row__notes {
-    text-decoration: line-through;
 }
 
 .daily-yesterday-footer {

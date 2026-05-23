@@ -457,13 +457,25 @@
     position: absolute;
     left: 0;
     right: 0;
-    top: calc(100% + 0.35rem);
+    bottom: calc(100% + 0.35rem);
     z-index: 20;
     padding: 0.6rem 0.55rem 0.5rem;
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-divider);
     border-radius: 0.35rem;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.15);
+    animation: tagPickerFadeIn 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes tagPickerFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .habit-tag-picker__search {
@@ -471,12 +483,12 @@
     width: 100%;
     box-sizing: border-box;
     margin-bottom: 0.5rem;
-    padding: 0.45rem 0.5rem;
+    padding: 0.55rem 0.65rem;
     background: var(--mud-palette-background-gray);
     border: 1px solid var(--mud-palette-divider);
     border-radius: 0.3rem;
     color: var(--mud-palette-text-primary);
-    font-size: 0.88rem;
+    font-size: 0.9rem;
     outline: none;
 }
 
@@ -522,8 +534,8 @@
     border: none;
     background: transparent;
     color: var(--mud-palette-text-primary);
-    font-size: 0.88rem;
-    padding: 0.4rem 0.45rem;
+    font-size: 0.9rem;
+    padding: 0.55rem 0.65rem;
     margin: 0;
     border-radius: 0.2rem;
     cursor: pointer;

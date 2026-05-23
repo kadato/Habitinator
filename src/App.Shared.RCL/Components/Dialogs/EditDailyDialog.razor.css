@@ -59,16 +59,23 @@
     background: var(--mud-palette-primary) !important;
     color: var(--mud-palette-primary-contrast-text) !important;
     text-transform: none !important;
-    font-weight: 600 !important;
-    padding: 0.45rem 1.1rem !important;
-    border-radius: 6px !important;
-    box-shadow: 0 4px 10px color-mix(in srgb, var(--mud-palette-primary) 25%, transparent) !important;
+    font-size: 0.9375rem !important;
+    font-weight: 650 !important;
+    letter-spacing: 0.02em !important;
+    min-width: 5.5rem !important;
+    padding: 0.5rem 1.35rem !important;
+    border-radius: 8px !important;
+    box-shadow:
+        0 1px 0 color-mix(in srgb, var(--mud-palette-primary-contrast-text) 18%, transparent) inset,
+        0 4px 14px color-mix(in srgb, var(--mud-palette-primary) 40%, transparent) !important;
     transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease !important;
 }
 
 .edit-daily-header__save:hover {
     background: var(--mud-palette-primary-darken) !important;
-    box-shadow: 0 6px 14px color-mix(in srgb, var(--mud-palette-primary) 35%, transparent) !important;
+    box-shadow:
+        0 1px 0 color-mix(in srgb, var(--mud-palette-primary-contrast-text) 18%, transparent) inset,
+        0 6px 18px color-mix(in srgb, var(--mud-palette-primary) 48%, transparent) !important;
     transform: translateY(-1px) !important;
 }
 

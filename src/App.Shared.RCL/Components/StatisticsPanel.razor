@@ -323,11 +323,13 @@
                                        Label="Tag Filter"
                                        Variant="Variant.Outlined"
                                        Dense="true"
-                                       Value="_tagFilter"
-                                       ValueChanged="OnTagFilterChanged"
+                                       MultiSelection="true"
+                                       MultiSelectionTextFunc="@(new Func<IReadOnlyList<string>, string>(GetMultiSelectionText))"
+                                       SelectedValues="_selectedTags"
+                                       SelectedValuesChanged="OnSelectedTagsChanged"
                                        Disabled="_periodBusy"
+                                       Clearable="true"
                                        Class="stats-tag-select-sidebar">
-                                <MudSelectItem T="string" Value="@("")">All tags</MudSelectItem>
                                 @foreach (var t in _data.AvailableTags ?? [])
                                 {
                                     <MudSelectItem T="string" Value="@t">@t</MudSelectItem>
@@ -393,6 +395,7 @@
     private DailyContributionsViewDto? _dailyView;
     private string _selectedPeriodKey = DailyGraphPeriods.Rolling370Days;
     private string _tagFilter = "";
+    private IReadOnlyCollection<string> _selectedTags = Array.Empty<string>();
     private bool _loadingDailies;
     private string? _dailyError;
     private bool _shouldScrollToEnd;
@@ -442,9 +445,17 @@
             _dailyView = await Stats.GetDailyContributionsAsync(periodKey, tag);
             _selectedPeriodKey = _data.PeriodKey;
             var tagList = _data.AvailableTags ?? [];
-            if (!string.IsNullOrEmpty(_tagFilter) && (tagList.Count == 0 || tagList.All(
-                    t => !t.Equals(_tagFilter, StringComparison.OrdinalIgnoreCase))))
+
+            if (!string.IsNullOrEmpty(_tagFilter))
             {
+                var splitFilter = _tagFilter.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                var validTags = splitFilter.Where(t => tagList.Contains(t, StringComparer.OrdinalIgnoreCase)).ToList();
+                _selectedTags = validTags;
+                _tagFilter = string.Join(",", _selectedTags);
+            }
+            else
+            {
+                _selectedTags = Array.Empty<string>();
                 _tagFilter = "";
             }
 
@@ -495,14 +506,24 @@
         }
     }
 
-    private async Task OnTagFilterChanged(string? value)
+    private string GetMultiSelectionText(IReadOnlyList<string> selectedValues)
+    {
+        if (selectedValues is null || selectedValues.Count == 0)
+        {
+            return "All tags";
+        }
+        return string.Join(", ", selectedValues);
+    }
+
+    private async Task OnSelectedTagsChanged(IReadOnlyCollection<string> values)
     {
         if (_loading)
         {
             return;
         }
 
-        _tagFilter = value ?? "";
+        _selectedTags = values ?? Array.Empty<string>();
+        _tagFilter = string.Join(",", _selectedTags);
         _periodBusy = true;
         _error = null;
         _dailyError = null;

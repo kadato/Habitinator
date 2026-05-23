@@ -166,7 +166,11 @@ public sealed class ActivityStatisticsService
     {
         if (string.IsNullOrWhiteSpace(tag)) return null;
 
-        var wanted = tag.Trim();
+        var wantedTags = tag.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (wantedTags.Length == 0) return null;
+
+        var wantedSet = new HashSet<string>(wantedTags, StringComparer.OrdinalIgnoreCase);
+
         var rows = await db.BoardItems.AsNoTracking()
             .Where(b => b.UserId == userId && b.DeletedAtUtc == null)
             .Select(b => new { b.Id, b.Tags })
@@ -175,7 +179,7 @@ public sealed class ActivityStatisticsService
         var set = new HashSet<Guid>();
         foreach (var r in rows)
         {
-            if (BoardTagUtil.ParseTags(r.Tags).Any(t => t.Equals(wanted, StringComparison.OrdinalIgnoreCase)))
+            if (BoardTagUtil.ParseTags(r.Tags).Any(t => wantedSet.Contains(t)))
                 set.Add(r.Id);
         }
 

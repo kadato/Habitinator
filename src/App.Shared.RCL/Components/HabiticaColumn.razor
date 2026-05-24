@@ -337,6 +337,7 @@
 
     private List<HabiticaDropItem> _dropItems = new();
     private MudDropContainer<HabiticaDropItem>? _dropContainer;
+    private bool _needRefresh;
 
     protected override async Task OnInitializedAsync()
     {
@@ -347,12 +348,14 @@
     {
         PruneSortOrderOverrides();
         SyncDropItems();
+        _needRefresh = true;
     }
 
     protected override void OnAfterRender(bool firstRender)
     {
-        if (firstRender && _dropContainer is not null && IsItemDraggable())
+        if ((firstRender || _needRefresh) && _dropContainer is not null && IsItemDraggable())
         {
+            _needRefresh = false;
             _dropContainer.Refresh();
         }
     }
@@ -385,20 +388,6 @@
         }
 
         var visible = VisibleItems();
-        var visibleIds = visible.Select(x => x.Id).ToList();
-
-        if (_dropItems.Count == visibleIds.Count
-            && _dropItems.Select(x => x.Item.Id).SequenceEqual(visibleIds))
-        {
-            for (var i = 0; i < visible.Count; i++)
-            {
-                _dropItems[i].Item = visible[i];
-                _dropItems[i].Order = i;
-            }
-
-            return;
-        }
-
         _dropItems = visible
             .Select((item, index) => new HabiticaDropItem
             {
@@ -577,6 +566,8 @@
 
     private async Task OnDropItemAsync(MudItemDropInfo<HabiticaDropItem> dropInfo)
     {
+        await Task.Yield();
+
         if (!IsItemDraggable() || dropInfo.Item is null)
         {
             return;
@@ -590,6 +581,7 @@
             return;
         }
 
+        Console.WriteLine($"[DRAG_DEBUG] Drop: '{sourceItem.Title}' (id={sourceItem.Id}) dragged from sourceIndex={sourceIndex} to IndexInZone={dropInfo.IndexInZone}. Total visible count={visible.Count}");
         var insertAt = dropInfo.IndexInZone;
         if (insertAt < 0)
         {
@@ -621,6 +613,7 @@
             dropItem.Order = i;
             dropItem.Zone = HabiticaDropItem.ListZoneId;
         }
+        _dropItems = _dropItems.OrderBy(x => x.Order).ToList();
 
         var newSortOrder = BoardItemReorder.ComputeMidpointSortOrder(reordered, insertAt, GetEffectiveSortOrder);
         if (newSortOrder is not { } sortOrder)
@@ -631,6 +624,7 @@
         }
 
         _sortOrderOverrides[sourceItem.Id] = sortOrder;
+        _dropContainer?.Refresh();
         StateHasChanged();
 
         var ok = await TryMutateAsync(() => PersistReorderAsync(sourceItem, sortOrder));
@@ -638,13 +632,10 @@
         {
             _sortOrderOverrides.Remove(sourceItem.Id);
             SyncDropItems();
-            StateHasChanged();
             _dropContainer?.Refresh();
+            StateHasChanged();
             return;
         }
-
-        _sortOrderOverrides.Remove(sourceItem.Id);
-        _dropContainer?.Refresh();
     }
 
     private Task PersistReorderAsync(BoardItem item, double newSortOrder)

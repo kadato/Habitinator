@@ -1149,6 +1149,16 @@ public sealed class LocalFirstBoardDataService(
         try
         {
             await db.Database.ExecuteSqlRawAsync(
+                "UPDATE BoardItems SET SortOrder = rowid WHERE SortOrder IS NULL;",
+                cancellationToken);
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE Meta ADD COLUMN LastSyncCursorUtc TEXT NULL;",
                 cancellationToken);
         }

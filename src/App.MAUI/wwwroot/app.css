@@ -293,6 +293,9 @@ h1:focus {
         0 2px 10px color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent) !important;
     cursor: pointer;
     animation: toast-slide-in 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    align-self: flex-start !important;
+    width: fit-content !important;
+    min-width: auto !important;
 }
 
 @keyframes toast-slide-in {

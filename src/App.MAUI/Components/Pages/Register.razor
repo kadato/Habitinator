@@ -13,30 +13,35 @@
 
 <PageTitle>Register</PageTitle>
 
-<AuthPageShell MaxWidth="24rem">
-    <h1>Register</h1>
+<AuthPageShell Title="Create account"
+               Subtitle="Pick an email and a password with at least 8 characters."
+               MaxWidth="28rem">
+    <ChildContent>
+        @if (!string.IsNullOrWhiteSpace(_message))
+        {
+            <div class="alert alert-warning" role="alert">@_message</div>
+        }
 
-    @if (!string.IsNullOrWhiteSpace(_message))
-    {
-        <div class="alert alert-warning" role="alert">@_message</div>
-    }
-
-    <div class="mb-3">
-        <label for="reg-email">Email</label>
-        <input class="form-control" id="reg-email" type="email" autocomplete="email"
-               value="@_email" @oninput="OnEmailInput" disabled="@_busy"/>
-    </div>
-    <div class="mb-3">
-        <label for="reg-password">Password</label>
-        <input class="form-control" id="reg-password" type="password" minlength="8" autocomplete="new-password"
-               title="At least 8 characters."
-               value="@_password" @oninput="OnPasswordInput" disabled="@_busy"/>
-    </div>
-    <p class="auth-form-hint">Use at least 8 characters. Avoid obvious passwords for your own account security.</p>
-    <button class="btn btn-primary" type="button" disabled="@_busy" @onclick="RegisterAsync">Create account</button>
-    <div class="mt-3">
-        <a class="btn btn-link p-0" href="/auth/login">Back to sign in</a>
-    </div>
+        <div class="mb-3">
+            <label for="reg-email">Email</label>
+            <input class="form-control" id="reg-email" type="email" autocomplete="email"
+                   value="@_email" @oninput="OnEmailInput" disabled="@_busy"/>
+        </div>
+        <div class="mb-3">
+            <label for="reg-password">Password</label>
+            <input class="form-control" id="reg-password" type="password" minlength="8" autocomplete="new-password"
+                   title="At least 8 characters."
+                   value="@_password" @oninput="OnPasswordInput" disabled="@_busy"/>
+        </div>
+        <p class="auth-form-hint">Use at least 8 characters. Avoid obvious passwords for your own account security.</p>
+        <div class="auth-form-actions">
+            <button class="btn btn-primary" type="button" disabled="@_busy" @onclick="RegisterAsync">Create account</button>
+        </div>
+    </ChildContent>
+    <Footer>
+        <span>Already have an account?</span>
+        <a href="/auth/login">Sign in</a>
+    </Footer>
 </AuthPageShell>
 
 @code {

@@ -1,10 +1,9 @@
-/* Reinforce slate surface when global CSS sets a different default on cards. */
 .home-landing-card {
     background: var(--mud-palette-surface);
     border-color: var(--mud-palette-divider);
 }
 
 .guest-login-paper {
-    background: var(--mud-palette-surface);
-    border-color: var(--mud-palette-divider);
+    background: transparent;
+    border: none;
 }

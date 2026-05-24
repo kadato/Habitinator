@@ -158,12 +158,12 @@ public sealed class DocumentationScreenshotsTests
             await page.ScreenshotAsync(new PageScreenshotOptions { Path = ShotPath("01-welcome", suffix), FullPage = true });
 
             await page.GotoAsync($"{BaseUrl}/auth/login", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
-            await page.GetByRole(AriaRole.Heading, new() { Name = "Login" }).WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
+            await page.GetByRole(AriaRole.Heading, new() { Name = "Sign in" }).WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
             await page.WaitForTimeoutAsync(500);
             await page.ScreenshotAsync(new PageScreenshotOptions { Path = ShotPath("07-login", suffix), FullPage = true });
 
             await page.GotoAsync($"{BaseUrl}/auth/register", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
-            await page.GetByRole(AriaRole.Heading, new() { Name = "Register" }).WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
+            await page.GetByRole(AriaRole.Heading, new() { Name = "Create account" }).WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
             await page.WaitForTimeoutAsync(500);
             await page.ScreenshotAsync(new PageScreenshotOptions { Path = ShotPath("08-register", suffix), FullPage = true });
         }

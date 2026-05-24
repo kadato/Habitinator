@@ -1,12 +1,41 @@
 @* Shared wrapper for login and register pages (web + MAUI). *@
 
-<div class="content auth-form-page" style="max-width: @MaxWidth">
-    @ChildContent
+<div class="auth-page">
+    <div class="auth-page__shell" style="--auth-shell-max: @MaxWidth">
+        @if (!string.IsNullOrWhiteSpace(Title) || !string.IsNullOrWhiteSpace(Subtitle))
+        {
+            <header class="auth-page__header">
+                @if (!string.IsNullOrWhiteSpace(Title))
+                {
+                    <h1 class="auth-page__title">@Title</h1>
+                }
+                @if (!string.IsNullOrWhiteSpace(Subtitle))
+                {
+                    <p class="auth-page__subtitle">@Subtitle</p>
+                }
+            </header>
+        }
+        <div class="auth-card">
+            @ChildContent
+        </div>
+        @if (Footer is not null)
+        {
+            <div class="auth-page__footer">
+                @Footer
+            </div>
+        }
+    </div>
 </div>
 
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
-    /// <summary>CSS max-width value, e.g. <c>36rem</c> for login, <c>24rem</c> for register.</summary>
-    [Parameter] public string MaxWidth { get; set; } = "24rem";
+    [Parameter] public RenderFragment? Footer { get; set; }
+
+    [Parameter] public string? Title { get; set; }
+
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>CSS max-width for the shell, e.g. <c>28rem</c>.</summary>
+    [Parameter] public string MaxWidth { get; set; } = "28rem";
 }

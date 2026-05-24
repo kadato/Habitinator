@@ -1,0 +1,186 @@
+/* Shared welcome / login / register layout (web + MAUI). */
+
+.auth-page {
+    --auth-shell-max: 28rem;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    min-height: min(100%, calc(100dvh - 7rem));
+    padding: 0.5rem 0 2rem;
+    box-sizing: border-box;
+}
+
+.auth-page__shell {
+    width: 100%;
+    max-width: var(--auth-shell-max);
+    margin-inline: auto;
+}
+
+.auth-page__header {
+    text-align: center;
+    margin-bottom: 1.25rem;
+}
+
+.auth-page__title {
+    margin: 0;
+    font-size: clamp(1.65rem, 4vw, 2rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    color: var(--mud-palette-text-primary);
+}
+
+.auth-page__subtitle {
+    margin: 0.5rem 0 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--mud-palette-text-secondary);
+    max-width: 26rem;
+    margin-inline: auto;
+}
+
+.auth-card {
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 0.75rem;
+    padding: 1.35rem 1.25rem;
+    box-shadow:
+        0 1px 2px color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent),
+        0 12px 32px color-mix(in srgb, var(--mud-palette-text-primary) 8%, transparent);
+}
+
+@media (min-width: 480px) {
+    .auth-card {
+        padding: 1.5rem 1.5rem;
+    }
+}
+
+.auth-card__section-title {
+    margin: 0 0 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--mud-palette-text-secondary);
+}
+
+.auth-card .form-control {
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+}
+
+.auth-card label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.35rem;
+}
+
+.auth-card .btn-primary,
+.auth-card .btn-outline-secondary {
+    width: 100%;
+    padding: 0.625rem 1rem;
+    font-weight: 600;
+    border-radius: 0.5rem;
+}
+
+.auth-card .btn-primary {
+    background-color: var(--mud-palette-primary);
+    border-color: var(--mud-palette-primary);
+}
+
+.auth-card .btn-primary:hover {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 88%, var(--mud-palette-black));
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 88%, var(--mud-palette-black));
+}
+
+.auth-form-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    margin-top: 0.25rem;
+}
+
+.auth-form-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.15rem 0;
+    color: var(--mud-palette-text-disabled);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.auth-form-divider::before,
+.auth-form-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--mud-palette-divider);
+}
+
+.auth-page__footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
+    margin-top: 1.25rem;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.auth-page__footer a {
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.auth-page__footer a:hover {
+    text-decoration: underline;
+}
+
+.auth-card .alert {
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+/* Welcome landing */
+.auth-landing .auth-landing__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.auth-landing__guest-block {
+    margin-top: 0.25rem;
+}
+
+.auth-landing__guest-hint {
+    margin: 0 0 0.65rem;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--mud-palette-text-secondary);
+}
+
+.auth-landing__guest-paper {
+    background: color-mix(in srgb, var(--mud-palette-primary) 6%, var(--mud-palette-surface));
+    border: 1px dashed var(--mud-palette-divider);
+    border-radius: 0.5rem;
+    padding: 0.35rem;
+}
+
+@media (min-width: 768px) {
+    .auth-page {
+        min-height: min(100%, calc(100dvh - 5rem));
+        padding-top: 1.5rem;
+        padding-bottom: 3rem;
+    }
+
+    .auth-page__header {
+        margin-bottom: 1.5rem;
+    }
+}

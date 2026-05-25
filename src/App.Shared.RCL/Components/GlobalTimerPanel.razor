@@ -2,7 +2,39 @@
 @implements IDisposable
 
 <MudCard Class="@GetTimerPanelClass()" Elevation="0" Outlined="true">
-    <MudCardContent Class="pa-2 pa-sm-3 timer-panel__content">
+    <div class="timer-mobile-header @(_expanded ? "timer-mobile-header--expanded" : "timer-mobile-header--collapsed")"
+         @onclick="ToggleExpanded"
+         role="button"
+         aria-expanded="@(_expanded ? "true" : "false")"
+         aria-label="Toggle timer panel">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="w-100 px-3 py-2">
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="min-w-0 flex-grow-1">
+                <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Primary" Size="Size.Small"/>
+                @if (IsSessionActive)
+                {
+                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold timer-mobile-header-text">
+                        @TimerService.Elapsed.ToString(@"hh\:mm\:ss")
+                        @if (!string.IsNullOrWhiteSpace(GetRunningTargetLabel()))
+                        {
+                            <span class="mud-text-secondary font-weight-normal text-truncate max-w-160"> · @GetRunningTargetLabel()</span>
+                        }
+                    </MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold timer-mobile-header-text">Focus Timer</MudText>
+                }
+            </MudStack>
+            <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                     Color="Color.Default"
+                     Class="timer-mobile-expand-icon"
+                     Size="Size.Medium"/>
+        </MudStack>
+    </div>
+
+    <div class="timer-collapse-outer">
+        <MudCollapse Expanded="@_expanded" Class="timer-collapse-wrapper">
+            <MudCardContent Class="pa-2 pa-sm-3 timer-panel__content">
         @if (IsSessionActive)
         {
             <div class="timer-running-strip" role="group" aria-label="Active session timer">
@@ -68,6 +100,7 @@
                                Class="timer-btn timer-btn--stop"
                                OnClick="StopAndLog"
                                Size="Size.Small"
+                               Disabled="@(!IsSessionActive)"
                                aria-label="Stop and log session">
                         Stop &amp; log
                     </MudButton>
@@ -141,7 +174,8 @@
                                StartIcon="@Icons.Material.Filled.Stop"
                                Class="timer-btn timer-btn--stop"
                                OnClick="StopAndLog"
-                               Size="Size.Small">
+                               Size="Size.Small"
+                               Disabled="@(!IsSessionActive)">
                         Stop &amp; log
                     </MudButton>
                     <MudButton Variant="Variant.Outlined"
@@ -156,7 +190,9 @@
                 </div>
             </div>
         }
-    </MudCardContent>
+            </MudCardContent>
+        </MudCollapse>
+    </div>
 </MudCard>
 
 @code {
@@ -178,6 +214,7 @@
     private string _focusDurationText = string.Empty;
     private bool _settingsExpanded;
     private bool _wasRunning;
+    private bool _expanded;
 
     private bool IsSessionActive =>
         TimerService.IsRunning || TimerService.Elapsed > TimeSpan.Zero;
@@ -317,6 +354,7 @@
     {
         _uiTickCts = new CancellationTokenSource();
         _uiTick = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        _expanded = IsSessionActive;
         _ = RunUiTickAsync(_uiTickCts.Token);
     }
 
@@ -336,6 +374,7 @@
         if (TimerService.IsRunning && !_wasRunning)
         {
             _settingsExpanded = false;
+            _expanded = true; // Auto-expand when timer starts
         }
 
         _wasRunning = TimerService.IsRunning;
@@ -615,6 +654,11 @@
         _focusDurationFieldInitialized = true;
         _settingsExpanded = false;
         _wasRunning = false;
+    }
+
+    private void ToggleExpanded()
+    {
+        _expanded = !_expanded;
     }
 
     public void Dispose()

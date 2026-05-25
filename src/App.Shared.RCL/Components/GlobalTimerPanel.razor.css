@@ -72,7 +72,7 @@
     width: 100%;
 }
 
-.timer-running-strip__actions .timer-btn {
+.timer-running-strip__actions ::deep .timer-btn {
     width: 100%;
     justify-content: center;
 }
@@ -125,7 +125,7 @@
         justify-content: stretch;
     }
 
-    .timer-compact__actions .timer-btn {
+    .timer-compact__actions ::deep .timer-btn {
         width: 100%;
         justify-content: center;
     }
@@ -245,7 +245,91 @@
     }
 
     .timer-value {
-        font-size: 1.5rem !important;
+        font-size: 2.25rem !important;
+    }
+
+    .timer-value--strip {
+        font-size: 2rem !important;
+    }
+
+    .timer-clock-icon {
+        width: 2.25rem !important;
+        height: 2.25rem !important;
+    }
+
+    .timer-clock-icon--strip {
+        width: 2rem !important;
+        height: 2rem !important;
+    }
+
+    .timer-clock-icon ::deep svg {
+        width: 2.25rem !important;
+        height: 2.25rem !important;
+    }
+
+    .timer-clock-icon--strip ::deep svg {
+        width: 2rem !important;
+        height: 2rem !important;
+    }
+}
+
+/* Collapsible Timer Panel Styles */
+.timer-mobile-header {
+    display: none;
+    cursor: pointer;
+    user-select: none;
+    background: transparent;
+    transition: background-color 0.2s ease;
+    border-radius: 12px;
+}
+
+@media (max-width: 959.98px) {
+    .timer-mobile-header {
+        display: block;
+    }
+    
+    .timer-mobile-header:active {
+        background-color: color-mix(in srgb, var(--mud-palette-action-default) 8%, transparent);
+    }
+}
+
+.timer-mobile-header--expanded {
+    border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 50%, transparent);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.timer-mobile-header-text {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.875rem;
+    color: var(--mud-palette-text-primary);
+    max-width: 100%;
+}
+
+.max-w-160 {
+    max-width: 160px;
+    display: inline-block;
+}
+
+.timer-mobile-expand-icon {
+    flex-shrink: 0;
+}
+
+@media (min-width: 960px) {
+    .timer-collapse-outer ::deep .timer-collapse-wrapper {
+        height: auto !important;
+        max-height: none !important;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+
+    .timer-collapse-outer ::deep .mud-collapse-wrapper {
+        height: auto !important;
+        max-height: none !important;
+        display: block !important;
+        visibility: visible !important;
     }
 }
 
@@ -272,6 +356,12 @@
     margin-bottom: 0;
 }
 
+.timer-target-field ::deep .mud-input-outlined,
+.timer-focus-textfield ::deep .mud-input-outlined {
+    height: 2.5rem !important;
+    align-items: center !important;
+}
+
 .timer-target-field ::deep .mud-input-helper {
     margin: 0;
     min-height: 0;
@@ -282,9 +372,11 @@
     opacity: 0.85;
 }
 
+.timer-target-field ::deep .mud-input-slot input,
 .timer-focus-field ::deep .mud-input > input.mud-input-root,
 .timer-focus-field ::deep .mud-input-slot input {
     font-variant-numeric: tabular-nums;
+    height: 100% !important;
 }
 
 .timer-focus-input-row {
@@ -325,9 +417,9 @@
     justify-content: flex-start;
 }
 
-.timer-btn {
+::deep .timer-btn {
     border-radius: 8px !important;
-    min-height: 1.85rem;
+    height: 2.5rem !important;
     padding-left: 0.5rem !important;
     padding-right: 0.5rem !important;
     text-transform: none !important;
@@ -339,26 +431,26 @@
 }
 
 @media (max-width: 959.98px) {
-    .timer-btn {
-        min-height: 2.75rem;
+    ::deep .timer-btn {
+        height: 2.5rem !important;
     }
 }
 
 @media (min-width: 960px) {
-    .timer-btn {
+    ::deep .timer-btn {
         min-width: 4.5rem;
     }
 }
 
-.timer-btn--start:not(:disabled) {
+::deep .timer-btn--start:not(:disabled) {
     box-shadow: 0 2px 12px color-mix(in srgb, var(--mud-palette-success) 45%, transparent) !important;
 }
 
-.timer-btn--pause:not(:disabled) {
+::deep .timer-btn--pause:not(:disabled) {
     box-shadow: 0 2px 12px color-mix(in srgb, var(--mud-palette-warning) 40%, transparent) !important;
 }
 
-.timer-btn--stop:not(:disabled) {
+::deep .timer-btn--stop:not(:disabled) {
     box-shadow: 0 2px 12px color-mix(in srgb, var(--mud-palette-primary) 35%, transparent) !important;
 }
 
@@ -384,7 +476,7 @@
         flex: 0 0 auto;
     }
 
-    .timer-running-strip__actions .timer-btn {
+    .timer-running-strip__actions ::deep .timer-btn {
         width: auto;
     }
 }

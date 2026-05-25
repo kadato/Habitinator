@@ -1,13 +1,15 @@
 @using System.Globalization
 @using Microsoft.JSInterop
 @using App.Shared.RCL.Components.Dialogs
+@using App.Shared.RCL.Models
 @inject IActivityStatisticsReader Stats
 @inject IDialogService DialogService
 @inject IUserDateFormatService DateFormatService
+@inject IUserTimeZoneService TimeZoneService
 @inject IJSRuntime JSRuntime
 
-<MudStack Spacing="3">
-    <MudText Typo="Typo.h4" Class="app-page-title">Statistics</MudText>
+<MudStack Spacing="2" Class="stats-panel">
+    <MudText Typo="Typo.h4" Class="app-page-title stats-panel__title">Statistics</MudText>
 
     @if (_error is not null)
     {
@@ -15,24 +17,8 @@
     }
     else if (_loading)
     {
-        <!-- KPI Row Skeleton -->
-        <MudGrid Spacing="3" Class="stats-kpi-grid">
-            @for (int i = 0; i < 3; i++)
-            {
-                <MudItem xs="12" sm="4">
-                    <MudPaper Class="stats-kpi-card pa-4" Elevation="0" Outlined="false">
-                        <div class="stats-kpi-card__head d-flex justify-space-between align-center mb-2">
-                            <MudSkeleton Width="120px" Height="20px" />
-                            <MudSkeleton Width="24px" Height="24px" SkeletonType="SkeletonType.Circle" />
-                        </div>
-                        <MudSkeleton Width="80px" Height="40px" />
-                    </MudPaper>
-                </MudItem>
-            }
-        </MudGrid>
-
         <!-- Main Dashboard Layout Grid Skeleton -->
-        <MudGrid Spacing="3" Class="mt-2">
+        <MudGrid Spacing="3">
             <!-- Left Main Column (Charts & Heatmaps) -->
             <MudItem xs="12" lg="9" Class="order-2 order-lg-1">
                 <!-- Activity Heatmap Card Skeleton -->
@@ -74,20 +60,60 @@
                 </MudPaper>
             </MudItem>
 
-            <!-- Right Sidebar Column (Controls / Info) -->
+            <!-- Right Sidebar Column (Filters + KPIs) -->
             <MudItem xs="12" lg="3" Class="order-1 order-lg-2">
-                <MudPaper Class="pa-4 stats-dashboard-card stats-sidebar-controls" Elevation="0" Outlined="true">
-                    <MudSkeleton Width="150px" Height="24px" Class="mb-4" />
-                    <MudStack Spacing="3">
-                        <MudSkeleton Width="100%" Height="40px" />
-                        <MudSkeleton Width="100%" Height="40px" />
-                        <MudDivider Class="my-2"/>
-                        <MudSkeleton Width="100px" Height="16px" />
-                        <MudSkeleton Width="150px" Height="20px" Class="mb-3" />
-                        <MudSkeleton Width="80px" Height="16px" />
-                        <MudSkeleton Width="100px" Height="20px" />
-                    </MudStack>
-                </MudPaper>
+                <div class="stats-sidebar-column">
+                    <div class="stats-sidebar-block stats-sidebar-controls">
+                        <div class="stats-filters-mobile-header @(_filtersExpanded ? "stats-filters-mobile-header--expanded" : "")"
+                             @onclick="ToggleFiltersExpanded"
+                             role="button"
+                             aria-expanded="@(_filtersExpanded ? "true" : "false")"
+                             aria-label="Toggle statistics filters">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="w-100 stats-filters-mobile-header-inner">
+                                <MudStack Spacing="0" Class="min-w-0 flex-grow-1">
+                                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                        <MudIcon Icon="@Icons.Material.Filled.FilterList" Size="Size.Small" Color="Color.Primary" aria-hidden="true"/>
+                                        <MudText Typo="Typo.subtitle2" Class="stats-filters-mobile-header-text">Filters</MudText>
+                                    </MudStack>
+                                </MudStack>
+                                <MudIcon Icon="@(_filtersExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                         Class="stats-filters-mobile-expand-icon"
+                                         Size="Size.Medium"
+                                         aria-hidden="true"/>
+                            </MudStack>
+                        </div>
+                        <div class="stats-filters-collapse-outer">
+                            <MudCollapse Expanded="@_filtersExpanded" Class="stats-filters-collapse-wrapper">
+                                <MudStack Spacing="2" Class="stats-sidebar-filters stats-sidebar-filters--body">
+                                    <MudSkeleton Width="100%" Height="36px" />
+                                    <MudSkeleton Width="100%" Height="36px" />
+                                    <MudSkeleton Width="100%" Height="14px" />
+                                </MudStack>
+                            </MudCollapse>
+                        </div>
+                    </div>
+                    <div class="stats-kpi-strip stats-kpi-strip--mobile">
+                        <div class="stats-kpi-strip__grid">
+                            @for (int i = 0; i < 3; i++)
+                            {
+                                <div class="stats-kpi-strip__item">
+                                    <MudSkeleton Width="40px" Height="10px" />
+                                    <MudSkeleton Width="32px" Height="16px" Class="mt-1" />
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="stats-kpi-cards stats-kpi-cards--desktop">
+                        @for (int i = 0; i < 3; i++)
+                        {
+                            <MudPaper Class="stats-kpi-card stats-kpi-card--sidebar" Elevation="0" Outlined="false">
+                                <MudSkeleton Width="100px" Height="14px" />
+                                <MudSkeleton Width="72px" Height="24px" Class="mt-1" />
+                                <MudSkeleton Width="120px" Height="12px" Class="mt-1" />
+                            </MudPaper>
+                        }
+                    </div>
+                </div>
             </MudItem>
         </MudGrid>
     }
@@ -97,44 +123,13 @@
     }
     else
     {
-        <!-- KPI Row at the top of the dashboard -->
-        <MudGrid Spacing="3" Class="stats-kpi-grid">
-            <MudItem xs="12" sm="4">
-                <MudPaper Class="stats-kpi-card stats-kpi-card--events" Elevation="0" Outlined="false">
-                    <div class="stats-kpi-card__head">
-                        <MudText Typo="Typo.caption" Class="stats-kpi-card__label">Events in range</MudText>
-                        <MudIcon Icon="@Icons.Material.Filled.ViewTimeline" Class="stats-kpi-card__icon" Size="Size.Medium" aria-hidden="true"/>
-                    </div>
-                    <MudText Typo="Typo.h4" Class="stats-kpi-card__value">@_data.TotalEvents</MudText>
-                </MudPaper>
-            </MudItem>
-            <MudItem xs="12" sm="4">
-                <MudPaper Class="stats-kpi-card stats-kpi-card--focus" Elevation="0" Outlined="false">
-                    <div class="stats-kpi-card__head">
-                        <MudText Typo="Typo.caption" Class="stats-kpi-card__label">Focus time (timer)</MudText>
-                        <MudIcon Icon="@Icons.Material.Filled.Timer" Class="stats-kpi-card__icon" Size="Size.Medium" aria-hidden="true"/>
-                    </div>
-                    <MudText Typo="Typo.h4" Class="stats-kpi-card__value">@FormatFocus(_data.TotalFocusMinutes)</MudText>
-                </MudPaper>
-            </MudItem>
-            <MudItem xs="12" sm="4">
-                <MudPaper Class="stats-kpi-card stats-kpi-card--peak" Elevation="0" Outlined="false">
-                    <div class="stats-kpi-card__head">
-                        <MudText Typo="Typo.caption" Class="stats-kpi-card__label">Busiest day (count)</MudText>
-                        <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Class="stats-kpi-card__icon" Size="Size.Medium" aria-hidden="true"/>
-                    </div>
-                    <MudText Typo="Typo.h4" Class="stats-kpi-card__value">@(_data.MaxDayCount == 0 ? "—" : _data.MaxDayCount.ToString())</MudText>
-                </MudPaper>
-            </MudItem>
-        </MudGrid>
-
         @if (_data.TotalEvents == 0)
         {
             <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-2">No activity logged yet. Use habits, dailies, to-dos, or the focus timer on the board.</MudAlert>
         }
 
         <!-- Main Dashboard Layout Grid -->
-        <MudGrid Spacing="3" Class="mt-2">
+        <MudGrid Spacing="3">
             <!-- Left Main Column (Charts & Heatmaps) -->
             <MudItem xs="12" lg="9" Class="order-2 order-lg-1">
                 <!-- Activity Heatmap Card -->
@@ -156,14 +151,14 @@
                     </div>
 
                     <div class="stats-heatmap-container stats-heatmap-container--large">
-                        <div class="stats-heatmap-rowlabels">
-                            <span>Mon</span>
+                        <div class="stats-heatmap-rowlabels" aria-hidden="true">
+                            <span>M</span>
                             <span></span>
-                            <span>Wed</span>
+                            <span>W</span>
                             <span></span>
-                            <span>Fri</span>
+                            <span>F</span>
                             <span></span>
-                            <span>Sun</span>
+                            <span>S</span>
                         </div>
                         <div class="stats-heatmap-wrap">
                             <div class="stats-heatmap-grid" style="--stats-cols: @_data.GridWeekColumns;">
@@ -176,8 +171,9 @@
                                             if (cell.InDataRange)
                                             {
                                                 <button type="button"
-                                                        class="stats-heatmap-day-btn stats-cell @($"stats-lvl-{cell.Intensity}")"
-                                                        title="@($"{DateFormatService.Format(cell.Date)}: {cell.Count} event(s) — view details")"
+                                                        class="@($"stats-heatmap-day-btn stats-cell stats-lvl-{cell.Intensity}{(IsHeatmapToday(cell.Date) ? " stats-heatmap-day--today" : "")}")"
+                                                        title="@HeatmapDayTitle(cell.Date, cell.Count)"
+                                                        aria-current="@(IsHeatmapToday(cell.Date) ? "date" : null)"
                                                         @onclick="() => OpenDayDetailAsync(cell.Date)">
                                                 </button>
                                             }
@@ -254,25 +250,17 @@
                                     var cellIx = daily.Heatmap.ToDictionary(x => (x.DayRow, x.WeekCol));
                                     <MudItem xs="12" md="6">
                                         <div class="stats-daily-block pa-3 border rounded mud-border-lines-default" style="background: var(--mud-palette-background-gray);">
-                                            <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-2">
-                                                <MudText Typo="Typo.subtitle2" Class="font-weight-bold stats-daily-title ma-0">@daily.Title</MudText>
-                                                <div class="stats-contrib-legend stats-contrib-legend--binary ma-0 d-flex align-center gap-1">
-                                                    <span class="text-secondary-caption" style="font-size: 0.65rem; color: var(--mud-palette-text-secondary);">Missed</span>
-                                                    <div class="stats-cell stats-legend-swatch stats-daily-missed" style="width: 10px; height: 10px; min-width: 10px;"></div>
-                                                    <span class="text-secondary-caption" style="font-size: 0.65rem; color: var(--mud-palette-text-secondary);">Done</span>
-                                                    <div class="stats-cell stats-legend-swatch stats-daily-done" style="width: 10px; height: 10px; min-width: 10px;"></div>
-                                                </div>
-                                            </div>
-                                            
+                                            <MudText Typo="Typo.subtitle2" Class="font-weight-bold stats-daily-title ma-0 mb-2">@daily.Title</MudText>
+
                                             <div class="stats-heatmap-container">
-                                                <div class="stats-heatmap-rowlabels">
-                                                    <span>Mon</span>
+                                                <div class="stats-heatmap-rowlabels" aria-hidden="true">
+                                                    <span>M</span>
                                                     <span></span>
-                                                    <span>Wed</span>
+                                                    <span>W</span>
                                                     <span></span>
-                                                    <span>Fri</span>
+                                                    <span>F</span>
                                                     <span></span>
-                                                    <span>Sun</span>
+                                                    <span>S</span>
                                                 </div>
                                                 <div class="stats-heatmap-wrap">
                                                     <div class="stats-heatmap-grid" style="--stats-cols: @daily.GridWeekColumns;">
@@ -284,8 +272,9 @@
                                                                 {
                                                                     if (cell.InDataRange)
                                                                     {
-                                                                        <div class="stats-cell @(cell.Count > 0 ? "stats-daily-done" : "stats-daily-missed")"
-                                                                             title="@($"{DateFormatService.Format(cell.Date)}: {(cell.Count > 0 ? $"{cell.Count} complete(s)" : "not completed")}")">
+                                                                        <div class="@($"stats-cell {(cell.Count > 0 ? "stats-daily-done" : "stats-daily-missed")}{(IsHeatmapToday(cell.Date) ? " stats-heatmap-day--today" : "")}")"
+                                                                             title="@DailyHeatmapDayTitle(cell.Date, cell.Count)"
+                                                                             aria-current="@(IsHeatmapToday(cell.Date) ? "date" : null)">
                                                                         </div>
                                                                     }
                                                                     else
@@ -311,73 +300,150 @@
                 </MudPaper>
             </MudItem>
 
-            <!-- Right Sidebar Column (Controls / Info) -->
+            <!-- Right Sidebar Column (Filters + KPIs) -->
             <MudItem xs="12" lg="3" Class="order-1 order-lg-2">
-                <MudPaper Class="pa-4 stats-dashboard-card stats-sidebar-controls" Elevation="0" Outlined="true" Style="position: sticky; top: 80px;">
-                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold mb-3">Dashboard Controls</MudText>
-                    
-                    <MudStack Spacing="3">
-                        @if ((_data.AvailableTags?.Count ?? 0) > 0)
-                        {
-                            <MudSelect T="string"
-                                       Label="Tag Filter"
-                                       Variant="Variant.Outlined"
-                                       Dense="true"
-                                       MultiSelection="true"
-                                       MultiSelectionTextFunc="@(new Func<IReadOnlyList<string>, string>(GetMultiSelectionText))"
-                                       SelectedValues="_selectedTags"
-                                       SelectedValuesChanged="OnSelectedTagsChanged"
-                                       Disabled="_periodBusy"
-                                       Clearable="true"
-                                       Class="stats-tag-select-sidebar">
-                                @foreach (var t in _data.AvailableTags ?? [])
-                                {
-                                    <MudSelectItem T="string" Value="@t">@t</MudSelectItem>
-                                }
-                            </MudSelect>
-                        }
-                        
-                        <MudSelect T="string"
-                                   Label="Time Period"
-                                   Variant="Variant.Outlined"
-                                   Dense="true"
-                                   Value="_selectedPeriodKey"
-                                   ValueChanged="OnStatsPeriodChanged"
-                                   Disabled="_periodBusy"
-                                   Class="stats-year-select-sidebar">
-                            @if (_periodOptions is not null)
-                            {
-                                @foreach (var opt in _periodOptions)
-                                {
-                                    <MudSelectItem T="string" Value="@opt.Key">@opt.Label</MudSelectItem>
-                                }
-                            }
-                        </MudSelect>
-
-                        @if (_periodBusy)
-                        {
-                            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-1"/>
-                        }
-
-                        <MudDivider Class="my-2"/>
-
-                        <div>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-1">
-                                <strong>Date Range:</strong>
-                            </MudText>
-                            <MudText Typo="Typo.body2" Class="mb-3">
-                                @FormatRange(_data.RangeStart, _data.RangeEnd)
-                            </MudText>
-                            
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-1">
-                                <strong>Duration:</strong>
-                            </MudText>
-                            <MudText Typo="Typo.body2">
-                                @(_data.HeatmapDataDayCount) days
-                            </MudText>
+                <div class="stats-sidebar-column">
+                    <div class="stats-sidebar-block stats-sidebar-controls">
+                        <div class="stats-filters-mobile-header @(_filtersExpanded ? "stats-filters-mobile-header--expanded" : "")"
+                             @onclick="ToggleFiltersExpanded"
+                             role="button"
+                             aria-expanded="@(_filtersExpanded ? "true" : "false")"
+                             aria-label="Toggle statistics filters">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="w-100 stats-filters-mobile-header-inner">
+                                <MudStack Spacing="0" Class="min-w-0 flex-grow-1">
+                                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                        <MudIcon Icon="@Icons.Material.Filled.FilterList" Size="Size.Small" Color="Color.Primary" aria-hidden="true"/>
+                                        <MudText Typo="Typo.subtitle2" Class="stats-filters-mobile-header-text">Filters</MudText>
+                                    </MudStack>
+                                    @if (!_filtersExpanded)
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="stats-filters-mobile-header-summary text-truncate">
+                                            @GetFiltersHeaderSummary()
+                                        </MudText>
+                                    }
+                                </MudStack>
+                                <MudIcon Icon="@(_filtersExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                         Class="stats-filters-mobile-expand-icon"
+                                         Size="Size.Medium"
+                                         aria-hidden="true"/>
+                            </MudStack>
                         </div>
-                    </MudStack>
-                </MudPaper>
+                        <div class="stats-filters-collapse-outer">
+                            <MudCollapse Expanded="@_filtersExpanded" Class="stats-filters-collapse-wrapper">
+                                <MudStack Spacing="2" Class="stats-sidebar-filters stats-sidebar-filters--body">
+                                    @if ((_data.AvailableTags?.Count ?? 0) > 0)
+                                    {
+                                        <MudSelect T="string"
+                                                   Label="Tags"
+                                                   Variant="Variant.Outlined"
+                                                   Dense="true"
+                                                   Margin="Margin.Dense"
+                                                   MultiSelection="true"
+                                                   MultiSelectionTextFunc="@(new Func<IReadOnlyList<string>, string>(GetMultiSelectionText))"
+                                                   SelectedValues="_selectedTags"
+                                                   SelectedValuesChanged="OnSelectedTagsChanged"
+                                                   Disabled="_periodBusy"
+                                                   Clearable="true"
+                                                   Class="stats-tag-select-sidebar">
+                                            @foreach (var t in _data.AvailableTags ?? [])
+                                            {
+                                                <MudSelectItem T="string" Value="@t">@t</MudSelectItem>
+                                            }
+                                        </MudSelect>
+                                    }
+
+                                    <MudSelect T="string"
+                                               Label="Period"
+                                               Variant="Variant.Outlined"
+                                               Dense="true"
+                                               Margin="Margin.Dense"
+                                               Value="_selectedPeriodKey"
+                                               ValueChanged="OnStatsPeriodChanged"
+                                               Disabled="_periodBusy"
+                                               Class="stats-year-select-sidebar">
+                                        @if (_periodOptions is not null)
+                                        {
+                                            @foreach (var opt in _periodOptions)
+                                            {
+                                                <MudSelectItem T="string" Value="@opt.Key">@opt.Label</MudSelectItem>
+                                            }
+                                        }
+                                    </MudSelect>
+
+                                    @if (_periodBusy)
+                                    {
+                                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-0"/>
+                                    }
+
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="stats-sidebar-range">
+                                        @FormatRange(_data.RangeStart, _data.RangeEnd)
+                                    </MudText>
+                                </MudStack>
+                            </MudCollapse>
+                        </div>
+                    </div>
+
+                    <div class="stats-kpi-strip stats-kpi-strip--mobile">
+                        <div class="stats-kpi-strip__grid">
+                            <div class="stats-kpi-strip__item stats-kpi-strip__item--events">
+                                <span class="stats-kpi-strip__label">Events</span>
+                                <span class="stats-kpi-strip__value">@_data.TotalEvents</span>
+                            </div>
+                            <div class="stats-kpi-strip__item stats-kpi-strip__item--focus">
+                                <span class="stats-kpi-strip__label">Focus</span>
+                                <span class="stats-kpi-strip__value">@FormatFocus(_data.TotalFocusMinutes)</span>
+                            </div>
+                            <div class="stats-kpi-strip__item stats-kpi-strip__item--peak">
+                                <span class="stats-kpi-strip__label">Busiest</span>
+                                @if (_data.BusiestDay is null || _data.MaxDayCount == 0)
+                                {
+                                    <span class="stats-kpi-strip__value">—</span>
+                                }
+                                else
+                                {
+                                    <span class="stats-kpi-strip__value stats-kpi-strip__value--date" title="@FormatBusiestDayDetail(_data.BusiestDay.Value, _data.MaxDayCount)">@FormatBusiestDayShort(_data.BusiestDay.Value)</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats-kpi-cards stats-kpi-cards--desktop">
+                        <MudPaper Class="stats-kpi-card stats-kpi-card--sidebar stats-kpi-card--plain stats-kpi-card--events" Elevation="0" Outlined="false">
+                            <div class="stats-kpi-card__head">
+                                <MudText Typo="Typo.caption" Class="stats-kpi-card__label">Total events</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.ViewTimeline" Class="stats-kpi-card__icon" Size="Size.Small" aria-hidden="true"/>
+                            </div>
+                            <MudText Typo="Typo.h6" Class="stats-kpi-card__value">@_data.TotalEvents</MudText>
+                            <MudText Typo="Typo.caption" Class="stats-kpi-card__detail">Logged in this period</MudText>
+                        </MudPaper>
+                        <MudPaper Class="stats-kpi-card stats-kpi-card--sidebar stats-kpi-card--plain stats-kpi-card--focus" Elevation="0" Outlined="false">
+                            <div class="stats-kpi-card__head">
+                                <MudText Typo="Typo.caption" Class="stats-kpi-card__label">Focus time</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.Timer" Class="stats-kpi-card__icon" Size="Size.Small" aria-hidden="true"/>
+                            </div>
+                            <MudText Typo="Typo.h6" Class="stats-kpi-card__value">@FormatFocus(_data.TotalFocusMinutes)</MudText>
+                            <MudText Typo="Typo.caption" Class="stats-kpi-card__detail">From focus timer sessions</MudText>
+                        </MudPaper>
+                        <MudPaper Class="stats-kpi-card stats-kpi-card--sidebar stats-kpi-card--plain stats-kpi-card--peak" Elevation="0" Outlined="false">
+                            <div class="stats-kpi-card__head">
+                                <MudText Typo="Typo.caption" Class="stats-kpi-card__label">Busiest day</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Class="stats-kpi-card__icon" Size="Size.Small" aria-hidden="true"/>
+                            </div>
+                            @if (_data.BusiestDay is null || _data.MaxDayCount == 0)
+                            {
+                                <MudText Typo="Typo.h6" Class="stats-kpi-card__value">—</MudText>
+                                <MudText Typo="Typo.caption" Class="stats-kpi-card__detail">No activity in range</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.h6" Class="stats-kpi-card__value">@DateFormatService.Format(_data.BusiestDay.Value)</MudText>
+                                <MudText Typo="Typo.caption" Class="stats-kpi-card__detail">
+                                    @FormatBusiestDayDetail(_data.BusiestDay.Value, _data.MaxDayCount)
+                                </MudText>
+                            }
+                        </MudPaper>
+                    </div>
+                </div>
             </MudItem>
         </MudGrid>
     }
@@ -399,6 +465,8 @@
     private bool _loadingDailies;
     private string? _dailyError;
     private bool _shouldScrollToEnd;
+    private bool _filtersExpanded;
+    private DateOnly _heatmapToday;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -418,6 +486,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _heatmapToday = DailySchedule.LocalToday(TimeZoneService);
         try
         {
             await DateFormatService.InitializeAsync();
@@ -436,6 +505,7 @@
 
     private async Task LoadStatisticsAsync(string periodKey)
     {
+        _heatmapToday = DailySchedule.LocalToday(TimeZoneService);
         _loadingDailies = true;
         _dailyError = null;
         try
@@ -506,6 +576,42 @@
         }
     }
 
+    private void ToggleFiltersExpanded()
+    {
+        _filtersExpanded = !_filtersExpanded;
+    }
+
+    private string GetFiltersHeaderSummary()
+    {
+        if (_data is null)
+        {
+            return "Filters";
+        }
+
+        var period = GetSelectedPeriodLabel();
+        var tags = _selectedTags.Count == 0
+            ? "All tags"
+            : _selectedTags.Count == 1
+                ? _selectedTags.First()
+                : $"{_selectedTags.Count} tags";
+        return $"{period} · {tags}";
+    }
+
+    private string GetSelectedPeriodLabel()
+    {
+        if (_periodOptions is null)
+        {
+            return "Period";
+        }
+
+        return _periodOptions.FirstOrDefault(o => o.Key == _selectedPeriodKey)?.Label ?? "Period";
+    }
+
+    private string FormatBusiestDayShort(DateOnly day)
+    {
+        return DateFormatService.Format(day);
+    }
+
     private string GetMultiSelectionText(IReadOnlyList<string> selectedValues)
     {
         if (selectedValues is null || selectedValues.Count == 0)
@@ -561,6 +667,13 @@
             options);
     }
 
+    private static string FormatBusiestDayDetail(DateOnly day, int eventCount)
+    {
+        var weekday = day.ToString("dddd", CultureInfo.InvariantCulture);
+        var eventsLabel = eventCount == 1 ? "1 event" : $"{eventCount} events";
+        return $"{weekday} · {eventsLabel}";
+    }
+
     private static string FormatFocus(int totalMinutes)
     {
         if (totalMinutes <= 0)
@@ -586,6 +699,21 @@
         var formatted = DateFormatService.Format(date);
         var weekday = date.ToString("dddd", CultureInfo.InvariantCulture);
         return $"{formatted} ({weekday})";
+    }
+
+    private bool IsHeatmapToday(DateOnly date) => date == _heatmapToday;
+
+    private string HeatmapDayTitle(DateOnly date, int count)
+    {
+        var baseTitle = $"{DateFormatService.Format(date)}: {count} event(s) — view details";
+        return IsHeatmapToday(date) ? $"Today · {baseTitle}" : baseTitle;
+    }
+
+    private string DailyHeatmapDayTitle(DateOnly date, int count)
+    {
+        var status = count > 0 ? $"{count} complete(s)" : "not completed";
+        var baseTitle = $"{DateFormatService.Format(date)}: {status}";
+        return IsHeatmapToday(date) ? $"Today · {baseTitle}" : baseTitle;
     }
 
 }

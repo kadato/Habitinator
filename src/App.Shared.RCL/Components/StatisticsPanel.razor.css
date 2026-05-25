@@ -35,7 +35,7 @@
     --stats-grid-gap: 2px;
     display: flex;
     align-items: flex-start;
-    gap: 0.5rem;
+    gap: 0.2rem;
     width: 100%;
     max-width: 100%;
 }
@@ -89,17 +89,20 @@
     grid-template-rows: repeat(7, var(--stats-cell));
     gap: var(--stats-grid-gap);
     align-items: center;
-    font-size: 0.7rem;
+    font-size: 0.58rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.02em;
     color: var(--mud-palette-text-secondary);
     text-align: right;
-    flex: 0 0 2rem;
+    flex: 0 0 0.7rem;
     box-sizing: border-box;
     padding-top: 4px;
 }
 
 .stats-heatmap-container--large .stats-heatmap-rowlabels {
-    font-size: 0.75rem;
-    flex: 0 0 2.1rem;
+    font-size: 0.62rem;
+    flex: 0 0 0.75rem;
 }
 
 .stats-heatmap-grid {
@@ -138,6 +141,21 @@ button.stats-heatmap-day-btn:hover {
 button.stats-heatmap-day-btn:focus-visible {
     outline: 2px solid var(--mud-palette-primary);
     outline-offset: 1px;
+}
+
+.stats-heatmap-day--today {
+    position: relative;
+    z-index: 2;
+    box-shadow:
+        0 0 0 1px var(--mud-palette-surface),
+        0 0 0 3px var(--mud-palette-primary);
+}
+
+button.stats-heatmap-day-btn.stats-heatmap-day--today:hover {
+    box-shadow:
+        0 0 0 1px var(--mud-palette-surface),
+        0 0 0 3px var(--mud-palette-primary),
+        0 0 0 5px color-mix(in srgb, var(--mud-palette-primary) 35%, transparent);
 }
 
 .stats-lvl-0 {
@@ -228,10 +246,204 @@ button.stats-heatmap-day-btn:focus-visible {
     box-sizing: border-box;
 }
 
+/* Tighter gap under the page title (global .app-page-title uses 1rem). */
+::deep .stats-panel__title {
+    margin-bottom: 0.35rem;
+}
+
+/* Sidebar: filters on top, KPIs below; sticky on large screens. */
+.stats-sidebar-column {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+@media (min-width: 960px) {
+    .stats-sidebar-column {
+        position: sticky;
+        top: 80px;
+        align-self: flex-start;
+    }
+}
+
+.stats-sidebar-block {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+}
+
+.stats-sidebar-controls {
+    padding: 0;
+    overflow: visible;
+}
+
+.stats-sidebar-filters--body {
+    padding: 0.25rem 0.85rem 0.85rem;
+}
+
+/* Collapsible filter card on mobile (always open on desktop). */
+.stats-filters-mobile-header {
+    display: none;
+    cursor: pointer;
+    user-select: none;
+    background: transparent;
+    transition: background-color 0.2s ease;
+}
+
+.stats-filters-mobile-header-inner {
+    padding: 0.65rem 0.85rem;
+}
+
+.stats-filters-mobile-header-summary {
+    margin-top: 0.15rem;
+    margin-left: 1.65rem;
+    line-height: 1.3;
+    max-width: 100%;
+}
+
+@media (max-width: 959.98px) {
+    .stats-filters-mobile-header {
+        display: block;
+    }
+
+    .stats-filters-mobile-header:active {
+        background-color: color-mix(in srgb, var(--mud-palette-action-default) 8%, transparent);
+    }
+
+    .stats-sidebar-filters--body {
+        padding-top: 0.75rem;
+    }
+
+    .stats-filters-collapse-outer ::deep .stats-filters-collapse-wrapper,
+    .stats-filters-collapse-outer ::deep .mud-collapse-wrapper,
+    .stats-filters-collapse-outer ::deep .mud-collapse-container {
+        overflow: visible !important;
+    }
+}
+
+.stats-filters-mobile-header--expanded {
+    border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 50%, transparent);
+}
+
+.stats-filters-mobile-header-text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.stats-filters-mobile-expand-icon {
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+}
+
+@media (min-width: 960px) {
+    .stats-filters-collapse-outer ::deep .stats-filters-collapse-wrapper,
+    .stats-filters-collapse-outer ::deep .mud-collapse-wrapper {
+        height: auto !important;
+        max-height: none !important;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        overflow: visible !important;
+    }
+
+    .stats-sidebar-filters--body {
+        padding: 0.65rem 0.85rem 0.85rem;
+    }
+}
+
+::deep .stats-sidebar-filters .stats-tag-select-sidebar.mud-input-control {
+    margin-top: 0.15rem;
+    margin-bottom: 0.15rem;
+}
+
+::deep .stats-sidebar-filters .stats-year-select-sidebar.mud-input-control {
+    margin-top: 0.15rem;
+    margin-bottom: 0.15rem;
+}
+
+.stats-sidebar-range {
+    line-height: 1.35;
+    font-variant-numeric: tabular-nums;
+    margin-top: 0.25rem;
+}
+
+/* Mobile: compact KPI strip (no outer box). */
+.stats-kpi-strip--mobile {
+    display: block;
+    padding: 0.15rem 0;
+}
+
+.stats-kpi-cards--desktop {
+    display: none;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.stats-kpi-strip__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    align-items: start;
+}
+
+.stats-kpi-strip__item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+    min-width: 0;
+    padding: 0 0.15rem;
+    position: relative;
+}
+
+.stats-kpi-strip__item:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    right: -0.25rem;
+    top: 0.1rem;
+    bottom: 0.1rem;
+    width: 1px;
+    background: color-mix(in srgb, var(--mud-palette-divider) 70%, transparent);
+}
+
+.stats-kpi-strip__label {
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 1.2;
+    color: var(--mud-palette-text-secondary);
+}
+
+.stats-kpi-strip__value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    color: var(--mud-palette-text-primary);
+    word-break: break-word;
+}
+
+.stats-kpi-strip__value--date {
+    font-size: 0.78rem;
+}
+
+@media (min-width: 960px) {
+    .stats-kpi-strip--mobile {
+        display: none;
+    }
+
+    .stats-kpi-cards--desktop {
+        display: flex;
+    }
+}
+
 /* Summary KPI cards — use ::deep because classes are merged onto MudBlazor’s root. */
 ::deep .stats-kpi-card {
     position: relative;
-    padding: 1.1rem 1.15rem 1.2rem 1.15rem;
+    padding: 0.75rem 0.85rem 0.8rem;
     border-radius: 10px;
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 18%, var(--mud-palette-table-lines) 72%);
     background: color-mix(in srgb, var(--mud-palette-surface) 88%, var(--mud-palette-primary) 6%);
@@ -295,6 +507,71 @@ button.stats-heatmap-day-btn:focus-visible {
     letter-spacing: -0.01em;
     line-height: 1.2;
     color: var(--mud-palette-text-primary);
+}
+
+::deep .stats-kpi-card--sidebar {
+    padding: 0.85rem 0.95rem 0.9rem 1rem;
+    border-radius: 10px;
+}
+
+::deep .stats-kpi-card--sidebar .stats-kpi-card__head {
+    margin-bottom: 0.35rem;
+}
+
+::deep .stats-kpi-card--sidebar .stats-kpi-card__label {
+    font-size: 0.7rem;
+}
+
+::deep .stats-kpi-card--sidebar .stats-kpi-card__value {
+    font-size: 1.25rem;
+    line-height: 1.2;
+}
+
+::deep .stats-kpi-card--sidebar .stats-kpi-card__detail {
+    margin-top: 0.25rem;
+    line-height: 1.35;
+}
+
+@media (min-width: 960px) {
+    ::deep .stats-kpi-cards--desktop .stats-kpi-card::before {
+        display: none;
+    }
+
+    ::deep .stats-kpi-cards--desktop .stats-kpi-card--sidebar {
+        padding: 0.85rem 0.95rem 0.9rem;
+    }
+
+    ::deep .stats-kpi-cards--desktop .stats-kpi-card__head,
+    ::deep .stats-kpi-cards--desktop .stats-kpi-card__value,
+    ::deep .stats-kpi-cards--desktop .stats-kpi-card__detail {
+        padding-left: 0;
+    }
+
+    ::deep .stats-kpi-cards--desktop .stats-kpi-card__icon {
+        color: var(--mud-palette-text-secondary);
+    }
+}
+
+::deep .stats-kpi-card--plain::before {
+    display: none;
+}
+
+::deep .stats-kpi-card--plain .stats-kpi-card__head,
+::deep .stats-kpi-card--plain .stats-kpi-card__value {
+    padding-left: 0;
+}
+
+::deep .stats-kpi-card--plain .stats-kpi-card__icon {
+    color: var(--mud-palette-text-secondary);
+}
+
+::deep .stats-kpi-card__detail {
+    display: block;
+    margin-top: 0.15rem;
+    padding-left: 0;
+    line-height: 1.35;
+    color: var(--mud-palette-text-secondary);
+    font-variant-numeric: tabular-nums;
 }
 
 /* Scoped styles for the reorganized dashboard */

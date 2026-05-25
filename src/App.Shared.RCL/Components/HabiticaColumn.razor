@@ -252,9 +252,11 @@
                                 <div class="habitica-card__foot-left">
                                     @if (Section == BoardSection.Todo && item.TodoDueDate is { } due)
                                     {
-                                        <div class="habitica-todo-due" title="Due date">
+                                        <div class="@TodoDueCssClass(due)">
                                             <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Class="me-1" Size="Size.Small"/>
-                                            <span class="habitica-todo-due__text">@DateFormatService.Format(due)</span>
+                                            <span class="habitica-todo-due__date">@DateFormatService.Format(due)</span>
+                                            <span class="habitica-todo-due__sep" aria-hidden="true">·</span>
+                                            <span class="habitica-todo-due__relative">@TodoDueRelativeLabel(due)</span>
                                         </div>
                                     }
                                 </div>
@@ -682,6 +684,24 @@
             _ => Task.CompletedTask
         };
     }
+
+    private string TodoDueRelativeLabel(DateOnly due) =>
+        TodoDueRelativeText.Format(due, BoardToday());
+
+    private string TodoDueCssClass(DateOnly due)
+    {
+        var days = due.DayNumber - BoardToday().DayNumber;
+        var state = days switch
+        {
+            < 0 => "overdue",
+            0 => "today",
+            _ => "upcoming"
+        };
+
+        return $"habitica-todo-due habitica-todo-due--{state}";
+    }
+
+    private DateOnly BoardToday() => DailySchedule.LocalToday(TimeZoneService);
 
     private static string HabitStreakLabel(BoardItem item)
     {

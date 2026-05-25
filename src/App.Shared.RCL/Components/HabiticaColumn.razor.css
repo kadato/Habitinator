@@ -351,11 +351,33 @@
     align-items: center;
     font-size: 0.75rem;
     font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+}
+
+.habitica-todo-due--overdue {
     color: var(--mud-palette-error);
 }
 
-.habitica-todo-due__text {
+.habitica-todo-due--today {
+    color: var(--mud-palette-warning);
+}
+
+.habitica-todo-due--upcoming {
+    color: var(--mud-palette-text-secondary);
+}
+
+.habitica-todo-due__date,
+.habitica-todo-due__relative {
     font-variant-numeric: tabular-nums;
+}
+
+.habitica-todo-due__sep {
+    margin: 0 0.25rem;
+    opacity: 0.65;
+}
+
+.habitica-todo-due__relative {
+    font-weight: 500;
 }
 
 .habitica-streak {

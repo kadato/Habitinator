@@ -1,4 +1,4 @@
-﻿@implements IDisposable
+@implements IDisposable
 @inject NavigationManager Nav
 @inject IApiSession Session
 
@@ -8,7 +8,7 @@
         <MudButton OnClick="@(() => Nav.NavigateTo("/"))"
                    Variant="@(IsActivePath("", NavLinkMatch.All) ? Variant.Filled : Variant.Outlined)"
                    Color="Color.Primary"
-                   Size="Size.Medium"
+                   Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.SpaceDashboard"
                    Class="app-header-nav-btn text-transform-none">
             Board
@@ -16,7 +16,7 @@
         <MudButton OnClick="@(() => Nav.NavigateTo("/stats"))"
                    Variant="@(IsActivePath("stats", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
                    Color="Color.Primary"
-                   Size="Size.Medium"
+                   Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.BarChart"
                    Class="app-header-nav-btn text-transform-none">
             Statistics
@@ -24,7 +24,7 @@
         <MudButton OnClick="@(() => Nav.NavigateTo("/settings"))"
                    Variant="@(IsActivePath("settings", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
                    Color="Color.Primary"
-                   Size="Size.Medium"
+                   Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.Notifications"
                    Class="app-header-nav-btn text-transform-none">
             Settings

@@ -12,7 +12,7 @@
 @inject IUserDateFormatService DateFormatService
 @inject IUndoService UndoService
 
-<MudStack Class="board-shell w-100" Spacing="2">
+<MudStack Class="board-shell w-100" Spacing="1">
     @if (_isLoading && _initialLoadComplete)
     {
         <MudProgressLinear Color="Color.Primary" Indeterminate="true"/>
@@ -219,7 +219,7 @@
                 </MudTabs>
             </div>
             <div class="board-columns-desktop">
-                <MudGrid Spacing="4" Class="board-columns-grid mt-0 w-100">
+                <MudGrid Spacing="2" Class="board-columns-grid mt-0 w-100">
                     <MudItem xs="12" md="4">
                         <HabiticaColumn Section="BoardSection.Habit"
                                         Items="FilteredHabits"
@@ -259,7 +259,7 @@
                 </MudTabs>
             </div>
             <div class="board-columns-desktop">
-                <MudGrid Spacing="4" Class="board-columns-grid mt-0 w-100">
+                <MudGrid Spacing="2" Class="board-columns-grid mt-0 w-100">
                     <MudItem xs="12" md="4">
                         @RenderColumnSkeleton(BoardSection.Habit)
                     </MudItem>
@@ -355,16 +355,16 @@
                             BoardSection.Todo => "habitica-row--todo-open",
                             _ => string.Empty
                         };
-                        <div class="@($"habitica-card {rowClass} pa-3 mb-2 d-flex align-center gap-3")" style="min-height: 64px;">
+                        <div class="@($"habitica-card {rowClass} pa-2 mb-1.5 d-flex align-center gap-3")" style="min-height: 48px;">
                             <div class="habitica-card__left d-flex gap-1 align-center">
-                                <MudSkeleton Width="28px" Height="28px" SkeletonType="SkeletonType.Rectangle" Class="rounded" />
+                                <MudSkeleton Width="26px" Height="26px" SkeletonType="SkeletonType.Rectangle" Class="rounded" />
                                 @if (isHabit)
                                 {
-                                    <MudSkeleton Width="28px" Height="28px" SkeletonType="SkeletonType.Rectangle" Class="rounded" />
+                                    <MudSkeleton Width="26px" Height="26px" SkeletonType="SkeletonType.Rectangle" Class="rounded" />
                                 }
                             </div>
                             <div class="flex-grow-1">
-                                <MudSkeleton Width="60%" Height="18px" Class="mb-1" />
+                                <MudSkeleton Width="60%" Height="16px" Class="mb-1" />
                                 <MudSkeleton Width="40%" Height="12px" />
                             </div>
                         </div>

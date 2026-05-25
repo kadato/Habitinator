@@ -1,4 +1,4 @@
-﻿@implements IDisposable
+@implements IDisposable
 @inject NavigationManager Nav
 
 @{
@@ -12,7 +12,7 @@
         <MudButton Href="/"
                    Variant="@(IsActivePath("", NavLinkMatch.All) ? Variant.Filled : Variant.Outlined)"
                    Color="Color.Primary"
-                   Size="Size.Medium"
+                   Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.SpaceDashboard"
                    Class="app-header-nav-btn text-transform-none">
             Board
@@ -22,7 +22,7 @@
                 <MudButton Href="/stats"
                            Variant="@(IsActivePath("stats", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
                            Color="Color.Primary"
-                           Size="Size.Medium"
+                           Size="Size.Small"
                            StartIcon="@Icons.Material.Filled.BarChart"
                            Class="app-header-nav-btn text-transform-none">
                     Statistics
@@ -30,7 +30,7 @@
                 <MudButton Href="/settings"
                            Variant="@(IsActivePath("settings", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
                            Color="Color.Primary"
-                           Size="Size.Medium"
+                           Size="Size.Small"
                            StartIcon="@Icons.Material.Filled.Notifications"
                            Class="app-header-nav-btn text-transform-none">
                     Settings
@@ -64,7 +64,7 @@
         <MudButton Href="auth/login"
                    Variant="@(IsActivePath("auth/login", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
                    Color="Color.Secondary"
-                   Size="Size.Medium"
+                   Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.Login"
                    Class="app-header-nav-btn text-transform-none">
             Login
@@ -72,7 +72,7 @@
         <MudButton Href="auth/register"
                    Variant="@(IsActivePath("auth/register", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
                    Color="Color.Secondary"
-                   Size="Size.Medium"
+                   Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.PersonAdd"
                    Class="app-header-nav-btn text-transform-none">
             Register

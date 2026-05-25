@@ -15,7 +15,7 @@
 <MudLayout>
     <AuthorizeView>
         <Authorized Context="auth">
-            <MudAppBar Elevation="0" Dense="false" Class="app-top-bar" ToolBarClass="app-top-bar-toolbar">
+            <MudAppBar Elevation="0" Dense="true" Class="app-top-bar" ToolBarClass="app-top-bar-toolbar">
                 <div class="app-top-bar__row d-flex">
                     <div class="app-top-bar__left d-flex flex-wrap align-center">
                         <MudText Typo="Typo.h6" Class="app-top-bar__title">Habitinator</MudText>
@@ -24,11 +24,11 @@
                     <div class="app-top-bar__flex-spacer" aria-hidden="true"></div>
                     <div class="app-top-bar__right d-flex flex-wrap align-center">
                         <div class="app-header-user-rail d-flex flex-wrap align-center">
-                             <MudChip T="string"
+                              <MudChip T="string"
                                      Icon="@Icons.Material.Filled.AccountCircle"
                                      Color="Color.Primary"
                                      Variant="Variant.Filled"
-                                     Size="Size.Medium"
+                                     Size="Size.Small"
                                      Class="app-header-username-chip text-truncate"
                                      title="@GetFullIdentity(auth)">
                                 @GetDisplayName(auth)
@@ -37,7 +37,7 @@
                                 <MudButton ButtonType="ButtonType.Submit"
                                            Variant="Variant.Outlined"
                                            Color="Color.Error"
-                                           Size="Size.Medium"
+                                           Size="Size.Small"
                                            StartIcon="@Icons.Material.Filled.Logout"
                                            Class="app-header-logout-btn">
                                     Log out
@@ -50,7 +50,7 @@
         </Authorized>
     </AuthorizeView>
     <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4 px-4 px-sm-5 board-main-container">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pt-1 pb-3 px-4 px-sm-5 board-main-container">
             @Body
         </MudContainer>
     </MudMainContent>

@@ -5,12 +5,22 @@ namespace App.Shared.RCL.Models;
 /// </summary>
 public static class TodoOrdering
 {
-    /// <summary>Active tab: manual order via <see cref="BoardItem.SortOrder"/> only.</summary>
-    public static IReadOnlyList<BoardItem> OrderForActiveTab(IEnumerable<BoardItem> items) =>
-        items
-            .OrderBy(x => x.SortOrder ?? double.MaxValue)
+    /// <summary>
+    /// Display-order offset so dated to-dos sort after all undated items while sharing one drag/reorder space.
+    /// </summary>
+    public const double DatedSortOrderOffset = 1_000_000_000.0;
+
+    /// <summary>Active tab: undated first, then manual order; uses a unified display order for drag midpoints.</summary>
+    public static IReadOnlyList<BoardItem> OrderForActiveTab(
+        IEnumerable<BoardItem> items,
+        Func<BoardItem, double?>? getSortOrder = null)
+    {
+        getSortOrder ??= static x => x.SortOrder;
+        return items
+            .OrderBy(x => GetActiveDisplayOrder(x, getSortOrder))
             .ThenBy(x => x.Id)
             .ToList();
+    }
 
     /// <summary>Scheduled tab: due date ascending (caller filters to dated items only).</summary>
     public static IReadOnlyList<BoardItem> OrderForScheduledTab(IEnumerable<BoardItem> items) =>
@@ -19,4 +29,70 @@ public static class TodoOrdering
             .ThenBy(x => x.SortOrder ?? double.MaxValue)
             .ThenBy(x => x.Id)
             .ToList();
+
+    /// <summary>Maps stored <see cref="BoardItem.SortOrder"/> to the value used for Active-tab ordering and drag midpoints.</summary>
+    public static double GetActiveDisplayOrder(BoardItem item, Func<BoardItem, double?> getSortOrder)
+    {
+        var order = getSortOrder(item) ?? double.MaxValue;
+        return item.TodoDueDate.HasValue ? DatedSortOrderOffset + order : order;
+    }
+
+    /// <summary>Converts a display-order midpoint back to persisted <see cref="BoardItem.SortOrder"/>.</summary>
+    public static double ToStoredSortOrder(BoardItem item, double displayOrder) =>
+        item.TodoDueDate.HasValue ? displayOrder - DatedSortOrderOffset : displayOrder;
+
+    /// <summary>
+    /// Midpoint sort order after a drop on the Active tab; neighbours use the same ordering as <see cref="OrderForActiveTab"/>.
+    /// </summary>
+    public static double? ComputeMidpointSortOrderForActiveTab(
+        IReadOnlyList<BoardItem> reordered,
+        int insertAt,
+        Func<BoardItem, double?> getSortOrder)
+    {
+        var item = reordered[insertAt];
+        var hasPrev = insertAt > 0;
+        var hasNext = insertAt < reordered.Count - 1;
+        var prev = hasPrev ? reordered[insertAt - 1] : null;
+        var next = hasNext ? reordered[insertAt + 1] : null;
+        var itemDated = item.TodoDueDate.HasValue;
+        var prevDated = prev?.TodoDueDate.HasValue ?? false;
+        var nextDated = next?.TodoDueDate.HasValue ?? false;
+
+        // Undated item placed just above the dated block: step above previous undated neighbour.
+        if (!itemDated && hasPrev && !prevDated && (!hasNext || nextDated))
+        {
+            return ToStoredSortOrder(item, GetActiveDisplayOrder(prev!, getSortOrder) + 1.0);
+        }
+
+        // Dated item placed at the top of the dated block (directly under undated items).
+        if (itemDated && hasPrev && !prevDated)
+        {
+            if (hasNext && nextDated)
+            {
+                var nextDisplay = GetActiveDisplayOrder(next!, getSortOrder);
+                var midDisplay = (DatedSortOrderOffset + nextDisplay) / 2.0;
+                return ToStoredSortOrder(item, midDisplay);
+            }
+
+            return ToStoredSortOrder(item, DatedSortOrderOffset + 1.0);
+        }
+
+        // Undated at the very top (no undated neighbour above).
+        if (!itemDated && !hasPrev)
+        {
+            if (hasNext && !nextDated)
+            {
+                return ToStoredSortOrder(item, GetActiveDisplayOrder(next!, getSortOrder) - 1.0);
+            }
+
+            return BoardItemReorder.SortOrderForNewItem(
+                reordered.Where(x => !x.TodoDueDate.HasValue).Select(getSortOrder).Min());
+        }
+
+        var displayMid = BoardItemReorder.ComputeMidpointSortOrder(
+            reordered,
+            insertAt,
+            i => GetActiveDisplayOrder(i, getSortOrder));
+        return displayMid is null ? null : ToStoredSortOrder(item, displayMid.Value);
+    }
 }

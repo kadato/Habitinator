@@ -488,7 +488,7 @@
     private IReadOnlyList<BoardItem> OrderTodos(IReadOnlyList<BoardItem> items) =>
         _todoFilter switch
         {
-            TodoListFilter.Active => OrderBySort(items),
+            TodoListFilter.Active => TodoOrdering.OrderForActiveTab(items, GetEffectiveSortOrder),
             TodoListFilter.Scheduled => TodoOrdering.OrderForScheduledTab(items),
             _ => OrderBySort(items)
         };
@@ -583,7 +583,6 @@
             return;
         }
 
-        Console.WriteLine($"[DRAG_DEBUG] Drop: '{sourceItem.Title}' (id={sourceItem.Id}) dragged from sourceIndex={sourceIndex} to IndexInZone={dropInfo.IndexInZone}. Total visible count={visible.Count}");
         var insertAt = dropInfo.IndexInZone;
         if (insertAt < 0)
         {
@@ -617,7 +616,9 @@
         }
         _dropItems = _dropItems.OrderBy(x => x.Order).ToList();
 
-        var newSortOrder = BoardItemReorder.ComputeMidpointSortOrder(reordered, insertAt, GetEffectiveSortOrder);
+        var newSortOrder = Section == BoardSection.Todo && _todoFilter == TodoListFilter.Active
+            ? TodoOrdering.ComputeMidpointSortOrderForActiveTab(reordered, insertAt, GetEffectiveSortOrder)
+            : BoardItemReorder.ComputeMidpointSortOrder(reordered, insertAt, GetEffectiveSortOrder);
         if (newSortOrder is not { } sortOrder)
         {
             SyncDropItems();

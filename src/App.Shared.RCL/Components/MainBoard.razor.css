@@ -40,10 +40,20 @@
     padding-top: 0.5rem;
 }
 
+/* Keep section tab panels from overlapping the tab bar */
+.board-section-tabs ::deep .mud-tabs-panels {
+    position: relative;
+    overflow: hidden;
+}
+
 @media (max-width: 959.98px) {
+    .board-shell {
+        --board-sticky-top: var(--app-top-bar-offset, 6.25rem);
+    }
+
     .board-columns-mobile {
         display: block !important;
-        margin-top: -6px !important;
+        margin-top: 0 !important;
     }
 
     .board-columns-desktop {

@@ -7,6 +7,11 @@
     padding-left: 0.5rem;
     padding-right: 0.5rem;
     column-gap: 1rem;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    background-color: color-mix(in srgb, var(--mud-palette-surface) 82%, transparent) !important;
+    border-bottom: 1px solid var(--mud-palette-divider) !important;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05) !important;
 }
 
 ::deep .app-top-bar.mud-appbar {
@@ -65,25 +70,91 @@
     margin: 0;
     margin-right: 0.9rem;
     flex-shrink: 0;
+    font-weight: 850 !important;
+    letter-spacing: -0.03em !important;
+    background: linear-gradient(135deg, var(--mud-palette-primary) 0%, var(--mud-palette-tertiary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1.15 !important;
 }
 
-/* Account rail: signed-in user + log out (kept on the far right, same as web). */
+::deep .app-top-bar__section {
+    color: var(--mud-palette-text-secondary) !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.02em;
+    line-height: 1.2 !important;
+    margin-top: 0.05rem;
+}
+
+::deep .app-header-profile-btn.mud-icon-button {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 12px !important;
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent) !important;
+}
+
+/* Micro-animations */
+@keyframes branding-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.85; transform: scale(1.04); }
+}
+
+::deep .animate-pulse {
+    animation: branding-pulse 3s infinite ease-in-out;
+}
+
+/* Account rail */
 ::deep .app-header-user-rail {
     gap: 0.6rem 0.9rem;
     justify-content: flex-end;
-    flex-wrap: wrap;
 }
 
-::deep .app-header-username-chip {
+::deep .app-header-username-btn {
     max-width: 12rem;
     font-weight: 600;
     font-size: 0.9rem;
+    text-transform: none !important;
 }
 
-::deep .app-header-logout-btn {
-    min-width: 6.5rem;
-    font-weight: 600;
-    text-transform: none !important;
+/* Profile Menu Dropdown Popover */
+::deep .app-profile-menu-popover {
+    margin-top: 8px;
+    border-radius: 12px !important;
+    border: 1px solid var(--mud-palette-divider) !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
+    background-color: var(--mud-palette-surface) !important;
+    overflow: hidden;
+}
+
+::deep .app-profile-menu-popover .dropdown-header {
+    background-color: color-mix(in srgb, var(--mud-palette-text-primary) 4%, transparent);
+}
+
+
+
+
+::deep .app-top-bar__stack {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.35rem;
+}
+
+@media (max-width: 767.98px) {
+    ::deep .board-main-container.mud-container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    ::deep .app-top-bar.mud-appbar {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    ::deep .app-top-bar__title {
+        font-size: 1.05rem !important;
+        margin-right: 0;
+    }
 }
 
 @media (min-width: 1280px) {
@@ -93,3 +164,4 @@
         padding-right: 2rem !important;
     }
 }
+

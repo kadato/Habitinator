@@ -2,81 +2,81 @@
 @inject NavigationManager Nav
 
 @{
-    var navClass = Mode == AppNavMode.AuthLinks
-        ? "app-header-nav app-header-nav--auth d-flex flex-wrap align-center"
-        : "app-header-nav d-flex flex-wrap align-center";
+    var navClass = MobileTopBar
+        ? "app-mobile-nav"
+        : BottomBar
+            ? "app-bottom-nav"
+            : $"app-header-nav {(Vertical ? "flex-column align-stretch w-100" : "d-flex flex-wrap align-center")}";
+    if (!MobileTopBar && !BottomBar && Mode == AppNavMode.AuthLinks)
+    {
+        navClass += " app-header-nav--auth";
+    }
 }
-<div class="@navClass">
+
+@if (MobileTopBar)
+{
     @if (Mode is AppNavMode.Full or AppNavMode.BoardOnly)
     {
-        <MudButton Href="/"
-                   Variant="@(IsActivePath("", NavLinkMatch.All) ? Variant.Filled : Variant.Outlined)"
-                   Color="Color.Primary"
-                   Size="Size.Small"
-                   StartIcon="@Icons.Material.Filled.SpaceDashboard"
-                   Class="app-header-nav-btn text-transform-none">
-            Board
-        </MudButton>
-        <AuthorizeView>
-            <Authorized>
-                <MudButton Href="/stats"
-                           Variant="@(IsActivePath("stats", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
-                           Color="Color.Primary"
-                           Size="Size.Small"
-                           StartIcon="@Icons.Material.Filled.BarChart"
-                           Class="app-header-nav-btn text-transform-none">
-                    Statistics
-                </MudButton>
-                <MudButton Href="/settings"
-                           Variant="@(IsActivePath("settings", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
-                           Color="Color.Primary"
-                           Size="Size.Small"
-                           StartIcon="@Icons.Material.Filled.Notifications"
-                           Class="app-header-nav-btn text-transform-none">
-                    Settings
-                </MudButton>
-            </Authorized>
-        </AuthorizeView>
+        <nav class="@navClass" role="navigation" aria-label="Main navigation">
+            @MobileNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
+            @MobileNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Stats")
+            @MobileNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Notifications, "Settings")
+        </nav>
     }
-    @if (Mode is AppNavMode.Full)
+}
+else if (BottomBar)
+{
+    @if (Mode is AppNavMode.Full or AppNavMode.BoardOnly)
     {
-        <AuthorizeView>
-            <NotAuthorized>
-                @AuthLinkButtons
-            </NotAuthorized>
-        </AuthorizeView>
+        <nav class="@navClass" role="navigation" aria-label="Main navigation">
+            @BottomNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
+            @BottomNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Statistics")
+            @BottomNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Notifications, "Settings")
+        </nav>
     }
-    @if (Mode is AppNavMode.AuthLinks)
-    {
-        <AuthorizeView>
-            <NotAuthorized>
-                @AuthLinkButtons
-            </NotAuthorized>
-        </AuthorizeView>
-    }
-</div>
+}
+else
+{
+    <div class="@navClass">
+        @if (Mode is AppNavMode.Full or AppNavMode.BoardOnly)
+        {
+            @HeaderNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
+            <AuthorizeView>
+                <Authorized>
+                    @HeaderNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Statistics")
+                    @HeaderNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Notifications, "Settings")
+                </Authorized>
+            </AuthorizeView>
+        }
+        @if (Mode is AppNavMode.Full)
+        {
+            <AuthorizeView>
+                <NotAuthorized>
+                    @AuthLinkButtons
+                </NotAuthorized>
+            </AuthorizeView>
+        }
+        @if (Mode is AppNavMode.AuthLinks)
+        {
+            <AuthorizeView>
+                <NotAuthorized>
+                    @AuthLinkButtons
+                </NotAuthorized>
+            </AuthorizeView>
+        }
+    </div>
+}
 
 @code {
     [Parameter] public AppNavMode Mode { get; set; } = AppNavMode.Full;
+    [Parameter] public bool Vertical { get; set; }
+    [Parameter] public bool BottomBar { get; set; }
+    [Parameter] public bool MobileTopBar { get; set; }
 
     private RenderFragment AuthLinkButtons => __builder =>
     {
-        <MudButton Href="auth/login"
-                   Variant="@(IsActivePath("auth/login", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
-                   Color="Color.Secondary"
-                   Size="Size.Small"
-                   StartIcon="@Icons.Material.Filled.Login"
-                   Class="app-header-nav-btn text-transform-none">
-            Login
-        </MudButton>
-        <MudButton Href="auth/register"
-                   Variant="@(IsActivePath("auth/register", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
-                   Color="Color.Secondary"
-                   Size="Size.Small"
-                   StartIcon="@Icons.Material.Filled.PersonAdd"
-                   Class="app-header-nav-btn text-transform-none">
-            Register
-        </MudButton>
+        @HeaderNavItem("auth/login", "auth/login", NavLinkMatch.Prefix, Icons.Material.Filled.Login, "Login")
+        @HeaderNavItem("auth/register", "auth/register", NavLinkMatch.Prefix, Icons.Material.Filled.PersonAdd, "Register")
     };
 
     protected override void OnInitialized()
@@ -117,4 +117,42 @@
         return rel.StartsWith(p, StringComparison.OrdinalIgnoreCase);
     }
 
+    private RenderFragment MobileNavItem(string href, string path, NavLinkMatch match, string icon, string label) => __builder =>
+    {
+        var active = IsActivePath(path, match);
+        var itemClass = active ? "app-mobile-nav__item app-mobile-nav__item--active" : "app-mobile-nav__item";
+        <a href="@href" class="@itemClass" aria-current="@(active ? "page" : null)">
+            <MudIcon Icon="@icon" Class="app-mobile-nav__icon" />
+            <span class="app-mobile-nav__label">@label</span>
+        </a>
+    };
+
+    private RenderFragment BottomNavItem(string href, string path, NavLinkMatch match, string icon, string label) => __builder =>
+    {
+        var active = IsActivePath(path, match);
+        var itemClass = active ? "app-bottom-nav__item app-bottom-nav__item--active" : "app-bottom-nav__item";
+        <a href="@href" class="@itemClass" aria-current="@(active ? "page" : null)" aria-label="@label">
+            <span class="app-bottom-nav__icon-wrap" aria-hidden="true">
+                <MudIcon Icon="@icon" Class="app-bottom-nav__icon" />
+            </span>
+            <span class="app-bottom-nav__label">@label</span>
+        </a>
+    };
+
+    private RenderFragment HeaderNavItem(string href, string path, NavLinkMatch match, string icon, string label) => __builder =>
+    {
+        var active = IsActivePath(path, match);
+        var slotClass = active ? "app-header-nav-slot app-header-nav-slot--active" : "app-header-nav-slot";
+        <span class="@slotClass">
+            <MudButton Href="@href"
+                       Variant="@(active ? Variant.Filled : Variant.Text)"
+                       Color="@(active ? Color.Primary : Color.Default)"
+                       Size="Size.Medium"
+                       StartIcon="@icon"
+                       Class="app-header-nav-btn text-transform-none"
+                       aria-current="@(active ? "page" : null)">
+                @label
+            </MudButton>
+        </span>
+    };
 }

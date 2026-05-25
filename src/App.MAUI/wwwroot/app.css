@@ -1,5 +1,5 @@
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: var(--hab-font-sans);
     background: var(--mud-palette-background);
     color: var(--mud-palette-text-primary);
     -webkit-tap-highlight-color: transparent;
@@ -260,6 +260,125 @@ h1:focus {
     text-transform: none !important;
 }
 
+.app-show-mobile-only {
+    display: none !important;
+}
+
+.app-show-desktop-only {
+    display: flex !important;
+}
+
+@media (max-width: 767.98px) {
+    .app-show-mobile-only {
+        display: inline-flex !important;
+    }
+
+    .app-show-desktop-only {
+        display: none !important;
+    }
+
+    .app-shell-layout {
+        --app-top-bar-offset: 6.25rem;
+        --board-sticky-top: 6.25rem;
+    }
+
+    .app-shell-layout .app-shell-main.mud-main-content {
+        padding-top: var(--app-top-bar-offset) !important;
+    }
+}
+
+/* Desktop header nav — global styles (MudButton root is outside component CSS isolation) */
+.app-header-nav {
+    gap: 0.35rem 0.5rem;
+    margin-left: 0;
+    align-items: center;
+}
+
+.app-header-nav-slot {
+    display: inline-flex;
+    align-items: center;
+    height: 2.25rem;
+    box-sizing: border-box;
+}
+
+.app-header-nav .app-header-nav-slot .app-header-nav-btn.mud-button-root {
+    box-sizing: border-box;
+    height: 2.25rem !important;
+    min-height: 2.25rem !important;
+    margin: 0 !important;
+    padding: 0.5rem 1rem !important;
+    border: 1px solid transparent !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    font-weight: 600;
+    text-transform: none !important;
+}
+
+.app-header-nav .app-header-nav-slot:not(.app-header-nav-slot--active) .app-header-nav-btn.mud-button-root {
+    color: var(--mud-palette-text-secondary) !important;
+    background-color: transparent !important;
+}
+
+.app-header-nav .app-header-nav-slot:not(.app-header-nav-slot--active) .app-header-nav-btn.mud-button-root:hover {
+    color: var(--mud-palette-primary) !important;
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent) !important;
+}
+
+.app-header-nav .app-header-nav-slot--active .app-header-nav-btn.mud-button-filled.mud-button-filled-primary {
+    border-color: var(--mud-palette-primary) !important;
+}
+
+.app-top-bar__stack {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.35rem;
+}
+
+.app-mobile-nav {
+    display: none;
+    width: 100%;
+    gap: 0.35rem;
+}
+
+.app-mobile-nav__item {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.5rem;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--mud-palette-text-secondary);
+    font-weight: 600;
+    font-size: 0.82rem;
+    touch-action: manipulation;
+}
+
+.app-mobile-nav__item--active {
+    color: var(--mud-palette-primary);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 18%, transparent);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, transparent);
+}
+
+@media (max-width: 767.98px) {
+    .app-mobile-nav {
+        display: flex;
+    }
+
+    .app-top-bar.mud-appbar {
+        height: auto !important;
+    }
+
+    .app-top-bar .mud-toolbar-appbar {
+        height: auto !important;
+        align-items: stretch !important;
+    }
+}
 
 .status-bar-safe-area {
     display: none;

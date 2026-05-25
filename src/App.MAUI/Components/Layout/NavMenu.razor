@@ -2,37 +2,52 @@
 @inject NavigationManager Nav
 @inject IApiSession Session
 
-<div class="app-header-nav d-flex flex-wrap align-center">
+@{
+    var navClass = MobileTopBar
+        ? "app-mobile-nav"
+        : BottomBar
+            ? "app-bottom-nav"
+            : $"app-header-nav {(Vertical ? "flex-column align-stretch w-100" : "d-flex flex-wrap align-center")}";
+}
+
+@if (MobileTopBar)
+{
     @if (Session.IsLoggedIn)
     {
-        <MudButton OnClick="@(() => Nav.NavigateTo("/"))"
-                   Variant="@(IsActivePath("", NavLinkMatch.All) ? Variant.Filled : Variant.Outlined)"
-                   Color="Color.Primary"
-                   Size="Size.Small"
-                   StartIcon="@Icons.Material.Filled.SpaceDashboard"
-                   Class="app-header-nav-btn text-transform-none">
-            Board
-        </MudButton>
-        <MudButton OnClick="@(() => Nav.NavigateTo("/stats"))"
-                   Variant="@(IsActivePath("stats", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
-                   Color="Color.Primary"
-                   Size="Size.Small"
-                   StartIcon="@Icons.Material.Filled.BarChart"
-                   Class="app-header-nav-btn text-transform-none">
-            Statistics
-        </MudButton>
-        <MudButton OnClick="@(() => Nav.NavigateTo("/settings"))"
-                   Variant="@(IsActivePath("settings", NavLinkMatch.Prefix) ? Variant.Filled : Variant.Outlined)"
-                   Color="Color.Primary"
-                   Size="Size.Small"
-                   StartIcon="@Icons.Material.Filled.Notifications"
-                   Class="app-header-nav-btn text-transform-none">
-            Settings
-        </MudButton>
+        <nav class="@navClass" role="navigation" aria-label="Main navigation">
+            @MobileNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
+            @MobileNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Stats")
+            @MobileNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Notifications, "Settings")
+        </nav>
     }
-</div>
+}
+else if (BottomBar)
+{
+    @if (Session.IsLoggedIn)
+    {
+        <nav class="@navClass" role="navigation" aria-label="Main navigation">
+            @BottomNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
+            @BottomNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Statistics")
+            @BottomNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Notifications, "Settings")
+        </nav>
+    }
+}
+else
+{
+    <div class="@navClass">
+        @if (Session.IsLoggedIn)
+        {
+            @HeaderNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
+            @HeaderNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Statistics")
+            @HeaderNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Notifications, "Settings")
+        }
+    </div>
+}
 
 @code {
+    [Parameter] public bool Vertical { get; set; }
+    [Parameter] public bool BottomBar { get; set; }
+    [Parameter] public bool MobileTopBar { get; set; }
 
     protected override void OnInitialized()
     {
@@ -54,6 +69,11 @@
     {
         Nav.LocationChanged -= OnLocationChanged;
         Session.Changed -= OnSessionChanged;
+    }
+
+    private void NavigateAndRefresh(string uri)
+    {
+        Nav.NavigateTo(uri);
     }
 
     private bool IsActivePath(string path, NavLinkMatch match)
@@ -79,4 +99,49 @@
         return rel.StartsWith(p, StringComparison.OrdinalIgnoreCase);
     }
 
+    private RenderFragment MobileNavItem(string uri, string path, NavLinkMatch match, string icon, string label) => __builder =>
+    {
+        var active = IsActivePath(path, match);
+        var itemClass = active ? "app-mobile-nav__item app-mobile-nav__item--active" : "app-mobile-nav__item";
+        <button type="button"
+                class="@itemClass"
+                aria-current="@(active ? "page" : null)"
+                @onclick="@(() => NavigateAndRefresh(uri))">
+            <MudIcon Icon="@icon" Class="app-mobile-nav__icon" />
+            <span class="app-mobile-nav__label">@label</span>
+        </button>
+    };
+
+    private RenderFragment BottomNavItem(string uri, string path, NavLinkMatch match, string icon, string label) => __builder =>
+    {
+        var active = IsActivePath(path, match);
+        var itemClass = active ? "app-bottom-nav__item app-bottom-nav__item--active" : "app-bottom-nav__item";
+        <button type="button"
+                class="@itemClass"
+                aria-current="@(active ? "page" : null)"
+                aria-label="@label"
+                @onclick="@(() => NavigateAndRefresh(uri))">
+            <span class="app-bottom-nav__icon-wrap" aria-hidden="true">
+                <MudIcon Icon="@icon" Class="app-bottom-nav__icon" />
+            </span>
+            <span class="app-bottom-nav__label">@label</span>
+        </button>
+    };
+
+    private RenderFragment HeaderNavItem(string uri, string path, NavLinkMatch match, string icon, string label) => __builder =>
+    {
+        var active = IsActivePath(path, match);
+        var slotClass = active ? "app-header-nav-slot app-header-nav-slot--active" : "app-header-nav-slot";
+        <span class="@slotClass">
+            <MudButton OnClick="@(() => NavigateAndRefresh(uri))"
+                       Variant="@(active ? Variant.Filled : Variant.Text)"
+                       Color="@(active ? Color.Primary : Color.Default)"
+                       Size="Size.Medium"
+                       StartIcon="@icon"
+                       Class="app-header-nav-btn text-transform-none"
+                       aria-current="@(active ? "page" : null)">
+                @label
+            </MudButton>
+        </span>
+    };
 }

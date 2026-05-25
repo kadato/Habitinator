@@ -4,7 +4,10 @@
 @using global::App.Shared.RCL.Themes
 @implements IDisposable
 @inherits LayoutComponentBase
+@rendermode @(new InteractiveServerRenderMode(false))
 @inject IUserPreferencesService PreferencesService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
 
 <MudThemeProvider @ref="_mudThemeProvider" Theme="@HabitinatorMudTheme.Default" @bind-IsDarkMode="@_isDarkMode"/>
 <MudPopoverProvider/>
@@ -12,44 +15,74 @@
 <MudSnackbarProvider/>
 <TimeZoneInitializer />
 
-<MudLayout>
+<form id="globalLogoutForm" method="post" action="/api/auth/cookie-logout" style="display: none;"></form>
+
+<MudLayout Class="app-shell-layout">
     <AuthorizeView>
         <Authorized Context="auth">
             <MudAppBar Elevation="0" Dense="true" Class="app-top-bar" ToolBarClass="app-top-bar-toolbar">
-                <div class="app-top-bar__row d-flex">
-                    <div class="app-top-bar__left d-flex flex-wrap align-center">
-                        <MudText Typo="Typo.h6" Class="app-top-bar__title">Habitinator</MudText>
-                        <NavMenu Mode="AppNavMode.Full"/>
-                    </div>
-                    <div class="app-top-bar__flex-spacer" aria-hidden="true"></div>
-                    <div class="app-top-bar__right d-flex flex-wrap align-center">
-                        <div class="app-header-user-rail d-flex flex-wrap align-center">
-                              <MudChip T="string"
-                                     Icon="@Icons.Material.Filled.AccountCircle"
-                                     Color="Color.Primary"
-                                     Variant="Variant.Filled"
-                                     Size="Size.Small"
-                                     Class="app-header-username-chip text-truncate"
-                                     title="@GetFullIdentity(auth)">
-                                @GetDisplayName(auth)
-                            </MudChip>
-                            <form method="post" action="/api/auth/cookie-logout" class="d-inline m-0 app-header-logout-form">
-                                <MudButton ButtonType="ButtonType.Submit"
-                                           Variant="Variant.Outlined"
-                                           Color="Color.Error"
-                                           Size="Size.Small"
-                                           StartIcon="@Icons.Material.Filled.Logout"
-                                           Class="app-header-logout-btn">
-                                    Log out
-                                </MudButton>
-                            </form>
+                <div class="app-top-bar__stack w-100">
+                    <div class="app-top-bar__row d-flex">
+                        <div class="app-top-bar__left d-flex align-center">
+                            <div class="app-branding d-flex flex-column justify-center">
+                                <MudText Typo="Typo.h6" Class="app-top-bar__title mb-0">Habitinator</MudText>
+                            </div>
+                            <div class="app-show-desktop-only align-center">
+                                <NavMenu Mode="AppNavMode.Full"/>
+                            </div>
+                        </div>
+                        <div class="app-top-bar__flex-spacer" aria-hidden="true"></div>
+                        <div class="app-top-bar__right d-flex align-center">
+                            <div class="app-header-user-rail d-flex align-center">
+                                <MudMenu AnchorOrigin="Origin.BottomRight"
+                                         TransformOrigin="Origin.TopRight"
+                                         Dense="true"
+                                         PopoverFixed="true"
+                                         PopoverClass="app-profile-menu-popover">
+                                    <ActivatorContent Context="profileMenu">
+                                        <MudIconButton Icon="@Icons.Material.Filled.AccountCircle"
+                                                       Color="Color.Primary"
+                                                       Size="Size.Medium"
+                                                       Class="app-header-profile-btn app-show-mobile-only"
+                                                       aria-label="Account menu"
+                                                       OnClick="@(e => profileMenu.ToggleAsync(e))" />
+                                        <MudButton StartIcon="@Icons.Material.Filled.AccountCircle"
+                                                   Color="Color.Primary"
+                                                   Variant="Variant.Filled"
+                                                   Size="Size.Medium"
+                                                   Class="app-header-username-btn text-transform-none app-show-desktop-only"
+                                                   OnClick="@(e => profileMenu.ToggleAsync(e))">
+                                            @GetDisplayName(auth)
+                                        </MudButton>
+                                    </ActivatorContent>
+                                    <ChildContent>
+                                        <div class="px-4 py-3 border-bottom d-flex flex-column dropdown-header" style="min-width: 220px;">
+                                            <MudText Typo="Typo.subtitle2" Class="font-weight-bold dropdown-name">@GetDisplayName(auth)</MudText>
+                                            <MudText Typo="Typo.caption" Class="text-secondary text-truncate dropdown-email">@auth.User.FindFirst(ClaimTypes.Email)?.Value</MudText>
+                                        </div>
+                                        <MudDivider Class="my-1"/>
+                                        <MudMenuItem Icon="@Icons.Material.Filled.Logout" IconColor="Color.Error" Class="text-danger" OnClick="TriggerLogout">
+                                            <MudText Color="Color.Error" Class="font-weight-semibold">Log out</MudText>
+                                        </MudMenuItem>
+                                    </ChildContent>
+                                </MudMenu>
+                            </div>
                         </div>
                     </div>
+                    <NavMenu Mode="AppNavMode.Full" MobileTopBar="true" />
                 </div>
             </MudAppBar>
         </Authorized>
+        <NotAuthorized>
+            <MudAppBar Elevation="0" Dense="true" Class="app-top-bar app-top-bar--guest" ToolBarClass="app-top-bar-toolbar">
+                <MudText Typo="Typo.h6" Class="app-top-bar__title mb-0">Habitinator</MudText>
+                <MudSpacer />
+                <MudButton Href="/auth/login" Variant="Variant.Text" Color="Color.Inherit" Class="text-transform-none app-show-mobile-only">Sign in</MudButton>
+                <MudButton Href="/auth/register" Variant="Variant.Filled" Color="Color.Primary" Class="text-transform-none ms-1">Register</MudButton>
+            </MudAppBar>
+        </NotAuthorized>
     </AuthorizeView>
-    <MudMainContent>
+    <MudMainContent Class="app-shell-main">
         <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pt-1 pb-3 px-4 px-sm-5 board-main-container">
             @Body
         </MudContainer>
@@ -70,6 +103,10 @@
 </div>
 
 @code {
+    private async Task TriggerLogout()
+    {
+        await JS.InvokeVoidAsync("eval", "document.getElementById('globalLogoutForm').submit()");
+    }
 
     private UserPreferences? _preferences;
     private bool _isDarkMode = true;
@@ -78,7 +115,13 @@
     protected override async Task OnInitializedAsync()
     {
         PreferencesService.Changed += OnPreferencesChanged;
+        Nav.LocationChanged += OnLocationChanged;
         await LoadPreferencesAsync();
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _ = InvokeAsync(StateHasChanged);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -93,6 +136,7 @@
     public void Dispose()
     {
         PreferencesService.Changed -= OnPreferencesChanged;
+        Nav.LocationChanged -= OnLocationChanged;
     }
 
     private void OnPreferencesChanged()

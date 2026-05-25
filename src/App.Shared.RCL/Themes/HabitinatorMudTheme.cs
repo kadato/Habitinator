@@ -64,6 +64,7 @@ public static class HabitinatorMudTheme
         LayoutProperties = new LayoutProperties
         {
             DefaultBorderRadius = "0.375rem"
-        }
+        },
+        Typography = HabitinatorTypography.Create()
     };
 }

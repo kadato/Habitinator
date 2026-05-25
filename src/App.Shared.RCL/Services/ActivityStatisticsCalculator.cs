@@ -91,9 +91,19 @@ public static class ActivityStatisticsCalculator
         ApplyNetToggleCountsToPerDay(perDay, netTodoItemDay);
 
         var maxDayCount = 0;
+        DateOnly? busiestDay = null;
         foreach (var kv in perDay)
+        {
             if (kv.Value.count > maxDayCount)
+            {
                 maxDayCount = kv.Value.count;
+                busiestDay = kv.Key;
+            }
+            else if (kv.Value.count == maxDayCount && maxDayCount > 0 && kv.Key > busiestDay)
+            {
+                busiestDay = kv.Key;
+            }
+        }
 
         var totalEvents = rows.Count;
         var totalFocusSec = rows
@@ -170,6 +180,7 @@ public static class ActivityStatisticsCalculator
             totalEvents,
             totalFocusMinutes,
             maxDayCount,
+            busiestDay,
             start,
             end,
             heatmapSpanDays,

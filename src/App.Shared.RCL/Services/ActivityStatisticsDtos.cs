@@ -61,6 +61,7 @@ public sealed record ActivityDashboardDto(
     int TotalEvents,
     int TotalFocusMinutes,
     int MaxDayCount,
+    DateOnly? BusiestDay,
     DateOnly RangeStart,
     DateOnly RangeEnd,
     int HeatmapDataDayCount,

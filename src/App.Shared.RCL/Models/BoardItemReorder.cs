@@ -5,6 +5,9 @@ namespace App.Shared.RCL.Models;
 /// </summary>
 public static class BoardItemReorder
 {
+    /// <summary>Sort order for a newly created item so it appears at the top of its column.</summary>
+    public static double SortOrderForNewItem(double? currentMinimum) => (currentMinimum ?? 1.0) - 1.0;
+
     /// <summary>
     /// Inserts <paramref name="sourceIndex"/> relative to <paramref name="targetIndex"/> after removing the source.
     /// When <paramref name="insertBefore"/> is false, inserts after the target (drag-down semantics).

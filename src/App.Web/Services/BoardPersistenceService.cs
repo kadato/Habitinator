@@ -191,7 +191,7 @@ public sealed class BoardPersistenceService
                 DailyLastCompletedOn = null,
                 CreatedAtUtc = utcNow,
                 UpdatedAtUtc = utcNow,
-                SortOrder = await GetNextSortOrderAsync(userId, section, cancellationToken)
+                SortOrder = await GetInitialSortOrderAsync(userId, section, cancellationToken)
             };
 
             _dbContext.BoardItems.Add(entity);
@@ -1280,13 +1280,13 @@ public sealed class BoardPersistenceService
         return entity.DailyLastCompletedOn is null && entity.IsCompleted;
     }
 
-    private async Task<double> GetNextSortOrderAsync(Guid userId, BoardSection section, CancellationToken cancellationToken)
+    private async Task<double> GetInitialSortOrderAsync(Guid userId, BoardSection section, CancellationToken cancellationToken)
     {
-        var max = await _dbContext.BoardItems
+        var min = await _dbContext.BoardItems
             .Where(x => x.UserId == userId && x.Section == section && x.DeletedAtUtc == null)
             .Select(x => (double?)x.SortOrder)
-            .MaxAsync(cancellationToken);
-        return (max ?? 0) + 1.0;
+            .MinAsync(cancellationToken);
+        return BoardItemReorder.SortOrderForNewItem(min);
     }
 
     public Task LogActivityAsync(

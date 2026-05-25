@@ -98,7 +98,7 @@ public sealed class LocalFirstBoardDataService(
             {
                 var id = itemId ?? Guid.NewGuid();
                 var now = DateTimeOffset.UtcNow;
-                var sortOrder = await GetNextLocalSortOrderAsync(db, userKey, section, cancellationToken);
+                var sortOrder = await GetInitialLocalSortOrderAsync(db, userKey, section, cancellationToken);
                 var item = new BoardItem(id, title.Trim(), CreatedAtUtc: now, SortOrder: sortOrder);
                 db.BoardItems.Add(LocalBoardItemRow.FromModel(section, userKey, item, true));
                 var payload = new CreateOutboxPayload(section, item.Title, id);
@@ -1224,16 +1224,16 @@ public sealed class LocalFirstBoardDataService(
         }
     }
 
-    private static async Task<double> GetNextLocalSortOrderAsync(
+    private static async Task<double> GetInitialLocalSortOrderAsync(
         LocalBoardDbContext db,
         string userKey,
         BoardSection section,
         CancellationToken cancellationToken)
     {
-        var max = await db.BoardItems
+        var min = await db.BoardItems
             .Where(x => x.UserKey == userKey && x.Section == section)
             .Select(x => x.SortOrder)
-            .MaxAsync(cancellationToken);
-        return (max ?? 0) + 1.0;
+            .MinAsync(cancellationToken);
+        return BoardItemReorder.SortOrderForNewItem(min);
     }
 }

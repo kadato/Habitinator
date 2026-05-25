@@ -4,6 +4,13 @@ namespace App.Shared.Tests;
 
 public sealed class BoardItemReorderTests
 {
+    [Fact]
+    public void SortOrderForNewItem_is_below_current_minimum()
+    {
+        Assert.Equal(4.0, BoardItemReorder.SortOrderForNewItem(5.0));
+        Assert.Equal(0.0, BoardItemReorder.SortOrderForNewItem(null));
+    }
+
     [Theory]
     [InlineData(0, 2, true, 1)]
     [InlineData(0, 2, false, 2)]

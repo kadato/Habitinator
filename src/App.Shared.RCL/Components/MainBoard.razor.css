@@ -43,6 +43,7 @@
 @media (max-width: 959.98px) {
     .board-columns-mobile {
         display: block !important;
+        margin-top: -6px !important;
     }
 
     .board-columns-desktop {
@@ -52,6 +53,7 @@
 
 .board-columns-grid {
     flex-shrink: 0;
+    margin-top: -12px !important;
 }
 
 .board-stat-strip {
@@ -61,84 +63,12 @@
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18), inset 0 1px 0 color-mix(in srgb, var(--mud-palette-text-primary) 5%, transparent);
     backdrop-filter: blur(8px);
     margin-bottom: 0.1rem;
+    padding-top: 0.4rem !important;
+    padding-bottom: 0.4rem !important;
 }
 
 /* Count chips (left) + search & tags (right) in one bar. */
-.board-stat-strip-row {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.65rem 1rem;
-    min-width: 0;
-}
-
-.board-stat-chips {
-    flex: 0 1 auto;
-    min-width: 0;
-}
-
-.board-stat-filters {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.5rem;
-    min-width: min(100%, 11rem);
-}
-
-.board-search-field.board-search-pill {
-    flex: 1 1 8rem;
-    min-width: 0;
-    max-width: 14rem;
-}
-
-@media (max-width: 599.98px) {
-    .board-stat-strip-row {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .board-stat-chips {
-        width: 100%;
-    }
-
-    .board-stat-filters {
-        width: 100%;
-        justify-content: stretch;
-        min-width: 0;
-    }
-
-    .board-search-field.board-search-pill {
-        flex: 1 1 100%;
-        max-width: 100%;
-    }
-
-    .board-tags-menu-activator {
-        width: 100%;
-    }
-
-    .board-tags-menu-activator ::deep .board-tags-trigger {
-        width: 100%;
-    }
-}
-
-.board-search-pill ::deep .mud-input-outlined {
-    border-radius: 9999px;
-}
-
-.board-search-pill ::deep .mud-input-control {
-    margin-top: 0;
-    margin-bottom: 0;
-}
-
-.board-search-pill ::deep .mud-input-slot input {
-    font-size: 0.8125rem;
-    min-height: 1.85rem;
-}
+/* Centered and compact search & tags in one bar. Styling is in inline <style> in MainBoard.razor */
 
 .board-tags-menu-activator {
     display: inline-flex;
@@ -158,14 +88,6 @@
 
 .board-tags-trigger {
     flex-shrink: 0;
-}
-
-.board-tags-trigger--strip {
-    min-height: 2rem;
-    padding-top: 0.15rem !important;
-    padding-bottom: 0.15rem !important;
-    font-size: 0.8rem;
-    border-radius: 9999px !important;
 }
 
 .board-tags-menu-panel {
@@ -189,3 +111,4 @@
 .habitica-board-wrap {
     max-width: 100%;
 }
+

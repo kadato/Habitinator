@@ -12,6 +12,113 @@
 @inject IUserDateFormatService DateFormatService
 @inject IUndoService UndoService
 
+<style>
+    /* Centered search and tags filter row on desktop */
+    .board-stat-strip-row {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.65rem 1rem !important;
+        width: 100% !important;
+    }
+
+    .board-stat-filters {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.75rem !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        max-width: 45rem !important; /* desktop max-width: wider search bar */
+    }
+
+    /* Search field */
+    .board-search-pill {
+        flex-grow: 1 !important;
+        min-width: 0 !important;
+    }
+
+    .board-search-pill .mud-input-outlined {
+        border-radius: 9999px !important;
+        height: 2.5rem !important; /* matching height */
+        align-items: center !important;
+    }
+
+    .board-search-pill .mud-input-control {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+    .board-search-pill .mud-input-slot input {
+        font-size: 0.875rem !important;
+        height: 100% !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+
+    /* Hide helper container to remove bottom space */
+    .board-stat-filters .mud-input-control-helper-container {
+        display: none !important;
+    }
+
+    /* Tags Button */
+    .board-tags-trigger--strip {
+        height: 2.5rem !important; /* matching height */
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        font-size: 0.85rem !important;
+        border-radius: 8px !important; /* squared tags button */
+    }
+
+    /* Header flex row for desktop */
+    .habitica-column-header-flex {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 0.5rem !important;
+        width: 100% !important;
+    }
+
+    /* Mobile overrides */
+    @@media (max-width: 959.98px) {
+        .board-stat-filters {
+            width: 100% !important;
+            max-width: none !important;
+            justify-content: space-between !important;
+        }
+
+        .board-search-pill {
+            width: 100% !important;
+            max-width: none !important;
+        }
+
+        /* Hide column card titles ("Habits", "Dailies", etc.) and badges in mobile tabbed view */
+        .board-columns-mobile .habitica-column-header-row {
+            display: none !important;
+        }
+
+        .board-columns-mobile .mud-card-header {
+            padding-top: 0.35rem !important;
+            padding-bottom: 0.25rem !important;
+        }
+
+        /* More space below mobile nav tabs */
+        .board-section-tabs .mud-tab-panel-content {
+            padding-top: 1.25rem !important;
+        }
+
+        /* Align filter buttons to the right on mobile */
+        .board-columns-mobile .habitica-filter-toolbar {
+            justify-content: flex-end !important;
+        }
+    }
+</style>
+
 <MudStack Class="board-shell w-100" Spacing="1">
     @if (_isLoading && _initialLoadComplete)
     {
@@ -76,30 +183,7 @@
     {
         <MudPaper Class="px-3 py-2 board-stat-strip" Outlined="false" Elevation="0">
             <div class="board-stat-strip-row">
-                <MudStack Row="true"
-                          AlignItems="AlignItems.Center"
-                          Spacing="2"
-                          Class="board-stat-chips flex-wrap">
-                    <MudChip T="string"
-                             Icon="@BoardSectionVisuals.GetMudIcon(BoardSection.Habit)"
-                             Text="@($"{FilteredHabits.Count} habits")"
-                             Size="Size.Small"
-                             Variant="Variant.Text"
-                             Color="Color.Success"/>
-                    <MudChip T="string"
-                             Icon="@BoardSectionVisuals.GetMudIcon(BoardSection.Daily)"
-                             Text="@($"{DailiesDueOpenCount} dailies left")"
-                             Size="Size.Small"
-                             Variant="Variant.Text"
-                             Color="Color.Primary"/>
-                    <MudChip T="string"
-                             Icon="@BoardSectionVisuals.GetMudIcon(BoardSection.Todo)"
-                             Text="@($"{FilteredTodos.Count(t => !t.IsCompleted)} to-dos open")"
-                             Size="Size.Small"
-                             Variant="Variant.Text"
-                             Color="Color.Warning"/>
 
-                </MudStack>
                 <div class="board-stat-filters">
                     <MudTextField @bind-Value="_searchText"
                                   Placeholder="Search"
@@ -170,14 +254,7 @@
     {
         <MudPaper Class="px-3 py-2 board-stat-strip" Outlined="false" Elevation="0">
             <div class="board-stat-strip-row">
-                <MudStack Row="true"
-                          AlignItems="AlignItems.Center"
-                          Spacing="2"
-                          Class="board-stat-chips flex-wrap">
-                    <MudSkeleton Width="80px" Height="28px" Class="rounded-pill" />
-                    <MudSkeleton Width="100px" Height="28px" Class="rounded-pill" />
-                    <MudSkeleton Width="90px" Height="28px" Class="rounded-pill" />
-                </MudStack>
+
                 <div class="board-stat-filters d-flex gap-2">
                     <MudSkeleton Width="160px" Height="32px" Class="rounded-pill" />
                     <MudSkeleton Width="80px" Height="32px" Class="rounded-pill" />
@@ -219,7 +296,7 @@
                 </MudTabs>
             </div>
             <div class="board-columns-desktop">
-                <MudGrid Spacing="2" Class="board-columns-grid mt-0 w-100">
+                <MudGrid Spacing="2" Class="board-columns-grid w-100">
                     <MudItem xs="12" md="4">
                         <HabiticaColumn Section="BoardSection.Habit"
                                         Items="FilteredHabits"
@@ -259,7 +336,7 @@
                 </MudTabs>
             </div>
             <div class="board-columns-desktop">
-                <MudGrid Spacing="2" Class="board-columns-grid mt-0 w-100">
+                <MudGrid Spacing="2" Class="board-columns-grid w-100">
                     <MudItem xs="12" md="4">
                         @RenderColumnSkeleton(BoardSection.Habit)
                     </MudItem>
@@ -306,17 +383,17 @@
         <MudCard Class="@($"habitica-column {accentClass}")" Elevation="0" Outlined="false">
             <MudCardHeader Class="pb-2">
                 <CardHeaderContent>
-                    <MudStack Spacing="2">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <div class="habitica-column-header-flex">
+                        <div class="habitica-column-header-left habitica-column-header-row">
                             <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
                                 <MudIcon Icon="@BoardSectionVisuals.GetMudIcon(section)"
                                          Class="habitica-col-type-icon"
                                          Size="Size.Small"
                                          Color="Color.Primary"/>
                                 <MudText Typo="Typo.subtitle1" Class="habitica-title">@title</MudText>
+                                <MudSkeleton Width="28px" Height="20px" Class="rounded-pill ms-1" />
                             </MudStack>
-                            <MudSkeleton Width="28px" Height="20px" Class="rounded-pill" />
-                        </MudStack>
+                        </div>
                         <MudStack Row="true" Spacing="1" Class="flex-wrap habitica-filter-toolbar">
                             @if (section == BoardSection.Habit)
                             {
@@ -336,7 +413,7 @@
                                 <MudSkeleton Width="65px" Height="26px" />
                             }
                         </MudStack>
-                    </MudStack>
+                    </div>
                 </CardHeaderContent>
             </MudCardHeader>
 

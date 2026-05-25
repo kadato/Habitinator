@@ -11,96 +11,98 @@
 <MudCard Class="@($"habitica-column {GetAccentClass()}")" Elevation="0" Outlined="false">
     <MudCardHeader Class="pb-2">
         <CardHeaderContent>
-            <MudStack Spacing="2">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="habitica-title-stack">
-                        <MudIcon Icon="@BoardSectionVisuals.GetMudIcon(Section)"
-                                 Class="habitica-col-type-icon"
-                                 Size="Size.Small"
-                                 Color="Color.Primary"/>
-                        <MudText Typo="Typo.subtitle1" Class="habitica-title">@GetTitle()</MudText>
+            <MudStack Spacing="1">
+                <div class="habitica-column-header-flex">
+                    <div class="habitica-column-header-left habitica-column-header-row">
+                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="habitica-title-stack">
+                            <MudIcon Icon="@BoardSectionVisuals.GetMudIcon(Section)"
+                                     Class="habitica-col-type-icon"
+                                     Size="Size.Small"
+                                     Color="Color.Primary"/>
+                            <MudText Typo="Typo.subtitle1" Class="habitica-title">@GetTitle()</MudText>
+                            <MudChip T="string"
+                                     Text="@VisibleItems().Count.ToString()"
+                                     Class="habitica-count-chip ms-1"
+                                     Color="Color.Secondary"
+                                     Size="Size.Small"
+                                     Variant="Variant.Filled"/>
+                        </MudStack>
+                    </div>
+                    <MudStack Row="true" Spacing="1" Class="flex-wrap habitica-filter-toolbar" role="toolbar">
+                        @if (Section == BoardSection.Habit)
+                        {
+                            <MudButton Size="Size.Small"
+                                       Class="habitica-filter-btn"
+                                       Variant="@FilterVariant(_habitFilter == HabitListFilter.All)"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => { _habitFilter = HabitListFilter.All; })">
+                                All
+                            </MudButton>
+                            <MudButton Size="Size.Small"
+                                       Class="habitica-filter-btn"
+                                       Variant="@FilterVariant(_habitFilter == HabitListFilter.Weak)"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => { _habitFilter = HabitListFilter.Weak; })">
+                                Weak
+                            </MudButton>
+                            <MudButton Size="Size.Small"
+                                       Class="habitica-filter-btn"
+                                       Variant="@FilterVariant(_habitFilter == HabitListFilter.Strong)"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => { _habitFilter = HabitListFilter.Strong; })">
+                                Strong
+                            </MudButton>
+                        }
+                        else if (Section == BoardSection.Daily)
+                        {
+                            <MudButton Size="Size.Small"
+                                       Class="habitica-filter-btn"
+                                       Variant="@FilterVariant(_dailyFilter == DailyListFilter.All)"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => { _dailyFilter = DailyListFilter.All; })">
+                                All
+                            </MudButton>
+                            <MudButton Size="Size.Small"
+                                       Class="habitica-filter-btn"
+                                       Variant="@FilterVariant(_dailyFilter == DailyListFilter.Due)"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => { _dailyFilter = DailyListFilter.Due; })">
+                                Due
+                            </MudButton>
+                            <MudButton Size="Size.Small"
+                                       Class="habitica-filter-btn"
+                                       Variant="@FilterVariant(_dailyFilter == DailyListFilter.NotDue)"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => { _dailyFilter = DailyListFilter.NotDue; })">
+                                Not due
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Size="Size.Small"
+                                       Class="habitica-filter-btn"
+                                       Variant="@FilterVariant(_todoFilter == TodoListFilter.Active)"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => { _todoFilter = TodoListFilter.Active; })">
+                                Active
+                            </MudButton>
+                            <MudButton Size="Size.Small"
+                                       Class="habitica-filter-btn"
+                                       Variant="@FilterVariant(_todoFilter == TodoListFilter.Scheduled)"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => { _todoFilter = TodoListFilter.Scheduled; })">
+                                Scheduled
+                            </MudButton>
+                            <MudButton Size="Size.Small"
+                                       Class="habitica-filter-btn"
+                                       Variant="@FilterVariant(_todoFilter == TodoListFilter.Complete)"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => { _todoFilter = TodoListFilter.Complete; })">
+                                Complete
+                            </MudButton>
+                        }
                     </MudStack>
-                    <MudChip T="string"
-                             Text="@VisibleItems().Count.ToString()"
-                             Class="habitica-count-chip"
-                             Color="Color.Secondary"
-                             Size="Size.Small"
-                             Variant="Variant.Filled"/>
-                </MudStack>
-                <MudStack Row="true" Spacing="1" Class="flex-wrap habitica-filter-toolbar" role="toolbar">
-                    @if (Section == BoardSection.Habit)
-                    {
-                        <MudButton Size="Size.Small"
-                                   Class="habitica-filter-btn"
-                                   Variant="@FilterVariant(_habitFilter == HabitListFilter.All)"
-                                   Color="Color.Primary"
-                                   OnClick="@(() => { _habitFilter = HabitListFilter.All; })">
-                            All
-                        </MudButton>
-                        <MudButton Size="Size.Small"
-                                   Class="habitica-filter-btn"
-                                   Variant="@FilterVariant(_habitFilter == HabitListFilter.Weak)"
-                                   Color="Color.Primary"
-                                   OnClick="@(() => { _habitFilter = HabitListFilter.Weak; })">
-                            Weak
-                        </MudButton>
-                        <MudButton Size="Size.Small"
-                                   Class="habitica-filter-btn"
-                                   Variant="@FilterVariant(_habitFilter == HabitListFilter.Strong)"
-                                   Color="Color.Primary"
-                                   OnClick="@(() => { _habitFilter = HabitListFilter.Strong; })">
-                            Strong
-                        </MudButton>
-                    }
-                    else if (Section == BoardSection.Daily)
-                    {
-                        <MudButton Size="Size.Small"
-                                   Class="habitica-filter-btn"
-                                   Variant="@FilterVariant(_dailyFilter == DailyListFilter.All)"
-                                   Color="Color.Primary"
-                                   OnClick="@(() => { _dailyFilter = DailyListFilter.All; })">
-                            All
-                        </MudButton>
-                        <MudButton Size="Size.Small"
-                                   Class="habitica-filter-btn"
-                                   Variant="@FilterVariant(_dailyFilter == DailyListFilter.Due)"
-                                   Color="Color.Primary"
-                                   OnClick="@(() => { _dailyFilter = DailyListFilter.Due; })">
-                            Due
-                        </MudButton>
-                        <MudButton Size="Size.Small"
-                                   Class="habitica-filter-btn"
-                                   Variant="@FilterVariant(_dailyFilter == DailyListFilter.NotDue)"
-                                   Color="Color.Primary"
-                                   OnClick="@(() => { _dailyFilter = DailyListFilter.NotDue; })">
-                            Not due
-                        </MudButton>
-                    }
-                    else
-                    {
-                        <MudButton Size="Size.Small"
-                                   Class="habitica-filter-btn"
-                                   Variant="@FilterVariant(_todoFilter == TodoListFilter.Active)"
-                                   Color="Color.Primary"
-                                   OnClick="@(() => { _todoFilter = TodoListFilter.Active; })">
-                            Active
-                        </MudButton>
-                        <MudButton Size="Size.Small"
-                                   Class="habitica-filter-btn"
-                                   Variant="@FilterVariant(_todoFilter == TodoListFilter.Scheduled)"
-                                   Color="Color.Primary"
-                                   OnClick="@(() => { _todoFilter = TodoListFilter.Scheduled; })">
-                            Scheduled
-                        </MudButton>
-                        <MudButton Size="Size.Small"
-                                   Class="habitica-filter-btn"
-                                   Variant="@FilterVariant(_todoFilter == TodoListFilter.Complete)"
-                                   Color="Color.Primary"
-                                   OnClick="@(() => { _todoFilter = TodoListFilter.Complete; })">
-                            Complete
-                        </MudButton>
-                    }
-                </MudStack>
+                </div>
                 @if (Section == BoardSection.Todo
                      && _todoFilter == TodoListFilter.Complete
                      && VisibleItems().Count > 0)

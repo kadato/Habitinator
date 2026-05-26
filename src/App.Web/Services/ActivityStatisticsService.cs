@@ -10,13 +10,16 @@ public sealed class ActivityStatisticsService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
     private readonly IUserTimeZoneService _timeZone;
+    private readonly ActivityStatisticsCache _cache;
 
     public ActivityStatisticsService(
         IDbContextFactory<ApplicationDbContext> dbFactory,
-        IUserTimeZoneService timeZone)
+        IUserTimeZoneService timeZone,
+        ActivityStatisticsCache cache)
     {
         _dbFactory = dbFactory;
         _timeZone = timeZone;
+        _cache = cache;
     }
 
     private DateOnly Today() => DailySchedule.LocalToday(_timeZone);
@@ -27,6 +30,13 @@ public sealed class ActivityStatisticsService
         string? tag,
         CancellationToken cancellationToken = default)
     {
+        var userCache = _cache.GetOrCreate(userId);
+        var cacheKey = (day, tag);
+        if (userCache.DayDetail.TryGetValue(cacheKey, out var cached))
+        {
+            return cached;
+        }
+
         var fromUtc = day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var toUtc = day.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
@@ -56,7 +66,9 @@ public sealed class ActivityStatisticsService
                 .Where(b => b.UserId == userId && boardIds.Contains(b.Id))
                 .ToDictionaryAsync(b => b.Id, b => b.Title, cancellationToken);
 
-        return ActivityStatisticsCalculator.BuildDayDetail(day, rows, titles);
+        var result = ActivityStatisticsCalculator.BuildDayDetail(day, rows, titles);
+        userCache.DayDetail[cacheKey] = result;
+        return result;
     }
 
     public async Task<ActivityDashboardDto> GetDashboardAsync(
@@ -66,6 +78,13 @@ public sealed class ActivityStatisticsService
         CancellationToken cancellationToken = default)
     {
         var utcToday = Today();
+        var userCache = _cache.GetOrCreate(userId);
+        var cacheKey = (periodKey, tag, utcToday);
+        if (userCache.Dashboard.TryGetValue(cacheKey, out var cached))
+        {
+            return cached;
+        }
+
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         var options = await BuildDailyPeriodOptionsAsync(db, userId, utcToday, cancellationToken);
         var (key, start, end) = ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, utcToday, options);
@@ -86,7 +105,9 @@ public sealed class ActivityStatisticsService
             .ToListAsync(cancellationToken);
 
         var built = ActivityStatisticsCalculator.BuildDashboard(rows, key, start, end, utcToday);
-        return built with { AvailableTags = availableTags };
+        var result = built with { AvailableTags = availableTags };
+        userCache.Dashboard[cacheKey] = result;
+        return result;
     }
 
     public async Task<DailyContributionsViewDto> GetDailyContributionsAsync(
@@ -96,6 +117,13 @@ public sealed class ActivityStatisticsService
         CancellationToken cancellationToken = default)
     {
         var utcToday = Today();
+        var userCache = _cache.GetOrCreate(userId);
+        var cacheKey = (periodKey, tag, utcToday);
+        if (userCache.DailyContributions.TryGetValue(cacheKey, out var cached))
+        {
+            return cached;
+        }
+
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         var options = await BuildDailyPeriodOptionsAsync(db, userId, utcToday, cancellationToken);
         var (key, rangeStart, rangeEnd) =
@@ -135,7 +163,7 @@ public sealed class ActivityStatisticsService
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
             .ToListAsync(cancellationToken);
 
-        return ActivityStatisticsCalculator.BuildDailyContributions(
+        var result = ActivityStatisticsCalculator.BuildDailyContributions(
             eventRows,
             dailyItemRows,
             key,
@@ -143,6 +171,9 @@ public sealed class ActivityStatisticsService
             rangeStart,
             rangeEnd,
             utcToday);
+
+        userCache.DailyContributions[cacheKey] = result;
+        return result;
     }
 
     private async Task<IReadOnlyList<string>> GetDistinctTagsForUserAsync(

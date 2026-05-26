@@ -13,15 +13,18 @@ public interface IBoardChangeNotifier
 public sealed class BoardChangeNotifier : IBoardChangeNotifier
 {
     private readonly BoardSnapshotCache _snapshotCache;
+    private readonly ActivityStatisticsCache _statsCache;
     private readonly IHubContext<BoardHub> _hub;
     private readonly ILogger<BoardChangeNotifier> _logger;
 
     public BoardChangeNotifier(
         BoardSnapshotCache snapshotCache,
+        ActivityStatisticsCache statsCache,
         IHubContext<BoardHub> hub,
         ILogger<BoardChangeNotifier> logger)
     {
         _snapshotCache = snapshotCache;
+        _statsCache = statsCache;
         _hub = hub;
         _logger = logger;
     }
@@ -29,6 +32,7 @@ public sealed class BoardChangeNotifier : IBoardChangeNotifier
     public async Task NotifyBoardChangedAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         _snapshotCache.Invalidate(userId);
+        _statsCache.Invalidate(userId);
         // Use SendCoreAsync with an empty arg list. SendAsync(hub, cancelToken) can bind to
         // SendAsync(string, object? arg1, CancellationToken) and pass the token as a hub payload, which
         // can fail serialization and surface as random save / API errors after DB commit.

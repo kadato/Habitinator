@@ -93,6 +93,7 @@ builder.Services.AddScoped<IRemoteBoardRefreshService, RemoteBoardRefreshService
 builder.Services.AddSingleton<IBoardSyncStatus, NoOpBoardSyncStatus>();
 builder.Services.AddScoped<BoardRemoteNotifyBridge>();
 builder.Services.AddSingleton<BoardSnapshotCache>();
+builder.Services.AddSingleton<ActivityStatisticsCache>();
 builder.Services.AddSingleton<IBoardChangeNotifier, BoardChangeNotifier>();
 builder.Services.AddScoped<BoardPersistenceService>();
 builder.Services.AddScoped<IInitialBoardLoadGate, InitialBoardLoadGate>();

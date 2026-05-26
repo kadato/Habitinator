@@ -143,7 +143,8 @@
                     var checklist = DailyChecklistJson.Parse(item.ChecklistJson);
                     var subDone = checklist.Count(x => x.IsDone);
                     var subTotal = checklist.Count;
-                    var hasBodyExtra = !string.IsNullOrWhiteSpace(item.Notes) || subTotal > 0;
+                    var tagsList = BoardTagUtil.ParseTags(item.Tags).ToList();
+                    var hasBodyExtra = !string.IsNullOrWhiteSpace(item.Notes) || subTotal > 0 || tagsList.Count > 0;
                     return @<div @key="item.Id" class="@GetCardClass(item)">
                         @if (Section == BoardSection.Habit)
                         {
@@ -212,6 +213,26 @@
                         @if (hasBodyExtra)
                         {
                             <div class="habitica-card__extra">
+                                @if (tagsList.Count > 0)
+                                {
+                                    <div class="habitica-card__tags">
+                                        @if (tagsList.Count <= 3)
+                                        {
+                                            @foreach (var tag in tagsList)
+                                            {
+                                                <span class="habitica-card__tag-badge" title="@tag">@tag</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            @foreach (var tag in tagsList.Take(2))
+                                            {
+                                                <span class="habitica-card__tag-badge" title="@tag">@tag</span>
+                                            }
+                                            <span class="habitica-card__tag-badge habitica-card__tag-badge--more" title="@(string.Join(", ", tagsList.Skip(2)))">+@(tagsList.Count - 2)</span>
+                                        }
+                                    </div>
+                                }
                                 @if (!string.IsNullOrWhiteSpace(item.Notes))
                                 {
                                     <MudText Typo="Typo.caption" Class="habitica-card__notes" Color="Color.Secondary">@item.Notes</MudText>

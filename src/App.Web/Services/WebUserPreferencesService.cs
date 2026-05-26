@@ -15,6 +15,8 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
     private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
     private readonly DemoUserResolver _demoUserResolver;
     private readonly ILogger<WebUserPreferencesService> _logger;
+    private Guid? _cachedUserId;
+    private UserPreferences? _cachedPreferences;
 
     public WebUserPreferencesService(
         AuthenticationStateProvider authenticationStateProvider,
@@ -38,14 +40,25 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
         {
             var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
             var user = state.User;
-            if (user.Identity?.IsAuthenticated != true) return UserPreferences.CreateDefault();
+            if (user.Identity?.IsAuthenticated != true)
+            {
+                _cachedUserId = null;
+                _cachedPreferences = null;
+                return UserPreferences.CreateDefault();
+            }
 
             var userId = await _demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
+            if (_cachedUserId == userId && _cachedPreferences is not null)
+                return _cachedPreferences;
+
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
             var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-            if (row is null) return UserPreferences.CreateDefault();
-
-            return UserPreferencesJson.DeserializeOrDefault(row.UserPreferencesJson);
+            var prefs = row is null
+                ? UserPreferences.CreateDefault()
+                : UserPreferencesJson.DeserializeOrDefault(row.UserPreferencesJson);
+            _cachedUserId = userId;
+            _cachedPreferences = prefs;
+            return prefs;
         }
         catch (Exception ex)
         {
@@ -67,6 +80,8 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
 
         row.UserPreferencesJson = UserPreferencesJson.Serialize(preferences);
         await db.SaveChangesAsync(cancellationToken);
+        _cachedUserId = userId;
+        _cachedPreferences = preferences;
         Changed?.Invoke();
         await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
     }

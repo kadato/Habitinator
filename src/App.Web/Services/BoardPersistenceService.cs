@@ -9,6 +9,7 @@ namespace App.Web.Services;
 
 public sealed class BoardPersistenceService
 {
+    private readonly BoardSnapshotCache _snapshotCache;
     private readonly IBoardChangeNotifier _boardChangeNotifier;
     private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
     private readonly ApplicationDbContext _dbContext;
@@ -18,11 +19,13 @@ public sealed class BoardPersistenceService
     public BoardPersistenceService(
         ApplicationDbContext dbContext,
         IDbContextFactory<ApplicationDbContext> dbContextFactory,
+        BoardSnapshotCache snapshotCache,
         IBoardChangeNotifier boardChangeNotifier,
         IUserTimeZoneService timeZone)
     {
         _dbContext = dbContext;
         _dbContextFactory = dbContextFactory;
+        _snapshotCache = snapshotCache;
         _boardChangeNotifier = boardChangeNotifier;
         _timeZone = timeZone;
     }
@@ -111,6 +114,9 @@ public sealed class BoardPersistenceService
 
     public async Task<BoardSnapshot> GetSnapshotAsync(Guid userId, CancellationToken cancellationToken = default)
     {
+        if (_snapshotCache.TryGet(userId, out var cached))
+            return cached;
+
         await using var readDb = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         var items = await LiveBoardItems(readDb, userId)
             .AsNoTracking()
@@ -122,7 +128,7 @@ public sealed class BoardPersistenceService
         var today = Today();
         var dailies = items.Where(x => x.Section == BoardSection.Daily).ToList();
         var dailyStreaks = await BuildDailyStreakMapAsync(userId, dailies, today, readDb, cancellationToken);
-        return new BoardSnapshot(
+        var snapshot = new BoardSnapshot(
             items.Where(x => x.Section == BoardSection.Habit)
                 .OrderBy(x => x.SortOrder)
                 .ThenBy(x => x.CreatedAtUtc)
@@ -145,6 +151,8 @@ public sealed class BoardPersistenceService
                 .ThenBy(x => x.Id)
                 .Select(x => ToModelWithToday(x, today, dailyStreaks))
                 .ToList());
+        _snapshotCache.Set(userId, snapshot);
+        return snapshot;
     }
 
     public Task<BoardItem> CreateItemAsync(Guid userId, BoardSection section, string title,

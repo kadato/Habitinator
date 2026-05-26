@@ -92,8 +92,10 @@ builder.Services.AddScoped<DemoUserResolver>();
 builder.Services.AddScoped<IRemoteBoardRefreshService, RemoteBoardRefreshService>();
 builder.Services.AddSingleton<IBoardSyncStatus, NoOpBoardSyncStatus>();
 builder.Services.AddScoped<BoardRemoteNotifyBridge>();
+builder.Services.AddSingleton<BoardSnapshotCache>();
 builder.Services.AddSingleton<IBoardChangeNotifier, BoardChangeNotifier>();
 builder.Services.AddScoped<BoardPersistenceService>();
+builder.Services.AddScoped<IInitialBoardLoadGate, InitialBoardLoadGate>();
 builder.Services.AddScoped<BoardIdempotencyService>();
 builder.Services.Configure<BoardMaintenanceOptions>(
     builder.Configuration.GetSection(BoardMaintenanceOptions.SectionName));
@@ -128,6 +130,8 @@ builder.Services.AddScoped<INotificationSettingsRules, NotificationSettingsRules
 builder.Services.AddScoped<IUserDateFormatService, UserDateFormatService>();
 builder.Services.AddScoped<IAccountActionsService, WebAccountActionsService>();
 builder.Services.AddHttpClient();
+
+builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -262,6 +266,7 @@ if (!app.Environment.IsEnvironment("Testing"))
 // Used by AppHost WithHttpHealthCheck; anonymous, no auth required.
 app.MapGet("/health", () => Results.Text("OK", "text/plain"));
 app.MapOpenApi();
+app.UseResponseCompression();
 app.MapStaticAssets();
 app.MapRazorComponents<App.Web.Components.App>()
     .AddInteractiveServerRenderMode();

@@ -111,10 +111,17 @@ public sealed class ActivityStatisticsService
         if (allowedIds is not null)
             dailyQ = dailyQ.Where(b => allowedIds.Contains(b.Id));
 
-        var dailyItemRows = await dailyQ
+        var dailyItemRawRows = await dailyQ
             .OrderBy(b => b.Title)
-            .Select(b => new { b.Id, b.Title })
+            .Select(b => new { b.Id, b.Title, b.DailyStartDate, b.CreatedAtUtc })
             .ToListAsync(cancellationToken);
+
+        var dailyItemRows = dailyItemRawRows.Select(b => new DailyItemStatsDto(
+            b.Id,
+            b.Title,
+            b.DailyStartDate != null ? DateOnly.FromDateTime(b.DailyStartDate.Value) : null,
+            DateOnly.FromDateTime(_timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime)
+        )).ToList();
 
         IQueryable<UserActivityEventEntity> evQ = db.UserActivityEvents.AsNoTracking()
             .Where(e =>
@@ -128,11 +135,9 @@ public sealed class ActivityStatisticsService
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
             .ToListAsync(cancellationToken);
 
-        IReadOnlyList<(Guid Id, string Title)> dailies = dailyItemRows.Select(x => (x.Id, x.Title)).ToList();
-
         return ActivityStatisticsCalculator.BuildDailyContributions(
             eventRows,
-            dailies,
+            dailyItemRows,
             key,
             options,
             rangeStart,

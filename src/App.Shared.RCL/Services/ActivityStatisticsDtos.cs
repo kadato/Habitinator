@@ -33,6 +33,9 @@ public sealed record DailyContributionGraphDto(
 
 public sealed record DailyGraphPeriodOption(string Key, string Label);
 
+public sealed record DailyItemStatsDto(Guid Id, string Title, DateOnly? DailyStartDate, DateOnly CreatedAt);
+
+
 public sealed record DailyContributionsViewDto(
     string PeriodKey,
     IReadOnlyList<DailyGraphPeriodOption> PeriodOptions,

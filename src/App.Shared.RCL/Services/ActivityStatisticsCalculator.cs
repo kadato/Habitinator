@@ -111,8 +111,9 @@ public static class ActivityStatisticsCalculator
             .Sum(x => x.DurationSeconds.GetValueOrDefault());
         var totalFocusMinutes = (totalFocusSec + 30) / 60;
 
+        var actualEnd = end > todayCutoff ? todayCutoff : end;
         var startWeek = StartOfIsoWeek(start);
-        var endWeek = StartOfIsoWeek(end);
+        var endWeek = StartOfIsoWeek(actualEnd);
         var weekSpan = (endWeek.DayNumber - startWeek.DayNumber) / 7;
         if (weekSpan < 0) weekSpan = 0;
 
@@ -123,7 +124,7 @@ public static class ActivityStatisticsCalculator
             var ws = startWeek.AddDays(i * 7);
             var we = ws.AddDays(6);
             var clipFrom = ws < start ? start : ws;
-            var clipTo = we > end ? end : we;
+            var clipTo = we > actualEnd ? actualEnd : we;
 
             if (clipFrom > clipTo)
             {
@@ -144,13 +145,13 @@ public static class ActivityStatisticsCalculator
         }
 
         var weekBarsRangeStart = weekCount > 0 ? weekBars[0].WeekStart : startWeek;
-        var weekBarsRangeEnd = weekCount > 0 ? weekBars[^1].WeekStart.AddDays(6) : end;
+        var weekBarsRangeEnd = weekCount > 0 ? weekBars[^1].WeekStart.AddDays(6) : actualEnd;
 
-        var heatmapSpanDays = end.DayNumber - start.DayNumber + 1;
+        var heatmapSpanDays = actualEnd.DayNumber - start.DayNumber + 1;
         if (heatmapSpanDays < 1) heatmapSpanDays = 1;
 
         var gridStartMonday = StartOfIsoWeek(start);
-        var endMonday = StartOfIsoWeek(end);
+        var endMonday = StartOfIsoWeek(actualEnd);
         var gridWeekColumns = (endMonday.DayNumber - gridStartMonday.DayNumber) / 7 + 1;
         if (gridWeekColumns < 1) gridWeekColumns = 1;
 
@@ -182,7 +183,7 @@ public static class ActivityStatisticsCalculator
             maxDayCount,
             busiestDay,
             start,
-            end,
+            actualEnd,
             heatmapSpanDays,
             weekBarsRangeStart,
             weekBarsRangeEnd,
@@ -191,7 +192,7 @@ public static class ActivityStatisticsCalculator
 
     public static DailyContributionsViewDto BuildDailyContributions(
         IReadOnlyList<UserActivityEventRecord> eventRowsInRange,
-        IReadOnlyList<(Guid Id, string Title)> dailyItemRows,
+        IReadOnlyList<DailyItemStatsDto> dailyItemRows,
         string periodKey,
         IReadOnlyList<DailyGraphPeriodOption> options,
         DateOnly rangeStart,
@@ -236,6 +237,37 @@ public static class ActivityStatisticsCalculator
             map[d] = 1;
         }
 
+        // Calculate the common range for all visible daily graphs.
+        // Cap the end date at todayCutoff.
+        var commonEnd = rangeEnd > todayCutoff ? todayCutoff : rangeEnd;
+
+        // Find the earliest start date among all visible daily items.
+        var earliestDailyStart = commonEnd; // Default
+        foreach (var di in dailyItemRows)
+        {
+            var dailyStart = di.DailyStartDate ?? di.CreatedAt;
+            byItem.TryGetValue(di.Id, out var countByDay);
+            if (countByDay is { Keys.Count: > 0 })
+            {
+                var firstCompletion = countByDay.Keys.Min();
+                if (firstCompletion < dailyStart)
+                {
+                    dailyStart = firstCompletion;
+                }
+            }
+
+            if (dailyStart < earliestDailyStart)
+            {
+                earliestDailyStart = dailyStart;
+            }
+        }
+
+        var commonStart = earliestDailyStart < rangeStart ? rangeStart : earliestDailyStart;
+        if (commonStart > commonEnd)
+        {
+            commonStart = commonEnd;
+        }
+
         var graphs = new List<DailyContributionGraphDto>(dailyItemRows.Count);
         foreach (var di in dailyItemRows)
         {
@@ -243,22 +275,20 @@ public static class ActivityStatisticsCalculator
             countByDay ??= [];
 
             var maxInRange = 0;
-            for (var d = rangeStart; d <= rangeEnd; d = d.AddDays(1))
+            for (var d = commonStart; d <= commonEnd; d = d.AddDays(1))
             {
-                if (d > todayCutoff) break;
-
                 if (countByDay.TryGetValue(d, out var c) && c > maxInRange) maxInRange = c;
             }
 
             IReadOnlyList<ActivityHeatmapCellDto> graphHeat = BuildRangeContributionHeatmap(
-                rangeStart,
-                rangeEnd,
+                commonStart,
+                commonEnd,
                 todayCutoff,
                 countByDay,
                 maxInRange);
 
-            var gStartW = StartOfIsoWeek(rangeStart);
-            var gEndW = StartOfIsoWeek(rangeEnd);
+            var gStartW = StartOfIsoWeek(commonStart);
+            var gEndW = StartOfIsoWeek(commonEnd);
             var columns = (gEndW.DayNumber - gStartW.DayNumber) / 7 + 1;
             if (columns < 1) columns = 1;
 
@@ -269,8 +299,8 @@ public static class ActivityStatisticsCalculator
             periodKey,
             options,
             graphs,
-            rangeStart,
-            rangeEnd);
+            commonStart,
+            commonEnd);
     }
 
     public static ActivityDayDetailDto BuildDayDetail(

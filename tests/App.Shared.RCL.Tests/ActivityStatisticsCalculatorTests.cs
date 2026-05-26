@@ -182,6 +182,50 @@ public sealed class ActivityStatisticsCalculatorTests
         string? customLabel = null) =>
         new(At(day, hourUtc), type, boardItemId, durationSeconds, customLabel);
 
+    [Fact]
+    public void BuildDashboard_caps_range_and_grid_at_todayCutoff()
+    {
+        var start = new DateOnly(2026, 1, 1);
+        var end = new DateOnly(2026, 12, 31);
+        var todayCutoff = new DateOnly(2026, 5, 26);
+        
+        var dashboard = ActivityStatisticsCalculator.BuildDashboard(
+            [],
+            DailyGraphPeriods.ForCalendarYear(2026),
+            start,
+            end,
+            todayCutoff);
+
+        dashboard.RangeEnd.Should().Be(todayCutoff);
+        dashboard.GridWeekColumns.Should().BeLessThan(53);
+    }
+
+    [Fact]
+    public void BuildDailyContributions_resizes_based_on_earliest_daily_start_date()
+    {
+        var rangeStart = new DateOnly(2026, 1, 1);
+        var rangeEnd = new DateOnly(2026, 12, 31);
+        var todayCutoff = new DateOnly(2026, 5, 26);
+
+        var dailies = new[]
+        {
+            new DailyItemStatsDto(Guid.NewGuid(), "Daily A", new DateOnly(2026, 5, 10), new DateOnly(2026, 5, 8)),
+            new DailyItemStatsDto(Guid.NewGuid(), "Daily B", null, new DateOnly(2026, 5, 15))
+        };
+
+        var view = ActivityStatisticsCalculator.BuildDailyContributions(
+            [],
+            dailies,
+            DailyGraphPeriods.ForCalendarYear(2026),
+            [],
+            rangeStart,
+            rangeEnd,
+            todayCutoff);
+
+        view.RangeStart.Should().Be(new DateOnly(2026, 5, 10));
+        view.RangeEnd.Should().Be(todayCutoff);
+    }
+
     private static DateTimeOffset At(DateOnly day, int hourUtc) =>
         new(day.Year, day.Month, day.Day, hourUtc, 0, 0, TimeSpan.Zero);
 }

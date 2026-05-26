@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5031/"
+      "url": "http://127.0.0.1:5031/"
     }
   ],
   "paths": {
@@ -755,6 +755,15 @@
             ],
             "format": "int32",
             "default": 0
+          },
+          "sortOrder": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },
@@ -819,6 +828,15 @@
               "null",
               "string"
             ]
+          },
+          "sortOrder": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },
@@ -970,6 +988,15 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "sortOrder": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },

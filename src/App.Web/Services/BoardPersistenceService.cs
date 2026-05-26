@@ -595,6 +595,18 @@ public sealed class BoardPersistenceService
             if (sortOrder.HasValue)
             {
                 entity.SortOrder = sortOrder.Value;
+
+                var needsRebalance = await _dbContext.BoardItems
+                    .AnyAsync(x => x.UserId == userId 
+                                && x.Section == BoardSection.Habit 
+                                && x.DeletedAtUtc == null 
+                                && x.Id != itemId 
+                                && Math.Abs(x.SortOrder - sortOrder.Value) < 1e-9, 
+                              cancellationToken);
+                if (needsRebalance)
+                {
+                    await RebalanceSortOrdersAsync(userId, BoardSection.Habit, cancellationToken);
+                }
             }
             entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
             await _dbContext.SaveChangesAsync(cancellationToken);
@@ -665,6 +677,18 @@ public sealed class BoardPersistenceService
             if (sortOrder.HasValue)
             {
                 entity.SortOrder = sortOrder.Value;
+
+                var needsRebalance = await _dbContext.BoardItems
+                    .AnyAsync(x => x.UserId == userId 
+                                && x.Section == BoardSection.Todo 
+                                && x.DeletedAtUtc == null 
+                                && x.Id != itemId 
+                                && Math.Abs(x.SortOrder - sortOrder.Value) < 1e-9, 
+                              cancellationToken);
+                if (needsRebalance)
+                {
+                    await RebalanceSortOrdersAsync(userId, BoardSection.Todo, cancellationToken);
+                }
             }
             entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
             await _dbContext.SaveChangesAsync(cancellationToken);
@@ -754,6 +778,18 @@ public sealed class BoardPersistenceService
             if (sortOrder.HasValue)
             {
                 entity.SortOrder = sortOrder.Value;
+
+                var needsRebalance = await _dbContext.BoardItems
+                    .AnyAsync(x => x.UserId == userId 
+                                && x.Section == BoardSection.Daily 
+                                && x.DeletedAtUtc == null 
+                                && x.Id != itemId 
+                                && Math.Abs(x.SortOrder - sortOrder.Value) < 1e-9, 
+                              cancellationToken);
+                if (needsRebalance)
+                {
+                    await RebalanceSortOrdersAsync(userId, BoardSection.Daily, cancellationToken);
+                }
             }
             entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
 
@@ -1296,6 +1332,26 @@ public sealed class BoardPersistenceService
             .MinAsync(cancellationToken);
         return BoardItemReorder.SortOrderForNewItem(min);
     }
+
+    private async Task RebalanceSortOrdersAsync(Guid userId, BoardSection section, CancellationToken cancellationToken)
+    {
+        var items = await _dbContext.BoardItems
+            .Where(x => x.UserId == userId && x.Section == section && x.DeletedAtUtc == null)
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.CreatedAtUtc)
+            .ThenBy(x => x.Id)
+            .ToListAsync(cancellationToken);
+
+        double seq = 1.0;
+        var utcNow = DateTimeOffset.UtcNow;
+        foreach (var item in items)
+        {
+            item.SortOrder = seq;
+            item.UpdatedAtUtc = utcNow;
+            seq += 1.0;
+        }
+    }
+
 
     public Task LogActivityAsync(
         Guid userId,

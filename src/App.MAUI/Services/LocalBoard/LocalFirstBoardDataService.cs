@@ -302,6 +302,17 @@ public sealed class LocalFirstBoardDataService(
                 if (sortOrder.HasValue)
                 {
                     row.SortOrder = sortOrder.Value;
+
+                    var needsRebalance = await db.BoardItems
+                        .AnyAsync(x => x.UserKey == userKey 
+                                    && x.Section == BoardSection.Habit 
+                                    && x.Id != itemId 
+                                    && Math.Abs((x.SortOrder ?? 0.0) - sortOrder.Value) < 1e-9, 
+                                  cancellationToken);
+                    if (needsRebalance)
+                    {
+                        await RebalanceLocalSortOrdersAsync(db, userKey, BoardSection.Habit, cancellationToken);
+                    }
                 }
                 Enqueue(
                     db,
@@ -319,7 +330,7 @@ public sealed class LocalFirstBoardDataService(
                         row.NegativeCounter,
                         row.ChecklistJson,
                         expected,
-                        sortOrder));
+                        row.SortOrder));
                 await db.SaveChangesAsync(cancellationToken);
                 return row.ToModel();
             });
@@ -351,6 +362,17 @@ public sealed class LocalFirstBoardDataService(
                 if (sortOrder.HasValue)
                 {
                     row.SortOrder = sortOrder.Value;
+
+                    var needsRebalance = await db.BoardItems
+                        .AnyAsync(x => x.UserKey == userKey 
+                                    && x.Section == BoardSection.Todo 
+                                    && x.Id != itemId 
+                                    && Math.Abs((x.SortOrder ?? 0.0) - sortOrder.Value) < 1e-9, 
+                                  cancellationToken);
+                    if (needsRebalance)
+                    {
+                        await RebalanceLocalSortOrdersAsync(db, userKey, BoardSection.Todo, cancellationToken);
+                    }
                 }
                 Enqueue(
                     db,
@@ -364,7 +386,7 @@ public sealed class LocalFirstBoardDataService(
                         row.ChecklistJson,
                         dueDate,
                         expectedTodo,
-                        sortOrder));
+                        row.SortOrder));
                 await db.SaveChangesAsync(cancellationToken);
                 return row.ToModel();
             });
@@ -402,6 +424,17 @@ public sealed class LocalFirstBoardDataService(
                 if (sortOrder.HasValue)
                 {
                     row.SortOrder = sortOrder.Value;
+
+                    var needsRebalance = await db.BoardItems
+                        .AnyAsync(x => x.UserKey == userKey 
+                                    && x.Section == BoardSection.Daily 
+                                    && x.Id != itemId 
+                                    && Math.Abs((x.SortOrder ?? 0.0) - sortOrder.Value) < 1e-9, 
+                                  cancellationToken);
+                    if (needsRebalance)
+                    {
+                        await RebalanceLocalSortOrdersAsync(db, userKey, BoardSection.Daily, cancellationToken);
+                    }
                 }
                 Enqueue(
                     db,
@@ -418,7 +451,7 @@ public sealed class LocalFirstBoardDataService(
                         row.ChecklistJson,
                         streak,
                         expectedDaily,
-                        sortOrder));
+                        row.SortOrder));
                 await db.SaveChangesAsync(cancellationToken);
                 return row.ToModel();
             });
@@ -1260,4 +1293,25 @@ public sealed class LocalFirstBoardDataService(
             .MinAsync(cancellationToken);
         return BoardItemReorder.SortOrderForNewItem(min);
     }
+
+    private static async Task RebalanceLocalSortOrdersAsync(
+        LocalBoardDbContext db,
+        string userKey,
+        BoardSection section,
+        CancellationToken cancellationToken)
+    {
+        var items = await db.BoardItems
+            .Where(x => x.UserKey == userKey && x.Section == section)
+            .OrderBy(x => x.SortOrder ?? double.MaxValue)
+            .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
+            .ThenBy(x => x.Id)
+            .ToListAsync(cancellationToken);
+
+        double seq = 1.0;
+        foreach (var item in items)
+        {
+            item.SortOrder = seq;
+        }
+    }
 }
+

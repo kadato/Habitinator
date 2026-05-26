@@ -738,6 +738,7 @@
     private void ToggleSubtasksExpand(Guid id)
     {
         _subtasksExpand[id] = !IsSubtasksExpanded(id);
+        _dropContainer?.Refresh();
     }
 
     private async Task SetChecklistItemDoneAsync(BoardItem item, Guid lineId, bool done)

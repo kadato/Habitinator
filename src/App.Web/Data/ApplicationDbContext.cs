@@ -30,6 +30,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(x => x.EventType).IsRequired();
             entity.Property(x => x.OccurredAtUtc).IsRequired();
             entity.HasIndex(x => new { x.UserId, x.OccurredAtUtc });
+            entity.HasIndex(x => new { x.UserId, x.BoardItemId, x.OccurredAtUtc });
             entity.HasOne(x => x.User)
                 .WithMany()
                 .HasForeignKey(x => x.UserId)

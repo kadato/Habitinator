@@ -1,4 +1,5 @@
 using App.MAUI.Services.LocalBoard;
+using App.Shared.RCL.Services;
 
 using Microsoft.Extensions.Logging;
 
@@ -12,6 +13,7 @@ public sealed class MauiBoardSyncCoordinator
     private readonly LocalFirstBoardDataService _board;
     private readonly IAuthTokenStore _tokens;
     private readonly MauiBoardSyncStatus _status;
+    private readonly MauiInitialBoardLoadSignal _initialLoad;
     private readonly ILogger<MauiBoardSyncCoordinator> _logger;
     private readonly SemaphoreSlim _run = new(1, 1);
     private readonly PeriodicTimer _timer = new(TimeSpan.FromSeconds(45));
@@ -21,11 +23,13 @@ public sealed class MauiBoardSyncCoordinator
         LocalFirstBoardDataService board,
         IAuthTokenStore tokens,
         MauiBoardSyncStatus status,
+        MauiInitialBoardLoadSignal initialLoad,
         ILogger<MauiBoardSyncCoordinator> logger)
     {
         _board = board;
         _tokens = tokens;
         _status = status;
+        _initialLoad = initialLoad;
         _logger = logger;
         _ = Task.Run(() => PeriodicLoopAsync(_appStopping.Token));
     }
@@ -95,6 +99,11 @@ public sealed class MauiBoardSyncCoordinator
     {
         try
         {
+            while (!_initialLoad.IsComplete && !cancellationToken.IsCancellationRequested)
+            {
+                await Task.Delay(250, cancellationToken);
+            }
+
             while (await _timer.WaitForNextTickAsync(cancellationToken))
             {
                 try

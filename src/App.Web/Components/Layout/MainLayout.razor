@@ -6,6 +6,7 @@
 @inherits LayoutComponentBase
 @rendermode @(new InteractiveServerRenderMode(false))
 @inject IUserPreferencesService PreferencesService
+@inject IUserDateFormatService DateFormatService
 @inject IJSRuntime JS
 @inject NavigationManager Nav
 
@@ -150,6 +151,7 @@
     private async Task LoadPreferencesAsync()
     {
         _preferences = await PreferencesService.GetAsync();
+        DateFormatService.ApplyFromPreferences(_preferences);
         await ResolveThemeAsync();
     }
 

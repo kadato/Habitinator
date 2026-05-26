@@ -1,6 +1,6 @@
 :root {
-    --hab-font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    --hab-font-mono: "Roboto Mono", ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
+    --hab-font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --hab-font-mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
     --bs-body-font-family: var(--hab-font-sans);
     --bs-font-sans-serif: var(--hab-font-sans);
 }

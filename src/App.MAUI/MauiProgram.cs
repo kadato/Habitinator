@@ -52,6 +52,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<RemoteBoardRefreshService>();
         builder.Services.AddSingleton<MauiBoardSyncStatus>();
         builder.Services.AddSingleton<IBoardSyncStatus>(sp => sp.GetRequiredService<MauiBoardSyncStatus>());
+        builder.Services.AddSingleton<MauiInitialBoardLoadSignal>();
         builder.Services.AddSingleton<MauiBoardSyncCoordinator>();
         builder.Services.AddSingleton<IRemoteBoardRefreshService>(sp =>
             new PullBeforeNotifyRemoteBoardRefreshService(
@@ -99,6 +100,8 @@ public static class MauiProgram
         builder.Services.AddScoped<IUserNotifier, UserNotifier>();
         builder.Services.AddScoped<IFocusTimerClientAlerts, FocusTimerClientAlerts>();
         builder.Services.AddScoped<IDailyRetroPromptStore, JsDailyRetroPromptStore>();
+        builder.Services.AddScoped<IInitialBoardLoadGate>(sp =>
+            new InitialBoardLoadGate(sp.GetRequiredService<MauiInitialBoardLoadSignal>()));
         builder.Services.AddScoped<IUserTimeZoneService, UserTimeZoneService>();
         builder.Services.AddScoped<INotificationSettingsRules, NotificationSettingsRules>();
         builder.Services.AddSingleton<IUserDateFormatService, UserDateFormatService>();

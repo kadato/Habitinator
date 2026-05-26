@@ -77,9 +77,6 @@
     padding-bottom: 0.4rem !important;
 }
 
-/* Count chips (left) + search & tags (right) in one bar. */
-/* Centered and compact search & tags in one bar. Styling is in inline <style> in MainBoard.razor */
-
 .board-tags-menu-activator {
     display: inline-flex;
     flex-shrink: 0;
@@ -91,7 +88,6 @@
     overflow-y: auto;
 }
 
-/* Popover is portaled; class applied via PopoverClass on MudMenu. */
 :global(.board-tags-menu-popover) {
     z-index: calc(var(--mud-zindex-popover, 1300) + 1) !important;
 }
@@ -121,4 +117,3 @@
 .habitica-board-wrap {
     max-width: 100%;
 }
-

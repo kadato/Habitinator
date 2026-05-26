@@ -16,19 +16,24 @@ public sealed class LocalFirstBoardDataService(
     RemoteBoardDataService remote,
     IServiceProvider services,
     IUserTimeZoneService timeZone,
+    MauiBoardSyncStatus syncStatus,
     ILogger<LocalFirstBoardDataService> logger)
     : IBoardDataService, IMauiBoardLocalStoreLifecycle
 {
+    private static volatile bool _schemaReady;
+    private static readonly SemaphoreSlim SchemaLock = new(1, 1);
     private readonly SemaphoreSlim _gate = new(1, 1);
+
+    public Task EnsureStoreReadyAsync(CancellationToken cancellationToken = default) =>
+        EnsureLocalStoreSchemaAsync(cancellationToken);
 
     public async Task ClearAllLocalStateAsync(CancellationToken cancellationToken = default)
     {
+        await EnsureLocalStoreSchemaAsync(cancellationToken);
         await _gate.WaitAsync(cancellationToken);
         try
         {
             await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            await db.Database.EnsureCreatedAsync(cancellationToken);
-            await EnsureSqliteBoardColumnsAsync(db, cancellationToken);
             await db.BoardItems.ExecuteDeleteAsync(cancellationToken);
             await db.Outbox.ExecuteDeleteAsync(cancellationToken);
             var meta = await db.Meta.FindAsync([1], cancellationToken);
@@ -52,12 +57,11 @@ public sealed class LocalFirstBoardDataService(
 
     public async Task<BoardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
     {
+        await EnsureLocalStoreSchemaAsync(cancellationToken);
         await _gate.WaitAsync(cancellationToken);
         try
         {
             await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            await db.Database.EnsureCreatedAsync(cancellationToken);
-            await EnsureSqliteBoardColumnsAsync(db, cancellationToken);
 
             if (!await HasAuthAsync(cancellationToken))
                 return EmptySnapshot();
@@ -68,7 +72,7 @@ public sealed class LocalFirstBoardDataService(
 
             await EnsureUserScopeAsync(db, userKey, cancellationToken);
             var snap = ReadSnapshot(db, userKey);
-            if (IsEmpty(snap))
+            if (IsEmpty(snap) && !syncStatus.IsSyncing)
             {
                 try
                 {
@@ -87,6 +91,26 @@ public sealed class LocalFirstBoardDataService(
         finally
         {
             _gate.Release();
+        }
+    }
+
+    private async Task EnsureLocalStoreSchemaAsync(CancellationToken cancellationToken)
+    {
+        if (_schemaReady) return;
+
+        await SchemaLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (_schemaReady) return;
+
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            await db.Database.EnsureCreatedAsync(cancellationToken);
+            await EnsureSqliteBoardColumnsAsync(db, cancellationToken);
+            _schemaReady = true;
+        }
+        finally
+        {
+            SchemaLock.Release();
         }
     }
 

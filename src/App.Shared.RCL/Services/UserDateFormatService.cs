@@ -18,13 +18,18 @@ public sealed class UserDateFormatService : IUserDateFormatService
 
     public string DateFormat => _dateFormat;
 
+    public void ApplyFromPreferences(UserPreferences preferences)
+    {
+        _dateFormat = NormalizeFormat(preferences.DateFormat);
+        _initialized = true;
+    }
+
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         if (_initialized) return;
 
         var prefs = await _preferencesService.GetAsync(cancellationToken).ConfigureAwait(false);
-        _dateFormat = NormalizeFormat(prefs.DateFormat);
-        _initialized = true;
+        ApplyFromPreferences(prefs);
     }
 
     public string Format(DateOnly date)

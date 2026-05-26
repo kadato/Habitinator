@@ -343,11 +343,6 @@
     private MudDropContainer<HabiticaDropItem>? _dropContainer;
     private bool _needRefresh;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await DateFormatService.InitializeAsync();
-    }
-
     protected override void OnParametersSet()
     {
         PruneSortOrderOverrides();

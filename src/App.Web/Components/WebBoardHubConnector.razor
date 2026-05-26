@@ -1,19 +1,48 @@
 @inject IJSRuntime JS
 @inject BoardRemoteNotifyBridge RefreshBridge
+@inject IInitialBoardLoadGate InitialBoardLoad
 @using Microsoft.JSInterop
 @using global::App.Shared.RCL.Services
 @implements IAsyncDisposable
 
 @code {
     private DotNetObjectReference<BoardRemoteNotifyBridge>? _dotNetRef;
+    private bool _hubStarted;
+
+    protected override void OnInitialized()
+    {
+        if (InitialBoardLoad.IsComplete)
+        {
+            _ = StartHubAsync();
+        }
+        else
+        {
+            InitialBoardLoad.Completed += OnInitialBoardLoadCompleted;
+        }
+    }
+
+    private void OnInitialBoardLoadCompleted()
+    {
+        InitialBoardLoad.Completed -= OnInitialBoardLoadCompleted;
+        _ = InvokeAsync(StartHubAsync);
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
+        if (firstRender && InitialBoardLoad.IsComplete && !_hubStarted)
+        {
+            await StartHubAsync();
+        }
+    }
+
+    private async Task StartHubAsync()
+    {
+        if (_hubStarted)
         {
             return;
         }
 
+        _hubStarted = true;
         _dotNetRef = DotNetObjectReference.Create(RefreshBridge);
         try
         {
@@ -35,6 +64,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        InitialBoardLoad.Completed -= OnInitialBoardLoadCompleted;
         try
         {
             await JS.InvokeVoidAsync("HabitinatorBoardHub.stop");

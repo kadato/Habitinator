@@ -2,6 +2,8 @@ using App.Shared.RCL.Models;
 
 using App.MAUI.Services.LocalBoard;
 
+using Microsoft.Extensions.Logging;
+
 namespace App.MAUI.Services;
 
 public interface IApiSession
@@ -28,19 +30,22 @@ public sealed class ApiSession : IApiSession
     private readonly MauiBoardSyncCoordinator _sync;
     private readonly MauiBoardSyncStatus _syncStatus;
     private readonly IAuthTokenStore _store;
+    private readonly ILogger<ApiSession> _logger;
 
     public ApiSession(
         IAuthTokenStore store,
         MauiBoardHubService hub,
         IMauiBoardLocalStoreLifecycle localBoard,
         MauiBoardSyncCoordinator sync,
-        MauiBoardSyncStatus syncStatus)
+        MauiBoardSyncStatus syncStatus,
+        ILogger<ApiSession> logger)
     {
         _store = store;
         _hub = hub;
         _localBoard = localBoard;
         _sync = sync;
         _syncStatus = syncStatus;
+        _logger = logger;
     }
 
     public event EventHandler? Changed;
@@ -62,13 +67,10 @@ public sealed class ApiSession : IApiSession
         IsLoggedIn = !string.IsNullOrEmpty(t);
         Email = e;
         IsReady = true;
-        if (IsLoggedIn)
-        {
-            await _hub.EnsureConnectedAsync(cancellationToken);
-            _sync.RequestSync();
-        }
-
         OnChanged();
+
+        if (IsLoggedIn)
+            StartBackgroundHubAndSync();
     }
 
     public async Task SetSessionAsync(LoginResponse response, CancellationToken cancellationToken = default)
@@ -78,9 +80,24 @@ public sealed class ApiSession : IApiSession
         IsLoggedIn = true;
         Email = response.Email;
         IsReady = true;
-        await _hub.EnsureConnectedAsync(cancellationToken);
-        _sync.RequestSync();
         OnChanged();
+        StartBackgroundHubAndSync();
+    }
+
+    private void StartBackgroundHubAndSync()
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _hub.EnsureConnectedAsync(CancellationToken.None);
+                _sync.RequestSync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Background hub connect or board sync failed.");
+            }
+        });
     }
 
     public async Task ClearSessionAsync(CancellationToken cancellationToken = default)

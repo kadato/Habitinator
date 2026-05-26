@@ -11,6 +11,7 @@
 @inject IUserPreferencesService PreferencesService
 @inject IUserDateFormatService DateFormatService
 @inject IUndoService UndoService
+@inject IInitialBoardLoadGate InitialBoardLoad
 
 <style>
     /* Centered search and tags filter row on desktop */
@@ -468,6 +469,7 @@
     private readonly HashSet<string> _selectedFilterTags = new(StringComparer.OrdinalIgnoreCase);
     private bool _dailyRetroSessionOffered;
     private bool _dailyRetroClientReady;
+    private bool _boardClientScriptsStarted;
     private DotNetObjectReference<BoardRemoteNotifyBridge>? _visibilityRef;
     private DotNetObjectReference<MainBoard>? _selfRef;
 
@@ -592,37 +594,45 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (_initialLoadComplete && _loadError is null && !_boardClientScriptsStarted)
         {
-            _dailyRetroClientReady = true;
-            try
-            {
-                _visibilityRef = DotNetObjectReference.Create(BoardNotifyBridge);
-                await JS.InvokeVoidAsync("HabitinatorBoardVisibility.start", _visibilityRef);
-            }
-            catch (JSDisconnectedException)
-            {
-            }
-            catch (InvalidOperationException)
-            {
-            }
-
-            try
-            {
-                _selfRef = DotNetObjectReference.Create(this);
-                await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.start", _selfRef);
-            }
-            catch (JSDisconnectedException)
-            {
-            }
-            catch (InvalidOperationException)
-            {
-            }
+            await StartBoardClientScriptsAsync();
         }
+    }
 
-        if (_initialLoadComplete && _loadError is null)
+    private async Task StartBoardClientScriptsAsync()
+    {
+        _boardClientScriptsStarted = true;
+        try
         {
+            await JS.InvokeVoidAsync(
+                "habitinatorLoadScript",
+                "_content/App.Shared.RCL/js/boardVisibility.js");
+            await JS.InvokeVoidAsync(
+                "habitinatorLoadScript",
+                "_content/App.Shared.RCL/js/dailyRetroSession.js");
+
+            _visibilityRef = DotNetObjectReference.Create(BoardNotifyBridge);
+            await JS.InvokeVoidAsync("HabitinatorBoardVisibility.start", _visibilityRef);
+
+            _selfRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.start", _selfRef);
+
+            _dailyRetroClientReady = true;
             await TryOpenDailyYesterdayRetroIfNeededAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (TaskCanceledException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+        catch (JSException)
+        {
+            _boardClientScriptsStarted = false;
         }
     }
 
@@ -649,6 +659,7 @@
         {
             _isLoading = false;
             _initialLoadComplete = true;
+            InitialBoardLoad.MarkComplete();
         }
     }
 

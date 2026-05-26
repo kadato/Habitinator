@@ -1,0 +1,28 @@
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+
+@code {
+    private bool _loaded;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _loaded)
+        {
+            return;
+        }
+
+        _loaded = true;
+        try
+        {
+            await JS.InvokeVoidAsync(
+                "habitinatorLoadScript",
+                "_content/App.Shared.RCL/js/statisticsScrolling.js");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+}

@@ -1,4 +1,5 @@
 ﻿using App.MAUI.Services;
+using App.MAUI.Services.LocalBoard;
 
 namespace App.MAUI;
 
@@ -17,7 +18,16 @@ public partial class App : Application
     protected override void OnStart()
     {
         base.OnStart();
+        RequestLocalStoreReady();
         RequestDailyReminderReschedule();
+    }
+
+    private static void RequestLocalStoreReady()
+    {
+        if (IPlatformApplication.Current?.Services is not IServiceProvider sp) return;
+
+        if (sp.GetService(typeof(IMauiBoardLocalStoreLifecycle)) is IMauiBoardLocalStoreLifecycle store)
+            _ = store.EnsureStoreReadyAsync();
     }
 
     protected override void OnResume()

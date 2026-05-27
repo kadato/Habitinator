@@ -1,3 +1,7 @@
+:root {
+    color-scheme: light dark;
+}
+
 html, body {
     font-family: var(--hab-font-sans);
     background: var(--mud-palette-background);

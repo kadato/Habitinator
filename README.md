@@ -25,45 +25,35 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 <div align="center">
 
 <p align="center">
-  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/02-board-light.png" title="Open full-size image on GitHub">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/readme/02-board-dark.png">
-      <img src="docs/automation/screenshots/readme/02-board-light.png" width="320" alt="Board view with habits, dailies, and to-dos (preview crops bottom half)"/>
-    </picture>
-  </a>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/readme/02-board-dark.png">
+    <img src="docs/automation/screenshots/readme/02-board-light.png" width="320" alt="Board view with habits, dailies, and to-dos (preview crops bottom half)"/>
+  </picture>
   &nbsp;&nbsp;
-  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/03-edit-daily-light.png" title="Open full-size image on GitHub">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/03-edit-daily-dark.png">
-      <img src="docs/automation/screenshots/03-edit-daily-light.png" width="320" alt="Edit daily modal"/>
-    </picture>
-  </a>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/03-edit-daily-dark.png">
+    <img src="docs/automation/screenshots/03-edit-daily-light.png" width="320" alt="Edit daily modal"/>
+  </picture>
   &nbsp;&nbsp;
-  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/04-statistics-light.png" title="Open full-size statistics screenshot on GitHub">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/readme/04-statistics-dark.png">
-      <img src="docs/automation/screenshots/readme/04-statistics-light.png" width="320" alt="Statistics heatmap and summaries (preview shows top half of the page)"/>
-    </picture>
-  </a>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/readme/04-statistics-dark.png">
+    <img src="docs/automation/screenshots/readme/04-statistics-light.png" width="320" alt="Statistics heatmap and summaries (preview shows top half of the page)"/>
+  </picture>
 </p>
-<p align="center"><sub><b>Board</b> · <b>Edit daily</b> · <b>Statistics</b></sub></p>
+<p align="center"><sub><b>Board</b> (<a href="docs/automation/screenshots/02-board-light.png">light</a> | <a href="docs/automation/screenshots/02-board-dark.png">dark</a>) · <b>Edit daily</b> (<a href="docs/automation/screenshots/03-edit-daily-light.png">light</a> | <a href="docs/automation/screenshots/03-edit-daily-dark.png">dark</a>) · <b>Statistics</b> (<a href="docs/automation/screenshots/04-statistics-light.png">light</a> | <a href="docs/automation/screenshots/04-statistics-dark.png">dark</a>)</sub></p>
 
 <p align="center">
-  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/05-activity-day-detail-light.png" title="Open full-size image on GitHub">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/05-activity-day-detail-dark.png">
-      <img src="docs/automation/screenshots/05-activity-day-detail-light.png" width="480" alt="Activity day detail modal"/>
-    </picture>
-  </a>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/05-activity-day-detail-dark.png">
+    <img src="docs/automation/screenshots/05-activity-day-detail-light.png" width="480" alt="Activity day detail modal"/>
+  </picture>
   &nbsp;&nbsp;
-  <a href="https://github.com/tothKarolyDavid/Habitinator/blob/main/docs/automation/screenshots/06-settings-light.png" title="Open full-size image on GitHub">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/06-settings-dark.png">
-      <img src="docs/automation/screenshots/06-settings-light.png" width="480" alt="Settings page"/>
-    </picture>
-  </a>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/06-settings-dark.png">
+    <img src="docs/automation/screenshots/06-settings-light.png" width="480" alt="Settings page"/>
+  </picture>
 </p>
-<p align="center"><sub><b>Day detail</b> · <b>Settings</b></sub></p>
+<p align="center"><sub><b>Day detail</b> (<a href="docs/automation/screenshots/05-activity-day-detail-light.png">light</a> | <a href="docs/automation/screenshots/05-activity-day-detail-dark.png">dark</a>) · <b>Settings</b> (<a href="docs/automation/screenshots/06-settings-light.png">light</a> | <a href="docs/automation/screenshots/06-settings-dark.png">dark</a>)</sub></p>
 
 </div>
 

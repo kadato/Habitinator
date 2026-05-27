@@ -155,6 +155,18 @@
         await ResolveThemeAsync();
     }
 
+    private async Task SyncHtmlThemeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("habitinatorSetTheme", _isDarkMode ? "dark" : "light");
+        }
+        catch
+        {
+            // Ignore if JS is not available (e.g. prerendering)
+        }
+    }
+
     private async Task ResolveThemeAsync()
     {
         if (_preferences is null) return;
@@ -174,18 +186,20 @@
                 _isDarkMode = await _mudThemeProvider.GetSystemDarkModeAsync();
             }
         }
+        await SyncHtmlThemeAsync();
         await InvokeAsync(StateHasChanged);
     }
 
-    private Task OnSystemPreferenceChanged(bool isDarkMode)
+    private async Task OnSystemPreferenceChanged(bool isDarkMode)
     {
         if (_preferences?.Theme == AppTheme.System)
         {
             _isDarkMode = isDarkMode;
+            await SyncHtmlThemeAsync();
             StateHasChanged();
         }
-        return Task.CompletedTask;
     }
+
 
     private string GetFullIdentity(AuthenticationState auth)
     {

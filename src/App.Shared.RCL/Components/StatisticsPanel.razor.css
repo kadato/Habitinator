@@ -55,33 +55,37 @@
 }
 
 /* Custom scrollbar styling to make scrollbars always visible and elegant */
-.stats-heatmap-wrap::-webkit-scrollbar,
-.stats-week-bars::-webkit-scrollbar {
-    height: 6px;
-}
-
-.stats-heatmap-wrap::-webkit-scrollbar-track,
-.stats-week-bars::-webkit-scrollbar-track {
-    background: var(--mud-palette-background-gray);
-    border-radius: 3px;
-}
-
-.stats-heatmap-wrap::-webkit-scrollbar-thumb,
-.stats-week-bars::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--mud-palette-primary) 30%, var(--mud-palette-text-secondary) 25%);
-    border-radius: 3px;
-    transition: background-color 0.2s ease;
-}
-
-.stats-heatmap-wrap::-webkit-scrollbar-thumb:hover,
-.stats-week-bars::-webkit-scrollbar-thumb:hover {
-    background: var(--mud-palette-primary);
-}
-
 .stats-heatmap-wrap,
 .stats-week-bars {
+    --scrollbar-thumb: color-mix(in srgb, var(--mud-palette-primary) 30%, var(--mud-palette-text-secondary) 25%);
+    --scrollbar-track: var(--mud-palette-background-gray);
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--mud-palette-primary) 30%, var(--mud-palette-text-secondary) 25%) var(--mud-palette-background-gray);
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+@supports not (scrollbar-color: auto) {
+    .stats-heatmap-wrap::-webkit-scrollbar,
+    .stats-week-bars::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .stats-heatmap-wrap::-webkit-scrollbar-track,
+    .stats-week-bars::-webkit-scrollbar-track {
+        background: var(--scrollbar-track);
+        border-radius: 3px;
+    }
+
+    .stats-heatmap-wrap::-webkit-scrollbar-thumb,
+    .stats-week-bars::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb);
+        border-radius: 3px;
+        transition: background-color 0.2s ease;
+    }
+
+    .stats-heatmap-wrap::-webkit-scrollbar-thumb:hover,
+    .stats-week-bars::-webkit-scrollbar-thumb:hover {
+        background: var(--mud-palette-primary);
+    }
 }
 
 .stats-heatmap-rowlabels {

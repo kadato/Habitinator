@@ -70,6 +70,15 @@
     font-size: 1rem;
 }
 
+.auth-card .form-control:user-invalid {
+    border-color: var(--mud-palette-error) !important;
+    background-color: color-mix(in srgb, var(--mud-palette-error) 6%, var(--mud-palette-surface)) !important;
+}
+
+.auth-card .form-control:user-valid {
+    border-color: var(--mud-palette-success) !important;
+}
+
 .auth-card label {
     font-size: 0.875rem;
     font-weight: 500;

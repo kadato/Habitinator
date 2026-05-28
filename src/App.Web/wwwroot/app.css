@@ -2,11 +2,33 @@
     color-scheme: light dark;
 }
 
+html {
+    --scrollbar-thumb: var(--mud-palette-text-disabled);
+    --scrollbar-track: var(--mud-palette-background);
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    scrollbar-width: thin;
+}
+
+@supports not (scrollbar-color: auto) {
+    html::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    html::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb);
+        border-radius: 999px;
+    }
+    html::-webkit-scrollbar-track {
+        background: var(--scrollbar-track);
+    }
+}
+
 html, body {
     font-family: var(--hab-font-sans);
     background: var(--mud-palette-background);
     color: var(--mud-palette-text-primary);
     -webkit-tap-highlight-color: transparent;
+    accent-color: var(--mud-palette-primary);
 }
 
 a, .btn-link {

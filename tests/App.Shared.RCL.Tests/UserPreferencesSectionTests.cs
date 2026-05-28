@@ -1,0 +1,262 @@
+#pragma warning disable MUD0012
+
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using App.Shared.RCL.Components;
+using App.Shared.RCL.Models;
+using App.Shared.RCL.Services;
+using Bunit;
+using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using MudBlazor;
+using MudBlazor.Services;
+using NSubstitute;
+using Xunit;
+
+namespace App.Shared.RCL.Tests;
+
+public sealed class UserPreferencesSectionTests : IAsyncDisposable
+{
+    private readonly BunitContext _ctx = new();
+    private readonly IUserPreferencesService _preferencesService = Substitute.For<IUserPreferencesService>();
+    private readonly IUserNotifier _notifier = Substitute.For<IUserNotifier>();
+    private readonly IUserTimeZoneService _timeZoneService = Substitute.For<IUserTimeZoneService>();
+
+    public UserPreferencesSectionTests()
+    {
+        _ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+        _ctx.Services.AddMudServices();
+        _ctx.Services.AddSingleton<IUserPreferencesService>(_preferencesService);
+        _ctx.Services.AddSingleton<IUserNotifier>(_notifier);
+        _ctx.Services.AddSingleton<IUserTimeZoneService>(_timeZoneService);
+
+        // Render PopoverProvider to satisfy MudBlazor dropdowns/pickers
+        _ctx.Render<MudPopoverProvider>();
+
+        // Set default mocks for timezone service
+        _timeZoneService.TimeZoneId.Returns("UTC");
+        _timeZoneService.IsDetected.Returns(true);
+        _timeZoneService.GetTimeZoneAbbreviation().Returns("UTC");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _ctx.DisposeAsync();
+    }
+
+    [Fact]
+    public void Renders_LoadingSkeletons_Initially()
+    {
+        // Arrange
+        var tcs = new TaskCompletionSource<UserPreferences>();
+        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(tcs.Task);
+
+        // Act
+        var cut = _ctx.Render<UserPreferencesSection>();
+
+        // Assert
+        cut.FindComponents<MudSkeleton>().Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void Renders_Preferences_OnceLoaded()
+    {
+        // Arrange
+        var prefs = new UserPreferences
+        {
+            DisplayName = "Jane Doe",
+            DateFormat = "yyyy-MM-dd",
+            DayStartLocalTime = TimeSpan.FromHours(5),
+            TimeZoneOverrideId = "America/New_York",
+            Theme = AppTheme.Dark
+        };
+        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(prefs));
+
+        // Act
+        var cut = _ctx.Render<UserPreferencesSection>();
+
+        // Assert
+        var textFields = cut.FindComponents<MudTextField<string>>();
+        textFields.Should().HaveCountGreaterOrEqualTo(2);
+        textFields[0].Instance.Value.Should().Be("Jane Doe");
+        textFields[1].Instance.Value.Should().Be("yyyy-MM-dd");
+
+        var timePicker = cut.FindComponent<MudTimePicker>();
+        timePicker.Instance.Time.Should().Be(TimeSpan.FromHours(5));
+
+        var tzSelect = cut.FindComponent<MudSelect<string>>();
+        tzSelect.Instance.Value.Should().Be("America/New_York");
+
+        var themeSelect = cut.FindComponent<MudSelect<AppTheme>>();
+        themeSelect.Instance.Value.Should().Be(AppTheme.Dark);
+    }
+
+    [Fact]
+    public async Task AutoSaves_DisplayName_OnBlur()
+    {
+        // Arrange
+        var prefs = new UserPreferences
+        {
+            DisplayName = "Jane Doe",
+            DateFormat = "yyyy-MM-dd",
+            DayStartLocalTime = TimeSpan.FromHours(5)
+        };
+        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(prefs));
+
+        var cut = _ctx.Render<UserPreferencesSection>();
+        var displayNameField = cut.FindComponents<MudTextField<string>>()[0];
+
+        // Act - change display name and blur
+        await cut.InvokeAsync(() => displayNameField.Instance.ValueChanged.InvokeAsync("Jane Smith"));
+        await cut.InvokeAsync(() => displayNameField.Instance.OnBlur.InvokeAsync(new Microsoft.AspNetCore.Components.Web.FocusEventArgs()));
+
+        // Assert
+        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p.DisplayName == "Jane Smith"));
+    }
+
+    [Fact]
+    public async Task AutoSaves_DateFormat_OnBlur()
+    {
+        // Arrange
+        var prefs = new UserPreferences
+        {
+            DisplayName = "Jane Doe",
+            DateFormat = "yyyy-MM-dd"
+        };
+        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(prefs));
+
+        var cut = _ctx.Render<UserPreferencesSection>();
+        var dateFormatField = cut.FindComponents<MudTextField<string>>()[1];
+
+        // Act - change date format and blur
+        await cut.InvokeAsync(() => dateFormatField.Instance.ValueChanged.InvokeAsync("dd/MM/yyyy"));
+        await cut.InvokeAsync(() => dateFormatField.Instance.OnBlur.InvokeAsync(new Microsoft.AspNetCore.Components.Web.FocusEventArgs()));
+
+        // Assert
+        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p.DateFormat == "dd/MM/yyyy"));
+    }
+
+    [Fact]
+    public async Task AutoSaves_DayStart_Immediately()
+    {
+        // Arrange
+        var prefs = new UserPreferences
+        {
+            DayStartLocalTime = TimeSpan.FromHours(5)
+        };
+        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(prefs));
+
+        var cut = _ctx.Render<UserPreferencesSection>();
+        var timePicker = cut.FindComponent<MudTimePicker>();
+
+        // Act - change time
+        await cut.InvokeAsync(() => timePicker.Instance.TimeChanged.InvokeAsync(TimeSpan.FromHours(7)));
+
+        // Assert
+        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p.DayStartLocalTime == TimeSpan.FromHours(7)));
+    }
+
+    [Fact]
+    public async Task AutoSaves_TimeZone_Immediately()
+    {
+        // Arrange
+        var prefs = new UserPreferences
+        {
+            TimeZoneOverrideId = "UTC"
+        };
+        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(prefs));
+
+        var cut = _ctx.Render<UserPreferencesSection>();
+        var tzSelect = cut.FindComponent<MudSelect<string>>();
+
+        // Act - change timezone
+        await cut.InvokeAsync(() => tzSelect.Instance.ValueChanged.InvokeAsync("Europe/London"));
+
+        // Assert
+        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p.TimeZoneOverrideId == "Europe/London"));
+        _timeZoneService.Received().SetOverride("Europe/London");
+    }
+
+    [Fact]
+    public async Task AutoSaves_Theme_Immediately()
+    {
+        // Arrange
+        var prefs = new UserPreferences
+        {
+            Theme = AppTheme.System
+        };
+        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(prefs));
+
+        var cut = _ctx.Render<UserPreferencesSection>();
+        var themeSelect = cut.FindComponent<MudSelect<AppTheme>>();
+
+        // Act - change theme
+        await cut.InvokeAsync(() => themeSelect.Instance.ValueChanged.InvokeAsync(AppTheme.Light));
+
+        // Assert
+        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p.Theme == AppTheme.Light));
+    }
+
+    [Fact]
+    public async Task Displays_ValidationError_IfDisplayNameTooLong()
+    {
+        // Arrange
+        var prefs = new UserPreferences
+        {
+            DisplayName = "Jane Doe"
+        };
+        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(prefs));
+
+        var cut = _ctx.Render<UserPreferencesSection>();
+        var displayNameField = cut.FindComponents<MudTextField<string>>()[0];
+
+        // Act - set long name and blur
+        string longName = new string('A', 41);
+        await cut.InvokeAsync(() => displayNameField.Instance.ValueChanged.InvokeAsync(longName));
+        await cut.InvokeAsync(() => displayNameField.Instance.OnBlur.InvokeAsync(new Microsoft.AspNetCore.Components.Web.FocusEventArgs()));
+
+        // Assert
+        displayNameField.Instance.Error.Should().BeTrue();
+        displayNameField.Instance.ErrorText.Should().Be("Display name must be 40 characters or fewer.");
+        await _preferencesService.DidNotReceiveWithAnyArgs().SaveAsync(null!);
+    }
+
+    [Fact]
+    public async Task Displays_ValidationError_IfDateFormatInvalid()
+    {
+        // Arrange
+        var prefs = new UserPreferences
+        {
+            DateFormat = "yyyy-MM-dd"
+        };
+        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(prefs));
+
+        var cut = _ctx.Render<UserPreferencesSection>();
+        var dateFormatField = cut.FindComponents<MudTextField<string>>()[1];
+
+        // Act - set invalid format and blur
+        await cut.InvokeAsync(() => dateFormatField.Instance.ValueChanged.InvokeAsync("%"));
+        await cut.InvokeAsync(() => dateFormatField.Instance.OnBlur.InvokeAsync(new Microsoft.AspNetCore.Components.Web.FocusEventArgs()));
+
+        // Assert
+        dateFormatField.Instance.Error.Should().BeTrue();
+        dateFormatField.Instance.ErrorText.Should().Be("Date format is not valid.");
+        await _preferencesService.DidNotReceiveWithAnyArgs().SaveAsync(null!);
+    }
+
+    [Fact]
+    public void Displays_ErrorAlert_OnLoadException()
+    {
+        // Arrange
+        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(x => Task.FromException<UserPreferences>(new Exception("Network failure")));
+
+        // Act
+        var cut = _ctx.Render<UserPreferencesSection>();
+
+        // Assert
+        var alert = cut.FindComponent<MudAlert>();
+        alert.Instance.Severity.Should().Be(Severity.Error);
+        cut.Markup.Should().Contain("Network failure");
+    }
+}

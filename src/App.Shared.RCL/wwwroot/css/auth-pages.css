@@ -79,6 +79,10 @@
     border-color: var(--mud-palette-success) !important;
 }
 
+.auth-card .mb-3:has(:user-invalid) label {
+    color: var(--mud-palette-error) !important;
+}
+
 .auth-card label {
     font-size: 0.875rem;
     font-weight: 500;

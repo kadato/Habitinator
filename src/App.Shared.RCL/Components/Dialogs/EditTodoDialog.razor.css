@@ -99,6 +99,13 @@
     color: var(--mud-palette-text-primary) !important;
 }
 
+.edit-daily-field-header :deep(textarea.mud-input-slot) {
+    field-sizing: content;
+    height: auto;
+    min-height: 3lh;
+    max-height: 10lh;
+}
+
 .edit-daily-field-header :deep(.mud-input-outlined-border) {
     border-color: var(--mud-palette-divider) !important;
 }

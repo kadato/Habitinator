@@ -131,6 +131,11 @@ builder.Services.AddScoped<INotificationSettingsRules, NotificationSettingsRules
 builder.Services.AddScoped<IUserDateFormatService, UserDateFormatService>();
 builder.Services.AddScoped<IAccountActionsService, WebAccountActionsService>();
 builder.Services.AddHttpClient();
+builder.Services.AddValidation();
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);
+});
 
 builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 

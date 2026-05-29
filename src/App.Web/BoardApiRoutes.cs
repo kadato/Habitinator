@@ -54,7 +54,6 @@ internal static class BoardApiRoutes
             async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
                 BoardSection section, ItemTitleRequest request, CancellationToken cancellationToken) =>
             {
-                if (string.IsNullOrWhiteSpace(request.Title)) return Results.BadRequest("Title is required.");
                 if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
                 var path = http.Request.Path.Value ?? "";
@@ -257,7 +256,6 @@ internal static class BoardApiRoutes
             async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
                 Guid itemId, HabitUpdateRequest request, CancellationToken cancellationToken) =>
             {
-                if (string.IsNullOrWhiteSpace(request.Title)) return Results.BadRequest("Title is required.");
                 if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
                 var path = http.Request.Path.Value ?? "";
@@ -304,7 +302,6 @@ internal static class BoardApiRoutes
             async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
                 Guid itemId, TodoUpdateRequest request, CancellationToken cancellationToken) =>
             {
-                if (string.IsNullOrWhiteSpace(request.Title)) return Results.BadRequest("Title is required.");
                 if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
                 var path = http.Request.Path.Value ?? "";
@@ -347,7 +344,6 @@ internal static class BoardApiRoutes
             async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
                 Guid itemId, DailyUpdateRequest request, CancellationToken cancellationToken) =>
             {
-                if (string.IsNullOrWhiteSpace(request.Title)) return Results.BadRequest("Title is required.");
                 if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
 
                 var path = http.Request.Path.Value ?? "";

@@ -1,38 +1,43 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace App.Shared.RCL.Models;
 
-public sealed record ItemTitleRequest(string Title, Guid? ItemId = null);
+public sealed record ItemTitleRequest(
+    [Required, StringLength(200)] string Title, 
+    Guid? ItemId = null);
 
 public sealed record HabitUpdateRequest(
-    string Title,
-    string? Notes,
-    string? Tags,
+    [Required, StringLength(200)] string Title,
+    [StringLength(4000)] string? Notes,
+    [StringLength(500)] string? Tags,
     bool TrackPlus,
     bool TrackMinus,
     HabitResetPeriod ResetPeriod,
     int Counter,
     int NegativeCounter,
-    string? ChecklistJson = null,
+    [StringLength(8000)] string? ChecklistJson = null,
     double? SortOrder = null);
 
 public sealed record DailyUpdateRequest(
-    string Title,
-    string? Notes,
-    string? Tags,
+    [Required, StringLength(200)] string Title,
+    [StringLength(4000)] string? Notes,
+    [StringLength(500)] string? Tags,
     DateTime? StartDate,
     DailyRepeatType Repeat,
     int RepeatInterval,
-    string? ChecklistJson,
+    [StringLength(8000)] string? ChecklistJson,
     int Streak = 0,
     double? SortOrder = null);
 
 public sealed record TodoUpdateRequest(
-    string Title,
-    string? Notes,
-    string? Tags,
-    string? ChecklistJson,
+    [Required, StringLength(200)] string Title,
+    [StringLength(4000)] string? Notes,
+    [StringLength(500)] string? Tags,
+    [StringLength(8000)] string? ChecklistJson,
     DateTime? DueDate,
     double? SortOrder = null);
 
 public sealed record BoardSectionRequest(BoardSection Section);
 
 public sealed record DailyCompleteForDateRequest(DateOnly CompletedOn);
+

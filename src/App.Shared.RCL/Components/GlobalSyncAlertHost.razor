@@ -1,0 +1,113 @@
+@inject IBoardSyncStatus BoardSync
+@inject IUserNotifier UserNotifier
+@inject INotificationSettingsService SettingsService
+@implements IDisposable
+
+@code {
+    private bool? _wasOffline;
+    private string? _prevSyncProblemMessage;
+    private NotificationSettings? _settings;
+
+    protected override async Task OnInitializedAsync()
+    {
+        BoardSync.Changed += OnBoardSyncChanged;
+        SettingsService.Changed += OnSettingsChanged;
+        await LoadSettingsAsync();
+
+        // Initialize tracking variables so we only alert on transitions, not initial load
+        _wasOffline = BoardSync.IsOffline;
+        _prevSyncProblemMessage = BoardSync.SyncProblemMessage;
+    }
+
+    private async Task LoadSettingsAsync()
+    {
+        try
+        {
+            _settings = await SettingsService.GetAsync();
+        }
+        catch
+        {
+            _settings = null;
+        }
+    }
+
+    private void OnSettingsChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await LoadSettingsAsync();
+            StateHasChanged();
+        });
+    }
+
+    private void OnBoardSyncChanged(object? sender, EventArgs e)
+    {
+        _ = InvokeAsync(HandleSyncStatusChangeAsync);
+    }
+
+    private async Task HandleSyncStatusChangeAsync()
+    {
+        if (_settings is null)
+        {
+            await LoadSettingsAsync();
+        }
+
+        if (_settings is null || !_settings.SyncFailureAlertsEnabled)
+        {
+            // Update tracking to avoid queuing old transitions if alerts are toggled back on
+            _wasOffline = BoardSync.IsOffline;
+            _prevSyncProblemMessage = BoardSync.SyncProblemMessage;
+            return;
+        }
+
+        var currentOffline = BoardSync.IsOffline;
+        var currentProblem = BoardSync.SyncProblemMessage;
+
+        // 1. Connection/Offline transition
+        if (_wasOffline.HasValue && _wasOffline != currentOffline)
+        {
+            if (currentOffline)
+            {
+                await UserNotifier.NotifyAsync(
+                    "Working offline. Changes will save locally and sync when you reconnect.",
+                    MudBlazor.Severity.Warning);
+            }
+            else
+            {
+                await UserNotifier.NotifyAsync(
+                    "Back online. Connection to the server restored.",
+                    MudBlazor.Severity.Success);
+            }
+        }
+
+        // 2. Sync problem message transition
+        if (_prevSyncProblemMessage != currentProblem)
+        {
+            if (!string.IsNullOrEmpty(currentProblem))
+            {
+                // Suppress problem toast if it is just reporting offline, as we already show the offline warning
+                if (!(currentOffline && currentProblem.Contains("Offline", StringComparison.OrdinalIgnoreCase)))
+                {
+                    await UserNotifier.NotifyAsync(currentProblem, MudBlazor.Severity.Error);
+                }
+            }
+            else if (!string.IsNullOrEmpty(_prevSyncProblemMessage))
+            {
+                // Suppress resolved toast if the previous message was just the offline message
+                if (!currentOffline && !_prevSyncProblemMessage.Contains("Offline", StringComparison.OrdinalIgnoreCase))
+                {
+                    await UserNotifier.NotifyAsync("Sync issues resolved. All changes synchronized.", MudBlazor.Severity.Success);
+                }
+            }
+        }
+
+        _wasOffline = currentOffline;
+        _prevSyncProblemMessage = currentProblem;
+    }
+
+    public void Dispose()
+    {
+        BoardSync.Changed -= OnBoardSyncChanged;
+        SettingsService.Changed -= OnSettingsChanged;
+    }
+}

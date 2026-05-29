@@ -1,6 +1,7 @@
 #pragma warning disable MUD0012
 
 using System;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using App.Shared.RCL.Components;
@@ -243,6 +244,145 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         dateFormatField.Instance.Error.Should().BeTrue();
         dateFormatField.Instance.ErrorText.Should().Be("Date format is not valid.");
         await _preferencesService.DidNotReceiveWithAnyArgs().SaveAsync(null!);
+    }
+
+    [Fact]
+    public void Renders_InvalidFormatError_Immediately_IfLoadedFormatIsInvalid()
+    {
+        // Arrange
+        var prefs = new UserPreferences
+        {
+            DateFormat = "%" // Invalid format
+        };
+        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(prefs));
+
+        // Act
+        var cut = _ctx.Render<UserPreferencesSection>();
+        var dateFormatField = cut.FindComponents<MudTextField<string>>()[1];
+
+        // Assert
+        dateFormatField.Instance.Error.Should().BeTrue();
+        dateFormatField.Instance.ErrorText.Should().Be("Date format is not valid.");
+        
+        // The preview should contain "Invalid format"
+        cut.Markup.Should().Contain("Preview: Invalid format");
+    }
+
+    [Fact]
+    public async Task Updates_Preview_Dynamically_OnUserInputChange()
+    {
+        // Arrange
+        var prefs = new UserPreferences
+        {
+            DateFormat = "yyyy-MM-dd"
+        };
+        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(prefs));
+
+        var cut = _ctx.Render<UserPreferencesSection>();
+        var dateFormatField = cut.FindComponents<MudTextField<string>>()[1];
+
+        // Act - change to a new valid format dynamically (before blur)
+        var newFormat = "dd/MM/yyyy";
+        var expectedPreview = DateTime.Now.ToString(newFormat, CultureInfo.InvariantCulture);
+        await cut.InvokeAsync(() => dateFormatField.Instance.ValueChanged.InvokeAsync(newFormat));
+
+        // Assert preview updates immediately
+        cut.Markup.Should().Contain($"Preview: {expectedPreview}");
+        dateFormatField.Instance.Error.Should().BeFalse();
+
+        // Act - change to an invalid format dynamically
+        await cut.InvokeAsync(() => dateFormatField.Instance.ValueChanged.InvokeAsync("%"));
+
+        // Assert preview shows invalid and error is displayed immediately
+        cut.Markup.Should().Contain("Preview: Invalid format");
+        dateFormatField.Instance.Error.Should().BeTrue();
+        dateFormatField.Instance.ErrorText.Should().Be("Date format is not valid.");
+    }
+
+    [Theory]
+    [InlineData("yyyy-MM-dd")]
+    [InlineData("dd/MM/yyyy")]
+    [InlineData("MM/dd/yyyy")]
+    [InlineData("yyyy.MM.dd")]
+    [InlineData("dd-MMM-yyyy")]
+    [InlineData("yyyy/MM/dd HH:mm")]
+    [InlineData("yyyy")]
+    [InlineData("MM-dd")]
+    public async Task Allows_Saving_Typical_ValidFormats_OnBlur(string validFormat)
+    {
+        // Arrange
+        var prefs = new UserPreferences
+        {
+            DateFormat = "yyyy-MM-dd"
+        };
+        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(prefs));
+
+        var cut = _ctx.Render<UserPreferencesSection>();
+        var dateFormatField = cut.FindComponents<MudTextField<string>>()[1];
+
+        // Act - change to the valid format and blur
+        await cut.InvokeAsync(() => dateFormatField.Instance.ValueChanged.InvokeAsync(validFormat));
+        await cut.InvokeAsync(() => dateFormatField.Instance.OnBlur.InvokeAsync(new Microsoft.AspNetCore.Components.Web.FocusEventArgs()));
+
+        // Assert
+        dateFormatField.Instance.Error.Should().BeFalse();
+        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p.DateFormat == validFormat));
+    }
+
+    [Theory]
+    [InlineData("%")]
+    [InlineData("z")] // Invalid single-character format specifier
+    [InlineData("yyyy-MM-dd %")] // Trailing percent sign without a format specifier
+    [InlineData("yyyy-MM-dd \\")] // Trailing escape character without a character to escape
+    public async Task Blocks_Saving_And_DisplaysError_For_Typical_InvalidFormats_OnBlur(string invalidFormat)
+    {
+        // Arrange
+        var prefs = new UserPreferences
+        {
+            DateFormat = "yyyy-MM-dd"
+        };
+        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(prefs));
+
+        var cut = _ctx.Render<UserPreferencesSection>();
+        var dateFormatField = cut.FindComponents<MudTextField<string>>()[1];
+
+        // Act - change to the invalid format and blur
+        await cut.InvokeAsync(() => dateFormatField.Instance.ValueChanged.InvokeAsync(invalidFormat));
+        await cut.InvokeAsync(() => dateFormatField.Instance.OnBlur.InvokeAsync(new Microsoft.AspNetCore.Components.Web.FocusEventArgs()));
+
+        // Assert
+        dateFormatField.Instance.Error.Should().BeTrue();
+        dateFormatField.Instance.ErrorText.Should().Be("Date format is not valid.");
+        await _preferencesService.DidNotReceiveWithAnyArgs().SaveAsync(null!);
+    }
+
+    [Fact]
+    public async Task Clears_Error_And_Saves_When_Corrected_From_Invalid_To_Valid()
+    {
+        // Arrange
+        var prefs = new UserPreferences
+        {
+            DateFormat = "yyyy-MM-dd"
+        };
+        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(prefs));
+
+        var cut = _ctx.Render<UserPreferencesSection>();
+        var dateFormatField = cut.FindComponents<MudTextField<string>>()[1];
+
+        // 1. Set invalid format and blur -> expect error and no save
+        await cut.InvokeAsync(() => dateFormatField.Instance.ValueChanged.InvokeAsync("%"));
+        await cut.InvokeAsync(() => dateFormatField.Instance.OnBlur.InvokeAsync(new Microsoft.AspNetCore.Components.Web.FocusEventArgs()));
+
+        dateFormatField.Instance.Error.Should().BeTrue();
+        await _preferencesService.DidNotReceiveWithAnyArgs().SaveAsync(null!);
+
+        // 2. Set valid format and blur -> expect error cleared and save called
+        await cut.InvokeAsync(() => dateFormatField.Instance.ValueChanged.InvokeAsync("dd/MM/yyyy"));
+        await cut.InvokeAsync(() => dateFormatField.Instance.OnBlur.InvokeAsync(new Microsoft.AspNetCore.Components.Web.FocusEventArgs()));
+
+        dateFormatField.Instance.Error.Should().BeFalse();
+        dateFormatField.Instance.ErrorText.Should().BeNull();
+        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p.DateFormat == "dd/MM/yyyy"));
     }
 
     [Fact]

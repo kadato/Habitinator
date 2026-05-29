@@ -88,6 +88,7 @@ public sealed class MauiBoardSyncCoordinator
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Board sync tick failed.");
+            _status.SyncProblemMessage = "Could not reach the server. Board changes will sync when connection is restored.";
         }
         finally
         {

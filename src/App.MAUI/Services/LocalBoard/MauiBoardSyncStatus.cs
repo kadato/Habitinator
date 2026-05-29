@@ -4,12 +4,28 @@ using Microsoft.Maui.Networking;
 
 namespace App.MAUI.Services.LocalBoard;
 
-public sealed class MauiBoardSyncStatus : IBoardSyncStatus
+public sealed class MauiBoardSyncStatus : IBoardSyncStatus, IDisposable
 {
     private volatile bool _isOffline;
     private volatile bool _isSyncing;
     private DateTimeOffset? _lastSyncedUtc;
     private string? _syncProblemMessage;
+
+    public MauiBoardSyncStatus()
+    {
+        RefreshConnectivity();
+        Connectivity.Current.ConnectivityChanged += OnConnectivityChanged;
+    }
+
+    private void OnConnectivityChanged(object? sender, ConnectivityChangedEventArgs e)
+    {
+        IsOffline = e.NetworkAccess != NetworkAccess.Internet;
+    }
+
+    public void Dispose()
+    {
+        Connectivity.Current.ConnectivityChanged -= OnConnectivityChanged;
+    }
 
     public bool IsOffline
     {

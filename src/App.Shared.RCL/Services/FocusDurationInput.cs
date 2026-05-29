@@ -124,8 +124,10 @@ public static class FocusDurationInput
         var m = Regex.Match(s, @"^(\d+)\s*m\s*(\d+)\s*s$", RegexOptions.IgnoreCase);
         if (!m.Success) return false;
 
-        var min = int.Parse(m.Groups[1].Value);
-        var sec = int.Parse(m.Groups[2].Value);
+        if (!int.TryParse(m.Groups[1].Value, out var min) ||
+            !int.TryParse(m.Groups[2].Value, out var sec))
+            return false;
+
         if (sec is < 0 or > 59 || min < 0) return false;
 
         return TryFromTotalSeconds(min * 60L + sec, out duration);
@@ -137,9 +139,11 @@ public static class FocusDurationInput
         var m = Regex.Match(s, @"^(\d+):(\d+):(\d+)$");
         if (!m.Success) return false;
 
-        var h = int.Parse(m.Groups[1].Value);
-        var min = int.Parse(m.Groups[2].Value);
-        var sec = int.Parse(m.Groups[3].Value);
+        if (!int.TryParse(m.Groups[1].Value, out var h) ||
+            !int.TryParse(m.Groups[2].Value, out var min) ||
+            !int.TryParse(m.Groups[3].Value, out var sec))
+            return false;
+
         if (min is < 0 or > 59 || sec is < 0 or > 59 || h is < 0 or > 23) return false;
 
         if (h == 0 && min == 0 && sec == 0) return false;
@@ -153,8 +157,10 @@ public static class FocusDurationInput
         var m = Regex.Match(s, @"^(\d+):(\d+)$");
         if (!m.Success) return false;
 
-        var h = int.Parse(m.Groups[1].Value);
-        var min = int.Parse(m.Groups[2].Value);
+        if (!int.TryParse(m.Groups[1].Value, out var h) ||
+            !int.TryParse(m.Groups[2].Value, out var min))
+            return false;
+
         if (min is < 0 or > 59 || h is < 0 or > 23) return false;
 
         if (h == 0 && min == 0) return false;
@@ -168,8 +174,7 @@ public static class FocusDurationInput
         var m = Regex.Match(s, @"^(\d+)\s*m$", RegexOptions.IgnoreCase);
         if (!m.Success) return false;
 
-        var mins = int.Parse(m.Groups[1].Value);
-        if (mins <= 0) return false;
+        if (!int.TryParse(m.Groups[1].Value, out var mins) || mins <= 0) return false;
 
         return TryFromTotalSeconds(mins * 60L, out duration);
     }

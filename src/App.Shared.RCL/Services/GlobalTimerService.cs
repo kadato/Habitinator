@@ -5,8 +5,6 @@ public sealed class GlobalTimerService
     private readonly IClock _clock;
     private TimeSpan _accumulated = TimeSpan.Zero;
 
-    private TimeSpan? _focusAlertAfter;
-
     /// <summary>Total <see cref="Elapsed" /> at which the next "time's up" event fires, when focus duration is set.</summary>
     private TimeSpan? _nextFocusMilestoneAtElapsed;
 
@@ -30,12 +28,12 @@ public sealed class GlobalTimerService
     /// </summary>
     public TimeSpan? FocusAlertAfter
     {
-        get => _focusAlertAfter;
+        get => field;
         set
         {
-            if (_focusAlertAfter == value) return;
+            if (field == value) return;
 
-            _focusAlertAfter = value;
+            field = value;
             RearmFocusMilestone();
         }
     }
@@ -65,7 +63,7 @@ public sealed class GlobalTimerService
 
         if (AwaitingFocusTimeUpPrompt) return false;
 
-        if (!_focusAlertAfter.HasValue || _focusAlertAfter <= TimeSpan.Zero) return false;
+        if (!FocusAlertAfter.HasValue || FocusAlertAfter <= TimeSpan.Zero) return false;
 
         if (_nextFocusMilestoneAtElapsed is null) return false;
 
@@ -110,7 +108,7 @@ public sealed class GlobalTimerService
         }
 
         if (_nextFocusMilestoneAtElapsed is null
-            && _focusAlertAfter is { } f
+            && FocusAlertAfter is { } f
             && f > TimeSpan.Zero)
             _nextFocusMilestoneAtElapsed = _accumulated + f;
 
@@ -178,7 +176,7 @@ public sealed class GlobalTimerService
     /// </summary>
     public void ClearTargetAndFocus()
     {
-        _focusAlertAfter = null;
+        FocusAlertAfter = null;
         _nextFocusMilestoneAtElapsed = null;
         TargetType = null;
         TargetId = null;
@@ -192,15 +190,15 @@ public sealed class GlobalTimerService
 
     private void RearmFocusMilestone()
     {
-        if (!_focusAlertAfter.HasValue || _focusAlertAfter <= TimeSpan.Zero)
+        if (!FocusAlertAfter.HasValue || FocusAlertAfter <= TimeSpan.Zero)
         {
             _nextFocusMilestoneAtElapsed = null;
             return;
         }
 
         if (IsRunning)
-            _nextFocusMilestoneAtElapsed = Elapsed + _focusAlertAfter.Value;
+            _nextFocusMilestoneAtElapsed = Elapsed + FocusAlertAfter.Value;
         else
-            _nextFocusMilestoneAtElapsed = _accumulated + _focusAlertAfter.Value;
+            _nextFocusMilestoneAtElapsed = _accumulated + FocusAlertAfter.Value;
     }
 }

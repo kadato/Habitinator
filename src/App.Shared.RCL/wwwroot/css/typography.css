@@ -25,3 +25,12 @@ body {
 .mud-chip {
     font-family: var(--hab-font-sans);
 }
+
+/* Orphan prevention and wrapping optimization */
+h1, h2, h3, h4, h5, h6, .app-page-title, .edit-daily-header__title {
+    text-wrap: balance;
+}
+
+p, .auth-form-hint, .edit-daily-label-body, .habit-tag-picker__empty {
+    text-wrap: pretty;
+}

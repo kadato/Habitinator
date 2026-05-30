@@ -18,14 +18,22 @@ window.habitinatorGetTimezoneOffsetMinutes = function () {
 window.habitinatorSetTheme = function (theme) {
     try {
         const root = document.documentElement;
-        if (theme === "dark") {
-            root.classList.add("dark-theme");
-            root.classList.remove("light-theme");
-            root.style.colorScheme = "dark";
+        const updateTheme = () => {
+            if (theme === "dark") {
+                root.classList.add("dark-theme");
+                root.classList.remove("light-theme");
+                root.style.colorScheme = "dark";
+            } else {
+                root.classList.add("light-theme");
+                root.classList.remove("dark-theme");
+                root.style.colorScheme = "light";
+            }
+        };
+
+        if (document.startViewTransition && window.matchMedia('(prefers-reduced-motion: no-preference)').matches) {
+            document.startViewTransition(updateTheme);
         } else {
-            root.classList.add("light-theme");
-            root.classList.remove("dark-theme");
-            root.style.colorScheme = "light";
+            updateTheme();
         }
     } catch (e) {
         console.error(e);

@@ -481,18 +481,23 @@
     border: 1px solid var(--mud-palette-divider);
     border-radius: 0.35rem;
     box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.15);
-    animation: tagPickerFadeIn 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+    
+    /* Smooth CSS Entry & Exit Transition */
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+    pointer-events: none;
+    visibility: hidden;
+    transition: 
+        opacity 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+        transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+        visibility 0.15s;
 }
 
-@keyframes tagPickerFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(8px) scale(0.97);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
+.habit-tag-picker__dropdown--open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+    visibility: visible;
 }
 
 .habit-tag-picker__search {

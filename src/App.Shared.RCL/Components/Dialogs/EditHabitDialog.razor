@@ -139,50 +139,50 @@
             </div>
             <span class="habit-tag-picker__chevron" aria-hidden="true">▾</span>
         </div>
-        @if (_tagPickerOpen)
-        {
-            <div class="habit-tag-picker__dropdown" role="listbox" aria-labelledby="edit-habit-tags-trigger">
-                <input type="text"
-                       class="habit-tag-picker__search"
-                       @bind="_tagSearch"
-                       @bind:event="oninput"
-                       @onkeydown="OnTagSearchKeydown"
-                       @ref="_tagSearchField"
-                       placeholder="Enter a tag"/>
-                <div class="habit-tag-picker__list">
-                    @if (FilteredTagSuggestions().Count == 0 && !CanAddNewTagFromSearch())
-                    {
-                        <div class="habit-tag-picker__empty">
-                            @if (string.IsNullOrWhiteSpace(_tagSearch))
-                            {
-                                <text>Search or type a new tag, then press Enter</text>
-                            }
-                            else
-                            {
-                                <text>No tags match your search</text>
-                            }
-                        </div>
-                    }
-                    @foreach (var option in FilteredTagSuggestions())
-                    {
-                        <button type="button"
-                                class="habit-tag-picker__option"
-                                role="option"
-                                @onclick="() => AddTag(option)">
-                            @option
-                        </button>
-                    }
-                    @if (CanAddNewTagFromSearch() && !string.IsNullOrWhiteSpace(_tagSearch))
-                    {
-                        <button type="button"
-                                class="habit-tag-picker__option habit-tag-picker__option--add"
-                                @onclick="AddTagFromSearch">
-                            Add “@(_tagSearch.Trim())”
-                        </button>
-                    }
-                </div>
+        <div class="habit-tag-picker__dropdown @(_tagPickerOpen ? "habit-tag-picker__dropdown--open" : "")"
+             role="listbox"
+             aria-labelledby="edit-habit-tags-trigger"
+             aria-hidden="@(!_tagPickerOpen)">
+            <input type="text"
+                   class="habit-tag-picker__search"
+                   @bind="_tagSearch"
+                   @bind:event="oninput"
+                   @onkeydown="OnTagSearchKeydown"
+                   @ref="_tagSearchField"
+                   placeholder="Enter a tag"/>
+            <div class="habit-tag-picker__list">
+                @if (FilteredTagSuggestions().Count == 0 && !CanAddNewTagFromSearch())
+                {
+                    <div class="habit-tag-picker__empty">
+                        @if (string.IsNullOrWhiteSpace(_tagSearch))
+                        {
+                            <text>Search or type a new tag, then press Enter</text>
+                        }
+                        else
+                        {
+                            <text>No tags match your search</text>
+                        }
+                    </div>
+                }
+                @foreach (var option in FilteredTagSuggestions())
+                {
+                    <button type="button"
+                            class="habit-tag-picker__option"
+                            role="option"
+                            @onclick="() => AddTag(option)">
+                        @option
+                    </button>
+                }
+                @if (CanAddNewTagFromSearch() && !string.IsNullOrWhiteSpace(_tagSearch))
+                {
+                    <button type="button"
+                            class="habit-tag-picker__option habit-tag-picker__option--add"
+                            @onclick="AddTagFromSearch">
+                        Add “@(_tagSearch.Trim())”
+                    </button>
+                }
             </div>
-        }
+        </div>
     </div>
 
     <MudText Typo="Typo.caption" Class="edit-habit-label-body d-block mb-1 mt-2">Reset counter</MudText>

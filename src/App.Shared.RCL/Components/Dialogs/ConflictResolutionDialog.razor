@@ -1,0 +1,319 @@
+@using App.Shared.RCL.Models
+@using App.Shared.RCL.Services
+
+<style>
+    .conflict-dialog {
+        background: var(--mud-palette-surface);
+        border: 1px solid var(--mud-palette-divider);
+        border-radius: 12px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+    }
+    
+    .conflict-title {
+        font-weight: 700;
+        font-size: 1.25rem;
+        color: var(--mud-palette-text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .conflict-subtitle {
+        color: var(--mud-palette-text-secondary);
+        line-height: 1.5;
+    }
+
+    .conflict-card {
+        border-radius: 8px;
+        border: 1px solid var(--mud-palette-divider);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        background: color-mix(in srgb, var(--mud-palette-background) 10%, var(--mud-palette-surface));
+    }
+    
+    .conflict-card--local {
+        border-top: 4px solid var(--mud-palette-primary);
+    }
+    
+    .conflict-card--server {
+        border-top: 4px solid var(--mud-palette-warning);
+    }
+    
+    .card-title {
+        font-weight: 650 !important;
+        font-size: 1.05rem !important;
+    }
+    
+    .card-subtitle {
+        color: var(--mud-palette-text-secondary);
+    }
+    
+    .field-item {
+        padding: 0.5rem;
+        background: var(--mud-palette-surface);
+        border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 50%, transparent);
+        border-radius: 6px;
+    }
+    
+    .field-label {
+        font-weight: 600;
+        color: var(--mud-palette-text-secondary) !important;
+        text-transform: uppercase;
+        font-size: 0.7rem !important;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.2rem;
+        display: block;
+    }
+    
+    .field-value {
+        font-size: 0.9rem !important;
+        color: var(--mud-palette-text-primary);
+        word-break: break-word;
+    }
+    
+    .field-value--different {
+        background-color: color-mix(in srgb, var(--mud-palette-warning) 12%, transparent);
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-weight: 550;
+        border: 1px dashed color-mix(in srgb, var(--mud-palette-warning) 40%, transparent);
+    }
+    
+    .conflict-checklist-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.825rem;
+        margin-top: 0.25rem;
+        color: var(--mud-palette-text-secondary);
+    }
+</style>
+
+<MudDialog Class="conflict-dialog" Style="width: min(44rem, calc(100vw - 2rem));">
+    <TitleContent>
+        <div class="conflict-title">
+            <MudIcon Icon="@Icons.Material.Filled.Compare" Color="Color.Warning" />
+            <span>Sync Conflict Detected</span>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="conflict-subtitle mb-4">
+            The item <b>"@LocalItem.Title"</b> has been updated on another device.
+            Please choose which version to keep. The other will be replaced.
+        </MudText>
+        
+        <MudGrid Spacing="3">
+            <MudItem xs="12" sm="6">
+                <MudCard Class="conflict-card conflict-card--local" Elevation="0">
+                    <MudCardContent>
+                        <MudText Typo="Typo.subtitle1" Class="card-title text-primary mb-1">📱 My Version (Local)</MudText>
+                        <MudText Typo="Typo.caption" Class="card-subtitle d-block mb-4">Unsaved edits from this device</MudText>
+                        
+                        <MudStack Spacing="2">
+                            <div class="field-item">
+                                <span class="field-label">Title</span>
+                                <span class="@GetFieldClass(LocalItem.Title, ServerItem.Title)">@LocalItem.Title</span>
+                            </div>
+                            
+                            @if (!string.IsNullOrEmpty(LocalItem.Notes) || !string.IsNullOrEmpty(ServerItem.Notes))
+                            {
+                                <div class="field-item">
+                                    <span class="field-label">Notes</span>
+                                    <span class="@GetFieldClass(LocalItem.Notes, ServerItem.Notes)">
+                                        @(string.IsNullOrWhiteSpace(LocalItem.Notes) ? "(None)" : LocalItem.Notes)
+                                    </span>
+                                </div>
+                            }
+                            
+                            @if (!string.IsNullOrEmpty(LocalItem.Tags) || !string.IsNullOrEmpty(ServerItem.Tags))
+                            {
+                                <div class="field-item">
+                                    <span class="field-label">Tags</span>
+                                    <span class="@GetFieldClass(LocalItem.Tags, ServerItem.Tags)">
+                                        @(string.IsNullOrWhiteSpace(LocalItem.Tags) ? "(None)" : LocalItem.Tags)
+                                    </span>
+                                </div>
+                            }
+                            
+                            @if (Conflict.Section == BoardSection.Habit)
+                            {
+                                <div class="field-item">
+                                    <span class="field-label">Counters</span>
+                                    <span class="@GetFieldClass($"{LocalItem.Counter}/{LocalItem.NegativeCounter}", $"{ServerItem.Counter}/{ServerItem.NegativeCounter}")">
+                                        +@LocalItem.Counter / -@LocalItem.NegativeCounter
+                                    </span>
+                                </div>
+                                <div class="field-item">
+                                    <span class="field-label">Reset Period</span>
+                                    <span class="@GetFieldClass(LocalItem.ResetPeriod, ServerItem.ResetPeriod)">@LocalItem.ResetPeriod</span>
+                                </div>
+                            }
+                            else if (Conflict.Section == BoardSection.Daily)
+                            {
+                                <div class="field-item">
+                                    <span class="field-label">Streak</span>
+                                    <span class="@GetFieldClass(LocalItem.Counter, ServerItem.Counter)">@LocalItem.Counter days</span>
+                                </div>
+                            }
+                            else if (Conflict.Section == BoardSection.Todo)
+                            {
+                                <div class="field-item">
+                                    <span class="field-label">Due Date</span>
+                                    <span class="@GetFieldClass(LocalItem.TodoDueDate, ServerItem.TodoDueDate)">
+                                        @(LocalItem.TodoDueDate?.ToString("yyyy-MM-dd") ?? "(No due date)")
+                                    </span>
+                                </div>
+                            }
+                            
+                            @if (HasChecklist(LocalItem) || HasChecklist(ServerItem))
+                            {
+                                <div class="field-item">
+                                    <span class="field-label">Checklist Items</span>
+                                    <div class="@GetFieldClass(LocalItem.ChecklistJson, ServerItem.ChecklistJson)">
+                                        @RenderChecklistSummary(LocalItem)
+                                    </div>
+                                </div>
+                            }
+                        </MudStack>
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" OnClick="KeepLocal" Class="mt-2 py-2">
+                            Keep My Version
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6">
+                <MudCard Class="conflict-card conflict-card--server" Elevation="0">
+                    <MudCardContent>
+                        <MudText Typo="Typo.subtitle1" Class="card-title text-warning mb-1">☁️ Server Version</MudText>
+                        <MudText Typo="Typo.caption" Class="card-subtitle d-block mb-4">Version stored on server</MudText>
+                        
+                        <MudStack Spacing="2">
+                            <div class="field-item">
+                                <span class="field-label">Title</span>
+                                <span class="@GetFieldClass(ServerItem.Title, LocalItem.Title)">@ServerItem.Title</span>
+                            </div>
+                            
+                            @if (!string.IsNullOrEmpty(LocalItem.Notes) || !string.IsNullOrEmpty(ServerItem.Notes))
+                            {
+                                <div class="field-item">
+                                    <span class="field-label">Notes</span>
+                                    <span class="@GetFieldClass(ServerItem.Notes, LocalItem.Notes)">
+                                        @(string.IsNullOrWhiteSpace(ServerItem.Notes) ? "(None)" : ServerItem.Notes)
+                                    </span>
+                                </div>
+                            }
+                            
+                            @if (!string.IsNullOrEmpty(LocalItem.Tags) || !string.IsNullOrEmpty(ServerItem.Tags))
+                            {
+                                <div class="field-item">
+                                    <span class="field-label">Tags</span>
+                                    <span class="@GetFieldClass(ServerItem.Tags, LocalItem.Tags)">
+                                        @(string.IsNullOrWhiteSpace(ServerItem.Tags) ? "(None)" : ServerItem.Tags)
+                                    </span>
+                                </div>
+                            }
+                            
+                            @if (Conflict.Section == BoardSection.Habit)
+                            {
+                                <div class="field-item">
+                                    <span class="field-label">Counters</span>
+                                    <span class="@GetFieldClass($"{ServerItem.Counter}/{ServerItem.NegativeCounter}", $"{LocalItem.Counter}/{LocalItem.NegativeCounter}")">
+                                        +@ServerItem.Counter / -@ServerItem.NegativeCounter
+                                    </span>
+                                </div>
+                                <div class="field-item">
+                                    <span class="field-label">Reset Period</span>
+                                    <span class="@GetFieldClass(ServerItem.ResetPeriod, LocalItem.ResetPeriod)">@ServerItem.ResetPeriod</span>
+                                </div>
+                            }
+                            else if (Conflict.Section == BoardSection.Daily)
+                            {
+                                <div class="field-item">
+                                    <span class="field-label">Streak</span>
+                                    <span class="@GetFieldClass(ServerItem.Counter, LocalItem.Counter)">@ServerItem.Counter days</span>
+                                </div>
+                            }
+                            else if (Conflict.Section == BoardSection.Todo)
+                            {
+                                <div class="field-item">
+                                    <span class="field-label">Due Date</span>
+                                    <span class="@GetFieldClass(ServerItem.TodoDueDate, LocalItem.TodoDueDate)">
+                                        @(ServerItem.TodoDueDate?.ToString("yyyy-MM-dd") ?? "(No due date)")
+                                    </span>
+                                </div>
+                            }
+                            
+                            @if (HasChecklist(LocalItem) || HasChecklist(ServerItem))
+                            {
+                                <div class="field-item">
+                                    <span class="field-label">Checklist Items</span>
+                                    <div class="@GetFieldClass(ServerItem.ChecklistJson, LocalItem.ChecklistJson)">
+                                        @RenderChecklistSummary(ServerItem)
+                                    </div>
+                                </div>
+                            }
+                        </MudStack>
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudButton Variant="Variant.Filled" Color="Color.Warning" FullWidth="true" OnClick="KeepServer" Class="mt-2 py-2">
+                            Keep Server Version
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <div class="d-flex justify-center pb-4 w-100">
+            <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="DecideLater" Class="px-6 py-2">
+                Decide Later
+            </MudButton>
+        </div>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] [EditorRequired] public ConflictInfo Conflict { get; set; } = default!;
+
+    private BoardItem LocalItem => Conflict.LocalItem;
+    private BoardItem ServerItem => Conflict.ServerItem;
+
+    private string GetFieldClass<T>(T value1, T value2)
+    {
+        return EqualityComparer<T>.Default.Equals(value1, value2)
+            ? "field-value"
+            : "field-value field-value--different";
+    }
+
+    private bool HasChecklist(BoardItem item)
+    {
+        return !string.IsNullOrEmpty(item.ChecklistJson) && item.ChecklistJson != "[]";
+    }
+
+    private string RenderChecklistSummary(BoardItem item)
+    {
+        if (string.IsNullOrEmpty(item.ChecklistJson)) return "(None)";
+        try
+        {
+            var parsed = DailyChecklistJson.Parse(item.ChecklistJson);
+            if (parsed.Count == 0) return "(None)";
+            var doneCount = parsed.Count(x => x.IsDone);
+            return $"{doneCount} of {parsed.Count} items completed";
+        }
+        catch
+        {
+            return "(Error parsing checklist)";
+        }
+    }
+
+    private void KeepLocal() => MudDialog.Close(DialogResult.Ok(ConflictResolutionChoice.KeepMine));
+    private void KeepServer() => MudDialog.Close(DialogResult.Ok(ConflictResolutionChoice.KeepServer));
+    private void DecideLater() => MudDialog.Close(DialogResult.Ok(ConflictResolutionChoice.Cancel));
+}

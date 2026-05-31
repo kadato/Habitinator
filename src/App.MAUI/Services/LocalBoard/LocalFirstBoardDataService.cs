@@ -178,6 +178,89 @@ public sealed class LocalFirstBoardDataService(
                 return true;
             });
 
+    public Task<BoardItem?> ArchiveItemAsync(BoardSection section, Guid itemId,
+        CancellationToken cancellationToken = default) =>
+        MutateWithSyncAsync(
+            cancellationToken,
+            async (db, userKey) =>
+            {
+                var row = await db.BoardItems.FirstOrDefaultAsync(
+                    x => x.UserKey == userKey && x.Id == itemId,
+                    cancellationToken);
+                if (row is null) return null;
+
+                var expected = row.ServerUpdatedAtUtc;
+                row.IsArchived = true;
+                row.ServerUpdatedAtUtc = DateTimeOffset.UtcNow;
+
+                Enqueue(
+                    db,
+                    userKey,
+                    BoardOutboxOperationKind.Archive,
+                    new SectionItemOutboxPayload(section, itemId, expected));
+                await db.SaveChangesAsync(cancellationToken);
+                return row.ToModel();
+            });
+
+    public Task<BoardItem?> UnarchiveItemAsync(BoardSection section, Guid itemId,
+        CancellationToken cancellationToken = default) =>
+        MutateWithSyncAsync(
+            cancellationToken,
+            async (db, userKey) =>
+            {
+                var row = await db.BoardItems.FirstOrDefaultAsync(
+                    x => x.UserKey == userKey && x.Id == itemId,
+                    cancellationToken);
+                if (row is null) return null;
+
+                var expected = row.ServerUpdatedAtUtc;
+                row.IsArchived = false;
+                row.ServerUpdatedAtUtc = DateTimeOffset.UtcNow;
+
+                Enqueue(
+                    db,
+                    userKey,
+                    BoardOutboxOperationKind.Unarchive,
+                    new SectionItemOutboxPayload(section, itemId, expected));
+                await db.SaveChangesAsync(cancellationToken);
+                return row.ToModel();
+            });
+
+    public async Task<BoardSnapshot> GetArchivedSnapshotAsync(CancellationToken cancellationToken = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        await db.Database.EnsureCreatedAsync(cancellationToken);
+        await EnsureSqliteBoardColumnsAsync(db, cancellationToken);
+
+        var userKey = await ResolveUserKeyAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(userKey)) return EmptySnapshot();
+
+        var today = DailySchedule.LocalToday(timeZone);
+        var items = db.BoardItems.AsNoTracking().Where(x => x.UserKey == userKey && x.IsArchived).ToList();
+
+        var habits = items.Where(x => x.Section == BoardSection.Habit)
+            .OrderBy(x => x.SortOrder ?? double.MaxValue)
+            .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
+            .Select(x => x.ToModel())
+            .ToList();
+        var dailies = items.Where(x => x.Section == BoardSection.Daily)
+            .OrderBy(x => IsDailyRowCompleteForToday(x, today) ? 1 : 0)
+            .ThenBy(x => x.SortOrder ?? double.MaxValue)
+            .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
+            .Select(x => x.ToModel())
+            .ToList();
+        var todos = items.Where(x => x.Section == BoardSection.Todo)
+            .OrderBy(x => x.IsCompleted ? 1 : 0)
+            .ThenBy(x => x.TodoDueDate.HasValue ? 1 : 0)
+            .ThenBy(x => x.TodoDueDate ?? DateOnly.MaxValue)
+            .ThenBy(x => x.SortOrder ?? double.MaxValue)
+            .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
+            .Select(x => x.ToModel())
+            .ToList();
+
+        return new BoardSnapshot(habits, dailies, todos);
+    }
+
     public Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId,
         CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
@@ -517,16 +600,28 @@ public sealed class LocalFirstBoardDataService(
         }
         catch (BoardRemoteConflictException ex)
         {
-            logger.LogWarning(ex, "Outbox operation {OperationId} returned 409; dropping op and requesting resync.", operationId);
+            logger.LogWarning(ex, "Outbox operation {OperationId} returned 409 Conflict.", operationId);
+            
+            BoardItem? serverItem = ex.ServerItem;
+            if (serverItem is null)
+            {
+                logger.LogWarning("Conflict exception has no server item; dropping op.");
+                await DropOutboxOperationAsync(operationId, cancellationToken);
+                RequestSyncSoon();
+                return false;
+            }
+
+            BoardItem? localItem = null;
+            BoardSection section = BoardSection.Todo;
             await _gate.WaitAsync(cancellationToken);
             try
             {
                 await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-                var still = await db.Outbox.FindAsync([operationId], cancellationToken);
-                if (still is not null)
+                var row = await db.BoardItems.FindAsync([serverItem.Id], cancellationToken);
+                if (row is not null)
                 {
-                    db.Outbox.Remove(still);
-                    await db.SaveChangesAsync(cancellationToken);
+                    localItem = row.ToModel();
+                    section = row.Section;
                 }
             }
             finally
@@ -534,8 +629,95 @@ public sealed class LocalFirstBoardDataService(
                 _gate.Release();
             }
 
-            RequestSyncSoon();
-            return false;
+            if (localItem is null)
+            {
+                logger.LogWarning("Local item not found for conflict resolution; dropping op.");
+                await DropOutboxOperationAsync(operationId, cancellationToken);
+                RequestSyncSoon();
+                return false;
+            }
+
+            var conflictService = services.GetRequiredService<ConflictResolutionService>();
+            var conflictInfo = new ConflictInfo(operationId, localItem, serverItem, section);
+            
+            var choice = await conflictService.WaitForResolutionAsync(conflictInfo, cancellationToken);
+            if (choice == ConflictResolutionChoice.KeepMine)
+            {
+                logger.LogInformation("Conflict resolved by user: Keeping Device version.");
+                await _gate.WaitAsync(cancellationToken);
+                try
+                {
+                    await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+                    var opRow = await db.Outbox.FindAsync([operationId], cancellationToken);
+                    if (opRow is not null)
+                    {
+                        var updatedPayload = BoardOutboxPayloadMapper.RemapExpectedVersion(
+                            opRow.Kind, 
+                            opRow.PayloadJson, 
+                            serverItem.ServerUpdatedAtUtc ?? DateTimeOffset.UtcNow);
+                        opRow.PayloadJson = updatedPayload;
+                        opRow.AttemptCount = 0;
+                        opRow.LastError = null;
+                        await db.SaveChangesAsync(cancellationToken);
+                    }
+                }
+                finally
+                {
+                    _gate.Release();
+                }
+                return false;
+            }
+            else if (choice == ConflictResolutionChoice.KeepServer)
+            {
+                logger.LogInformation("Conflict resolved by user: Keeping Server version.");
+                await _gate.WaitAsync(cancellationToken);
+                try
+                {
+                    await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+                    var opRow = await db.Outbox.FindAsync([operationId], cancellationToken);
+                    if (opRow is not null)
+                    {
+                        db.Outbox.Remove(opRow);
+                    }
+                    var localRow = await db.BoardItems.FindAsync([serverItem.Id], cancellationToken);
+                    if (localRow is not null)
+                    {
+                        var userKey = localRow.UserKey;
+                        var updated = LocalBoardItemRow.FromModel(section, userKey, serverItem, false);
+                        localRow.Title = updated.Title;
+                        localRow.IsCompleted = updated.IsCompleted;
+                        localRow.Counter = updated.Counter;
+                        localRow.Notes = updated.Notes;
+                        localRow.Tags = updated.Tags;
+                        localRow.TrackPlus = updated.TrackPlus;
+                        localRow.TrackMinus = updated.TrackMinus;
+                        localRow.NegativeCounter = updated.NegativeCounter;
+                        localRow.ResetPeriod = updated.ResetPeriod;
+                        localRow.DailyStartDate = updated.DailyStartDate;
+                        localRow.DailyRepeat = updated.DailyRepeat;
+                        localRow.DailyRepeatInterval = updated.DailyRepeatInterval;
+                        localRow.ChecklistJson = updated.ChecklistJson;
+                        localRow.DailyLastCompletedOn = updated.DailyLastCompletedOn;
+                        localRow.TodoDueDate = updated.TodoDueDate;
+                        localRow.ServerUpdatedAtUtc = updated.ServerUpdatedAtUtc;
+                        localRow.CreatedAtUtc = updated.CreatedAtUtc;
+                        localRow.SortOrder = updated.SortOrder;
+                        localRow.IsArchived = updated.IsArchived;
+                    }
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+                finally
+                {
+                    _gate.Release();
+                }
+                RequestSyncSoon();
+                return false;
+            }
+            else
+            {
+                logger.LogInformation("Conflict resolution postponed or cancelled.");
+                return false;
+            }
         }
         catch (Exception ex)
         {
@@ -870,8 +1052,53 @@ public sealed class LocalFirstBoardDataService(
                 await PatchLocalAsync(p.ItemId, head.UserKey, updated, cancellationToken);
                 return;
             }
+            case BoardOutboxOperationKind.Archive:
+            {
+                var p = System.Text.Json.JsonSerializer.Deserialize<SectionItemOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
+                        ?? throw new InvalidOperationException("Invalid archive payload.");
+                var updated = await api.ArchiveItemAsync(
+                    p.Section,
+                    p.ItemId,
+                    head.OperationId,
+                    p.ExpectedServerUpdatedAtUtc,
+                    cancellationToken);
+                await PatchLocalAsync(p.ItemId, head.UserKey, updated, cancellationToken);
+                return;
+            }
+            case BoardOutboxOperationKind.Unarchive:
+            {
+                var p = System.Text.Json.JsonSerializer.Deserialize<SectionItemOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
+                        ?? throw new InvalidOperationException("Invalid unarchive payload.");
+                var updated = await api.UnarchiveItemAsync(
+                    p.Section,
+                    p.ItemId,
+                    head.OperationId,
+                    p.ExpectedServerUpdatedAtUtc,
+                    cancellationToken);
+                await PatchLocalAsync(p.ItemId, head.UserKey, updated, cancellationToken);
+                return;
+            }
             default:
                 throw new InvalidOperationException($"Unknown outbox kind {head.Kind}.");
+        }
+    }
+
+    private async Task DropOutboxOperationAsync(Guid operationId, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            var still = await db.Outbox.FindAsync([operationId], cancellationToken);
+            if (still is not null)
+            {
+                db.Outbox.Remove(still);
+                await db.SaveChangesAsync(cancellationToken);
+            }
+        }
+        finally
+        {
+            _gate.Release();
         }
     }
 
@@ -1096,7 +1323,7 @@ public sealed class LocalFirstBoardDataService(
     private BoardSnapshot ReadSnapshot(LocalBoardDbContext db, string userKey)
     {
         var today = DailySchedule.LocalToday(timeZone);
-        var items = db.BoardItems.AsNoTracking().Where(x => x.UserKey == userKey).ToList();
+        var items = db.BoardItems.AsNoTracking().Where(x => x.UserKey == userKey && !x.IsArchived).ToList();
         // Match BoardPersistenceService.GetSnapshotAsync ordering (web app).
         var habits = items.Where(x => x.Section == BoardSection.Habit)
             .OrderBy(x => x.SortOrder ?? double.MaxValue)
@@ -1217,6 +1444,16 @@ public sealed class LocalFirstBoardDataService(
         {
             await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE Meta ADD COLUMN LastSyncCursorUtc TEXT NULL;",
+                cancellationToken);
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE BoardItems ADD COLUMN IsArchived INTEGER NOT NULL DEFAULT 0;",
                 cancellationToken);
         }
         catch

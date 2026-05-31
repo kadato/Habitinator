@@ -91,6 +91,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<DemoUserResolver>();
 builder.Services.AddScoped<IRemoteBoardRefreshService, RemoteBoardRefreshService>();
 builder.Services.AddSingleton<IBoardSyncStatus, NoOpBoardSyncStatus>();
+builder.Services.AddSingleton<ConflictResolutionService>();
 builder.Services.AddScoped<BoardRemoteNotifyBridge>();
 builder.Services.AddSingleton<BoardSnapshotCache>();
 builder.Services.AddSingleton<ActivityStatisticsCache>();

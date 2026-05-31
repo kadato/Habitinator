@@ -35,21 +35,21 @@
                                        Class="habitica-filter-btn"
                                        Variant="@FilterVariant(_habitFilter == HabitListFilter.All)"
                                        Color="Color.Primary"
-                                       OnClick="@(() => { _habitFilter = HabitListFilter.All; })">
+                                       OnClick="@(() => SetHabitFilter(HabitListFilter.All))">
                                 All
                             </MudButton>
                             <MudButton Size="Size.Small"
                                        Class="habitica-filter-btn"
                                        Variant="@FilterVariant(_habitFilter == HabitListFilter.Weak)"
                                        Color="Color.Primary"
-                                       OnClick="@(() => { _habitFilter = HabitListFilter.Weak; })">
+                                       OnClick="@(() => SetHabitFilter(HabitListFilter.Weak))">
                                 Weak
                             </MudButton>
                             <MudButton Size="Size.Small"
                                        Class="habitica-filter-btn"
                                        Variant="@FilterVariant(_habitFilter == HabitListFilter.Strong)"
                                        Color="Color.Primary"
-                                       OnClick="@(() => { _habitFilter = HabitListFilter.Strong; })">
+                                       OnClick="@(() => SetHabitFilter(HabitListFilter.Strong))">
                                 Strong
                             </MudButton>
                         }
@@ -59,21 +59,21 @@
                                        Class="habitica-filter-btn"
                                        Variant="@FilterVariant(_dailyFilter == DailyListFilter.All)"
                                        Color="Color.Primary"
-                                       OnClick="@(() => { _dailyFilter = DailyListFilter.All; })">
+                                       OnClick="@(() => SetDailyFilter(DailyListFilter.All))">
                                 All
                             </MudButton>
                             <MudButton Size="Size.Small"
                                        Class="habitica-filter-btn"
                                        Variant="@FilterVariant(_dailyFilter == DailyListFilter.Due)"
                                        Color="Color.Primary"
-                                       OnClick="@(() => { _dailyFilter = DailyListFilter.Due; })">
+                                       OnClick="@(() => SetDailyFilter(DailyListFilter.Due))">
                                 Due
                             </MudButton>
                             <MudButton Size="Size.Small"
                                        Class="habitica-filter-btn"
                                        Variant="@FilterVariant(_dailyFilter == DailyListFilter.NotDue)"
                                        Color="Color.Primary"
-                                       OnClick="@(() => { _dailyFilter = DailyListFilter.NotDue; })">
+                                       OnClick="@(() => SetDailyFilter(DailyListFilter.NotDue))">
                                 Not due
                             </MudButton>
                         }
@@ -83,21 +83,21 @@
                                        Class="habitica-filter-btn"
                                        Variant="@FilterVariant(_todoFilter == TodoListFilter.Active)"
                                        Color="Color.Primary"
-                                       OnClick="@(() => { _todoFilter = TodoListFilter.Active; })">
+                                       OnClick="@(() => SetTodoFilter(TodoListFilter.Active))">
                                 Active
                             </MudButton>
                             <MudButton Size="Size.Small"
                                        Class="habitica-filter-btn"
                                        Variant="@FilterVariant(_todoFilter == TodoListFilter.Scheduled)"
                                        Color="Color.Primary"
-                                       OnClick="@(() => { _todoFilter = TodoListFilter.Scheduled; })">
+                                       OnClick="@(() => SetTodoFilter(TodoListFilter.Scheduled))">
                                 Scheduled
                             </MudButton>
                             <MudButton Size="Size.Small"
                                        Class="habitica-filter-btn"
                                        Variant="@FilterVariant(_todoFilter == TodoListFilter.Complete)"
                                        Color="Color.Primary"
-                                       OnClick="@(() => { _todoFilter = TodoListFilter.Complete; })">
+                                       OnClick="@(() => SetTodoFilter(TodoListFilter.Complete))">
                                 Complete
                             </MudButton>
                         }
@@ -356,6 +356,27 @@
     private HabitListFilter _habitFilter;
     private DailyListFilter _dailyFilter = DailyListFilter.Due;
     private TodoListFilter _todoFilter = TodoListFilter.Active;
+
+    private void SetHabitFilter(HabitListFilter filter)
+    {
+        _habitFilter = filter;
+        SyncDropItems();
+        _needRefresh = true;
+    }
+
+    private void SetDailyFilter(DailyListFilter filter)
+    {
+        _dailyFilter = filter;
+        SyncDropItems();
+        _needRefresh = true;
+    }
+
+    private void SetTodoFilter(TodoListFilter filter)
+    {
+        _todoFilter = filter;
+        SyncDropItems();
+        _needRefresh = true;
+    }
 
     private readonly Dictionary<Guid, bool> _subtasksExpand = new();
     private readonly Dictionary<Guid, double> _sortOrderOverrides = new();

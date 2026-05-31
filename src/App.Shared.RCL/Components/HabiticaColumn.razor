@@ -203,11 +203,39 @@
                                 <span class="habitica-card__title-text">@item.Title</span>
                             </div>
                             <div class="habitica-card__head-actions">
-                                <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline"
-                                               Size="Size.Small"
-                                               title="Delete"
-                                               Class="ma-0 habitica-card__delete"
-                                               OnClick="@(async () => await DeleteAsync(item.Id))"/>
+                                <MudMenu AnchorOrigin="Origin.BottomRight"
+                                         TransformOrigin="Origin.TopRight"
+                                         Dense="true">
+                                    <ActivatorContent Context="itemMenu">
+                                        <span @onclick:stopPropagation="true">
+                                            <MudIconButton Icon="@Icons.Material.Filled.MoreVert"
+                                                           Size="Size.Small"
+                                                           Class="ma-0 habitica-card__delete"
+                                                           title="Options"
+                                                           OnClick="@(e => itemMenu.ToggleAsync(e))"/>
+                                        </span>
+                                    </ActivatorContent>
+                                    <ChildContent>
+                                        <MudMenuItem OnClick="@(() => MoveToTopAsync(item))" Disabled="@(!IsItemDraggable())">
+                                            <div class="d-flex align-center gap-2">
+                                                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"/>
+                                                <MudText Typo="Typo.body2">Move to Top</MudText>
+                                            </div>
+                                        </MudMenuItem>
+                                        <MudMenuItem OnClick="@(() => MoveToBottomAsync(item))" Disabled="@(!IsItemDraggable())">
+                                            <div class="d-flex align-center gap-2">
+                                                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"/>
+                                                <MudText Typo="Typo.body2">Move to Bottom</MudText>
+                                            </div>
+                                        </MudMenuItem>
+                                        <MudMenuItem OnClick="@(() => DeleteAsync(item.Id))">
+                                            <div class="d-flex align-center gap-2">
+                                                <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" Color="Color.Error"/>
+                                                <MudText Typo="Typo.body2" Color="Color.Error">Delete</MudText>
+                                            </div>
+                                        </MudMenuItem>
+                                    </ChildContent>
+                                </MudMenu>
                             </div>
                         </div>
                         @if (hasBodyExtra)
@@ -962,6 +990,93 @@
     private async Task DeleteAsync(Guid id)
     {
         await TryMutateAsync(() => BoardData.DeleteItemAsync(Section, id));
+    }
+
+    private async Task MoveToTopAsync(BoardItem item)
+    {
+        var visible = VisibleItems().ToList();
+        var sourceIndex = visible.FindIndex(x => x.Id == item.Id);
+        if (sourceIndex <= 0)
+        {
+            return;
+        }
+
+        var reordered = visible.ToList();
+        reordered.RemoveAt(sourceIndex);
+        reordered.Insert(0, item);
+
+        var newSortOrder = Section == BoardSection.Todo && _todoFilter == TodoListFilter.Active
+            ? TodoOrdering.ComputeMidpointSortOrderForActiveTab(reordered, 0, GetEffectiveSortOrder)
+            : BoardItemReorder.ComputeMidpointSortOrder(reordered, 0, GetEffectiveSortOrder);
+
+        if (newSortOrder is not { } sortOrder)
+        {
+            return;
+        }
+
+        _sortOrderOverrides[item.Id] = sortOrder;
+        if (IsItemDraggable())
+        {
+            SyncDropItems();
+        }
+        _dropContainer?.Refresh();
+        StateHasChanged();
+
+        var ok = await TryMutateAsync(() => PersistReorderAsync(item, sortOrder));
+        if (!ok)
+        {
+            _sortOrderOverrides.Remove(item.Id);
+            if (IsItemDraggable())
+            {
+                SyncDropItems();
+            }
+            _dropContainer?.Refresh();
+            StateHasChanged();
+        }
+    }
+
+    private async Task MoveToBottomAsync(BoardItem item)
+    {
+        var visible = VisibleItems().ToList();
+        var sourceIndex = visible.FindIndex(x => x.Id == item.Id);
+        if (sourceIndex < 0 || sourceIndex == visible.Count - 1)
+        {
+            return;
+        }
+
+        var reordered = visible.ToList();
+        reordered.RemoveAt(sourceIndex);
+        reordered.Add(item);
+        var insertAt = reordered.Count - 1;
+
+        var newSortOrder = Section == BoardSection.Todo && _todoFilter == TodoListFilter.Active
+            ? TodoOrdering.ComputeMidpointSortOrderForActiveTab(reordered, insertAt, GetEffectiveSortOrder)
+            : BoardItemReorder.ComputeMidpointSortOrder(reordered, insertAt, GetEffectiveSortOrder);
+
+        if (newSortOrder is not { } sortOrder)
+        {
+            return;
+        }
+
+        _sortOrderOverrides[item.Id] = sortOrder;
+        if (IsItemDraggable())
+        {
+            SyncDropItems();
+        }
+        _dropContainer?.Refresh();
+        StateHasChanged();
+
+        var ok = await TryMutateAsync(() => PersistReorderAsync(item, sortOrder));
+        if (!ok)
+        {
+            _sortOrderOverrides.Remove(item.Id);
+            if (IsItemDraggable())
+            {
+                SyncDropItems();
+            }
+            _dropContainer?.Refresh();
+            StateHasChanged();
+        }
     }
 
     private async Task DeleteAllCompletedTodosAsync()

@@ -122,16 +122,20 @@
                                     </div>
                                 </div>
                                 <div class="archived-actions">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Unarchive" 
-                                                   Color="Color.Primary" 
-                                                   title="Restore"
-                                                   Class="action-btn"
-                                                   OnClick="@(() => UnarchiveAsync(section, item))" />
-                                    <MudIconButton Icon="@Icons.Material.Filled.DeleteForever" 
-                                                   Color="Color.Error" 
-                                                   title="Delete Permanently"
-                                                   Class="action-btn"
-                                                   OnClick="@(() => DeletePermanentlyAsync(section, item))" />
+                                    <MudButton StartIcon="@Icons.Material.Filled.Unarchive" 
+                                               Color="Color.Primary" 
+                                               Variant="Variant.Text"
+                                               Size="Size.Small"
+                                               OnClick="@(() => UnarchiveAsync(section, item))">
+                                        Restore
+                                    </MudButton>
+                                    <MudButton StartIcon="@Icons.Material.Filled.DeleteForever" 
+                                               Color="Color.Error" 
+                                               Variant="Variant.Text"
+                                               Size="Size.Small"
+                                               OnClick="@(() => DeletePermanentlyAsync(section, item))">
+                                        Delete
+                                    </MudButton>
                                 </div>
                             </div>
                         }

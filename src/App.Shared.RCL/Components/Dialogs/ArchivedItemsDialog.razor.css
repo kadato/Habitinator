@@ -210,38 +210,26 @@
     overflow: hidden;
 }
 
-/* Accent border-left, background, and hover states per item type */
+/* Accent background and hover states per item type */
 .archived-item-card.card-habit {
-    border-left: 4px solid #8b5cf6;
     background: rgba(139, 92, 246, 0.03);
 }
 .archived-item-card.card-habit:hover {
     background: rgba(139, 92, 246, 0.08);
-    border-color: rgba(139, 92, 246, 0.4);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.08);
 }
 
 .archived-item-card.card-daily {
-    border-left: 4px solid #0d9488;
     background: rgba(13, 148, 136, 0.03);
 }
 .archived-item-card.card-daily:hover {
     background: rgba(13, 148, 136, 0.08);
-    border-color: rgba(13, 148, 136, 0.4);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(13, 148, 136, 0.08);
 }
 
 .archived-item-card.card-todo {
-    border-left: 4px solid #f59e0b;
     background: rgba(245, 158, 11, 0.03);
 }
 .archived-item-card.card-todo:hover {
     background: rgba(245, 158, 11, 0.08);
-    border-color: rgba(245, 158, 11, 0.4);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.08);
 }
 
 /* Main information inside the card */
@@ -329,10 +317,3 @@
     margin-left: 0.75rem;
 }
 
-.action-btn {
-    transition: all 0.15s ease !important;
-}
-
-.action-btn:hover {
-    transform: scale(1.08);
-}

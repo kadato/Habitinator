@@ -58,7 +58,9 @@ public sealed record BoardItem(
     /// <summary>Server creation time; kept for display/audit only — do not use for ordering.</summary>
     DateTimeOffset? CreatedAtUtc = null,
     /// <summary>Explicit user-defined sort position. New items get max+1; reorder sets midpoint between neighbours.</summary>
-    double? SortOrder = null);
+    double? SortOrder = null,
+    /// <summary>True if the item is archived and hidden from the active board.</summary>
+    bool IsArchived = false);
 
 public sealed record BoardSnapshot(
     IReadOnlyList<BoardItem> Habits,

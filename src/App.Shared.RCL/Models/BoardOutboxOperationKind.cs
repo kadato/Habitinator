@@ -11,5 +11,7 @@ public enum BoardOutboxOperationKind
     HabitDecrement = 6,
     UpdateHabit = 7,
     UpdateTodo = 8,
-    UpdateDaily = 9
+    UpdateDaily = 9,
+    Archive = 10,
+    Unarchive = 11
 }

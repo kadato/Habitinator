@@ -13,6 +13,12 @@ public interface IBoardDataService
 
     Task<bool> DeleteItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default);
 
+    Task<BoardItem?> ArchiveItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default);
+
+    Task<BoardItem?> UnarchiveItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default);
+
+    Task<BoardSnapshot> GetArchivedSnapshotAsync(CancellationToken cancellationToken = default);
+
     Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default);
 
     /// <summary>Sets the daily's last completion to a specific past calendar day (UTC), for backdating completion.</summary>

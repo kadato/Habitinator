@@ -133,4 +133,58 @@ public static class BoardOutboxPayloadMapper
 
         Guid Map(Guid id) => id == clientId ? serverId : id;
     }
+
+    /// <summary>Rewrite payload JSON to update the ExpectedServerUpdatedAtUtc timestamp.</summary>
+    public static string RemapExpectedVersion(
+        BoardOutboxOperationKind kind,
+        string payloadJson,
+        DateTimeOffset newVersion)
+    {
+        return kind switch
+        {
+            BoardOutboxOperationKind.Rename => JsonSerializer.Serialize(
+                Rename(JsonSerializer.Deserialize<RenameOutboxPayload>(payloadJson, BoardOutboxJson.Options)),
+                BoardOutboxJson.Options),
+            BoardOutboxOperationKind.Delete or BoardOutboxOperationKind.Toggle => JsonSerializer.Serialize(
+                SectionItem(JsonSerializer.Deserialize<SectionItemOutboxPayload>(payloadJson, BoardOutboxJson.Options)),
+                BoardOutboxJson.Options),
+            BoardOutboxOperationKind.CompleteDailyForDate => JsonSerializer.Serialize(
+                CompleteDaily(JsonSerializer.Deserialize<CompleteDailyOutboxPayload>(payloadJson, BoardOutboxJson.Options)),
+                BoardOutboxJson.Options),
+            BoardOutboxOperationKind.HabitIncrement or BoardOutboxOperationKind.HabitDecrement => JsonSerializer.Serialize(
+                ItemId(JsonSerializer.Deserialize<ItemIdOutboxPayload>(payloadJson, BoardOutboxJson.Options)),
+                BoardOutboxJson.Options),
+            BoardOutboxOperationKind.UpdateHabit => JsonSerializer.Serialize(
+                UpdateHabit(JsonSerializer.Deserialize<UpdateHabitOutboxPayload>(payloadJson, BoardOutboxJson.Options)),
+                BoardOutboxJson.Options),
+            BoardOutboxOperationKind.UpdateTodo => JsonSerializer.Serialize(
+                UpdateTodo(JsonSerializer.Deserialize<UpdateTodoOutboxPayload>(payloadJson, BoardOutboxJson.Options)),
+                BoardOutboxJson.Options),
+            BoardOutboxOperationKind.UpdateDaily => JsonSerializer.Serialize(
+                UpdateDaily(JsonSerializer.Deserialize<UpdateDailyOutboxPayload>(payloadJson, BoardOutboxJson.Options)),
+                BoardOutboxJson.Options),
+            _ => payloadJson
+        };
+
+        RenameOutboxPayload? Rename(RenameOutboxPayload? p) =>
+            p is null ? null : p with { ExpectedServerUpdatedAtUtc = newVersion };
+
+        SectionItemOutboxPayload? SectionItem(SectionItemOutboxPayload? p) =>
+            p is null ? null : p with { ExpectedServerUpdatedAtUtc = newVersion };
+
+        CompleteDailyOutboxPayload? CompleteDaily(CompleteDailyOutboxPayload? p) =>
+            p is null ? null : p with { ExpectedServerUpdatedAtUtc = newVersion };
+
+        ItemIdOutboxPayload? ItemId(ItemIdOutboxPayload? p) =>
+            p is null ? null : p with { ExpectedServerUpdatedAtUtc = newVersion };
+
+        UpdateHabitOutboxPayload? UpdateHabit(UpdateHabitOutboxPayload? p) =>
+            p is null ? null : p with { ExpectedServerUpdatedAtUtc = newVersion };
+
+        UpdateTodoOutboxPayload? UpdateTodo(UpdateTodoOutboxPayload? p) =>
+            p is null ? null : p with { ExpectedServerUpdatedAtUtc = newVersion };
+
+        UpdateDailyOutboxPayload? UpdateDaily(UpdateDailyOutboxPayload? p) =>
+            p is null ? null : p with { ExpectedServerUpdatedAtUtc = newVersion };
+    }
 }

@@ -22,6 +22,40 @@ public sealed class UndoableBoardDataService : IBoardDataService
         return _inner.GetSnapshotAsync(cancellationToken);
     }
 
+    public async Task<BoardItem?> ArchiveItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
+    {
+        var item = await FindItemAsync(itemId, cancellationToken);
+        if (item is null) return await _inner.ArchiveItemAsync(section, itemId, cancellationToken);
+
+        var result = await _inner.ArchiveItemAsync(section, itemId, cancellationToken);
+        if (result is not null && !_undoService.IsUndoing)
+        {
+            _undoService.RegisterUndo($"Archive \"{item.Title}\"", async () =>
+            {
+                await _inner.UnarchiveItemAsync(section, itemId, CancellationToken.None);
+            });
+        }
+        return result;
+    }
+
+    public async Task<BoardItem?> UnarchiveItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
+    {
+        var result = await _inner.UnarchiveItemAsync(section, itemId, cancellationToken);
+        if (result is not null && !_undoService.IsUndoing)
+        {
+            _undoService.RegisterUndo($"Unarchive \"{result.Title}\"", async () =>
+            {
+                await _inner.ArchiveItemAsync(section, itemId, CancellationToken.None);
+            });
+        }
+        return result;
+    }
+
+    public Task<BoardSnapshot> GetArchivedSnapshotAsync(CancellationToken cancellationToken = default)
+    {
+        return _inner.GetArchivedSnapshotAsync(cancellationToken);
+    }
+
     public async Task<BoardItem> CreateItemAsync(BoardSection section, string title, Guid? itemId = null, CancellationToken cancellationToken = default)
     {
         var item = await _inner.CreateItemAsync(section, title, itemId, cancellationToken);

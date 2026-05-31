@@ -48,6 +48,28 @@ public sealed class WebBoardDataService : IBoardDataService
         return await _boardPersistenceService.DeleteItemAsync(userId, section, itemId, cancellationToken);
     }
 
+    public async Task<BoardItem?> ArchiveItemAsync(BoardSection section, Guid itemId,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = await GetCurrentUserIdAsync(cancellationToken);
+        var r = await _boardPersistenceService.ArchiveItemForApiAsync(userId, section, itemId, null, cancellationToken);
+        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
+    }
+
+    public async Task<BoardItem?> UnarchiveItemAsync(BoardSection section, Guid itemId,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = await GetCurrentUserIdAsync(cancellationToken);
+        var r = await _boardPersistenceService.UnarchiveItemForApiAsync(userId, section, itemId, null, cancellationToken);
+        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
+    }
+
+    public async Task<BoardSnapshot> GetArchivedSnapshotAsync(CancellationToken cancellationToken = default)
+    {
+        var userId = await GetCurrentUserIdAsync(cancellationToken);
+        return await _boardPersistenceService.GetArchivedSnapshotAsync(userId, cancellationToken);
+    }
+
     public async Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId,
         CancellationToken cancellationToken = default)
     {

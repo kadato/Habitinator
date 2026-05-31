@@ -49,4 +49,26 @@ public sealed class BoardOutboxRemapTests
         parsed.Should().NotBeNull();
         parsed!.ItemId.Should().Be(other);
     }
+
+    [Fact]
+    public void Remap_expected_version_updates_the_expected_timestamp()
+    {
+        var originalTime = DateTimeOffset.UtcNow.AddMinutes(-5);
+        var newTime = DateTimeOffset.UtcNow;
+        var json = JsonSerializer.Serialize(
+            new RenameOutboxPayload(BoardSection.Todo, Guid.NewGuid(), "x")
+            {
+                ExpectedServerUpdatedAtUtc = originalTime
+            },
+            BoardOutboxJson.Options);
+
+        var remapped = BoardOutboxPayloadMapper.RemapExpectedVersion(
+            BoardOutboxOperationKind.Rename,
+            json,
+            newTime);
+
+        var parsed = JsonSerializer.Deserialize<RenameOutboxPayload>(remapped, BoardOutboxJson.Options);
+        parsed.Should().NotBeNull();
+        parsed!.ExpectedServerUpdatedAtUtc.Should().Be(newTime);
+    }
 }

@@ -36,6 +36,21 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
         return _inner.DeleteItemAsync(section, itemId, cancellationToken);
     }
 
+    public Task<BoardItem?> ArchiveItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
+    {
+        return _inner.ArchiveItemAsync(section, itemId, cancellationToken);
+    }
+
+    public Task<BoardItem?> UnarchiveItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
+    {
+        return _inner.UnarchiveItemAsync(section, itemId, cancellationToken);
+    }
+
+    public Task<BoardSnapshot> GetArchivedSnapshotAsync(CancellationToken cancellationToken = default)
+    {
+        return _inner.GetArchivedSnapshotAsync(cancellationToken);
+    }
+
     public async Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn,
         CancellationToken cancellationToken = default)
     {

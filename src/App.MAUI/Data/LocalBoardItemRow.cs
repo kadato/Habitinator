@@ -44,6 +44,8 @@ public sealed class LocalBoardItemRow
 
     public DateOnly? TodoDueDate { get; set; }
 
+    public bool IsArchived { get; set; }
+
     /// <summary>True until the server acknowledges a create for this client-generated id.</summary>
     public bool AwaitingServerCreate { get; set; }
 
@@ -74,7 +76,8 @@ public sealed class LocalBoardItemRow
         TodoDueDate,
         ServerUpdatedAtUtc,
         CreatedAtUtc,
-        SortOrder);
+        SortOrder,
+        IsArchived);
 
     public static LocalBoardItemRow FromModel(BoardSection section, string userKey, BoardItem item, bool awaitingCreate)
     {
@@ -101,7 +104,8 @@ public sealed class LocalBoardItemRow
             AwaitingServerCreate = awaitingCreate,
             ServerUpdatedAtUtc = item.ServerUpdatedAtUtc,
             CreatedAtUtc = item.CreatedAtUtc,
-            SortOrder = item.SortOrder
+            SortOrder = item.SortOrder,
+            IsArchived = item.IsArchived
         };
     }
 }

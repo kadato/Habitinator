@@ -156,6 +156,45 @@ public sealed class RemoteBoardDataService : IBoardDataService
         return true;
     }
 
+    public Task<BoardItem?> ArchiveItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default) =>
+        ArchiveItemAsync(section, itemId, Guid.Empty, null, cancellationToken);
+
+    public async Task<BoardItem?> ArchiveItemAsync(
+        BoardSection section,
+        Guid itemId,
+        Guid operationId,
+        DateTimeOffset? expectedServerUpdatedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"api/board/{section}/{itemId}/archive");
+        AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
+        using var res = await Client.SendAsync(req, cancellationToken);
+        return await ReadBoardItemOrNullAsync(res, cancellationToken);
+    }
+
+    public Task<BoardItem?> UnarchiveItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default) =>
+        UnarchiveItemAsync(section, itemId, Guid.Empty, null, cancellationToken);
+
+    public async Task<BoardItem?> UnarchiveItemAsync(
+        BoardSection section,
+        Guid itemId,
+        Guid operationId,
+        DateTimeOffset? expectedServerUpdatedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"api/board/{section}/{itemId}/unarchive");
+        AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
+        using var res = await Client.SendAsync(req, cancellationToken);
+        return await ReadBoardItemOrNullAsync(res, cancellationToken);
+    }
+
+    public async Task<BoardSnapshot> GetArchivedSnapshotAsync(CancellationToken cancellationToken = default)
+    {
+        using var res = await Client.GetAsync("api/board/archived", cancellationToken);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<BoardSnapshot>(Serializer, cancellationToken))!;
+    }
+
     public Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId,
         CancellationToken cancellationToken = default) =>
         ToggleItemAsync(section, itemId, Guid.Empty, null, cancellationToken);

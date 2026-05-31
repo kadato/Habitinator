@@ -1,0 +1,291 @@
+@using App.Shared.RCL.Models
+@using App.Shared.RCL.Services
+@inject IBoardDataService BoardData
+@inject IUserNotifier Notifier
+
+<MudDialog Class="archived-dialog" Style="width: min(34rem, calc(100vw - 2rem));">
+    <TitleContent>
+        <div class="archived-title">
+            <MudIcon Icon="@Icons.Material.Filled.Archive" Color="Color.Primary" />
+            <span>Archived Items</span>
+            @if (!_loading && TotalCount > 0)
+            {
+                <span class="archived-title-count">@TotalCount</span>
+            }
+        </div>
+    </TitleContent>
+    <DialogContent>
+        @if (_loading)
+        {
+            <div class="d-flex justify-center my-8">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else
+        {
+            <div class="dialog-body">
+                @if (TotalCount > 0)
+                {
+                    <div class="search-container">
+                        <MudTextField @bind-Value="_searchQuery"
+                                      Placeholder="Search archived items..."
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Search"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Clearable="true"
+                                      Immediate="true" />
+                    </div>
+
+                    <div class="filter-chips">
+                        <button type="button" class="filter-chip @(_selectedSection == null ? "active" : "")" @onclick="() => SetFilter(null)">
+                            All <span class="chip-count">@TotalCount</span>
+                        </button>
+                        <button type="button" class="filter-chip @(_selectedSection == BoardSection.Habit ? "active" : "")" @onclick="() => SetFilter(BoardSection.Habit)">
+                            <span class="chip-dot dot-habit"></span> Habits <span class="chip-count">@_snapshot.Habits.Count</span>
+                        </button>
+                        <button type="button" class="filter-chip @(_selectedSection == BoardSection.Daily ? "active" : "")" @onclick="() => SetFilter(BoardSection.Daily)">
+                            <span class="chip-dot dot-daily"></span> Dailies <span class="chip-count">@_snapshot.Dailies.Count</span>
+                        </button>
+                        <button type="button" class="filter-chip @(_selectedSection == BoardSection.Todo ? "active" : "")" @onclick="() => SetFilter(BoardSection.Todo)">
+                            <span class="chip-dot dot-todo"></span> To-Dos <span class="chip-count">@_snapshot.Todos.Count</span>
+                        </button>
+                    </div>
+                }
+
+                <div class="archived-list">
+                    @if (FilteredItems.Count == 0)
+                    {
+                        <div class="empty-state">
+                            <MudIcon Icon="@Icons.Material.Filled.SearchOff" Class="empty-icon" />
+                            <div class="empty-text">No archived items found</div>
+                            <div class="empty-subtext">@(string.IsNullOrWhiteSpace(_searchQuery) ? "All clean! You don't have any archived items in this section." : "Try adjusting your search query or filters.")</div>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var entry in FilteredItems)
+                        {
+                            var item = entry.Item;
+                            var section = entry.Section;
+                            var cardClass = section switch
+                            {
+                                BoardSection.Habit => "card-habit",
+                                BoardSection.Daily => "card-daily",
+                                BoardSection.Todo => "card-todo",
+                                _ => ""
+                            };
+                            var badgeClass = section switch
+                            {
+                                BoardSection.Habit => "badge-habit",
+                                BoardSection.Daily => "badge-daily",
+                                BoardSection.Todo => "badge-todo",
+                                _ => ""
+                            };
+                            var badgeText = section switch
+                            {
+                                BoardSection.Habit => "Habit",
+                                BoardSection.Daily => "Daily",
+                                BoardSection.Todo => "To-Do",
+                                _ => ""
+                            };
+                            var itemIcon = section switch
+                            {
+                                BoardSection.Habit => Icons.Material.Filled.Autorenew,
+                                BoardSection.Daily => Icons.Material.Filled.CalendarToday,
+                                BoardSection.Todo => Icons.Material.Filled.FormatListBulleted,
+                                _ => Icons.Material.Filled.Help
+                            };
+
+                            <div class="archived-item-card @cardClass" @key="item.Id">
+                                <div class="archived-item-info">
+                                    <div class="title-row">
+                                        <MudIcon Icon="@itemIcon" Class="item-icon" />
+                                        <span class="archived-item-title" title="@item.Title">@item.Title</span>
+                                        <span class="type-badge @badgeClass">@badgeText</span>
+                                    </div>
+                                    <div class="archived-item-meta">
+                                        @if (section == BoardSection.Habit)
+                                        {
+                                            <span>Reset: <strong>@item.ResetPeriod</strong></span>
+                                            <span class="meta-divider">•</span>
+                                            <span>Counter: <strong>@item.Counter</strong> / <strong>-@item.NegativeCounter</strong></span>
+                                        }
+                                        else if (section == BoardSection.Daily)
+                                        {
+                                            <span>Streak: <strong>@item.Counter</strong> days</span>
+                                        }
+                                        else if (section == BoardSection.Todo)
+                                        {
+                                            <span>Due: <strong>@(item.TodoDueDate?.ToString("yyyy-MM-dd") ?? "No due date")</strong></span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="archived-actions">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Unarchive" 
+                                                   Color="Color.Primary" 
+                                                   title="Restore"
+                                                   Class="action-btn"
+                                                   OnClick="@(() => UnarchiveAsync(section, item))" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.DeleteForever" 
+                                                   Color="Color.Error" 
+                                                   title="Delete Permanently"
+                                                   Class="action-btn"
+                                                   OnClick="@(() => DeletePermanentlyAsync(section, item))" />
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Secondary" OnClick="Close" Class="px-6 py-2">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private BoardSnapshot _snapshot = new([], [], []);
+    private bool _loading = true;
+    private string _searchQuery = "";
+    private BoardSection? _selectedSection = null;
+
+    private int TotalCount => _snapshot.Habits.Count + _snapshot.Dailies.Count + _snapshot.Todos.Count;
+
+    private struct ArchivedItemEntry
+    {
+        public BoardSection Section { get; set; }
+        public BoardItem Item { get; set; }
+        public DateTimeOffset Date { get; set; }
+    }
+
+    private List<ArchivedItemEntry> _allEntries = new();
+
+    private List<ArchivedItemEntry> FilteredItems
+    {
+        get
+        {
+            var query = _searchQuery?.Trim() ?? "";
+            return _allEntries
+                .Where(x => _selectedSection == null || x.Section == _selectedSection)
+                .Where(x => string.IsNullOrEmpty(query) || x.Item.Title.Contains(query, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadArchivedItemsAsync();
+    }
+
+    private async Task LoadArchivedItemsAsync()
+    {
+        _loading = true;
+        try
+        {
+            _snapshot = await BoardData.GetArchivedSnapshotAsync();
+            BuildEntriesList();
+        }
+        catch (Exception)
+        {
+            await Notifier.NotifyAsync("Could not load archived items.", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void BuildEntriesList()
+    {
+        _allEntries.Clear();
+        
+        foreach (var item in _snapshot.Habits)
+        {
+            _allEntries.Add(new ArchivedItemEntry 
+            { 
+                Section = BoardSection.Habit, 
+                Item = item,
+                Date = item.ServerUpdatedAtUtc ?? item.CreatedAtUtc ?? DateTimeOffset.MinValue
+            });
+        }
+        
+        foreach (var item in _snapshot.Dailies)
+        {
+            _allEntries.Add(new ArchivedItemEntry 
+            { 
+                Section = BoardSection.Daily, 
+                Item = item,
+                Date = item.ServerUpdatedAtUtc ?? item.CreatedAtUtc ?? DateTimeOffset.MinValue
+            });
+        }
+        
+        foreach (var item in _snapshot.Todos)
+        {
+            _allEntries.Add(new ArchivedItemEntry 
+            { 
+                Section = BoardSection.Todo, 
+                Item = item,
+                Date = item.ServerUpdatedAtUtc ?? item.CreatedAtUtc ?? DateTimeOffset.MinValue
+            });
+        }
+
+        // Sort by Date descending (newest archived items first), then title
+        _allEntries = _allEntries
+            .OrderByDescending(x => x.Date)
+            .ThenBy(x => x.Item.Title, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private void SetFilter(BoardSection? section)
+    {
+        _selectedSection = section;
+    }
+
+    private async Task UnarchiveAsync(BoardSection section, BoardItem item)
+    {
+        try
+        {
+            var res = await BoardData.UnarchiveItemAsync(section, item.Id);
+            if (res is not null)
+            {
+                await Notifier.NotifyAsync($"Restored \"{item.Title}\" back to the board.", Severity.Success);
+                await LoadArchivedItemsAsync();
+            }
+            else
+            {
+                await Notifier.NotifyAsync($"Failed to restore \"{item.Title}\".", Severity.Error);
+            }
+        }
+        catch (Exception)
+        {
+            await Notifier.NotifyAsync("Something went wrong. Please check your connection and try again.", Severity.Error);
+        }
+    }
+
+    private async Task DeletePermanentlyAsync(BoardSection section, BoardItem item)
+    {
+        try
+        {
+            var success = await BoardData.DeleteItemAsync(section, item.Id);
+            if (success)
+            {
+                await Notifier.NotifyAsync($"Permanently deleted \"{item.Title}\".", Severity.Success);
+                await LoadArchivedItemsAsync();
+            }
+            else
+            {
+                await Notifier.NotifyAsync($"Failed to delete \"{item.Title}\".", Severity.Error);
+            }
+        }
+        catch (Exception)
+        {
+            await Notifier.NotifyAsync("Something went wrong. Please check your connection and try again.", Severity.Error);
+        }
+    }
+
+    private void Close() => MudDialog.Close();
+}

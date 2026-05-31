@@ -180,14 +180,24 @@
                 </div>
 
                 <div class="edit-daily-delete-wrap">
-                    <MudButton Variant="Variant.Text"
-                               Color="Color.Error"
-                               Size="Size.Small"
-                               StartIcon="@Icons.Material.Outlined.DeleteOutline"
-                               OnClick="DeleteAsync"
-                               Disabled="@_saving">
-                        Delete this to-do
-                    </MudButton>
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" Style="width: 100%;">
+                        <MudButton Variant="Variant.Text"
+                                   Color="Color.Warning"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Outlined.Archive"
+                                   OnClick="ArchiveAsync"
+                                   Disabled="@_saving">
+                            Archive
+                        </MudButton>
+                        <MudButton Variant="Variant.Text"
+                                   Color="Color.Error"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Outlined.DeleteOutline"
+                                   OnClick="DeleteAsync"
+                                   Disabled="@_saving">
+                            Delete
+                        </MudButton>
+                    </MudStack>
                 </div>
             </div>
         </div>
@@ -452,6 +462,30 @@
             if (updated is null)
             {
                 await Notifier.NotifyAsync("Could not save this to-do.", Severity.Error);
+                return;
+            }
+
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception)
+        {
+            await Notifier.NotifyAsync("Something went wrong. Check your connection and try again.", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task ArchiveAsync()
+    {
+        _saving = true;
+        try
+        {
+            var archived = await BoardData.ArchiveItemAsync(BoardSection.Todo, Item.Id);
+            if (archived is null)
+            {
+                await Notifier.NotifyAsync("Could not archive this to-do.", Severity.Error);
                 return;
             }
 

@@ -12,6 +12,7 @@
 @inject IUserDateFormatService DateFormatService
 @inject IUndoService UndoService
 @inject IInitialBoardLoadGate InitialBoardLoad
+@inject ConflictResolutionService ConflictResolution
 
 <style>
     /* Centered search and tags filter row on desktop */
@@ -247,6 +248,14 @@
                             </ChildContent>
                         </MudMenu>
                     </div>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Default"
+                               Class="board-tags-trigger board-tags-trigger--strip"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Archive"
+                               OnClick="OpenArchivedItemsDialogAsync">
+                        Archive
+                    </MudButton>
                 </div>
             </div>
         </MudPaper>
@@ -527,6 +536,7 @@
         RemoteBoardRefresh.RegisterForRemoteRefresh(HandleRemoteBoardRefreshedAsync);
         UndoService.OnStateChanged += HandleUndoStateChanged;
         UndoService.OnUndoPerformed += HandleUndoPerformed;
+        ConflictResolution.ConflictDetected += HandleConflictDetected;
         await InitialLoadAsync();
     }
 
@@ -564,6 +574,7 @@
         RemoteBoardRefresh.UnregisterForRemoteRefresh(HandleRemoteBoardRefreshedAsync);
         UndoService.OnStateChanged -= HandleUndoStateChanged;
         UndoService.OnUndoPerformed -= HandleUndoPerformed;
+        ConflictResolution.ConflictDetected -= HandleConflictDetected;
         try
         {
             await JS.InvokeVoidAsync("HabitinatorBoardVisibility.stop");
@@ -900,5 +911,54 @@
         {
             await HandleUndoAsync();
         }
+    }
+
+    private void HandleConflictDetected(ConflictInfo conflict)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            var options = new DialogOptions
+            {
+                CloseButton = false,
+                CloseOnEscapeKey = false,
+                NoHeader = true
+            };
+            
+            var parameters = new DialogParameters<ConflictResolutionDialog>
+            {
+                { x => x.Conflict, conflict }
+            };
+
+            var dialog = await DialogService.ShowAsync<ConflictResolutionDialog>(
+                string.Empty, parameters, options);
+            
+            var result = await dialog.Result;
+            if (result is not null && !result.Canceled && result.Data is ConflictResolutionChoice choice)
+            {
+                ConflictResolution.Resolve(conflict.OperationId, choice);
+            }
+            else
+            {
+                ConflictResolution.Resolve(conflict.OperationId, ConflictResolutionChoice.Cancel);
+            }
+            
+            await LoadBoardAsync();
+        });
+    }
+
+    private async Task OpenArchivedItemsDialogAsync()
+    {
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            CloseOnEscapeKey = true,
+            NoHeader = false
+        };
+
+        var dialog = await DialogService.ShowAsync<ArchivedItemsDialog>(
+            string.Empty, options);
+        await dialog.Result;
+        
+        await LoadBoardAsync();
     }
 }

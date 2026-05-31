@@ -119,6 +119,77 @@ internal static class BoardApiRoutes
                 }
             });
 
+        boardApi.MapGet("/archived",
+            async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService) =>
+            {
+                if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+
+                var snapshot = await boardPersistenceService.GetArchivedSnapshotAsync(userId);
+                return Results.Json(snapshot, Json);
+            });
+
+        boardApi.MapPost("/{section}/{itemId:guid}/archive",
+            async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
+                BoardSection section, Guid itemId, CancellationToken cancellationToken) =>
+            {
+                if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+
+                var path = http.Request.Path.Value ?? "";
+                var expected = ReadExpectedUpdatedAtUtc(http.Request);
+                try
+                {
+                    var outcome = await idem.RunAsync(
+                        userId,
+                        http.Request.Headers["Idempotency-Key"].FirstOrDefault(),
+                        BoardIdempotencyService.ComputeFingerprintHex("POST", path, ""),
+                        async () =>
+                        {
+                            var r = await board.ArchiveItemForApiAsync(userId, section, itemId, expected, cancellationToken);
+                            return MutationToOutcome(r);
+                        },
+                        cancellationToken);
+                    return ToHttpResult(outcome);
+                }
+                catch (BoardIdempotencyFingerprintMismatchException)
+                {
+                    return Results.Text(
+                        BoardIdempotencyService.IdempotencyMismatchJson(),
+                        "application/json",
+                        statusCode: StatusCodes.Status409Conflict);
+                }
+            });
+
+        boardApi.MapPost("/{section}/{itemId:guid}/unarchive",
+            async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
+                BoardSection section, Guid itemId, CancellationToken cancellationToken) =>
+            {
+                if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+
+                var path = http.Request.Path.Value ?? "";
+                var expected = ReadExpectedUpdatedAtUtc(http.Request);
+                try
+                {
+                    var outcome = await idem.RunAsync(
+                        userId,
+                        http.Request.Headers["Idempotency-Key"].FirstOrDefault(),
+                        BoardIdempotencyService.ComputeFingerprintHex("POST", path, ""),
+                        async () =>
+                        {
+                            var r = await board.UnarchiveItemForApiAsync(userId, section, itemId, expected, cancellationToken);
+                            return MutationToOutcome(r);
+                        },
+                        cancellationToken);
+                    return ToHttpResult(outcome);
+                }
+                catch (BoardIdempotencyFingerprintMismatchException)
+                {
+                    return Results.Text(
+                        BoardIdempotencyService.IdempotencyMismatchJson(),
+                        "application/json",
+                        statusCode: StatusCodes.Status409Conflict);
+                }
+            });
+
         boardApi.MapDelete("/{section}/{itemId:guid}",
             async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
                 BoardSection section, Guid itemId, CancellationToken cancellationToken) =>

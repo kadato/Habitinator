@@ -59,7 +59,7 @@ public sealed class BoardPersistenceService
     private DateOnly Today() => DailySchedule.LocalToday(_timeZone);
 
     private static IQueryable<BoardItemEntity> LiveBoardItems(ApplicationDbContext db, Guid userId) =>
-        db.BoardItems.Where(x => x.UserId == userId && x.DeletedAtUtc == null);
+        db.BoardItems.Where(x => x.UserId == userId && x.DeletedAtUtc == null && !x.IsArchived);
 
     private static BoardMutationStatus MatchExpected(BoardItemEntity? entity, DateTimeOffset? expectedUpdatedAtUtc)
     {
@@ -277,6 +277,94 @@ public sealed class BoardPersistenceService
             await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
             return new BoardMutationResult(BoardMutationStatus.Ok, null);
         }, cancellationToken);
+
+    public Task<BoardMutationResult> ArchiveItemForApiAsync(
+        Guid userId,
+        BoardSection section,
+        Guid itemId,
+        DateTimeOffset? expectedUpdatedAtUtc,
+        CancellationToken cancellationToken = default) =>
+        LockAsync(async () =>
+        {
+            var entity = await _dbContext.BoardItems
+                .FirstOrDefaultAsync(
+                    x => x.UserId == userId && x.Section == section && x.Id == itemId && x.DeletedAtUtc == null,
+                    cancellationToken);
+            var st = MatchExpected(entity, expectedUpdatedAtUtc);
+            if (st == BoardMutationStatus.NotFound) return new BoardMutationResult(BoardMutationStatus.NotFound, null);
+            if (st == BoardMutationStatus.Conflict)
+                return new BoardMutationResult(
+                    BoardMutationStatus.Conflict,
+                    await ToModelWithDailyStreaksAsync(userId, entity!, cancellationToken));
+
+            entity!.IsArchived = true;
+            entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            var archived = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
+            await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+            return new BoardMutationResult(BoardMutationStatus.Ok, archived);
+        }, cancellationToken);
+
+    public Task<BoardMutationResult> UnarchiveItemForApiAsync(
+        Guid userId,
+        BoardSection section,
+        Guid itemId,
+        DateTimeOffset? expectedUpdatedAtUtc,
+        CancellationToken cancellationToken = default) =>
+        LockAsync(async () =>
+        {
+            var entity = await _dbContext.BoardItems
+                .FirstOrDefaultAsync(
+                    x => x.UserId == userId && x.Section == section && x.Id == itemId && x.DeletedAtUtc == null,
+                    cancellationToken);
+            var st = MatchExpected(entity, expectedUpdatedAtUtc);
+            if (st == BoardMutationStatus.NotFound) return new BoardMutationResult(BoardMutationStatus.NotFound, null);
+            if (st == BoardMutationStatus.Conflict)
+                return new BoardMutationResult(
+                    BoardMutationStatus.Conflict,
+                    await ToModelWithDailyStreaksAsync(userId, entity!, cancellationToken));
+
+            entity!.IsArchived = false;
+            entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            var unarchived = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
+            await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+            return new BoardMutationResult(BoardMutationStatus.Ok, unarchived);
+        }, cancellationToken);
+
+    public async Task<BoardSnapshot> GetArchivedSnapshotAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        await using var readDb = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var items = await readDb.BoardItems
+            .AsNoTracking()
+            .Where(x => x.UserId == userId && x.DeletedAtUtc == null && x.IsArchived)
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.CreatedAtUtc)
+            .ThenBy(x => x.Id)
+            .ToListAsync(cancellationToken);
+
+        var today = Today();
+        var dailyStreaks = new Dictionary<Guid, int>();
+        return new BoardSnapshot(
+            items.Where(x => x.Section == BoardSection.Habit)
+                .OrderBy(x => x.SortOrder)
+                .ThenBy(x => x.CreatedAtUtc)
+                .ThenBy(x => x.Id)
+                .Select(x => ToModelWithToday(x, today, dailyStreaks))
+                .ToList(),
+            items.Where(x => x.Section == BoardSection.Daily)
+                .OrderBy(x => x.SortOrder)
+                .ThenBy(x => x.CreatedAtUtc)
+                .ThenBy(x => x.Id)
+                .Select(x => ToModelWithToday(x, today, dailyStreaks))
+                .ToList(),
+            items.Where(x => x.Section == BoardSection.Todo)
+                .OrderBy(x => x.SortOrder)
+                .ThenBy(x => x.CreatedAtUtc)
+                .ThenBy(x => x.Id)
+                .Select(x => ToModelWithToday(x, today, dailyStreaks))
+                .ToList());
+    }
 
     public async Task<BoardItem?> CompleteDailyForDateAsync(
         Guid userId,
@@ -1314,7 +1402,8 @@ public sealed class BoardPersistenceService
             todoDue,
             entity.UpdatedAtUtc,
             entity.CreatedAtUtc,
-            entity.SortOrder);
+            entity.SortOrder,
+            entity.IsArchived);
     }
 
     private static bool IsDailyEntityCompleteForToday(BoardItemEntity entity, DateOnly today)

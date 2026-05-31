@@ -50,4 +50,7 @@ public sealed class BoardItemEntity
 
     /// <summary>When set, the row is a tombstone (soft-deleted). Live board queries exclude these.</summary>
     public DateTimeOffset? DeletedAtUtc { get; set; }
+
+    /// <summary>True if the item is archived and hidden from the active board.</summary>
+    public bool IsArchived { get; set; } = false;
 }

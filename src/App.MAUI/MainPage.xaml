@@ -3,6 +3,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:components="clr-namespace:App.MAUI.Components"
+             xmlns:blazorweb="clr-namespace:Microsoft.AspNetCore.Components.Web;assembly=Microsoft.AspNetCore.Components.Web"
              x:Class="App.MAUI.MainPage"
              AutomationProperties.AutomationId="uitest-main-page">
 
@@ -10,6 +11,7 @@
                    HostPage="wwwroot/index.html"
                    AutomationProperties.AutomationId="uitest-blazor-webview">
         <BlazorWebView.RootComponents>
+            <RootComponent Selector="head::after" ComponentType="{x:Type blazorweb:HeadOutlet}" />
             <RootComponent Selector="#app" ComponentType="{x:Type components:Routes}" />
         </BlazorWebView.RootComponents>
     </BlazorWebView>

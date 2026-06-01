@@ -3,7 +3,14 @@
 @inject ApiAuthService Auth
 @inject NavigationManager Nav
 
-<PageTitle>Habitinator</PageTitle>
+@if (Session.IsLoggedIn)
+{
+    <PageTitle>@PageTitles.Page("Board")</PageTitle>
+}
+else
+{
+    <PageTitle>@PageTitles.Landing</PageTitle>
+}
 
 @if (Session.IsLoggedIn)
 {

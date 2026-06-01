@@ -8,6 +8,8 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
+<PageTitle>@PageTitles.Brand</PageTitle>
+
 <MudThemeProvider @ref="_mudThemeProvider" Theme="@HabitinatorMudTheme.Default" @bind-IsDarkMode="@_isDarkMode"/>
 <MudPopoverProvider/>
 <MudDialogProvider BackdropClick="false"/>

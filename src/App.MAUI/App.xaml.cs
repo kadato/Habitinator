@@ -12,7 +12,7 @@ public partial class App : Application
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        return new Window(new MainPage()) { Title = "App.MAUI" };
+        return new Window(new MainPage()) { Title = "Habitinator" };
     }
 
     protected override void OnStart()

@@ -56,10 +56,16 @@
                 </div>
             </div>
         </div>
+
+        @if (ShowLegalFooter)
+        {
+            <SiteLegalFooter/>
+        }
     </div>
 </div>
 
 @code {
+    [Parameter] public bool ShowLegalFooter { get; set; }
     /// <summary>When true, posts to the web cookie guest-login endpoint. When false, uses <see cref="OnContinueAsDemoGuest"/> (MAUI / JWT flow).</summary>
     [Parameter] public bool UseCookieGuestLogin { get; set; } = true;
 

@@ -186,6 +186,24 @@
     padding: 0.35rem;
 }
 
+.site-legal-footer {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--mud-palette-divider);
+    font-size: 0.8125rem;
+    text-align: center;
+}
+
+.site-legal-footer a {
+    color: var(--mud-palette-text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+}
+
+.site-legal-footer a:hover {
+    color: var(--mud-palette-primary);
+}
+
 @media (min-width: 768px) {
     .auth-page {
         min-height: min(100%, calc(100dvh - 5rem));

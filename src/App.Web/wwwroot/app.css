@@ -41,8 +41,8 @@ a:hover, .btn-link:hover {
 
 .btn-primary {
     color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+    background-color: #3b82f6;
+    border-color: #2563eb;
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
@@ -666,4 +666,28 @@ h1:focus {
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
     }
+}
+
+.privacy-page {
+    max-width: 42rem;
+    margin: 0 auto 2rem;
+    line-height: 1.6;
+}
+
+.privacy-page h1 {
+    margin-bottom: 0.5rem;
+}
+
+.privacy-page h2 {
+    margin-top: 1.75rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.125rem;
+}
+
+.privacy-page ul {
+    padding-left: 1.25rem;
+}
+
+.privacy-page__back {
+    margin-top: 2rem;
 }

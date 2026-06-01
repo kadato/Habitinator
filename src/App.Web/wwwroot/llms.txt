@@ -15,6 +15,7 @@ Habitinator is a productivity app (Blazor web + .NET MAUI). User board data is p
 - `/` — landing for signed-out visitors (sign in / register / demo guest)
 - `/auth/login` — sign in
 - `/auth/register` — create account
+- `/privacy` — privacy policy
 
 ## API (authenticated)
 

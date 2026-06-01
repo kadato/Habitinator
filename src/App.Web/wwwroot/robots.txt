@@ -1,0 +1,33 @@
+# https://habitinator.app — public marketing and auth pages only; app data requires sign-in.
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /hubs/
+Disallow: /stats
+Disallow: /settings
+Disallow: /Error
+Disallow: /not-found
+
+# AI crawlers — same policy as default; adjust if you publish a training opt-out via Content-Signal.
+User-agent: GPTBot
+Allow: /
+Disallow: /api/
+Disallow: /hubs/
+Disallow: /stats
+Disallow: /settings
+
+User-agent: Claude-Web
+Allow: /
+Disallow: /api/
+Disallow: /hubs/
+Disallow: /stats
+Disallow: /settings
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /api/
+Disallow: /hubs/
+Disallow: /stats
+Disallow: /settings
+
+Sitemap: https://habitinator.app/sitemap.xml

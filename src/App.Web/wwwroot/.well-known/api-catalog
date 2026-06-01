@@ -1,0 +1,27 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://habitinator.app/",
+      "item": [
+        {
+          "href": "https://habitinator.app/openapi/v1.json",
+          "rel": "openapi",
+          "type": "application/vnd.oai.openapi+json",
+          "title": "Habitinator HTTP API (OpenAPI 3)"
+        },
+        {
+          "href": "https://habitinator.app/health",
+          "rel": "health",
+          "type": "text/plain",
+          "title": "Liveness probe"
+        },
+        {
+          "href": "https://habitinator.app/llms.txt",
+          "rel": "alternate",
+          "type": "text/plain",
+          "title": "LLM site index"
+        }
+      ]
+    }
+  ]
+}

@@ -11,6 +11,7 @@ using App.Web.Middleware;
 using App.Web.Models;
 using App.Web.Services;
 
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -142,6 +143,12 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 
+builder.Services.AddHsts(options =>
+{
+    options.MaxAge = TimeSpan.FromDays(365);
+    options.IncludeSubDomains = true;
+});
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -187,6 +194,19 @@ var authBuilder = builder.Services
     });
 
 authBuilder.AddIdentityCookies();
+
+static void ConfigureAuthCookie(CookieAuthenticationOptions options, IWebHostEnvironment environment)
+{
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
+}
+
+builder.Services.ConfigureApplicationCookie(o => ConfigureAuthCookie(o, builder.Environment));
+builder.Services.ConfigureExternalCookie(o => ConfigureAuthCookie(o, builder.Environment));
+
 authBuilder.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
 {
     var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();

@@ -2,11 +2,10 @@
 @using Microsoft.AspNetCore.WebUtilities
 @inject NavigationManager Navigation
 
-<PageTitle>Create account — Habitinator</PageTitle>
-<SeoHead Title="Create account — Habitinator"
-         Description="Create a Habitinator account to sync habits, dailies, and to-dos across web and mobile."
-         CanonicalPath="/auth/register"
-         Robots="@SeoDefaults.IndexRobots"/>
+<PageMeta Title="@PageTitles.Page("Create account")"
+          Description="Create a Habitinator account to sync habits, dailies, and to-dos across web and mobile."
+          CanonicalPath="/auth/register"
+          Robots="@SeoDefaults.IndexRobots"/>
 
 <AuthPageShell Title="Create account"
                Subtitle="Pick an email and a password with at least 8 characters."

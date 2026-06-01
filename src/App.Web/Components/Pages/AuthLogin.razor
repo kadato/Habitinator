@@ -2,11 +2,10 @@
 @using Microsoft.AspNetCore.WebUtilities
 @inject NavigationManager Navigation
 
-<PageTitle>Sign in — Habitinator</PageTitle>
-<SeoHead Title="Sign in — Habitinator"
-         Description="Sign in to your Habitinator account or continue as demo guest."
-         CanonicalPath="/auth/login"
-         Robots="@SeoDefaults.IndexRobots"/>
+<PageMeta Title="@PageTitles.Page("Sign in")"
+          Description="Sign in to your Habitinator account or continue as demo guest."
+          CanonicalPath="/auth/login"
+          Robots="@SeoDefaults.IndexRobots"/>
 
 <AuthPageShell Title="Sign in"
                Subtitle="Use your email and password, or try the demo guest."

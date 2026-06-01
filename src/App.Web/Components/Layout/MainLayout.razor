@@ -1,4 +1,5 @@
 @using System.Security.Claims
+@using global::App.Web
 @using global::App.Shared.RCL.Models
 @using global::App.Shared.RCL.Services
 @using global::App.Shared.RCL.Themes
@@ -9,6 +10,8 @@
 @inject IUserDateFormatService DateFormatService
 @inject IJSRuntime JS
 @inject NavigationManager Nav
+
+<PageTitle>@SeoDefaults.DefaultTitle</PageTitle>
 
 <MudThemeProvider @ref="_mudThemeProvider" Theme="@HabitinatorMudTheme.Default" @bind-IsDarkMode="@_isDarkMode"/>
 <MudPopoverProvider/>

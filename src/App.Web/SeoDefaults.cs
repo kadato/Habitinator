@@ -1,10 +1,12 @@
+using App.Shared.RCL;
+
 namespace App.Web;
 
 public static class SeoDefaults
 {
     public const string SiteName = "Habitinator";
 
-    public const string DefaultTitle = "Habitinator — habits, dailies, and to-dos";
+    public const string DefaultTitle = PageTitles.Landing;
 
     public const string DefaultDescription =
         "Cross-platform productivity app for habits, scheduled dailies, and to-dos with a focus timer, activity history, and statistics. Web and mobile.";

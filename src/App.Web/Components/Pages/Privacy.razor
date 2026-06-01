@@ -1,16 +1,14 @@
 @page "/privacy"
 @layout MainLayout
 
-<PageTitle>Privacy — Habitinator</PageTitle>
-<SeoHead Title="Privacy — Habitinator"
-         Description="How Habitinator collects, uses, and protects your personal data on web and mobile."
-         CanonicalPath="/privacy"
-         Robots="@SeoDefaults.IndexRobots"/>
-<HeadContent>
+<PageMeta Title="@PageTitles.Page("Privacy")"
+          Description="How Habitinator collects, uses, and protects your personal data on web and mobile."
+          CanonicalPath="/privacy"
+          Robots="@SeoDefaults.IndexRobots">
     <script type="application/ld+json">
         @((MarkupString)BreadcrumbJsonLd)
     </script>
-</HeadContent>
+</PageMeta>
 
 <article class="privacy-page">
     <h1>Privacy policy</h1>

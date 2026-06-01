@@ -2,10 +2,9 @@
 @using System.Diagnostics
 @inject IWebHostEnvironment HostEnvironment
 
-<PageTitle>Error — Habitinator</PageTitle>
-<SeoHead Title="Error — Habitinator"
-         Description="An error occurred."
-         CanonicalPath="/Error"/>
+<PageMeta Title="@PageTitles.Page("Error")"
+          Description="An error occurred."
+          CanonicalPath="/Error"/>
 
 <h1>Something went wrong</h1>
 <p>We could not complete your request. Please try again in a moment.</p>

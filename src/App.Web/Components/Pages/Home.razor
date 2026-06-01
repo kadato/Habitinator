@@ -2,18 +2,42 @@
 @using System.Security.Claims
 @rendermode @(new InteractiveServerRenderMode(false))
 
-<PageTitle>Habitinator</PageTitle>
-
 <AuthorizeView>
     <Authorized>
+        <PageTitle>Board — Habitinator</PageTitle>
+        <SeoHead Title="Board — Habitinator"
+                 Description="Your habits, dailies, and to-dos board. Sign-in required."
+                 CanonicalPath="/"
+                 Robots="@SeoDefaults.NoIndexRobots"/>
         <MainBoard SignedInEmail="@GetEmail(context.User)"/>
     </Authorized>
     <NotAuthorized>
+        <PageTitle>Habitinator — habits, dailies, and to-dos</PageTitle>
+        <SeoHead Title="Habitinator — habits, dailies, and to-dos"
+                 Description="@SeoDefaults.DefaultDescription"
+                 CanonicalPath="/"
+                 Robots="@SeoDefaults.IndexRobots"/>
+        <HeadContent>
+            <script type="application/ld+json">
+                @((MarkupString)LandingJsonLd)
+            </script>
+        </HeadContent>
         <HomeLanding/>
     </NotAuthorized>
 </AuthorizeView>
 
 @code {
+    private const string LandingJsonLd = """
+        {
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          "name": "Habitinator",
+          "url": "https://habitinator.app/",
+          "applicationCategory": "ProductivityApplication",
+          "operatingSystem": "Web, Android, Windows, iOS, macOS",
+          "description": "Track habits, dailies, and to-dos with a focus timer and activity statistics."
+        }
+        """;
 
     private static string? GetEmail(ClaimsPrincipal user)
     {

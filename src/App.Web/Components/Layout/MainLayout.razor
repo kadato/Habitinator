@@ -18,10 +18,12 @@
 
 <form id="globalLogoutForm" method="post" action="/api/auth/cookie-logout" style="display: none;"></form>
 
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
 <MudLayout Class="app-shell-layout">
     <AuthorizeView>
         <Authorized Context="auth">
-            <MudAppBar Elevation="0" Dense="true" Class="app-top-bar" ToolBarClass="app-top-bar-toolbar">
+            <MudAppBar Elevation="0" Dense="true" Class="app-top-bar" ToolBarClass="app-top-bar-toolbar" role="banner">
                 <div class="app-top-bar__stack w-100">
                     <div class="app-top-bar__row d-flex">
                         <div class="app-top-bar__left d-flex align-center">
@@ -75,7 +77,7 @@
             </MudAppBar>
         </Authorized>
         <NotAuthorized>
-            <MudAppBar Elevation="0" Dense="true" Class="app-top-bar app-top-bar--guest" ToolBarClass="app-top-bar-toolbar">
+            <MudAppBar Elevation="0" Dense="true" Class="app-top-bar app-top-bar--guest" ToolBarClass="app-top-bar-toolbar" role="banner">
                 <MudText Typo="Typo.h6" Class="app-top-bar__title mb-0">Habitinator</MudText>
                 <MudSpacer />
                 <MudButton Href="/auth/login" Variant="Variant.Text" Color="Color.Inherit" Class="text-transform-none app-show-mobile-only">Sign in</MudButton>
@@ -84,9 +86,11 @@
         </NotAuthorized>
     </AuthorizeView>
     <MudMainContent Class="app-shell-main">
-        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pt-1 pb-3 px-4 px-sm-5 board-main-container">
-            @Body
-        </MudContainer>
+        <main id="main-content">
+            <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pt-1 pb-3 px-4 px-sm-5 board-main-container">
+                @Body
+            </MudContainer>
+        </main>
     </MudMainContent>
 </MudLayout>
 

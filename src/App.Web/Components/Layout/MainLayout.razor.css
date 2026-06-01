@@ -196,3 +196,27 @@
     top: 0.5rem;
 }
 
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    z-index: 2000;
+    padding: 0.75rem 1rem;
+    background: var(--mud-palette-primary);
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 0.25rem;
+}
+
+.skip-link:focus {
+    left: 0.5rem;
+    top: 0.5rem;
+    width: auto;
+    height: auto;
+    overflow: visible;
+}
+

@@ -24,7 +24,12 @@ public static class MauiProgram
         AddEmbeddedAppSettings(builder);
         builder
             .UseMauiApp<App>()
-            .ConfigureFonts(fonts => { fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular"); });
+            .ConfigureFonts(fonts =>
+            {
+                fonts.AddFont("PlusJakartaSans-Regular.ttf", "PlusJakartaSans");
+                fonts.AddFont("PlusJakartaSans-Medium.ttf", "PlusJakartaSansMedium");
+                fonts.AddFont("PlusJakartaSans-Bold.ttf", "PlusJakartaSansBold");
+            });
         builder.UseLocalNotification(config =>
         {
             _ = config.AddAndroid(a => a.AddChannel(new AndroidNotificationChannelRequest

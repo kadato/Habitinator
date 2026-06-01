@@ -1,5 +1,29 @@
+@font-face {
+    font-family: "Plus Jakarta Sans";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../fonts/PlusJakartaSans-Regular.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Plus Jakarta Sans";
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url("../fonts/PlusJakartaSans-Medium.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Plus Jakarta Sans";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("../fonts/PlusJakartaSans-Bold.woff2") format("woff2");
+}
+
 :root {
-    --hab-font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --hab-font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --hab-font-mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
     --bs-body-font-family: var(--hab-font-sans);
     --bs-font-sans-serif: var(--hab-font-sans);

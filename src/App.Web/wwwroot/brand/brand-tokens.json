@@ -1,0 +1,10 @@
+{
+  "name": "Habitinator",
+  "primary": "#3b82f6",
+  "primaryDarken": "#2563eb",
+  "backgroundDark": "#0f1419",
+  "surfaceDark": "#111827",
+  "onPrimary": "#ffffff",
+  "tagline": "Habits, dailies, and to-dos on one board.",
+  "fontFamily": "Plus Jakarta Sans, ui-sans-serif, system-ui, Segoe UI, Roboto, sans-serif"
+}

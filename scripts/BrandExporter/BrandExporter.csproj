@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>BrandExporter</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="3.116.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.116.1" Condition="$([MSBuild]::IsOSPlatform('windows'))" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.116.1" Condition="$([MSBuild]::IsOSPlatform('linux'))" />
+    <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.116.1" Condition="$([MSBuild]::IsOSPlatform('osx'))" />
+    <PackageReference Include="Svg.Skia" Version="3.0.6" />
+  </ItemGroup>
+</Project>

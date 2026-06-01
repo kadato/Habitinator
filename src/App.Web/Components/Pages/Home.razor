@@ -16,13 +16,14 @@
         <SeoHead Title="Habitinator — habits, dailies, and to-dos"
                  Description="@SeoDefaults.DefaultDescription"
                  CanonicalPath="/"
+                 OgImagePath="/og-image.png"
                  Robots="@SeoDefaults.IndexRobots"/>
         <HeadContent>
             <script type="application/ld+json">
                 @((MarkupString)LandingJsonLd)
             </script>
         </HeadContent>
-        <HomeLanding/>
+        <HomeLanding ShowLegalFooter="true"/>
     </NotAuthorized>
 </AuthorizeView>
 

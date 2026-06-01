@@ -7,6 +7,7 @@ using App.Web;
 using App.Web.Auth;
 using App.Web.Data;
 using App.Web.Hubs;
+using App.Web.Middleware;
 using App.Web.Models;
 using App.Web.Services;
 
@@ -76,6 +77,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddDefaultTokenProviders();
 
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+builder.Services.Configure<SitePublicOptions>(builder.Configuration.GetSection(SitePublicOptions.SectionName));
 builder.Services.Configure<DemoUserOptions>(builder.Configuration.GetSection(DemoUserOptions.SectionName));
 builder.Services.PostConfigure<DemoUserOptions>(static o =>
 {
@@ -259,11 +261,14 @@ if (!app.Environment.IsEnvironment("Testing"))
 {
     app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
     app.UseHttpsRedirection();
-    app.UseAntiforgery();
 }
+
+app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseMiddleware<DiscoveryLinkHeadersMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseAntiforgery();
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
@@ -272,6 +277,8 @@ if (!app.Environment.IsEnvironment("Testing"))
 
 // Used by AppHost WithHttpHealthCheck; anonymous, no auth required.
 app.MapGet("/health", () => Results.Text("OK", "text/plain"));
+
+app.MapGet("/.well-known/change-password", () => Results.Redirect("/settings", permanent: false));
 app.MapOpenApi();
 app.UseResponseCompression();
 app.MapStaticAssets();

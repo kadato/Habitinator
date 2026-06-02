@@ -1,4 +1,4 @@
-@inject GlobalTimerService TimerService
+﻿@inject GlobalTimerService TimerService
 @inject IBoardDataService BoardDataService
 @inject ITimerSessionLogService TimerSessionLog
 @inject IDialogService DialogService
@@ -77,7 +77,7 @@
     }
 
     /* Header flex row for desktop */
-    .habitica-column-header-flex {
+    .board-column-header-flex {
         display: flex !important;
         flex-direction: row !important;
         align-items: center !important;
@@ -100,7 +100,7 @@
         }
 
         /* Hide column card titles ("Habits", "Dailies", etc.) and badges in mobile tabbed view */
-        .board-columns-mobile .habitica-column-header-row {
+        .board-columns-mobile .board-column-header-row {
             display: none !important;
         }
 
@@ -115,7 +115,7 @@
         }
 
         /* Align filter buttons to the right on mobile */
-        .board-columns-mobile .habitica-filter-toolbar {
+        .board-columns-mobile .board-filter-toolbar {
             justify-content: flex-end !important;
         }
     }
@@ -286,19 +286,19 @@
                          Elevation="0"
                          Outlined="false">
                     <MudTabPanel Text="@($"Habits ({FilteredHabits.Count})")">
-                        <HabiticaColumn Section="BoardSection.Habit"
+                        <BoardColumn Section="BoardSection.Habit"
                                         Items="FilteredHabits"
                                         IsBoardFilterExcludingAll="Habits.Count > 0 && FilteredHabits.Count == 0"
                                         OnChanged="OnBoardChanged"/>
                     </MudTabPanel>
                     <MudTabPanel Text="@($"Dailies ({DailiesDueOpenCount})")">
-                        <HabiticaColumn Section="BoardSection.Daily"
+                        <BoardColumn Section="BoardSection.Daily"
                                         Items="FilteredDailies"
                                         IsBoardFilterExcludingAll="Dailies.Count > 0 && FilteredDailies.Count == 0"
                                         OnChanged="OnBoardChanged"/>
                     </MudTabPanel>
                     <MudTabPanel Text="@($"To-dos ({OpenTodoCount})")">
-                        <HabiticaColumn Section="BoardSection.Todo"
+                        <BoardColumn Section="BoardSection.Todo"
                                         Items="FilteredTodos"
                                         IsBoardFilterExcludingAll="Todos.Count > 0 && FilteredTodos.Count == 0"
                                         OnChanged="OnBoardChanged"/>
@@ -308,19 +308,19 @@
             <div class="board-columns-desktop">
                 <MudGrid Spacing="2" Class="board-columns-grid w-100">
                     <MudItem xs="12" md="4">
-                        <HabiticaColumn Section="BoardSection.Habit"
+                        <BoardColumn Section="BoardSection.Habit"
                                         Items="FilteredHabits"
                                         IsBoardFilterExcludingAll="Habits.Count > 0 && FilteredHabits.Count == 0"
                                         OnChanged="OnBoardChanged"/>
                     </MudItem>
                     <MudItem xs="12" md="4">
-                        <HabiticaColumn Section="BoardSection.Daily"
+                        <BoardColumn Section="BoardSection.Daily"
                                         Items="FilteredDailies"
                                         IsBoardFilterExcludingAll="Dailies.Count > 0 && FilteredDailies.Count == 0"
                                         OnChanged="OnBoardChanged"/>
                     </MudItem>
                     <MudItem xs="12" md="4">
-                        <HabiticaColumn Section="BoardSection.Todo"
+                        <BoardColumn Section="BoardSection.Todo"
                                         Items="FilteredTodos"
                                         IsBoardFilterExcludingAll="Todos.Count > 0 && FilteredTodos.Count == 0"
                                         OnChanged="OnBoardChanged"/>
@@ -376,9 +376,9 @@
     {
         var accentClass = section switch
         {
-            BoardSection.Habit => "habitica-column--habit",
-            BoardSection.Daily => "habitica-column--daily",
-            BoardSection.Todo => "habitica-column--todo",
+            BoardSection.Habit => "board-column--habit",
+            BoardSection.Daily => "board-column--daily",
+            BoardSection.Todo => "board-column--todo",
             _ => string.Empty
         };
         var title = section switch
@@ -390,21 +390,21 @@
         };
         var isHabit = section == BoardSection.Habit;
 
-        <MudCard Class="@($"habitica-column {accentClass}")" Elevation="0" Outlined="false">
+        <MudCard Class="@($"board-column {accentClass}")" Elevation="0" Outlined="false">
             <MudCardHeader Class="pb-2">
                 <CardHeaderContent>
-                    <div class="habitica-column-header-flex">
-                        <div class="habitica-column-header-left habitica-column-header-row">
+                    <div class="board-column-header-flex">
+                        <div class="board-column-header-left board-column-header-row">
                             <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
                                 <MudIcon Icon="@BoardSectionVisuals.GetMudIcon(section)"
-                                         Class="habitica-col-type-icon"
+                                         Class="board-col-type-icon"
                                          Size="Size.Small"
                                          Color="Color.Primary"/>
-                                <MudText Typo="Typo.subtitle1" Class="habitica-title">@title</MudText>
+                                <MudText Typo="Typo.subtitle1" Class="board-title">@title</MudText>
                                 <MudSkeleton Width="28px" Height="20px" Class="rounded-pill ms-1" />
                             </MudStack>
                         </div>
-                        <MudStack Row="true" Spacing="1" Class="flex-wrap habitica-filter-toolbar">
+                        <MudStack Row="true" Spacing="1" Class="flex-wrap board-filter-toolbar">
                             @if (section == BoardSection.Habit)
                             {
                                 <MudSkeleton Width="40px" Height="26px" />
@@ -428,22 +428,22 @@
             </MudCardHeader>
 
             <MudCardContent Class="pt-0">
-                <div class="habitica-add-wrap mb-3">
+                <div class="board-add-wrap mb-3">
                     <MudSkeleton Width="100%" Height="40px" />
                 </div>
 
-                <div class="habitica-list">
+                <div class="board-list">
                     @for (int cardIdx = 0; cardIdx < 3; cardIdx++)
                     {
                         var rowClass = section switch
                         {
-                            BoardSection.Habit => "habitica-row--habit",
-                            BoardSection.Daily => "habitica-row--daily-open",
-                            BoardSection.Todo => "habitica-row--todo-open",
+                            BoardSection.Habit => "board-row--habit",
+                            BoardSection.Daily => "board-row--daily-open",
+                            BoardSection.Todo => "board-row--todo-open",
                             _ => string.Empty
                         };
-                        <div class="@($"habitica-card {rowClass} pa-2 mb-1.5 d-flex align-center gap-3")" style="min-height: 48px;">
-                            <div class="habitica-card__left d-flex gap-1 align-center">
+                        <div class="@($"board-card {rowClass} pa-2 mb-1.5 d-flex align-center gap-3")" style="min-height: 48px;">
+                            <div class="board-card__left d-flex gap-1 align-center">
                                 <MudSkeleton Width="26px" Height="26px" SkeletonType="SkeletonType.Rectangle" Class="rounded" />
                                 @if (isHabit)
                                 {
@@ -459,7 +459,7 @@
                 </div>
             </MudCardContent>
 
-            <MudCardActions Class="habitica-col-foot px-4 pb-3 pt-0">
+            <MudCardActions Class="board-col-foot px-4 pb-3 pt-0">
                 <MudSkeleton Width="100%" Height="16px" />
             </MudCardActions>
         </MudCard>

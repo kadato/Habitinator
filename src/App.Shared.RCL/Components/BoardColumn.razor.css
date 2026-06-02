@@ -1,4 +1,4 @@
-.habitica-column {
+﻿.board-column {
     min-height: 18rem;
     height: 100%;
     border-radius: 1rem;
@@ -15,61 +15,61 @@
     transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
 }
 
-.habitica-column:hover {
+.board-column:hover {
     border-color: color-mix(in srgb, var(--mud-palette-text-primary) 12%, transparent);
     box-shadow:
         0 16px 48px color-mix(in srgb, var(--mud-palette-black) 20%, transparent),
         0 0 0 1px color-mix(in srgb, var(--mud-palette-text-primary) 5%, transparent) inset;
 }
 
-.habitica-column ::deep .mud-card-header,
-.habitica-column ::deep .mud-card-content,
-.habitica-column ::deep .mud-card-actions {
+.board-column ::deep .mud-card-header,
+.board-column ::deep .mud-card-content,
+.board-column ::deep .mud-card-actions {
     background: transparent;
 }
 
-.habitica-column ::deep .mud-card-header {
+.board-column ::deep .mud-card-header {
     padding: 0.65rem 0.85rem 0.35rem !important;
 }
 
-.habitica-column ::deep .mud-card-content {
+.board-column ::deep .mud-card-content {
     padding: 0 0.85rem 0.65rem !important;
 }
 
-.habitica-column--habit {
+.board-column--habit {
     border-left: 4px solid #10b981;
 }
 
-.habitica-column--daily {
+.board-column--daily {
     border-left: 4px solid #3b82f6;
 }
 
-.habitica-column--todo {
+.board-column--todo {
     border-left: 4px solid #f59e0b;
 }
 
-.habitica-title {
+.board-title {
     font-weight: 600;
     letter-spacing: 0.02em;
 }
 
-.habitica-title-stack {
+.board-title-stack {
     min-width: 0;
     flex: 1 1 auto;
 }
 
-.habitica-col-type-icon,
-.habitica-row-type-icon {
+.board-col-type-icon,
+.board-row-type-icon {
     flex-shrink: 0;
     opacity: 0.9;
 }
 
-.habitica-count-chip {
+.board-count-chip {
     font-weight: 600;
 }
 
 /* Column filter toggles: softer than default primary blue (filled + outlined). */
-.habitica-column ::deep .habitica-filter-btn.mud-button-outlined.mud-button-outlined-primary {
+.board-column ::deep .board-filter-btn.mud-button-outlined.mud-button-outlined-primary {
     color: color-mix(in srgb, var(--mud-palette-primary) 60%, var(--mud-palette-text-secondary)) !important;
     --mud-ripple-color: color-mix(in srgb, var(--mud-palette-primary) 40%, transparent) !important;
     border-color: color-mix(
@@ -79,11 +79,11 @@
     ) !important;
 }
 
-.habitica-column ::deep .habitica-filter-btn.mud-button-outlined.mud-button-outlined-primary:hover {
+.board-column ::deep .board-filter-btn.mud-button-outlined.mud-button-outlined-primary:hover {
     background-color: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent) !important;
 }
 
-.habitica-column ::deep .habitica-filter-btn.mud-button-filled.mud-button-filled-primary {
+.board-column ::deep .board-filter-btn.mud-button-filled.mud-button-filled-primary {
     color: var(--mud-palette-primary-contrast-text) !important;
     --mud-ripple-color: color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-primary-contrast-text)) !important;
     background-color: color-mix(
@@ -94,7 +94,7 @@
     box-shadow: 0 1px 0 color-mix(in srgb, var(--mud-palette-surface) 15%, transparent) inset !important;
 }
 
-.habitica-column ::deep .habitica-filter-btn.mud-button-filled.mud-button-filled-primary:hover {
+.board-column ::deep .board-filter-btn.mud-button-filled.mud-button-filled-primary:hover {
     background-color: color-mix(
         in srgb,
         var(--mud-palette-primary) 50%,
@@ -102,22 +102,22 @@
     ) !important;
 }
 
-.habitica-add-wrap ::deep .mud-input-outlined {
+.board-add-wrap ::deep .mud-input-outlined {
     background: var(--mud-palette-surface);
     border-radius: 0.65rem;
 }
 
-.habitica-add-wrap ::deep .mud-input-outlined:hover {
+.board-add-wrap ::deep .mud-input-outlined:hover {
     border-color: color-mix(in srgb, var(--mud-palette-text-primary) 14%, transparent) !important;
 }
 
-.habitica-list {
+.board-list {
     border-top: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
     display: flex;
     flex-direction: column;
 }
 
-.habitica-card {
+.board-card {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     column-gap: 0.5rem;
@@ -141,41 +141,50 @@
                 opacity 0.2s ease;
 }
 
-.habitica-card:hover {
+.board-card:hover {
     border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, transparent);
 }
 
-/* Child components (MudDropContainer/Zone) don't get this file's scope attribute; pierce from .habitica-list. */
-.habitica-list ::deep .habitica-drop-container,
-.habitica-list ::deep .habitica-drop-zone {
+/* SortableJS drag and drop styling */
+.board-sortable-list {
     display: flex;
     flex-direction: column;
     width: 100%;
+    padding-top: 0.2rem;
 }
 
-.habitica-list ::deep .habitica-drop-zone {
-    padding: 0.2rem 0 0px;
-}
-
-/* Draggable items inside drop zone: spacing via padding on the wrapper instead of margin on card to avoid dead zones */
-.habitica-list ::deep .mud-drop-item {
+.board-sortable-item {
     padding-top: 0.2rem;
     padding-bottom: 0.2rem;
 }
 
-.habitica-list ::deep .mud-drop-item .habitica-card {
+.board-sortable-item .board-card {
     margin-bottom: 0px !important;
-}
-
-.habitica-list ::deep .mud-drop-item.mud-drop-item-draggable:not(.mud-drop-item-preview-start) {
     cursor: grab;
 }
 
-.habitica-list ::deep .mud-drop-item.mud-drop-item-draggable:not(.mud-drop-item-preview-start):active {
+.board-sortable-item .board-card:active {
     cursor: grabbing;
 }
 
-.habitica-card__head-actions {
+/* Premium feedback while dragging */
+.board-sortable-ghost {
+    opacity: 0.45;
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-background)) !important;
+    border: 2px dashed color-mix(in srgb, var(--mud-palette-primary) 30%, transparent) !important;
+}
+
+.board-sortable-chosen {
+    cursor: grabbing;
+}
+
+.board-sortable-drag {
+    opacity: 0.92;
+    transform: rotate(1.2deg);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2) !important;
+}
+
+.board-card__head-actions {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -183,26 +192,26 @@
     gap: 0;
 }
 
-.habitica-card.habitica-row--done {
+.board-card.board-row--done {
     background: color-mix(in srgb, var(--mud-palette-surface) 40%, var(--mud-palette-background));
     border-color: color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
     box-shadow: none;
 }
 
-.habitica-card.habitica-row--done:hover {
+.board-card.board-row--done:hover {
     transform: none;
     box-shadow: none;
     border-color: color-mix(in srgb, var(--mud-palette-text-primary) 10%, transparent);
 }
 
 /* Row 1: check/habit and title on the same row so they share one vertical center. */
-.habitica-card__left {
+.board-card__left {
     grid-row: 1;
     grid-column: 1;
     align-self: center;
 }
 
-.habitica-card__head {
+.board-card__head {
     grid-row: 1;
     grid-column: 2;
     align-self: center;
@@ -214,7 +223,7 @@
     min-width: 0;
 }
 
-.habitica-card__habit-btns {
+.board-card__habit-btns {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -223,13 +232,13 @@
     flex-shrink: 0;
 }
 
-.habitica-card__check-col {
+.board-card__check-col {
     display: flex;
     align-items: center;
     flex-shrink: 0;
 }
 
-.habitica-card__extra {
+.board-card__extra {
     grid-column: 2;
     min-width: 0;
     display: flex;
@@ -237,7 +246,7 @@
     gap: 0.25rem;
 }
 
-.habitica-card__tags {
+.board-card__tags {
     display: flex;
     flex-wrap: wrap;
     gap: 0.3rem;
@@ -245,7 +254,7 @@
     margin-bottom: 0.2rem;
 }
 
-.habitica-card__tag-badge {
+.board-card__tag-badge {
     display: inline-flex;
     align-items: center;
     max-width: 7.5rem;
@@ -263,26 +272,26 @@
     text-overflow: ellipsis;
 }
 
-.habitica-card__tag-badge--more {
+.board-card__tag-badge--more {
     font-weight: 750;
     background: color-mix(in srgb, var(--mud-palette-primary) 8%, color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent));
     border-color: color-mix(in srgb, var(--mud-palette-primary) 20%, transparent);
     color: var(--mud-palette-primary);
 }
 
-.habitica-card__title {
+.board-card__title {
     min-width: 0;
     flex: 1;
     cursor: pointer;
     color: var(--mud-palette-text-primary);
 }
 
-.habitica-card__title:hover {
+.board-card__title:hover {
     text-decoration: underline;
     text-underline-offset: 2px;
 }
 
-.habitica-card__title-text {
+.board-card__title-text {
     min-width: 0;
     font-size: 0.875rem;
     font-weight: 600;
@@ -292,17 +301,17 @@
     display: block;
 }
 
-.habitica-card__delete {
+.board-card__delete {
     color: var(--mud-palette-text-secondary) !important;
     margin: 0;
     align-self: center;
 }
 
-.habitica-card__delete:hover {
+.board-card__delete:hover {
     color: var(--mud-palette-error) !important;
 }
 
-.habitica-card__notes {
+.board-card__notes {
     font-size: 0.775rem;
     line-height: 1.4;
     white-space: pre-wrap;
@@ -312,7 +321,7 @@
     overflow: hidden;
 }
 
-.habitica-subtask-pill {
+.board-subtask-pill {
     align-self: flex-start;
     display: inline-flex;
     flex-direction: row;
@@ -328,45 +337,45 @@
     font-variant-numeric: tabular-nums;
 }
 
-.habitica-subtask-pill__count {
+.board-subtask-pill__count {
     font-weight: 600;
 }
 
-.habitica-subtask-list {
+.board-subtask-list {
     list-style: none;
     margin: 0.15rem 0 0 0;
     padding: 0;
 }
 
-.habitica-subtask-list__row {
+.board-subtask-list__row {
     margin: 0.1rem 0;
 }
 
-.habitica-subtask-list__row ::deep .mud-typography,
-.habitica-subtask-list__row ::deep label {
+.board-subtask-list__row ::deep .mud-typography,
+.board-subtask-list__row ::deep label {
     font-size: 0.82rem;
     color: var(--mud-palette-text-primary);
     line-height: 1.35;
 }
 
 /* Extra space between subtask checkbox control and label text (MudBlazor 9). */
-.habitica-subtask-list__row .habitica-subtask-cb ::deep .mud-input-control {
+.board-subtask-list__row .board-subtask-cb ::deep .mud-input-control {
     display: flex;
     flex-direction: row;
     align-items: center;
     column-gap: 0.55rem;
 }
 
-.habitica-subtask-list__row .habitica-subtask-cb ::deep label,
-.habitica-subtask-list__row .habitica-subtask-cb ::deep .mud-typography {
+.board-subtask-list__row .board-subtask-cb ::deep label,
+.board-subtask-list__row .board-subtask-cb ::deep .mud-typography {
     margin-left: 0 !important;
 }
 
-.habitica-subtask-list__row ::deep .mud-checkbox {
+.board-subtask-list__row ::deep .mud-checkbox {
     margin: 0;
 }
 
-.habitica-card__foot {
+.board-card__foot {
     grid-column: 1 / -1;
     display: flex;
     flex-direction: row;
@@ -378,7 +387,7 @@
     min-height: 0;
 }
 
-.habitica-todo-due {
+.board-todo-due {
     display: inline-flex;
     flex-direction: row;
     align-items: center;
@@ -387,33 +396,33 @@
     color: var(--mud-palette-text-secondary);
 }
 
-.habitica-todo-due--overdue {
+.board-todo-due--overdue {
     color: var(--mud-palette-error);
 }
 
-.habitica-todo-due--today {
+.board-todo-due--today {
     color: var(--mud-palette-warning);
 }
 
-.habitica-todo-due--upcoming {
+.board-todo-due--upcoming {
     color: var(--mud-palette-text-secondary);
 }
 
-.habitica-todo-due__date,
-.habitica-todo-due__relative {
+.board-todo-due__date,
+.board-todo-due__relative {
     font-variant-numeric: tabular-nums;
 }
 
-.habitica-todo-due__sep {
+.board-todo-due__sep {
     margin: 0 0.25rem;
     opacity: 0.65;
 }
 
-.habitica-todo-due__relative {
+.board-todo-due__relative {
     font-weight: 500;
 }
 
-.habitica-streak {
+.board-streak {
     display: inline-flex;
     flex-direction: row;
     align-items: center;
@@ -423,22 +432,22 @@
     margin-left: auto;
 }
 
-.habitica-streak__text {
+.board-streak__text {
     font-weight: 600;
 }
 
-.habitica-row--done .habitica-card__title {
+.board-row--done .board-card__title {
     opacity: 0.75;
 }
 
-.habitica-row--done .habitica-card__notes,
-.habitica-row--done .habitica-subtask-pill,
-.habitica-row--done .habitica-todo-due,
-.habitica-row--done .habitica-streak {
+.board-row--done .board-card__notes,
+.board-row--done .board-subtask-pill,
+.board-row--done .board-todo-due,
+.board-row--done .board-streak {
     opacity: 0.7;
 }
 
-.habitica-row {
+.board-row {
     display: flex;
     align-items: center;
     gap: 0.45rem;
@@ -447,7 +456,7 @@
     min-height: 2.75rem;
 }
 
-.habitica-row-title {
+.board-row-title {
     display: flex;
     align-items: center;
     gap: 0.35rem;
@@ -458,7 +467,7 @@
     color: var(--mud-palette-text-primary);
 }
 
-.habitica-row-title .habitica-row-title-text {
+.board-row-title .board-row-title-text {
     min-width: 0;
     flex: 1 1 auto;
     overflow: hidden;
@@ -466,28 +475,28 @@
     white-space: nowrap;
 }
 
-.habitica-row-title:hover {
+.board-row-title:hover {
     text-decoration: underline;
     text-underline-offset: 2px;
 }
 
-.habitica-row-delete {
+.board-row-delete {
     flex-shrink: 0;
     color: var(--mud-palette-text-secondary) !important;
 }
 
-.habitica-row-delete:hover {
+.board-row-delete:hover {
     color: var(--mud-palette-error) !important;
 }
 
-.habitica-counters {
+.board-counters {
     font-size: 0.75rem;
     color: var(--mud-palette-text-secondary);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
 
-.habitica-sq {
+.board-sq {
     width: 1.65rem;
     height: 1.65rem;
     border: none;
@@ -500,35 +509,35 @@
     flex-shrink: 0;
 }
 
-.habitica-sq:disabled {
+.board-sq:disabled {
     opacity: 0.35;
     cursor: not-allowed;
 }
 
-.habitica-sq--good {
+.board-sq--good {
     background: #0d9488;
 }
 
-.habitica-sq--good:hover:not(:disabled) {
+.board-sq--good:hover:not(:disabled) {
     background: #14b8a6;
 }
 
-.habitica-sq--bad {
+.board-sq--bad {
     background: #b91c1c;
 }
 
-.habitica-sq--bad:hover:not(:disabled) {
+.board-sq--bad:hover:not(:disabled) {
     background: #dc2626;
 }
 
-.habitica-sq-spacer {
+.board-sq-spacer {
     width: 1.65rem;
     height: 1.65rem;
     flex-shrink: 0;
 }
 
-.habitica-check {
-    /* inline-flex: centers .habitica-check-glyph; works on empty buttons too (stable size) */
+.board-check {
+    /* inline-flex: centers .board-check-glyph; works on empty buttons too (stable size) */
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -547,55 +556,56 @@
     transition: border-color 0.12s ease, background-color 0.12s ease;
 }
 
-.habitica-check--daily {
+.board-check--daily {
     background: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
     border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, transparent);
 }
 
-.habitica-check--todo {
+.board-check--todo {
     background: color-mix(in srgb, var(--mud-palette-warning) 12%, transparent);
     border-color: color-mix(in srgb, var(--mud-palette-warning) 40%, transparent);
 }
 
-.habitica-check--ok {
+.board-check--ok {
     background: var(--mud-palette-success);
     border-color: var(--mud-palette-success);
 }
 
-.habitica-check-glyph {
+.board-check-glyph {
     display: block;
     flex-shrink: 0;
     pointer-events: none;
 }
 
-.habitica-row--done .habitica-row-title {
+.board-row--done .board-row-title {
     opacity: 0.72;
 }
 
-.habitica-col-foot {
+.board-col-foot {
     border-top: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
     margin-top: 0.25rem;
     padding-top: 0.4rem !important;
 }
 
 @media (max-width: 959.98px) {
-    .habitica-column {
+    .board-column {
         min-height: auto;
     }
 }
 
 @media (max-width: 599.98px) {
-    .habitica-check {
+    .board-check {
         width: 2rem;
         height: 2rem;
         min-width: 2rem;
         min-height: 2rem;
     }
 
-    .habitica-sq,
-    .habitica-sq-spacer {
+    .board-sq,
+    .board-sq-spacer {
         width: 2rem;
         height: 2rem;
     }
 
 }
+

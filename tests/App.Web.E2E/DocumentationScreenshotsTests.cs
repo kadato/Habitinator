@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using System.Net.Http;
 using Microsoft.Playwright;
 using SixLabors.ImageSharp;
@@ -107,9 +107,9 @@ public sealed class DocumentationScreenshotsTests
             await page.ScreenshotAsync(new PageScreenshotOptions { Path = boardPath, FullPage = true });
             WriteReadmeTopHalfCrop(boardPath, ReadmeShotPath("02-board", suffix));
 
-            await page.Locator(".habitica-column--daily").GetByRole(AriaRole.Button, new() { Name = "All" }).ClickAsync();
+            await page.Locator(".board-column--daily").GetByRole(AriaRole.Button, new() { Name = "All" }).ClickAsync();
             await page.WaitForTimeoutAsync(200);
-            await page.Locator(".habitica-column--daily .habitica-card__title").First.ClickAsync();
+            await page.Locator(".board-column--daily .board-card__title").First.ClickAsync();
             await page.Locator(".edit-daily-dialog").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
             await page.WaitForTimeoutAsync(400);
             await page.ScreenshotAsync(new PageScreenshotOptions { Path = ShotPath("03-edit-daily", suffix), FullPage = false });
@@ -195,14 +195,14 @@ public sealed class DocumentationScreenshotsTests
             await page.Locator(".board-shell").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 60_000 });
             await page.WaitForTimeoutAsync(500);
 
-            await page.Locator(".board-columns-desktop .habitica-column--habit .habitica-card__title").First.ClickAsync();
+            await page.Locator(".board-columns-desktop .board-column--habit .board-card__title").First.ClickAsync();
             await page.Locator(".edit-habit-dialog").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
             await page.WaitForTimeoutAsync(400);
             await page.ScreenshotAsync(new PageScreenshotOptions { Path = ShotPath("09-edit-habit", suffix), FullPage = false });
             await page.Locator(".edit-habit-dialog").GetByRole(AriaRole.Button, new() { Name = "Cancel" }).ClickAsync();
             await page.Locator(".edit-habit-dialog").WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 15_000 });
 
-            await page.Locator(".board-columns-desktop .habitica-column--todo .habitica-card__title").First.ClickAsync();
+            await page.Locator(".board-columns-desktop .board-column--todo .board-card__title").First.ClickAsync();
             await page.Locator(".edit-daily-dialog").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
             await page.WaitForTimeoutAsync(400);
             await page.ScreenshotAsync(new PageScreenshotOptions { Path = ShotPath("10-edit-todo", suffix), FullPage = false });
@@ -376,3 +376,4 @@ public sealed class DocumentationScreenshotsTests
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 15_000 });
     }
 }
+

@@ -1,4 +1,5 @@
-@using System.Globalization
+﻿@using System.Globalization
+@using Microsoft.JSInterop
 @using App.Shared.RCL.Components.Dialogs
 @inject GlobalTimerService TimerService
 @inject IBoardDataService BoardData
@@ -7,46 +8,48 @@
 @inject IUserTimeZoneService TimeZoneService
 @inject IUserDateFormatService DateFormatService
 @inject IUndoService UndoService
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
-<MudCard Class="@($"habitica-column {GetAccentClass()}")" Elevation="0" Outlined="false">
+<MudCard Class="@($"board-column {GetAccentClass()}")" Elevation="0" Outlined="false">
     <MudCardHeader Class="pb-2">
         <CardHeaderContent>
             <MudStack Spacing="1">
-                <div class="habitica-column-header-flex">
-                    <div class="habitica-column-header-left habitica-column-header-row">
-                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="habitica-title-stack">
+                <div class="board-column-header-flex">
+                    <div class="board-column-header-left board-column-header-row">
+                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="board-title-stack">
                             <MudIcon Icon="@BoardSectionVisuals.GetMudIcon(Section)"
-                                     Class="habitica-col-type-icon"
+                                     Class="board-col-type-icon"
                                      Size="Size.Small"
                                      Color="Color.Primary"/>
-                            <MudText Typo="Typo.subtitle1" Class="habitica-title">@GetTitle()</MudText>
+                            <MudText Typo="Typo.subtitle1" Class="board-title">@GetTitle()</MudText>
                             <MudChip T="string"
                                      Text="@VisibleItems().Count.ToString()"
-                                     Class="habitica-count-chip ms-1"
+                                     Class="board-count-chip ms-1"
                                      Color="Color.Secondary"
                                      Size="Size.Small"
                                      Variant="Variant.Filled"/>
                         </MudStack>
                     </div>
-                    <MudStack Row="true" Spacing="1" Class="flex-wrap habitica-filter-toolbar" role="toolbar">
+                    <MudStack Row="true" Spacing="1" Class="flex-wrap board-filter-toolbar" role="toolbar">
                         @if (Section == BoardSection.Habit)
                         {
                             <MudButton Size="Size.Small"
-                                       Class="habitica-filter-btn"
+                                       Class="board-filter-btn"
                                        Variant="@FilterVariant(_habitFilter == HabitListFilter.All)"
                                        Color="Color.Primary"
                                        OnClick="@(() => SetHabitFilter(HabitListFilter.All))">
                                 All
                             </MudButton>
                             <MudButton Size="Size.Small"
-                                       Class="habitica-filter-btn"
+                                       Class="board-filter-btn"
                                        Variant="@FilterVariant(_habitFilter == HabitListFilter.Weak)"
                                        Color="Color.Primary"
                                        OnClick="@(() => SetHabitFilter(HabitListFilter.Weak))">
                                 Weak
                             </MudButton>
                             <MudButton Size="Size.Small"
-                                       Class="habitica-filter-btn"
+                                       Class="board-filter-btn"
                                        Variant="@FilterVariant(_habitFilter == HabitListFilter.Strong)"
                                        Color="Color.Primary"
                                        OnClick="@(() => SetHabitFilter(HabitListFilter.Strong))">
@@ -56,21 +59,21 @@
                         else if (Section == BoardSection.Daily)
                         {
                             <MudButton Size="Size.Small"
-                                       Class="habitica-filter-btn"
+                                       Class="board-filter-btn"
                                        Variant="@FilterVariant(_dailyFilter == DailyListFilter.All)"
                                        Color="Color.Primary"
                                        OnClick="@(() => SetDailyFilter(DailyListFilter.All))">
                                 All
                             </MudButton>
                             <MudButton Size="Size.Small"
-                                       Class="habitica-filter-btn"
+                                       Class="board-filter-btn"
                                        Variant="@FilterVariant(_dailyFilter == DailyListFilter.Due)"
                                        Color="Color.Primary"
                                        OnClick="@(() => SetDailyFilter(DailyListFilter.Due))">
                                 Due
                             </MudButton>
                             <MudButton Size="Size.Small"
-                                       Class="habitica-filter-btn"
+                                       Class="board-filter-btn"
                                        Variant="@FilterVariant(_dailyFilter == DailyListFilter.NotDue)"
                                        Color="Color.Primary"
                                        OnClick="@(() => SetDailyFilter(DailyListFilter.NotDue))">
@@ -80,21 +83,21 @@
                         else
                         {
                             <MudButton Size="Size.Small"
-                                       Class="habitica-filter-btn"
+                                       Class="board-filter-btn"
                                        Variant="@FilterVariant(_todoFilter == TodoListFilter.Active)"
                                        Color="Color.Primary"
                                        OnClick="@(() => SetTodoFilter(TodoListFilter.Active))">
                                 Active
                             </MudButton>
                             <MudButton Size="Size.Small"
-                                       Class="habitica-filter-btn"
+                                       Class="board-filter-btn"
                                        Variant="@FilterVariant(_todoFilter == TodoListFilter.Scheduled)"
                                        Color="Color.Primary"
                                        OnClick="@(() => SetTodoFilter(TodoListFilter.Scheduled))">
                                 Scheduled
                             </MudButton>
                             <MudButton Size="Size.Small"
-                                       Class="habitica-filter-btn"
+                                       Class="board-filter-btn"
                                        Variant="@FilterVariant(_todoFilter == TodoListFilter.Complete)"
                                        Color="Color.Primary"
                                        OnClick="@(() => SetTodoFilter(TodoListFilter.Complete))">
@@ -121,9 +124,9 @@
     </MudCardHeader>
 
     <MudCardContent Class="pt-0">
-        <div @onkeydown="OnDraftKeyAsync" class="habitica-add-wrap">
+        <div @onkeydown="OnDraftKeyAsync" class="board-add-wrap">
             <MudTextField @bind-Value="_draft"
-                          Class="habitica-add-field"
+                          Class="board-add-field"
                           Placeholder="@GetAddPlaceholder()"
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
@@ -133,7 +136,7 @@
                           Immediate="true"/>
         </div>
 
-        <div class="habitica-list mt-2">
+        <div class="board-list mt-2">
             @{
                 var visibleItems = VisibleItems();
                 var canReorder = IsItemDraggable();
@@ -148,30 +151,30 @@
                     return @<div @key="item.Id" class="@GetCardClass(item)">
                         @if (Section == BoardSection.Habit)
                         {
-                            <div class="habitica-card__habit-btns habitica-card__left">
+                            <div class="board-card__habit-btns board-card__left">
                                 @if (item.TrackPlus)
                                 {
-                                    <button type="button" class="habitica-sq habitica-sq--good" title="Log +" draggable="false" @onclick="@(() => HabitUpAsync(item))" @onclick:stopPropagation="true">+</button>
+                                    <button type="button" class="board-sq board-sq--good" title="Log +" draggable="false" @onclick="@(() => HabitUpAsync(item))" @onclick:stopPropagation="true">+</button>
                                 }
                                 else
                                 {
-                                    <span class="habitica-sq-spacer" aria-hidden="true"></span>
+                                    <span class="board-sq-spacer" aria-hidden="true"></span>
                                 }
                                 @if (item.TrackMinus)
                                 {
-                                    <button type="button" class="habitica-sq habitica-sq--bad" title="Log −" draggable="false" @onclick="@(() => HabitDownAsync(item))" @onclick:stopPropagation="true">−</button>
+                                    <button type="button" class="board-sq board-sq--bad" title="Log −" draggable="false" @onclick="@(() => HabitDownAsync(item))" @onclick:stopPropagation="true">−</button>
                                 }
                                 else
                                 {
-                                    <span class="habitica-sq-spacer" aria-hidden="true"></span>
+                                    <span class="board-sq-spacer" aria-hidden="true"></span>
                                 }
                             </div>
                         }
                         else
                         {
-                            <div class="habitica-card__check-col habitica-card__left">
+                            <div class="board-card__check-col board-card__left">
                                 <button type="button"
-                                        class="habitica-check @GetCheckClass(item)"
+                                        class="board-check @GetCheckClass(item)"
                                         title="Toggle"
                                         draggable="false"
                                         @onclick="@(() => ToggleAsync(item))"
@@ -181,7 +184,7 @@
                                         role="checkbox">
                                     @if (item.IsCompleted)
                                     {
-                                        <svg class="habitica-check-glyph"
+                                        <svg class="board-check-glyph"
                                              viewBox="0 0 24 24"
                                              width="14"
                                              height="14"
@@ -198,11 +201,11 @@
                                 </button>
                             </div>
                         }
-                        <div class="habitica-card__head">
-                            <div class="habitica-card__title" draggable="false" @onclick="@(() => OpenItemEditorAsync(item))">
-                                <span class="habitica-card__title-text">@item.Title</span>
+                        <div class="board-card__head">
+                            <div class="board-card__title" draggable="false" @onclick="@(() => OpenItemEditorAsync(item))">
+                                <span class="board-card__title-text">@item.Title</span>
                             </div>
-                            <div class="habitica-card__head-actions">
+                            <div class="board-card__head-actions">
                                 <MudMenu AnchorOrigin="Origin.BottomRight"
                                          TransformOrigin="Origin.TopRight"
                                          Dense="true">
@@ -210,7 +213,7 @@
                                         <span @onclick:stopPropagation="true">
                                             <MudIconButton Icon="@Icons.Material.Filled.MoreVert"
                                                            Size="Size.Small"
-                                                           Class="ma-0 habitica-card__delete"
+                                                           Class="ma-0 board-card__delete"
                                                            title="Options"
                                                            OnClick="@(e => itemMenu.ToggleAsync(e))"/>
                                         </span>
@@ -240,53 +243,53 @@
                         </div>
                         @if (hasBodyExtra)
                         {
-                            <div class="habitica-card__extra">
+                            <div class="board-card__extra">
                                 @if (tagsList.Count > 0)
                                 {
-                                    <div class="habitica-card__tags">
+                                    <div class="board-card__tags">
                                         @if (tagsList.Count <= 3)
                                         {
                                             @foreach (var tag in tagsList)
                                             {
-                                                <span class="habitica-card__tag-badge" title="@tag">@tag</span>
+                                                <span class="board-card__tag-badge" title="@tag">@tag</span>
                                             }
                                         }
                                         else
                                         {
                                             @foreach (var tag in tagsList.Take(2))
                                             {
-                                                <span class="habitica-card__tag-badge" title="@tag">@tag</span>
+                                                <span class="board-card__tag-badge" title="@tag">@tag</span>
                                             }
-                                            <span class="habitica-card__tag-badge habitica-card__tag-badge--more" title="@(string.Join(", ", tagsList.Skip(2)))">+@(tagsList.Count - 2)</span>
+                                            <span class="board-card__tag-badge board-card__tag-badge--more" title="@(string.Join(", ", tagsList.Skip(2)))">+@(tagsList.Count - 2)</span>
                                         }
                                     </div>
                                 }
                                 @if (!string.IsNullOrWhiteSpace(item.Notes))
                                 {
-                                    <MudText Typo="Typo.caption" Class="habitica-card__notes" Color="Color.Secondary">@item.Notes</MudText>
+                                    <MudText Typo="Typo.caption" Class="board-card__notes" Color="Color.Secondary">@item.Notes</MudText>
                                 }
                                 @if (subTotal > 0)
                                 {
                                     <button type="button"
-                                            class="habitica-subtask-pill"
+                                            class="board-subtask-pill"
                                             @onclick="@(() => ToggleSubtasksExpand(item.Id))"
                                             @onclick:stopPropagation="true">
                                         <MudIcon Icon="@Icons.Material.Filled.List" Size="Size.Small" Class="me-1"/>
-                                        <span class="habitica-subtask-pill__count">@subDone / @subTotal</span>
+                                        <span class="board-subtask-pill__count">@subDone / @subTotal</span>
                                         <MudIcon Icon="@(IsSubtasksExpanded(item.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small" Class="ms-1"/>
                                     </button>
                                 }
                                 @if (subTotal > 0 && IsSubtasksExpanded(item.Id))
                                 {
-                                    <ul class="habitica-subtask-list">
+                                    <ul class="board-subtask-list">
                                         @foreach (var line in checklist)
                                         {
-                                            <li class="habitica-subtask-list__row" @key="line.Id">
+                                            <li class="board-subtask-list__row" @key="line.Id">
                                                 <MudCheckBox T="bool"
                                                              Value="line.IsDone"
                                                              ValueChanged="@(v => SetChecklistItemDoneAsync(item, line.Id, v))"
                                                              Label="@line.Text"
-                                                             Class="ma-0 habitica-subtask-cb"
+                                                             Class="ma-0 board-subtask-cb"
                                                              Color="Color.Secondary"
                                                              Dense="true"/>
                                             </li>
@@ -297,31 +300,31 @@
                         }
                         @if (ShouldShowItemFooter(Section, item))
                         {
-                            <div class="habitica-card__foot">
-                                <div class="habitica-card__foot-left">
+                            <div class="board-card__foot">
+                                <div class="board-card__foot-left">
                                     @if (Section == BoardSection.Todo && item.TodoDueDate is { } due)
                                     {
                                         <div class="@TodoDueCssClass(due)">
                                             <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Class="me-1" Size="Size.Small"/>
-                                            <span class="habitica-todo-due__date">@DateFormatService.Format(due)</span>
-                                            <span class="habitica-todo-due__sep" aria-hidden="true">·</span>
-                                            <span class="habitica-todo-due__relative">@TodoDueRelativeLabel(due)</span>
+                                            <span class="board-todo-due__date">@DateFormatService.Format(due)</span>
+                                            <span class="board-todo-due__sep" aria-hidden="true">·</span>
+                                            <span class="board-todo-due__relative">@TodoDueRelativeLabel(due)</span>
                                         </div>
                                     }
                                 </div>
-                                <div class="habitica-card__foot-right">
+                                <div class="board-card__foot-right">
                                     @if (Section == BoardSection.Habit)
                                     {
-                                        <div class="habitica-streak" title="@HabitCounterTitle(item)">
+                                        <div class="board-streak" title="@HabitCounterTitle(item)">
                                             <MudIcon Icon="@Icons.Material.Filled.FastForward" Size="Size.Small" Class="me-1"/>
-                                            <span class="habitica-streak__text">@HabitStreakLabel(item)</span>
+                                            <span class="board-streak__text">@HabitStreakLabel(item)</span>
                                         </div>
                                     }
                                     else if (Section == BoardSection.Daily)
                                     {
-                                        <div class="habitica-streak" title="Streak">
+                                        <div class="board-streak" title="Streak">
                                             <MudIcon Icon="@Icons.Material.Filled.FastForward" Size="Size.Small" Class="me-1"/>
-                                            <span class="habitica-streak__text">@item.Counter</span>
+                                            <span class="board-streak__text">@item.Counter</span>
                                         </div>
                                     }
                                 </div>
@@ -338,22 +341,14 @@
             }
             else if (canReorder)
             {
-                <MudDropContainer T="HabiticaDropItem"
-                                  @ref="_dropContainer"
-                                  Items="_dropItems"
-                                  ItemsSelector="@((item, zone) => item.Zone == zone)"
-                                  ItemDropped="OnDropItemAsync"
-                                  Class="habitica-drop-container mud-width-full">
-                    <ChildContent>
-                        <MudDropZone T="HabiticaDropItem"
-                                     Identifier="@HabiticaDropItem.ListZoneId"
-                                     AllowReorder="true"
-                                     Class="habitica-drop-zone mud-width-full"/>
-                    </ChildContent>
-                    <ItemRenderer>
-                        @itemCard(context.Item)
-                    </ItemRenderer>
-                </MudDropContainer>
+                <div @ref="_containerRef" class="board-sortable-list mud-width-full">
+                    @foreach (var item in visibleItems)
+                    {
+                        <div @key="item.Id" data-id="@item.Id" class="board-sortable-item">
+                            @itemCard(item)
+                        </div>
+                    }
+                </div>
             }
             else
             {
@@ -365,7 +360,7 @@
         </div>
     </MudCardContent>
 
-    <MudCardActions Class="habitica-col-foot px-4 pb-3 pt-0">
+    <MudCardActions Class="board-col-foot px-4 pb-3 pt-0">
         <MudText Typo="Typo.caption" Color="Color.Secondary">@GetFooterText()</MudText>
     </MudCardActions>
 </MudCard>
@@ -388,45 +383,55 @@
     private void SetHabitFilter(HabitListFilter filter)
     {
         _habitFilter = filter;
-        SyncDropItems();
         _needRefresh = true;
     }
 
     private void SetDailyFilter(DailyListFilter filter)
     {
         _dailyFilter = filter;
-        SyncDropItems();
         _needRefresh = true;
     }
 
     private void SetTodoFilter(TodoListFilter filter)
     {
         _todoFilter = filter;
-        SyncDropItems();
         _needRefresh = true;
     }
 
     private readonly Dictionary<Guid, bool> _subtasksExpand = new();
     private readonly Dictionary<Guid, double> _sortOrderOverrides = new();
 
-    private List<HabiticaDropItem> _dropItems = new();
-    private MudDropContainer<HabiticaDropItem>? _dropContainer;
+    private ElementReference _containerRef;
+    private DotNetObjectReference<BoardColumn>? _selfRef;
     private bool _needRefresh;
 
     protected override void OnParametersSet()
     {
         PruneSortOrderOverrides();
-        SyncDropItems();
         _needRefresh = true;
     }
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if ((firstRender || _needRefresh) && _dropContainer is not null && IsItemDraggable())
+        if (IsItemDraggable() && VisibleItems().Count > 0)
         {
-            _needRefresh = false;
-            _dropContainer.Refresh();
+            if (firstRender || _needRefresh)
+            {
+                _needRefresh = false;
+                await InitSortableAsync();
+            }
         }
+    }
+
+    private async Task InitSortableAsync()
+    {
+        try
+        {
+            _selfRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("HabitinatorSortable.init", Section.ToString(), _containerRef, _selfRef);
+        }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
     }
 
     private void PruneSortOrderOverrides()
@@ -446,25 +451,6 @@
                 _sortOrderOverrides.Remove(id);
             }
         }
-    }
-
-    private void SyncDropItems()
-    {
-        if (!IsItemDraggable())
-        {
-            _dropItems = new List<HabiticaDropItem>();
-            return;
-        }
-
-        var visible = VisibleItems();
-        _dropItems = visible
-            .Select((item, index) => new HabiticaDropItem
-            {
-                Item = item,
-                Zone = HabiticaDropItem.ListZoneId,
-                Order = index
-            })
-            .ToList();
     }
 
     private enum HabitListFilter
@@ -610,9 +596,9 @@
     {
         return Section switch
         {
-            BoardSection.Habit => "habitica-column--habit",
-            BoardSection.Daily => "habitica-column--daily",
-            BoardSection.Todo => "habitica-column--todo",
+            BoardSection.Habit => "board-column--habit",
+            BoardSection.Daily => "board-column--daily",
+            BoardSection.Todo => "board-column--todo",
             _ => string.Empty
         };
     }
@@ -621,90 +607,76 @@
     {
         return Section switch
         {
-            BoardSection.Habit => "habitica-row--habit",
-            BoardSection.Daily => item.IsCompleted ? "habitica-row--done" : "habitica-row--daily-open",
-            BoardSection.Todo => item.IsCompleted ? "habitica-row--done" : "habitica-row--todo-open",
+            BoardSection.Habit => "board-row--habit",
+            BoardSection.Daily => item.IsCompleted ? "board-row--done" : "board-row--daily-open",
+            BoardSection.Todo => item.IsCompleted ? "board-row--done" : "board-row--todo-open",
             _ => string.Empty
         };
     }
 
     private string GetCardClass(BoardItem item) =>
-        $"habitica-card {GetRowClass(item)}";
+        $"board-card {GetRowClass(item)}";
 
-    // ── Reordering (MudBlazor MudDropContainer) ─────────────────────────────
+    // ── Reordering (SortableJS) ─────────────────────────────
 
-    private async Task OnDropItemAsync(MudItemDropInfo<HabiticaDropItem> dropInfo)
+    [JSInvokable]
+    public async Task OnJsReorderAsync(int oldIndex, int newIndex)
     {
-        await Task.Yield();
-
-        if (!IsItemDraggable() || dropInfo.Item is null)
+        if (!IsItemDraggable())
         {
             return;
         }
 
-        var sourceItem = dropInfo.Item.Item;
         var visible = VisibleItems().ToList();
-        var sourceIndex = visible.FindIndex(x => x.Id == sourceItem.Id);
-        if (sourceIndex < 0)
+        if (oldIndex < 0 || oldIndex >= visible.Count || newIndex < 0 || newIndex >= visible.Count || oldIndex == newIndex)
         {
             return;
         }
 
-        var insertAt = dropInfo.IndexInZone;
-        if (insertAt < 0)
-        {
-            insertAt = 0;
-        }
-        else if (insertAt > visible.Count - 1)
-        {
-            insertAt = visible.Count - 1;
-        }
-
-        if (sourceIndex == insertAt)
-        {
-            return;
-        }
-
+        var sourceItem = visible[oldIndex];
         var reordered = visible.ToList();
-        reordered.RemoveAt(sourceIndex);
-        if (insertAt > reordered.Count)
-        {
-            insertAt = reordered.Count;
-        }
-
-        reordered.Insert(insertAt, sourceItem);
-
-        dropInfo.Item.Zone = dropInfo.DropzoneIdentifier;
-        for (var i = 0; i < reordered.Count; i++)
-        {
-            var dropItem = _dropItems.First(x => x.Item.Id == reordered[i].Id);
-            dropItem.Order = i;
-            dropItem.Zone = HabiticaDropItem.ListZoneId;
-        }
-        _dropItems = _dropItems.OrderBy(x => x.Order).ToList();
+        reordered.RemoveAt(oldIndex);
+        reordered.Insert(newIndex, sourceItem);
 
         var newSortOrder = Section == BoardSection.Todo && _todoFilter == TodoListFilter.Active
-            ? TodoOrdering.ComputeMidpointSortOrderForActiveTab(reordered, insertAt, GetEffectiveSortOrder)
-            : BoardItemReorder.ComputeMidpointSortOrder(reordered, insertAt, GetEffectiveSortOrder);
+            ? TodoOrdering.ComputeMidpointSortOrderForActiveTab(reordered, newIndex, GetEffectiveSortOrder)
+            : BoardItemReorder.ComputeMidpointSortOrder(reordered, newIndex, GetEffectiveSortOrder);
+
         if (newSortOrder is not { } sortOrder)
         {
-            SyncDropItems();
-            _dropContainer?.Refresh();
+            _needRefresh = true;
+            StateHasChanged();
             return;
         }
 
         _sortOrderOverrides[sourceItem.Id] = sortOrder;
-        _dropContainer?.Refresh();
+        _needRefresh = true;
         StateHasChanged();
 
         var ok = await TryMutateAsync(() => PersistReorderAsync(sourceItem, sortOrder));
         if (!ok)
         {
             _sortOrderOverrides.Remove(sourceItem.Id);
-            SyncDropItems();
-            _dropContainer?.Refresh();
+            _needRefresh = true;
             StateHasChanged();
             return;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (IsItemDraggable())
+            {
+                await JS.InvokeVoidAsync("HabitinatorSortable.destroy", Section.ToString());
+            }
+        }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+        finally
+        {
+            _selfRef?.Dispose();
         }
     }
 
@@ -763,7 +735,7 @@
             _ => "upcoming"
         };
 
-        return $"habitica-todo-due habitica-todo-due--{state}";
+        return $"board-todo-due board-todo-due--{state}";
     }
 
     private DateOnly BoardToday() => DailySchedule.LocalToday(TimeZoneService);
@@ -787,7 +759,7 @@
     private void ToggleSubtasksExpand(Guid id)
     {
         _subtasksExpand[id] = !IsSubtasksExpanded(id);
-        _dropContainer?.Refresh();
+        _needRefresh = true;
     }
 
     private async Task SetChecklistItemDoneAsync(BoardItem item, Guid lineId, bool done)
@@ -850,10 +822,10 @@
     {
         if (item.IsCompleted)
         {
-            return "habitica-check--ok";
+            return "board-check--ok";
         }
 
-        return Section == BoardSection.Daily ? "habitica-check--daily" : "habitica-check--todo";
+        return Section == BoardSection.Daily ? "board-check--daily" : "board-check--todo";
     }
 
     private async Task OnDraftKeyAsync(KeyboardEventArgs e)
@@ -1015,22 +987,14 @@
         }
 
         _sortOrderOverrides[item.Id] = sortOrder;
-        if (IsItemDraggable())
-        {
-            SyncDropItems();
-        }
-        _dropContainer?.Refresh();
+        _needRefresh = true;
         StateHasChanged();
 
         var ok = await TryMutateAsync(() => PersistReorderAsync(item, sortOrder));
         if (!ok)
         {
             _sortOrderOverrides.Remove(item.Id);
-            if (IsItemDraggable())
-            {
-                SyncDropItems();
-            }
-            _dropContainer?.Refresh();
+            _needRefresh = true;
             StateHasChanged();
         }
     }
@@ -1059,22 +1023,14 @@
         }
 
         _sortOrderOverrides[item.Id] = sortOrder;
-        if (IsItemDraggable())
-        {
-            SyncDropItems();
-        }
-        _dropContainer?.Refresh();
+        _needRefresh = true;
         StateHasChanged();
 
         var ok = await TryMutateAsync(() => PersistReorderAsync(item, sortOrder));
         if (!ok)
         {
             _sortOrderOverrides.Remove(item.Id);
-            if (IsItemDraggable())
-            {
-                SyncDropItems();
-            }
-            _dropContainer?.Refresh();
+            _needRefresh = true;
             StateHasChanged();
         }
     }

@@ -3,6 +3,7 @@
 @using global::App.Shared.RCL.Models
 @using global::App.Shared.RCL.Services
 @using global::App.Shared.RCL.Themes
+@using Microsoft.AspNetCore.WebUtilities
 @implements IDisposable
 @inherits LayoutComponentBase
 @rendermode @(new InteractiveServerRenderMode(false))
@@ -125,6 +126,22 @@
     {
         PreferencesService.Changed += OnPreferencesChanged;
         Nav.LocationChanged += OnLocationChanged;
+
+        // Parse query parameter to avoid flash of wrong theme during loading
+        var uri = Nav.ToAbsoluteUri(Nav.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("theme", out var themeValues))
+        {
+            var theme = themeValues.ToString();
+            if (string.Equals(theme, "light", StringComparison.OrdinalIgnoreCase))
+            {
+                _isDarkMode = false;
+            }
+            else if (string.Equals(theme, "dark", StringComparison.OrdinalIgnoreCase))
+            {
+                _isDarkMode = true;
+            }
+        }
+
         await LoadPreferencesAsync();
     }
 

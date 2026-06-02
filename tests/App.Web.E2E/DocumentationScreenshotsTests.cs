@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using System.Net.Http;
 using Microsoft.Playwright;
 using SixLabors.ImageSharp;
@@ -31,20 +31,6 @@ public sealed class DocumentationScreenshotsTests
     private static string ShotPath(string baseFileName, string schemeSuffix) =>
         Path.Combine(ScreenshotDir, $"{baseFileName}-{schemeSuffix}.png");
 
-    private static string ReadmeShotPath(string baseFileName, string schemeSuffix)
-    {
-        var readmeDir = Path.Combine(ScreenshotDir, "readme");
-        Directory.CreateDirectory(readmeDir);
-        return Path.Combine(readmeDir, $"{baseFileName}-{schemeSuffix}.png");
-    }
-
-    private static void WriteReadmeTopHalfCrop(string fullPagePath, string readmePath)
-    {
-        using var image = Image.Load(fullPagePath);
-        var cropHeight = image.Height / 2;
-        image.Mutate(ctx => ctx.Crop(new Rectangle(0, 0, image.Width, cropHeight)));
-        image.SaveAsPng(readmePath);
-    }
 
     private static BrowserNewContextOptions CreateContextOptions(ColorScheme scheme) =>
         new()
@@ -105,7 +91,6 @@ public sealed class DocumentationScreenshotsTests
             await page.WaitForTimeoutAsync(500);
             var boardPath = ShotPath("02-board", suffix);
             await page.ScreenshotAsync(new PageScreenshotOptions { Path = boardPath, FullPage = true });
-            WriteReadmeTopHalfCrop(boardPath, ReadmeShotPath("02-board", suffix));
 
             await page.Locator(".board-column--daily").GetByRole(AriaRole.Button, new() { Name = "All" }).ClickAsync();
             await page.WaitForTimeoutAsync(200);
@@ -121,7 +106,6 @@ public sealed class DocumentationScreenshotsTests
             await page.WaitForTimeoutAsync(500);
             var statsPath = ShotPath("04-statistics", suffix);
             await page.ScreenshotAsync(new PageScreenshotOptions { Path = statsPath, FullPage = true });
-            WriteReadmeTopHalfCrop(statsPath, ReadmeShotPath("04-statistics", suffix));
 
             await ClickBusiestHeatmapDayAsync(page);
 

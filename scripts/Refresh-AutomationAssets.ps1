@@ -3,7 +3,6 @@
   Regenerates committed documentation assets under docs/automation/.
   - Mermaid: solution graph + database FK flowchart (no running server).
   - OpenAPI JSON + Playwright PNGs: require App.Web reachable at -BaseUrl (PostgreSQL must match appsettings).
-  - README preview crops (02-board-readme, 04-statistics-readme) are written by DocumentationScreenshotsTests.
 
   Example:
     pwsh ./scripts/Refresh-AutomationAssets.ps1

@@ -1,6 +1,6 @@
 #Requires -Version 7
 <#
-  Generates automatic demo videos under docs/automation/demo-video-light.webm and demo-video-dark.webm.
+  Generates automatic demo videos under docs/automation/demo-video-light.mp4 and demo-video-dark.mp4 (transcoded from WebM).
   Requires running web app (e.g. at -BaseUrl).
 
   Example:
@@ -43,14 +43,26 @@ finally {
 }
 
 $themes = @("light", "dark")
-Write-Host "`n== Verification:"
+Write-Host "`n== Transcoding and Verification:"
 foreach ($theme in $themes) {
-    $videoPath = Join-Path $videoOutDir "demo-video-$theme.webm"
-    if (Test-Path $videoPath) {
-        Write-Host "   [SUCCESS] Demo video ($theme) saved to: $videoPath"
+    $webmPath = Join-Path $videoOutDir "demo-video-$theme.webm"
+    $mp4Path = Join-Path $videoOutDir "demo-video-$theme.mp4"
+    if (Test-Path $webmPath) {
+        Write-Host "   Transcoding $theme webm to mp4 using ffmpeg..."
+        # Use ffmpeg to transcode. -y overwrites existing output.
+        & ffmpeg -y -i $webmPath -c:v libx264 -pix_fmt yuv420p $mp4Path
+        if (Test-Path $mp4Path) {
+            Write-Host "   [SUCCESS] Demo video ($theme) saved as MP4 to: $mp4Path"
+            # Remove the webm file to avoid duplicates/confusion
+            Remove-Item $webmPath -Force
+        }
+        else {
+            Write-Error "   [FAILED] Transcoding failed for demo video ($theme)."
+        }
     }
     else {
-        Write-Warning "   [FAILED] Demo video ($theme) was not generated."
+        Write-Warning "   [FAILED] Demo video ($theme) webm source was not generated."
     }
 }
+
 

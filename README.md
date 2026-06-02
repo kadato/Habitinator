@@ -23,11 +23,13 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 ## Preview
 <div align="center">
 
-<video width="100%" controls>
-  <source src="docs/automation/demo-video-dark.webm" type="video/webm" media="(prefers-color-scheme: dark)">
-  <source src="docs/automation/demo-video-light.webm" type="video/webm" media="(prefers-color-scheme: light)">
-  <source src="docs/automation/demo-video-light.webm" type="video/webm">
-</video>
+<h3>Light Theme Demo Walkthrough</h3>
+<video src="https://raw.githubusercontent.com/tothKarolyDavid/Habitinator/main/docs/automation/demo-video-light.mp4" width="100%" controls></video>
+
+<br><br>
+
+<h3>Dark Theme Demo Walkthrough</h3>
+<video src="https://raw.githubusercontent.com/tothKarolyDavid/Habitinator/main/docs/automation/demo-video-dark.mp4" width="100%" controls></video>
 
 </div>
 
@@ -486,7 +488,7 @@ Committed assets for architecture and UI references live under **`docs/automatio
 | [`docs/automation/database-schema.mmd`](docs/automation/database-schema.mmd) | Mermaid **flowchart** of EF Core FKs / PostgreSQL tables (from the latest `ApplicationDbContextModelSnapshot`). |
 | [`docs/automation/openapi-v1.json`](docs/automation/openapi-v1.json) | OpenAPI **3.1** document from `GET /openapi/v1.json` (paths and schemas for HTTP APIs). |
 | [`docs/automation/screenshots/`](docs/automation/screenshots/) | Playwright **PNG** captures in **light and dark** (`*-light.png` / `*-dark.png`): board, modals, statistics, settings, auth pages, etc. |
-| [`docs/automation/demo-video-light.webm`](docs/automation/demo-video-light.webm) / [`demo-video-dark.webm`](docs/automation/demo-video-dark.webm) | Playwright **WEBM** video walkthrough recordings of the app in **light and dark** theme. |
+| [`docs/automation/demo-video-light.mp4`](docs/automation/demo-video-light.mp4) / [`demo-video-dark.mp4`](docs/automation/demo-video-dark.mp4) | Playwright **MP4** video walkthrough recordings of the app in **light and dark** theme (transcoded from WebM for cross-browser compatibility). |
 
 ### Architecture diagrams (Mermaid)
 

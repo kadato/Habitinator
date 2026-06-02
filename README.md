@@ -23,12 +23,6 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 ## Preview
 <div align="center">
 
-<h3>Light Theme Demo Walkthrough</h3>
-<video src="https://raw.githubusercontent.com/tothKarolyDavid/Habitinator/main/docs/automation/demo-video-light.mp4" width="100%" controls></video>
-
-<br><br>
-
-<h3>Dark Theme Demo Walkthrough</h3>
 <video src="https://raw.githubusercontent.com/tothKarolyDavid/Habitinator/main/docs/automation/demo-video-dark.mp4" width="100%" controls></video>
 
 </div>

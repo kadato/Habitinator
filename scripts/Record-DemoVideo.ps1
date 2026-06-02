@@ -1,6 +1,6 @@
 #Requires -Version 7
 <#
-  Generates automatic demo videos under docs/automation/demo-video-light.mp4 and demo-video-dark.mp4 (transcoded from WebM).
+  Generates automatic demo video under docs/automation/demo-video-dark.mp4 (transcoded from WebM).
   Requires running web app (e.g. at -BaseUrl).
 
   Example:
@@ -42,7 +42,7 @@ finally {
     Remove-Item Env:E2E_VIDEO_OUT_DIR -ErrorAction SilentlyContinue
 }
 
-$themes = @("light", "dark")
+$themes = @("dark")
 Write-Host "`n== Transcoding and Verification:"
 foreach ($theme in $themes) {
     $webmPath = Join-Path $videoOutDir "demo-video-$theme.webm"

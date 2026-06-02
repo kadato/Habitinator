@@ -79,7 +79,7 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
 
         // Assert
         var textFields = cut.FindComponents<MudTextField<string>>();
-        textFields.Should().HaveCountGreaterOrEqualTo(2);
+        textFields.Should().HaveCountGreaterThanOrEqualTo(2);
         textFields[0].Instance.Value.Should().Be("Jane Doe");
         textFields[1].Instance.Value.Should().Be("yyyy-MM-dd");
 

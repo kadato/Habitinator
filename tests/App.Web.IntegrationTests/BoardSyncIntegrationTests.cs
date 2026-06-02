@@ -188,7 +188,7 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
         
         // 5. Verify they are rebalanced to sequential values (e.g. 1.0, 2.0, 3.0)
         var sortedTodos = updatedSnapshot.Todos.OrderBy(x => x.SortOrder).ToList();
-        sortedTodos.Count.Should().BeGreaterOrEqualTo(3);
+        sortedTodos.Count.Should().BeGreaterThanOrEqualTo(3);
         
         // Check that the gap between all consecutive elements in the list is exactly 1.0 (indicating sequential rebalancing)
         for (int i = 0; i < sortedTodos.Count - 1; i++)

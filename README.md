@@ -23,8 +23,11 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 ## Preview
 <div align="center">
 
-<video src="docs/automation/demo-video-light.webm#gh-light-mode-only" width="100%" controls></video>
-<video src="docs/automation/demo-video-dark.webm#gh-dark-mode-only" width="100%" controls></video>
+<video width="100%" controls>
+  <source src="docs/automation/demo-video-dark.webm" type="video/webm" media="(prefers-color-scheme: dark)">
+  <source src="docs/automation/demo-video-light.webm" type="video/webm" media="(prefers-color-scheme: light)">
+  <source src="docs/automation/demo-video-light.webm" type="video/webm">
+</video>
 
 </div>
 

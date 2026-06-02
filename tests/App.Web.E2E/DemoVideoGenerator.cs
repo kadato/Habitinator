@@ -7,13 +7,14 @@ namespace App.Web.E2E;
 /// <summary>
 /// Automatically records a video walkthrough of the app showing the basic features.
 /// Requires running web app (set E2E_BASE_URL).
-/// Output: docs/automation/demo-video-dark.webm
+/// Output: docs/automation/demo-video-dark.webm, docs/automation/demo-video-light.webm
 /// </summary>
 public sealed class DemoVideoGenerator
 {
     private static readonly (string Suffix, ColorScheme Scheme)[] ThemeVideoSchemes =
     [
         ("dark", ColorScheme.Dark),
+        ("light", ColorScheme.Light),
     ];
 
     private static string BaseUrl =>

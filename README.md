@@ -23,9 +23,11 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 ## Preview
 <div align="center">
 
-![Habitinator demo](docs/automation/demo-video-dark.gif)
-
-> [Watch full-quality video](https://github.com/tothKarolyDavid/Habitinator/releases/download/v0.4.0-demo/demo-video-dark.mp4)
+<picture>
+  <source media="(prefers-color-scheme: dark)"  srcset="docs/automation/demo-video-dark.gif">
+  <source media="(prefers-color-scheme: light)" srcset="docs/automation/demo-video-light.gif">
+  <img src="docs/automation/demo-video-dark.gif" alt="Habitinator demo">
+</picture>
 
 </div>
 

@@ -1,6 +1,9 @@
 #Requires -Version 7
 <#
-  Generates automatic demo video under docs/automation/demo-video-dark.mp4 (transcoded from WebM).
+  Records, transcodes, and converts demo videos for both dark and light themes.
+  Outputs:
+    docs/automation/demo-video-dark.mp4  + demo-video-dark.gif
+    docs/automation/demo-video-light.mp4 + demo-video-light.gif
   Requires running web app (e.g. at -BaseUrl).
 
   Example:
@@ -42,27 +45,37 @@ finally {
     Remove-Item Env:E2E_VIDEO_OUT_DIR -ErrorAction SilentlyContinue
 }
 
-$themes = @("dark")
-Write-Host "`n== Transcoding and Verification:"
+$themes = @("dark", "light")
+Write-Host "`n== Transcoding and GIF conversion:"
 foreach ($theme in $themes) {
     $webmPath = Join-Path $videoOutDir "demo-video-$theme.webm"
-    $mp4Path = Join-Path $videoOutDir "demo-video-$theme.mp4"
+    $mp4Path  = Join-Path $videoOutDir "demo-video-$theme.mp4"
+    $gifPath  = Join-Path $videoOutDir "demo-video-$theme.gif"
+
     if (Test-Path $webmPath) {
-        Write-Host "   Transcoding $theme webm to mp4 using ffmpeg..."
-        # Use ffmpeg to transcode. -y overwrites existing output.
+        Write-Host "   Transcoding $theme webm -> mp4..."
         & ffmpeg -y -i $webmPath -c:v libx264 -pix_fmt yuv420p $mp4Path
         if (Test-Path $mp4Path) {
-            Write-Host "   [SUCCESS] Demo video ($theme) saved as MP4 to: $mp4Path"
-            # Remove the webm file to avoid duplicates/confusion
+            Write-Host "   [OK] mp4: $mp4Path"
             Remove-Item $webmPath -Force
-        }
-        else {
-            Write-Error "   [FAILED] Transcoding failed for demo video ($theme)."
+        } else {
+            Write-Error "   [FAIL] Transcoding failed for $theme."
+            continue
         }
     }
-    else {
-        Write-Warning "   [FAILED] Demo video ($theme) webm source was not generated."
+
+    if (Test-Path $mp4Path) {
+        Write-Host "   Converting $theme mp4 -> gif (720p, 8fps, optimized palette)..."
+        & ffmpeg -y -ss 1.5 -i $mp4Path `
+            -vf "fps=8,scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer" `
+            -loop 0 $gifPath
+        if (Test-Path $gifPath) {
+            $sizeMB = [math]::Round((Get-Item $gifPath).Length / 1MB, 1)
+            Write-Host "   [OK] gif: $gifPath ($sizeMB MB)"
+        } else {
+            Write-Error "   [FAIL] GIF conversion failed for $theme."
+        }
+    } else {
+        Write-Warning "   [SKIP] No mp4 found for $theme, skipping GIF conversion."
     }
 }
-
-

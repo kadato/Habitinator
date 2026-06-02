@@ -61,7 +61,7 @@ public sealed class UndoableBoardDataService : IBoardDataService
         var item = await _inner.CreateItemAsync(section, title, itemId, cancellationToken);
         if (!_undoService.IsUndoing)
         {
-            _undoService.RegisterUndo($"Add \"{title}\"", async () =>
+            _undoService.RegisterUndo($"Add \"{item.Title}\"", async () =>
             {
                 await _inner.DeleteItemAsync(section, item.Id, CancellationToken.None);
             });
@@ -78,7 +78,7 @@ public sealed class UndoableBoardDataService : IBoardDataService
         var result = await _inner.RenameItemAsync(section, itemId, title, cancellationToken);
         if (result is not null && !_undoService.IsUndoing)
         {
-            _undoService.RegisterUndo($"Rename \"{oldTitle}\" to \"{title}\"", async () =>
+            _undoService.RegisterUndo($"Rename \"{oldTitle}\" to \"{result.Title}\"", async () =>
             {
                 await _inner.RenameItemAsync(section, itemId, oldTitle, CancellationToken.None);
             });

@@ -241,6 +241,42 @@ public sealed class UndoableBoardDataServiceTests
     }
 
     [Fact]
+    public async Task CreateItemAsync_with_zalgo_title_should_register_undo_with_sanitized_title()
+    {
+        const string zalgoTitle = "k\u0300\u0301\u0302\u0303\u0304a\u0300\u0301\u0302\u0303\u0304r\u0300\u0301\u0302\u0303\u0304o\u0300\u0301\u0302\u0303\u0304l\u0300\u0301\u0302\u0303\u0304y\u0300\u0301\u0302\u0303\u0304";
+        var item = new BoardItem(Guid.NewGuid(), "karoly");
+        _inner.CreateItemAsync(BoardSection.Todo, zalgoTitle, Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(item));
+        _undoService.IsUndoing.Returns(false);
+
+        await _undoableService.CreateItemAsync(BoardSection.Todo, zalgoTitle);
+
+        _undoService.Received(1).RegisterUndo(
+            Arg.Is("Add \"karoly\""),
+            Arg.Any<Func<Task>>());
+    }
+
+    [Fact]
+    public async Task RenameItemAsync_with_zalgo_title_should_register_undo_with_sanitized_title()
+    {
+        var item = new BoardItem(Guid.NewGuid(), "Old Task");
+        _inner.GetSnapshotAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new BoardSnapshot(
+                new[] { item }, Array.Empty<BoardItem>(), Array.Empty<BoardItem>()
+            )));
+        const string zalgoTitle = "k\u0300\u0301\u0302\u0303\u0304a\u0300\u0301\u0302\u0303\u0304r\u0300\u0301\u0302\u0303\u0304o\u0300\u0301\u0302\u0303\u0304l\u0300\u0301\u0302\u0303\u0304y\u0300\u0301\u0302\u0303\u0304";
+        _inner.RenameItemAsync(BoardSection.Habit, item.Id, zalgoTitle, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<BoardItem?>(new BoardItem(item.Id, "karoly")));
+        _undoService.IsUndoing.Returns(false);
+
+        await _undoableService.RenameItemAsync(BoardSection.Habit, item.Id, zalgoTitle);
+
+        _undoService.Received(1).RegisterUndo(
+            Arg.Is("Rename \"Old Task\" to \"karoly\""),
+            Arg.Any<Func<Task>>());
+    }
+
+    [Fact]
     public async Task DeleteItemAsync_should_register_undo_with_recreate()
     {
         var item = new BoardItem(Guid.NewGuid(), "Deleted Todo");

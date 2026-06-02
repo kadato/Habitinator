@@ -14,52 +14,28 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 
 **Live Demo:** [habitinator.app](https://habitinator.app)
 
-[Demo](https://habitinator.app) • [Preview](#-preview) • [Download](#-download--install) • [Features](#product-features-current) • [Tech Stack](#technology-stack) • [Getting Started](#run-and-debug)
+[Demo](https://habitinator.app) • [Preview](#preview) • [Download](#download--install) • [Features](#product-features-current) • [Tech Stack](#technology-stack) • [Getting Started](#run-and-debug)
 
 </div>
 
 ---
 
-## 📸 Preview
+## Preview
 
 <div align="center">
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/readme/02-board-dark.png">
-    <img src="docs/automation/screenshots/readme/02-board-light.png" width="320" alt="Board view with habits, dailies, and to-dos (preview crops bottom half)"/>
-  </picture>
-  &nbsp;&nbsp;
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/03-edit-daily-dark.png">
-    <img src="docs/automation/screenshots/03-edit-daily-light.png" width="320" alt="Edit daily modal"/>
-  </picture>
-  &nbsp;&nbsp;
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/readme/04-statistics-dark.png">
-    <img src="docs/automation/screenshots/readme/04-statistics-light.png" width="320" alt="Statistics heatmap and summaries (preview shows top half of the page)"/>
-  </picture>
+  <video src="docs/automation/demo-video-light.webm" width="48%" controls></video>
+  &nbsp;
+  <video src="docs/automation/demo-video-dark.webm" width="48%" controls></video>
 </p>
-<p align="center"><sub><b>Board</b> (<a href="docs/automation/screenshots/02-board-light.png">light</a> | <a href="docs/automation/screenshots/02-board-dark.png">dark</a>) · <b>Edit daily</b> (<a href="docs/automation/screenshots/03-edit-daily-light.png">light</a> | <a href="docs/automation/screenshots/03-edit-daily-dark.png">dark</a>) · <b>Statistics</b> (<a href="docs/automation/screenshots/04-statistics-light.png">light</a> | <a href="docs/automation/screenshots/04-statistics-dark.png">dark</a>)</sub></p>
-
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/05-activity-day-detail-dark.png">
-    <img src="docs/automation/screenshots/05-activity-day-detail-light.png" width="480" alt="Activity day detail modal"/>
-  </picture>
-  &nbsp;&nbsp;
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/automation/screenshots/06-settings-dark.png">
-    <img src="docs/automation/screenshots/06-settings-light.png" width="480" alt="Settings page"/>
-  </picture>
-</p>
-<p align="center"><sub><b>Day detail</b> (<a href="docs/automation/screenshots/05-activity-day-detail-light.png">light</a> | <a href="docs/automation/screenshots/05-activity-day-detail-dark.png">dark</a>) · <b>Settings</b> (<a href="docs/automation/screenshots/06-settings-light.png">light</a> | <a href="docs/automation/screenshots/06-settings-dark.png">dark</a>)</sub></p>
+<p align="center"><sub><b>Demo Walkthrough</b> (left: light theme, right: dark theme)</sub></p>
 
 </div>
 
 ---
 
-## 📥 Download & Install
+## Download & Install
 
 ### Available builds
 
@@ -68,9 +44,9 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 
 | Platform | Package | Notes |
 |----------|---------|-------|
-| 🤖 Android | [Habitinator-android.apk](https://github.com/tothKarolyDavid/Habitinator/releases/latest/download/Habitinator-android.apk) | Install on-device (unknown sources required) |
-| 🪟 Windows | [Habitinator-windows-x64.zip](https://github.com/tothKarolyDavid/Habitinator/releases/latest/download/Habitinator-windows-x64.zip) | Portable app, extract and run |
-| 🍎 iOS / macOS | *Source only* | Build from source using .NET MAUI workload |
+| Android | [Habitinator-android.apk](https://github.com/tothKarolyDavid/Habitinator/releases/latest/download/Habitinator-android.apk) | Install on-device (unknown sources required) |
+| Windows | [Habitinator-windows-x64.zip](https://github.com/tothKarolyDavid/Habitinator/releases/latest/download/Habitinator-windows-x64.zip) | Portable app, extract and run |
+| iOS / macOS | *Source only* | Build from source using .NET MAUI workload |
 
 **Windows runtime note:** if your release is framework-dependent, install [.NET Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) once.
 
@@ -112,11 +88,6 @@ dotnet build -t:Run -f net10.0-android
 - **Time on task**: a **global** stopwatch-style timer; when you stop it, you log elapsed time to a chosen habit, daily, or to-do so it appears in your **activity history** and **statistics**.
 - **Insight without games**: an **activity heatmap**, period summaries, per-day drill-down, and tag filtering are built on **UserActivity** events (completions, timer logs, etc.) stored in PostgreSQL on the server.
 - **Web and native**: use the **Blazor web** app in the browser (online, server-backed), or the **.NET MAUI** Blazor Hybrid app on **Android, iOS, Mac Catalyst, or Windows** with **local-first** board data and background sync to the same API the web uses.
-
-## Web UI screenshots
-
-These are produced by the **Playwright** test in `DocumentationScreenshotsTests` into [`docs/automation/screenshots/`](docs/automation/screenshots/). Each capture is saved as **`{name}-light.png`** and **`{name}-dark.png`** (Chromium `prefers-color-scheme` emulation). Regenerate with [`scripts/Refresh-AutomationAssets.ps1`](scripts/Refresh-AutomationAssets.ps1) (see [Documentation automation (local)](#documentation-automation-local)). The same test writes **`docs/automation/screenshots/readme/02-board-{light|dark}.png`** and **`04-statistics-{light|dark}.png`** (top half of the full-page captures, bottom trimmed) for the README **Preview** gallery. The **Preview** section uses HTML `<picture>` so GitHub shows the variant that matches the viewer’s light/dark theme.
-
 ---
 
 ## Product features (current)
@@ -517,6 +488,7 @@ Committed assets for architecture and UI references live under **`docs/automatio
 | [`docs/automation/database-schema.mmd`](docs/automation/database-schema.mmd) | Mermaid **flowchart** of EF Core FKs / PostgreSQL tables (from the latest `ApplicationDbContextModelSnapshot`). |
 | [`docs/automation/openapi-v1.json`](docs/automation/openapi-v1.json) | OpenAPI **3.1** document from `GET /openapi/v1.json` (paths and schemas for HTTP APIs). |
 | [`docs/automation/screenshots/`](docs/automation/screenshots/) | Playwright **PNG** captures in **light and dark** (`*-light.png` / `*-dark.png`): board, modals, statistics, settings, auth pages, etc. |
+| [`docs/automation/demo-video-light.webm`](docs/automation/demo-video-light.webm) / [`demo-video-dark.webm`](docs/automation/demo-video-dark.webm) | Playwright **WEBM** video walkthrough recordings of the app in **light and dark** theme. |
 
 ### Architecture diagrams (Mermaid)
 
@@ -573,7 +545,7 @@ flowchart TB
 ```
 <!-- HABITINATOR_MERMAID_END:database-schema -->
 
-**Web UI gallery:** see [Web UI screenshots](#web-ui-screenshots) near the top of this file.
+**Web UI gallery:** see [Preview](#preview) near the top of this file for the demo videos.
 
 **Regenerate local automation assets (diagrams, OpenAPI, Playwright):** start **`App.Web`** with PostgreSQL (e.g. standalone or Aspire), using the same **URL** you pass as `-BaseUrl` (default `http://127.0.0.1:5050`). Then run:
 
@@ -583,7 +555,17 @@ pwsh ./scripts/Refresh-AutomationAssets.ps1
 pwsh ./scripts/Refresh-AutomationAssets.ps1 -BaseUrl "http://127.0.0.1:5031"
 ```
 
-The script writes into `docs/automation/`, **syncs the Mermaid blocks in `README.md`** from the generated `.mmd` files, installs Chromium for Playwright if needed, and runs only the documentation screenshot test. Review diffs, then commit.
+The script writes into `docs/automation/`, **syncs the Mermaid blocks in `README.md`** from the generated `.mmd` files, installs Chromium for Playwright if needed, and runs the documentation screenshot test.
+
+**Regenerate demo videos:** start **`App.Web`** and run:
+
+```powershell
+pwsh ./scripts/Record-DemoVideo.ps1
+# If the app uses another URL (e.g. Aspire http profile on 5031):
+pwsh ./scripts/Record-DemoVideo.ps1 -BaseUrl "http://127.0.0.1:5031"
+```
+
+Review diffs, then commit.
 
 The **`servers`** entry inside `openapi-v1.json` reflects the base URL used when the file was exported; it does not affect how the app runs.
 

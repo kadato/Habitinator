@@ -1,4 +1,4 @@
-﻿.board-column {
+.board-column {
     min-height: 18rem;
     height: 100%;
     border-radius: 1rem;
@@ -64,8 +64,33 @@
     opacity: 0.9;
 }
 
-.board-count-chip {
-    font-weight: 600;
+.board-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5rem;
+    height: 1.5rem;
+    padding: 0 0.45rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.board-column--habit .board-count-badge {
+    background-color: color-mix(in srgb, #10b981 15%, transparent);
+    color: #10b981;
+}
+
+.board-column--daily .board-count-badge {
+    background-color: color-mix(in srgb, #3b82f6 15%, transparent);
+    color: #3b82f6;
+}
+
+.board-column--todo .board-count-badge {
+    background-color: color-mix(in srgb, #f59e0b 15%, transparent);
+    color: #f59e0b;
 }
 
 /* Column filter toggles: softer than default primary blue (filled + outlined). */

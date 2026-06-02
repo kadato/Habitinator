@@ -1,4 +1,4 @@
-﻿@using System.Globalization
+@using System.Globalization
 @using Microsoft.JSInterop
 @using App.Shared.RCL.Components.Dialogs
 @inject GlobalTimerService TimerService
@@ -17,18 +17,9 @@
             <MudStack Spacing="1">
                 <div class="board-column-header-flex">
                     <div class="board-column-header-left board-column-header-row">
-                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="board-title-stack">
-                            <MudIcon Icon="@BoardSectionVisuals.GetMudIcon(Section)"
-                                     Class="board-col-type-icon"
-                                     Size="Size.Small"
-                                     Color="Color.Primary"/>
+                        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="board-title-stack">
+                            <span class="board-count-badge">@VisibleItems().Count</span>
                             <MudText Typo="Typo.subtitle1" Class="board-title">@GetTitle()</MudText>
-                            <MudChip T="string"
-                                     Text="@VisibleItems().Count.ToString()"
-                                     Class="board-count-chip ms-1"
-                                     Color="Color.Secondary"
-                                     Size="Size.Small"
-                                     Variant="Variant.Filled"/>
                         </MudStack>
                     </div>
                     <MudStack Row="true" Spacing="1" Class="flex-wrap board-filter-toolbar" role="toolbar">
@@ -98,16 +89,16 @@
                             </MudButton>
                             <MudButton Size="Size.Small"
                                        Class="board-filter-btn"
-                                       Variant="@FilterVariant(_todoFilter == TodoListFilter.Complete)"
+                                       Variant="@FilterVariant(_todoFilter == TodoListFilter.Done)"
                                        Color="Color.Primary"
-                                       OnClick="@(() => SetTodoFilter(TodoListFilter.Complete))">
-                                Complete
+                                       OnClick="@(() => SetTodoFilter(TodoListFilter.Done))">
+                                Done
                             </MudButton>
                         }
                     </MudStack>
                 </div>
                 @if (Section == BoardSection.Todo
-                     && _todoFilter == TodoListFilter.Complete
+                     && _todoFilter == TodoListFilter.Done
                      && VisibleItems().Count > 0)
                 {
                     <MudButton Size="Size.Small"
@@ -115,8 +106,8 @@
                                Color="Color.Error"
                                StartIcon="@Icons.Material.Filled.DeleteSweep"
                                Class="align-self-start"
-                               OnClick="DeleteAllCompletedTodosAsync">
-                        Delete all completed
+                               OnClick="DeleteAllDoneTodosAsync">
+                        Delete all done
                     </MudButton>
                 }
             </MudStack>
@@ -471,7 +462,7 @@
     {
         Active,
         Scheduled,
-        Complete
+        Done
     }
 
     private static Variant FilterVariant(bool active)
@@ -533,7 +524,7 @@
         {
             TodoListFilter.Active => Items.Where(x => !x.IsCompleted).ToList(),
             TodoListFilter.Scheduled => Items.Where(x => !x.IsCompleted && x.TodoDueDate is not null).ToList(),
-            TodoListFilter.Complete => Items.Where(x => x.IsCompleted).ToList(),
+            TodoListFilter.Done => Items.Where(x => x.IsCompleted).ToList(),
             _ => Items.ToList()
         };
     }
@@ -1035,9 +1026,9 @@
         }
     }
 
-    private async Task DeleteAllCompletedTodosAsync()
+    private async Task DeleteAllDoneTodosAsync()
     {
-        if (Section != BoardSection.Todo || _todoFilter != TodoListFilter.Complete)
+        if (Section != BoardSection.Todo || _todoFilter != TodoListFilter.Done)
         {
             return;
         }
@@ -1049,8 +1040,8 @@
         }
 
         var confirmed = await DialogService.ShowMessageBoxAsync(
-            "Delete all completed to-dos?",
-            $"This will permanently remove {toDelete.Count} completed to-do(s) matching your current view. This cannot be undone.",
+            "Delete all done to-dos?",
+            $"This will permanently remove {toDelete.Count} done to-do(s) matching your current view. This cannot be undone.",
             "Delete all",
             null,
             "Cancel");
@@ -1063,7 +1054,7 @@
         var deleted = 0;
         try
         {
-            using (UndoService.BeginBatch($"Delete {toDelete.Count} completed to-dos"))
+            using (UndoService.BeginBatch($"Delete {toDelete.Count} done to-dos"))
             {
                 foreach (var item in toDelete)
                 {
@@ -1077,7 +1068,7 @@
             await OnChanged.InvokeAsync();
             if (deleted == toDelete.Count)
             {
-                await Notifier.NotifyAsync($"Deleted {deleted} completed to-do(s).", Severity.Success);
+                await Notifier.NotifyAsync($"Deleted {deleted} done to-do(s).", Severity.Success);
             }
             else
             {

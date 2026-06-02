@@ -1,4 +1,4 @@
-﻿@inject GlobalTimerService TimerService
+@inject GlobalTimerService TimerService
 @inject IBoardDataService BoardDataService
 @inject ITimerSessionLogService TimerSessionLog
 @inject IDialogService DialogService
@@ -395,13 +395,9 @@
                 <CardHeaderContent>
                     <div class="board-column-header-flex">
                         <div class="board-column-header-left board-column-header-row">
-                            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
-                                <MudIcon Icon="@BoardSectionVisuals.GetMudIcon(section)"
-                                         Class="board-col-type-icon"
-                                         Size="Size.Small"
-                                         Color="Color.Primary"/>
+                            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                <MudSkeleton Width="24px" Height="24px" SkeletonType="SkeletonType.Rectangle" Class="rounded" />
                                 <MudText Typo="Typo.subtitle1" Class="board-title">@title</MudText>
-                                <MudSkeleton Width="28px" Height="20px" Class="rounded-pill ms-1" />
                             </MudStack>
                         </div>
                         <MudStack Row="true" Spacing="1" Class="flex-wrap board-filter-toolbar">

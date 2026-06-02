@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text;
 
+using App.Shared.RCL;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 using App.Web;
@@ -588,6 +589,11 @@ settingsApi.MapPut("/preferences",
 
         var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
         if (row is null) return Results.NotFound();
+
+        // Sanitize free-text field before persisting
+        body.DisplayName = string.IsNullOrWhiteSpace(body.DisplayName)
+            ? null
+            : ZalgoSanitizer.Sanitize(body.DisplayName.Trim());
 
         row.UserPreferencesJson = UserPreferencesJson.Serialize(body);
         await db.SaveChangesAsync(cancellationToken);

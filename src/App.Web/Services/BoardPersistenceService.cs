@@ -1,4 +1,5 @@
 using System.Threading;
+using App.Shared.RCL;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 using App.Web.Data;
@@ -168,7 +169,7 @@ public sealed class BoardPersistenceService
                 if (existing is not null)
                 {
                     existing.DeletedAtUtc = null;
-                    existing.Title = title;
+                    existing.Title = ZalgoSanitizer.SanitizeAndTrim(title);
                     existing.UpdatedAtUtc = utcNow;
                     await _dbContext.SaveChangesAsync(cancellationToken);
                     var restored = await ToModelWithDailyStreaksAsync(userId, existing, cancellationToken);
@@ -182,7 +183,7 @@ public sealed class BoardPersistenceService
                 Id = itemId ?? Guid.NewGuid(),
                 UserId = userId,
                 Section = section,
-                Title = title,
+                Title = ZalgoSanitizer.SanitizeAndTrim(title),
                 Notes = null,
                 Tags = null,
                 TrackPlus = true,
@@ -236,7 +237,7 @@ public sealed class BoardPersistenceService
                     BoardMutationStatus.Conflict,
                     await ToModelWithDailyStreaksAsync(userId, entity!, cancellationToken));
 
-            entity!.Title = title;
+            entity!.Title = ZalgoSanitizer.SanitizeAndTrim(title);
             entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
             await _dbContext.SaveChangesAsync(cancellationToken);
             var renamed = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
@@ -671,15 +672,17 @@ public sealed class BoardPersistenceService
                 trackMinus = true;
             }
 
-            entity.Title = title;
-            entity.Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
-            entity.Tags = string.IsNullOrWhiteSpace(tags) ? null : tags.Trim();
+            entity.Title = ZalgoSanitizer.SanitizeAndTrim(title);
+            entity.Notes = string.IsNullOrWhiteSpace(notes) ? null : ZalgoSanitizer.SanitizeAndTrim(notes);
+            entity.Tags = string.IsNullOrWhiteSpace(tags) ? null : ZalgoSanitizer.SanitizeAndTrim(tags);
             entity.TrackPlus = trackPlus;
             entity.TrackMinus = trackMinus;
             entity.ResetPeriod = (int)resetPeriod;
             entity.Counter = Math.Max(0, counter);
             entity.NegativeCounter = Math.Max(0, negativeCounter);
-            entity.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson) ? null : checklistJson.Trim();
+            entity.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson)
+                ? null
+                : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(checklistJson));
             if (sortOrder.HasValue)
             {
                 entity.SortOrder = sortOrder.Value;
@@ -757,10 +760,12 @@ public sealed class BoardPersistenceService
                 ? new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc)
                 : null;
 
-            entity.Title = title;
-            entity.Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
-            entity.Tags = string.IsNullOrWhiteSpace(tags) ? null : tags.Trim();
-            entity.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson) ? null : checklistJson.Trim();
+            entity.Title = ZalgoSanitizer.SanitizeAndTrim(title);
+            entity.Notes = string.IsNullOrWhiteSpace(notes) ? null : ZalgoSanitizer.SanitizeAndTrim(notes);
+            entity.Tags = string.IsNullOrWhiteSpace(tags) ? null : ZalgoSanitizer.SanitizeAndTrim(tags);
+            entity.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson)
+                ? null
+                : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(checklistJson));
             entity.DailyStartDate = dueUtc;
             if (sortOrder.HasValue)
             {
@@ -855,13 +860,15 @@ public sealed class BoardPersistenceService
 
             DateOnly? newStartD = startUtc is { } su ? DateOnly.FromDateTime(su) : null;
 
-            entity.Title = title;
-            entity.Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
-            entity.Tags = string.IsNullOrWhiteSpace(tags) ? null : tags.Trim();
+            entity.Title = ZalgoSanitizer.SanitizeAndTrim(title);
+            entity.Notes = string.IsNullOrWhiteSpace(notes) ? null : ZalgoSanitizer.SanitizeAndTrim(notes);
+            entity.Tags = string.IsNullOrWhiteSpace(tags) ? null : ZalgoSanitizer.SanitizeAndTrim(tags);
             entity.DailyStartDate = startUtc;
             entity.DailyRepeatType = (int)repeatType;
             entity.DailyRepeatInterval = n;
-            entity.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson) ? null : checklistJson.Trim();
+            entity.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson)
+                ? null
+                : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(checklistJson));
             entity.Counter = streakClamped;
             if (sortOrder.HasValue)
             {

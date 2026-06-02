@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using App.Shared.RCL;
 using App.Shared.RCL.Models;
 using App.Web.Auth;
 using App.Web.Services;
@@ -66,7 +67,7 @@ internal static class BoardApiRoutes
                         BoardIdempotencyService.ComputeFingerprintHex("POST", path, bodyJson),
                         async () =>
                         {
-                            var item = await board.CreateItemAsync(userId, section, request.Title.Trim(), request.ItemId, cancellationToken);
+                            var item = await board.CreateItemAsync(userId, section, ZalgoSanitizer.SanitizeAndTrim(request.Title), request.ItemId, cancellationToken);
                             return (200, JsonSerializer.Serialize(item, Json), "application/json");
                         },
                         cancellationToken);
@@ -102,7 +103,7 @@ internal static class BoardApiRoutes
                                 userId,
                                 section,
                                 itemId,
-                                request.Title.Trim(),
+                                ZalgoSanitizer.SanitizeAndTrim(request.Title),
                                 expected,
                                 cancellationToken);
                             return MutationToOutcome(r);
@@ -343,15 +344,15 @@ internal static class BoardApiRoutes
                             var r = await board.UpdateHabitForApiAsync(
                                 userId,
                                 itemId,
-                                request.Title.Trim(),
-                                request.Notes,
-                                request.Tags,
+                                ZalgoSanitizer.SanitizeAndTrim(request.Title),
+                                ZalgoSanitizer.Sanitize(request.Notes),
+                                ZalgoSanitizer.Sanitize(request.Tags),
                                 request.TrackPlus,
                                 request.TrackMinus,
                                 request.ResetPeriod,
                                 request.Counter,
                                 request.NegativeCounter,
-                                request.ChecklistJson,
+                                DailyChecklistJson.Serialize(DailyChecklistJson.Parse(request.ChecklistJson)),
                                 request.SortOrder,
                                 expected,
                                 cancellationToken);
@@ -389,10 +390,10 @@ internal static class BoardApiRoutes
                             var r = await board.UpdateTodoForApiAsync(
                                 userId,
                                 itemId,
-                                request.Title.Trim(),
-                                request.Notes,
-                                request.Tags,
-                                request.ChecklistJson,
+                                ZalgoSanitizer.SanitizeAndTrim(request.Title),
+                                ZalgoSanitizer.Sanitize(request.Notes),
+                                ZalgoSanitizer.Sanitize(request.Tags),
+                                DailyChecklistJson.Serialize(DailyChecklistJson.Parse(request.ChecklistJson)),
                                 request.DueDate,
                                 request.SortOrder,
                                 expected,
@@ -431,13 +432,13 @@ internal static class BoardApiRoutes
                             var r = await board.UpdateDailyForApiAsync(
                                 userId,
                                 itemId,
-                                request.Title.Trim(),
-                                request.Notes,
-                                request.Tags,
+                                ZalgoSanitizer.SanitizeAndTrim(request.Title),
+                                ZalgoSanitizer.Sanitize(request.Notes),
+                                ZalgoSanitizer.Sanitize(request.Tags),
                                 request.StartDate,
                                 request.Repeat,
                                 request.RepeatInterval,
-                                request.ChecklistJson,
+                                DailyChecklistJson.Serialize(DailyChecklistJson.Parse(request.ChecklistJson)),
                                 request.Streak,
                                 request.SortOrder,
                                 expected,

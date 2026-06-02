@@ -67,6 +67,37 @@ public sealed class BoardApiIsolationTests(PostgresWebAppFactory factory)
         var toggleRes = await client.SendAsync(requestToggle);
         toggleRes.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
+
+    [Fact]
+    public async Task CreateTodo_WithZalgoTitle_ReturnsSanitizedTodo()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var email = $"zalgo-user-{suffix}@integration.test";
+        const string password = "TestUser1!Aa";
+
+        (await client.PostAsJsonAsync("/api/auth/register",
+            new RegisterRequest(email, password))).IsSuccessStatusCode.Should().BeTrue();
+
+        var login = await client.PostAsJsonAsync("/api/auth/login",
+            new LoginRequest(email, password, RememberMe: false));
+        login.EnsureSuccessStatusCode();
+        var token = (await login.Content.ReadFromJsonAsync<LoginResponse>(s_json))!.AccessToken;
+
+        // Heavy Zalgo title
+        const string zalgoTitle = "k\u0300\u0301\u0302\u0303\u0304a\u0300\u0301\u0302\u0303\u0304r\u0300\u0301\u0302\u0303\u0304o\u0300\u0301\u0302\u0303\u0304l\u0300\u0301\u0302\u0303\u0304y\u0300\u0301\u0302\u0303\u0304";
+
+        using var requestCreate = new HttpRequestMessage(HttpMethod.Post, "/api/board/Todo");
+        requestCreate.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        requestCreate.Content = JsonContent.Create(new ItemTitleRequest(zalgoTitle));
+        var createRes = await client.SendAsync(requestCreate);
+        createRes.EnsureSuccessStatusCode();
+        var created = await createRes.Content.ReadFromJsonAsync<BoardItem>(s_json);
+
+        created.Should().NotBeNull();
+        created!.Title.Should().Be("karoly");
+    }
 }
 
 [CollectionDefinition(nameof(IntegrationCollection))]

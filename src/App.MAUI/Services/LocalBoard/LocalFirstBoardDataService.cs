@@ -1,5 +1,6 @@
 using App.MAUI.Data;
 using App.MAUI.Services;
+using App.Shared.RCL;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 
@@ -123,7 +124,7 @@ public sealed class LocalFirstBoardDataService(
                 var id = itemId ?? Guid.NewGuid();
                 var now = DateTimeOffset.UtcNow;
                 var sortOrder = await GetInitialLocalSortOrderAsync(db, userKey, section, cancellationToken);
-                var item = new BoardItem(id, title.Trim(), CreatedAtUtc: now, SortOrder: sortOrder);
+                var item = new BoardItem(id, ZalgoSanitizer.SanitizeAndTrim(title), CreatedAtUtc: now, SortOrder: sortOrder);
                 db.BoardItems.Add(LocalBoardItemRow.FromModel(section, userKey, item, true));
                 var payload = new CreateOutboxPayload(section, item.Title, id);
                 Enqueue(db, userKey, BoardOutboxOperationKind.Create, payload);
@@ -143,7 +144,7 @@ public sealed class LocalFirstBoardDataService(
                 if (row is null) return null;
 
                 var expected = row.ServerUpdatedAtUtc;
-                row.Title = title.Trim();
+                row.Title = ZalgoSanitizer.SanitizeAndTrim(title);
                 Enqueue(
                     db,
                     userKey,
@@ -373,15 +374,17 @@ public sealed class LocalFirstBoardDataService(
                 if (row is null) return null;
 
                 var expected = row.ServerUpdatedAtUtc;
-                row.Title = title.Trim();
-                row.Notes = notes;
-                row.Tags = tags;
+                row.Title = ZalgoSanitizer.SanitizeAndTrim(title);
+                row.Notes = string.IsNullOrWhiteSpace(notes) ? null : ZalgoSanitizer.SanitizeAndTrim(notes);
+                row.Tags = string.IsNullOrWhiteSpace(tags) ? null : ZalgoSanitizer.SanitizeAndTrim(tags);
                 row.TrackPlus = trackPlus;
                 row.TrackMinus = trackMinus;
                 row.ResetPeriod = resetPeriod;
                 row.Counter = counter;
                 row.NegativeCounter = negativeCounter;
-                row.ChecklistJson = checklistJson;
+                row.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson)
+                    ? null
+                    : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(checklistJson));
                 if (sortOrder.HasValue)
                 {
                     row.SortOrder = sortOrder.Value;
@@ -437,10 +440,12 @@ public sealed class LocalFirstBoardDataService(
                 if (row is null) return null;
 
                 var expectedTodo = row.ServerUpdatedAtUtc;
-                row.Title = title.Trim();
-                row.Notes = notes;
-                row.Tags = tags;
-                row.ChecklistJson = checklistJson;
+                row.Title = ZalgoSanitizer.SanitizeAndTrim(title);
+                row.Notes = string.IsNullOrWhiteSpace(notes) ? null : ZalgoSanitizer.SanitizeAndTrim(notes);
+                row.Tags = string.IsNullOrWhiteSpace(tags) ? null : ZalgoSanitizer.SanitizeAndTrim(tags);
+                row.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson)
+                    ? null
+                    : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(checklistJson));
                 row.TodoDueDate = dueDate.HasValue ? DateOnly.FromDateTime(dueDate.Value.Date) : null;
                 if (sortOrder.HasValue)
                 {
@@ -496,13 +501,15 @@ public sealed class LocalFirstBoardDataService(
                 if (row is null) return null;
 
                 var expectedDaily = row.ServerUpdatedAtUtc;
-                row.Title = title.Trim();
-                row.Notes = notes;
-                row.Tags = tags;
+                row.Title = ZalgoSanitizer.SanitizeAndTrim(title);
+                row.Notes = string.IsNullOrWhiteSpace(notes) ? null : ZalgoSanitizer.SanitizeAndTrim(notes);
+                row.Tags = string.IsNullOrWhiteSpace(tags) ? null : ZalgoSanitizer.SanitizeAndTrim(tags);
                 row.DailyStartDate = startDate.HasValue ? DateOnly.FromDateTime(startDate.Value.Date) : null;
                 row.DailyRepeat = repeatType;
                 row.DailyRepeatInterval = repeatInterval;
-                row.ChecklistJson = checklistJson;
+                row.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson)
+                    ? null
+                    : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(checklistJson));
                 row.Counter = streak;
                 if (sortOrder.HasValue)
                 {

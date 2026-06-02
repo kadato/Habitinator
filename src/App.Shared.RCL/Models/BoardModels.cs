@@ -107,7 +107,7 @@ public static class DailyChecklistJson
             .Where(x => !string.IsNullOrWhiteSpace(x.Text))
             .Select(x => new DailyChecklistItem(
                 x.Id == Guid.Empty ? Guid.NewGuid() : x.Id,
-                x.Text.Trim(),
+                ZalgoSanitizer.SanitizeAndTrim(x.Text),
                 x.IsDone))
             .ToList();
         if (cleaned.Count == 0) return null;

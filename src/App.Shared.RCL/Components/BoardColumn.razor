@@ -391,6 +391,10 @@
 
     private readonly Dictionary<Guid, bool> _subtasksExpand = new();
     private readonly Dictionary<Guid, double> _sortOrderOverrides = new();
+    private readonly Dictionary<Guid, BoardItem> _optimisticOverrides = new();
+
+    private IEnumerable<BoardItem> EffectiveItems =>
+        Items.Select(x => _optimisticOverrides.TryGetValue(x.Id, out var o) ? o : x);
 
     private ElementReference _containerRef;
     private DotNetObjectReference<BoardColumn>? _selfRef;
@@ -399,6 +403,7 @@
     protected override void OnParametersSet()
     {
         PruneSortOrderOverrides();
+        PruneOptimisticOverrides();
         _needRefresh = true;
     }
 
@@ -440,6 +445,28 @@
                 && Math.Abs(serverOrder - _sortOrderOverrides[id]) < 0.0001)
             {
                 _sortOrderOverrides.Remove(id);
+            }
+        }
+    }
+
+    private void PruneOptimisticOverrides()
+    {
+        foreach (var id in _optimisticOverrides.Keys.ToList())
+        {
+            var serverItem = Items.FirstOrDefault(x => x.Id == id);
+            if (serverItem is null)
+            {
+                _optimisticOverrides.Remove(id);
+                continue;
+            }
+
+            var overrideItem = _optimisticOverrides[id];
+            if (serverItem.IsCompleted == overrideItem.IsCompleted
+                && serverItem.Counter == overrideItem.Counter
+                && serverItem.NegativeCounter == overrideItem.NegativeCounter
+                && serverItem.ChecklistJson == overrideItem.ChecklistJson)
+            {
+                _optimisticOverrides.Remove(id);
             }
         }
     }
@@ -487,7 +514,7 @@
             BoardSection.Habit => OrderBySort(FilterHabits()),
             BoardSection.Daily => OrderBySort(FilterDailies()),
             BoardSection.Todo => OrderTodos(FilterTodos()),
-            _ => OrderBySort(Items)
+            _ => OrderBySort(EffectiveItems)
         };
     }
 
@@ -501,9 +528,9 @@
     {
         return _habitFilter switch
         {
-            HabitListFilter.Weak => Items.Where(x => x.Counter < 3).ToList(),
-            HabitListFilter.Strong => Items.Where(x => x.Counter >= 3).ToList(),
-            _ => Items.ToList()
+            HabitListFilter.Weak => EffectiveItems.Where(x => x.Counter < 3).ToList(),
+            HabitListFilter.Strong => EffectiveItems.Where(x => x.Counter >= 3).ToList(),
+            _ => EffectiveItems.ToList()
         };
     }
 
@@ -512,9 +539,9 @@
         var today = DailySchedule.LocalToday(TimeZoneService);
         return _dailyFilter switch
         {
-            DailyListFilter.Due => Items.Where(d => DailySchedule.IsDueOnDate(d, today)).ToList(),
-            DailyListFilter.NotDue => Items.Where(d => !DailySchedule.IsDueOnDate(d, today)).ToList(),
-            _ => Items.ToList()
+            DailyListFilter.Due => EffectiveItems.Where(d => DailySchedule.IsDueOnDate(d, today)).ToList(),
+            DailyListFilter.NotDue => EffectiveItems.Where(d => !DailySchedule.IsDueOnDate(d, today)).ToList(),
+            _ => EffectiveItems.ToList()
         };
     }
 
@@ -522,10 +549,10 @@
     {
         return _todoFilter switch
         {
-            TodoListFilter.Active => Items.Where(x => !x.IsCompleted).ToList(),
-            TodoListFilter.Scheduled => Items.Where(x => !x.IsCompleted && x.TodoDueDate is not null).ToList(),
-            TodoListFilter.Done => Items.Where(x => x.IsCompleted).ToList(),
-            _ => Items.ToList()
+            TodoListFilter.Active => EffectiveItems.Where(x => !x.IsCompleted).ToList(),
+            TodoListFilter.Scheduled => EffectiveItems.Where(x => !x.IsCompleted && x.TodoDueDate is not null).ToList(),
+            TodoListFilter.Done => EffectiveItems.Where(x => x.IsCompleted).ToList(),
+            _ => EffectiveItems.ToList()
         };
     }
 
@@ -770,9 +797,15 @@
             return;
         }
 
+        var optimistic = item with { ChecklistJson = json };
+        _optimisticOverrides[item.Id] = optimistic;
+        _needRefresh = true;
+        StateHasChanged();
+
+        Task mutation;
         if (Section == BoardSection.Daily)
         {
-            await TryMutateAsync(() => BoardData.UpdateDailyAsync(
+            mutation = BoardData.UpdateDailyAsync(
                 item.Id,
                 item.Title,
                 item.Notes,
@@ -781,21 +814,21 @@
                 item.DailyRepeat,
                 item.DailyRepeatInterval,
                 json,
-                item.Counter));
+                item.Counter);
         }
         else if (Section == BoardSection.Todo)
         {
-            await TryMutateAsync(() => BoardData.UpdateTodoAsync(
+            mutation = BoardData.UpdateTodoAsync(
                 item.Id,
                 item.Title,
                 item.Notes,
                 item.Tags,
                 json,
-                item.TodoDueDate?.ToDateTime(TimeOnly.MinValue)));
+                item.TodoDueDate?.ToDateTime(TimeOnly.MinValue));
         }
         else
         {
-            await TryMutateAsync(() => BoardData.UpdateHabitAsync(
+            mutation = BoardData.UpdateHabitAsync(
                 item.Id,
                 item.Title,
                 item.Notes,
@@ -805,7 +838,15 @@
                 item.ResetPeriod,
                 item.Counter,
                 item.NegativeCounter,
-                json));
+                json);
+        }
+
+        var ok = await TryMutateAsync(() => mutation);
+        if (!ok)
+        {
+            _optimisticOverrides.Remove(item.Id);
+            _needRefresh = true;
+            StateHasChanged();
         }
     }
 
@@ -847,12 +888,34 @@
 
     private async Task HabitUpAsync(BoardItem item)
     {
-        await TryMutateAsync(() => BoardData.IncrementHabitPlusAsync(item.Id));
+        var optimistic = item with { Counter = item.Counter + 1 };
+        _optimisticOverrides[item.Id] = optimistic;
+        _needRefresh = true;
+        StateHasChanged();
+
+        var ok = await TryMutateAsync(() => BoardData.IncrementHabitPlusAsync(item.Id));
+        if (!ok)
+        {
+            _optimisticOverrides.Remove(item.Id);
+            _needRefresh = true;
+            StateHasChanged();
+        }
     }
 
     private async Task HabitDownAsync(BoardItem item)
     {
-        await TryMutateAsync(() => BoardData.IncrementHabitMinusAsync(item.Id));
+        var optimistic = item with { NegativeCounter = item.NegativeCounter + 1 };
+        _optimisticOverrides[item.Id] = optimistic;
+        _needRefresh = true;
+        StateHasChanged();
+
+        var ok = await TryMutateAsync(() => BoardData.IncrementHabitMinusAsync(item.Id));
+        if (!ok)
+        {
+            _optimisticOverrides.Remove(item.Id);
+            _needRefresh = true;
+            StateHasChanged();
+        }
     }
 
     private static string HabitCounterLabel(BoardItem item)
@@ -879,7 +942,20 @@
 
     private async Task ToggleAsync(BoardItem item)
     {
-        await TryMutateAsync(() => BoardData.ToggleItemAsync(Section, item.Id));
+        var nextCompleted = !item.IsCompleted;
+        DateOnly? lastCompleted = nextCompleted ? BoardToday() : null;
+        var optimistic = item with { IsCompleted = nextCompleted, DailyLastCompletedOn = lastCompleted };
+        _optimisticOverrides[item.Id] = optimistic;
+        _needRefresh = true;
+        StateHasChanged();
+
+        var ok = await TryMutateAsync(() => BoardData.ToggleItemAsync(Section, item.Id));
+        if (!ok)
+        {
+            _optimisticOverrides.Remove(item.Id);
+            _needRefresh = true;
+            StateHasChanged();
+        }
     }
 
     private async Task OpenEditHabitAsync(BoardItem item)

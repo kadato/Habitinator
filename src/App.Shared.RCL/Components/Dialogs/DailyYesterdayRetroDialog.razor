@@ -32,7 +32,6 @@
                     @foreach (var item in _pending)
                     {
                         var isCompleted = _completedById.GetValueOrDefault(item.Id);
-                        var isBusy = _busyById.GetValueOrDefault(item.Id);
                         var rowClass = isCompleted ? "daily-yesterday-row--completed" : "";
                         
                         <div class="daily-yesterday-row @rowClass" @key="item.Id">
@@ -41,14 +40,10 @@
                                         class="daily-yesterday-check @(isCompleted ? "daily-yesterday-check--ok" : "daily-yesterday-check--daily")"
                                         title="Toggle"
                                         @onclick="@(() => MarkForDueDateAsync(item))"
-                                        disabled="@(isBusy || isCompleted)"
+                                        disabled="@isCompleted"
                                         aria-checked="@(isCompleted ? "true" : "false")"
                                         role="checkbox">
-                                    @if (isBusy)
-                                    {
-                                        <MudProgressCircular Size="Size.Small" Color="Color.Primary" Class="daily-yesterday-spinner" Style="width: 12px; height: 12px;" Indeterminate="true" />
-                                    }
-                                    else if (isCompleted)
+                                    @if (isCompleted)
                                     {
                                         <svg class="daily-yesterday-check-glyph"
                                              viewBox="0 0 24 24"
@@ -100,11 +95,11 @@
 
     private string _dueOnFormatted = string.Empty;
     private List<BoardItem> _pending = [];
-    private readonly Dictionary<Guid, bool> _busyById = new();
+    private readonly HashSet<Guid> _inFlightIds = new();
     private readonly Dictionary<Guid, bool> _completedById = new();
     private bool _anyChanged;
 
-    private bool AnyRowBusy => _busyById.Values.Any(v => v);
+    private bool AnyRowBusy => _inFlightIds.Count > 0;
 
     protected override void OnParametersSet()
     {
@@ -121,12 +116,14 @@
 
     private async Task MarkForDueDateAsync(BoardItem item)
     {
-        if (_busyById.GetValueOrDefault(item.Id) || _completedById.GetValueOrDefault(item.Id))
+        if (_inFlightIds.Contains(item.Id) || _completedById.GetValueOrDefault(item.Id))
         {
             return;
         }
 
-        _busyById[item.Id] = true;
+        _completedById[item.Id] = true;
+        _inFlightIds.Add(item.Id);
+        _anyChanged = true;
         await InvokeAsync(StateHasChanged);
         try
         {
@@ -134,21 +131,17 @@
             if (updated is null)
             {
                 await Notifier.NotifyAsync("Could not update that daily.", Severity.Error);
-                _busyById[item.Id] = false;
-                return;
+                _completedById[item.Id] = false;
             }
-
-            _completedById[item.Id] = true;
-            _anyChanged = true;
-            _ = _busyById.Remove(item.Id);
         }
         catch (Exception)
         {
             await Notifier.NotifyAsync("Could not update that daily.", Severity.Error);
-            _ = _busyById.Remove(item.Id);
+            _completedById[item.Id] = false;
         }
         finally
         {
+            _inFlightIds.Remove(item.Id);
             await InvokeAsync(StateHasChanged);
         }
     }

@@ -13,6 +13,7 @@
 @inject IUndoService UndoService
 @inject IInitialBoardLoadGate InitialBoardLoad
 @inject ConflictResolutionService ConflictResolution
+@inject IUserNotifier Notifier
 
 <style>
     /* Centered search and tags filter row on desktop */
@@ -187,7 +188,8 @@
             <div class="board-stat-strip-row">
 
                 <div class="board-stat-filters">
-                    <MudTextField @bind-Value="_searchText"
+                    <MudTextField @ref="_searchField"
+                                  @bind-Value="_searchText"
                                   Placeholder="Search"
                                   Variant="Variant.Outlined"
                                   Margin="Margin.Dense"
@@ -463,6 +465,7 @@
 
     [Parameter] public string? SignedInEmail { get; set; }
 
+    private MudTextField<string>? _searchField;
     private List<BoardItem> Habits { get; set; } = [];
     private List<BoardItem> Dailies { get; set; } = [];
     private List<BoardItem> Todos { get; set; } = [];
@@ -907,6 +910,155 @@
         {
             await HandleUndoAsync();
         }
+    }
+
+    [JSInvokable]
+    public async Task OnNPressed()
+    {
+        await InvokeAsync(async () =>
+        {
+            await OpenCommandPaletteAsync();
+        });
+    }
+
+    [JSInvokable]
+    public async Task OnSPressed()
+    {
+        await InvokeAsync(async () =>
+        {
+            if (_searchField is not null)
+            {
+                await _searchField.FocusAsync();
+            }
+        });
+    }
+
+    [JSInvokable]
+    public async Task OnDigitPressed(int digit)
+    {
+        await InvokeAsync(() =>
+        {
+            var index = digit - 1;
+            if (index >= 0 && index <= 2)
+            {
+                _mobileSectionIndex = index;
+                StateHasChanged();
+            }
+        });
+    }
+
+    [JSInvokable]
+    public async Task OnCtrlKPressed()
+    {
+        await InvokeAsync(async () =>
+        {
+            await OpenCommandPaletteAsync();
+        });
+    }
+
+    public async Task OpenEditHabitPublicAsync(BoardItem item)
+    {
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = false,
+            CloseButton = false,
+            CloseOnEscapeKey = true,
+            NoHeader = true
+        };
+        var parameters = new DialogParameters<EditHabitDialog> { { x => x.Item, item } };
+        var dialog = await DialogService.ShowAsync<EditHabitDialog>(string.Empty, parameters, options);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await OnBoardChanged();
+        }
+    }
+
+    public async Task OpenEditDailyPublicAsync(BoardItem item)
+    {
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = false,
+            CloseButton = false,
+            CloseOnEscapeKey = true,
+            NoHeader = true
+        };
+        var parameters = new DialogParameters<EditDailyDialog> { { x => x.Item, item } };
+        var dialog = await DialogService.ShowAsync<EditDailyDialog>(string.Empty, parameters, options);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await OnBoardChanged();
+        }
+    }
+
+    public async Task OpenEditTodoPublicAsync(BoardItem item)
+    {
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = false,
+            CloseButton = false,
+            CloseOnEscapeKey = true,
+            NoHeader = true
+        };
+        var parameters = new DialogParameters<EditTodoDialog> { { x => x.Item, item } };
+        var dialog = await DialogService.ShowAsync<EditTodoDialog>(string.Empty, parameters, options);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await OnBoardChanged();
+        }
+    }
+
+    public async Task CreateItemPublicAsync(BoardSection section)
+    {
+        var defaultTitle = section switch
+        {
+            BoardSection.Habit => "New Habit",
+            BoardSection.Daily => "New Daily",
+            BoardSection.Todo => "New To Do",
+            _ => "New Item"
+        };
+        try
+        {
+            var item = await BoardDataService.CreateItemAsync(section, defaultTitle);
+            if (item is not null)
+            {
+                await OnBoardChanged();
+                if (section == BoardSection.Habit) await OpenEditHabitPublicAsync(item);
+                else if (section == BoardSection.Daily) await OpenEditDailyPublicAsync(item);
+                else if (section == BoardSection.Todo) await OpenEditTodoPublicAsync(item);
+            }
+        }
+        catch (Exception)
+        {
+            await Notifier.NotifyAsync("Could not create item.", Severity.Error);
+        }
+    }
+
+    public async Task OpenCommandPaletteAsync()
+    {
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseButton = false,
+            CloseOnEscapeKey = true,
+            NoHeader = true,
+            Position = DialogPosition.TopCenter
+        };
+        var parameters = new DialogParameters<CommandPaletteDialog>
+        {
+            { x => x.Habits, Habits },
+            { x => x.Dailies, Dailies },
+            { x => x.Todos, Todos },
+            { x => x.BoardDataService, BoardDataService },
+            { x => x.ParentBoard, this }
+        };
+        await DialogService.ShowAsync<CommandPaletteDialog>(string.Empty, parameters, options);
     }
 
     private void HandleConflictDetected(ConflictInfo conflict)

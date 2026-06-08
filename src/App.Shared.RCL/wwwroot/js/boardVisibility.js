@@ -27,20 +27,56 @@ window.HabitinatorKeyboardShortcuts = (function () {
   function onKeyDown(e) {
     if (!dotNetHelper) return;
 
-    const isUndo = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z';
-    if (!isUndo) return;
+    // 1. Global shortcut: Ctrl+K / Cmd+K (Command Palette)
+    const isCmdK = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k';
+    if (isCmdK) {
+      e.preventDefault();
+      dotNetHelper.invokeMethodAsync("OnCtrlKPressed").catch(function () {});
+      return;
+    }
 
+    // 2. Global shortcut: Ctrl+Z / Cmd+Z (Undo)
+    const isUndo = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z';
+
+    // Helper to check if active element is input/editable
     const activeElement = document.activeElement;
-    if (activeElement) {
-      const tagName = activeElement.tagName.toLowerCase();
-      const isInput = tagName === 'input' || tagName === 'textarea' || activeElement.isContentEditable;
-      if (isInput) {
+    const isEditing = activeElement && (
+      activeElement.tagName.toLowerCase() === 'input' || 
+      activeElement.tagName.toLowerCase() === 'textarea' || 
+      activeElement.isContentEditable
+    );
+
+    // If typing in an input field, do not trigger single-key or undo shortcuts
+    if (isEditing) {
+      return;
+    }
+
+    if (isUndo) {
+      e.preventDefault();
+      dotNetHelper.invokeMethodAsync("OnCtrlZPressed").catch(function () {});
+      return;
+    }
+
+    // Single-key shortcuts (when not editing)
+    if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+      const key = e.key.toLowerCase();
+      if (key === 'n') {
+        e.preventDefault();
+        dotNetHelper.invokeMethodAsync("OnNPressed").catch(function () {});
+        return;
+      }
+      if (key === 's') {
+        e.preventDefault();
+        dotNetHelper.invokeMethodAsync("OnSPressed").catch(function () {});
+        return;
+      }
+      if (key === '1' || key === '2' || key === '3') {
+        e.preventDefault();
+        const digit = parseInt(key, 10);
+        dotNetHelper.invokeMethodAsync("OnDigitPressed", digit).catch(function () {});
         return;
       }
     }
-
-    e.preventDefault();
-    dotNetHelper.invokeMethodAsync("OnCtrlZPressed").catch(function () {});
   }
 
   return {
@@ -54,4 +90,14 @@ window.HabitinatorKeyboardShortcuts = (function () {
     }
   };
 })();
+
+window.HabitinatorCommandPalette = {
+  scrollSelectedIntoView: function () {
+    const selected = document.querySelector('.hab-command-palette-item--selected');
+    if (selected) {
+      selected.scrollIntoView({ block: 'nearest' });
+    }
+  }
+};
+
 

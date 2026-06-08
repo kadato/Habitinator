@@ -1,0 +1,378 @@
+@inject GlobalTimerService TimerService
+@inject ITimerSessionLogService TimerSessionLog
+@inject IUserNotifier Notifier
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@using App.Shared.RCL.Models
+@using App.Shared.RCL.Services
+@using Microsoft.JSInterop
+
+<style>
+    .hab-command-palette-dialog {
+        background: rgba(255, 255, 255, 0.9) !important;
+        backdrop-filter: blur(16px) saturate(180%);
+        -webkit-backdrop-filter: blur(16px) saturate(180%);
+        border: 1px solid rgba(209, 213, 219, 0.5) !important;
+        border-radius: 12px !important;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
+        overflow: hidden !important;
+    }
+
+    .dark .hab-command-palette-dialog {
+        background: rgba(21, 27, 38, 0.9) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    .hab-command-palette__input-wrapper {
+        border-bottom: 1px solid var(--mud-palette-divider);
+        padding: 8px 12px;
+    }
+
+    .hab-command-palette-list {
+        max-height: 380px;
+        overflow-y: auto;
+        padding: 8px;
+    }
+
+    .hab-command-palette-category-title {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--mud-palette-text-secondary);
+        padding: 8px 8px 4px 8px;
+    }
+
+    .hab-command-palette-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 0.12s ease;
+    }
+
+    .hab-command-palette-item--selected {
+        background-color: var(--mud-palette-action-default-hover) !important;
+    }
+
+    .hab-command-palette-item__title {
+        flex-grow: 1;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--mud-palette-text-primary);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+    .hab-command-palette-item__shortcut {
+        font-size: 0.75rem;
+        color: var(--mud-palette-text-secondary);
+        background: var(--mud-palette-background-gray);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: monospace;
+    }
+
+    .hab-command-palette__footer {
+        border-top: 1px solid var(--mud-palette-divider);
+        padding: 8px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        color: var(--mud-palette-text-secondary);
+        background: rgba(0, 0, 0, 0.02);
+    }
+
+    .dark .hab-command-palette__footer {
+        background: rgba(255, 255, 255, 0.01);
+    }
+
+    .hab-kbd-badge {
+        background: var(--mud-palette-background-gray);
+        border: 1px solid var(--mud-palette-divider);
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-size: 0.7rem;
+        font-family: inherit;
+        font-weight: 600;
+    }
+</style>
+
+<MudDialog Class="hab-command-palette-dialog" ContentClass="pa-0">
+    <DialogContent>
+        <div class="hab-command-palette__input-wrapper" @onkeydown="HandleKeyDown">
+            <MudTextField T="string"
+                          @ref="_searchInput"
+                          Value="_searchText"
+                          ValueChanged="OnSearchChanged"
+                          Placeholder="Type a command or search board items..."
+                          Variant="Variant.Text"
+                          Margin="Margin.None"
+                          FullWidth="true"
+                          Immediate="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          AdornmentColor="Color.Primary"
+                          Underline="false"
+                          InputType="InputType.Text"
+                          Class="hab-command-palette-input"
+                          Autofocus="true" />
+        </div>
+
+        <div class="hab-command-palette-list">
+            @if (_filteredItems.Count == 0)
+            {
+                <div class="pa-4 text-center">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">No matching commands found.</MudText>
+                </div>
+            }
+            else
+            {
+                string? currentCategory = null;
+                @for (int i = 0; i < _filteredItems.Count; i++)
+                {
+                    var index = i;
+                    var item = _filteredItems[index];
+
+                    if (item.Category != currentCategory)
+                    {
+                        currentCategory = item.Category;
+                        <div class="hab-command-palette-category-title">@currentCategory</div>
+                    }
+
+                    <div class="hab-command-palette-item @(index == _selectedIndex ? "hab-command-palette-item--selected" : "")"
+                         @onclick="@(() => TriggerItemAsync(index))"
+                         @onmouseover="@(() => _selectedIndex = index)">
+                        <MudIcon Icon="@item.Icon" Color="@item.IconColor" Size="Size.Small" />
+                        <span class="hab-command-palette-item__title">@item.Title</span>
+                        @if (!string.IsNullOrEmpty(item.Shortcut))
+                        {
+                            <span class="hab-command-palette-item__shortcut">@item.Shortcut</span>
+                        }
+                    </div>
+                }
+            }
+        </div>
+
+        <div class="hab-command-palette__footer">
+            <div class="d-flex align-center gap-2">
+                <span>Navigate: <span class="hab-kbd-badge">↑</span> <span class="hab-kbd-badge">↓</span></span>
+                <span>Select: <span class="hab-kbd-badge">Enter</span></span>
+                <span>Close: <span class="hab-kbd-badge">Esc</span></span>
+            </div>
+            <div>
+                <span>Habitinator Palette</span>
+            </div>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public IReadOnlyList<BoardItem> Habits { get; set; } = [];
+    [Parameter] public IReadOnlyList<BoardItem> Dailies { get; set; } = [];
+    [Parameter] public IReadOnlyList<BoardItem> Todos { get; set; } = [];
+    [Parameter] public IBoardDataService BoardDataService { get; set; } = default!;
+    [Parameter] public MainBoard ParentBoard { get; set; } = default!;
+
+    private string _searchText = string.Empty;
+    private int _selectedIndex = 0;
+    private MudTextField<string>? _searchInput;
+    private List<PaletteItem> _allItems = [];
+    private List<PaletteItem> _filteredItems = [];
+    private bool _shouldScrollIntoView;
+
+    protected override void OnInitialized()
+    {
+        BuildPaletteItems();
+        FilterItems();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _searchInput is not null)
+        {
+            await Task.Delay(150);
+            await _searchInput.FocusAsync();
+        }
+
+        if (_shouldScrollIntoView)
+        {
+            _shouldScrollIntoView = false;
+            await JS.InvokeVoidAsync("HabitinatorCommandPalette.scrollSelectedIntoView");
+        }
+    }
+
+    private void BuildPaletteItems()
+    {
+        _allItems.Clear();
+
+        // 1. Actions Category
+        _allItems.Add(new PaletteItem("Create Habit", "Quick Actions", Icons.Material.Filled.PlaylistAdd, Color.Primary, 
+            () => ParentBoard.CreateItemPublicAsync(BoardSection.Habit), "N"));
+        _allItems.Add(new PaletteItem("Create Daily", "Quick Actions", Icons.Material.Filled.PlaylistAdd, Color.Success, 
+            () => ParentBoard.CreateItemPublicAsync(BoardSection.Daily), "N"));
+        _allItems.Add(new PaletteItem("Create To-Do", "Quick Actions", Icons.Material.Filled.PlaylistAdd, Color.Warning, 
+            () => ParentBoard.CreateItemPublicAsync(BoardSection.Todo), "N"));
+
+        if (TimerService.IsRunning)
+        {
+            _allItems.Add(new PaletteItem("Stop & Log Focus Timer", "Timer Tools", Icons.Material.Filled.TimerOff, Color.Error, 
+                () => StopTimerAsync()));
+        }
+        else if (TimerService.Elapsed > TimeSpan.Zero)
+        {
+            _allItems.Add(new PaletteItem("Resume Focus Timer", "Timer Tools", Icons.Material.Filled.PlayArrow, Color.Success, 
+                () => StartTimerNoTargetAsync()));
+            _allItems.Add(new PaletteItem("Stop & Log Focus Timer", "Timer Tools", Icons.Material.Filled.TimerOff, Color.Error, 
+                () => StopTimerAsync()));
+        }
+
+        // 2. Navigation Category
+        _allItems.Add(new PaletteItem("Go to Board", "Navigation", Icons.Material.Filled.Dashboard, Color.Default, 
+            () => NavigateTo("/"), "1"));
+        _allItems.Add(new PaletteItem("Go to Statistics", "Navigation", Icons.Material.Filled.BarChart, Color.Default, 
+            () => NavigateTo("/statistics")));
+        _allItems.Add(new PaletteItem("Go to Settings", "Navigation", Icons.Material.Filled.Settings, Color.Default, 
+            () => NavigateTo("/settings")));
+
+        // 3. Habits
+        foreach (var item in Habits)
+        {
+            var h = item;
+            _allItems.Add(new PaletteItem($"Start Timer: {h.Title}", "Habits", Icons.Material.Filled.Timer, Color.Primary, 
+                () => StartTimerAsync(BoardSection.Habit, h)));
+            _allItems.Add(new PaletteItem($"Edit Habit: {h.Title}", "Habits", Icons.Material.Filled.Edit, Color.Primary, 
+                () => EditItemAsync(BoardSection.Habit, h)));
+        }
+
+        // 4. Dailies
+        foreach (var item in Dailies)
+        {
+            var d = item;
+            _allItems.Add(new PaletteItem($"Start Timer: {d.Title}", "Dailies", Icons.Material.Filled.Timer, Color.Success, 
+                () => StartTimerAsync(BoardSection.Daily, d)));
+            _allItems.Add(new PaletteItem($"Edit Daily: {d.Title}", "Dailies", Icons.Material.Filled.Edit, Color.Success, 
+                () => EditItemAsync(BoardSection.Daily, d)));
+        }
+
+        // 5. Todos
+        foreach (var item in Todos)
+        {
+            var t = item;
+            _allItems.Add(new PaletteItem($"Start Timer: {t.Title}", "To Do's", Icons.Material.Filled.Timer, Color.Warning, 
+                () => StartTimerAsync(BoardSection.Todo, t)));
+            _allItems.Add(new PaletteItem($"Edit To-Do: {t.Title}", "To Do's", Icons.Material.Filled.Edit, Color.Warning, 
+                () => EditItemAsync(BoardSection.Todo, t)));
+        }
+    }
+
+    private void OnSearchChanged(string text)
+    {
+        _searchText = text ?? string.Empty;
+        FilterItems();
+    }
+
+    private void FilterItems()
+    {
+        if (string.IsNullOrWhiteSpace(_searchText))
+        {
+            _filteredItems = _allItems.Take(12).ToList(); // show first few items as defaults
+        }
+        else
+        {
+            var q = _searchText.Trim();
+            _filteredItems = _allItems
+                .Where(x => x.Title.Contains(q, StringComparison.OrdinalIgnoreCase) || 
+                            x.Category.Contains(q, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        _selectedIndex = 0;
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "ArrowDown")
+        {
+            if (_filteredItems.Count > 0)
+            {
+                _selectedIndex = (_selectedIndex + 1) % _filteredItems.Count;
+                _shouldScrollIntoView = true;
+            }
+        }
+        else if (e.Key == "ArrowUp")
+        {
+            if (_filteredItems.Count > 0)
+            {
+                _selectedIndex = (_selectedIndex - 1 + _filteredItems.Count) % _filteredItems.Count;
+                _shouldScrollIntoView = true;
+            }
+        }
+        else if (e.Key == "Enter")
+        {
+            if (_filteredItems.Count > 0 && _selectedIndex >= 0 && _selectedIndex < _filteredItems.Count)
+            {
+                await TriggerItemAsync(_selectedIndex);
+            }
+        }
+        else if (e.Key == "Escape")
+        {
+            MudDialog.Cancel();
+        }
+    }
+
+    private async Task TriggerItemAsync(int index)
+    {
+        var item = _filteredItems[index];
+        MudDialog.Close(DialogResult.Ok(true));
+        await item.Action();
+    }
+
+    private Task NavigateTo(string path)
+    {
+        Navigation.NavigateTo(path);
+        return Task.CompletedTask;
+    }
+
+    private async Task StartTimerAsync(BoardSection section, BoardItem item)
+    {
+        var targetType = section.ToString();
+        TimerService.SelectTarget(targetType, item.Title, item.Id);
+        TimerService.Start();
+        await Notifier.NotifyAsync($"Focus timer started for \"{item.Title}\"", Severity.Success);
+    }
+
+    private async Task StartTimerNoTargetAsync()
+    {
+        TimerService.Start();
+        await Notifier.NotifyAsync("Focus timer resumed", Severity.Success);
+    }
+
+    private async Task StopTimerAsync()
+    {
+        var elapsed = TimerService.Stop();
+        if (elapsed > TimeSpan.Zero)
+        {
+            var result = await TimerSessionLog.LogStoppedSessionAsync(elapsed);
+            await Notifier.NotifyAsync(result.UserMessage ?? "Timer session logged.", Severity.Success);
+        }
+        TimerService.ClearTargetAndFocus();
+    }
+
+    private async Task EditItemAsync(BoardSection section, BoardItem item)
+    {
+        if (section == BoardSection.Habit) await ParentBoard.OpenEditHabitPublicAsync(item);
+        else if (section == BoardSection.Daily) await ParentBoard.OpenEditDailyPublicAsync(item);
+        else if (section == BoardSection.Todo) await ParentBoard.OpenEditTodoPublicAsync(item);
+    }
+
+    public record PaletteItem(string Title, string Category, string Icon, Color IconColor, Func<Task> Action, string Shortcut = "");
+}

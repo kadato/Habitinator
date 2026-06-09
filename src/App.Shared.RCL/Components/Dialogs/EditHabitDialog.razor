@@ -148,6 +148,7 @@
                    @bind="_tagSearch"
                    @bind:event="oninput"
                    @onkeydown="OnTagSearchKeydown"
+                   @onkeydown:stopPropagation="true"
                    @ref="_tagSearchField"
                    placeholder="Enter a tag"/>
             <div class="habit-tag-picker__list">

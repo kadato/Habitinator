@@ -20,19 +20,6 @@
                         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="board-title-stack">
                             <span class="board-count-badge">@VisibleItems().Count</span>
                             <MudText Typo="Typo.subtitle1" Class="board-title">@GetTitle()</MudText>
-                            @{
-                                var sectionNum = Section switch
-                                {
-                                    BoardSection.Habit => "1",
-                                    BoardSection.Daily => "2",
-                                    BoardSection.Todo => "3",
-                                    _ => ""
-                                };
-                            }
-                            @if (!string.IsNullOrEmpty(sectionNum))
-                            {
-                                <span class="hab-shortcut-badge" title="Section @sectionNum">@sectionNum</span>
-                            }
                         </MudStack>
                     </div>
                     <MudStack Row="true" Spacing="1" Class="flex-wrap board-filter-toolbar" role="toolbar">

@@ -28,8 +28,7 @@ window.HabitinatorKeyboardShortcuts = (function () {
 
   let isAltHeld = false;
   let isShiftHeld = false;
-  let lastKeyPressed = null;
-  let lastKeyTime = 0;
+
 
   // Shift Shortcut Overlay State
   let shortcutModeActive = false;
@@ -106,9 +105,9 @@ window.HabitinatorKeyboardShortcuts = (function () {
       }
       .hab-shortcut-hud {
         position: fixed;
-        bottom: 24px;
+        top: 24px;
         left: 50%;
-        transform: translateX(-50%) translateY(100px);
+        transform: translateX(-50%) translateY(-100px);
         z-index: 100001;
         display: flex;
         align-items: center;
@@ -327,16 +326,7 @@ window.HabitinatorKeyboardShortcuts = (function () {
     });
     addTarget(settingsEl, "P", "nav");
 
-    // Also support sequence aliases (G B, G S, G P)
-    if (boardEl && isElementVisible(boardEl) && !assignedElements.has(boardEl)) {
-      targets.push({ element: boardEl, shortcut: "GB", type: "nav" });
-    }
-    if (statsEl && isElementVisible(statsEl) && !assignedElements.has(statsEl)) {
-      targets.push({ element: statsEl, shortcut: "GS", type: "nav" });
-    }
-    if (settingsEl && isElementVisible(settingsEl) && !assignedElements.has(settingsEl)) {
-      targets.push({ element: settingsEl, shortcut: "GP", type: "nav" });
-    }
+
 
     // 2. Common Inputs (fixed shortcuts)
     const searchInput = document.querySelector('.board-search-field input, #board-search') ||
@@ -701,15 +691,7 @@ window.HabitinatorKeyboardShortcuts = (function () {
     const dotNetHelper = boardHelper || layoutHelper;
     if (!dotNetHelper) return;
 
-    // 1. Global shortcut: Ctrl+K / Cmd+K (Command Palette)
-    const isCmdK = (e.ctrlKey || e.metaKey) && e.code === 'KeyK';
-    if (isCmdK) {
-      e.preventDefault();
-      dotNetHelper.invokeMethodAsync("OnCtrlKPressed").catch(function () {});
-      return;
-    }
-
-    // 2. Global shortcut: Ctrl+Z / Cmd+Z (Undo)
+    // 1. Global shortcut: Ctrl+Z / Cmd+Z (Undo)
     const isUndo = (e.ctrlKey || e.metaKey) && e.code === 'KeyZ';
 
     if (isEdit) {
@@ -722,43 +704,7 @@ window.HabitinatorKeyboardShortcuts = (function () {
       return;
     }
 
-    // Navigation key sequences: g followed by b/s/p
-    const now = Date.now();
-    if (lastKeyPressed === 'g' && (now - lastKeyTime < 1000)) {
-      if (e.code === 'KeyB') {
-        e.preventDefault();
-        dotNetHelper.invokeMethodAsync("NavigateTo", "/").catch(function () {});
-        lastKeyPressed = null;
-        return;
-      }
-      if (e.code === 'KeyS') {
-        e.preventDefault();
-        dotNetHelper.invokeMethodAsync("NavigateTo", "/stats").catch(function () {});
-        lastKeyPressed = null;
-        return;
-      }
-      if (e.code === 'KeyP') {
-        e.preventDefault();
-        dotNetHelper.invokeMethodAsync("NavigateTo", "/settings").catch(function () {});
-        lastKeyPressed = null;
-        return;
-      }
-    }
 
-    if (e.code === 'KeyG') {
-      lastKeyPressed = 'g';
-      lastKeyTime = now;
-    }
-
-    // Single-key shortcuts (when not editing, allowing Shift/Alt modifiers)
-    if (!e.ctrlKey && !e.metaKey) {
-      if (e.code === 'KeyN') {
-        e.preventDefault();
-        // Invoke on active helper
-        dotNetHelper.invokeMethodAsync("OnNPressed").catch(function () {});
-        return;
-      }
-    }
   }
 
   function onKeyUp(e) {
@@ -814,12 +760,3 @@ window.HabitinatorKeyboardShortcuts = (function () {
     }
   };
 })();
-
-window.HabitinatorCommandPalette = {
-  scrollSelectedIntoView: function () {
-    const selected = document.querySelector('.hab-command-palette-item--selected');
-    if (selected) {
-      selected.scrollIntoView({ block: 'nearest' });
-    }
-  }
-};

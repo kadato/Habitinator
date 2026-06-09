@@ -156,94 +156,7 @@
         transform: scale(1);
     }
 
-    /* Search field shortcut badge styling */
-    .board-search-shortcut-badge-container {
-        position: absolute;
-        right: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        z-index: 5;
-        pointer-events: auto;
-    }
 
-    .board-search-palette-badge {
-        cursor: pointer;
-        background: var(--mud-palette-background-gray);
-        border: 1px solid var(--mud-palette-divider);
-        border-radius: 4px;
-        padding: 2px 6px;
-        font-size: 0.7rem;
-        font-family: monospace;
-        font-weight: 600;
-        color: var(--mud-palette-text-secondary);
-        user-select: none;
-        transition: background-color 0.15s ease, color 0.15s ease;
-    }
-
-    .board-search-palette-badge:hover {
-        background: var(--mud-palette-action-default-hover);
-        color: var(--mud-palette-text-primary);
-    }
-
-    body.hab-show-shortcuts .board-search-palette-badge {
-        display: none !important;
-    }
-
-    body.hab-show-shortcuts .board-search-focus-badge {
-        margin-left: 0 !important;
-    }
-
-    /* Mobile tab header shortcut indicators using CSS ::after selector */
-    .board-section-tabs ::deep .mud-tabs-tab {
-        position: relative;
-    }
-
-    .board-section-tabs ::deep .mud-tabs-tab::after {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: #0f172a;
-        color: #f8fafc;
-        border: 1px solid #334155;
-        border-radius: 4px;
-        padding: 1px 4px;
-        font-size: 0.6rem;
-        font-family: monospace;
-        font-weight: 700;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.25);
-        margin-left: 0.4rem;
-        opacity: 0;
-        visibility: hidden;
-        transform: scale(0.8);
-        transition: opacity 0.15s ease, visibility 0.15s ease, transform 0.15s ease;
-    }
-
-    .dark .board-section-tabs ::deep .mud-tabs-tab::after {
-        background: #cbd5e1;
-        color: #0f172a;
-        border: 1px solid #94a3b8;
-    }
-
-    body.hab-show-shortcuts .board-section-tabs ::deep .mud-tabs-tab::after {
-        opacity: 1;
-        visibility: visible;
-        transform: scale(1);
-    }
-
-    .board-section-tabs ::deep .mud-tabs-tab:nth-of-type(1)::after {
-        content: "1";
-    }
-    .board-section-tabs ::deep .mud-tabs-tab:nth-of-type(2)::after {
-        content: "2";
-        margin-left: 0.4rem;
-    }
-    .board-section-tabs ::deep .mud-tabs-tab:nth-of-type(3)::after {
-        content: "3";
-        margin-left: 0.4rem;
-    }
 
     /* Floating Shortcuts Legend at the bottom of the screen */
     .hab-shortcuts-legend {
@@ -397,14 +310,7 @@
                                       Class="board-search-field board-search-pill w-100"
                                       InputType="InputType.Text"
                                       Immediate="true"/>
-                        <div class="board-search-shortcut-badge-container">
-                            <span class="board-search-palette-badge" @onclick="OpenCommandPaletteAsync" title="Open Command Palette (Ctrl+K)">
-                                Ctrl+K
-                            </span>
-                            <span class="board-search-focus-badge hab-shortcut-badge" title="Focus Search (S)">
-                                S
-                            </span>
-                        </div>
+
                     </div>
                     <div class="board-tags-menu-activator">
                         <MudMenu AnchorOrigin="Origin.BottomRight"
@@ -589,24 +495,12 @@
         </div>
         <div class="hab-shortcuts-legend-grid">
             <div class="hab-shortcuts-legend-item">
-                <span class="hab-kbd-badge">Ctrl</span> + <span class="hab-kbd-badge">K</span>
-                <span>Open Command Palette / Search Board Items</span>
-            </div>
-            <div class="hab-shortcuts-legend-item">
-                <span class="hab-kbd-badge">S</span>
-                <span>Focus Search Bar</span>
+                <span class="hab-kbd-badge">Double Shift</span>
+                <span>Toggle Shortcut Navigation Mode</span>
             </div>
             <div class="hab-shortcuts-legend-item">
                 <span class="hab-kbd-badge">Ctrl</span> + <span class="hab-kbd-badge">Z</span>
                 <span>Undo Last Action</span>
-            </div>
-            <div class="hab-shortcuts-legend-item">
-                <span class="hab-kbd-badge">1</span> / <span class="hab-kbd-badge">2</span> / <span class="hab-kbd-badge">3</span>
-                <span>Focus Column Draft Inputs / Switch Tabs</span>
-            </div>
-            <div class="hab-shortcuts-legend-item">
-                <span class="hab-kbd-badge">G</span> then <span class="hab-kbd-badge">B</span> / <span class="hab-kbd-badge">S</span> / <span class="hab-kbd-badge">P</span>
-                <span>Go to Board / Stats / Settings</span>
             </div>
         </div>
     </div>
@@ -721,7 +615,6 @@
     private string? LastEvent { get; set; }
     private bool _isLoading;
     private bool _initialLoadComplete;
-    private bool _isCommandPaletteOpen;
     private string? _loadError;
     private string _searchText = string.Empty;
     private readonly HashSet<string> _selectedFilterTags = new(StringComparer.OrdinalIgnoreCase);
@@ -1163,69 +1056,9 @@
     }
 
     [JSInvokable]
-    public async Task OnNPressed()
-    {
-        await InvokeAsync(async () =>
-        {
-            await OpenCommandPaletteAsync();
-        });
-    }
-
-    [JSInvokable]
-    public async Task OnSPressed()
-    {
-        await InvokeAsync(async () =>
-        {
-            if (_searchField is not null)
-            {
-                await _searchField.FocusAsync();
-            }
-        });
-    }
-
-    [JSInvokable]
-    public async Task OnDigitPressed(int digit)
-    {
-        await InvokeAsync(async () =>
-        {
-            var index = digit - 1;
-            if (index >= 0 && index <= 2)
-            {
-                _mobileSectionIndex = index;
-                StateHasChanged();
-
-                if (index == 0)
-                {
-                    if (_habitColumn is not null) await _habitColumn.FocusDraftAsync();
-                    if (_habitColumnMobile is not null) await _habitColumnMobile.FocusDraftAsync();
-                }
-                else if (index == 1)
-                {
-                    if (_dailyColumn is not null) await _dailyColumn.FocusDraftAsync();
-                    if (_dailyColumnMobile is not null) await _dailyColumnMobile.FocusDraftAsync();
-                }
-                else if (index == 2)
-                {
-                    if (_todoColumn is not null) await _todoColumn.FocusDraftAsync();
-                    if (_todoColumnMobile is not null) await _todoColumnMobile.FocusDraftAsync();
-                }
-            }
-        });
-    }
-
-    [JSInvokable]
     public void NavigateTo(string path)
     {
         Navigation.NavigateTo(path);
-    }
-
-    [JSInvokable]
-    public async Task OnCtrlKPressed()
-    {
-        await InvokeAsync(async () =>
-        {
-            await OpenCommandPaletteAsync();
-        });
     }
 
     public async Task OpenEditHabitPublicAsync(BoardItem item)
@@ -1311,38 +1144,7 @@
         }
     }
 
-    public async Task OpenCommandPaletteAsync()
-    {
-        if (_isCommandPaletteOpen) return;
-        _isCommandPaletteOpen = true;
 
-        try
-        {
-            var options = new DialogOptions
-            {
-                MaxWidth = MaxWidth.Small,
-                FullWidth = true,
-                CloseButton = false,
-                CloseOnEscapeKey = true,
-                NoHeader = true,
-                Position = DialogPosition.TopCenter
-            };
-            var parameters = new DialogParameters<CommandPaletteDialog>
-            {
-                { x => x.Habits, Habits },
-                { x => x.Dailies, Dailies },
-                { x => x.Todos, Todos },
-                { x => x.BoardDataService, BoardDataService },
-                { x => x.ParentBoard, this }
-            };
-            var dialog = await DialogService.ShowAsync<CommandPaletteDialog>(string.Empty, parameters, options);
-            await dialog.Result;
-        }
-        finally
-        {
-            _isCommandPaletteOpen = false;
-        }
-    }
 
     private void HandleConflictDetected(ConflictInfo conflict)
     {

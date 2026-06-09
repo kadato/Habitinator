@@ -121,6 +121,7 @@
     private UserPreferences? _preferences;
     private bool _isDarkMode = true;
     private MudThemeProvider? _mudThemeProvider;
+    private DotNetObjectReference<MainLayout>? _layoutSelfRef;
 
     protected override async Task OnInitializedAsync()
     {
@@ -157,12 +158,39 @@
             await ResolveThemeAsync();
             await _mudThemeProvider.WatchSystemDarkModeAsync(OnSystemPreferenceChanged);
         }
+
+        if (firstRender)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardVisibility.js");
+                _layoutSelfRef = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.startGlobal", _layoutSelfRef);
+            }
+            catch
+            {
+                // Ignore JS errors on prerendering or test hosts
+            }
+        }
+    }
+
+    [JSInvokable]
+    public void NavigateTo(string path)
+    {
+        Nav.NavigateTo(path);
+    }
+
+    [JSInvokable]
+    public Task OnCtrlZPressed()
+    {
+        return Task.CompletedTask;
     }
 
     public void Dispose()
     {
         PreferencesService.Changed -= OnPreferencesChanged;
         Nav.LocationChanged -= OnLocationChanged;
+        _layoutSelfRef?.Dispose();
     }
 
     private void OnPreferencesChanged()

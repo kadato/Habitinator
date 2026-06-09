@@ -20,6 +20,19 @@
                         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="board-title-stack">
                             <span class="board-count-badge">@VisibleItems().Count</span>
                             <MudText Typo="Typo.subtitle1" Class="board-title">@GetTitle()</MudText>
+                            @{
+                                var sectionNum = Section switch
+                                {
+                                    BoardSection.Habit => "1",
+                                    BoardSection.Daily => "2",
+                                    BoardSection.Todo => "3",
+                                    _ => ""
+                                };
+                            }
+                            @if (!string.IsNullOrEmpty(sectionNum))
+                            {
+                                <span class="hab-shortcut-badge" title="Section @sectionNum">@sectionNum</span>
+                            }
                         </MudStack>
                     </div>
                     <MudStack Row="true" Spacing="1" Class="flex-wrap board-filter-toolbar" role="toolbar">
@@ -116,7 +129,8 @@
 
     <MudCardContent Class="pt-0">
         <div @onkeydown="OnDraftKeyAsync" class="board-add-wrap">
-            <MudTextField @bind-Value="_draft"
+            <MudTextField @ref="_draftField"
+                          @bind-Value="_draft"
                           Class="board-add-field"
                           Placeholder="@GetAddPlaceholder()"
                           Variant="Variant.Outlined"
@@ -1174,4 +1188,13 @@
         }
     }
 
+    private MudTextField<string>? _draftField;
+
+    public async Task FocusDraftAsync()
+    {
+        if (_draftField is not null)
+        {
+            await _draftField.FocusAsync();
+        }
+    }
 }

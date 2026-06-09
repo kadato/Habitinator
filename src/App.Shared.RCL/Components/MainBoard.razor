@@ -1,4 +1,5 @@
 @inject GlobalTimerService TimerService
+@inject NavigationManager Navigation
 @inject IBoardDataService BoardDataService
 @inject ITimerSessionLogService TimerSessionLog
 @inject IDialogService DialogService
@@ -120,6 +121,203 @@
             justify-content: flex-end !important;
         }
     }
+
+    /* Keyboard Shortcuts Overlay and Legend */
+    .hab-shortcut-badge {
+        opacity: 0;
+        visibility: hidden;
+        transform: scale(0.8);
+        transition: opacity 0.15s ease, visibility 0.15s ease, transform 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #0f172a;
+        color: #f8fafc;
+        border: 1px solid #334155;
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-size: 0.65rem;
+        font-family: monospace;
+        font-weight: 700;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+        vertical-align: middle;
+        pointer-events: none;
+    }
+
+    .dark .hab-shortcut-badge {
+        background: #cbd5e1;
+        color: #0f172a;
+        border: 1px solid #94a3b8;
+    }
+
+    body.hab-show-shortcuts .hab-shortcut-badge {
+        opacity: 1;
+        visibility: visible;
+        transform: scale(1);
+    }
+
+    /* Search field shortcut badge styling */
+    .board-search-shortcut-badge-container {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        z-index: 5;
+        pointer-events: auto;
+    }
+
+    .board-search-palette-badge {
+        cursor: pointer;
+        background: var(--mud-palette-background-gray);
+        border: 1px solid var(--mud-palette-divider);
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-size: 0.7rem;
+        font-family: monospace;
+        font-weight: 600;
+        color: var(--mud-palette-text-secondary);
+        user-select: none;
+        transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .board-search-palette-badge:hover {
+        background: var(--mud-palette-action-default-hover);
+        color: var(--mud-palette-text-primary);
+    }
+
+    body.hab-show-shortcuts .board-search-palette-badge {
+        display: none !important;
+    }
+
+    body.hab-show-shortcuts .board-search-focus-badge {
+        margin-left: 0 !important;
+    }
+
+    /* Mobile tab header shortcut indicators using CSS ::after selector */
+    .board-section-tabs ::deep .mud-tabs-tab {
+        position: relative;
+    }
+
+    .board-section-tabs ::deep .mud-tabs-tab::after {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #0f172a;
+        color: #f8fafc;
+        border: 1px solid #334155;
+        border-radius: 4px;
+        padding: 1px 4px;
+        font-size: 0.6rem;
+        font-family: monospace;
+        font-weight: 700;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+        margin-left: 0.4rem;
+        opacity: 0;
+        visibility: hidden;
+        transform: scale(0.8);
+        transition: opacity 0.15s ease, visibility 0.15s ease, transform 0.15s ease;
+    }
+
+    .dark .board-section-tabs ::deep .mud-tabs-tab::after {
+        background: #cbd5e1;
+        color: #0f172a;
+        border: 1px solid #94a3b8;
+    }
+
+    body.hab-show-shortcuts .board-section-tabs ::deep .mud-tabs-tab::after {
+        opacity: 1;
+        visibility: visible;
+        transform: scale(1);
+    }
+
+    .board-section-tabs ::deep .mud-tabs-tab:nth-of-type(1)::after {
+        content: "1";
+    }
+    .board-section-tabs ::deep .mud-tabs-tab:nth-of-type(2)::after {
+        content: "2";
+        margin-left: 0.4rem;
+    }
+    .board-section-tabs ::deep .mud-tabs-tab:nth-of-type(3)::after {
+        content: "3";
+        margin-left: 0.4rem;
+    }
+
+    /* Floating Shortcuts Legend at the bottom of the screen */
+    .hab-shortcuts-legend {
+        position: fixed;
+        bottom: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        color: #f8fafc;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        z-index: 9999;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
+                    visibility 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
+                    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        pointer-events: none;
+        width: 90%;
+        max-width: 480px;
+    }
+
+    body.hab-show-shortcuts .hab-shortcuts-legend {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(-50%) translateY(0);
+    }
+
+    .hab-shortcuts-legend-header {
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #94a3b8;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 0.5rem;
+    }
+
+    .hab-shortcuts-legend-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+
+    .hab-shortcuts-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .hab-shortcuts-legend-item span:last-child {
+        color: #cbd5e1;
+    }
+
+    .hab-kbd-badge {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-size: 0.7rem;
+        font-family: monospace;
+        font-weight: 600;
+        color: #fff;
+        box-shadow: inset 0 -1px 0 rgba(0,0,0,0.25);
+    }
 </style>
 
 <MudStack Class="board-shell w-100" Spacing="1">
@@ -188,16 +386,26 @@
             <div class="board-stat-strip-row">
 
                 <div class="board-stat-filters">
-                    <MudTextField @ref="_searchField"
-                                  @bind-Value="_searchText"
-                                  Placeholder="Search"
-                                  Variant="Variant.Outlined"
-                                  Margin="Margin.Dense"
-                                  Adornment="Adornment.Start"
-                                  AdornmentIcon="@Icons.Material.Filled.Search"
-                                  Class="board-search-field board-search-pill"
-                                  InputType="InputType.Text"
-                                  Immediate="true"/>
+                    <div class="board-search-wrapper flex-grow-1" style="position: relative; display: flex; align-items: center;">
+                        <MudTextField @ref="_searchField"
+                                      @bind-Value="_searchText"
+                                      Placeholder="Search"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Search"
+                                      Class="board-search-field board-search-pill w-100"
+                                      InputType="InputType.Text"
+                                      Immediate="true"/>
+                        <div class="board-search-shortcut-badge-container">
+                            <span class="board-search-palette-badge" @onclick="OpenCommandPaletteAsync" title="Open Command Palette (Ctrl+K)">
+                                Ctrl+K
+                            </span>
+                            <span class="board-search-focus-badge hab-shortcut-badge" title="Focus Search (S)">
+                                S
+                            </span>
+                        </div>
+                    </div>
                     <div class="board-tags-menu-activator">
                         <MudMenu AnchorOrigin="Origin.BottomRight"
                                  TransformOrigin="Origin.TopRight"
@@ -288,19 +496,22 @@
                          Elevation="0"
                          Outlined="false">
                     <MudTabPanel Text="@($"Habits ({FilteredHabits.Count})")">
-                        <BoardColumn Section="BoardSection.Habit"
+                        <BoardColumn @ref="_habitColumnMobile"
+                                        Section="BoardSection.Habit"
                                         Items="FilteredHabits"
                                         IsBoardFilterExcludingAll="Habits.Count > 0 && FilteredHabits.Count == 0"
                                         OnChanged="OnBoardChanged"/>
                     </MudTabPanel>
                     <MudTabPanel Text="@($"Dailies ({DailiesDueOpenCount})")">
-                        <BoardColumn Section="BoardSection.Daily"
+                        <BoardColumn @ref="_dailyColumnMobile"
+                                        Section="BoardSection.Daily"
                                         Items="FilteredDailies"
                                         IsBoardFilterExcludingAll="Dailies.Count > 0 && FilteredDailies.Count == 0"
                                         OnChanged="OnBoardChanged"/>
                     </MudTabPanel>
                     <MudTabPanel Text="@($"To-dos ({OpenTodoCount})")">
-                        <BoardColumn Section="BoardSection.Todo"
+                        <BoardColumn @ref="_todoColumnMobile"
+                                        Section="BoardSection.Todo"
                                         Items="FilteredTodos"
                                         IsBoardFilterExcludingAll="Todos.Count > 0 && FilteredTodos.Count == 0"
                                         OnChanged="OnBoardChanged"/>
@@ -310,19 +521,22 @@
             <div class="board-columns-desktop">
                 <MudGrid Spacing="2" Class="board-columns-grid w-100">
                     <MudItem xs="12" md="4">
-                        <BoardColumn Section="BoardSection.Habit"
+                        <BoardColumn @ref="_habitColumn"
+                                        Section="BoardSection.Habit"
                                         Items="FilteredHabits"
                                         IsBoardFilterExcludingAll="Habits.Count > 0 && FilteredHabits.Count == 0"
                                         OnChanged="OnBoardChanged"/>
                     </MudItem>
                     <MudItem xs="12" md="4">
-                        <BoardColumn Section="BoardSection.Daily"
+                        <BoardColumn @ref="_dailyColumn"
+                                        Section="BoardSection.Daily"
                                         Items="FilteredDailies"
                                         IsBoardFilterExcludingAll="Dailies.Count > 0 && FilteredDailies.Count == 0"
                                         OnChanged="OnBoardChanged"/>
                     </MudItem>
                     <MudItem xs="12" md="4">
-                        <BoardColumn Section="BoardSection.Todo"
+                        <BoardColumn @ref="_todoColumn"
+                                        Section="BoardSection.Todo"
                                         Items="FilteredTodos"
                                         IsBoardFilterExcludingAll="Todos.Count > 0 && FilteredTodos.Count == 0"
                                         OnChanged="OnBoardChanged"/>
@@ -367,6 +581,35 @@
     {
         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@LastEvent</MudAlert>
     }
+
+    <!-- Keyboard Shortcuts Legend Overlay (Shift/Alt Held) -->
+    <div class="hab-shortcuts-legend" aria-hidden="true">
+        <div class="hab-shortcuts-legend-header">
+            <span class="hab-kbd-badge">Shift</span> or <span class="hab-kbd-badge">Alt</span> Keyboard Shortcuts
+        </div>
+        <div class="hab-shortcuts-legend-grid">
+            <div class="hab-shortcuts-legend-item">
+                <span class="hab-kbd-badge">Ctrl</span> + <span class="hab-kbd-badge">K</span>
+                <span>Open Command Palette / Search Board Items</span>
+            </div>
+            <div class="hab-shortcuts-legend-item">
+                <span class="hab-kbd-badge">S</span>
+                <span>Focus Search Bar</span>
+            </div>
+            <div class="hab-shortcuts-legend-item">
+                <span class="hab-kbd-badge">Ctrl</span> + <span class="hab-kbd-badge">Z</span>
+                <span>Undo Last Action</span>
+            </div>
+            <div class="hab-shortcuts-legend-item">
+                <span class="hab-kbd-badge">1</span> / <span class="hab-kbd-badge">2</span> / <span class="hab-kbd-badge">3</span>
+                <span>Focus Column Draft Inputs / Switch Tabs</span>
+            </div>
+            <div class="hab-shortcuts-legend-item">
+                <span class="hab-kbd-badge">G</span> then <span class="hab-kbd-badge">B</span> / <span class="hab-kbd-badge">S</span> / <span class="hab-kbd-badge">P</span>
+                <span>Go to Board / Stats / Settings</span>
+            </div>
+        </div>
+    </div>
 </MudStack>
 
 @using App.Shared.RCL.Components.Dialogs
@@ -466,12 +709,19 @@
     [Parameter] public string? SignedInEmail { get; set; }
 
     private MudTextField<string>? _searchField;
+    private BoardColumn? _habitColumn;
+    private BoardColumn? _dailyColumn;
+    private BoardColumn? _todoColumn;
+    private BoardColumn? _habitColumnMobile;
+    private BoardColumn? _dailyColumnMobile;
+    private BoardColumn? _todoColumnMobile;
     private List<BoardItem> Habits { get; set; } = [];
     private List<BoardItem> Dailies { get; set; } = [];
     private List<BoardItem> Todos { get; set; } = [];
     private string? LastEvent { get; set; }
     private bool _isLoading;
     private bool _initialLoadComplete;
+    private bool _isCommandPaletteOpen;
     private string? _loadError;
     private string _searchText = string.Empty;
     private readonly HashSet<string> _selectedFilterTags = new(StringComparer.OrdinalIgnoreCase);
@@ -936,15 +1186,37 @@
     [JSInvokable]
     public async Task OnDigitPressed(int digit)
     {
-        await InvokeAsync(() =>
+        await InvokeAsync(async () =>
         {
             var index = digit - 1;
             if (index >= 0 && index <= 2)
             {
                 _mobileSectionIndex = index;
                 StateHasChanged();
+
+                if (index == 0)
+                {
+                    if (_habitColumn is not null) await _habitColumn.FocusDraftAsync();
+                    if (_habitColumnMobile is not null) await _habitColumnMobile.FocusDraftAsync();
+                }
+                else if (index == 1)
+                {
+                    if (_dailyColumn is not null) await _dailyColumn.FocusDraftAsync();
+                    if (_dailyColumnMobile is not null) await _dailyColumnMobile.FocusDraftAsync();
+                }
+                else if (index == 2)
+                {
+                    if (_todoColumn is not null) await _todoColumn.FocusDraftAsync();
+                    if (_todoColumnMobile is not null) await _todoColumnMobile.FocusDraftAsync();
+                }
             }
         });
+    }
+
+    [JSInvokable]
+    public void NavigateTo(string path)
+    {
+        Navigation.NavigateTo(path);
     }
 
     [JSInvokable]
@@ -1041,24 +1313,35 @@
 
     public async Task OpenCommandPaletteAsync()
     {
-        var options = new DialogOptions
+        if (_isCommandPaletteOpen) return;
+        _isCommandPaletteOpen = true;
+
+        try
         {
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true,
-            CloseButton = false,
-            CloseOnEscapeKey = true,
-            NoHeader = true,
-            Position = DialogPosition.TopCenter
-        };
-        var parameters = new DialogParameters<CommandPaletteDialog>
+            var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Small,
+                FullWidth = true,
+                CloseButton = false,
+                CloseOnEscapeKey = true,
+                NoHeader = true,
+                Position = DialogPosition.TopCenter
+            };
+            var parameters = new DialogParameters<CommandPaletteDialog>
+            {
+                { x => x.Habits, Habits },
+                { x => x.Dailies, Dailies },
+                { x => x.Todos, Todos },
+                { x => x.BoardDataService, BoardDataService },
+                { x => x.ParentBoard, this }
+            };
+            var dialog = await DialogService.ShowAsync<CommandPaletteDialog>(string.Empty, parameters, options);
+            await dialog.Result;
+        }
+        finally
         {
-            { x => x.Habits, Habits },
-            { x => x.Dailies, Dailies },
-            { x => x.Todos, Todos },
-            { x => x.BoardDataService, BoardDataService },
-            { x => x.ParentBoard, this }
-        };
-        await DialogService.ShowAsync<CommandPaletteDialog>(string.Empty, parameters, options);
+            _isCommandPaletteOpen = false;
+        }
     }
 
     private void HandleConflictDetected(ConflictInfo conflict)

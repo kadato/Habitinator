@@ -80,27 +80,39 @@
 
     .hab-command-palette__footer {
         border-top: 1px solid var(--mud-palette-divider);
-        padding: 8px 16px;
+        padding: 10px 16px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         font-size: 0.75rem;
-        color: var(--mud-palette-text-secondary);
-        background: rgba(0, 0, 0, 0.02);
+        color: var(--mud-palette-text-primary);
+        background: rgba(0, 0, 0, 0.04);
+        font-weight: 500;
     }
 
     .dark .hab-command-palette__footer {
-        background: rgba(255, 255, 255, 0.01);
+        background: rgba(0, 0, 0, 0.25);
     }
 
-    .hab-kbd-badge {
-        background: var(--mud-palette-background-gray);
+    .hab-command-palette-dialog .hab-kbd-badge {
+        background: var(--mud-palette-surface);
         border: 1px solid var(--mud-palette-divider);
+        border-bottom-width: 2px;
         border-radius: 4px;
-        padding: 1px 5px;
+        padding: 1px 6px;
         font-size: 0.7rem;
-        font-family: inherit;
+        font-family: system-ui, -apple-system, sans-serif;
         font-weight: 600;
+        color: var(--mud-palette-text-primary) !important;
+        box-shadow: 0 1px 0px rgba(0, 0, 0, 0.05);
+        display: inline-block;
+        line-height: 1.2;
+    }
+
+    .dark .hab-command-palette-dialog .hab-kbd-badge {
+        background: var(--mud-palette-background-gray);
+        border-color: var(--mud-palette-divider);
+        box-shadow: 0 1px 0px rgba(255, 255, 255, 0.05);
     }
 </style>
 
@@ -239,7 +251,7 @@
         _allItems.Add(new PaletteItem("Go to Board", "Navigation", Icons.Material.Filled.Dashboard, Color.Default, 
             () => NavigateTo("/"), "1"));
         _allItems.Add(new PaletteItem("Go to Statistics", "Navigation", Icons.Material.Filled.BarChart, Color.Default, 
-            () => NavigateTo("/statistics")));
+            () => NavigateTo("/stats")));
         _allItems.Add(new PaletteItem("Go to Settings", "Navigation", Icons.Material.Filled.Settings, Color.Default, 
             () => NavigateTo("/settings")));
 

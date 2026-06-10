@@ -15,13 +15,12 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
     private readonly string? _externalConnectionString =
         Environment.GetEnvironmentVariable("APPWEB_INTEGRATIONTESTS_CONNECTION_STRING");
 
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
+    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine")
         .Build();
 
     public async Task InitializeAsync()
     {
-        var connectionString = _externalConnectionString;
+        string? connectionString = _externalConnectionString;
         if (!string.IsNullOrWhiteSpace(connectionString))
         {
             await WaitUntilDatabaseAcceptsConnectionsAsync(
@@ -39,7 +38,9 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
         await base.DisposeAsync();
 
         if (string.IsNullOrWhiteSpace(_externalConnectionString))
+        {
             await _postgres.DisposeAsync();
+        }
     }
 
     /// <summary>
@@ -62,7 +63,7 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
 
     private Dictionary<string, string?> GetIntegrationConfiguration()
     {
-        var connectionString = PostgresResilienceConnectionString.EnsureColdStartTimeouts(
+        string connectionString = PostgresResilienceConnectionString.EnsureColdStartTimeouts(
             string.IsNullOrWhiteSpace(_externalConnectionString)
                 ? _postgres.GetConnectionString()
                 : _externalConnectionString);
@@ -85,14 +86,14 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
         CancellationToken cancellationToken = default)
     {
         connectionString = PostgresResilienceConnectionString.EnsureColdStartTimeouts(connectionString);
-        var lastError = (Exception?)null;
+        Exception? lastError = null;
         const int maxAttempts = 60;
 
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
         {
             try
             {
-                await using var connection = new NpgsqlConnection(connectionString);
+                await using NpgsqlConnection connection = new(connectionString);
                 await connection.OpenAsync(cancellationToken);
                 await connection.CloseAsync();
                 return;

@@ -6,6 +6,7 @@ obj/
 .vs/
 .vscode/
 .cursor/
+.idea/
 *.user
 *.suo
 *.lscache

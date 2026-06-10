@@ -195,6 +195,68 @@ window.HabitinatorKeyboardShortcuts = (function () {
     );
   }
 
+  function isInteractiveElement(el) {
+    if (!el) return false;
+    const tagName = el.tagName.toLowerCase();
+    if (['input', 'textarea', 'select', 'button', 'a'].includes(tagName)) {
+      return true;
+    }
+    if (el.isContentEditable) {
+      return true;
+    }
+    const role = el.getAttribute('role');
+    if (role && ['button', 'checkbox', 'menu', 'menuitem', 'tab', 'option', 'listbox', 'slider', 'combobox', 'radio'].includes(role)) {
+      return true;
+    }
+    if (el.closest('.mud-button-root') || el.closest('.mud-checkbox') || el.closest('.mud-switch') || el.closest('.mud-menu') || el.closest('.mud-list-item')) {
+      return true;
+    }
+    return false;
+  }
+
+  function needsArrowKeys(el) {
+    if (!el) return false;
+    const tagName = el.tagName.toLowerCase();
+    if (tagName === 'select') return true;
+    if (tagName === 'input' && ['range', 'date', 'time', 'datetime-local', 'month', 'week'].includes(el.type)) return true;
+    const role = el.getAttribute('role');
+    if (role && ['listbox', 'slider', 'combobox'].includes(role)) return true;
+    if (el.closest('.mud-select') || el.closest('.mud-slider')) return true;
+    return false;
+  }
+
+  function getScrollableContainer(container) {
+    if (!container) return window;
+    const known = container.querySelector('.edit-daily-body, .edit-habit-body, .edit-todo-body, .archived-list, .daily-yesterday-list, .mud-dialog-content');
+    if (known) return known;
+
+    const all = container.querySelectorAll('*');
+    for (let i = 0; i < all.length; i++) {
+      const style = window.getComputedStyle(all[i]);
+      if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+        return all[i];
+      }
+    }
+    return container;
+  }
+
+  function scrollTargetElement(target, amount) {
+    if (target === window) {
+      window.scrollBy({ top: amount, behavior: 'smooth' });
+    } else {
+      target.scrollBy({ top: amount, behavior: 'smooth' });
+    }
+  }
+
+  function scrollToPosition(target, position) {
+    if (target === window) {
+      const scrollingEl = document.scrollingElement || document.documentElement || document.body;
+      window.scrollTo({ top: position === 'top' ? 0 : scrollingEl.scrollHeight, behavior: 'smooth' });
+    } else {
+      target.scrollTo({ top: position === 'top' ? 0 : target.scrollHeight, behavior: 'smooth' });
+    }
+  }
+
   function isInsideInputControl(el) {
     return el.closest('.mud-input-control') || 
            el.closest('.mud-input') || 
@@ -700,6 +762,44 @@ window.HabitinatorKeyboardShortcuts = (function () {
     const isUndo = (e.ctrlKey || e.metaKey) && e.code === 'KeyZ';
 
     if (isEdit) {
+      return;
+    }
+
+    // Keyboard scrolling when not editing
+    const scrollKeys = ['ArrowDown', 'ArrowUp', 'Space', ' ', 'PageDown', 'PageUp', 'Home', 'End', 'j', 'J', 'k', 'K'];
+    if (scrollKeys.includes(e.key)) {
+      if (e.ctrlKey || e.metaKey || e.altKey) {
+        return;
+      }
+      // Check if interactive element should consume the key
+      if ((e.key === ' ' || e.key === 'Space') && isInteractiveElement(activeElement)) {
+        return;
+      }
+      if (['ArrowDown', 'ArrowUp'].includes(e.key) && needsArrowKeys(activeElement)) {
+        return;
+      }
+
+      e.preventDefault();
+
+      const activeContainer = getActiveOpenContainer();
+      const target = activeContainer ? getScrollableContainer(activeContainer) : window;
+
+      const scrollSpeed = 100; // px
+      const pageSpeed = target === window ? window.innerHeight * 0.8 : target.clientHeight * 0.8;
+
+      if (e.key === 'ArrowDown' || e.key === 'j' || e.key === 'J') {
+        scrollTargetElement(target, scrollSpeed);
+      } else if (e.key === 'ArrowUp' || e.key === 'k' || e.key === 'K') {
+        scrollTargetElement(target, -scrollSpeed);
+      } else if (e.key === 'PageDown' || ((e.key === ' ' || e.key === 'Space') && !e.shiftKey)) {
+        scrollTargetElement(target, pageSpeed);
+      } else if (e.key === 'PageUp' || ((e.key === ' ' || e.key === 'Space') && e.shiftKey)) {
+        scrollTargetElement(target, -pageSpeed);
+      } else if (e.key === 'Home') {
+        scrollToPosition(target, 'top');
+      } else if (e.key === 'End') {
+        scrollToPosition(target, 'bottom');
+      }
       return;
     }
 

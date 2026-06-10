@@ -205,6 +205,11 @@ window.HabitinatorKeyboardShortcuts = (function () {
            el.closest('.timer-focus-field');
   }
 
+  function isInsideToggle(el) {
+    if (!el.parentElement) return false;
+    return el.parentElement.closest('.mud-checkbox, .mud-switch, .board-subtask-cb') !== null;
+  }
+
   function isElementVisible(el) {
     // Check if element or any parent is display: none (skip fixed position elements which can have null offsetParent)
     if (el.offsetParent === null && window.getComputedStyle(el).position !== 'fixed') {
@@ -260,13 +265,13 @@ window.HabitinatorKeyboardShortcuts = (function () {
 
     if (activeContainer) {
       const inputs = Array.from(activeContainer.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([disabled]), textarea:not([disabled]), select:not([disabled]), [contenteditable="true"], .mud-input-slot:not([disabled])'))
-        .filter(el => !assignedElements.has(el) && isElementVisible(el));
+        .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideToggle(el));
 
       const toggles = Array.from(activeContainer.querySelectorAll('.mud-checkbox, .board-subtask-cb, .mud-switch'))
-        .filter(el => !assignedElements.has(el) && isElementVisible(el));
+        .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideToggle(el));
 
-      const clickables = Array.from(activeContainer.querySelectorAll('a[href]:not([href="#"]), button:not([disabled]), [role="button"]:not([disabled]), .mud-button-root:not([disabled]), .app-header-profile-btn, .app-header-username-btn, .board-card__title, .board-card__delete, [role="menuitem"]:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), .mud-list-item-clickable:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), .mud-menu-item:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"])'))
-        .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideInputControl(el));
+      const clickables = Array.from(activeContainer.querySelectorAll('a[href]:not([href="#"]), button:not([disabled]), [role="button"]:not([disabled]), .mud-button-root:not([disabled]), .app-header-profile-btn, .app-header-username-btn, .board-card__title, .board-card__delete, [role="menuitem"]:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), [role="tab"]:not([disabled]), .mud-tab:not([disabled]), .mud-list-item-clickable:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), .mud-menu-item:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"])'))
+        .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideInputControl(el) && !isInsideToggle(el));
 
       const totalDynamicElements = inputs.length + toggles.length + clickables.length;
       const useTwoChars = totalDynamicElements > availableKeys.length;
@@ -348,13 +353,13 @@ window.HabitinatorKeyboardShortcuts = (function () {
 
     // 3. Dynamic elements allocation (prefix-free)
     const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([disabled]), textarea:not([disabled]), select:not([disabled]), [contenteditable="true"], .mud-input-slot:not([disabled])'))
-      .filter(el => !assignedElements.has(el) && isElementVisible(el));
+      .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideToggle(el));
 
     const toggles = Array.from(document.querySelectorAll('.mud-checkbox, .board-subtask-cb, .mud-switch'))
-      .filter(el => !assignedElements.has(el) && isElementVisible(el));
+      .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideToggle(el));
 
-    const clickables = Array.from(document.querySelectorAll('a[href]:not([href="#"]), button:not([disabled]), [role="button"]:not([disabled]), .mud-button-root:not([disabled]), .app-header-profile-btn, .app-header-username-btn, .board-card__title, .board-card__delete, [role="menuitem"]:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), .mud-list-item-clickable:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), .mud-menu-item:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"])'))
-      .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideInputControl(el));
+    const clickables = Array.from(document.querySelectorAll('a[href]:not([href="#"]), button:not([disabled]), [role="button"]:not([disabled]), .mud-button-root:not([disabled]), .app-header-profile-btn, .app-header-username-btn, .board-card__title, .board-card__delete, [role="menuitem"]:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), [role="tab"]:not([disabled]), .mud-tab:not([disabled]), .mud-list-item-clickable:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), .mud-menu-item:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"])'))
+      .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideInputControl(el) && !isInsideToggle(el));
 
     const totalDynamicElements = inputs.length + toggles.length + clickables.length;
     const useTwoChars = totalDynamicElements > availableKeys.length;

@@ -506,10 +506,16 @@ window.HabitinatorKeyboardShortcuts = (function () {
       
       // Position badge
       const isInputEl = t.type === 'input';
+      const isTagPicker = t.element.classList.contains('habit-tag-picker__control');
       const top = rect.top + window.scrollY + (rect.height / 2);
-      const left = isInputEl 
-        ? rect.left + window.scrollX + 16 
-        : rect.left + window.scrollX + (rect.width / 2);
+      let left;
+      if (isTagPicker) {
+        left = rect.right + window.scrollX - 24;
+      } else {
+        left = isInputEl 
+          ? rect.left + window.scrollX + 16 
+          : rect.left + window.scrollX + (rect.width / 2);
+      }
 
       badge.style.top = `${top}px`;
       badge.style.left = `${left}px`;
@@ -685,6 +691,19 @@ window.HabitinatorKeyboardShortcuts = (function () {
         }
       }
 
+      if (activeElement && activeElement.classList.contains('habit-tag-picker__search')) {
+        e.preventDefault();
+        e.stopPropagation();
+        const picker = activeElement.closest('.habit-tag-picker');
+        if (picker) {
+          const control = picker.querySelector('.habit-tag-picker__control');
+          if (control) {
+            control.click();
+            control.focus();
+          }
+        }
+        return;
+      }
       
       const tagsPopover = document.querySelector('.board-tags-menu-popover');
       if (tagsPopover && isElementVisible(tagsPopover)) {

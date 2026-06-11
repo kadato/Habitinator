@@ -356,7 +356,7 @@
         {
             _tagSearch = string.Empty;
             await LoadTagSuggestionsAsync();
-            await Task.Yield();
+            await Task.Delay(100);
             try
             {
                 await _tagSearchField.FocusAsync();

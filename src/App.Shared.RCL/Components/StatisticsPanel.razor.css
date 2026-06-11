@@ -142,9 +142,12 @@ button.stats-heatmap-day-btn:hover {
     position: relative;
 }
 
-button.stats-heatmap-day-btn:focus-visible {
-    outline: 2px solid var(--mud-palette-primary);
-    outline-offset: 1px;
+button.stats-heatmap-day-btn:focus-visible,
+button.stats-heatmap-day-btn:focus {
+    outline: 2px solid var(--mud-palette-primary) !important;
+    outline-offset: 1px !important;
+    position: relative !important;
+    z-index: 5 !important;
 }
 
 .stats-heatmap-day--today {

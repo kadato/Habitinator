@@ -39,7 +39,7 @@ window.HabitinatorKeyboardShortcuts = (function () {
   let overlayContainer = null;
   let hudElement = null;
 
-  const availableKeys = ['A', 'C', 'E', 'I', 'J', 'K', 'L', 'M', 'N', 'Q', 'R', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+  const availableKeys = ['A', 'C', 'E', 'I', 'J', 'K', 'L', 'M', 'N', 'Q', 'U', 'V', 'W', 'X', 'Y', 'Z'];
 
   // Inject Styles dynamically
   function injectStyles() {
@@ -191,7 +191,10 @@ window.HabitinatorKeyboardShortcuts = (function () {
       activeElement.tagName.toLowerCase() === 'input' || 
       activeElement.tagName.toLowerCase() === 'textarea' || 
       activeElement.isContentEditable ||
-      activeElement.closest('.mud-input-slot')
+      activeElement.closest('.mud-input-slot') ||
+      activeElement.closest('.mud-popover') ||
+      activeElement.closest('.mud-list') ||
+      activeElement.closest('.mud-menu')
     );
   }
 
@@ -227,8 +230,16 @@ window.HabitinatorKeyboardShortcuts = (function () {
 
   function getScrollableContainer(container) {
     if (!container) return window;
-    const known = container.querySelector('.edit-daily-body, .edit-habit-body, .edit-todo-body, .archived-list, .daily-yesterday-list, .mud-dialog-content');
+    const known = container.querySelector('.edit-daily-body, .edit-habit-body, .archived-list, .daily-yesterday-body');
     if (known) return known;
+
+    const dialogContent = container.querySelector('.mud-dialog-content');
+    if (dialogContent) {
+      const style = window.getComputedStyle(dialogContent);
+      if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+        return dialogContent;
+      }
+    }
 
     const all = container.querySelectorAll('*');
     for (let i = 0; i < all.length; i++) {
@@ -318,7 +329,15 @@ window.HabitinatorKeyboardShortcuts = (function () {
     const assignedElements = new Set();
 
     function addTarget(el, shortcut, type) {
-      if (!el || assignedElements.has(el) || !isElementVisible(el)) return;
+      if (!el || assignedElements.has(el)) return;
+
+      const rect = el.getBoundingClientRect();
+      const isRendered = rect.width > 0 && rect.height > 0;
+      if (!isRendered) return;
+
+      const isFixed = ["B", "T", "P", "F", "H", "D", "O", "G", "R"].includes(shortcut);
+      if (!isFixed && !isElementVisible(el)) return;
+
       assignedElements.add(el);
       targets.push({ element: el, shortcut, type });
     }
@@ -332,7 +351,7 @@ window.HabitinatorKeyboardShortcuts = (function () {
       const toggles = Array.from(activeContainer.querySelectorAll('.mud-checkbox, .board-subtask-cb, .mud-switch'))
         .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideToggle(el));
 
-      const clickables = Array.from(activeContainer.querySelectorAll('a[href]:not([href="#"]), button:not([disabled]), [role="button"]:not([disabled]), .mud-button-root:not([disabled]), .app-header-profile-btn, .app-header-username-btn, .board-card__title, .board-card__delete, [role="menuitem"]:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), [role="tab"]:not([disabled]), .mud-tab:not([disabled]), .mud-list-item-clickable:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), .mud-menu-item:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"])'))
+      const clickables = Array.from(activeContainer.querySelectorAll('a[href]:not([href="#"]), button:not([disabled]):not(.stats-heatmap-day-btn), [role="button"]:not([disabled]), .mud-button-root:not([disabled]), .app-header-profile-btn, .app-header-username-btn, .board-card__title, .board-card__delete, [role="menuitem"]:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), [role="tab"]:not([disabled]), .mud-tab:not([disabled]), .mud-list-item-clickable:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), .mud-menu-item:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), .mud-expand-panel-header'))
         .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideInputControl(el) && !isInsideToggle(el));
 
       const totalDynamicElements = inputs.length + toggles.length + clickables.length;
@@ -413,6 +432,13 @@ window.HabitinatorKeyboardShortcuts = (function () {
     const todoInput = document.querySelector('.board-column--todo .board-add-wrap input, input[placeholder*="Add to-do" i]');
     addTarget(todoInput, "O", "input");
 
+    // 2b. Statistics Filters (fixed shortcuts)
+    const statsTagSelect = document.querySelector('.stats-tag-select-sidebar .mud-input-slot');
+    addTarget(statsTagSelect, "G", "input");
+
+    const statsPeriodSelect = document.querySelector('.stats-year-select-sidebar .mud-input-slot');
+    addTarget(statsPeriodSelect, "R", "input");
+
     // 3. Dynamic elements allocation (prefix-free)
     const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([disabled]), textarea:not([disabled]), select:not([disabled]), [contenteditable="true"], .mud-input-slot:not([disabled])'))
       .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideToggle(el));
@@ -420,7 +446,7 @@ window.HabitinatorKeyboardShortcuts = (function () {
     const toggles = Array.from(document.querySelectorAll('.mud-checkbox, .board-subtask-cb, .mud-switch'))
       .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideToggle(el));
 
-    const clickables = Array.from(document.querySelectorAll('a[href]:not([href="#"]), button:not([disabled]), [role="button"]:not([disabled]), .mud-button-root:not([disabled]), .app-header-profile-btn, .app-header-username-btn, .board-card__title, .board-card__delete, [role="menuitem"]:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), [role="tab"]:not([disabled]), .mud-tab:not([disabled]), .mud-list-item-clickable:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), .mud-menu-item:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"])'))
+    const clickables = Array.from(document.querySelectorAll('a[href]:not([href="#"]), button:not([disabled]):not(.stats-heatmap-day-btn), [role="button"]:not([disabled]), .mud-button-root:not([disabled]), .app-header-profile-btn, .app-header-username-btn, .board-card__title, .board-card__delete, [role="menuitem"]:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), [role="tab"]:not([disabled]), .mud-tab:not([disabled]), .mud-list-item-clickable:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), .mud-menu-item:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), .mud-expand-panel-header'))
       .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideInputControl(el) && !isInsideToggle(el));
 
     const totalDynamicElements = inputs.length + toggles.length + clickables.length;
@@ -654,7 +680,10 @@ window.HabitinatorKeyboardShortcuts = (function () {
   function executeTarget(target) {
     const el = target.element;
     if (target.type === 'input') {
-      if (el.classList.contains('mud-checkbox') || el.classList.contains('board-subtask-cb') || el.classList.contains('mud-switch')) {
+      if (el.classList.contains('mud-input-slot')) {
+        el.focus();
+        el.click();
+      } else if (el.classList.contains('mud-checkbox') || el.classList.contains('board-subtask-cb') || el.classList.contains('mud-switch')) {
         const inputChild = el.querySelector('input');
         if (inputChild) {
           inputChild.click();
@@ -674,6 +703,30 @@ window.HabitinatorKeyboardShortcuts = (function () {
   }
 
   function onKeyDown(e) {
+    // If a select dropdown or popover is open, do not intercept scroll keys or keyboard inputs,
+    // but prevent browser from scrolling when Arrow/Space/Page/Home/End keys are pressed.
+    if (!shortcutModeActive && document.querySelector('.mud-popover-open')) {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        // Let Escape pass through to the escape/blur handler below
+      } else {
+        const scrollKeys = ['ArrowDown', 'ArrowUp', 'Space', ' ', 'PageDown', 'PageUp', 'Home', 'End'];
+        if (scrollKeys.includes(e.key)) {
+          const activeElement = document.activeElement;
+          const isInput = activeElement && (
+            activeElement.tagName.toLowerCase() === 'input' || 
+            activeElement.tagName.toLowerCase() === 'textarea' || 
+            activeElement.isContentEditable
+          );
+          if (isInput && (e.key === ' ' || e.key === 'Space')) {
+            // Let space be typed normally in inputs
+          } else {
+            e.preventDefault();
+          }
+        }
+        return;
+      }
+    }
+
     // Escape blur functionality (from original codebase)
     const activeElement = document.activeElement;
     const isEdit = isEditing();
@@ -727,7 +780,18 @@ window.HabitinatorKeyboardShortcuts = (function () {
           events.forEach(type => {
             document.body.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }));
           });
-        }, 10);
+          
+          // Blur any select slot or input control that got focused back by Blazor's popover closing logic
+          const newActive = document.activeElement;
+          if (newActive && (
+            newActive.classList.contains('mud-input-slot') || 
+            newActive.closest('.mud-input-slot') ||
+            newActive.closest('.mud-select') ||
+            newActive.closest('.mud-input-control')
+          )) {
+            newActive.blur();
+          }
+        }, 50);
         return;
       }
       
@@ -789,6 +853,10 @@ window.HabitinatorKeyboardShortcuts = (function () {
     const isUndo = (e.ctrlKey || e.metaKey) && e.code === 'KeyZ';
 
     if (isEdit) {
+      // Prevent browser from scrolling when Arrow keys are pressed on select slots or popover list items
+      if (activeElement && (activeElement.classList.contains('mud-input-slot') || activeElement.closest('.mud-popover') || activeElement.closest('.mud-list')) && ['ArrowUp', 'ArrowDown'].includes(e.key)) {
+        e.preventDefault();
+      }
       return;
     }
 

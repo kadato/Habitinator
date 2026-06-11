@@ -677,6 +677,14 @@ window.HabitinatorKeyboardShortcuts = (function () {
         shiftLock = false;
         deactivateShortcutMode();
       }
+
+      if (activeElement && activeElement.closest('.timer-target-field')) {
+        const openPopover = Array.from(document.querySelectorAll('.mud-popover')).find(isElementVisible);
+        if (openPopover) {
+          return;
+        }
+      }
+
       
       const tagsPopover = document.querySelector('.board-tags-menu-popover');
       if (tagsPopover && isElementVisible(tagsPopover)) {

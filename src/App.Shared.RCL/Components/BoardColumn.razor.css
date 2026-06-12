@@ -168,11 +168,6 @@
 
 .board-card:hover {
     border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, transparent);
-    transform: translateY(-2px);
-    box-shadow:
-        0 1px 0 color-mix(in srgb, var(--mud-palette-surface) 15%, transparent) inset,
-        0 8px 24px color-mix(in srgb, var(--mud-palette-black) 22%, transparent),
-        0 2px 6px color-mix(in srgb, var(--mud-palette-black) 12%, transparent);
 }
 
 /* SortableJS drag and drop styling */

@@ -393,9 +393,12 @@
     private readonly Dictionary<Guid, bool> _subtasksExpand = new();
     private readonly Dictionary<Guid, double> _sortOrderOverrides = new();
     private readonly Dictionary<Guid, BoardItem> _optimisticOverrides = new();
+    private readonly HashSet<Guid> _optimisticDeletions = new();
 
     private IEnumerable<BoardItem> EffectiveItems =>
-        Items.Select(x => _optimisticOverrides.TryGetValue(x.Id, out var o) ? o : x);
+        Items
+            .Where(x => !_optimisticDeletions.Contains(x.Id))
+            .Select(x => _optimisticOverrides.TryGetValue(x.Id, out var o) ? o : x);
 
     private ElementReference _containerRef;
     private DotNetObjectReference<BoardColumn>? _selfRef;
@@ -405,6 +408,7 @@
     {
         PruneSortOrderOverrides();
         PruneOptimisticOverrides();
+        PruneOptimisticDeletions();
         _needRefresh = true;
     }
 
@@ -468,6 +472,18 @@
                 && serverItem.ChecklistJson == overrideItem.ChecklistJson)
             {
                 _optimisticOverrides.Remove(id);
+            }
+        }
+    }
+
+    private void PruneOptimisticDeletions()
+    {
+        foreach (var id in _optimisticDeletions.ToList())
+        {
+            var serverItem = Items.FirstOrDefault(x => x.Id == id);
+            if (serverItem is null)
+            {
+                _optimisticDeletions.Remove(id);
             }
         }
     }
@@ -1029,7 +1045,17 @@
 
     private async Task DeleteAsync(Guid id)
     {
-        await TryMutateAsync(() => BoardData.DeleteItemAsync(Section, id));
+        _optimisticDeletions.Add(id);
+        _needRefresh = true;
+        StateHasChanged();
+
+        var ok = await TryMutateAsync(() => BoardData.DeleteItemAsync(Section, id));
+        if (!ok)
+        {
+            _optimisticDeletions.Remove(id);
+            _needRefresh = true;
+            StateHasChanged();
+        }
     }
 
     private async Task MoveToTopAsync(BoardItem item)

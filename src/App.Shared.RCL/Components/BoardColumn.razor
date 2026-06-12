@@ -394,11 +394,20 @@
     private readonly Dictionary<Guid, double> _sortOrderOverrides = new();
     private readonly Dictionary<Guid, BoardItem> _optimisticOverrides = new();
     private readonly HashSet<Guid> _optimisticDeletions = new();
+    private readonly Dictionary<Guid, BoardItem> _optimisticCreations = new();
 
-    private IEnumerable<BoardItem> EffectiveItems =>
-        Items
-            .Where(x => !_optimisticDeletions.Contains(x.Id))
-            .Select(x => _optimisticOverrides.TryGetValue(x.Id, out var o) ? o : x);
+    private IEnumerable<BoardItem> EffectiveItems
+    {
+        get
+        {
+            var baseItems = Items
+                .Where(x => !_optimisticDeletions.Contains(x.Id))
+                .Select(x => _optimisticOverrides.TryGetValue(x.Id, out var o) ? o : x);
+            var serverIds = new HashSet<Guid>(Items.Select(x => x.Id));
+            var creations = _optimisticCreations.Values.Where(x => !serverIds.Contains(x.Id));
+            return baseItems.Concat(creations);
+        }
+    }
 
     private ElementReference _containerRef;
     private DotNetObjectReference<BoardColumn>? _selfRef;
@@ -409,6 +418,7 @@
         PruneSortOrderOverrides();
         PruneOptimisticOverrides();
         PruneOptimisticDeletions();
+        PruneOptimisticCreations();
         _needRefresh = true;
     }
 
@@ -486,6 +496,25 @@
                 _optimisticDeletions.Remove(id);
             }
         }
+    }
+
+    private void PruneOptimisticCreations()
+    {
+        foreach (var id in _optimisticCreations.Keys.ToList())
+        {
+            if (Items.Any(x => x.Id == id))
+            {
+                _optimisticCreations.Remove(id);
+            }
+        }
+    }
+
+    private double GetInitialSortOrderForOptimisticCreation()
+    {
+        var current = VisibleItems();
+        if (current.Count == 0) return 1.0;
+        var max = current.Max(x => GetEffectiveSortOrder(x) ?? 0.0);
+        return max + 1.0;
     }
 
     private enum HabitListFilter
@@ -895,12 +924,25 @@
         }
 
         var title = _draft.Trim();
-        if (!await TryMutateAsync(() => BoardData.CreateItemAsync(Section, title)))
-        {
-            return;
-        }
-
+        var newId = Guid.NewGuid();
+        var tempItem = new BoardItem(
+            Id: newId,
+            Title: title,
+            CreatedAtUtc: DateTimeOffset.UtcNow,
+            SortOrder: GetInitialSortOrderForOptimisticCreation()
+        );
+        _optimisticCreations[newId] = tempItem;
         _draft = string.Empty;
+        _needRefresh = true;
+        StateHasChanged();
+
+        var ok = await TryMutateAsync(() => BoardData.CreateItemAsync(Section, title, newId));
+        if (!ok)
+        {
+            _optimisticCreations.Remove(newId);
+            _needRefresh = true;
+            StateHasChanged();
+        }
     }
 
     private async Task HabitUpAsync(BoardItem item)

@@ -649,6 +649,7 @@
     private bool _boardClientScriptsStarted;
     private DotNetObjectReference<BoardRemoteNotifyBridge>? _visibilityRef;
     private DotNetObjectReference<MainBoard>? _selfRef;
+    private DateTimeOffset _lastLocalMutationTime = DateTimeOffset.MinValue;
 
     private IReadOnlyList<BoardItem> FilteredHabits => FilterItems(Habits);
     private IReadOnlyList<BoardItem> FilteredDailies => FilterItems(Dailies);
@@ -724,6 +725,13 @@
 
     private async Task OnRemoteBoardRefreshedAsync()
     {
+        // Skip reloading from remote SignalR notifications if we recently performed a local mutation,
+        // as the local action has already fetched the latest snapshot.
+        if (DateTimeOffset.UtcNow - _lastLocalMutationTime < TimeSpan.FromSeconds(2.0))
+        {
+            return;
+        }
+
         try
         {
             await LoadBoardAsync();
@@ -817,6 +825,7 @@
 
     private async Task OnBoardChanged()
     {
+        _lastLocalMutationTime = DateTimeOffset.UtcNow;
         await LoadBoardAsync();
     }
 
@@ -970,6 +979,7 @@
 
     private async Task HandleTimerLogSavedAsync(TimeSpan duration)
     {
+        _lastLocalMutationTime = DateTimeOffset.UtcNow;
         var result = await TimerSessionLog.LogStoppedSessionAsync(duration);
         LastEvent = result.UserMessage;
         await LoadBoardAsync();
@@ -1062,6 +1072,7 @@
     {
         _ = InvokeAsync(async () =>
         {
+            _lastLocalMutationTime = DateTimeOffset.UtcNow;
             await LoadBoardAsync();
             StateHasChanged();
         });
@@ -1201,6 +1212,7 @@
                 ConflictResolution.Resolve(conflict.OperationId, ConflictResolutionChoice.Cancel);
             }
             
+            _lastLocalMutationTime = DateTimeOffset.UtcNow;
             await LoadBoardAsync();
         });
     }
@@ -1218,6 +1230,7 @@
             string.Empty, options);
         await dialog.Result;
         
+        _lastLocalMutationTime = DateTimeOffset.UtcNow;
         await LoadBoardAsync();
     }
 

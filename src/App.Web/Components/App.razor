@@ -9,6 +9,9 @@
     <link rel="preload" href="_content/App.Shared.RCL/fonts/PlusJakartaSans-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous"/>
     <link rel="preload" href="_content/App.Shared.RCL/fonts/PlusJakartaSans-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous"/>
     <link rel="preload" href="_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2" as="font" type="font/woff2" crossorigin="anonymous"/>
+    <link rel="preload" href="@Assets["_framework/blazor.web.js"]" as="script" crossorigin="anonymous"/>
+    <link rel="preload" href="@Assets["_content/MudBlazor/MudBlazor.min.js"]" as="script" crossorigin="anonymous"/>
+    <link rel="preload" href="lib/microsoft-signalr/signalr.min.js" as="script" crossorigin="anonymous"/>
     <style>
         :root {
             --hab-bg-light: #f8fafc;
@@ -41,19 +44,91 @@
 </head>
 
 <body>
+<div id="habitinator-splash-screen" style="position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; background-color: var(--hab-bg-light); transition: opacity 0.2s ease, visibility 0.2s ease;">
+    <style>
+        .hab-splash-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.25rem;
+        }
+        .hab-splash-logo {
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: #3b82f6;
+            letter-spacing: -0.02em;
+            animation: habPulse 1.8s infinite ease-in-out;
+        }
+        .hab-splash-spinner {
+            width: 2.25rem;
+            height: 2.25rem;
+            border: 3px solid color-mix(in srgb, var(--hab-bg-light) 90%, var(--hab-bg-dark));
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: habSpin 0.8s linear infinite;
+        }
+        @@keyframes habPulse {
+            0%, 100% { opacity: 0.6; transform: scale(0.97); }
+            50% { opacity: 1; transform: scale(1.0); }
+        }
+        @@keyframes habSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @@media (prefers-color-scheme: dark) {
+            #habitinator-splash-screen {
+                background-color: var(--hab-bg-dark) !important;
+            }
+            .hab-splash-spinner {
+                border-color: color-mix(in srgb, var(--hab-bg-dark) 90%, var(--hab-bg-light)) !important;
+                border-top-color: #3b82f6 !important;
+            }
+        }
+    </style>
+    <div class="hab-splash-content">
+        <div class="hab-splash-logo">Habitinator</div>
+        <div class="hab-splash-spinner"></div>
+    </div>
+</div>
+
 <CascadingAuthenticationState>
     <Routes/>
 </CascadingAuthenticationState>
 <ReconnectModal/>
 <script src="_content/App.Shared.RCL/js/scriptLoader.js"></script>
-<script src="lib/microsoft-signalr/signalr.min.js"></script>
+<script src="lib/microsoft-signalr/signalr.min.js" crossorigin="anonymous"></script>
 <script src="js/boardHub.js"></script>
-<script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]"></script>
+<script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]" crossorigin="anonymous"></script>
 <script src="@Assets["_content/App.Shared.RCL/js/sortable.min.js"]"></script>
 <script src="@Assets["_content/App.Shared.RCL/js/boardSortable.js"]"></script>
 <script src="@Assets["_content/App.Shared.RCL/js/focusTimerAlert.js"]"></script>
 <script src="_content/App.Shared.RCL/js/userTimezone.js"></script>
-<script src="@Assets["_framework/blazor.web.js"]"></script>
+<script src="@Assets["_framework/blazor.web.js"]" autostart="false" crossorigin="anonymous"></script>
+<script>
+    window.addEventListener('DOMContentLoaded', () => {
+        if (window.Blazor) {
+            window.Blazor.start({
+                circuit: {
+                    configureSignalR: function (builder) {
+                        builder.withUrl('_blazor', {
+                            skipNegotiation: true,
+                            transport: 1 // WebSockets
+                        });
+                    }
+                }
+            });
+        }
+    });
+
+    window.habitinatorRemoveSplash = function () {
+        const el = document.getElementById('habitinator-splash-screen');
+        if (el) {
+            el.style.opacity = '0';
+            setTimeout(() => el.remove(), 250);
+        }
+    };
+</script>
 </body>
 
 </html>

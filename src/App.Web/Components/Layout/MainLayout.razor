@@ -153,14 +153,19 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && _mudThemeProvider != null)
-        {
-            await ResolveThemeAsync();
-            await _mudThemeProvider.WatchSystemDarkModeAsync(OnSystemPreferenceChanged);
-        }
-
         if (firstRender)
         {
+            // 1. Immediately remove the splash screen so the user is never stuck
+            try
+            {
+                await JS.InvokeVoidAsync("habitinatorRemoveSplash");
+            }
+            catch
+            {
+                // Ignore early JS interop failures
+            }
+
+            // 2. Initialize board visibility script and keyboard shortcuts
             try
             {
                 await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardVisibility.js");
@@ -169,7 +174,21 @@
             }
             catch
             {
-                // Ignore JS errors on prerendering or test hosts
+                // Ignore JS/shortcut initialization errors
+            }
+
+            // 3. Resolve theme and setup dark mode preference watcher
+            try
+            {
+                if (_mudThemeProvider != null)
+                {
+                    await ResolveThemeAsync();
+                    await _mudThemeProvider.WatchSystemDarkModeAsync(OnSystemPreferenceChanged);
+                }
+            }
+            catch
+            {
+                // Ignore theme watcher failures
             }
         }
     }

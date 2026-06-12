@@ -122,6 +122,21 @@
         }
     }
 
+    .board-shortcuts-hint {
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
+        opacity: 0.8;
+        font-size: 0.75rem;
+        margin-left: 0.25rem;
+    }
+
+    @@media (max-width: 959.98px) {
+        .board-shortcuts-hint {
+            display: none !important;
+        }
+    }
+
     /* Keyboard Shortcuts Overlay and Legend */
     .hab-shortcut-badge {
         opacity: 0;
@@ -372,6 +387,9 @@
                                OnClick="OpenArchivedItemsDialogAsync">
                         Archive
                     </MudButton>
+                    <span class="board-shortcuts-hint mud-text-secondary">
+                        Hold <kbd style="background: var(--mud-palette-background-grey); color: var(--mud-palette-text-primary); border: 1px solid var(--mud-palette-divider); border-radius: 4px; padding: 1px 4px; font-family: monospace; font-size: 0.65rem; box-shadow: 0 1px 0 rgba(0,0,0,0.15); margin: 0 2px;">Shift</kbd> for shortcuts
+                    </span>
                 </div>
             </div>
         </MudPaper>
@@ -1202,4 +1220,5 @@
         
         await LoadBoardAsync();
     }
+
 }

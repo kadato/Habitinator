@@ -41,132 +41,7 @@ window.HabitinatorKeyboardShortcuts = (function () {
 
   const availableKeys = ['A', 'C', 'E', 'I', 'J', 'K', 'L', 'M', 'N', 'Q', 'U', 'V', 'W', 'X', 'Y', 'Z'];
 
-  // Inject Styles dynamically
-  function injectStyles() {
-    if (document.getElementById('hab-shortcut-styles')) return;
-    const style = document.createElement('style');
-    style.id = 'hab-shortcut-styles';
-    style.textContent = `
-      .hab-shortcut-hint {
-        position: absolute;
-        z-index: 100000;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 4px 8px;
-        font-family: 'Plus Jakarta Sans', 'Outfit', system-ui, -apple-system, sans-serif;
-        font-size: 11px;
-        font-weight: 700;
-        line-height: 1;
-        color: #ffffff !important;
-        background: rgba(15, 23, 42, 0.85);
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 6px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-        pointer-events: none;
-        transform: translate(-50%, -50%) scale(0);
-        transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.18s ease;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-      .hab-shortcut-hint--visible {
-        transform: translate(-50%, -50%) scale(1);
-      }
-      .hab-shortcut-hint--dimmed {
-        opacity: 0.22;
-        transform: translate(-50%, -50%) scale(0.85);
-      }
-      .hab-shortcut-hint--matched {
-        background: rgba(16, 185, 129, 0.95) !important;
-        border-color: rgba(52, 211, 153, 0.6) !important;
-        box-shadow: 0 0 15px rgba(16, 185, 129, 0.6) !important;
-        transform: translate(-50%, -50%) scale(1.2) !important;
-      }
-      .hab-shortcut-hint--input {
-        border-color: rgba(56, 189, 248, 0.6);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), 0 0 8px rgba(56, 189, 248, 0.2);
-      }
-      .hab-shortcut-hint--nav {
-        border-color: rgba(139, 92, 246, 0.6);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), 0 0 8px rgba(139, 92, 246, 0.2);
-      }
-      .hab-shortcut-hint .key-char {
-        color: rgba(255, 255, 255, 0.5);
-      }
-      .hab-shortcut-hint .key-char--typed {
-        color: #38bdf8;
-        font-weight: 800;
-        text-shadow: 0 0 4px rgba(56, 189, 248, 0.6);
-      }
-      .hab-shortcut-hint .key-char--untyped {
-        color: #ffffff;
-      }
-      .hab-shortcut-hud {
-        position: fixed;
-        top: 24px;
-        left: 50%;
-        transform: translateX(-50%) translateY(-100px);
-        z-index: 100001;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 10px 22px;
-        font-family: 'Plus Jakarta Sans', 'Outfit', system-ui, -apple-system, sans-serif;
-        font-size: 13px;
-        font-weight: 600;
-        color: #f1f5f9;
-        background: rgba(15, 23, 42, 0.85);
-        backdrop-filter: blur(12px) saturate(180%);
-        -webkit-backdrop-filter: blur(12px) saturate(180%);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 9999px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-        pointer-events: none;
-        transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
-        opacity: 0;
-      }
-      .hab-shortcut-hud--visible {
-        transform: translateX(-50%) translateY(0);
-        opacity: 1;
-      }
-      .hab-shortcut-hud-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #34d399;
-        box-shadow: 0 0 8px #34d399;
-        animation: hab-pulse 1.5s infinite;
-      }
-      .hab-shortcut-hud-dot--warning {
-        background: #f59e0b;
-        box-shadow: 0 0 8px #f59e0b;
-      }
-      .hab-shortcut-hud-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(255, 255, 255, 0.12);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        border-radius: 4px;
-        padding: 2px 6px;
-        font-family: monospace;
-        font-size: 11px;
-        font-weight: 700;
-        color: #38bdf8;
-      }
-      @keyframes hab-pulse {
-        0% { transform: scale(0.95); opacity: 0.5; }
-        50% { transform: scale(1.15); opacity: 1; }
-        100% { transform: scale(0.95); opacity: 0.5; }
-      }
-      body.hab-shortcuts-modal-open .hab-shortcuts-legend {
-        display: none !important;
-      }
-    `;
-    document.head.appendChild(style);
-  }
+
 
   function updateShortcutOverlay() {
     if (isEditing()) {
@@ -174,7 +49,7 @@ window.HabitinatorKeyboardShortcuts = (function () {
       return;
     }
 
-    if (isAltHeld || isShiftHeld) {
+    if (isAltHeld || isShiftHeld || shortcutModeActive) {
       if (getActiveOpenContainer()) {
         document.body.classList.remove("hab-show-shortcuts");
         return;
@@ -483,7 +358,6 @@ window.HabitinatorKeyboardShortcuts = (function () {
 
   function activateShortcutMode() {
     if (shortcutModeActive || isEditing()) return;
-    injectStyles();
     shortcutModeActive = true;
     currentSequence = "";
 
@@ -502,6 +376,7 @@ window.HabitinatorKeyboardShortcuts = (function () {
   function deactivateShortcutMode() {
     if (!shortcutModeActive) return;
     shortcutModeActive = false;
+    shiftLock = false;
     currentSequence = "";
 
     if (overlayContainer) {
@@ -957,6 +832,16 @@ window.HabitinatorKeyboardShortcuts = (function () {
     stop: function () {
       boardHelper = null;
       deactivateShortcutMode();
+    },
+    toggle: function () {
+      if (shortcutModeActive) {
+        shiftLock = false;
+        deactivateShortcutMode();
+      } else {
+        shiftLock = true;
+        activateShortcutMode();
+      }
+      updateShortcutOverlay();
     }
   };
 })();

@@ -1,9 +1,0 @@
-﻿@using global::App.Web.Components.Pages
-@* Interactive-only (no prerender). IdentityRevalidatingAuthenticationStateProvider supplies auth on the circuit; prerender+interactive can still split DI scopes for DbContext. *@
-@rendermode @(new InteractiveServerRenderMode(false))
-<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(NotFound)">
-    <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)"/>
-        <FocusOnNavigate RouteData="routeData" Selector="h1"/>
-    </Found>
-</Router>

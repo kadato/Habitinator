@@ -30,11 +30,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents(options =>
-    {
-        options.DetailedErrors = builder.Environment.IsDevelopment()
-                                 || builder.Configuration.GetValue<bool>("DetailedErrors");
-    });
+    .AddInteractiveWebAssemblyComponents();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 builder.Services.AddMudServices(config =>
@@ -304,7 +300,8 @@ app.MapOpenApi();
 app.UseResponseCompression();
 app.MapStaticAssets();
 app.MapRazorComponents<App.Web.Components.App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveWebAssemblyRenderMode()
+    .AddAdditionalAssemblies(typeof(App.Web.Client._Imports).Assembly);
 
 app.MapHub<BoardHub>("/hubs/board").RequireRateLimiting("api");
 
@@ -442,6 +439,13 @@ app.MapPost("/api/auth/cookie-logout", async (SignInManager<ApplicationUser> sig
     .RequireAuthorization()
     .DisableAntiforgery();
 
+app.MapGet("/api/auth/status", (ClaimsPrincipal user) =>
+{
+    var isAuthenticated = user.Identity?.IsAuthenticated == true;
+    var email = user.FindFirst(ClaimTypes.Email)?.Value ?? user.Identity?.Name;
+    return Results.Ok(new { isAuthenticated, email });
+});
+
 app.MapPost("/api/account/change-password", async (
     ClaimsPrincipal user,
     UserManager<ApplicationUser> userManager,
@@ -536,6 +540,38 @@ activityApi.MapGet("day",
 
         return Results.Ok(await stats.GetActivityDayDetailAsync(userId, date, tag, cancellationToken));
     });
+
+activityApi.MapPost("log", async (
+    ClaimsPrincipal user,
+    BoardPersistenceService persistence,
+    DemoUserResolver demoUserResolver,
+    ActivityLogRequest body,
+    CancellationToken cancellationToken) =>
+{
+    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+    var resolvedUserId = await demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
+
+    if (body.EventType == ActivityEventType.TimerSession && body.DurationSeconds.HasValue)
+    {
+        await persistence.LogTimerSessionAsync(
+            resolvedUserId,
+            TimeSpan.FromSeconds(body.DurationSeconds.Value),
+            body.BoardItemId,
+            body.CustomLabel,
+            cancellationToken);
+    }
+    else
+    {
+        await persistence.LogActivityAsync(
+            resolvedUserId,
+            body.EventType,
+            body.BoardItemId,
+            body.DurationSeconds,
+            body.CustomLabel,
+            cancellationToken);
+    }
+    return Results.NoContent();
+});
 
 var settingsApi = app.MapGroup("/api/settings")
     .DisableAntiforgery()

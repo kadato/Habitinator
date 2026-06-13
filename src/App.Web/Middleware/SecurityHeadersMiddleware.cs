@@ -19,7 +19,7 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next)
             "img-src 'self' data: blob:; " +
             "font-src 'self' data:; " +
             "style-src 'self' 'unsafe-inline'; " +
-            "script-src 'self' 'unsafe-inline'; " +
+            "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; " +
             "connect-src 'self' https: wss: ws:; " +
             "object-src 'none'; " +
             "upgrade-insecure-requests";

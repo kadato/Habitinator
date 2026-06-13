@@ -1,3 +1,5 @@
+@using Microsoft.AspNetCore.Components.Web
+@using global::App.Web.Client
 <!DOCTYPE html>
 <html lang="en">
 
@@ -40,7 +42,7 @@
     <link rel="manifest" href="/manifest.webmanifest"/>
     @* Fallback until the interactive circuit updates head; must match Routes render mode. *@
     <title>@SeoDefaults.DefaultTitle</title>
-    <HeadOutlet @rendermode="@(new InteractiveServerRenderMode(prerender: false))"/>
+    <HeadOutlet @rendermode="@(new InteractiveWebAssemblyRenderMode(prerender: false))"/>
 </head>
 
 <body>
@@ -104,23 +106,8 @@
 <script src="@Assets["_content/App.Shared.RCL/js/boardSortable.js"]"></script>
 <script src="@Assets["_content/App.Shared.RCL/js/focusTimerAlert.js"]"></script>
 <script src="_content/App.Shared.RCL/js/userTimezone.js"></script>
-<script src="@Assets["_framework/blazor.web.js"]" autostart="false" crossorigin="anonymous"></script>
+<script src="@Assets["_framework/blazor.web.js"]" crossorigin="anonymous"></script>
 <script>
-    window.addEventListener('DOMContentLoaded', () => {
-        if (window.Blazor) {
-            window.Blazor.start({
-                circuit: {
-                    configureSignalR: function (builder) {
-                        builder.withUrl('_blazor', {
-                            skipNegotiation: true,
-                            transport: 1 // WebSockets
-                        });
-                    }
-                }
-            });
-        }
-    });
-
     window.habitinatorRemoveSplash = function () {
         const el = document.getElementById('habitinator-splash-screen');
         if (el) {

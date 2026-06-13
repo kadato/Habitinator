@@ -51,6 +51,8 @@ public static class MauiProgram
         var apiBase = MauiAppSettings.ResolveApiBaseUrl(builder.Configuration).TrimEnd('/') + "/";
         builder.Services.AddSingleton(_ => new MauiApiEndpointOptions(apiBase));
         builder.Services.AddSingleton<IAuthTokenStore, AuthTokenStore>();
+        builder.Services.AddSingleton<ILocalSettingsStore, MauiLocalSettingsStore>();
+        builder.Services.AddSingleton<IClientSessionProvider, MauiClientSessionProvider>();
         var localBoardDbPath = Path.Combine(FileSystem.AppDataDirectory, "habitinator-board-local.db");
         builder.Services.AddDbContextFactory<LocalBoardDbContext>(o =>
             o.UseSqlite($"Data Source={localBoardDbPath}"));
@@ -87,8 +89,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IClock, SystemClock>();
         builder.Services.AddSingleton<GlobalTimerService>();
         builder.Services.AddScoped<ITimerSessionLogService, TimerSessionLogService>();
-        builder.Services.AddSingleton<MauiActivityEventStore>();
-        builder.Services.AddSingleton<IUserActivityLogService, MauiUserActivityLogService>();
+        builder.Services.AddSingleton<IUserActivityLogService, RemoteUserActivityLogService>();
         builder.Services.AddScoped<IUndoService, UndoService>();
         builder.Services.AddScoped<IBoardDataService>(sp =>
         {
@@ -98,8 +99,8 @@ public static class MauiProgram
             var undoService = sp.GetRequiredService<IUndoService>();
             return new UndoableBoardDataService(loggingService, undoService);
         });
-        builder.Services.AddSingleton<IActivityStatisticsReader, MauiApiActivityStatisticsReader>();
-        builder.Services.AddSingleton<INotificationSettingsService, MauiApiNotificationSettingsService>();
+        builder.Services.AddSingleton<IActivityStatisticsReader, RemoteActivityStatisticsReader>();
+        builder.Services.AddSingleton<INotificationSettingsService, RemoteNotificationSettingsService>();
         builder.Services.AddSingleton<IUserPreferencesService, MauiApiUserPreferencesService>();
         builder.Services.AddSingleton<MauiDailyReminderService>();
         // Scoped: UserNotifier -> ISnackbar uses NavigationManager, which is only valid inside the Blazor WebView scope (not root/singleton).
@@ -111,7 +112,7 @@ public static class MauiProgram
         builder.Services.AddScoped<IUserTimeZoneService, UserTimeZoneService>();
         builder.Services.AddScoped<INotificationSettingsRules, NotificationSettingsRules>();
         builder.Services.AddSingleton<IUserDateFormatService, UserDateFormatService>();
-        builder.Services.AddSingleton<IAccountActionsService, MauiApiAccountActionsService>();
+        builder.Services.AddSingleton<IAccountActionsService, RemoteAccountActionsService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

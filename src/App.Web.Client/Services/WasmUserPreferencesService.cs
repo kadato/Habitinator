@@ -1,0 +1,103 @@
+using System;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.JSInterop;
+
+using App.Shared.RCL.Models;
+using App.Shared.RCL.Services;
+
+namespace App.Web.Client.Services;
+
+public sealed class WasmUserPreferencesService : IUserPreferencesService
+{
+    private const string PreferencesKey = "user_preferences_v1";
+
+    private static readonly JsonSerializerOptions Serializer = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
+    private readonly IHttpClientFactory _http;
+    private readonly IJSInProcessRuntime? _js;
+
+    public WasmUserPreferencesService(IHttpClientFactory http, IJSRuntime js)
+    {
+        _http = http;
+        _js = js as IJSInProcessRuntime;
+    }
+
+    private HttpClient Client => _http.CreateClient("api");
+
+    public event Action? Changed;
+
+    public async Task<UserPreferences> GetAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var res = await Client.GetAsync("api/settings/preferences", cancellationToken).ConfigureAwait(false);
+            if (res.IsSuccessStatusCode)
+            {
+                var remote = await res.Content.ReadFromJsonAsync<UserPreferences>(Serializer, cancellationToken).ConfigureAwait(false);
+                if (remote is not null)
+                {
+                    WriteLocal(remote);
+                    return remote;
+                }
+            }
+        }
+        catch
+        {
+            // Fallback to local
+        }
+        return ReadLocal();
+    }
+
+    public async Task SaveAsync(UserPreferences preferences, CancellationToken cancellationToken = default)
+    {
+        WriteLocal(preferences);
+
+        try
+        {
+            using var res = await Client.PutAsJsonAsync("api/settings/preferences", preferences, Serializer, cancellationToken).ConfigureAwait(false);
+            res.EnsureSuccessStatusCode();
+        }
+        catch
+        {
+            // Best-effort write to remote; local is updated
+        }
+        Changed?.Invoke();
+    }
+
+    private UserPreferences ReadLocal()
+    {
+        if (_js is null) return new UserPreferences();
+        try
+        {
+            var json = _js.Invoke<string?>("localStorage.getItem", PreferencesKey);
+            return UserPreferencesJson.DeserializeOrDefault(json);
+        }
+        catch
+        {
+            return new UserPreferences();
+        }
+    }
+
+    private void WriteLocal(UserPreferences preferences)
+    {
+        if (_js is null) return;
+        try
+        {
+            _js.InvokeVoid("localStorage.setItem", PreferencesKey, UserPreferencesJson.Serialize(preferences));
+        }
+        catch
+        {
+            // Ignore storage errors in browser
+        }
+    }
+}

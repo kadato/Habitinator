@@ -1,4 +1,5 @@
 window.habitinatorLoadScript = function (src) {
+    var resolvedSrc = (window.habitinatorAssets && window.habitinatorAssets[src]) || src;
     var existing = document.querySelector('script[data-habitinator-src="' + src + '"]');
     if (existing) {
         if (existing.getAttribute('data-habitinator-loaded') === '1') {
@@ -15,7 +16,7 @@ window.habitinatorLoadScript = function (src) {
 
     return new Promise(function (resolve, reject) {
         var s = document.createElement('script');
-        s.src = src;
+        s.src = resolvedSrc;
         s.async = true;
         s.setAttribute('data-habitinator-src', src);
         s.onload = function () {

@@ -43,26 +43,38 @@ public sealed class RemoteNotificationSettingsService : INotificationSettingsSer
 
     public async Task<NotificationSettings> GetAsync(CancellationToken cancellationToken = default)
     {
-        if (!_sessionProvider.IsLoggedIn) return ReadLocal();
+        var localSettings = ReadLocal();
 
-        try
+        if (!_sessionProvider.IsLoggedIn) return localSettings;
+
+        // Fetch remote settings in the background
+        _ = Task.Run(async () =>
         {
-            using var res = await Client.GetAsync("api/settings/notifications", cancellationToken)
-                .ConfigureAwait(false);
-            if (!res.IsSuccessStatusCode) return ReadLocal();
+            try
+            {
+                using var res = await Client.GetAsync("api/settings/notifications", cancellationToken).ConfigureAwait(false);
+                if (res.IsSuccessStatusCode)
+                {
+                    var remote = await res.Content.ReadFromJsonAsync<NotificationSettings>(Serializer, cancellationToken).ConfigureAwait(false);
+                    if (remote is not null)
+                    {
+                        var remoteJson = NotificationSettingsJson.Serialize(remote);
+                        var localJson = NotificationSettingsJson.Serialize(localSettings);
+                        if (remoteJson != localJson)
+                        {
+                            WriteLocal(remote);
+                            Changed?.Invoke();
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Best-effort remote sync, ignore errors in background task
+            }
+        }, cancellationToken);
 
-            var remote = await res.Content
-                .ReadFromJsonAsync<NotificationSettings>(Serializer, cancellationToken)
-                .ConfigureAwait(false);
-            if (remote is null) return ReadLocal();
-
-            WriteLocal(remote);
-            return remote;
-        }
-        catch (HttpRequestException)
-        {
-            return ReadLocal();
-        }
+        return localSettings;
     }
 
     public async Task SaveAsync(NotificationSettings settings, CancellationToken cancellationToken = default)

@@ -1,11 +1,15 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.Logging;
 using MudBlazor;
 using MudBlazor.Services;
 using App.Shared.RCL.Services;
 using App.Web.Client.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
+
+// Suppress verbose HttpClient logs (only show warnings/errors)
+builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
 
 // Register MudBlazor services
 builder.Services.AddMudServices(config =>

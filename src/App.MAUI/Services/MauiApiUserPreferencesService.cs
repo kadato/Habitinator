@@ -39,27 +39,39 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
 
     public async Task<UserPreferences> GetAsync(CancellationToken cancellationToken = default)
     {
-        await EnsureSessionReadyAsync(cancellationToken).ConfigureAwait(false);
-        if (!_apiSession.IsLoggedIn) return ReadLocal();
+        var localPrefs = ReadLocal();
 
-        try
+        // Fetch remote preferences in the background
+        _ = Task.Run(async () =>
         {
-            using var res = await Client.GetAsync("api/settings/preferences", cancellationToken)
-                .ConfigureAwait(false);
-            if (!res.IsSuccessStatusCode) return ReadLocal();
+            try
+            {
+                await EnsureSessionReadyAsync(cancellationToken).ConfigureAwait(false);
+                if (!_apiSession.IsLoggedIn) return;
 
-            var remote = await res.Content
-                .ReadFromJsonAsync<UserPreferences>(Serializer, cancellationToken)
-                .ConfigureAwait(false);
-            if (remote is null) return ReadLocal();
+                using var res = await Client.GetAsync("api/settings/preferences", cancellationToken).ConfigureAwait(false);
+                if (res.IsSuccessStatusCode)
+                {
+                    var remote = await res.Content.ReadFromJsonAsync<UserPreferences>(Serializer, cancellationToken).ConfigureAwait(false);
+                    if (remote is not null)
+                    {
+                        var remoteJson = UserPreferencesJson.Serialize(remote);
+                        var localJson = UserPreferencesJson.Serialize(localPrefs);
+                        if (remoteJson != localJson)
+                        {
+                            WriteLocal(remote);
+                            Changed?.Invoke();
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Best-effort remote sync, ignore errors in background task
+            }
+        }, cancellationToken);
 
-            WriteLocal(remote);
-            return remote;
-        }
-        catch (HttpRequestException)
-        {
-            return ReadLocal();
-        }
+        return localPrefs;
     }
 
     public async Task SaveAsync(UserPreferences preferences, CancellationToken cancellationToken = default)

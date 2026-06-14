@@ -1,13 +1,17 @@
-﻿window.HabitinatorSortable = {
+window.HabitinatorSortable = {
     instances: {},
     init: function (columnId, containerElement, dotNetRef) {
         if (this.instances[columnId]) {
+            if (this.instances[columnId].el === containerElement) {
+                this.instances[columnId].dotNetRef = dotNetRef;
+                return;
+            }
             this.instances[columnId].destroy();
         }
 
         if (!containerElement) return;
 
-        this.instances[columnId] = new Sortable(containerElement, {
+        var instance = new Sortable(containerElement, {
             animation: 150,
             ghostClass: 'board-sortable-ghost',
             chosenClass: 'board-sortable-chosen',
@@ -32,12 +36,19 @@
                     }
                 }
 
-                dotNetRef.invokeMethodAsync('OnJsReorderAsync', oldIndex, newIndex);
+                var currentDotNetRef = instance.dotNetRef;
+                if (currentDotNetRef) {
+                    currentDotNetRef.invokeMethodAsync('OnJsReorderAsync', oldIndex, newIndex);
+                }
             }
         });
+
+        instance.dotNetRef = dotNetRef;
+        this.instances[columnId] = instance;
     },
     destroy: function (columnId) {
         if (this.instances[columnId]) {
+            this.instances[columnId].dotNetRef = null;
             this.instances[columnId].destroy();
             delete this.instances[columnId];
         }

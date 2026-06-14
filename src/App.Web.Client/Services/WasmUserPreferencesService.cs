@@ -38,24 +38,36 @@ public sealed class WasmUserPreferencesService : IUserPreferencesService
 
     public async Task<UserPreferences> GetAsync(CancellationToken cancellationToken = default)
     {
-        try
+        var localPrefs = ReadLocal();
+
+        // Fetch remote preferences in the background
+        _ = Task.Run(async () =>
         {
-            using var res = await Client.GetAsync("api/settings/preferences", cancellationToken).ConfigureAwait(false);
-            if (res.IsSuccessStatusCode)
+            try
             {
-                var remote = await res.Content.ReadFromJsonAsync<UserPreferences>(Serializer, cancellationToken).ConfigureAwait(false);
-                if (remote is not null)
+                using var res = await Client.GetAsync("api/settings/preferences", cancellationToken).ConfigureAwait(false);
+                if (res.IsSuccessStatusCode)
                 {
-                    WriteLocal(remote);
-                    return remote;
+                    var remote = await res.Content.ReadFromJsonAsync<UserPreferences>(Serializer, cancellationToken).ConfigureAwait(false);
+                    if (remote is not null)
+                    {
+                        var remoteJson = UserPreferencesJson.Serialize(remote);
+                        var localJson = UserPreferencesJson.Serialize(localPrefs);
+                        if (remoteJson != localJson)
+                        {
+                            WriteLocal(remote);
+                            Changed?.Invoke();
+                        }
+                    }
                 }
             }
-        }
-        catch
-        {
-            // Fallback to local
-        }
-        return ReadLocal();
+            catch
+            {
+                // Best-effort remote sync, ignore errors in background task
+            }
+        }, cancellationToken);
+
+        return localPrefs;
     }
 
     public async Task SaveAsync(UserPreferences preferences, CancellationToken cancellationToken = default)

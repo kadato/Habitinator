@@ -8,6 +8,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <base href="/"/>
     <SiteHead/>
+    <script>
+        (function () {
+            try {
+                const stored = localStorage.getItem('user_preferences_v1');
+                let isDark = false;
+                if (stored) {
+                    const prefs = JSON.parse(stored);
+                    if (prefs && typeof prefs.theme === 'number') {
+                        if (prefs.theme === 2) {
+                            isDark = true;
+                        } else if (prefs.theme === 0) {
+                            isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                        }
+                    }
+                } else {
+                    isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                }
+
+                const root = document.documentElement;
+                if (isDark) {
+                    root.classList.add('dark-theme');
+                    root.classList.remove('light-theme');
+                    root.style.colorScheme = 'dark';
+                } else {
+                    root.classList.add('light-theme');
+                    root.classList.remove('dark-theme');
+                    root.style.colorScheme = 'light';
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        })();
+    </script>
     <link rel="preload" href="_content/App.Shared.RCL/fonts/PlusJakartaSans-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous"/>
     <link rel="preload" href="_content/App.Shared.RCL/fonts/PlusJakartaSans-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous"/>
     <link rel="preload" href="_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2" as="font" type="font/woff2" crossorigin="anonymous"/>
@@ -22,8 +55,11 @@
         html, body {
             background-color: var(--hab-bg-light);
         }
+        html.dark-theme, html.dark-theme body {
+            background-color: var(--hab-bg-dark);
+        }
         @@media (prefers-color-scheme: dark) {
-            html, body {
+            html:not(.light-theme), html:not(.light-theme) body {
                 background-color: var(--hab-bg-dark);
             }
         }
@@ -79,13 +115,20 @@
             100% { transform: rotate(360deg); }
         }
         @@media (prefers-color-scheme: dark) {
-            #habitinator-splash-screen {
+            html:not(.light-theme) #habitinator-splash-screen {
                 background-color: var(--hab-bg-dark) !important;
             }
-            .hab-splash-spinner {
+            html:not(.light-theme) .hab-splash-spinner {
                 border-color: color-mix(in srgb, var(--hab-bg-dark) 90%, var(--hab-bg-light)) !important;
                 border-top-color: #3b82f6 !important;
             }
+        }
+        html.dark-theme #habitinator-splash-screen {
+            background-color: var(--hab-bg-dark) !important;
+        }
+        html.dark-theme .hab-splash-spinner {
+            border-color: color-mix(in srgb, var(--hab-bg-dark) 90%, var(--hab-bg-light)) !important;
+            border-top-color: #3b82f6 !important;
         }
     </style>
     <div class="hab-splash-content">

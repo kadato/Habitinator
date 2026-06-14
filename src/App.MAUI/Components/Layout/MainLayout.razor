@@ -114,6 +114,8 @@
         Session.Changed += OnSessionChanged;
         PreferencesService.Changed += OnPreferencesChanged;
         Nav.LocationChanged += OnLocationChanged;
+
+        _isDarkMode = GetSystemDarkMode();
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
@@ -232,6 +234,10 @@
             {
                 _isDarkMode = await _mudThemeProvider.GetSystemDarkModeAsync();
             }
+            else
+            {
+                _isDarkMode = GetSystemDarkMode();
+            }
         }
         await SyncHtmlThemeAsync();
         await InvokeAsync(StateHasChanged);
@@ -291,11 +297,24 @@
         }
         else
         {
-            _ = LoadPreferencesAsync();
+            await LoadPreferencesAsync();
         }
 
         _sessionInitialized = true;
         await InvokeAsync(StateHasChanged);
+    }
+
+    private bool GetSystemDarkMode()
+    {
+        try
+        {
+            var systemTheme = Microsoft.Maui.Controls.Application.Current?.RequestedTheme;
+            return systemTheme == Microsoft.Maui.ApplicationModel.AppTheme.Dark;
+        }
+        catch
+        {
+            return true; // Default
+        }
     }
 
 }

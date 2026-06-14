@@ -560,7 +560,13 @@
             return;
         }
 
-        _selectedPeriodKey = string.IsNullOrEmpty(periodKey) ? DailyGraphPeriods.Rolling370Days : periodKey;
+        var newPeriod = string.IsNullOrEmpty(periodKey) ? DailyGraphPeriods.Rolling370Days : periodKey;
+        if (newPeriod == _selectedPeriodKey)
+        {
+            return;
+        }
+
+        _selectedPeriodKey = newPeriod;
         _periodBusy = true;
         _error = null;
         _dailyError = null;
@@ -630,7 +636,13 @@
             return;
         }
 
-        _selectedTags = values ?? Array.Empty<string>();
+        var newTags = values ?? Array.Empty<string>();
+        if (newTags.Count == _selectedTags.Count && newTags.All(_selectedTags.Contains))
+        {
+            return;
+        }
+
+        _selectedTags = newTags;
         _tagFilter = string.Join(",", _selectedTags);
         _periodBusy = true;
         _error = null;

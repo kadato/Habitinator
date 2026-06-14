@@ -33,6 +33,7 @@ public sealed class FocusTimerClientAlerts : IFocusTimerClientAlerts
 
         try
         {
+            await _js.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/focusTimerAlert.js").ConfigureAwait(false);
             await _js
                 .InvokeVoidAsync("habitinatorFocusTimeUp", title, body, playSound, showSystemNotification)
                 .ConfigureAwait(false);

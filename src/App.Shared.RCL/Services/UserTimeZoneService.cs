@@ -152,6 +152,8 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
 
         try
         {
+            await _jsRuntime.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/userTimezone.js").ConfigureAwait(false);
+
             // Get timezone ID from browser
             var timeZoneId = await _jsRuntime.InvokeAsync<string?>("habitinatorGetUserTimezone").ConfigureAwait(false);
 

@@ -1,6 +1,6 @@
 @using global::App.Web.Client.Pages
 @using global::App.Web.Client.Layout
-@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: true))
 <Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)"/>

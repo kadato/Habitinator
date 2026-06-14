@@ -46,7 +46,7 @@
     <link rel="preload" href="_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2" as="font" type="font/woff2" crossorigin="anonymous"/>
     <link rel="preload" href="@Assets["_framework/blazor.web.js"]" as="script" crossorigin="anonymous"/>
     <link rel="preload" href="@Assets["_content/MudBlazor/MudBlazor.min.js"]" as="script" crossorigin="anonymous"/>
-    <link rel="preload" href="lib/microsoft-signalr/signalr.min.js" as="script" crossorigin="anonymous"/>
+
     <style>
         :root {
             --hab-bg-light: #f8fafc;
@@ -78,7 +78,7 @@
     <link rel="manifest" href="/manifest.webmanifest"/>
     @* Fallback until the interactive circuit updates head; must match Routes render mode. *@
     <title>@SeoDefaults.DefaultTitle</title>
-    <HeadOutlet @rendermode="@(new InteractiveWebAssemblyRenderMode(prerender: false))"/>
+    <HeadOutlet @rendermode="@(new InteractiveWebAssemblyRenderMode(prerender: true))"/>
 </head>
 
 <body>
@@ -141,15 +141,9 @@
     <Routes/>
 </CascadingAuthenticationState>
 <ReconnectModal/>
-<script src="_content/App.Shared.RCL/js/scriptLoader.js"></script>
-<script src="lib/microsoft-signalr/signalr.min.js" crossorigin="anonymous"></script>
-<script src="js/boardHub.js"></script>
-<script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]" crossorigin="anonymous"></script>
-<script src="@Assets["_content/App.Shared.RCL/js/sortable.min.js"]"></script>
-<script src="@Assets["_content/App.Shared.RCL/js/boardSortable.js"]"></script>
-<script src="@Assets["_content/App.Shared.RCL/js/focusTimerAlert.js"]"></script>
-<script src="_content/App.Shared.RCL/js/userTimezone.js"></script>
-<script src="@Assets["_framework/blazor.web.js"]" crossorigin="anonymous"></script>
+<script src="_content/App.Shared.RCL/js/scriptLoader.js" defer></script>
+<script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]" defer crossorigin="anonymous"></script>
+<script src="@Assets["_framework/blazor.web.js"]" defer crossorigin="anonymous"></script>
 <script>
     window.habitinatorRemoveSplash = function () {
         const el = document.getElementById('habitinator-splash-screen');

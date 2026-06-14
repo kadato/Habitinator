@@ -438,6 +438,8 @@
     {
         try
         {
+            await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/sortable.min.js");
+            await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardSortable.js");
             _selfRef ??= DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("HabitinatorSortable.init", Section.ToString(), _containerRef, _selfRef);
         }
@@ -738,6 +740,7 @@
         }
         catch (JSDisconnectedException) { }
         catch (TaskCanceledException) { }
+        catch (InvalidOperationException) { }
         finally
         {
             _selfRef?.Dispose();

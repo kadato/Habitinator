@@ -6,7 +6,7 @@
 @using Microsoft.AspNetCore.WebUtilities
 @implements IDisposable
 @inherits LayoutComponentBase
-@rendermode @(new InteractiveWebAssemblyRenderMode(false))
+@rendermode @(new InteractiveWebAssemblyRenderMode(true))
 @inject IUserPreferencesService PreferencesService
 @inject IUserDateFormatService DateFormatService
 @inject IJSRuntime JS

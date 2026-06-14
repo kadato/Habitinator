@@ -15,6 +15,7 @@
 @inject IInitialBoardLoadGate InitialBoardLoad
 @inject ConflictResolutionService ConflictResolution
 @inject IUserNotifier Notifier
+@inject PersistentComponentState ApplicationState
 
 <style>
     /* Centered search and tags filter row on desktop */
@@ -650,6 +651,7 @@
     private DotNetObjectReference<BoardRemoteNotifyBridge>? _visibilityRef;
     private DotNetObjectReference<MainBoard>? _selfRef;
     private DateTimeOffset _lastLocalMutationTime = DateTimeOffset.MinValue;
+    private PersistingComponentStateSubscription _subscription;
 
     private IReadOnlyList<BoardItem> FilteredHabits => FilterItems(Habits);
     private IReadOnlyList<BoardItem> FilteredDailies => FilterItems(Dailies);
@@ -700,6 +702,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _subscription = ApplicationState.RegisterOnPersisting(PersistBoardData);
         await DateFormatService.InitializeAsync();
         BoardSync.Changed += OnBoardSyncStatusChanged;
         RemoteBoardRefresh.RegisterForRemoteRefresh(HandleRemoteBoardRefreshedAsync);
@@ -707,6 +710,17 @@
         UndoService.OnUndoPerformed += HandleUndoPerformed;
         ConflictResolution.ConflictDetected += HandleConflictDetected;
         await InitialLoadAsync();
+    }
+
+    private Task PersistBoardData()
+    {
+        var snapshot = new BoardSnapshot(
+            Habits ?? new List<BoardItem>(),
+            Dailies ?? new List<BoardItem>(),
+            Todos ?? new List<BoardItem>()
+        );
+        ApplicationState.PersistAsJson("board_snapshot", snapshot);
+        return Task.CompletedTask;
     }
 
     private void OnBoardSyncStatusChanged(object? sender, EventArgs e)
@@ -751,32 +765,42 @@
         UndoService.OnStateChanged -= HandleUndoStateChanged;
         UndoService.OnUndoPerformed -= HandleUndoPerformed;
         ConflictResolution.ConflictDetected -= HandleConflictDetected;
-        try
+        if (_boardClientScriptsStarted)
         {
-            await JS.InvokeVoidAsync("HabitinatorBoardVisibility.stop");
-        }
-        catch (JSDisconnectedException)
-        {
-        }
-        catch (TaskCanceledException)
-        {
-        }
+            try
+            {
+                await JS.InvokeVoidAsync("HabitinatorBoardVisibility.stop");
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+            catch (TaskCanceledException)
+            {
+            }
+            catch (InvalidOperationException)
+            {
+            }
 
-        try
-        {
-            await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.stop");
-        }
-        catch (JSDisconnectedException)
-        {
-        }
-        catch (TaskCanceledException)
-        {
+            try
+            {
+                await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.stop");
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+            catch (TaskCanceledException)
+            {
+            }
+            catch (InvalidOperationException)
+            {
+            }
         }
 
         _visibilityRef?.Dispose();
         _visibilityRef = null;
         _selfRef?.Dispose();
         _selfRef = null;
+        _subscription.Dispose();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -881,10 +905,19 @@
 
     private async Task LoadBoardAsync()
     {
-        var snapshot = await BoardDataService.GetSnapshotAsync();
-        Habits = snapshot.Habits.ToList();
-        Dailies = snapshot.Dailies.ToList();
-        Todos = snapshot.Todos.ToList();
+        if (ApplicationState.TryTakeFromJson<BoardSnapshot>("board_snapshot", out var restored) && restored is not null)
+        {
+            Habits = restored.Habits.ToList();
+            Dailies = restored.Dailies.ToList();
+            Todos = restored.Todos.ToList();
+        }
+        else
+        {
+            var snapshot = await BoardDataService.GetSnapshotAsync();
+            Habits = snapshot.Habits.ToList();
+            Dailies = snapshot.Dailies.ToList();
+            Todos = snapshot.Todos.ToList();
+        }
         PruneStaleFilterTags();
     }
 

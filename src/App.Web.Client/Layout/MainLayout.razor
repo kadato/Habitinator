@@ -128,7 +128,7 @@
         PreferencesService.Changed += OnPreferencesChanged;
         Nav.LocationChanged += OnLocationChanged;
 
-        _isDarkMode = GetSystemDarkMode();
+        _isDarkMode = GetInitialDarkMode();
 
         // Parse query parameter to avoid flash of wrong theme during loading
         var uri = Nav.ToAbsoluteUri(Nav.Uri);
@@ -157,14 +157,18 @@
     {
         if (firstRender)
         {
-            // 1. Immediately remove the splash screen so the user is never stuck
+            // 1. Resolve theme first so the application renders in the correct theme before revealing it
             try
             {
-                await JS.InvokeVoidAsync("habitinatorRemoveSplash");
+                if (_mudThemeProvider != null)
+                {
+                    await ResolveThemeAsync();
+                    await _mudThemeProvider.WatchSystemDarkModeAsync(OnSystemPreferenceChanged);
+                }
             }
             catch
             {
-                // Ignore early JS interop failures
+                // Ignore theme watcher failures
             }
 
             // 2. Initialize board visibility script and keyboard shortcuts
@@ -179,18 +183,14 @@
                 // Ignore JS/shortcut initialization errors
             }
 
-            // 3. Resolve theme and setup dark mode preference watcher
+            // 3. Finally, remove the loading bar
             try
             {
-                if (_mudThemeProvider != null)
-                {
-                    await ResolveThemeAsync();
-                    await _mudThemeProvider.WatchSystemDarkModeAsync(OnSystemPreferenceChanged);
-                }
+                await JS.InvokeVoidAsync("habitinatorRemoveLoadingBar");
             }
             catch
             {
-                // Ignore theme watcher failures
+                // Ignore early JS interop failures
             }
         }
     }
@@ -304,6 +304,26 @@
         var full = GetFullIdentity(auth);
         var at = full.IndexOf('@');
         return at > 0 ? full[..at] : full;
+    }
+
+    private bool GetInitialDarkMode()
+    {
+        if (JS is Microsoft.JSInterop.IJSInProcessRuntime jsInProcess)
+        {
+            try
+            {
+                var isDarkClass = jsInProcess.Invoke<bool>("eval", "document.documentElement.classList.contains('dark-theme')");
+                if (isDarkClass) return true;
+
+                var isLightClass = jsInProcess.Invoke<bool>("eval", "document.documentElement.classList.contains('light-theme')");
+                if (isLightClass) return false;
+            }
+            catch
+            {
+                // Ignore and fall back
+            }
+        }
+        return GetSystemDarkMode();
     }
 
     private bool GetSystemDarkMode()

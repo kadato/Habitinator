@@ -3,6 +3,7 @@ using App.Shared.RCL.Services;
 using App.Web.Data;
 
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -14,6 +15,7 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
     private readonly IBoardChangeNotifier _boardChangeNotifier;
     private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
     private readonly DemoUserResolver _demoUserResolver;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<WebUserPreferencesService> _logger;
     private Guid? _cachedUserId;
     private UserPreferences? _cachedPreferences;
@@ -23,12 +25,14 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
         DemoUserResolver demoUserResolver,
         IDbContextFactory<ApplicationDbContext> dbFactory,
         IBoardChangeNotifier boardChangeNotifier,
+        IHttpContextAccessor httpContextAccessor,
         ILogger<WebUserPreferencesService> logger)
     {
         _authenticationStateProvider = authenticationStateProvider;
         _demoUserResolver = demoUserResolver;
         _dbFactory = dbFactory;
         _boardChangeNotifier = boardChangeNotifier;
+        _httpContextAccessor = httpContextAccessor;
         _logger = logger;
     }
 
@@ -44,7 +48,9 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
             {
                 _cachedUserId = null;
                 _cachedPreferences = null;
-                return UserPreferences.CreateDefault();
+                var guestPrefs = UserPreferences.CreateDefault();
+                ApplyThemeFromCookie(guestPrefs);
+                return guestPrefs;
             }
 
             var userId = await _demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
@@ -56,6 +62,12 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
             var prefs = row is null
                 ? UserPreferences.CreateDefault()
                 : UserPreferencesJson.DeserializeOrDefault(row.UserPreferencesJson);
+
+            if (prefs.Theme == AppTheme.System)
+            {
+                ApplyThemeFromCookie(prefs);
+            }
+
             _cachedUserId = userId;
             _cachedPreferences = prefs;
             return prefs;
@@ -63,7 +75,32 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Could not load user preferences; using defaults.");
-            return UserPreferences.CreateDefault();
+            var fallbackPrefs = UserPreferences.CreateDefault();
+            ApplyThemeFromCookie(fallbackPrefs);
+            return fallbackPrefs;
+        }
+    }
+
+    private void ApplyThemeFromCookie(UserPreferences prefs)
+    {
+        try
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext is not null && httpContext.Request.Cookies.TryGetValue("habitinator_theme", out var themeCookie))
+            {
+                if (themeCookie == "light")
+                {
+                    prefs.Theme = AppTheme.Light;
+                }
+                else if (themeCookie == "dark")
+                {
+                    prefs.Theme = AppTheme.Dark;
+                }
+            }
+        }
+        catch
+        {
+            // Ignore context or cookie reading issues during prerendering/tasks
         }
     }
 

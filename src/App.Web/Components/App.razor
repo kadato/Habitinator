@@ -1,7 +1,7 @@
 @using Microsoft.AspNetCore.Components.Web
 @using global::App.Web.Client
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="@GetInitialThemeClass()">
 
 <head>
     <meta charset="utf-8"/>
@@ -11,18 +11,34 @@
     <script>
         (function () {
             try {
-                const stored = localStorage.getItem('user_preferences_v1');
+                const cookies = document.cookie.split('; ');
+                const themeCookie = cookies.find(row => row.startsWith('habitinator_theme='));
                 let isDark = false;
-                if (stored) {
-                    const prefs = JSON.parse(stored);
-                    if (prefs && typeof prefs.theme === 'number') {
-                        if (prefs.theme === 2) {
-                            isDark = true;
-                        } else if (prefs.theme === 0) {
-                            isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                let hasTheme = false;
+
+                if (themeCookie) {
+                    const themeVal = themeCookie.split('=')[1];
+                    isDark = (themeVal === 'dark');
+                    hasTheme = true;
+                }
+
+                if (!hasTheme) {
+                    const stored = localStorage.getItem('user_preferences_v1');
+                    if (stored) {
+                        const prefs = JSON.parse(stored);
+                        if (prefs && typeof prefs.theme === 'number') {
+                            if (prefs.theme === 2) {
+                                isDark = true;
+                                hasTheme = true;
+                            } else if (prefs.theme === 1) {
+                                isDark = false;
+                                hasTheme = true;
+                            }
                         }
                     }
-                } else {
+                }
+
+                if (!hasTheme) {
                     isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                 }
 
@@ -36,6 +52,9 @@
                     root.classList.remove('dark-theme');
                     root.style.colorScheme = 'light';
                 }
+
+                // Sync the cookie so the server knows it on next loads
+                document.cookie = "habitinator_theme=" + (isDark ? "dark" : "light") + "; path=/; max-age=31536000; SameSite=Lax";
             } catch (e) {
                 console.error(e);
             }
@@ -76,6 +95,24 @@
             html:not(.light-theme), html:not(.light-theme) body {
                 background-color: var(--hab-bg-dark);
             }
+        }
+
+        /* Top Loading Bar */
+        #habitinator-loading-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 50%, #3b82f6 100%);
+            background-size: 200% 100%;
+            animation: habLoading 1.5s infinite linear;
+            z-index: 20000;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+        @@keyframes habLoading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
         }
     </style>
     <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.css"]"/>
@@ -121,60 +158,7 @@
 </head>
 
 <body>
-<div id="habitinator-splash-screen" style="position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; background-color: var(--hab-bg-light); transition: opacity 0.2s ease, visibility 0.2s ease;">
-    <style>
-        .hab-splash-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1.25rem;
-        }
-        .hab-splash-logo {
-            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-            font-size: 2.25rem;
-            font-weight: 700;
-            color: #3b82f6;
-            letter-spacing: -0.02em;
-            animation: habPulse 1.8s infinite ease-in-out;
-        }
-        .hab-splash-spinner {
-            width: 2.25rem;
-            height: 2.25rem;
-            border: 3px solid color-mix(in srgb, var(--hab-bg-light) 90%, var(--hab-bg-dark));
-            border-top-color: #3b82f6;
-            border-radius: 50%;
-            animation: habSpin 0.8s linear infinite;
-        }
-        @@keyframes habPulse {
-            0%, 100% { opacity: 0.6; transform: scale(0.97); }
-            50% { opacity: 1; transform: scale(1.0); }
-        }
-        @@keyframes habSpin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        @@media (prefers-color-scheme: dark) {
-            html:not(.light-theme) #habitinator-splash-screen {
-                background-color: var(--hab-bg-dark) !important;
-            }
-            html:not(.light-theme) .hab-splash-spinner {
-                border-color: color-mix(in srgb, var(--hab-bg-dark) 90%, var(--hab-bg-light)) !important;
-                border-top-color: #3b82f6 !important;
-            }
-        }
-        html.dark-theme #habitinator-splash-screen {
-            background-color: var(--hab-bg-dark) !important;
-        }
-        html.dark-theme .hab-splash-spinner {
-            border-color: color-mix(in srgb, var(--hab-bg-dark) 90%, var(--hab-bg-light)) !important;
-            border-top-color: #3b82f6 !important;
-        }
-    </style>
-    <div class="hab-splash-content">
-        <div class="hab-splash-logo">Habitinator</div>
-        <div class="hab-splash-spinner"></div>
-    </div>
-</div>
+<div id="habitinator-loading-bar"></div>
 
 <CascadingAuthenticationState>
     <Routes/>
@@ -184,14 +168,29 @@
 <script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]" defer crossorigin="anonymous"></script>
 <script src="@Assets["_framework/blazor.web.js"]" defer crossorigin="anonymous"></script>
 <script>
-    window.habitinatorRemoveSplash = function () {
-        const el = document.getElementById('habitinator-splash-screen');
+    window.habitinatorRemoveLoadingBar = function () {
+        const el = document.getElementById('habitinator-loading-bar');
         if (el) {
             el.style.opacity = '0';
+            el.style.visibility = 'hidden';
             setTimeout(() => el.remove(), 250);
         }
     };
 </script>
 </body>
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private string GetInitialThemeClass()
+    {
+        if (HttpContext is not null && HttpContext.Request.Cookies.TryGetValue("habitinator_theme", out var theme))
+        {
+            return theme == "dark" ? "dark-theme" : "light-theme";
+        }
+        return "";
+    }
+}
 
 </html>

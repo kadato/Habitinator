@@ -28,6 +28,8 @@ window.habitinatorSetTheme = function (theme) {
                 root.classList.remove("dark-theme");
                 root.style.colorScheme = "light";
             }
+            // Set cookie so the server knows the theme on next load
+            document.cookie = "habitinator_theme=" + theme + "; path=/; max-age=31536000; SameSite=Lax";
         };
 
         if (document.startViewTransition && window.matchMedia('(prefers-reduced-motion: no-preference)').matches) {

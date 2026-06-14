@@ -128,6 +128,8 @@
         PreferencesService.Changed += OnPreferencesChanged;
         Nav.LocationChanged += OnLocationChanged;
 
+        _isDarkMode = GetSystemDarkMode();
+
         // Parse query parameter to avoid flash of wrong theme during loading
         var uri = Nav.ToAbsoluteUri(Nav.Uri);
         if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("theme", out var themeValues))
@@ -257,6 +259,10 @@
             {
                 _isDarkMode = await _mudThemeProvider.GetSystemDarkModeAsync();
             }
+            else
+            {
+                _isDarkMode = GetSystemDarkMode();
+            }
         }
         await SyncHtmlThemeAsync();
         await InvokeAsync(StateHasChanged);
@@ -298,6 +304,22 @@
         var full = GetFullIdentity(auth);
         var at = full.IndexOf('@');
         return at > 0 ? full[..at] : full;
+    }
+
+    private bool GetSystemDarkMode()
+    {
+        if (JS is Microsoft.JSInterop.IJSInProcessRuntime jsInProcess)
+        {
+            try
+            {
+                return jsInProcess.Invoke<bool>("eval", "window.matchMedia('(prefers-color-scheme: dark)').matches");
+            }
+            catch
+            {
+                // Ignore and fall back
+            }
+        }
+        return true; // Default
     }
 
 }

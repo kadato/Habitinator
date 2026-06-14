@@ -173,80 +173,6 @@
     }
 
 
-
-    /* Floating Shortcuts Legend at the bottom of the screen */
-    .hab-shortcuts-legend {
-        position: fixed;
-        bottom: 1.5rem;
-        left: 50%;
-        transform: translateX(-50%) translateY(20px);
-        background: rgba(15, 23, 42, 0.95);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 1rem 1.25rem;
-        color: #f8fafc;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-        z-index: 9999;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
-                    visibility 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
-                    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        pointer-events: none;
-        width: 90%;
-        max-width: 480px;
-    }
-
-    body.hab-show-shortcuts .hab-shortcuts-legend {
-        opacity: 1;
-        visibility: visible;
-        transform: translateX(-50%) translateY(0);
-    }
-
-    .hab-shortcuts-legend-header {
-        font-size: 0.85rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #94a3b8;
-        margin-bottom: 0.75rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        padding-bottom: 0.5rem;
-    }
-
-    .hab-shortcuts-legend-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 0.5rem;
-    }
-
-    .hab-shortcuts-legend-item {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        font-size: 0.8rem;
-    }
-
-    .hab-shortcuts-legend-item span:last-child {
-        color: #cbd5e1;
-    }
-
-    .hab-kbd-badge {
-        background: rgba(255, 255, 255, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.25);
-        border-radius: 4px;
-        padding: 1px 5px;
-        font-size: 0.7rem;
-        font-family: monospace;
-        font-weight: 600;
-        color: #fff;
-        box-shadow: inset 0 -1px 0 rgba(0,0,0,0.25);
-    }
 </style>
 
 <MudStack Class="board-shell w-100" Spacing="1">
@@ -389,7 +315,7 @@
                         Archive
                     </MudButton>
                     <span class="board-shortcuts-hint mud-text-secondary">
-                        Hold <kbd style="background: var(--mud-palette-background-grey); color: var(--mud-palette-text-primary); border: 1px solid var(--mud-palette-divider); border-radius: 4px; padding: 1px 4px; font-family: monospace; font-size: 0.65rem; box-shadow: 0 1px 0 rgba(0,0,0,0.15); margin: 0 2px;">Shift</kbd> for shortcuts
+                        Press <kbd style="background: var(--mud-palette-background-grey); color: var(--mud-palette-text-primary); border: 1px solid var(--mud-palette-divider); border-radius: 4px; padding: 1px 4px; font-family: monospace; font-size: 0.65rem; box-shadow: 0 1px 0 rgba(0,0,0,0.15); margin: 0 2px;">Shift</kbd> to toggle shortcuts
                     </span>
                 </div>
             </div>
@@ -506,31 +432,6 @@
     {
         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@LastEvent</MudAlert>
     }
-
-    <!-- Keyboard Shortcuts Legend Overlay (Shift/Alt Held) -->
-    <div class="hab-shortcuts-legend" aria-hidden="true">
-        <div class="hab-shortcuts-legend-header">
-            <span class="hab-kbd-badge">Shift</span> or <span class="hab-kbd-badge">Alt</span> Keyboard Shortcuts
-        </div>
-        <div class="hab-shortcuts-legend-grid">
-            <div class="hab-shortcuts-legend-item">
-                <span class="hab-kbd-badge">Double Shift</span>
-                <span>Toggle Shortcut Navigation Mode</span>
-            </div>
-            <div class="hab-shortcuts-legend-item">
-                <span class="hab-kbd-badge">Ctrl</span> + <span class="hab-kbd-badge">Z</span>
-                <span>Undo Last Action</span>
-            </div>
-            <div class="hab-shortcuts-legend-item">
-                <span class="hab-kbd-badge">↑ / ↓</span> or <span class="hab-kbd-badge">k / j</span>
-                <span>Scroll Up / Down</span>
-            </div>
-            <div class="hab-shortcuts-legend-item">
-                <span class="hab-kbd-badge">Space</span> / <span class="hab-kbd-badge">Shift+Space</span>
-                <span>Scroll Page Down / Up</span>
-            </div>
-        </div>
-    </div>
 </MudStack>
 
 @using App.Shared.RCL.Components.Dialogs

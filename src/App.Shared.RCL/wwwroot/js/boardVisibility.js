@@ -33,11 +33,9 @@ window.HabitinatorKeyboardShortcuts = (function () {
   // Shift Shortcut Overlay State
   let shortcutModeActive = false;
   let shiftLock = false;
-  let lastShiftPressTime = 0;
   let currentSequence = "";
   let targets = [];
   let overlayContainer = null;
-  let hudElement = null;
 
   const availableKeys = ['A', 'C', 'E', 'I', 'J', 'K', 'L', 'M', 'N', 'Q', 'U', 'V', 'W', 'X', 'Y', 'Z'];
 
@@ -370,7 +368,6 @@ window.HabitinatorKeyboardShortcuts = (function () {
 
     buildShortcutTargets();
     renderOverlays();
-    showHUD();
   }
 
   function deactivateShortcutMode() {
@@ -384,10 +381,6 @@ window.HabitinatorKeyboardShortcuts = (function () {
       overlayContainer = null;
     }
 
-    if (hudElement) {
-      hudElement.remove();
-      hudElement = null;
-    }
 
     targets = [];
     document.body.classList.remove("hab-show-shortcuts");
@@ -436,44 +429,6 @@ window.HabitinatorKeyboardShortcuts = (function () {
     });
   }
 
-  function showHUD() {
-    if (hudElement) hudElement.remove();
-    hudElement = document.createElement('div');
-    hudElement.className = 'hab-shortcut-hud';
-    
-    const dot = document.createElement('div');
-    dot.className = 'hab-shortcut-hud-dot';
-    hudElement.appendChild(dot);
-
-    const text = document.createElement('span');
-    text.className = 'hud-text';
-    text.textContent = shiftLock ? 'Shortcut Mode [Locked]' : 'Shortcut Mode Active';
-    hudElement.appendChild(text);
-
-    const keyBadge = document.createElement('div');
-    keyBadge.className = 'hab-shortcut-hud-badge';
-    keyBadge.style.display = 'none';
-    hudElement.appendChild(keyBadge);
-
-    document.body.appendChild(hudElement);
-
-    setTimeout(() => hudElement.classList.add('hab-shortcut-hud--visible'), 10);
-  }
-
-  function updateHUD(seq) {
-    if (!hudElement) return;
-    const keyBadge = hudElement.querySelector('.hab-shortcut-hud-badge');
-    const dot = hudElement.querySelector('.hab-shortcut-hud-dot');
-    
-    if (seq) {
-      keyBadge.style.display = 'inline-flex';
-      keyBadge.textContent = seq;
-      dot.classList.add('hab-shortcut-hud-dot--warning');
-    } else {
-      keyBadge.style.display = 'none';
-      dot.classList.remove('hab-shortcut-hud-dot--warning');
-    }
-  }
 
   function handleKeystrokeInShortcutMode(e) {
     const key = e.key;
@@ -498,22 +453,10 @@ window.HabitinatorKeyboardShortcuts = (function () {
     const matching = targets.filter(t => t.shortcut.startsWith(newSeq));
 
     if (matching.length === 0) {
-      // No matches, play a brief warning on HUD and keep the previous sequence
-      if (hudElement) {
-        const text = hudElement.querySelector('.hud-text');
-        const oldText = text.textContent;
-        text.textContent = `No match for: ${char}`;
-        text.style.color = '#ef4444';
-        setTimeout(() => {
-          text.textContent = oldText;
-          text.style.color = '';
-        }, 800);
-      }
       return;
     }
 
     currentSequence = newSeq;
-    updateHUD(currentSequence);
 
     // Update badges
     const badges = Array.from(overlayContainer.querySelectorAll('.hab-shortcut-hint'));
@@ -685,24 +628,15 @@ window.HabitinatorKeyboardShortcuts = (function () {
       }
     }
 
-    // Double-tap Shift toggling
+    // Shift key toggle
     if (e.key === 'Shift') {
+      if (isEdit) return;
       if (!e.repeat) {
-        const now = Date.now();
-        if (now - lastShiftPressTime < 300) {
-          shiftLock = !shiftLock;
-          lastShiftPressTime = 0; // reset
-          if (shiftLock) {
-            activateShortcutMode();
-          } else {
-            deactivateShortcutMode();
-          }
+        shiftLock = !shiftLock;
+        if (shiftLock) {
+          activateShortcutMode();
         } else {
-          lastShiftPressTime = now;
-          if (!shiftLock) {
-            isShiftHeld = true;
-            activateShortcutMode();
-          }
+          deactivateShortcutMode();
         }
         updateShortcutOverlay();
       }

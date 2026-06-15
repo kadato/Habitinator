@@ -284,7 +284,7 @@
     private bool _checklistOpen = true;
     private int _streak;
     private bool _advancedOpen;
-    private bool _saving;
+    private bool _saving => false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -535,87 +535,39 @@
             return;
         }
 
-        _saving = true;
-        try
-        {
-            var tagsPayload = string.IsNullOrWhiteSpace(SerializeTags()) ? null : SerializeTags();
-            var checklistPayload = DailyChecklistJson.Serialize(ToChecklistModel());
-            var start = _startDate.Value.Date;
-            var updated = await BoardData.UpdateDailyAsync(
-                Item.Id,
-                _title.Trim(),
-                string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim(),
-                tagsPayload,
-                start,
-                _repeat,
-                _repeatInterval,
-                checklistPayload,
-                _streak);
-
-            if (updated is null)
-            {
-                await Notifier.NotifyAsync("Could not save this daily.", Severity.Error);
-                return;
-            }
-
-            MudDialog.Close(DialogResult.Ok(true));
-        }
-        catch (Exception)
-        {
-            await Notifier.NotifyAsync("Something went wrong. Check your connection and try again.", Severity.Error);
-        }
-        finally
-        {
-            _saving = false;
-        }
+        var tagsPayload = string.IsNullOrWhiteSpace(SerializeTags()) ? null : SerializeTags();
+        var checklistPayload = DailyChecklistJson.Serialize(ToChecklistModel());
+        var start = _startDate.Value.Date;
+        var result = new EditDailyDialogResult(
+            EditDialogAction.Save,
+            _title.Trim(),
+            string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim(),
+            tagsPayload,
+            start,
+            _repeat,
+            _repeatInterval,
+            checklistPayload,
+            _streak
+        );
+        MudDialog.Close(DialogResult.Ok(result));
     }
 
-    private async Task ArchiveAsync()
+    private void ArchiveAsync()
     {
-        _saving = true;
-        try
-        {
-            var archived = await BoardData.ArchiveItemAsync(BoardSection.Daily, Item.Id);
-            if (archived is null)
-            {
-                await Notifier.NotifyAsync("Could not archive this daily.", Severity.Error);
-                return;
-            }
-
-            MudDialog.Close(DialogResult.Ok(true));
-        }
-        catch (Exception)
-        {
-            await Notifier.NotifyAsync("Something went wrong. Check your connection and try again.", Severity.Error);
-        }
-        finally
-        {
-            _saving = false;
-        }
+        var result = new EditDailyDialogResult(
+            EditDialogAction.Archive,
+            "", null, null, default, default, 0, "", 0
+        );
+        MudDialog.Close(DialogResult.Ok(result));
     }
 
-    private async Task DeleteAsync()
+    private void DeleteAsync()
     {
-        _saving = true;
-        try
-        {
-            var removed = await BoardData.DeleteItemAsync(BoardSection.Daily, Item.Id);
-            if (!removed)
-            {
-                await Notifier.NotifyAsync("Could not delete this daily.", Severity.Error);
-                return;
-            }
-
-            MudDialog.Close(DialogResult.Ok(true));
-        }
-        catch (Exception)
-        {
-            await Notifier.NotifyAsync("Something went wrong. Check your connection and try again.", Severity.Error);
-        }
-        finally
-        {
-            _saving = false;
-        }
+        var result = new EditDailyDialogResult(
+            EditDialogAction.Delete,
+            "", null, null, default, default, 0, "", 0
+        );
+        MudDialog.Close(DialogResult.Ok(result));
     }
 
 }

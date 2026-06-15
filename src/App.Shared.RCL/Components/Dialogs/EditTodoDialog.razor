@@ -228,7 +228,7 @@
     private List<ChecklistRow> _checklistRows = [];
     private bool _checklistOpen = true;
     private DateTime? _dueDate;
-    private bool _saving;
+    private bool _saving => false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -446,84 +446,36 @@
             return;
         }
 
-        _saving = true;
-        try
-        {
-            var tagsPayload = string.IsNullOrWhiteSpace(SerializeTags()) ? null : SerializeTags();
-            var checklistPayload = DailyChecklistJson.Serialize(ToChecklistModel());
-            DateTime? due = _dueDate is { } d ? d.Date : null;
-            var updated = await BoardData.UpdateTodoAsync(
-                Item.Id,
-                _title.Trim(),
-                string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim(),
-                tagsPayload,
-                checklistPayload,
-                due);
-
-            if (updated is null)
-            {
-                await Notifier.NotifyAsync("Could not save this to-do.", Severity.Error);
-                return;
-            }
-
-            MudDialog.Close(DialogResult.Ok(true));
-        }
-        catch (Exception)
-        {
-            await Notifier.NotifyAsync("Something went wrong. Check your connection and try again.", Severity.Error);
-        }
-        finally
-        {
-            _saving = false;
-        }
+        var tagsPayload = string.IsNullOrWhiteSpace(SerializeTags()) ? null : SerializeTags();
+        var checklistPayload = DailyChecklistJson.Serialize(ToChecklistModel());
+        DateTime? due = _dueDate is { } d ? d.Date : null;
+        var result = new EditTodoDialogResult(
+            EditDialogAction.Save,
+            _title.Trim(),
+            string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim(),
+            tagsPayload,
+            checklistPayload,
+            due
+        );
+        MudDialog.Close(DialogResult.Ok(result));
     }
 
-    private async Task ArchiveAsync()
+    private void ArchiveAsync()
     {
-        _saving = true;
-        try
-        {
-            var archived = await BoardData.ArchiveItemAsync(BoardSection.Todo, Item.Id);
-            if (archived is null)
-            {
-                await Notifier.NotifyAsync("Could not archive this to-do.", Severity.Error);
-                return;
-            }
-
-            MudDialog.Close(DialogResult.Ok(true));
-        }
-        catch (Exception)
-        {
-            await Notifier.NotifyAsync("Something went wrong. Check your connection and try again.", Severity.Error);
-        }
-        finally
-        {
-            _saving = false;
-        }
+        var result = new EditTodoDialogResult(
+            EditDialogAction.Archive,
+            "", null, null, "", null
+        );
+        MudDialog.Close(DialogResult.Ok(result));
     }
 
-    private async Task DeleteAsync()
+    private void DeleteAsync()
     {
-        _saving = true;
-        try
-        {
-            var removed = await BoardData.DeleteItemAsync(BoardSection.Todo, Item.Id);
-            if (!removed)
-            {
-                await Notifier.NotifyAsync("Could not delete this to-do.", Severity.Error);
-                return;
-            }
-
-            MudDialog.Close(DialogResult.Ok(true));
-        }
-        catch (Exception)
-        {
-            await Notifier.NotifyAsync("Something went wrong. Check your connection and try again.", Severity.Error);
-        }
-        finally
-        {
-            _saving = false;
-        }
+        var result = new EditTodoDialogResult(
+            EditDialogAction.Delete,
+            "", null, null, "", null
+        );
+        MudDialog.Close(DialogResult.Ok(result));
     }
 
 }

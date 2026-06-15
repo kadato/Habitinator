@@ -1034,9 +1034,81 @@
         var parameters = new DialogParameters<EditHabitDialog> { { x => x.Item, item } };
         var dialog = await DialogService.ShowAsync<EditHabitDialog>(string.Empty, parameters, options);
         var result = await dialog.Result;
-        if (result is { Canceled: false })
+        if (result is { Canceled: false, Data: EditHabitDialogResult r })
         {
-            await OnChanged.InvokeAsync();
+            if (r.Action == EditDialogAction.Save)
+            {
+                var optimistic = item with {
+                    Title = r.Title,
+                    Notes = r.Notes,
+                    Tags = r.Tags,
+                    TrackPlus = r.TrackPlus,
+                    TrackMinus = r.TrackMinus,
+                    ResetPeriod = r.ResetPeriod,
+                    Counter = r.Counter,
+                    NegativeCounter = r.NegativeCounter,
+                    ChecklistJson = r.ChecklistJson
+                };
+                _optimisticOverrides[item.Id] = optimistic;
+                _needRefresh = true;
+                StateHasChanged();
+
+                _ = Task.Run(async () =>
+                {
+                    var ok = await TryMutateAsync(() => BoardData.UpdateHabitAsync(
+                        item.Id,
+                        r.Title,
+                        r.Notes,
+                        r.Tags,
+                        r.TrackPlus,
+                        r.TrackMinus,
+                        r.ResetPeriod,
+                        r.Counter,
+                        r.NegativeCounter,
+                        r.ChecklistJson
+                    ));
+                    if (!ok)
+                    {
+                        _optimisticOverrides.Remove(item.Id);
+                        _needRefresh = true;
+                        await InvokeAsync(StateHasChanged);
+                    }
+                });
+            }
+            else if (r.Action == EditDialogAction.Archive)
+            {
+                _optimisticDeletions.Add(item.Id);
+                _needRefresh = true;
+                StateHasChanged();
+
+                _ = Task.Run(async () =>
+                {
+                    var ok = await TryMutateAsync(() => BoardData.ArchiveItemAsync(BoardSection.Habit, item.Id));
+                    if (!ok)
+                    {
+                        _optimisticDeletions.Remove(item.Id);
+                        _needRefresh = true;
+                        await InvokeAsync(StateHasChanged);
+                    }
+                });
+            }
+            else if (r.Action == EditDialogAction.Delete)
+            {
+                _optimisticDeletions.Add(item.Id);
+                _needRefresh = true;
+                StateHasChanged();
+
+                _ = Task.Run(async () =>
+                {
+                    var ok = await TryMutateAsync(() => BoardData.DeleteItemAsync(BoardSection.Habit, item.Id));
+                    if (!ok)
+                    {
+                        _optimisticDeletions.Remove(item.Id);
+                        _needRefresh = true;
+                        await InvokeAsync(StateHasChanged);
+                    }
+                });
+            }
         }
     }
 
@@ -1053,9 +1125,79 @@
         var parameters = new DialogParameters<EditDailyDialog> { { x => x.Item, item } };
         var dialog = await DialogService.ShowAsync<EditDailyDialog>(string.Empty, parameters, options);
         var result = await dialog.Result;
-        if (result is { Canceled: false })
+        if (result is { Canceled: false, Data: EditDailyDialogResult r })
         {
-            await OnChanged.InvokeAsync();
+            if (r.Action == EditDialogAction.Save)
+            {
+                var optimistic = item with {
+                    Title = r.Title,
+                    Notes = r.Notes,
+                    Tags = r.Tags,
+                    DailyStartDate = DateOnly.FromDateTime(r.StartDate),
+                    DailyRepeat = r.Repeat,
+                    DailyRepeatInterval = r.RepeatInterval,
+                    ChecklistJson = r.ChecklistJson,
+                    Counter = r.Streak
+                };
+                _optimisticOverrides[item.Id] = optimistic;
+                _needRefresh = true;
+                StateHasChanged();
+
+                _ = Task.Run(async () =>
+                {
+                    var ok = await TryMutateAsync(() => BoardData.UpdateDailyAsync(
+                        item.Id,
+                        r.Title,
+                        r.Notes,
+                        r.Tags,
+                        r.StartDate,
+                        r.Repeat,
+                        r.RepeatInterval,
+                        r.ChecklistJson,
+                        r.Streak
+                    ));
+                    if (!ok)
+                    {
+                        _optimisticOverrides.Remove(item.Id);
+                        _needRefresh = true;
+                        await InvokeAsync(StateHasChanged);
+                    }
+                });
+            }
+            else if (r.Action == EditDialogAction.Archive)
+            {
+                _optimisticDeletions.Add(item.Id);
+                _needRefresh = true;
+                StateHasChanged();
+
+                _ = Task.Run(async () =>
+                {
+                    var ok = await TryMutateAsync(() => BoardData.ArchiveItemAsync(BoardSection.Daily, item.Id));
+                    if (!ok)
+                    {
+                        _optimisticDeletions.Remove(item.Id);
+                        _needRefresh = true;
+                        await InvokeAsync(StateHasChanged);
+                    }
+                });
+            }
+            else if (r.Action == EditDialogAction.Delete)
+            {
+                _optimisticDeletions.Add(item.Id);
+                _needRefresh = true;
+                StateHasChanged();
+
+                _ = Task.Run(async () =>
+                {
+                    var ok = await TryMutateAsync(() => BoardData.DeleteItemAsync(BoardSection.Daily, item.Id));
+                    if (!ok)
+                    {
+                        _optimisticDeletions.Remove(item.Id);
+                        _needRefresh = true;
+                        await InvokeAsync(StateHasChanged);
+                    }
+                });
+            }
         }
     }
 
@@ -1072,9 +1214,73 @@
         var parameters = new DialogParameters<EditTodoDialog> { { x => x.Item, item } };
         var dialog = await DialogService.ShowAsync<EditTodoDialog>(string.Empty, parameters, options);
         var result = await dialog.Result;
-        if (result is { Canceled: false })
+        if (result is { Canceled: false, Data: EditTodoDialogResult r })
         {
-            await OnChanged.InvokeAsync();
+            if (r.Action == EditDialogAction.Save)
+            {
+                var optimistic = item with {
+                    Title = r.Title,
+                    Notes = r.Notes,
+                    Tags = r.Tags,
+                    ChecklistJson = r.ChecklistJson,
+                    TodoDueDate = r.DueDate != null ? DateOnly.FromDateTime(r.DueDate.Value) : null
+                };
+                _optimisticOverrides[item.Id] = optimistic;
+                _needRefresh = true;
+                StateHasChanged();
+
+                _ = Task.Run(async () =>
+                {
+                    var ok = await TryMutateAsync(() => BoardData.UpdateTodoAsync(
+                        item.Id,
+                        r.Title,
+                        r.Notes,
+                        r.Tags,
+                        r.ChecklistJson,
+                        r.DueDate
+                    ));
+                    if (!ok)
+                    {
+                        _optimisticOverrides.Remove(item.Id);
+                        _needRefresh = true;
+                        await InvokeAsync(StateHasChanged);
+                    }
+                });
+            }
+            else if (r.Action == EditDialogAction.Archive)
+            {
+                _optimisticDeletions.Add(item.Id);
+                _needRefresh = true;
+                StateHasChanged();
+
+                _ = Task.Run(async () =>
+                {
+                    var ok = await TryMutateAsync(() => BoardData.ArchiveItemAsync(BoardSection.Todo, item.Id));
+                    if (!ok)
+                    {
+                        _optimisticDeletions.Remove(item.Id);
+                        _needRefresh = true;
+                        await InvokeAsync(StateHasChanged);
+                    }
+                });
+            }
+            else if (r.Action == EditDialogAction.Delete)
+            {
+                _optimisticDeletions.Add(item.Id);
+                _needRefresh = true;
+                StateHasChanged();
+
+                _ = Task.Run(async () =>
+                {
+                    var ok = await TryMutateAsync(() => BoardData.DeleteItemAsync(BoardSection.Todo, item.Id));
+                    if (!ok)
+                    {
+                        _optimisticDeletions.Remove(item.Id);
+                        _needRefresh = true;
+                        await InvokeAsync(StateHasChanged);
+                    }
+                });
+            }
         }
     }
 

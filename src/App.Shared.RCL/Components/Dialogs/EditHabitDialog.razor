@@ -287,7 +287,7 @@
     private int _counter;
     private int _negativeCounter;
     private bool _advancedOpen;
-    private bool _saving;
+    private bool _saving => false;
 
     private sealed class ChecklistRow
     {
@@ -520,39 +520,21 @@
             return;
         }
 
-        _saving = true;
-        try
-        {
-            var tagsPayload = string.IsNullOrWhiteSpace(SerializeTags()) ? null : SerializeTags();
-            var checklistPayload = DailyChecklistJson.Serialize(ToChecklistModel());
-            var updated = await BoardData.UpdateHabitAsync(
-                Item.Id,
-                _title.Trim(),
-                string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim(),
-                tagsPayload,
-                _trackPlus,
-                _trackMinus,
-                _resetPeriod,
-                _counter,
-                _negativeCounter,
-                checklistPayload);
-
-            if (updated is null)
-            {
-                await Notifier.NotifyAsync("Could not save this habit.", Severity.Error);
-                return;
-            }
-
-            MudDialog.Close(DialogResult.Ok(true));
-        }
-        catch (Exception)
-        {
-            await Notifier.NotifyAsync("Something went wrong. Check your connection and try again.", Severity.Error);
-        }
-        finally
-        {
-            _saving = false;
-        }
+        var tagsPayload = string.IsNullOrWhiteSpace(SerializeTags()) ? null : SerializeTags();
+        var checklistPayload = DailyChecklistJson.Serialize(ToChecklistModel());
+        var result = new EditHabitDialogResult(
+            EditDialogAction.Save,
+            _title.Trim(),
+            string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim(),
+            tagsPayload,
+            _trackPlus,
+            _trackMinus,
+            _resetPeriod,
+            _counter,
+            _negativeCounter,
+            checklistPayload
+        );
+        MudDialog.Close(DialogResult.Ok(result));
     }
 
     private void IncrementPlusLocal()
@@ -581,52 +563,22 @@
         }
     }
 
-    private async Task ArchiveAsync()
+    private void ArchiveAsync()
     {
-        _saving = true;
-        try
-        {
-            var archived = await BoardData.ArchiveItemAsync(BoardSection.Habit, Item.Id);
-            if (archived is null)
-            {
-                await Notifier.NotifyAsync("Could not archive this habit.", Severity.Error);
-                return;
-            }
-
-            MudDialog.Close(DialogResult.Ok(true));
-        }
-        catch (Exception)
-        {
-            await Notifier.NotifyAsync("Something went wrong. Check your connection and try again.", Severity.Error);
-        }
-        finally
-        {
-            _saving = false;
-        }
+        var result = new EditHabitDialogResult(
+            EditDialogAction.Archive,
+            "", null, null, false, false, default, 0, 0, ""
+        );
+        MudDialog.Close(DialogResult.Ok(result));
     }
 
-    private async Task DeleteAsync()
+    private void DeleteAsync()
     {
-        _saving = true;
-        try
-        {
-            var removed = await BoardData.DeleteItemAsync(BoardSection.Habit, Item.Id);
-            if (!removed)
-            {
-                await Notifier.NotifyAsync("Could not delete this habit.", Severity.Error);
-                return;
-            }
-
-            MudDialog.Close(DialogResult.Ok(true));
-        }
-        catch (Exception)
-        {
-            await Notifier.NotifyAsync("Something went wrong. Check your connection and try again.", Severity.Error);
-        }
-        finally
-        {
-            _saving = false;
-        }
+        var result = new EditHabitDialogResult(
+            EditDialogAction.Delete,
+            "", null, null, false, false, default, 0, 0, ""
+        );
+        MudDialog.Close(DialogResult.Ok(result));
     }
 
 }

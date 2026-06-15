@@ -675,6 +675,9 @@
             catch (JSDisconnectedException)
             {
             }
+            catch (JSException)
+            {
+            }
             catch (TaskCanceledException)
             {
             }
@@ -687,6 +690,9 @@
                 await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.stop");
             }
             catch (JSDisconnectedException)
+            {
+            }
+            catch (JSException)
             {
             }
             catch (TaskCanceledException)

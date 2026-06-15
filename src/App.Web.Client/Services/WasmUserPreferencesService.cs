@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
 
 using App.Shared.RCL.Models;
@@ -25,11 +26,13 @@ public sealed class WasmUserPreferencesService : IUserPreferencesService
 
     private readonly IHttpClientFactory _http;
     private readonly IJSInProcessRuntime? _js;
+    private readonly AuthenticationStateProvider _authStateProvider;
 
-    public WasmUserPreferencesService(IHttpClientFactory http, IJSRuntime js)
+    public WasmUserPreferencesService(IHttpClientFactory http, IJSRuntime js, AuthenticationStateProvider authStateProvider)
     {
         _http = http;
         _js = js as IJSInProcessRuntime;
+        _authStateProvider = authStateProvider;
     }
 
     private HttpClient Client => _http.CreateClient("api");
@@ -45,6 +48,12 @@ public sealed class WasmUserPreferencesService : IUserPreferencesService
         {
             try
             {
+                var authState = await _authStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+                if (authState.User.Identity?.IsAuthenticated != true)
+                {
+                    return;
+                }
+
                 using var res = await Client.GetAsync("api/settings/preferences", cancellationToken).ConfigureAwait(false);
                 if (res.IsSuccessStatusCode)
                 {
@@ -76,8 +85,12 @@ public sealed class WasmUserPreferencesService : IUserPreferencesService
 
         try
         {
-            using var res = await Client.PutAsJsonAsync("api/settings/preferences", preferences, Serializer, cancellationToken).ConfigureAwait(false);
-            res.EnsureSuccessStatusCode();
+            var authState = await _authStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+            if (authState.User.Identity?.IsAuthenticated == true)
+            {
+                using var res = await Client.PutAsJsonAsync("api/settings/preferences", preferences, Serializer, cancellationToken).ConfigureAwait(false);
+                res.EnsureSuccessStatusCode();
+            }
         }
         catch
         {

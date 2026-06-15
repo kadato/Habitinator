@@ -75,8 +75,8 @@ else
 
     private RenderFragment AuthLinkButtons => __builder =>
     {
-        @HeaderNavItem("auth/login", "auth/login", NavLinkMatch.Prefix, Icons.Material.Filled.Login, "Login")
-        @HeaderNavItem("auth/register", "auth/register", NavLinkMatch.Prefix, Icons.Material.Filled.PersonAdd, "Register")
+        @HeaderNavItem("/auth/login", "auth/login", NavLinkMatch.Prefix, Icons.Material.Filled.Login, "Login", target: "_self")
+        @HeaderNavItem("/auth/register", "auth/register", NavLinkMatch.Prefix, Icons.Material.Filled.PersonAdd, "Register", target: "_self")
     };
 
     protected override void OnInitialized()
@@ -121,7 +121,7 @@ else
     {
         var active = IsActivePath(path, match);
         var itemClass = active ? "app-mobile-nav__item app-mobile-nav__item--active" : "app-mobile-nav__item";
-        <a href="@href" class="@itemClass" aria-current="@(active ? "page" : null)">
+        <a href="@href" class="@itemClass" aria-current="@(active ? "page" : null)" data-enhance-nav="false">
             <MudIcon Icon="@icon" Class="app-mobile-nav__icon" />
             <span class="app-mobile-nav__label">@label</span>
         </a>
@@ -131,7 +131,7 @@ else
     {
         var active = IsActivePath(path, match);
         var itemClass = active ? "app-bottom-nav__item app-bottom-nav__item--active" : "app-bottom-nav__item";
-        <a href="@href" class="@itemClass" aria-current="@(active ? "page" : null)" aria-label="@label">
+        <a href="@href" class="@itemClass" aria-current="@(active ? "page" : null)" aria-label="@label" data-enhance-nav="false">
             <span class="app-bottom-nav__icon-wrap" aria-hidden="true">
                 <MudIcon Icon="@icon" Class="app-bottom-nav__icon" />
             </span>
@@ -139,18 +139,20 @@ else
         </a>
     };
 
-    private RenderFragment HeaderNavItem(string href, string path, NavLinkMatch match, string icon, string label) => __builder =>
+    private RenderFragment HeaderNavItem(string href, string path, NavLinkMatch match, string icon, string label, string? target = null) => __builder =>
     {
         var active = IsActivePath(path, match);
         var slotClass = active ? "app-header-nav-slot app-header-nav-slot--active" : "app-header-nav-slot";
         <span class="@slotClass">
             <MudButton Href="@href"
+                       Target="@target"
                        Variant="@(active ? Variant.Filled : Variant.Text)"
                        Color="@(active ? Color.Primary : Color.Default)"
                        Size="Size.Medium"
                        StartIcon="@icon"
                        Class="app-header-nav-btn text-transform-none"
-                       aria-current="@(active ? "page" : null)">
+                       aria-current="@(active ? "page" : null)"
+                       data-enhance-nav="false">
                 @label
             </MudButton>
         </span>

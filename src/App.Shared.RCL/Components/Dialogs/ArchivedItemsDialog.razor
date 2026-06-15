@@ -42,13 +42,13 @@
                             All <span class="chip-count">@TotalCount</span>
                         </button>
                         <button type="button" class="filter-chip @(_selectedSection == BoardSection.Habit ? "active" : "")" @onclick="() => SetFilter(BoardSection.Habit)">
-                            <span class="chip-dot dot-habit"></span> Habits <span class="chip-count">@_snapshot.Habits.Count</span>
+                            <span class="chip-dot dot-habit"></span> Habits <span class="chip-count">@HabitsCount</span>
                         </button>
                         <button type="button" class="filter-chip @(_selectedSection == BoardSection.Daily ? "active" : "")" @onclick="() => SetFilter(BoardSection.Daily)">
-                            <span class="chip-dot dot-daily"></span> Dailies <span class="chip-count">@_snapshot.Dailies.Count</span>
+                            <span class="chip-dot dot-daily"></span> Dailies <span class="chip-count">@DailiesCount</span>
                         </button>
                         <button type="button" class="filter-chip @(_selectedSection == BoardSection.Todo ? "active" : "")" @onclick="() => SetFilter(BoardSection.Todo)">
-                            <span class="chip-dot dot-todo"></span> To-Dos <span class="chip-count">@_snapshot.Todos.Count</span>
+                            <span class="chip-dot dot-todo"></span> To-Dos <span class="chip-count">@TodosCount</span>
                         </button>
                     </div>
                 }
@@ -126,14 +126,16 @@
                                                Color="Color.Primary" 
                                                Variant="Variant.Text"
                                                Size="Size.Small"
-                                               OnClick="@(() => UnarchiveAsync(section, item))">
+                                               OnClick="@(() => UnarchiveAsync(section, item))"
+                                               Disabled="_isClosing">
                                         Restore
                                     </MudButton>
                                     <MudButton StartIcon="@Icons.Material.Filled.DeleteForever" 
                                                Color="Color.Error" 
                                                Variant="Variant.Text"
                                                Size="Size.Small"
-                                               OnClick="@(() => DeletePermanentlyAsync(section, item))">
+                                               OnClick="@(() => DeletePermanentlyAsync(section, item))"
+                                               Disabled="_isClosing">
                                         Delete
                                     </MudButton>
                                 </div>
@@ -145,7 +147,17 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton Color="Color.Secondary" OnClick="Close" Class="px-6 py-2">Close</MudButton>
+        <MudButton Color="Color.Secondary" OnClick="Close" Class="px-6 py-2" Disabled="_isClosing">
+            @if (_isClosing && _inFlightTasks.Count > 0)
+            {
+                <MudProgressCircular Class="ms-n1 me-2" Size="Size.Small" Indeterminate="true" />
+                <span>Closing...</span>
+            }
+            else
+            {
+                <span>Close</span>
+            }
+        </MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -157,7 +169,10 @@
     private string _searchQuery = "";
     private BoardSection? _selectedSection = null;
 
-    private int TotalCount => _snapshot.Habits.Count + _snapshot.Dailies.Count + _snapshot.Todos.Count;
+    private int TotalCount => _allEntries.Count;
+    private int HabitsCount => _allEntries.Count(x => x.Section == BoardSection.Habit);
+    private int DailiesCount => _allEntries.Count(x => x.Section == BoardSection.Daily);
+    private int TodosCount => _allEntries.Count(x => x.Section == BoardSection.Todo);
 
     private struct ArchivedItemEntry
     {
@@ -167,6 +182,8 @@
     }
 
     private List<ArchivedItemEntry> _allEntries = new();
+    private readonly Dictionary<Guid, Task> _inFlightTasks = new();
+    private bool _isClosing;
 
     private List<ArchivedItemEntry> FilteredItems
     {
@@ -237,7 +254,11 @@
             });
         }
 
-        // Sort by Date descending (newest archived items first), then title
+        SortEntries();
+    }
+
+    private void SortEntries()
+    {
         _allEntries = _allEntries
             .OrderByDescending(x => x.Date)
             .ThenBy(x => x.Item.Title, StringComparer.OrdinalIgnoreCase)
@@ -251,26 +272,71 @@
 
     private async Task UnarchiveAsync(BoardSection section, BoardItem item)
     {
+        var index = _allEntries.FindIndex(x => x.Item.Id == item.Id);
+        ArchivedItemEntry? entry = null;
+        if (index >= 0)
+        {
+            entry = _allEntries[index];
+            _allEntries.RemoveAt(index);
+            StateHasChanged();
+        }
+
+        var task = DoUnarchiveAsync(section, item, entry);
+        _inFlightTasks[item.Id] = task;
+    }
+
+    private async Task DoUnarchiveAsync(BoardSection section, BoardItem item, ArchivedItemEntry? entry)
+    {
         try
         {
             var res = await BoardData.UnarchiveItemAsync(section, item.Id);
             if (res is not null)
             {
                 await Notifier.NotifyAsync($"Restored \"{item.Title}\" back to the board.", Severity.Success);
-                await LoadArchivedItemsAsync();
             }
             else
             {
                 await Notifier.NotifyAsync($"Failed to restore \"{item.Title}\".", Severity.Error);
+                if (entry is not null)
+                {
+                    _allEntries.Add(entry.Value);
+                    SortEntries();
+                    StateHasChanged();
+                }
             }
         }
         catch (Exception)
         {
             await Notifier.NotifyAsync("Something went wrong. Please check your connection and try again.", Severity.Error);
+            if (entry is not null)
+            {
+                _allEntries.Add(entry.Value);
+                SortEntries();
+                StateHasChanged();
+            }
+        }
+        finally
+        {
+            _inFlightTasks.Remove(item.Id);
         }
     }
 
     private async Task DeletePermanentlyAsync(BoardSection section, BoardItem item)
+    {
+        var index = _allEntries.FindIndex(x => x.Item.Id == item.Id);
+        ArchivedItemEntry? entry = null;
+        if (index >= 0)
+        {
+            entry = _allEntries[index];
+            _allEntries.RemoveAt(index);
+            StateHasChanged();
+        }
+
+        var task = DoDeleteAsync(section, item, entry);
+        _inFlightTasks[item.Id] = task;
+    }
+
+    private async Task DoDeleteAsync(BoardSection section, BoardItem item, ArchivedItemEntry? entry)
     {
         try
         {
@@ -278,18 +344,53 @@
             if (success)
             {
                 await Notifier.NotifyAsync($"Permanently deleted \"{item.Title}\".", Severity.Success);
-                await LoadArchivedItemsAsync();
             }
             else
             {
                 await Notifier.NotifyAsync($"Failed to delete \"{item.Title}\".", Severity.Error);
+                if (entry is not null)
+                {
+                    _allEntries.Add(entry.Value);
+                    SortEntries();
+                    StateHasChanged();
+                }
             }
         }
         catch (Exception)
         {
             await Notifier.NotifyAsync("Something went wrong. Please check your connection and try again.", Severity.Error);
+            if (entry is not null)
+            {
+                _allEntries.Add(entry.Value);
+                SortEntries();
+                StateHasChanged();
+            }
+        }
+        finally
+        {
+            _inFlightTasks.Remove(item.Id);
         }
     }
 
-    private void Close() => MudDialog.Close();
+    private async Task Close()
+    {
+        if (_isClosing) return;
+        _isClosing = true;
+        StateHasChanged();
+
+        try
+        {
+            if (_inFlightTasks.Count > 0)
+            {
+                var tasks = _inFlightTasks.Values.ToList();
+                await Task.WhenAll(tasks);
+            }
+        }
+        catch
+        {
+            // Handled individually
+        }
+
+        MudDialog.Close();
+    }
 }

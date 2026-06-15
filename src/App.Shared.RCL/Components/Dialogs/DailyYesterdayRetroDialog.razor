@@ -1,5 +1,3 @@
-@inject IBoardDataService BoardData
-@inject IUserNotifier Notifier
 @inject IUserDateFormatService DateFormatService
 
 <MudDialog Class="daily-yesterday-dialog"
@@ -16,7 +14,6 @@
                     <MudIconButton Icon="@Icons.Material.Filled.Close" 
                                    Class="daily-yesterday-header__close-btn" 
                                    OnClick="CloseAsync" 
-                                   Disabled="AnyRowBusy"
                                    Size="Size.Small"
                                    title="Close" />
                 </div>
@@ -36,12 +33,12 @@
                         
                         <div class="daily-yesterday-row @rowClass" 
                              @key="item.Id"
-                             @onclick="@(() => MarkForDueDateAsync(item))"
-                             @onkeydown="@(e => HandleKeyDownAsync(e, item))"
+                             @onclick="@(() => ToggleItem(item))"
+                             @onkeydown="@(e => HandleKeyDown(e, item))"
                              role="button"
-                             tabindex="@(isCompleted ? "-1" : "0")"
+                             tabindex="0"
                              aria-label="@item.Title"
-                             aria-disabled="@(isCompleted ? "true" : "false")">
+                             aria-disabled="false">
                             <div class="daily-yesterday-row__check-col">
                                 <div class="daily-yesterday-check @(isCompleted ? "daily-yesterday-check--ok" : "daily-yesterday-check--daily")"
                                      aria-hidden="true">
@@ -79,8 +76,7 @@
                 <MudButton Variant="Variant.Filled" 
                            Color="Color.Primary" 
                            Class="daily-yesterday-footer__close-btn w-100" 
-                           OnClick="CloseAsync" 
-                           Disabled="AnyRowBusy">
+                           OnClick="CloseAsync">
                     Done Catching Up
                 </MudButton>
             </div>
@@ -97,11 +93,8 @@
 
     private string _dueOnFormatted = string.Empty;
     private List<BoardItem> _pending = [];
-    private readonly HashSet<Guid> _inFlightIds = new();
     private readonly Dictionary<Guid, bool> _completedById = new();
     private bool _anyChanged;
-
-    private bool AnyRowBusy => _inFlightIds.Count > 0;
 
     protected override void OnParametersSet()
     {
@@ -116,43 +109,19 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task MarkForDueDateAsync(BoardItem item)
+    private void ToggleItem(BoardItem item)
     {
-        if (_inFlightIds.Contains(item.Id) || _completedById.GetValueOrDefault(item.Id))
-        {
-            return;
-        }
-
-        _completedById[item.Id] = true;
-        _inFlightIds.Add(item.Id);
+        var nextVal = !_completedById.GetValueOrDefault(item.Id);
+        _completedById[item.Id] = nextVal;
         _anyChanged = true;
-        await InvokeAsync(StateHasChanged);
-        try
-        {
-            var updated = await BoardData.CompleteDailyForDateAsync(item.Id, DueOn);
-            if (updated is null)
-            {
-                await Notifier.NotifyAsync("Could not update that daily.", Severity.Error);
-                _completedById[item.Id] = false;
-            }
-        }
-        catch (Exception)
-        {
-            await Notifier.NotifyAsync("Could not update that daily.", Severity.Error);
-            _completedById[item.Id] = false;
-        }
-        finally
-        {
-            _inFlightIds.Remove(item.Id);
-            await InvokeAsync(StateHasChanged);
-        }
+        StateHasChanged();
     }
 
-    private async Task HandleKeyDownAsync(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e, BoardItem item)
+    private void HandleKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e, BoardItem item)
     {
         if (e.Key is " " or "Enter")
         {
-            await MarkForDueDateAsync(item);
+            ToggleItem(item);
         }
     }
 
@@ -160,12 +129,12 @@
     {
         if (_anyChanged)
         {
-            MudDialog.Close(DialogResult.Ok(true));
+            var completedIds = _completedById.Where(kvp => kvp.Value).Select(kvp => kvp.Key).ToList();
+            MudDialog.Close(DialogResult.Ok(completedIds));
         }
         else
         {
             MudDialog.Close(DialogResult.Cancel());
         }
     }
-
 }

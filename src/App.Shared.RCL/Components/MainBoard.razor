@@ -944,6 +944,8 @@
         }
 
         _dailyRetroSessionOffered = true;
+        List<Guid> completedIds = [];
+        DateOnly yesterdayDate = default;
         try
         {
             var prefs = await PreferencesService.GetAsync();
@@ -961,7 +963,7 @@
                 return;
             }
 
-            var y = today.AddDays(-1);
+            yesterdayDate = today.AddDays(-1);
             var options = new DialogOptions
             {
                 MaxWidth = MaxWidth.Small,
@@ -972,13 +974,17 @@
             };
             var parameters = new DialogParameters<DailyYesterdayRetroDialog>
             {
-                { x => x.DueOn, y },
+                { x => x.DueOn, yesterdayDate },
                 { x => x.Items, missed }
             };
 
             var dialog = await DialogService.ShowAsync<DailyYesterdayRetroDialog>(
                 string.Empty, parameters, options);
-            _ = await dialog.Result;
+            var result = await dialog.Result;
+            if (result is { Canceled: false, Data: List<Guid> ids })
+            {
+                completedIds = ids;
+            }
         }
         catch (Exception)
         {
@@ -994,12 +1000,45 @@
         {
         }
 
+        if (completedIds.Count > 0)
+        {
+            _ = CompleteDailiesInBackgroundAsync(completedIds, yesterdayDate);
+        }
+    }
+
+    private async Task CompleteDailiesInBackgroundAsync(List<Guid> completedIds, DateOnly dueOn)
+    {
         try
         {
-            await LoadBoardAsync();
+            var tasks = completedIds.Select(async id =>
+            {
+                try
+                {
+                    await BoardDataService.CompleteDailyForDateAsync(id, dueOn);
+                }
+                catch (Exception)
+                {
+                    var item = Dailies.FirstOrDefault(d => d.Id == id);
+                    var title = item?.Title ?? "a daily";
+                    await Notifier.NotifyAsync($"Failed to save retroactive completion for '{title}'.", Severity.Error);
+                }
+            }).ToList();
+
+            await Task.WhenAll(tasks);
         }
         catch (Exception)
         {
+        }
+        finally
+        {
+            try
+            {
+                await LoadBoardAsync();
+            }
+            catch (Exception)
+            {
+            }
+            await InvokeAsync(StateHasChanged);
         }
     }
 

@@ -115,7 +115,7 @@
 @code {
     private async Task TriggerLogout()
     {
-        await JS.InvokeVoidAsync("eval", "document.getElementById('globalLogoutForm').submit()");
+        await JS.InvokeVoidAsync("habitinatorSubmitForm", "globalLogoutForm");
     }
 
     private UserPreferences? _preferences;

@@ -176,6 +176,12 @@
             setTimeout(() => el.remove(), 250);
         }
     };
+    window.habitinatorSubmitForm = function (formId) {
+        const form = document.getElementById(formId);
+        if (form) {
+            form.submit();
+        }
+    };
 </script>
 </body>
 

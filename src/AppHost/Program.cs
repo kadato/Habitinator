@@ -34,7 +34,7 @@ var postgres = builder
 
 var habitinatorDb = postgres.AddDatabase("habitinatordb");
 
-// Port 5031 comes from App.Web Properties/launchSettings.json profile "http" (Kestrel binds there when proxy is off).
+// Port 5033 comes from App.Web Properties/launchSettings.json profile "http" (Kestrel binds there when proxy is off).
 // Aspire defaults to a DCP reverse proxy in front of project endpoints; that breaks Blazor/SignalR WebSockets for many setups.
 // Turn off the proxy so the browser and MAUI talk to Kestrel directly (see /health for orchestration).
 var appWeb = builder.AddProject("app-web", "../App.Web/App.Web.csproj", options => options.LaunchProfileName = "http")
@@ -46,7 +46,7 @@ var appWeb = builder.AddProject("app-web", "../App.Web/App.Web.csproj", options 
 // MAUI reads HABITINATOR_API_BASE_URL first (see MauiAppSettings). This env var is only set when
 // the MAUI process is *started from the Aspire dashboard* (or F5 on App.MAUI alone). AppHost starts
 // postgres and app-web automatically; start app-maui manually when you need the hybrid client.
-// Otherwise run App.Web yourself on port 5031, or set HABITINATOR_API_BASE_URL / Api:BaseUrl in MAUI.
+// Otherwise run App.Web yourself on port 5033, or set HABITINATOR_API_BASE_URL / Api:BaseUrl in MAUI.
 builder.AddProject("app-maui", "../App.MAUI/App.MAUI.csproj")
     .WithExplicitStart()
     .WithReference(habitinatorDb)

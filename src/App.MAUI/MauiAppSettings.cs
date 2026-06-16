@@ -26,8 +26,8 @@ public static class MauiAppSettings
     /// <summary>Fallback when env and appsettings do not set <c>Api:BaseUrl</c>.</summary>
     public static string DefaultApiBaseUrlNoSlash() =>
 #if ANDROID
-        "http://10.0.2.2:5031";
+        "http://10.0.2.2:5033";
 #else
-        "http://127.0.0.1:5031";
+        "http://127.0.0.1:5033";
 #endif
 }

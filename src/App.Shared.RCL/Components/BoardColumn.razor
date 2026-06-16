@@ -478,10 +478,38 @@
             }
 
             var overrideItem = _optimisticOverrides[id];
-            if (serverItem.IsCompleted == overrideItem.IsCompleted
-                && serverItem.Counter == overrideItem.Counter
-                && serverItem.NegativeCounter == overrideItem.NegativeCounter
-                && serverItem.ChecklistJson == overrideItem.ChecklistJson)
+            bool match = serverItem.IsCompleted == overrideItem.IsCompleted
+                && serverItem.Title == overrideItem.Title
+                && serverItem.Notes == overrideItem.Notes
+                && serverItem.Tags == overrideItem.Tags
+                && serverItem.ChecklistJson == overrideItem.ChecklistJson;
+
+            if (Section == BoardSection.Habit)
+            {
+                match = match 
+                    && serverItem.Counter == overrideItem.Counter
+                    && serverItem.NegativeCounter == overrideItem.NegativeCounter
+                    && serverItem.TrackPlus == overrideItem.TrackPlus
+                    && serverItem.TrackMinus == overrideItem.TrackMinus
+                    && serverItem.ResetPeriod == overrideItem.ResetPeriod;
+            }
+            else if (Section == BoardSection.Daily)
+            {
+                match = match
+                    && serverItem.DailyStartDate == overrideItem.DailyStartDate
+                    && serverItem.DailyRepeat == overrideItem.DailyRepeat
+                    && serverItem.DailyRepeatInterval == overrideItem.DailyRepeatInterval;
+                // Note: We intentionally do NOT check Counter (streak) here because the server
+                // automatically increments/updates it upon completion, which would prevent
+                // the optimistic override from being pruned.
+            }
+            else if (Section == BoardSection.Todo)
+            {
+                match = match
+                    && serverItem.TodoDueDate == overrideItem.TodoDueDate;
+            }
+
+            if (match)
             {
                 _optimisticOverrides.Remove(id);
             }

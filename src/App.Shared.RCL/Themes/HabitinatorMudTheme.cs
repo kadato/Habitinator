@@ -11,7 +11,7 @@ public static class HabitinatorMudTheme
     {
         PaletteLight = new PaletteLight
         {
-            Primary = "#3b82f6",
+            Primary = "#2563eb",
             PrimaryContrastText = "#ffffff",
             Secondary = "#64748b",
             SecondaryContrastText = "#ffffff",

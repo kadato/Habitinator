@@ -41,7 +41,7 @@
 }
 
 .board-column--daily {
-    border-left: 4px solid #3b82f6;
+    border-left: 4px solid var(--mud-palette-primary);
 }
 
 .board-column--todo {
@@ -84,8 +84,8 @@
 }
 
 .board-column--daily .board-count-badge {
-    background-color: color-mix(in srgb, #3b82f6 15%, transparent);
-    color: #3b82f6;
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 15%, transparent);
+    color: var(--mud-palette-primary);
 }
 
 .board-column--todo .board-count-badge {

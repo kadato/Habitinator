@@ -6,9 +6,9 @@ Habitinator is a productivity app (Blazor web + .NET MAUI). User board data is p
 
 ## Product
 
-- Live app: https://habitinator.app/
-- Source: https://github.com/tothKarolyDavid/Habitinator
-- README: https://github.com/tothKarolyDavid/Habitinator#readme
+- [Live app](https://habitinator.app/)
+- [Source](https://github.com/tothKarolyDavid/Habitinator)
+- [README](https://github.com/tothKarolyDavid/Habitinator#readme)
 
 ## Public pages
 
@@ -19,10 +19,10 @@ Habitinator is a productivity app (Blazor web + .NET MAUI). User board data is p
 
 ## API (authenticated)
 
-- OpenAPI: https://habitinator.app/openapi/v1.json
-- API catalog: https://habitinator.app/.well-known/api-catalog
-- Board REST API under `/api/board` (JWT or cookie auth)
-- Health: https://habitinator.app/health
+- [OpenAPI](https://habitinator.app/openapi/v1.json)
+- [API catalog](https://habitinator.app/.well-known/api-catalog)
+- [Board REST API](/api/board) (JWT or cookie auth)
+- [Health](https://habitinator.app/health)
 
 ## Privacy
 
@@ -30,4 +30,4 @@ Authentication uses session cookies and optional JWT for native clients. No thir
 
 ## Security
 
-Report vulnerabilities: https://habitinator.app/.well-known/security.txt
+Report vulnerabilities: [security.txt](https://habitinator.app/.well-known/security.txt)

@@ -27,36 +27,51 @@ public sealed class DemoDataInitializationHostedService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        void OnStarted() => tcs.TrySetResult();
-        _lifetime.ApplicationStarted.Register(OnStarted);
-        await tcs.Task.WaitAsync(stoppingToken).ConfigureAwait(false);
-
-        var maxAttempts = Math.Max(1, _options.Value.MaxAttempts);
-        var delay = TimeSpan.FromSeconds(Math.Max(1, _options.Value.RetryDelaySeconds));
-
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        try
         {
-            try
+            var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            void OnStarted() => tcs.TrySetResult();
+            using var registration = _lifetime.ApplicationStarted.Register(OnStarted);
+            await tcs.Task.WaitAsync(stoppingToken).ConfigureAwait(false);
+
+            var maxAttempts = Math.Max(1, _options.Value.MaxAttempts);
+            var delay = TimeSpan.FromSeconds(Math.Max(1, _options.Value.RetryDelaySeconds));
+
+            for (var attempt = 1; attempt <= maxAttempts; attempt++)
             {
-                await DemoDataSeeder.SeedAsync(_services, stoppingToken).ConfigureAwait(false);
-                return;
+                try
+                {
+                    await DemoDataSeeder.SeedAsync(_services, stoppingToken).ConfigureAwait(false);
+                    return;
+                }
+                catch (Exception ex) when (attempt < maxAttempts)
+                {
+                    if (stoppingToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    _logger.LogWarning(ex,
+                        "Database not ready for migration/seeding (attempt {Attempt}/{Max}). Retrying after delay…",
+                        attempt, maxAttempts);
+                    await Task.Delay(delay, stoppingToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    if (stoppingToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    _logger.LogError(ex,
+                        "Demo data seeding failed after {Max} attempts. Demo guest may be unavailable until the DB is reachable. " +
+                        "Check ConnectionStrings:DefaultConnection.",
+                        maxAttempts);
+                    return;
+                }
             }
-            catch (Exception ex) when (attempt < maxAttempts)
-            {
-                _logger.LogWarning(ex,
-                    "Database not ready for migration/seeding (attempt {Attempt}/{Max}). Retrying after delay…",
-                    attempt, maxAttempts);
-                await Task.Delay(delay, stoppingToken).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex,
-                    "Demo data seeding failed after {Max} attempts. Demo guest may be unavailable until the DB is reachable. " +
-                    "Check ConnectionStrings:DefaultConnection.",
-                    maxAttempts);
-                return;
-            }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Demo data seeding was canceled because the application host is shutting down.");
         }
     }
 }

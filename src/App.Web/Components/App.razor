@@ -1,5 +1,7 @@
 @using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Hosting
 @using global::App.Web.Client
+@inject IWebHostEnvironment HostEnvironment
 <!DOCTYPE html>
 <html lang="en" class="@GetInitialThemeClass()">
 
@@ -120,7 +122,6 @@
             to { opacity: 1; }
         }
     </style>
-    <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]"/>
     <link rel="stylesheet" href="@Assets["_content/MudBlazor/MudBlazor.min.css"]"/>
     <link rel="stylesheet" href="@Assets["_content/App.Shared.RCL/css/typography.css"]"/>
     <link rel="stylesheet" href="@Assets["app.css"]"/>
@@ -187,6 +188,12 @@
             form.submit();
         }
     };
+</script>
+<script>
+    if ('serviceWorker' in navigator) {
+        const swFile = '@(HostEnvironment.IsDevelopment() ? "service-worker.js" : "service-worker.published.js")';
+        navigator.serviceWorker.register(swFile);
+    }
 </script>
 </body>
 

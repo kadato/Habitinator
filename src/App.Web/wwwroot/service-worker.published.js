@@ -1,4 +1,4 @@
-const CACHE_NAME = 'habitinator-v1';
+const CACHE_NAME = 'habitinator-v2';
 const PRE_CACHE_ASSETS = [
     '/',
     '/manifest.webmanifest',
@@ -49,6 +49,11 @@ self.addEventListener('fetch', event => {
 
     // Only cache requests from our origin
     if (url.origin !== self.location.origin) {
+        return;
+    }
+
+    // Exclude API requests from caching
+    if (url.pathname.startsWith('/api/')) {
         return;
     }
 

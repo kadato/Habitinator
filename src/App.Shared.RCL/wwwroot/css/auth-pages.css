@@ -187,6 +187,7 @@
 }
 
 .site-legal-footer {
+    width: 100%;
     margin-top: 1rem;
     padding-top: 0.75rem;
     border-top: 1px solid var(--mud-palette-divider);
@@ -365,19 +366,19 @@
 }
 
 .alert-info {
-    color: var(--mud-palette-info-text, color-mix(in srgb, var(--mud-palette-info) 40%, var(--mud-palette-text-primary)));
+    color: color-mix(in srgb, var(--mud-palette-info) 40%, var(--mud-palette-text-primary));
     background-color: color-mix(in srgb, var(--mud-palette-info) 8%, var(--mud-palette-surface));
     border-color: color-mix(in srgb, var(--mud-palette-info) 20%, var(--mud-palette-divider));
 }
 
 .alert-warning {
-    color: var(--mud-palette-warning-text, color-mix(in srgb, var(--mud-palette-warning) 40%, var(--mud-palette-text-primary)));
+    color: color-mix(in srgb, var(--mud-palette-warning) 40%, var(--mud-palette-text-primary));
     background-color: color-mix(in srgb, var(--mud-palette-warning) 8%, var(--mud-palette-surface));
     border-color: color-mix(in srgb, var(--mud-palette-warning) 20%, var(--mud-palette-divider));
 }
 
 .alert-danger {
-    color: var(--mud-palette-error-text, color-mix(in srgb, var(--mud-palette-error) 40%, var(--mud-palette-text-primary)));
+    color: color-mix(in srgb, var(--mud-palette-error) 40%, var(--mud-palette-text-primary));
     background-color: color-mix(in srgb, var(--mud-palette-error) 8%, var(--mud-palette-surface));
     border-color: color-mix(in srgb, var(--mud-palette-error) 20%, var(--mud-palette-divider));
 }

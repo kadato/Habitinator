@@ -15,6 +15,8 @@ public sealed class MauiClientSessionProvider : IClientSessionProvider
 
     public bool IsLoggedIn => _session.IsLoggedIn;
 
+    public string? Email => _session.Email;
+
     public event Action? Changed;
 
     private void OnSessionChanged(object? sender, EventArgs e)

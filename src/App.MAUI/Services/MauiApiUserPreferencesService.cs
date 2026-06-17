@@ -37,16 +37,23 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
 
     public event Action? Changed;
 
+    private string GetKey()
+    {
+        var email = _apiSession.Email;
+        return string.IsNullOrEmpty(email) ? PreferencesKey : $"{PreferencesKey}_{email}";
+    }
+
     public async Task<UserPreferences> GetAsync(CancellationToken cancellationToken = default)
     {
-        var localPrefs = ReadLocal();
+        await EnsureSessionReadyAsync(cancellationToken).ConfigureAwait(false);
+        var key = GetKey();
+        var localPrefs = ReadLocal(key);
 
         // Fetch remote preferences in the background
         _ = Task.Run(async () =>
         {
             try
             {
-                await EnsureSessionReadyAsync(cancellationToken).ConfigureAwait(false);
                 if (!_apiSession.IsLoggedIn) return;
 
                 using var res = await Client.GetAsync("api/settings/preferences", cancellationToken).ConfigureAwait(false);
@@ -59,7 +66,7 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
                         var localJson = UserPreferencesJson.Serialize(localPrefs);
                         if (remoteJson != localJson)
                         {
-                            WriteLocal(remote);
+                            WriteLocal(key, remote);
                             Changed?.Invoke();
                         }
                     }
@@ -77,7 +84,8 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
     public async Task SaveAsync(UserPreferences preferences, CancellationToken cancellationToken = default)
     {
         await EnsureSessionReadyAsync(cancellationToken).ConfigureAwait(false);
-        WriteLocal(preferences);
+        var key = GetKey();
+        WriteLocal(key, preferences);
 
         if (!_apiSession.IsLoggedIn)
         {
@@ -97,14 +105,14 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
         if (!_apiSession.IsReady) await _apiSession.LoadAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    private UserPreferences ReadLocal()
+    private UserPreferences ReadLocal(string key)
     {
-        var json = Preferences.Get(PreferencesKey, null);
+        var json = Preferences.Get(key, null);
         return UserPreferencesJson.DeserializeOrDefault(json);
     }
 
-    private static void WriteLocal(UserPreferences preferences)
+    private void WriteLocal(string key, UserPreferences preferences)
     {
-        Preferences.Set(PreferencesKey, UserPreferencesJson.Serialize(preferences));
+        Preferences.Set(key, UserPreferencesJson.Serialize(preferences));
     }
 }

@@ -41,9 +41,16 @@ public sealed class RemoteNotificationSettingsService : INotificationSettingsSer
 
     public event Action? Changed;
 
+    private string GetKey()
+    {
+        var email = _sessionProvider.Email;
+        return string.IsNullOrEmpty(email) ? PreferencesKey : $"{PreferencesKey}_{email}";
+    }
+
     public async Task<NotificationSettings> GetAsync(CancellationToken cancellationToken = default)
     {
-        var localSettings = ReadLocal();
+        var key = GetKey();
+        var localSettings = ReadLocal(key);
 
         if (!_sessionProvider.IsLoggedIn) return localSettings;
 
@@ -62,7 +69,7 @@ public sealed class RemoteNotificationSettingsService : INotificationSettingsSer
                         var localJson = NotificationSettingsJson.Serialize(localSettings);
                         if (remoteJson != localJson)
                         {
-                            WriteLocal(remote);
+                            WriteLocal(key, remote);
                             Changed?.Invoke();
                         }
                     }
@@ -79,7 +86,8 @@ public sealed class RemoteNotificationSettingsService : INotificationSettingsSer
 
     public async Task SaveAsync(NotificationSettings settings, CancellationToken cancellationToken = default)
     {
-        WriteLocal(settings);
+        var key = GetKey();
+        WriteLocal(key, settings);
 
         if (!_sessionProvider.IsLoggedIn)
         {
@@ -101,14 +109,14 @@ public sealed class RemoteNotificationSettingsService : INotificationSettingsSer
         Changed?.Invoke();
     }
 
-    private NotificationSettings ReadLocal()
+    private NotificationSettings ReadLocal(string key)
     {
-        var json = _localStore.Get(PreferencesKey);
+        var json = _localStore.Get(key);
         return NotificationSettingsJson.DeserializeOrDefault(json);
     }
 
-    private void WriteLocal(NotificationSettings settings)
+    private void WriteLocal(string key, NotificationSettings settings)
     {
-        _localStore.Set(PreferencesKey, NotificationSettingsJson.Serialize(settings));
+        _localStore.Set(key, NotificationSettingsJson.Serialize(settings));
     }
 }

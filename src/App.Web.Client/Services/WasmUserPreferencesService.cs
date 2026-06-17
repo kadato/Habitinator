@@ -39,9 +39,18 @@ public sealed class WasmUserPreferencesService : IUserPreferencesService
 
     public event Action? Changed;
 
+    private async Task<string> GetKeyAsync()
+    {
+        var authState = await _authStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+        var email = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value 
+                    ?? authState.User.Identity?.Name;
+        return string.IsNullOrEmpty(email) ? PreferencesKey : $"{PreferencesKey}_{email}";
+    }
+
     public async Task<UserPreferences> GetAsync(CancellationToken cancellationToken = default)
     {
-        var localPrefs = ReadLocal();
+        var key = await GetKeyAsync().ConfigureAwait(false);
+        var localPrefs = ReadLocal(key);
 
         // Fetch remote preferences in the background
         _ = Task.Run(async () =>
@@ -64,7 +73,7 @@ public sealed class WasmUserPreferencesService : IUserPreferencesService
                         var localJson = UserPreferencesJson.Serialize(localPrefs);
                         if (remoteJson != localJson)
                         {
-                            WriteLocal(remote);
+                            WriteLocal(key, remote);
                             Changed?.Invoke();
                         }
                     }
@@ -81,7 +90,8 @@ public sealed class WasmUserPreferencesService : IUserPreferencesService
 
     public async Task SaveAsync(UserPreferences preferences, CancellationToken cancellationToken = default)
     {
-        WriteLocal(preferences);
+        var key = await GetKeyAsync().ConfigureAwait(false);
+        WriteLocal(key, preferences);
 
         try
         {
@@ -99,12 +109,12 @@ public sealed class WasmUserPreferencesService : IUserPreferencesService
         Changed?.Invoke();
     }
 
-    private UserPreferences ReadLocal()
+    private UserPreferences ReadLocal(string key)
     {
         if (_js is null) return new UserPreferences();
         try
         {
-            var json = _js.Invoke<string?>("localStorage.getItem", PreferencesKey);
+            var json = _js.Invoke<string?>("localStorage.getItem", key);
             return UserPreferencesJson.DeserializeOrDefault(json);
         }
         catch
@@ -113,12 +123,12 @@ public sealed class WasmUserPreferencesService : IUserPreferencesService
         }
     }
 
-    private void WriteLocal(UserPreferences preferences)
+    private void WriteLocal(string key, UserPreferences preferences)
     {
         if (_js is null) return;
         try
         {
-            _js.InvokeVoid("localStorage.setItem", PreferencesKey, UserPreferencesJson.Serialize(preferences));
+            _js.InvokeVoid("localStorage.setItem", key, UserPreferencesJson.Serialize(preferences));
         }
         catch
         {

@@ -6,7 +6,6 @@
 @using Microsoft.AspNetCore.WebUtilities
 @implements IDisposable
 @inherits LayoutComponentBase
-@rendermode @(new InteractiveWebAssemblyRenderMode(true))
 @inject IUserPreferencesService PreferencesService
 @inject IUserDateFormatService DateFormatService
 @inject IJSRuntime JS
@@ -19,6 +18,12 @@
 <MudDialogProvider BackdropClick="false"/>
 <MudSnackbarProvider/>
 <TimeZoneInitializer />
+
+<AuthorizeView>
+    <Authorized>
+        <div id="habitinator-loading-bar"></div>
+    </Authorized>
+</AuthorizeView>
 
 <form id="globalLogoutForm" method="post" action="/api/auth/cookie-logout" style="display: none;"></form>
 
@@ -117,6 +122,9 @@
     {
         await JS.InvokeVoidAsync("habitinatorSubmitForm", "globalLogoutForm");
     }
+
+    [CascadingParameter(Name = "IsDarkMode")]
+    private bool CascadedIsDarkMode { get; set; } = true;
 
     private UserPreferences? _preferences;
     private bool _isDarkMode = true;
@@ -339,7 +347,7 @@
                 // Ignore and fall back
             }
         }
-        return true; // Default
+        return CascadedIsDarkMode; // Fall back to the server-resolved cascading theme
     }
 
 }

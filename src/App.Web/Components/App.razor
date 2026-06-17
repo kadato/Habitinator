@@ -3,7 +3,7 @@
 @using global::App.Web.Client
 @inject IWebHostEnvironment HostEnvironment
 <!DOCTYPE html>
-<html lang="en" class="@GetInitialThemeClass()">
+<html lang="en" class="@GetInitialThemeClass()" data-user-email="@GetUserEmail()" data-server-theme="@GetServerTheme()">
 
 <head>
     <meta charset="utf-8"/>
@@ -12,20 +12,46 @@
     <SiteHead/>
     <script>
         (function () {
+            // Prevent link clicks from updating the URL without navigating before WebAssembly is loaded
+            window.addEventListener('click', function(e) {
+                if (window.habitinatorWasmLoaded) {
+                    return;
+                }
+                let anchor = e.target.closest('a');
+                if (!anchor) {
+                    return;
+                }
+                if (anchor.hasAttribute('download') || anchor.target) {
+                    return;
+                }
+                let href = anchor.getAttribute('href');
+                if (!href || href.startsWith('#') || href.startsWith('javascript:')) {
+                    return;
+                }
+                let url;
+                try {
+                    url = new URL(anchor.href, window.location.href);
+                } catch (err) {
+                    return;
+                }
+                if (url.origin !== window.location.origin) {
+                    return;
+                }
+                console.log("Habitinator: Intercepted click on link before WASM loaded. Forcing full reload:", anchor.href);
+                e.stopPropagation();
+                e.preventDefault();
+                window.location.href = anchor.href;
+            }, true);
+
             try {
-                const cookies = document.cookie.split('; ');
-                const themeCookie = cookies.find(row => row.startsWith('habitinator_theme='));
+                const email = document.documentElement.getAttribute('data-user-email') || '';
                 let isDark = false;
                 let hasTheme = false;
 
-                if (themeCookie) {
-                    const themeVal = themeCookie.split('=')[1];
-                    isDark = (themeVal === 'dark');
-                    hasTheme = true;
-                }
-
-                if (!hasTheme) {
-                    const stored = localStorage.getItem('user_preferences_v1');
+                if (email) {
+                    // Authenticated user: try local storage preference first
+                    const key = 'user_preferences_v1_' + email;
+                    let stored = localStorage.getItem(key) || localStorage.getItem('user_preferences_v1');
                     if (stored) {
                         const prefs = JSON.parse(stored);
                         if (prefs && typeof prefs.theme === 'number') {
@@ -35,11 +61,26 @@
                             } else if (prefs.theme === 1) {
                                 isDark = false;
                                 hasTheme = true;
+                            } else if (prefs.theme === 0) {
+                                isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                                hasTheme = true;
                             }
+                        }
+                    }
+
+                    // Fallback to cookie if no local storage preference exists
+                    if (!hasTheme) {
+                        const cookies = document.cookie.split('; ');
+                        const themeCookie = cookies.find(row => row.startsWith('habitinator_theme='));
+                        if (themeCookie) {
+                            const themeVal = themeCookie.split('=')[1];
+                            isDark = (themeVal === 'dark');
+                            hasTheme = true;
                         }
                     }
                 }
 
+                // If anonymous, or no preference found for authenticated user, always use system theme
                 if (!hasTheme) {
                     isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                 }
@@ -56,7 +97,31 @@
                 }
 
                 // Sync the cookie so the server knows it on next loads
-                document.cookie = "habitinator_theme=" + (isDark ? "dark" : "light") + "; path=/; max-age=31536000; SameSite=Lax";
+                const newTheme = isDark ? "dark" : "light";
+                document.cookie = "habitinator_theme=" + newTheme + "; path=/; max-age=31536000; SameSite=Lax";
+
+                // Check for mismatch between client-resolved theme and server-rendered theme.
+                // If mismatch occurs, reload once so the server renders the correct theme.
+                const serverTheme = document.documentElement.getAttribute('data-server-theme') || 'dark';
+                if (serverTheme !== newTheme && navigator.cookieEnabled) {
+                    try {
+                        const redirectKey = 'habitinator_theme_redirect_' + newTheme;
+                        if (!sessionStorage.getItem(redirectKey)) {
+                            sessionStorage.setItem(redirectKey, '1');
+                            window.location.reload();
+                        }
+                    } catch (e) {
+                        // ignore sessionStorage security restrictions
+                    }
+                } else if (serverTheme === newTheme) {
+                    try {
+                        sessionStorage.removeItem('habitinator_theme_redirect_light');
+                        sessionStorage.removeItem('habitinator_theme_redirect_dark');
+                        sessionStorage.removeItem('habitinator_theme_redirected');
+                    } catch (e) {
+                        // ignore sessionStorage security restrictions
+                    }
+                }
             } catch (e) {
                 console.error(e);
             }
@@ -160,21 +225,26 @@
     <link rel="manifest" href="/manifest.webmanifest"/>
     @* Fallback until the interactive circuit updates head; must match Routes render mode. *@
     <title>@SeoDefaults.DefaultTitle</title>
-    <HeadOutlet @rendermode="@(new InteractiveWebAssemblyRenderMode(prerender: true))"/>
+    <HeadOutlet @rendermode="GetRoutesRenderMode()"/>
 </head>
 
 <body>
-<div id="habitinator-loading-bar"></div>
 
-<CascadingAuthenticationState>
-    <Routes/>
-</CascadingAuthenticationState>
+<CascadingValue Value="@IsDarkTheme()" Name="IsDarkMode">
+    <CascadingAuthenticationState>
+        <Routes @rendermode="GetRoutesRenderMode()"/>
+    </CascadingAuthenticationState>
+</CascadingValue>
 <ReconnectModal/>
 <script src="@Assets["_content/App.Shared.RCL/js/scriptLoader.js"]" defer></script>
 <script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]" defer crossorigin="anonymous"></script>
 <script src="@Assets["_framework/blazor.web.js"]" defer crossorigin="anonymous"></script>
 <script>
+    window.habitinatorSetWasmLoaded = function () {
+        window.habitinatorWasmLoaded = true;
+    };
     window.habitinatorRemoveLoadingBar = function () {
+        window.habitinatorWasmLoaded = true;
         const el = document.getElementById('habitinator-loading-bar');
         if (el) {
             el.style.opacity = '0';
@@ -191,8 +261,22 @@
 </script>
 <script>
     if ('serviceWorker' in navigator) {
-        const swFile = '@(HostEnvironment.IsDevelopment() ? "service-worker.js" : "service-worker.published.js")';
-        navigator.serviceWorker.register(swFile);
+        if ('@(HostEnvironment.IsDevelopment() ? "true" : "false")' === 'true') {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for (let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    for (let name of names) {
+                        caches.delete(name);
+                    }
+                });
+            }
+        } else {
+            navigator.serviceWorker.register('service-worker.published.js');
+        }
     }
 </script>
 </body>
@@ -201,6 +285,24 @@
     [CascadingParameter]
     private HttpContext? HttpContext { get; set; }
 
+    private IComponentRenderMode? GetRoutesRenderMode()
+    {
+        if (HttpContext?.User?.Identity?.IsAuthenticated == true)
+        {
+            return InteractiveWebAssembly;
+        }
+        return null;
+    }
+
+    private bool IsDarkTheme()
+    {
+        if (HttpContext is not null && HttpContext.Request.Cookies.TryGetValue("habitinator_theme", out var theme))
+        {
+            return theme == "dark";
+        }
+        return true;
+    }
+
     private string GetInitialThemeClass()
     {
         if (HttpContext is not null && HttpContext.Request.Cookies.TryGetValue("habitinator_theme", out var theme))
@@ -208,6 +310,18 @@
             return theme == "dark" ? "dark-theme" : "light-theme";
         }
         return "";
+    }
+
+    private string GetUserEmail()
+    {
+        return HttpContext?.User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value 
+            ?? HttpContext?.User?.Identity?.Name 
+            ?? "";
+    }
+
+    private string GetServerTheme()
+    {
+        return IsDarkTheme() ? "dark" : "light";
     }
 }
 

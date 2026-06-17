@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
+using Microsoft.JSInterop;
 using MudBlazor;
 using MudBlazor.Services;
 using App.Shared.RCL.Services;
@@ -10,6 +11,7 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 // Suppress verbose HttpClient logs (only show warnings/errors)
 builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
+builder.Logging.AddFilter("Microsoft.AspNetCore.Authorization", LogLevel.Warning);
 
 // Register MudBlazor services
 builder.Services.AddMudServices(config =>
@@ -65,4 +67,14 @@ builder.Services.AddScoped<INotificationSettingsRules, NotificationSettingsRules
 builder.Services.AddScoped<IUserDateFormatService, UserDateFormatService>();
 builder.Services.AddScoped<IAccountActionsService, RemoteAccountActionsService>();
 
-await builder.Build().RunAsync();
+var host = builder.Build();
+try
+{
+    var js = host.Services.GetRequiredService<IJSRuntime>();
+    await js.InvokeVoidAsync("habitinatorSetWasmLoaded");
+}
+catch
+{
+    // Safeguard
+}
+await host.RunAsync();

@@ -1,0 +1,26 @@
+@inherits LayoutComponentBase
+@using MudBlazor
+@using global::App.Shared.RCL.Themes
+
+<MudThemeProvider Theme="@HabitinatorMudTheme.Default" IsDarkMode="@IsDarkMode"/>
+
+<MudLayout Class="app-shell-layout">
+    <MudAppBar Elevation="0" Dense="true" Class="app-top-bar app-top-bar--guest" ToolBarClass="app-top-bar-toolbar" role="banner">
+        <MudText Typo="Typo.h6" Class="app-top-bar__title mb-0">Habitinator</MudText>
+        <MudSpacer />
+        <MudButton Href="/auth/login" Target="_self" data-enhance-nav="false" Variant="Variant.Text" Color="Color.Inherit" Class="text-transform-none app-show-mobile-only">Sign in</MudButton>
+        <MudButton Href="/auth/register" Target="_self" data-enhance-nav="false" Variant="Variant.Filled" Color="Color.Primary" Class="text-transform-none ms-1">Register</MudButton>
+    </MudAppBar>
+    <MudMainContent Class="app-shell-main">
+        <main id="main-content">
+            <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pt-1 pb-3 px-4 px-sm-5 board-main-container">
+                @Body
+            </MudContainer>
+        </main>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    [CascadingParameter(Name = "IsDarkMode")]
+    private bool IsDarkMode { get; set; } = true;
+}

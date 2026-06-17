@@ -436,9 +436,10 @@ app.MapPost("/api/auth/cookie-login", async (HttpContext httpContext, SignInMana
     return Results.LocalRedirect("/");
 }).DisableAntiforgery().RequireRateLimiting("auth");
 
-app.MapPost("/api/auth/cookie-logout", async (SignInManager<ApplicationUser> signInManager) =>
+app.MapPost("/api/auth/cookie-logout", async (HttpContext context, SignInManager<ApplicationUser> signInManager) =>
     {
         await signInManager.SignOutAsync();
+        context.Response.Cookies.Delete("habitinator_theme");
         return Results.LocalRedirect("/");
     })
     .RequireAuthorization()

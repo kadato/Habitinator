@@ -7,6 +7,8 @@
 @inject IUserDateFormatService DateFormatService
 @inject IUserTimeZoneService TimeZoneService
 @inject IJSRuntime JSRuntime
+@inject PersistentComponentState ApplicationState
+@implements IDisposable
 
 <MudStack Spacing="2" Class="stats-panel">
     <MudText Typo="Typo.h4" Class="app-page-title stats-panel__title">Statistics</MudText>
@@ -451,6 +453,7 @@
 </MudStack>
 
 @code {
+    private PersistingComponentStateSubscription _subscription;
     private ActivityDashboardDto? _data;
     private IReadOnlyList<DailyGraphPeriodOption>? _periodOptions;
     private Dictionary<(int R, int C), ActivityHeatmapCellDto> _cellIndex = [];
@@ -488,6 +491,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _subscription = ApplicationState.RegisterOnPersisting(PersistStatisticsData);
         _heatmapToday = DailySchedule.LocalToday(TimeZoneService);
         try
         {
@@ -505,6 +509,24 @@
         }
     }
 
+    private Task PersistStatisticsData()
+    {
+        if (_data is not null)
+        {
+            ApplicationState.PersistAsJson("stats_dashboard_data", _data);
+        }
+        if (_dailyView is not null)
+        {
+            ApplicationState.PersistAsJson("stats_daily_view_data", _dailyView);
+        }
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        _subscription.Dispose();
+    }
+
     private async Task LoadStatisticsAsync(string periodKey)
     {
         _heatmapToday = DailySchedule.LocalToday(TimeZoneService);
@@ -513,8 +535,24 @@
         try
         {
             var tag = string.IsNullOrEmpty(_tagFilter) ? null : _tagFilter;
-            _data = await Stats.GetDashboardAsync(periodKey, tag);
-            _dailyView = await Stats.GetDailyContributionsAsync(periodKey, tag);
+            if (ApplicationState.TryTakeFromJson<ActivityDashboardDto>("stats_dashboard_data", out var restoredDashboard) && restoredDashboard is not null)
+            {
+                _data = restoredDashboard;
+            }
+            else
+            {
+                _data = await Stats.GetDashboardAsync(periodKey, tag);
+            }
+
+            if (ApplicationState.TryTakeFromJson<DailyContributionsViewDto>("stats_daily_view_data", out var restoredDailyView) && restoredDailyView is not null)
+            {
+                _dailyView = restoredDailyView;
+            }
+            else
+            {
+                _dailyView = await Stats.GetDailyContributionsAsync(periodKey, tag);
+            }
+
             _selectedPeriodKey = _data.PeriodKey;
             var tagList = _data.AvailableTags ?? [];
 

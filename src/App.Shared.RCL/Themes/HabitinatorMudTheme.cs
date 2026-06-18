@@ -37,9 +37,9 @@ public static class HabitinatorMudTheme
         },
         PaletteDark = new PaletteDark
         {
-            Primary = "#3b82f6",
+            Primary = "#2563eb",
             PrimaryContrastText = "#ffffff",
-            Secondary = "#64748b",
+            Secondary = "#94a3b8",
             SecondaryContrastText = "#f8fafc",
             Tertiary = "#a78bfa",
             Black = "#030712",

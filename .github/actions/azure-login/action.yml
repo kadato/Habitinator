@@ -24,7 +24,7 @@ runs:
   steps:
     - name: Azure login (OIDC / workload federation)
       if: ${{ inputs.client-id != '' }}
-      uses: azure/login@v2
+      uses: azure/login@v3
       with:
         client-id: ${{ inputs.client-id }}
         tenant-id: ${{ inputs.tenant-id }}
@@ -32,6 +32,6 @@ runs:
 
     - name: Azure login (service principal JSON)
       if: ${{ inputs.client-id == '' }}
-      uses: azure/login@v2
+      uses: azure/login@v3
       with:
         creds: ${{ inputs.creds }}

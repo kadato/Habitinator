@@ -9,6 +9,12 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <base href="/"/>
+    <ResourcePreloader />
+    @if (HttpContext?.User?.Identity?.IsAuthenticated != true)
+    {
+        <!-- Prefetch WASM framework resources in the background for faster post-login startup -->
+        <WasmPrefetchLinks />
+    }
     <SiteHead/>
     <script>
         (function () {

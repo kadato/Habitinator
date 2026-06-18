@@ -42,8 +42,10 @@ jobs:
             10.0.x
           dotnet-quality: 'preview'
 
-      - name: Restore workloads
-        run: dotnet workload restore Habitinator.slnx
+      - name: Install workloads
+        run: |
+          dotnet workload install wasm-tools
+          dotnet workload restore Habitinator.slnx
 
       - name: Build
         run: dotnet build Habitinator.slnx --configuration Release

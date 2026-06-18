@@ -9,6 +9,10 @@
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>partial</TrimMode>
     <HybridGlobalization>true</HybridGlobalization>
+    <!-- AOT: compile C# to native WebAssembly for ~10-20x faster runtime execution (Release only) -->
+    <RunAOTCompilation Condition="'$(Configuration)' == 'Release'">true</RunAOTCompilation>
+    <!-- Webcil: repackage DLLs as .wasm for better CDN/proxy compatibility -->
+    <WasmEnableWebcil>true</WasmEnableWebcil>
   </PropertyGroup>
 
   <ItemGroup>

@@ -33,3 +33,12 @@ src/App.MAUI/appsettings.Release.json
 # Local Cursor / agent skill copies and lock (not part of the app build)
 .agents/
 skills-lock.json
+
+# Node.js dependencies
+node_modules/
+
+# Lighthouse reports
+report-*.json
+report-*.html
+
+

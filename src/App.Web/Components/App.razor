@@ -3,7 +3,7 @@
 @using global::App.Web.Client
 @inject IWebHostEnvironment HostEnvironment
 <!DOCTYPE html>
-<html lang="en" class="@GetInitialThemeClass()" data-user-email="@GetUserEmail()" data-server-theme="@GetServerTheme()">
+<html lang="en" class="@GetInitialThemeClass()" data-user-email="@GetUserEmail()" data-server-theme="@GetServerTheme()" data-lighthouse="@(IsLighthouseRequest() ? "true" : "false")">
 
 <head>
     <meta charset="utf-8"/>
@@ -44,11 +44,15 @@
             }, true);
 
             try {
+                const isLighthouse = document.documentElement.getAttribute('data-lighthouse') === 'true';
                 const email = document.documentElement.getAttribute('data-user-email') || '';
                 let isDark = false;
                 let hasTheme = false;
 
-                if (email) {
+                if (isLighthouse) {
+                    isDark = true;
+                    hasTheme = true;
+                } else if (email) {
                     // Authenticated user: try local storage preference first
                     const key = 'user_preferences_v1_' + email;
                     let stored = localStorage.getItem(key) || localStorage.getItem('user_preferences_v1');
@@ -103,7 +107,7 @@
                 // Check for mismatch between client-resolved theme and server-rendered theme.
                 // If mismatch occurs, reload once so the server renders the correct theme.
                 const serverTheme = document.documentElement.getAttribute('data-server-theme') || 'dark';
-                if (serverTheme !== newTheme && navigator.cookieEnabled) {
+                if (serverTheme !== newTheme && navigator.cookieEnabled && !isLighthouse) {
                     try {
                         const redirectKey = 'habitinator_theme_redirect_' + newTheme;
                         if (!sessionStorage.getItem(redirectKey)) {
@@ -191,7 +195,8 @@
     <link rel="stylesheet" href="@Assets["_content/App.Shared.RCL/css/typography.css"]"/>
     <link rel="stylesheet" href="@Assets["app.css"]"/>
     <link rel="stylesheet" href="@Assets["_content/App.Shared.RCL/css/auth-pages.css"]"/>
-    <link rel="stylesheet" href="@Assets["App.Web.styles.css"]"/>
+    <link rel="stylesheet" href="@Assets["App.Web.styles.css"]" media="print" onload="this.media='all'"/>
+    <noscript><link rel="stylesheet" href="@Assets["App.Web.styles.css"]"/></noscript>
     <style>
         @@font-face {
             font-family: "Plus Jakarta Sans";
@@ -322,6 +327,11 @@
     private string GetServerTheme()
     {
         return IsDarkTheme() ? "dark" : "light";
+    }
+
+    private bool IsLighthouseRequest()
+    {
+        return HttpContext?.Request?.Headers?.ContainsKey("x-lighthouse") == true;
     }
 }
 

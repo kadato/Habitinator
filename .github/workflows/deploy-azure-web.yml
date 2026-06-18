@@ -116,6 +116,11 @@ jobs:
             echo "DEMO_USER_EMAIL=guest@habitinator.local" >> "$GITHUB_ENV"
           fi
 
+      - name: Install workloads
+        run: |
+          dotnet workload install wasm-tools
+          dotnet workload restore Habitinator.slnx
+
       - name: Provision + deploy with azd
         run: azd up --no-prompt
 

@@ -41,4 +41,8 @@ node_modules/
 report-*.json
 report-*.html
 
-
+# SonarQube
+.sonar_token
+.sonar/
+.scannerwork/
+.sonarqube/

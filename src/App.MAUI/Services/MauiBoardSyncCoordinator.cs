@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace App.MAUI.Services;
 
 /// <summary>Periodic drain + pull; also invoked on hub/visibility refresh and app resume.</summary>
-public sealed class MauiBoardSyncCoordinator
+public sealed partial class MauiBoardSyncCoordinator : IDisposable
 {
     private const int StuckAfterAttempts = 8;
 
@@ -63,22 +63,31 @@ public sealed class MauiBoardSyncCoordinator
         }
 
         if (string.IsNullOrEmpty(await _tokens.GetAccessTokenAsync(cancellationToken)))
+        {
             return;
+        }
 
         _status.SyncProblemMessage = null;
         _status.IsSyncing = true;
         try
         {
-            var progressed = false;
+            bool progressed = false;
             while (await _board.TryDrainOneOutboxOperationAsync(cancellationToken))
+            {
                 progressed = true;
+            }
 
             if (await _board.TryPullRemoteMirrorAsync(cancellationToken))
+            {
                 progressed = true;
+            }
 
-            if (progressed) _status.LastSyncedUtc = DateTimeOffset.UtcNow;
+            if (progressed)
+            {
+                _status.LastSyncedUtc = DateTimeOffset.UtcNow;
+            }
 
-            var stuck = await _board.TryGetStuckOutboxHintAsync(StuckAfterAttempts, cancellationToken);
+            string? stuck = await _board.TryGetStuckOutboxHintAsync(StuckAfterAttempts, cancellationToken);
             _status.SyncProblemMessage = stuck;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -125,5 +134,13 @@ public sealed class MauiBoardSyncCoordinator
         {
             // shutdown
         }
+    }
+
+    public void Dispose()
+    {
+        _appStopping.Cancel();
+        _appStopping.Dispose();
+        _timer.Dispose();
+        _run.Dispose();
     }
 }

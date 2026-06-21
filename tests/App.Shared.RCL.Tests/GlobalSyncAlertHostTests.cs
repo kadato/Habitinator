@@ -194,7 +194,5 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         }
 
         public event Action? Changed;
-
-        public void RaiseChanged() => Changed?.Invoke();
     }
 }

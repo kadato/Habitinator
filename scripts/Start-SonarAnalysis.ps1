@@ -20,7 +20,7 @@ try {
 # Load the Sonar token
 $tokenPath = ".sonar_token"
 if (-not (Test-Path $tokenPath)) {
-    Write-Error "SonarQube token file not found at $tokenPath. Please run scripts/run-sonar.ps1 first."
+    Write-Error "SonarQube token file not found at $tokenPath. Please run scripts/Start-SonarServer.ps1 first."
     Pop-Location
     exit 1
 }

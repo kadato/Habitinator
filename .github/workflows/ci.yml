@@ -47,6 +47,9 @@ jobs:
           dotnet workload install wasm-tools
           dotnet workload restore Habitinator.slnx
 
+      - name: Verify Code Formatting
+        run: dotnet format --verify-no-changes
+
       - name: Build
         run: dotnet build Habitinator.slnx --configuration Release
 

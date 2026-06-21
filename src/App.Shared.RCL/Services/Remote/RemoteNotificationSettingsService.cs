@@ -52,7 +52,10 @@ public sealed class RemoteNotificationSettingsService : INotificationSettingsSer
         var key = GetKey();
         var localSettings = ReadLocal(key);
 
-        if (!_sessionProvider.IsLoggedIn) return localSettings;
+        if (!_sessionProvider.IsLoggedIn)
+        {
+            return localSettings;
+        }
 
         // Fetch remote settings in the background
         _ = Task.Run(async () =>

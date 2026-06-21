@@ -39,8 +39,10 @@ public static class DailyReminderText
             .ToList();
 
         if (dailies.Count == 0 && deadlineTodos.Count == 0)
+        {
             return (DefaultTitle,
                 "You have no dailies due and no to-dos with a due date for today. Open the app to work on your habits and tasks.");
+        }
 
         var sb = new StringBuilder(256);
         if (dailies.Count > 0)
@@ -51,12 +53,18 @@ public static class DailyReminderText
 
         if (deadlineTodos.Count > 0)
         {
-            if (sb.Length > 0) sb.AppendLine();
+            if (sb.Length > 0)
+            {
+                sb.AppendLine();
+            }
 
             sb.Append("To-dos (deadline): ");
             for (var i = 0; i < deadlineTodos.Count; i++)
             {
-                if (i > 0) sb.Append(", ");
+                if (i > 0)
+                {
+                    sb.Append(", ");
+                }
 
                 var t = deadlineTodos[i];
                 var due = t.TodoDueDate!.Value;
@@ -75,7 +83,10 @@ public static class DailyReminderText
         }
 
         var body = sb.ToString();
-        if (body.Length > maxBodyLength) body = body[..(maxBodyLength - 1)] + "…";
+        if (body.Length > maxBodyLength)
+        {
+            body = body[..(maxBodyLength - 1)] + "…";
+        }
 
         return (DefaultTitle, body);
     }

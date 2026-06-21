@@ -9,7 +9,10 @@ public sealed class RemoteBoardRefreshService : IRemoteBoardRefreshService
     {
         lock (_lock)
         {
-            if (!_callbacks.Contains(onRefresh)) _callbacks.Add(onRefresh);
+            if (!_callbacks.Contains(onRefresh))
+            {
+                _callbacks.Add(onRefresh);
+            }
         }
     }
 
@@ -29,13 +32,17 @@ public sealed class RemoteBoardRefreshService : IRemoteBoardRefreshService
             copy = _callbacks.ToList();
         }
 
-        if (copy.Count == 0) return Task.CompletedTask;
+        if (copy.Count == 0)
+        {
+            return Task.CompletedTask;
+        }
 
         return RunSequentiallyAsync();
 
         async Task RunSequentiallyAsync()
         {
             foreach (var fn in copy)
+            {
                 try
                 {
                     await fn();
@@ -44,6 +51,7 @@ public sealed class RemoteBoardRefreshService : IRemoteBoardRefreshService
                 {
                     // best-effort; other subscribers still run
                 }
+            }
         }
     }
 }

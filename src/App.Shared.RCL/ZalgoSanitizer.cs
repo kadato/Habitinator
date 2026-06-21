@@ -28,13 +28,18 @@ public static class ZalgoSanitizer
     /// </summary>
     public static bool IsZalgo(string? input)
     {
-        if (string.IsNullOrEmpty(input)) return false;
+        if (string.IsNullOrEmpty(input))
+        {
+            return false;
+        }
 
         var enumerator = StringInfo.GetTextElementEnumerator(input);
         while (enumerator.MoveNext())
         {
             if (CountCombining(enumerator.GetTextElement()) > MaxCombiningPerBase)
+            {
                 return true;
+            }
         }
 
         return false;
@@ -48,8 +53,15 @@ public static class ZalgoSanitizer
     /// </summary>
     public static string? Sanitize(string? input)
     {
-        if (string.IsNullOrEmpty(input)) return input;
-        if (!IsZalgo(input)) return input; // fast path – avoid allocation for clean strings
+        if (string.IsNullOrEmpty(input))
+        {
+            return input;
+        }
+
+        if (!IsZalgo(input))
+        {
+            return input; // fast path – avoid allocation for clean strings
+        }
 
         var sb = new StringBuilder(input.Length);
         var enumerator = StringInfo.GetTextElementEnumerator(input);
@@ -81,7 +93,10 @@ public static class ZalgoSanitizer
         {
             var codepoint = char.ConvertToUtf32(cluster, index);
             index += char.IsSurrogatePair(cluster, index) ? 2 : 1;
-            if (IsCombining(codepoint)) count++;
+            if (IsCombining(codepoint))
+            {
+                count++;
+            }
         }
 
         return count;
@@ -89,7 +104,10 @@ public static class ZalgoSanitizer
 
     private static string TrimCombining(string cluster)
     {
-        if (CountCombining(cluster) <= MaxCombiningPerBase) return cluster;
+        if (CountCombining(cluster) <= MaxCombiningPerBase)
+        {
+            return cluster;
+        }
 
         // If the cluster is identified as Zalgo, strip ALL combining marks from it.
         var sb = new StringBuilder(cluster.Length);

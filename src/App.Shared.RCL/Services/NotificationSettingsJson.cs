@@ -19,7 +19,10 @@ public static class NotificationSettingsJson
 
     public static NotificationSettings DeserializeOrDefault(string? json)
     {
-        if (string.IsNullOrWhiteSpace(json)) return NotificationSettings.CreateDefault();
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return NotificationSettings.CreateDefault();
+        }
 
         try
         {

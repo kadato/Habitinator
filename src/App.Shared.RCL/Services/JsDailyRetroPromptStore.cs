@@ -33,7 +33,10 @@ public sealed class JsDailyRetroPromptStore : IDailyRetroPromptStore
             return null;
         }
 
-        if (string.IsNullOrWhiteSpace(s) || !DateOnly.TryParse(s, out var d)) return null;
+        if (string.IsNullOrWhiteSpace(s) || !DateOnly.TryParse(s, out var d))
+        {
+            return null;
+        }
 
         return d;
     }

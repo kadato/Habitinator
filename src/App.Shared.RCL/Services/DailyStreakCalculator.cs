@@ -34,7 +34,10 @@ public static class DailyStreakCalculator
         foreach (var (occurred, type) in source)
         {
             if (type is not (ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete))
+            {
                 continue;
+            }
+
             var d = DateOnly.FromDateTime(occurred.UtcDateTime);
             if (!map.TryGetValue(d, out var list))
             {
@@ -46,7 +49,9 @@ public static class DailyStreakCalculator
         }
 
         foreach (var list in map.Values)
+        {
             list.Sort((a, b) => a.OccurredAtUtc.CompareTo(b.OccurredAtUtc));
+        }
 
         return map;
     }
@@ -80,7 +85,11 @@ public static class DailyStreakCalculator
         var maxSteps = 20_000;
         while (maxSteps-- > 0)
         {
-            if (d < historyStart) break;
+            if (d < historyStart)
+            {
+                break;
+            }
+
             if (!DailySchedule.IsScheduledOn(historyStart, repeat, repeatInterval, d))
             {
                 d = d.AddDays(-1);
@@ -88,7 +97,10 @@ public static class DailyStreakCalculator
             }
 
             if (!IsCalendarDayNetCompleted(d, GetDayListOrNull(eventsByDay, d), dailyLastCompletedOn))
+            {
                 break;
+            }
+
             n++;
             d = d.AddDays(-1);
         }

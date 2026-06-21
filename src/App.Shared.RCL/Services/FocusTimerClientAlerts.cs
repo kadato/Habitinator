@@ -24,7 +24,10 @@ public sealed class FocusTimerClientAlerts : IFocusTimerClientAlerts
     public async ValueTask NotifyTimeUpAsync(string title, string body, CancellationToken cancellationToken = default)
     {
         var settings = await _settingsService.GetAsync(cancellationToken).ConfigureAwait(false);
-        if (!settings.FocusTimerAlertsEnabled) return;
+        if (!settings.FocusTimerAlertsEnabled)
+        {
+            return;
+        }
 
         var quiet = _notificationRules.IsInQuietHours(settings, _clock.UtcNow.UtcDateTime);
         // Chime obeys quiet hours; in-app and browser OS notifications for focus do not (same as snackbar).

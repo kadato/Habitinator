@@ -59,8 +59,16 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
     private static string BuildActivityQuery(string? periodKey, string? tag)
     {
         var q = new List<string>();
-        if (!string.IsNullOrEmpty(periodKey)) q.Add("period=" + Uri.EscapeDataString(periodKey));
-        if (!string.IsNullOrEmpty(tag)) q.Add("tag=" + Uri.EscapeDataString(tag));
+        if (!string.IsNullOrEmpty(periodKey))
+        {
+            q.Add("period=" + Uri.EscapeDataString(periodKey));
+        }
+
+        if (!string.IsNullOrEmpty(tag))
+        {
+            q.Add("tag=" + Uri.EscapeDataString(tag));
+        }
+
         return q.Count == 0 ? string.Empty : "?" + string.Join("&", q);
     }
 
@@ -68,7 +76,9 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
     {
         using var res = await Client.GetAsync(requestUri, cancellationToken);
         if (res.StatusCode == HttpStatusCode.Unauthorized)
+        {
             throw new InvalidOperationException("Sign in required. Open Log in and try again.");
+        }
 
         res.EnsureSuccessStatusCode();
         var body = await res.Content.ReadFromJsonAsync<T>(Serializer, cancellationToken);

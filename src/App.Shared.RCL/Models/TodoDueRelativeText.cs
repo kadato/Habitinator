@@ -10,13 +10,19 @@ public static class TodoDueRelativeText
         var days = dueDate.DayNumber - today.DayNumber;
 
         if (days < 0)
+        {
             return FormatOverdue(-days);
+        }
 
         if (days == 0)
+        {
             return "Due today";
+        }
 
         if (days == 1)
+        {
             return "Due tomorrow";
+        }
 
         return FormatFuture(days);
     }
@@ -27,7 +33,9 @@ public static class TodoDueRelativeText
     private static string FormatFuture(int days)
     {
         if (days <= 30)
+        {
             return $"{days} days left";
+        }
 
         var months = days / 30;
         return months == 1 ? "1 month left" : $"{months} months left";

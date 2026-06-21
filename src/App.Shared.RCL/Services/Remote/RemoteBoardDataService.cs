@@ -32,14 +32,22 @@ public sealed class RemoteBoardDataService : IBoardDataService
     private static void AddMutationHeaders(HttpRequestMessage req, Guid operationId, DateTimeOffset? expectedUpdatedAtUtc)
     {
         if (operationId != Guid.Empty)
+        {
             req.Headers.TryAddWithoutValidation("Idempotency-Key", operationId.ToString("D"));
+        }
+
         if (expectedUpdatedAtUtc is { } e)
+        {
             req.Headers.TryAddWithoutValidation("X-Board-Expected-Updated-At-Utc", e.ToString("O"));
+        }
     }
 
     private static async Task ThrowIfConflictAsync(HttpResponseMessage res, CancellationToken cancellationToken)
     {
-        if (res.StatusCode != HttpStatusCode.Conflict) return;
+        if (res.StatusCode != HttpStatusCode.Conflict)
+        {
+            return;
+        }
 
         var body = await res.Content.ReadAsStringAsync(cancellationToken);
         throw new BoardRemoteConflictException(body);
@@ -50,7 +58,10 @@ public sealed class RemoteBoardDataService : IBoardDataService
         using var res = await Client.GetAsync(
             $"api/board/sync?cursor={Uri.EscapeDataString(cursor)}",
             cancellationToken);
-        if (res.StatusCode == HttpStatusCode.BadRequest) return null;
+        if (res.StatusCode == HttpStatusCode.BadRequest)
+        {
+            return null;
+        }
 
         if (!res.IsSuccessStatusCode)
         {
@@ -152,7 +163,10 @@ public sealed class RemoteBoardDataService : IBoardDataService
         using var req = new HttpRequestMessage(HttpMethod.Delete, $"api/board/{section}/{itemId}");
         AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
         using var res = await Client.SendAsync(req, cancellationToken);
-        if (res.StatusCode == HttpStatusCode.NotFound) return false;
+        if (res.StatusCode == HttpStatusCode.NotFound)
+        {
+            return false;
+        }
 
         await ThrowIfConflictAsync(res, cancellationToken);
         res.EnsureSuccessStatusCode();
@@ -437,7 +451,10 @@ public sealed class RemoteBoardDataService : IBoardDataService
     private static async Task<BoardItem?> ReadBoardItemOrNullAsync(HttpResponseMessage res,
         CancellationToken cancellationToken)
     {
-        if (res.StatusCode == HttpStatusCode.NotFound) return null;
+        if (res.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
 
         await ThrowIfConflictAsync(res, cancellationToken);
         res.EnsureSuccessStatusCode();

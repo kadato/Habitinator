@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 namespace App.Shared.RCL.Models;
 
 public sealed record ItemTitleRequest(
-    [Required, StringLength(200)] string Title, 
+    [Required, StringLength(200)] string Title,
     Guid? ItemId = null);
 
 public sealed record HabitUpdateRequest(

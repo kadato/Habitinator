@@ -19,7 +19,10 @@ public static class UserPreferencesJson
 
     public static UserPreferences DeserializeOrDefault(string? json)
     {
-        if (string.IsNullOrWhiteSpace(json)) return UserPreferences.CreateDefault();
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return UserPreferences.CreateDefault();
+        }
 
         try
         {

@@ -40,7 +40,10 @@ public sealed class UserNotifier : IUserNotifier, IDisposable
     public async ValueTask NotifyAsync(string message, Severity severity, CancellationToken cancellationToken = default)
     {
         var settings = await GetCachedAsync(cancellationToken).ConfigureAwait(false);
-        if (!_notificationRules.ShouldShowToast(settings, severity, _clock.UtcNow.UtcDateTime)) return;
+        if (!_notificationRules.ShouldShowToast(settings, severity, _clock.UtcNow.UtcDateTime))
+        {
+            return;
+        }
 
         var ms = _notificationRules.VisibleStateDurationMs(settings.ToastDuration);
         AppSnackbar.AddMessage(_snackbar, message, ms);
@@ -48,7 +51,10 @@ public sealed class UserNotifier : IUserNotifier, IDisposable
 
     private async ValueTask<NotificationSettings> GetCachedAsync(CancellationToken cancellationToken)
     {
-        if (_cache is not null) return _cache;
+        if (_cache is not null)
+        {
+            return _cache;
+        }
 
         _cache = await _settingsService.GetAsync(cancellationToken).ConfigureAwait(false);
         return _cache;

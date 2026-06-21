@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+
 using App.Shared.RCL.Components;
 using App.Shared.RCL.Models;
+
 using MudBlazor;
 
 namespace App.Shared.RCL.Services;
@@ -41,7 +43,10 @@ public sealed class UndoService : IUndoService
 
     public Guid RegisterUndo(string description, Func<Task> undoFunc)
     {
-        if (IsUndoing) return Guid.Empty;
+        if (IsUndoing)
+        {
+            return Guid.Empty;
+        }
 
         if (_currentBatch is not null)
         {
@@ -69,7 +74,10 @@ public sealed class UndoService : IUndoService
 
     private void EndBatch()
     {
-        if (_currentBatch is null) return;
+        if (_currentBatch is null)
+        {
+            return;
+        }
 
         var batch = _currentBatch;
         var desc = _currentBatchDescription ?? "Multiple actions";
@@ -95,13 +103,19 @@ public sealed class UndoService : IUndoService
 
     private async Task UndoAsync(Guid? actionId)
     {
-        if (_undoStack.Count == 0) return;
+        if (_undoStack.Count == 0)
+        {
+            return;
+        }
 
         var index = actionId is null
             ? _undoStack.Count - 1
             : _undoStack.FindIndex(a => a.Id == actionId);
 
-        if (index < 0) return;
+        if (index < 0)
+        {
+            return;
+        }
 
         var action = _undoStack[index];
         _undoStack.RemoveAt(index);
@@ -173,7 +187,10 @@ public sealed class UndoService : IUndoService
 
     private void DismissSnackbar(UndoAction action)
     {
-        if (action.SnackbarKey is null) return;
+        if (action.SnackbarKey is null)
+        {
+            return;
+        }
 
         try
         {

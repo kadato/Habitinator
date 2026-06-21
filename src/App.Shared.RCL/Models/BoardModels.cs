@@ -71,11 +71,18 @@ public static class BoardTagUtil
 {
     public static IEnumerable<string> ParseTags(string? raw)
     {
-        if (string.IsNullOrWhiteSpace(raw)) yield break;
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            yield break;
+        }
 
         foreach (var part in raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
             if (part.Length > 0)
+            {
                 yield return part;
+            }
+        }
     }
 }
 
@@ -88,7 +95,10 @@ public static class DailyChecklistJson
 
     public static IReadOnlyList<DailyChecklistItem> Parse(string? json)
     {
-        if (string.IsNullOrWhiteSpace(json)) return Array.Empty<DailyChecklistItem>();
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return Array.Empty<DailyChecklistItem>();
+        }
 
         try
         {
@@ -110,7 +120,10 @@ public static class DailyChecklistJson
                 ZalgoSanitizer.SanitizeAndTrim(x.Text),
                 x.IsDone))
             .ToList();
-        if (cleaned.Count == 0) return null;
+        if (cleaned.Count == 0)
+        {
+            return null;
+        }
 
         return JsonSerializer.Serialize(cleaned, s_options);
     }

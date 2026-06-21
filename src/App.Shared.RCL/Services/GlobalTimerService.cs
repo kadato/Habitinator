@@ -31,7 +31,10 @@ public sealed class GlobalTimerService
         get => field;
         set
         {
-            if (field == value) return;
+            if (field == value)
+            {
+                return;
+            }
 
             field = value;
             RearmFocusMilestone();
@@ -59,13 +62,25 @@ public sealed class GlobalTimerService
     /// </summary>
     public bool TryConsumeFocusDurationReached()
     {
-        if (!IsRunning) return false;
+        if (!IsRunning)
+        {
+            return false;
+        }
 
-        if (AwaitingFocusTimeUpPrompt) return false;
+        if (AwaitingFocusTimeUpPrompt)
+        {
+            return false;
+        }
 
-        if (!FocusAlertAfter.HasValue || FocusAlertAfter <= TimeSpan.Zero) return false;
+        if (!FocusAlertAfter.HasValue || FocusAlertAfter <= TimeSpan.Zero)
+        {
+            return false;
+        }
 
-        if (_nextFocusMilestoneAtElapsed is null) return false;
+        if (_nextFocusMilestoneAtElapsed is null)
+        {
+            return false;
+        }
 
         return Elapsed >= _nextFocusMilestoneAtElapsed;
     }
@@ -74,7 +89,9 @@ public sealed class GlobalTimerService
     {
         // Don't change target while timer is running - preserve the session target
         if (IsRunning)
+        {
             return;
+        }
 
         TargetType = targetType;
         TargetId = targetId;
@@ -99,7 +116,10 @@ public sealed class GlobalTimerService
 
     public void Start()
     {
-        if (IsRunning) return;
+        if (IsRunning)
+        {
+            return;
+        }
 
         if (AwaitingFocusTimeUpPrompt)
         {
@@ -110,7 +130,9 @@ public sealed class GlobalTimerService
         if (_nextFocusMilestoneAtElapsed is null
             && FocusAlertAfter is { } f
             && f > TimeSpan.Zero)
+        {
             _nextFocusMilestoneAtElapsed = _accumulated + f;
+        }
 
         _runningSince = _clock.UtcNow;
     }
@@ -121,12 +143,18 @@ public sealed class GlobalTimerService
     /// </summary>
     public void ResumeAfterFocusPromptNotDone()
     {
-        if (!AwaitingFocusTimeUpPrompt) return;
+        if (!AwaitingFocusTimeUpPrompt)
+        {
+            return;
+        }
 
         AwaitingFocusTimeUpPrompt = false;
         _nextFocusMilestoneAtElapsed = null;
 
-        if (!IsRunning) _runningSince = _clock.UtcNow;
+        if (!IsRunning)
+        {
+            _runningSince = _clock.UtcNow;
+        }
     }
 
     /// <summary>
@@ -135,14 +163,20 @@ public sealed class GlobalTimerService
     /// </summary>
     public void PauseForFocusTimeUp()
     {
-        if (!IsRunning) return;
+        if (!IsRunning)
+        {
+            return;
+        }
 
         AwaitingFocusTimeUpPrompt = true;
     }
 
     public void Pause()
     {
-        if (!IsRunning) return;
+        if (!IsRunning)
+        {
+            return;
+        }
 
         _accumulated += _clock.UtcNow - _runningSince!.Value;
         _runningSince = null;
@@ -197,8 +231,12 @@ public sealed class GlobalTimerService
         }
 
         if (IsRunning)
+        {
             _nextFocusMilestoneAtElapsed = Elapsed + FocusAlertAfter.Value;
+        }
         else
+        {
             _nextFocusMilestoneAtElapsed = _accumulated + FocusAlertAfter.Value;
+        }
     }
 }

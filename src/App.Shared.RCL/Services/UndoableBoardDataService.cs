@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
 using App.Shared.RCL.Models;
 
 namespace App.Shared.RCL.Services;
@@ -25,7 +26,10 @@ public sealed class UndoableBoardDataService : IBoardDataService
     public async Task<BoardItem?> ArchiveItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
     {
         var item = await FindItemAsync(itemId, cancellationToken);
-        if (item is null) return await _inner.ArchiveItemAsync(section, itemId, cancellationToken);
+        if (item is null)
+        {
+            return await _inner.ArchiveItemAsync(section, itemId, cancellationToken);
+        }
 
         var result = await _inner.ArchiveItemAsync(section, itemId, cancellationToken);
         if (result is not null && !_undoService.IsUndoing)
@@ -72,7 +76,10 @@ public sealed class UndoableBoardDataService : IBoardDataService
     public async Task<BoardItem?> RenameItemAsync(BoardSection section, Guid itemId, string title, CancellationToken cancellationToken = default)
     {
         var item = await FindItemAsync(itemId, cancellationToken);
-        if (item is null) return await _inner.RenameItemAsync(section, itemId, title, cancellationToken);
+        if (item is null)
+        {
+            return await _inner.RenameItemAsync(section, itemId, title, cancellationToken);
+        }
 
         var oldTitle = item.Title;
         var result = await _inner.RenameItemAsync(section, itemId, title, cancellationToken);
@@ -89,7 +96,10 @@ public sealed class UndoableBoardDataService : IBoardDataService
     public async Task<bool> DeleteItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
     {
         var item = await FindItemAsync(itemId, cancellationToken);
-        if (item is null) return await _inner.DeleteItemAsync(section, itemId, cancellationToken);
+        if (item is null)
+        {
+            return await _inner.DeleteItemAsync(section, itemId, cancellationToken);
+        }
 
         var success = await _inner.DeleteItemAsync(section, itemId, cancellationToken);
         if (success && !_undoService.IsUndoing)
@@ -175,7 +185,10 @@ public sealed class UndoableBoardDataService : IBoardDataService
     public async Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
         var item = await FindItemAsync(itemId, cancellationToken);
-        if (item is null) return await _inner.IncrementHabitPlusAsync(itemId, cancellationToken);
+        if (item is null)
+        {
+            return await _inner.IncrementHabitPlusAsync(itemId, cancellationToken);
+        }
 
         var result = await _inner.IncrementHabitPlusAsync(itemId, cancellationToken);
         if (result is not null && !_undoService.IsUndoing)
@@ -207,7 +220,10 @@ public sealed class UndoableBoardDataService : IBoardDataService
     public async Task<BoardItem?> IncrementHabitMinusAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
         var item = await FindItemAsync(itemId, cancellationToken);
-        if (item is null) return await _inner.IncrementHabitMinusAsync(itemId, cancellationToken);
+        if (item is null)
+        {
+            return await _inner.IncrementHabitMinusAsync(itemId, cancellationToken);
+        }
 
         var result = await _inner.IncrementHabitMinusAsync(itemId, cancellationToken);
         if (result is not null && !_undoService.IsUndoing)
@@ -428,8 +444,16 @@ public sealed class UndoableBoardDataService : IBoardDataService
 
     private static bool DatesEqual(DateOnly? itemDate, DateTime? dateTime)
     {
-        if (itemDate is null && dateTime is null) return true;
-        if (itemDate is null || dateTime is null) return false;
+        if (itemDate is null && dateTime is null)
+        {
+            return true;
+        }
+
+        if (itemDate is null || dateTime is null)
+        {
+            return false;
+        }
+
         return itemDate == DateOnly.FromDateTime(dateTime.Value);
     }
 

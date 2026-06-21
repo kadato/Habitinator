@@ -46,7 +46,10 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService
         CancellationToken cancellationToken = default)
     {
         var sec = (int)Math.Min(int.MaxValue, Math.Max(0, duration.TotalSeconds));
-        if (sec == 0) return;
+        if (sec == 0)
+        {
+            return;
+        }
 
         try
         {

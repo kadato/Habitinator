@@ -81,7 +81,10 @@ public static class BoardOutboxPayloadMapper
         Guid clientId,
         Guid serverId)
     {
-        if (clientId == serverId) return payloadJson;
+        if (clientId == serverId)
+        {
+            return payloadJson;
+        }
 
         return kind switch
         {

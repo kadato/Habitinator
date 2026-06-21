@@ -79,7 +79,10 @@ public static class DailySchedule
         int rawInterval,
         int streakWindow)
     {
-        if (dailyStart is { } d0 && d0 < notAfter) return d0;
+        if (dailyStart is { } d0 && d0 < notAfter)
+        {
+            return d0;
+        }
 
         return StreakHistorySyntheticAnchor(notAfter, repeat, rawInterval, streakWindow);
     }
@@ -102,11 +105,17 @@ public static class DailySchedule
         };
 
         var candidate = notAfter.AddDays(-padDays);
-        if (repeat != DailyRepeatType.Weekly) return candidate;
+        if (repeat != DailyRepeatType.Weekly)
+        {
+            return candidate;
+        }
 
         var dowDelta = ((int)notAfter.DayOfWeek - (int)candidate.DayOfWeek + 7) % 7;
         candidate = candidate.AddDays(dowDelta);
-        if (candidate > notAfter) candidate = candidate.AddDays(-7 * interval);
+        if (candidate > notAfter)
+        {
+            candidate = candidate.AddDays(-7 * interval);
+        }
 
         return candidate;
     }
@@ -119,7 +128,10 @@ public static class DailySchedule
     {
         var interval = Math.Max(1, Math.Min(999, rawInterval < 1 ? 1 : rawInterval));
         var start = ResolveStartDateOrToday(dailyStart);
-        if (on < start) return false;
+        if (on < start)
+        {
+            return false;
+        }
 
         return repeat switch
         {
@@ -171,7 +183,10 @@ public static class DailySchedule
     private static bool IsEveryNDaysFrom(DateOnly start, DateOnly on, int n)
     {
         var d = (on.ToDateTime(TimeOnly.MinValue) - start.ToDateTime(TimeOnly.MinValue)).Days;
-        if (d < 0) return false;
+        if (d < 0)
+        {
+            return false;
+        }
 
         return d % n == 0;
     }
@@ -179,11 +194,20 @@ public static class DailySchedule
     private static bool IsEveryNWeeksOnSameDowFrom(DateOnly start, DateOnly on, int n)
     {
         var d = (on.ToDateTime(TimeOnly.MinValue) - start.ToDateTime(TimeOnly.MinValue)).Days;
-        if (d < 0) return false;
+        if (d < 0)
+        {
+            return false;
+        }
 
-        if (on.DayOfWeek != start.DayOfWeek) return false;
+        if (on.DayOfWeek != start.DayOfWeek)
+        {
+            return false;
+        }
 
-        if (d % 7 != 0) return false;
+        if (d % 7 != 0)
+        {
+            return false;
+        }
 
         var weekIndex = d / 7;
         return weekIndex % n == 0;
@@ -191,25 +215,40 @@ public static class DailySchedule
 
     private static bool IsEveryNMonthsSameDayFrom(DateOnly start, DateOnly on, int n)
     {
-        if (on < start) return false;
+        if (on < start)
+        {
+            return false;
+        }
 
         var dueDay = Math.Min(start.Day, DateTime.DaysInMonth(on.Year, on.Month));
-        if (on.Day != dueDay) return false;
+        if (on.Day != dueDay)
+        {
+            return false;
+        }
 
         var m0 = start.Year * 12 + (start.Month - 1);
         var m1 = on.Year * 12 + (on.Month - 1);
         var monthDiff = m1 - m0;
-        if (monthDiff < 0) return false;
+        if (monthDiff < 0)
+        {
+            return false;
+        }
 
         return monthDiff % n == 0;
     }
 
     private static bool IsEveryNYearsSameDayFrom(DateOnly start, DateOnly on, int n)
     {
-        if (on < start) return false;
+        if (on < start)
+        {
+            return false;
+        }
 
         var dueDay = Math.Min(start.Day, DateTime.DaysInMonth(on.Year, on.Month));
-        if (on.Month != start.Month || on.Day != dueDay) return false;
+        if (on.Month != start.Month || on.Day != dueDay)
+        {
+            return false;
+        }
 
         var yDiff = on.Year - start.Year;
         return yDiff >= 0 && yDiff % n == 0;

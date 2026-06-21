@@ -30,7 +30,11 @@ public sealed class InitialBoardLoadGate : IInitialBoardLoadGate
 
     public void MarkComplete()
     {
-        if (_isComplete) return;
+        if (_isComplete)
+        {
+            return;
+        }
+
         _isComplete = true;
         _mauiSignal?.MarkComplete();
         Completed?.Invoke();

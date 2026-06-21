@@ -26,7 +26,10 @@ public sealed class UserDateFormatService : IUserDateFormatService
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        if (_initialized) return;
+        if (_initialized)
+        {
+            return;
+        }
 
         var prefs = await _preferencesService.GetAsync(cancellationToken).ConfigureAwait(false);
         ApplyFromPreferences(prefs);

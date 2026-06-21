@@ -24,9 +24,15 @@ public sealed class NotificationSettingsRules : INotificationSettingsRules
     /// <summary>Whether a MudSnackbar with the given severity should be shown.</summary>
     public bool ShouldShowToast(NotificationSettings settings, Severity severity, DateTime utcNow)
     {
-        if (!settings.InAppMessagesEnabled) return false;
+        if (!settings.InAppMessagesEnabled)
+        {
+            return false;
+        }
 
-        if (IsInQuietHours(settings, utcNow) && severity != Severity.Error) return false;
+        if (IsInQuietHours(settings, utcNow) && severity != Severity.Error)
+        {
+            return false;
+        }
 
         return severity switch
         {
@@ -65,7 +71,9 @@ public sealed class NotificationSettingsRules : INotificationSettingsRules
         if (!settings.QuietHoursEnabled
             || !settings.QuietHoursStartUtc.HasValue
             || !settings.QuietHoursEndUtc.HasValue)
+        {
             return false;
+        }
 
         // Convert current UTC time to local time for comparison with quiet hours
         var localTime = _timeZoneService.ConvertToLocal(new DateTimeOffset(utcNow, TimeSpan.Zero));
@@ -75,7 +83,10 @@ public sealed class NotificationSettingsRules : INotificationSettingsRules
         var quietStartLocal = _timeZoneService.ConvertUtcTimeToLocal(settings.QuietHoursStartUtc.Value);
         var quietEndLocal = _timeZoneService.ConvertUtcTimeToLocal(settings.QuietHoursEndUtc.Value);
 
-        if (quietStartLocal == quietEndLocal) return false;
+        if (quietStartLocal == quietEndLocal)
+        {
+            return false;
+        }
 
         // Check if current local time falls within quiet hours window
         if (quietStartLocal < quietEndLocal)

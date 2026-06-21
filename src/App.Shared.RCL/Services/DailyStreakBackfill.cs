@@ -25,7 +25,10 @@ public static class DailyStreakBackfill
         int streakCount,
         DateOnly notAfter)
     {
-        if (streakCount <= 0) return Array.Empty<DateOnly>();
+        if (streakCount <= 0)
+        {
+            return Array.Empty<DateOnly>();
+        }
 
         var n = Math.Min(9999, streakCount);
         var scheduleStart = DailySchedule.StreakHistoryScheduleStart(
@@ -35,9 +38,16 @@ public static class DailyStreakBackfill
         var maxSteps = 20_000;
         while (list.Count < n && maxSteps-- > 0)
         {
-            if (d < scheduleStart) break;
+            if (d < scheduleStart)
+            {
+                break;
+            }
+
             if (DailySchedule.IsScheduledOn(scheduleStart, repeat, repeatInterval, d))
+            {
                 list.Add(d);
+            }
+
             d = d.AddDays(-1);
         }
 

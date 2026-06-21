@@ -56,6 +56,7 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
     {
         var updated = await _inner.CompleteDailyForDateAsync(itemId, completedOn, cancellationToken);
         if (updated is not null)
+        {
             try
             {
                 await _activityLog.LogActivityAsync(
@@ -67,6 +68,7 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
             catch (Exception)
             {
             }
+        }
 
         return updated;
     }
@@ -74,13 +76,19 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
     public async Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId,
         CancellationToken cancellationToken = default)
     {
-        if (section == BoardSection.Habit) return await _inner.ToggleItemAsync(section, itemId, cancellationToken);
+        if (section == BoardSection.Habit)
+        {
+            return await _inner.ToggleItemAsync(section, itemId, cancellationToken);
+        }
 
         var snap = await _inner.GetSnapshotAsync(cancellationToken);
         var before = section == BoardSection.Daily
             ? snap.Dailies.FirstOrDefault(x => x.Id == itemId)
             : snap.Todos.FirstOrDefault(x => x.Id == itemId);
-        if (before is null) return await _inner.ToggleItemAsync(section, itemId, cancellationToken);
+        if (before is null)
+        {
+            return await _inner.ToggleItemAsync(section, itemId, cancellationToken);
+        }
 
         var today = DateOnly.FromDateTime(DateTime.Now); // Use local timezone for consistency
         var wasComplete = section == BoardSection.Daily
@@ -112,6 +120,7 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
     {
         var updated = await _inner.IncrementHabitPlusAsync(itemId, cancellationToken);
         if (updated is not null)
+        {
             try
             {
                 await _activityLog.LogActivityAsync(
@@ -123,6 +132,7 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
             catch (Exception)
             {
             }
+        }
 
         return updated;
     }
@@ -131,6 +141,7 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
     {
         var updated = await _inner.IncrementHabitMinusAsync(itemId, cancellationToken);
         if (updated is not null)
+        {
             try
             {
                 await _activityLog.LogActivityAsync(
@@ -142,6 +153,7 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
             catch (Exception)
             {
             }
+        }
 
         return updated;
     }

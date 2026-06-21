@@ -18,7 +18,10 @@ public static class FocusDurationInput
     public static string FormatForAlertLabel(TimeSpan t)
     {
         t = Clamp(t);
-        if (t <= TimeSpan.Zero) return "0s";
+        if (t <= TimeSpan.Zero)
+        {
+            return "0s";
+        }
 
         if (t.TotalSeconds < 60)
         {
@@ -29,43 +32,68 @@ public static class FocusDurationInput
         if (t.Seconds == 0 && t.Milliseconds == 0)
         {
             var min = (int)Math.Ceiling(t.TotalMinutes);
-            if (min < 60) return $"{min} min";
+            if (min < 60)
+            {
+                return $"{min} min";
+            }
 
             var h = min / 60;
             var rest = min % 60;
-            if (rest == 0) return $"{h}h";
+            if (rest == 0)
+            {
+                return $"{h}h";
+            }
 
             return $"{h}h {rest}m";
         }
 
-        if (t.Hours == 0) return $"{t.Minutes}m {t.Seconds}s";
+        if (t.Hours == 0)
+        {
+            return $"{t.Minutes}m {t.Seconds}s";
+        }
 
         if (t.Seconds == 0)
+        {
             return t.Minutes == 0
                 ? $"{t.Hours}h"
                 : $"{t.Hours}h {t.Minutes}m";
+        }
 
         return $"{t.Hours}h {t.Minutes}m {t.Seconds}s";
     }
 
     public static string FormatForField(TimeSpan? d)
     {
-        if (d is not { TotalSeconds: > 0 } t) return string.Empty;
+        if (d is not { TotalSeconds: > 0 } t)
+        {
+            return string.Empty;
+        }
 
         t = Clamp(t);
         var h = t.Hours;
         var m = t.Minutes;
         var s = t.Seconds;
-        if (h == 0 && m == 0) return $"{s}s";
+        if (h == 0 && m == 0)
+        {
+            return $"{s}s";
+        }
 
-        if (h == 0 && s == 0) return m.ToString();
+        if (h == 0 && s == 0)
+        {
+            return m.ToString();
+        }
 
-        if (h == 0) return $"{m}m{s}s";
+        if (h == 0)
+        {
+            return $"{m}m{s}s";
+        }
 
         if (s == 0)
+        {
             return m == 0
                 ? $"{h}h"
                 : $"{h}:{m:D2}";
+        }
 
         return $"{h}:{m:D2}:{s:D2}";
     }
@@ -74,34 +102,67 @@ public static class FocusDurationInput
     public static bool TryParse(string? raw, out TimeSpan? duration)
     {
         duration = null;
-        if (string.IsNullOrWhiteSpace(raw)) return true;
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return true;
+        }
 
         var input = raw.Trim();
-        if (TryParseSecondsSuffix(input, out var sec)) return Assign(ref duration, sec);
+        if (TryParseSecondsSuffix(input, out var sec))
+        {
+            return Assign(ref duration, sec);
+        }
 
-        if (TryParseMinutesSeconds(input, out var ms)) return Assign(ref duration, ms);
+        if (TryParseMinutesSeconds(input, out var ms))
+        {
+            return Assign(ref duration, ms);
+        }
 
-        if (TryParseThreePartColon(input, out var three)) return Assign(ref duration, three);
+        if (TryParseThreePartColon(input, out var three))
+        {
+            return Assign(ref duration, three);
+        }
 
-        if (TryParseTwoPartColon(input, out var two)) return Assign(ref duration, two);
+        if (TryParseTwoPartColon(input, out var two))
+        {
+            return Assign(ref duration, two);
+        }
 
-        if (TryParseMinutesOnlySuffix(input, out var mOnly)) return Assign(ref duration, mOnly);
+        if (TryParseMinutesOnlySuffix(input, out var mOnly))
+        {
+            return Assign(ref duration, mOnly);
+        }
 
-        if (TryParseHmsLongForm(input, out var hms)) return Assign(ref duration, hms);
+        if (TryParseHmsLongForm(input, out var hms))
+        {
+            return Assign(ref duration, hms);
+        }
 
-        if (TryParseHMSuffixForm(input, out var hm)) return Assign(ref duration, hm);
+        if (TryParseHMSuffixForm(input, out var hm))
+        {
+            return Assign(ref duration, hm);
+        }
 
-        if (TryParsePlainMinutes(input, out var plain)) return Assign(ref duration, plain);
+        if (TryParsePlainMinutes(input, out var plain))
+        {
+            return Assign(ref duration, plain);
+        }
 
         return false;
     }
 
     private static bool Assign(ref TimeSpan? slot, TimeSpan? value)
     {
-        if (value is not { } v || v <= TimeSpan.Zero) return false;
+        if (value is not { } v || v <= TimeSpan.Zero)
+        {
+            return false;
+        }
 
         v = Clamp(v);
-        if (v <= TimeSpan.Zero) return false;
+        if (v <= TimeSpan.Zero)
+        {
+            return false;
+        }
 
         slot = v;
         return true;
@@ -111,9 +172,15 @@ public static class FocusDurationInput
     {
         duration = null;
         var m = Regex.Match(s, @"^(\d+)\s*s$", RegexOptions.IgnoreCase);
-        if (!m.Success) return false;
+        if (!m.Success)
+        {
+            return false;
+        }
 
-        if (!int.TryParse(m.Groups[1].Value, out var sec) || sec <= 0) return false;
+        if (!int.TryParse(m.Groups[1].Value, out var sec) || sec <= 0)
+        {
+            return false;
+        }
 
         return TryFromTotalSeconds(sec, out duration);
     }
@@ -122,13 +189,21 @@ public static class FocusDurationInput
     {
         duration = null;
         var m = Regex.Match(s, @"^(\d+)\s*m\s*(\d+)\s*s$", RegexOptions.IgnoreCase);
-        if (!m.Success) return false;
+        if (!m.Success)
+        {
+            return false;
+        }
 
         if (!int.TryParse(m.Groups[1].Value, out var min) ||
             !int.TryParse(m.Groups[2].Value, out var sec))
+        {
             return false;
+        }
 
-        if (sec is < 0 or > 59 || min < 0) return false;
+        if (sec is < 0 or > 59 || min < 0)
+        {
+            return false;
+        }
 
         return TryFromTotalSeconds(min * 60L + sec, out duration);
     }
@@ -137,16 +212,27 @@ public static class FocusDurationInput
     {
         duration = null;
         var m = Regex.Match(s, @"^(\d+):(\d+):(\d+)$");
-        if (!m.Success) return false;
+        if (!m.Success)
+        {
+            return false;
+        }
 
         if (!int.TryParse(m.Groups[1].Value, out var h) ||
             !int.TryParse(m.Groups[2].Value, out var min) ||
             !int.TryParse(m.Groups[3].Value, out var sec))
+        {
             return false;
+        }
 
-        if (min is < 0 or > 59 || sec is < 0 or > 59 || h is < 0 or > 23) return false;
+        if (min is < 0 or > 59 || sec is < 0 or > 59 || h is < 0 or > 23)
+        {
+            return false;
+        }
 
-        if (h == 0 && min == 0 && sec == 0) return false;
+        if (h == 0 && min == 0 && sec == 0)
+        {
+            return false;
+        }
 
         return TryFromTotalSeconds(h * 3600L + min * 60L + sec, out duration);
     }
@@ -155,15 +241,26 @@ public static class FocusDurationInput
     {
         duration = null;
         var m = Regex.Match(s, @"^(\d+):(\d+)$");
-        if (!m.Success) return false;
+        if (!m.Success)
+        {
+            return false;
+        }
 
         if (!int.TryParse(m.Groups[1].Value, out var h) ||
             !int.TryParse(m.Groups[2].Value, out var min))
+        {
             return false;
+        }
 
-        if (min is < 0 or > 59 || h is < 0 or > 23) return false;
+        if (min is < 0 or > 59 || h is < 0 or > 23)
+        {
+            return false;
+        }
 
-        if (h == 0 && min == 0) return false;
+        if (h == 0 && min == 0)
+        {
+            return false;
+        }
 
         return TryFromTotalSeconds(h * 3600L + min * 60L, out duration);
     }
@@ -172,9 +269,15 @@ public static class FocusDurationInput
     {
         duration = null;
         var m = Regex.Match(s, @"^(\d+)\s*m$", RegexOptions.IgnoreCase);
-        if (!m.Success) return false;
+        if (!m.Success)
+        {
+            return false;
+        }
 
-        if (!int.TryParse(m.Groups[1].Value, out var mins) || mins <= 0) return false;
+        if (!int.TryParse(m.Groups[1].Value, out var mins) || mins <= 0)
+        {
+            return false;
+        }
 
         return TryFromTotalSeconds(mins * 60L, out duration);
     }
@@ -188,9 +291,15 @@ public static class FocusDurationInput
             var h = int.Parse(a.Groups[1].Value);
             var m = int.Parse(a.Groups[2].Value);
             var sec = int.Parse(a.Groups[3].Value);
-            if (m is < 0 or > 59 || sec is < 0 or > 59 || h is < 0 or > 23) return false;
+            if (m is < 0 or > 59 || sec is < 0 or > 59 || h is < 0 or > 23)
+            {
+                return false;
+            }
 
-            if (h == 0 && m == 0 && sec == 0) return false;
+            if (h == 0 && m == 0 && sec == 0)
+            {
+                return false;
+            }
 
             return TryFromTotalSeconds(h * 3600L + m * 60L + sec, out duration);
         }
@@ -200,9 +309,15 @@ public static class FocusDurationInput
         {
             var h = int.Parse(b.Groups[1].Value);
             var m = int.Parse(b.Groups[2].Value);
-            if (m is < 0 or > 59 || h is < 0 or > 23) return false;
+            if (m is < 0 or > 59 || h is < 0 or > 23)
+            {
+                return false;
+            }
 
-            if (h == 0 && m == 0) return false;
+            if (h == 0 && m == 0)
+            {
+                return false;
+            }
 
             return TryFromTotalSeconds(h * 3600L + m * 60L, out duration);
         }
@@ -212,9 +327,15 @@ public static class FocusDurationInput
         {
             var h = int.Parse(c.Groups[1].Value);
             var sec = int.Parse(c.Groups[2].Value);
-            if (sec is < 0 or > 59 || h is < 0 or > 23) return false;
+            if (sec is < 0 or > 59 || h is < 0 or > 23)
+            {
+                return false;
+            }
 
-            if (h == 0 && sec == 0) return false;
+            if (h == 0 && sec == 0)
+            {
+                return false;
+            }
 
             return TryFromTotalSeconds(h * 3600L + sec, out duration);
         }
@@ -229,13 +350,22 @@ public static class FocusDurationInput
             s,
             @"^(\d{1,2})\s*h(?:\s*(\d{1,2})\s*m?)?$",
             RegexOptions.IgnoreCase);
-        if (!m.Success) return false;
+        if (!m.Success)
+        {
+            return false;
+        }
 
         var h = int.Parse(m.Groups[1].Value);
         var min = m.Groups[2].Success ? int.Parse(m.Groups[2].Value) : 0;
-        if (min is < 0 or > 59 || h is < 0 or > 23) return false;
+        if (min is < 0 or > 59 || h is < 0 or > 23)
+        {
+            return false;
+        }
 
-        if (h == 0 && min == 0) return false;
+        if (h == 0 && min == 0)
+        {
+            return false;
+        }
 
         return TryFromTotalSeconds(h * 3600L + min * 60L, out duration);
     }
@@ -243,10 +373,16 @@ public static class FocusDurationInput
     private static bool TryParsePlainMinutes(string s, out TimeSpan? duration)
     {
         duration = null;
-        if (!Regex.IsMatch(s, @"^\d{1,4}$")) return false;
+        if (!Regex.IsMatch(s, @"^\d{1,4}$"))
+        {
+            return false;
+        }
 
         var mins = int.Parse(s);
-        if (mins <= 0) return false;
+        if (mins <= 0)
+        {
+            return false;
+        }
 
         return TryFromTotalSeconds(mins * 60L, out duration);
     }
@@ -254,9 +390,15 @@ public static class FocusDurationInput
     private static bool TryFromTotalSeconds(long totalSec, out TimeSpan? duration)
     {
         duration = null;
-        if (totalSec <= 0) return false;
+        if (totalSec <= 0)
+        {
+            return false;
+        }
 
-        if (totalSec > (long)MaxFocusDuration.TotalSeconds) return false;
+        if (totalSec > (long)MaxFocusDuration.TotalSeconds)
+        {
+            return false;
+        }
 
         var t = TimeSpan.FromSeconds(totalSec);
         duration = t;

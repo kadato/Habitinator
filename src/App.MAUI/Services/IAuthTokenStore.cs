@@ -48,7 +48,7 @@ public sealed class AuthTokenStore : IAuthTokenStore
         return RunSerializedAsync(
             async () =>
             {
-                var t = await SecureStorage.GetAsync(key);
+                string? t = await SecureStorage.GetAsync(key);
                 return string.IsNullOrWhiteSpace(t) ? null : t;
             },
             cancellationToken);
@@ -57,6 +57,7 @@ public sealed class AuthTokenStore : IAuthTokenStore
     private static async Task SetOrRemoveAsync(string key, string? value, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(value))
+        {
             await RunSerializedAsync(
                 () =>
                 {
@@ -64,8 +65,11 @@ public sealed class AuthTokenStore : IAuthTokenStore
                     return Task.CompletedTask;
                 },
                 cancellationToken);
+        }
         else
+        {
             await RunSerializedAsync(() => SecureStorage.SetAsync(key, value), cancellationToken);
+        }
     }
 
     private static async Task<T> RunSerializedAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken)
@@ -73,7 +77,8 @@ public sealed class AuthTokenStore : IAuthTokenStore
         await StorageLock.WaitAsync(cancellationToken);
         try
         {
-            for (var attempt = 0;; attempt++)
+            int attempt = 0;
+            while (true)
             {
                 try
                 {
@@ -81,7 +86,8 @@ public sealed class AuthTokenStore : IAuthTokenStore
                 }
                 catch (IOException) when (attempt < IoRetries)
                 {
-                    await Task.Delay(20 * (attempt + 1), cancellationToken);
+                    attempt++;
+                    await Task.Delay(20 * attempt, cancellationToken);
                 }
             }
         }
@@ -96,7 +102,8 @@ public sealed class AuthTokenStore : IAuthTokenStore
         await StorageLock.WaitAsync(cancellationToken);
         try
         {
-            for (var attempt = 0;; attempt++)
+            int attempt = 0;
+            while (true)
             {
                 try
                 {
@@ -105,7 +112,8 @@ public sealed class AuthTokenStore : IAuthTokenStore
                 }
                 catch (IOException) when (attempt < IoRetries)
                 {
-                    await Task.Delay(20 * (attempt + 1), cancellationToken);
+                    attempt++;
+                    await Task.Delay(20 * attempt, cancellationToken);
                 }
             }
         }

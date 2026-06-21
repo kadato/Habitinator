@@ -17,15 +17,15 @@ const PRE_CACHE_ASSETS = [
     '/_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2'
 ];
 
-self.addEventListener('install', event => {
+globalThis.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
             return cache.addAll(PRE_CACHE_ASSETS);
-        }).then(() => self.skipWaiting())
+        }).then(() => globalThis.skipWaiting())
     );
 });
 
-self.addEventListener('activate', event => {
+globalThis.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
@@ -36,11 +36,11 @@ self.addEventListener('activate', event => {
                     }
                 })
             );
-        }).then(() => self.clients.claim())
+        }).then(() => globalThis.clients.claim())
     );
 });
 
-self.addEventListener('fetch', event => {
+globalThis.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') {
         return;
     }
@@ -48,7 +48,7 @@ self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
     // Only cache requests from our origin
-    if (url.origin !== self.location.origin) {
+    if (url.origin !== globalThis.location.origin) {
         return;
     }
 
@@ -78,15 +78,13 @@ self.addEventListener('fetch', event => {
 
             return fetch(event.request).then(networkResponse => {
                 // Check if we received a valid response
-                if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-                    return networkResponse;
+                if (networkResponse?.status === 200 && networkResponse?.type === 'basic') {
+                    // Cache the newly retrieved asset
+                    const responseToCache = networkResponse.clone();
+                    caches.open(CACHE_NAME).then(cache => {
+                        cache.put(event.request, responseToCache);
+                    });
                 }
-
-                // Cache the newly retrieved asset
-                const responseToCache = networkResponse.clone();
-                caches.open(CACHE_NAME).then(cache => {
-                    cache.put(event.request, responseToCache);
-                });
 
                 return networkResponse;
             });

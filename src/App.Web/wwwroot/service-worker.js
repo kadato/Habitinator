@@ -1,8 +1,8 @@
 // In development, always fetch from the network and do not cache assets.
-self.addEventListener('install', event => {
-    self.skipWaiting();
+globalThis.addEventListener('install', event => {
+    globalThis.skipWaiting();
 });
 
-self.addEventListener('activate', event => {
-    event.waitUntil(self.clients.claim());
+globalThis.addEventListener('activate', event => {
+    event.waitUntil(globalThis.clients.claim());
 });

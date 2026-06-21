@@ -28,26 +28,49 @@ public static class PostgresTransientErrors
             {
                 foreach (var inner in agg.Flatten().InnerExceptions)
                 {
-                    if (IsTransient(inner)) return true;
+                    if (IsTransient(inner))
+                    {
+                        return true;
+                    }
                 }
 
                 continue;
             }
 
-            if (ex is DbUpdateException dbUpdate && IsTransient(dbUpdate.InnerException)) return true;
+            if (ex is DbUpdateException dbUpdate && IsTransient(dbUpdate.InnerException))
+            {
+                return true;
+            }
 
             if (ex is PostgresException pg)
             {
-                if (SqlStates.Contains(pg.SqlState, StringComparer.Ordinal)) return true;
-                if (MessageMatches(pg.Message)) return true;
+                if (SqlStates.Contains(pg.SqlState, StringComparer.Ordinal))
+                {
+                    return true;
+                }
+
+                if (MessageMatches(pg.Message))
+                {
+                    return true;
+                }
             }
 
             if (ex is NpgsqlException npg)
             {
-                if (npg.IsTransient) return true;
-                if (!string.IsNullOrEmpty(npg.SqlState) && SqlStates.Contains(npg.SqlState, StringComparer.Ordinal))
+                if (npg.IsTransient)
+                {
                     return true;
-                if (MessageMatches(npg.Message)) return true;
+                }
+
+                if (!string.IsNullOrEmpty(npg.SqlState) && SqlStates.Contains(npg.SqlState, StringComparer.Ordinal))
+                {
+                    return true;
+                }
+
+                if (MessageMatches(npg.Message))
+                {
+                    return true;
+                }
             }
         }
 
@@ -56,11 +79,17 @@ public static class PostgresTransientErrors
 
     private static bool MessageMatches(string? message)
     {
-        if (string.IsNullOrEmpty(message)) return false;
+        if (string.IsNullOrEmpty(message))
+        {
+            return false;
+        }
 
         foreach (var fragment in MessageSubstrings)
         {
-            if (message.Contains(fragment, StringComparison.OrdinalIgnoreCase)) return true;
+            if (message.Contains(fragment, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
         }
 
         return false;

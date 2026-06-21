@@ -21,11 +21,16 @@ public sealed class DemoUserResolver
     public async Task<Guid> ResolveUserIdAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default)
     {
         var claimValue = principal.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (Guid.TryParse(claimValue, out var parsedUserId)) return parsedUserId;
+        if (Guid.TryParse(claimValue, out var parsedUserId))
+        {
+            return parsedUserId;
+        }
 
         var guestUser = await _userManager.FindByEmailAsync(_options.Email);
         if (guestUser is null)
+        {
             throw new InvalidOperationException("Demo guest user does not exist. Seed data has not run.");
+        }
 
         return guestUser.Id;
     }

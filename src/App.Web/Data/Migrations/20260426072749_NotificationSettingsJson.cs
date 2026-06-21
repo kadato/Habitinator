@@ -1,28 +1,27 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace App.Web.Data.Migrations
+namespace App.Web.Data.Migrations;
+
+/// <inheritdoc />
+public partial class NotificationSettingsJson : Migration
 {
     /// <inheritdoc />
-    public partial class NotificationSettingsJson : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<string>(
-                name: "NotificationSettingsJson",
-                table: "AspNetUsers",
-                type: "text",
-                nullable: true);
-        }
+        migrationBuilder.AddColumn<string>(
+            name: "NotificationSettingsJson",
+            table: "AspNetUsers",
+            type: "text",
+            nullable: true);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "NotificationSettingsJson",
-                table: "AspNetUsers");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "NotificationSettingsJson",
+            table: "AspNetUsers");
     }
 }

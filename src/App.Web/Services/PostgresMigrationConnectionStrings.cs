@@ -24,7 +24,10 @@ public static class PostgresMigrationConnectionStrings
     public static string ResolveForMigrations(IConfiguration configuration)
     {
         var explicitMigration = configuration.GetConnectionString("MigrationConnection");
-        if (!string.IsNullOrWhiteSpace(explicitMigration)) return explicitMigration;
+        if (!string.IsNullOrWhiteSpace(explicitMigration))
+        {
+            return explicitMigration;
+        }
 
         var primary = ResolvePrimary(configuration);
         return TryNeonDirectFromPooler(primary) ?? primary;
@@ -35,10 +38,20 @@ public static class PostgresMigrationConnectionStrings
         try
         {
             var b = new NpgsqlConnectionStringBuilder(connectionString);
-            if (string.IsNullOrEmpty(b.Host)) return null;
-            if (!b.Host.Contains("neon.tech", StringComparison.OrdinalIgnoreCase)) return null;
+            if (string.IsNullOrEmpty(b.Host))
+            {
+                return null;
+            }
+
+            if (!b.Host.Contains("neon.tech", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
             // Neon pooled hosts: ep-...-pooler.<region>.aws.neon.tech
-            if (!b.Host.Contains("-pooler.", StringComparison.OrdinalIgnoreCase)) return null;
+            if (!b.Host.Contains("-pooler.", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
 
             b.Host = b.Host.Replace("-pooler.", ".", StringComparison.OrdinalIgnoreCase);
             return b.ConnectionString;

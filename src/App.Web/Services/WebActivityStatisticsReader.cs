@@ -45,7 +45,10 @@ public sealed class WebActivityStatisticsReader : IActivityStatisticsReader
     {
         var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
         var user = state.User;
-        if (user.Identity?.IsAuthenticated != true) throw new InvalidOperationException("Sign in required.");
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            throw new InvalidOperationException("Sign in required.");
+        }
 
         return await _demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
     }

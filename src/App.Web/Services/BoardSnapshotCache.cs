@@ -12,7 +12,11 @@ public sealed class BoardSnapshotCache
     public bool TryGet(Guid userId, out BoardSnapshot snapshot)
     {
         snapshot = default!;
-        if (!_entries.TryGetValue(userId, out var entry)) return false;
+        if (!_entries.TryGetValue(userId, out var entry))
+        {
+            return false;
+        }
+
         if (DateTimeOffset.UtcNow - entry.StoredAtUtc > Ttl)
         {
             _entries.TryRemove(userId, out _);

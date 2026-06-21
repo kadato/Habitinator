@@ -16,7 +16,10 @@ public static class PostgresResilienceConnectionString
     public static string EnsureColdStartTimeouts(string connectionString)
     {
         var b = new NpgsqlConnectionStringBuilder(connectionString);
-        if (b.Timeout < MinimumConnectionTimeoutSeconds) b.Timeout = MinimumConnectionTimeoutSeconds;
+        if (b.Timeout < MinimumConnectionTimeoutSeconds)
+        {
+            b.Timeout = MinimumConnectionTimeoutSeconds;
+        }
 
         return b.ConnectionString;
     }

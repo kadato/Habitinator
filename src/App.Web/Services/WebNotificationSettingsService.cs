@@ -32,12 +32,18 @@ public sealed class WebNotificationSettingsService : INotificationSettingsServic
     {
         var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
         var user = state.User;
-        if (user.Identity?.IsAuthenticated != true) return NotificationSettings.CreateDefault();
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            return NotificationSettings.CreateDefault();
+        }
 
         var userId = await _demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-        if (row is null) return NotificationSettings.CreateDefault();
+        if (row is null)
+        {
+            return NotificationSettings.CreateDefault();
+        }
 
         return NotificationSettingsJson.DeserializeOrDefault(row.NotificationSettingsJson);
     }
@@ -46,12 +52,18 @@ public sealed class WebNotificationSettingsService : INotificationSettingsServic
     {
         var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
         var user = state.User;
-        if (user.Identity?.IsAuthenticated != true) return;
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            return;
+        }
 
         var userId = await _demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-        if (row is null) return;
+        if (row is null)
+        {
+            return;
+        }
 
         row.NotificationSettingsJson = NotificationSettingsJson.Serialize(settings);
         await db.SaveChangesAsync(cancellationToken);

@@ -1,5 +1,6 @@
-using Microsoft.Extensions.Options;
 using App.Shared.RCL.Models;
+
+using Microsoft.Extensions.Options;
 
 namespace App.Web.Middleware;
 

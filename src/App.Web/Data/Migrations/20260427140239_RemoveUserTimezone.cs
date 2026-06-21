@@ -1,29 +1,28 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace App.Web.Data.Migrations
+namespace App.Web.Data.Migrations;
+
+/// <inheritdoc />
+public partial class RemoveUserTimezone : Migration
 {
     /// <inheritdoc />
-    public partial class RemoveUserTimezone : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "Timezone",
-                table: "AspNetUsers");
-        }
+        migrationBuilder.DropColumn(
+            name: "Timezone",
+            table: "AspNetUsers");
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<string>(
-                name: "Timezone",
-                table: "AspNetUsers",
-                type: "text",
-                nullable: false,
-                defaultValue: "");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.AddColumn<string>(
+            name: "Timezone",
+            table: "AspNetUsers",
+            type: "text",
+            nullable: false,
+            defaultValue: "");
     }
 }

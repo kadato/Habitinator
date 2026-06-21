@@ -46,7 +46,9 @@ public sealed class ActivityStatisticsService
         IQueryable<UserActivityEventEntity> ev = db.UserActivityEvents.AsNoTracking()
             .Where(e => e.UserId == userId && e.OccurredAtUtc >= fromUtc && e.OccurredAtUtc < toUtc);
         if (allowedIds is not null)
+        {
             ev = ev.Where(e => e.BoardItemId != null && allowedIds.Contains(e.BoardItemId.Value));
+        }
 
         var rows = await ev
             .OrderBy(e => e.OccurredAtUtc)
@@ -98,7 +100,9 @@ public sealed class ActivityStatisticsService
         IQueryable<UserActivityEventEntity> evq = db.UserActivityEvents.AsNoTracking()
             .Where(e => e.UserId == userId && e.OccurredAtUtc >= fromUtc && e.OccurredAtUtc < toUtc);
         if (allowedIds is not null)
+        {
             evq = evq.Where(e => e.BoardItemId != null && allowedIds.Contains(e.BoardItemId.Value));
+        }
 
         var rows = await evq
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
@@ -137,7 +141,9 @@ public sealed class ActivityStatisticsService
         IQueryable<BoardItemEntity> dailyQ = db.BoardItems.AsNoTracking()
             .Where(b => b.UserId == userId && b.DeletedAtUtc == null && b.Section == BoardSection.Daily);
         if (allowedIds is not null)
+        {
             dailyQ = dailyQ.Where(b => allowedIds.Contains(b.Id));
+        }
 
         var dailyItemRawRows = await dailyQ
             .OrderBy(b => b.Title)
@@ -157,7 +163,9 @@ public sealed class ActivityStatisticsService
                 e.OccurredAtUtc >= fromUtc &&
                 e.OccurredAtUtc < toUtc);
         if (allowedIds is not null)
+        {
             evQ = evQ.Where(e => e.BoardItemId != null && allowedIds.Contains(e.BoardItemId.Value));
+        }
 
         var eventRows = await evQ
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
@@ -188,8 +196,12 @@ public sealed class ActivityStatisticsService
 
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var ts in tagStrings)
-        foreach (var t in BoardTagUtil.ParseTags(ts))
-            set.Add(t);
+        {
+            foreach (var t in BoardTagUtil.ParseTags(ts))
+            {
+                set.Add(t);
+            }
+        }
 
         return set.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
     }
@@ -200,10 +212,16 @@ public sealed class ActivityStatisticsService
         string? tag,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(tag)) return null;
+        if (string.IsNullOrWhiteSpace(tag))
+        {
+            return null;
+        }
 
         var wantedTags = tag.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (wantedTags.Length == 0) return null;
+        if (wantedTags.Length == 0)
+        {
+            return null;
+        }
 
         var wantedSet = new HashSet<string>(wantedTags, StringComparer.OrdinalIgnoreCase);
 
@@ -216,7 +234,9 @@ public sealed class ActivityStatisticsService
         foreach (var r in rows)
         {
             if (BoardTagUtil.ParseTags(r.Tags).Any(t => wantedSet.Contains(t)))
+            {
                 set.Add(r.Id);
+            }
         }
 
         return set;
@@ -236,14 +256,19 @@ public sealed class ActivityStatisticsService
             .FirstOrDefaultAsync(cancellationToken);
 
         var minYear = first is { } f ? f.UtcDateTime.Year : maxYear;
-        if (minYear > maxYear) minYear = maxYear;
+        if (minYear > maxYear)
+        {
+            minYear = maxYear;
+        }
 
         var list = new List<DailyGraphPeriodOption>
         {
             new(DailyGraphPeriods.Rolling370Days, "Last 370 days")
         };
         for (var y = maxYear; y >= minYear; y--)
+        {
             list.Add(new DailyGraphPeriodOption(DailyGraphPeriods.ForCalendarYear(y), y.ToString()));
+        }
 
         return list;
     }

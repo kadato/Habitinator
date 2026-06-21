@@ -127,11 +127,20 @@ public static class DemoDataSeeder
         CancellationToken cancellationToken)
     {
         var events = await db.UserActivityEvents.Where(e => e.UserId == guestUserId).ToListAsync(cancellationToken);
-        if (events.Count > 0) db.UserActivityEvents.RemoveRange(events);
+        if (events.Count > 0)
+        {
+            db.UserActivityEvents.RemoveRange(events);
+        }
 
         var items = await db.BoardItems.Where(b => b.UserId == guestUserId).ToListAsync(cancellationToken);
-        if (items.Count > 0) db.BoardItems.RemoveRange(items);
+        if (items.Count > 0)
+        {
+            db.BoardItems.RemoveRange(items);
+        }
 
-        if (events.Count > 0 || items.Count > 0) await db.SaveChangesAsync(cancellationToken);
+        if (events.Count > 0 || items.Count > 0)
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
     }
 }

@@ -36,7 +36,9 @@ public sealed class BoardIdempotencyService(
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(idempotencyKey))
+        {
             return await execute();
+        }
 
         while (true)
         {
@@ -50,10 +52,14 @@ public sealed class BoardIdempotencyService(
             if (row is not null)
             {
                 if (!string.Equals(row.RequestFingerprintHex, fingerprintHex, StringComparison.OrdinalIgnoreCase))
+                {
                     throw new BoardIdempotencyFingerprintMismatchException();
+                }
 
                 if (row.ResponseStatusCode != PendingResponseCode)
+                {
                     return (row.ResponseStatusCode, row.ResponseBody, "application/json");
+                }
 
                 await WaitForOtherAsync(userId, idempotencyKey, fingerprintHex, cancellationToken);
                 continue;
@@ -119,13 +125,20 @@ public sealed class BoardIdempotencyService(
                 .FirstOrDefaultAsync(
                     x => x.UserId == userId && x.IdempotencyKey == idempotencyKey,
                     cancellationToken);
-            if (row is null) return;
+            if (row is null)
+            {
+                return;
+            }
 
             if (!string.Equals(row.RequestFingerprintHex, fingerprintHex, StringComparison.OrdinalIgnoreCase))
+            {
                 throw new BoardIdempotencyFingerprintMismatchException();
+            }
 
             if (row.ResponseStatusCode != PendingResponseCode)
+            {
                 return;
+            }
         }
 
         logger.LogWarning("Idempotency wait timed out for user {UserId} key {Key}.", userId, idempotencyKey);

@@ -64,8 +64,15 @@ public static class DemoGuestSeeder
         // Only fill an empty (or board-only backfill) log. Never append a second year on startup.
         // Full replace is ReseedActivityAsync (ForceReseed / ForceReseedActivity only).
         var n = await db.UserActivityEvents.CountAsync(e => e.UserId == guestUserId, cancellationToken);
-        if (n >= HeatmapPresentThreshold) return;
-        if (n > BoardBackfillEventMax) return;
+        if (n >= HeatmapPresentThreshold)
+        {
+            return;
+        }
+
+        if (n > BoardBackfillEventMax)
+        {
+            return;
+        }
 
         await SeedDemoActivityCoreAsync(db, guestUserId, cancellationToken);
     }
@@ -81,7 +88,10 @@ public static class DemoGuestSeeder
             .Select(x => new { x.Id, x.Section, x.Title })
             .ToListAsync(cancellationToken);
 
-        if (boardItems.Count == 0) return;
+        if (boardItems.Count == 0)
+        {
+            return;
+        }
 
         var titlesById = boardItems.ToDictionary(x => x.Id, x => x.Title);
         var habitIds = boardItems.Where(x => x.Section == BoardSection.Habit).Select(x => x.Id).ToList();
@@ -152,7 +162,9 @@ public static class DemoGuestSeeder
         };
 
         if (pool.Count == 0)
+        {
             pool = anyBoardItemIds;
+        }
 
         return pool[faker.Random.Int(0, pool.Count - 1)];
     }

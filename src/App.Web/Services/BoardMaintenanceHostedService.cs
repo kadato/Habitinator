@@ -68,9 +68,11 @@ public sealed class BoardMaintenanceHostedService(
             .ExecuteDeleteAsync(ct);
 
         if (idemRemoved > 0 || tombRemoved > 0)
+        {
             logger.LogInformation(
                 "Board maintenance: removed {Idem} idempotency rows, {Tomb} tombstoned items.",
                 idemRemoved,
                 tombRemoved);
+        }
     }
 }

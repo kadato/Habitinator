@@ -55,7 +55,9 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
 
             var userId = await _demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
             if (_cachedUserId == userId && _cachedPreferences is not null)
+            {
                 return _cachedPreferences;
+            }
 
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
             var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
@@ -108,12 +110,18 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
     {
         var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
         var user = state.User;
-        if (user.Identity?.IsAuthenticated != true) return;
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            return;
+        }
 
         var userId = await _demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-        if (row is null) return;
+        if (row is null)
+        {
+            return;
+        }
 
         row.UserPreferencesJson = UserPreferencesJson.Serialize(preferences);
         await db.SaveChangesAsync(cancellationToken);

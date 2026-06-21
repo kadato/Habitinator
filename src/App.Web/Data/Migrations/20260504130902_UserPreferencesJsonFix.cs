@@ -2,20 +2,19 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace App.Web.Data.Migrations
+namespace App.Web.Data.Migrations;
+
+/// <inheritdoc />
+public partial class UserPreferencesJsonFix : Migration
 {
     /// <inheritdoc />
-    public partial class UserPreferencesJsonFix : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            // No-op: InitialIdentityAndBoard already defines AspNetUsers.UserPreferencesJson.
-        }
+        // No-op: InitialIdentityAndBoard already defines AspNetUsers.UserPreferencesJson.
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
     }
 }

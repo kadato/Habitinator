@@ -28,7 +28,10 @@ internal static class BoardApiRoutes
         boardApi.MapGet("/",
             async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+                if (AuthenticatedUserId.TryGet(user) is not { } userId)
+                {
+                    return Results.Unauthorized();
+                }
 
                 var snapshot = await boardPersistenceService.GetSnapshotAsync(userId);
                 return Results.Json(snapshot, Json);
@@ -38,14 +41,21 @@ internal static class BoardApiRoutes
             async (HttpRequest request, ClaimsPrincipal user, BoardPersistenceService boardPersistenceService,
                 CancellationToken cancellationToken) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+                if (AuthenticatedUserId.TryGet(user) is not { } userId)
+                {
+                    return Results.Unauthorized();
+                }
 
                 var cursorRaw = request.Query["cursor"].FirstOrDefault();
                 if (string.IsNullOrWhiteSpace(cursorRaw))
+                {
                     return Results.BadRequest(new { detail = "Query parameter 'cursor' is required (ISO 8601 watermark)." });
+                }
 
                 if (!DateTimeOffset.TryParse(cursorRaw, out var cursor))
+                {
                     return Results.BadRequest(new { detail = "Invalid cursor; expected ISO-8601 DateTimeOffset." });
+                }
 
                 var delta = await boardPersistenceService.GetSyncDeltaAsync(userId, cursor, cancellationToken);
                 return Results.Json(delta, Json);
@@ -55,7 +65,10 @@ internal static class BoardApiRoutes
             async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
                 BoardSection section, ItemTitleRequest request, CancellationToken cancellationToken) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+                if (AuthenticatedUserId.TryGet(user) is not { } userId)
+                {
+                    return Results.Unauthorized();
+                }
 
                 var path = http.Request.Path.Value ?? "";
                 var bodyJson = JsonSerializer.Serialize(request, Json);
@@ -86,7 +99,10 @@ internal static class BoardApiRoutes
             async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
                 BoardSection section, Guid itemId, ItemTitleRequest request, CancellationToken cancellationToken) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+                if (AuthenticatedUserId.TryGet(user) is not { } userId)
+                {
+                    return Results.Unauthorized();
+                }
 
                 var path = http.Request.Path.Value ?? "";
                 var bodyJson = JsonSerializer.Serialize(request, Json);
@@ -123,7 +139,10 @@ internal static class BoardApiRoutes
         boardApi.MapGet("/archived",
             async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+                if (AuthenticatedUserId.TryGet(user) is not { } userId)
+                {
+                    return Results.Unauthorized();
+                }
 
                 var snapshot = await boardPersistenceService.GetArchivedSnapshotAsync(userId);
                 return Results.Json(snapshot, Json);
@@ -133,7 +152,10 @@ internal static class BoardApiRoutes
             async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
                 BoardSection section, Guid itemId, CancellationToken cancellationToken) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+                if (AuthenticatedUserId.TryGet(user) is not { } userId)
+                {
+                    return Results.Unauthorized();
+                }
 
                 var path = http.Request.Path.Value ?? "";
                 var expected = ReadExpectedUpdatedAtUtc(http.Request);
@@ -164,7 +186,10 @@ internal static class BoardApiRoutes
             async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
                 BoardSection section, Guid itemId, CancellationToken cancellationToken) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+                if (AuthenticatedUserId.TryGet(user) is not { } userId)
+                {
+                    return Results.Unauthorized();
+                }
 
                 var path = http.Request.Path.Value ?? "";
                 var expected = ReadExpectedUpdatedAtUtc(http.Request);
@@ -195,7 +220,10 @@ internal static class BoardApiRoutes
             async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
                 BoardSection section, Guid itemId, CancellationToken cancellationToken) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+                if (AuthenticatedUserId.TryGet(user) is not { } userId)
+                {
+                    return Results.Unauthorized();
+                }
 
                 var path = http.Request.Path.Value ?? "";
                 var expected = ReadExpectedUpdatedAtUtc(http.Request);
@@ -235,7 +263,10 @@ internal static class BoardApiRoutes
             async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
                 BoardSection section, Guid itemId, CancellationToken cancellationToken) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+                if (AuthenticatedUserId.TryGet(user) is not { } userId)
+                {
+                    return Results.Unauthorized();
+                }
 
                 var path = http.Request.Path.Value ?? "";
                 var expected = ReadExpectedUpdatedAtUtc(http.Request);
@@ -266,7 +297,10 @@ internal static class BoardApiRoutes
             async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
                 Guid itemId, CancellationToken cancellationToken) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+                if (AuthenticatedUserId.TryGet(user) is not { } userId)
+                {
+                    return Results.Unauthorized();
+                }
 
                 var path = http.Request.Path.Value ?? "";
                 var expected = ReadExpectedUpdatedAtUtc(http.Request);
@@ -297,7 +331,10 @@ internal static class BoardApiRoutes
             async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
                 Guid itemId, CancellationToken cancellationToken) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+                if (AuthenticatedUserId.TryGet(user) is not { } userId)
+                {
+                    return Results.Unauthorized();
+                }
 
                 var path = http.Request.Path.Value ?? "";
                 var expected = ReadExpectedUpdatedAtUtc(http.Request);
@@ -328,7 +365,10 @@ internal static class BoardApiRoutes
             async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
                 Guid itemId, HabitUpdateRequest request, CancellationToken cancellationToken) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+                if (AuthenticatedUserId.TryGet(user) is not { } userId)
+                {
+                    return Results.Unauthorized();
+                }
 
                 var path = http.Request.Path.Value ?? "";
                 var bodyJson = JsonSerializer.Serialize(request, Json);
@@ -374,7 +414,10 @@ internal static class BoardApiRoutes
             async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
                 Guid itemId, TodoUpdateRequest request, CancellationToken cancellationToken) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+                if (AuthenticatedUserId.TryGet(user) is not { } userId)
+                {
+                    return Results.Unauthorized();
+                }
 
                 var path = http.Request.Path.Value ?? "";
                 var bodyJson = JsonSerializer.Serialize(request, Json);
@@ -416,7 +459,10 @@ internal static class BoardApiRoutes
             async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
                 Guid itemId, DailyUpdateRequest request, CancellationToken cancellationToken) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+                if (AuthenticatedUserId.TryGet(user) is not { } userId)
+                {
+                    return Results.Unauthorized();
+                }
 
                 var path = http.Request.Path.Value ?? "";
                 var bodyJson = JsonSerializer.Serialize(request, Json);
@@ -461,7 +507,10 @@ internal static class BoardApiRoutes
             async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
                 Guid itemId, DailyCompleteForDateRequest request, CancellationToken cancellationToken) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+                if (AuthenticatedUserId.TryGet(user) is not { } userId)
+                {
+                    return Results.Unauthorized();
+                }
 
                 var path = http.Request.Path.Value ?? "";
                 var bodyJson = JsonSerializer.Serialize(request, Json);
@@ -500,15 +549,24 @@ internal static class BoardApiRoutes
         if (request.Headers.TryGetValue("X-Board-Expected-Updated-At-Utc", out var custom))
         {
             var s = custom.ToString();
-            if (DateTimeOffset.TryParse(s, out var d)) return d;
+            if (DateTimeOffset.TryParse(s, out var d))
+            {
+                return d;
+            }
         }
 
         if (request.Headers.TryGetValue("If-Match", out var etag))
         {
             var raw = etag.ToString().Trim();
             if (raw.StartsWith('"') && raw.EndsWith('"') && raw.Length > 1)
+            {
                 raw = raw[1..^1];
-            if (DateTimeOffset.TryParse(raw, out var d2)) return d2;
+            }
+
+            if (DateTimeOffset.TryParse(raw, out var d2))
+            {
+                return d2;
+            }
         }
 
         return null;
@@ -532,10 +590,21 @@ internal static class BoardApiRoutes
 
     private static IResult ToHttpResult((int statusCode, string body, string? contentType) o)
     {
-        if (o.statusCode == StatusCodes.Status204NoContent) return Results.NoContent();
-        if (o.statusCode == StatusCodes.Status404NotFound) return Results.NotFound();
+        if (o.statusCode == StatusCodes.Status204NoContent)
+        {
+            return Results.NoContent();
+        }
+
+        if (o.statusCode == StatusCodes.Status404NotFound)
+        {
+            return Results.NotFound();
+        }
+
         if (string.IsNullOrEmpty(o.body))
+        {
             return Results.StatusCode(o.statusCode);
+        }
+
         return Results.Text(o.body, o.contentType ?? "application/json", statusCode: o.statusCode);
     }
 }

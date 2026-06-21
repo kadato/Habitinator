@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 
 using App.Shared.RCL;
 using App.Shared.RCL.Models;
@@ -16,12 +17,10 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-
-using Microsoft.AspNetCore.RateLimiting;
-using System.Threading.RateLimiting;
 
 using MudBlazor;
 using MudBlazor.Services;
@@ -80,8 +79,15 @@ builder.Services.Configure<DemoUserOptions>(builder.Configuration.GetSection(Dem
 builder.Services.PostConfigure<DemoUserOptions>(static o =>
 {
     var defaults = new DemoUserOptions();
-    if (string.IsNullOrWhiteSpace(o.Email)) o.Email = defaults.Email;
-    if (string.IsNullOrWhiteSpace(o.Password)) o.Password = defaults.Password;
+    if (string.IsNullOrWhiteSpace(o.Email))
+    {
+        o.Email = defaults.Email;
+    }
+
+    if (string.IsNullOrWhiteSpace(o.Password))
+    {
+        o.Password = defaults.Password;
+    }
 });
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddSingleton<IClock, SystemClock>();
@@ -188,7 +194,7 @@ builder.Services.AddRateLimiter(options =>
         var key = AuthenticatedUserId.TryGet(context.User)?.ToString()
                   ?? context.Connection.RemoteIpAddress?.ToString()
                   ?? "unknown";
-                  
+
         return RateLimitPartition.GetSlidingWindowLimiter(key, _ => new SlidingWindowRateLimiterOptions
         {
             PermitLimit = 60,
@@ -238,11 +244,17 @@ authBuilder.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
         OnMessageReceived = context =>
         {
-            if (!string.IsNullOrEmpty(context.Token)) return Task.CompletedTask;
+            if (!string.IsNullOrEmpty(context.Token))
+            {
+                return Task.CompletedTask;
+            }
 
             var accessToken = context.Request.Query["access_token"];
             var path = context.Request.Path;
-            if (path.StartsWithSegments("/hubs") && !string.IsNullOrEmpty(accessToken)) context.Token = accessToken;
+            if (path.StartsWithSegments("/hubs") && !string.IsNullOrEmpty(accessToken))
+            {
+                context.Token = accessToken;
+            }
 
             return Task.CompletedTask;
         }
@@ -327,7 +339,9 @@ app.MapPost("/api/auth/register", async (
     UserManager<ApplicationUser> userManager) =>
 {
     if (!RegistrationEmailValidation.IsValid(request.Email))
+    {
         return Results.BadRequest(new List<string> { "Enter a valid email address." });
+    }
 
     var user = new ApplicationUser
     {
@@ -336,7 +350,10 @@ app.MapPost("/api/auth/register", async (
     };
 
     var result = await userManager.CreateAsync(user, request.Password);
-    if (!result.Succeeded) return Results.BadRequest(MapRegistrationErrorsToUserFacing(result.Errors));
+    if (!result.Succeeded)
+    {
+        return Results.BadRequest(MapRegistrationErrorsToUserFacing(result.Errors));
+    }
 
     return Results.Ok(new { message = "Registration successful." });
 }).DisableAntiforgery().RequireRateLimiting("auth");
@@ -348,7 +365,10 @@ app.MapPost("/api/auth/login", async (
     JwtTokenService jwtTokenService) =>
 {
     var user = await userManager.FindByEmailAsync(request.Email);
-    if (user is null) return Results.Unauthorized();
+    if (user is null)
+    {
+        return Results.Unauthorized();
+    }
 
     var loginResult = await signInManager.PasswordSignInAsync(
         user,
@@ -356,7 +376,10 @@ app.MapPost("/api/auth/login", async (
         request.RememberMe,
         true);
 
-    if (!loginResult.Succeeded) return Results.Unauthorized();
+    if (!loginResult.Succeeded)
+    {
+        return Results.Unauthorized();
+    }
 
     var token = jwtTokenService.CreateToken(user);
     return Results.Ok(new LoginResponse(token, user.Email ?? string.Empty));
@@ -379,7 +402,10 @@ app.MapPost("/api/auth/guest-jwt", async (
         user = await userManager.FindByEmailAsync(email);
     }
 
-    if (user is null) return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+    if (user is null)
+    {
+        return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+    }
 
     var loginResult = await signInManager.PasswordSignInAsync(
         user,
@@ -387,7 +413,10 @@ app.MapPost("/api/auth/guest-jwt", async (
         false,
         true);
 
-    if (!loginResult.Succeeded) return Results.Unauthorized();
+    if (!loginResult.Succeeded)
+    {
+        return Results.Unauthorized();
+    }
 
     var token = jwtTokenService.CreateToken(user);
     return Results.Ok(new LoginResponse(token, user.Email ?? string.Empty));
@@ -417,7 +446,10 @@ app.MapPost("/api/auth/guest-login", async (
         guestUser = await userManager.FindByEmailAsync(email);
     }
 
-    if (guestUser is null) return Results.LocalRedirect("/auth/login?guest=missing");
+    if (guestUser is null)
+    {
+        return Results.LocalRedirect("/auth/login?guest=missing");
+    }
 
     await signInManager.SignInAsync(guestUser, true);
     return Results.LocalRedirect("/");
@@ -432,10 +464,15 @@ app.MapPost("/api/auth/cookie-login", async (HttpContext httpContext, SignInMana
     var rememberMe = form["RememberMe"] == "true";
 
     if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+    {
         return Results.LocalRedirect("/auth/login?error=1");
+    }
 
     var user = await userManager.FindByEmailAsync(email);
-    if (user is null) return Results.LocalRedirect("/auth/login?error=1");
+    if (user is null)
+    {
+        return Results.LocalRedirect("/auth/login?error=1");
+    }
 
     var loginResult = await signInManager.PasswordSignInAsync(
         user,
@@ -443,7 +480,10 @@ app.MapPost("/api/auth/cookie-login", async (HttpContext httpContext, SignInMana
         rememberMe,
         true);
 
-    if (!loginResult.Succeeded) return Results.LocalRedirect("/auth/login?error=1");
+    if (!loginResult.Succeeded)
+    {
+        return Results.LocalRedirect("/auth/login?error=1");
+    }
 
     return Results.LocalRedirect("/");
 }).DisableAntiforgery().RequireRateLimiting("auth");
@@ -470,13 +510,22 @@ app.MapPost("/api/account/change-password", async (
     SignInManager<ApplicationUser> signInManager,
     ChangePasswordRequest body) =>
 {
-    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
 
     var appUser = await userManager.FindByIdAsync(userId.ToString());
-    if (appUser is null) return Results.NotFound();
+    if (appUser is null)
+    {
+        return Results.NotFound();
+    }
 
     var result = await userManager.ChangePasswordAsync(appUser, body.CurrentPassword, body.NewPassword);
-    if (!result.Succeeded) return Results.BadRequest();
+    if (!result.Succeeded)
+    {
+        return Results.BadRequest();
+    }
 
     await signInManager.RefreshSignInAsync(appUser);
     return Results.NoContent();
@@ -487,13 +536,22 @@ app.MapPost("/api/account/delete", async (
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager) =>
 {
-    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
 
     var appUser = await userManager.FindByIdAsync(userId.ToString());
-    if (appUser is null) return Results.NotFound();
+    if (appUser is null)
+    {
+        return Results.NotFound();
+    }
 
     var result = await userManager.DeleteAsync(appUser);
-    if (!result.Succeeded) return Results.BadRequest();
+    if (!result.Succeeded)
+    {
+        return Results.BadRequest();
+    }
 
     await signInManager.SignOutAsync();
     return Results.NoContent();
@@ -506,10 +564,14 @@ app.MapPost("/api/auth/register-form", async (HttpContext httpContext, UserManag
     var password = form["Password"].ToString();
 
     if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+    {
         return Results.LocalRedirect("/auth/register?error=1");
+    }
 
     if (!RegistrationEmailValidation.IsValid(email))
+    {
         return Results.LocalRedirect("/auth/register?error=1");
+    }
 
     var user = new ApplicationUser
     {
@@ -538,7 +600,10 @@ activityApi.MapGet("dashboard",
     async (ClaimsPrincipal user, ActivityStatisticsService stats, string? period, string? tag,
         CancellationToken cancellationToken) =>
     {
-        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+        if (AuthenticatedUserId.TryGet(user) is not { } userId)
+        {
+            return Results.Unauthorized();
+        }
 
         return Results.Ok(await stats.GetDashboardAsync(userId, period, tag, cancellationToken));
     });
@@ -546,7 +611,10 @@ activityApi.MapGet("daily-contributions",
     async (ClaimsPrincipal user, ActivityStatisticsService stats, string? period, string? tag,
         CancellationToken cancellationToken) =>
     {
-        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+        if (AuthenticatedUserId.TryGet(user) is not { } userId)
+        {
+            return Results.Unauthorized();
+        }
 
         return Results.Ok(await stats.GetDailyContributionsAsync(userId, period, tag, cancellationToken));
     });
@@ -554,7 +622,10 @@ activityApi.MapGet("day",
     async (ClaimsPrincipal user, ActivityStatisticsService stats, DateOnly date, string? tag,
         CancellationToken cancellationToken) =>
     {
-        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+        if (AuthenticatedUserId.TryGet(user) is not { } userId)
+        {
+            return Results.Unauthorized();
+        }
 
         return Results.Ok(await stats.GetActivityDayDetailAsync(userId, date, tag, cancellationToken));
     });
@@ -566,7 +637,11 @@ activityApi.MapPost("log", async (
     ActivityLogRequest body,
     CancellationToken cancellationToken) =>
 {
-    if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    {
+        return Results.Unauthorized();
+    }
+
     var resolvedUserId = await demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
 
     if (body.EventType == ActivityEventType.TimerSession && body.DurationSeconds.HasValue)
@@ -599,10 +674,16 @@ var settingsApi = app.MapGroup("/api/settings")
 settingsApi.MapGet("/notifications",
     async (ClaimsPrincipal user, ApplicationDbContext db, CancellationToken cancellationToken) =>
     {
-        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+        if (AuthenticatedUserId.TryGet(user) is not { } userId)
+        {
+            return Results.Unauthorized();
+        }
 
         var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-        if (row is null) return Results.NotFound();
+        if (row is null)
+        {
+            return Results.NotFound();
+        }
 
         var settings = NotificationSettingsJson.DeserializeOrDefault(row.NotificationSettingsJson);
         return Results.Ok(settings);
@@ -612,10 +693,16 @@ settingsApi.MapPut("/notifications",
     async (ClaimsPrincipal user, ApplicationDbContext db, IBoardChangeNotifier boardChangeNotifier,
         NotificationSettings body, CancellationToken cancellationToken) =>
     {
-        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+        if (AuthenticatedUserId.TryGet(user) is not { } userId)
+        {
+            return Results.Unauthorized();
+        }
 
         var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-        if (row is null) return Results.NotFound();
+        if (row is null)
+        {
+            return Results.NotFound();
+        }
 
         row.NotificationSettingsJson = NotificationSettingsJson.Serialize(body);
         await db.SaveChangesAsync(cancellationToken);
@@ -626,10 +713,16 @@ settingsApi.MapPut("/notifications",
 settingsApi.MapGet("/preferences",
     async (ClaimsPrincipal user, ApplicationDbContext db, CancellationToken cancellationToken) =>
     {
-        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+        if (AuthenticatedUserId.TryGet(user) is not { } userId)
+        {
+            return Results.Unauthorized();
+        }
 
         var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-        if (row is null) return Results.NotFound();
+        if (row is null)
+        {
+            return Results.NotFound();
+        }
 
         var settings = UserPreferencesJson.DeserializeOrDefault(row.UserPreferencesJson);
         return Results.Ok(settings);
@@ -639,10 +732,16 @@ settingsApi.MapPut("/preferences",
     async (ClaimsPrincipal user, ApplicationDbContext db, IBoardChangeNotifier boardChangeNotifier,
         UserPreferences body, CancellationToken cancellationToken) =>
     {
-        if (AuthenticatedUserId.TryGet(user) is not { } userId) return Results.Unauthorized();
+        if (AuthenticatedUserId.TryGet(user) is not { } userId)
+        {
+            return Results.Unauthorized();
+        }
 
         var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-        if (row is null) return Results.NotFound();
+        if (row is null)
+        {
+            return Results.NotFound();
+        }
 
         // Sanitize free-text field before persisting
         body.DisplayName = string.IsNullOrWhiteSpace(body.DisplayName)

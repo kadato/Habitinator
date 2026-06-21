@@ -1,4 +1,5 @@
 using Bunit;
+
 using FluentAssertions;
 
 namespace App.Shared.RCL.Tests;

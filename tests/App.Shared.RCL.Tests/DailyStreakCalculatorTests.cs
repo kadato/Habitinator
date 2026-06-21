@@ -1,5 +1,6 @@
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+
 using FluentAssertions;
 
 namespace App.Shared.RCL.Tests;

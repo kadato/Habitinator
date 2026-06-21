@@ -70,7 +70,10 @@ public sealed class PostgresPollyRetryTests
             {
                 attempts++;
                 if (attempts < 3)
+                {
                     throw new NpgsqlException("Couldn't connect to compute node");
+                }
+
                 await Task.Yield();
             },
             CancellationToken.None);

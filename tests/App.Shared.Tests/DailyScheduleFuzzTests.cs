@@ -1,4 +1,5 @@
 using App.Shared.RCL.Models;
+
 using FsCheck;
 using FsCheck.Xunit;
 

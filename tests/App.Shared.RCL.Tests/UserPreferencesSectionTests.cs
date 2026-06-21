@@ -4,15 +4,22 @@ using System;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
+
 using App.Shared.RCL.Components;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+
 using Bunit;
+
 using FluentAssertions;
+
 using Microsoft.Extensions.DependencyInjection;
+
 using MudBlazor;
 using MudBlazor.Services;
+
 using NSubstitute;
+
 using Xunit;
 
 namespace App.Shared.RCL.Tests;
@@ -263,7 +270,7 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         // Assert
         dateFormatField.Instance.Error.Should().BeTrue();
         dateFormatField.Instance.ErrorText.Should().Be("Date format is not valid.");
-        
+
         // The preview should contain "Invalid format"
         cut.Markup.Should().Contain("Preview: Invalid format");
     }

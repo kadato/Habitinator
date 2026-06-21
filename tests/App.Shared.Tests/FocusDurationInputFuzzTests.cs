@@ -1,4 +1,5 @@
 using App.Shared.RCL.Services;
+
 using FsCheck;
 using FsCheck.Xunit;
 
@@ -21,7 +22,10 @@ public sealed class FocusDurationInputFuzzTests
         var m = Math.Abs(minutesVal) % 60;
         var s = Math.Abs(secondsVal) % 60;
 
-        if (h == 0 && m == 0 && s == 0) return; // Ignore zero TimeSpan as it is invalid to parse
+        if (h == 0 && m == 0 && s == 0)
+        {
+            return; // Ignore zero TimeSpan as it is invalid to parse
+        }
 
         var ts = new TimeSpan(h, m, s);
 

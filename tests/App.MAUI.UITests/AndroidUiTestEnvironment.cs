@@ -59,9 +59,11 @@ internal static class AndroidUiTestEnvironment
             .FirstOrDefault();
 
         if (apkPath is null)
+        {
             apkPath = Directory.GetFiles(outDir, "*.apk", SearchOption.TopDirectoryOnly)
                 .OrderByDescending(File.GetLastWriteTimeUtc)
                 .FirstOrDefault();
+        }
 
         if (apkPath is null || !File.Exists(apkPath))
         {
@@ -79,7 +81,10 @@ internal static class AndroidUiTestEnvironment
         while (dir is not null)
         {
             if (File.Exists(Path.Combine(dir.FullName, "Habitinator.slnx")))
+            {
                 return dir.FullName;
+            }
+
             dir = dir.Parent;
         }
 

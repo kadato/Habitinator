@@ -1,7 +1,9 @@
+using FluentAssertions;
+
 using OpenQA.Selenium.Appium;
 using OpenQA.Selenium.Appium.Android;
 using OpenQA.Selenium.Support.UI;
-using FluentAssertions;
+
 using Xunit;
 
 namespace App.MAUI.UITests;

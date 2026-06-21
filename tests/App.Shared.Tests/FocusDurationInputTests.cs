@@ -1,4 +1,5 @@
 using App.Shared.RCL.Services;
+
 using FluentAssertions;
 
 namespace App.Shared.Tests;

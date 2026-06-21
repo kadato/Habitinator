@@ -2,8 +2,11 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+
 using App.Shared.RCL.Models;
+
 using FluentAssertions;
+
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace App.Web.IntegrationTests;
@@ -82,12 +85,16 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
         try
         {
             foreach (var msg in responses)
+            {
                 msg.EnsureSuccessStatusCode();
+            }
         }
         finally
         {
             foreach (var msg in responses)
+            {
                 msg.Dispose();
+            }
         }
 
         using var snapReq = new HttpRequestMessage(HttpMethod.Get, "/api/board/");
@@ -185,11 +192,11 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
 
         // 4. Fetch the snapshot again
         var updatedSnapshot = await GetSnapshotAsync(client, token);
-        
+
         // 5. Verify they are rebalanced to sequential values (e.g. 1.0, 2.0, 3.0)
         var sortedTodos = updatedSnapshot.Todos.OrderBy(x => x.SortOrder).ToList();
         sortedTodos.Count.Should().BeGreaterThanOrEqualTo(3);
-        
+
         // Check that the gap between all consecutive elements in the list is exactly 1.0 (indicating sequential rebalancing)
         for (int i = 0; i < sortedTodos.Count - 1; i++)
         {

@@ -1,5 +1,7 @@
 using System.Text;
+
 using App.Shared.RCL;
+
 using FsCheck.Xunit;
 
 namespace App.Shared.Tests;
@@ -58,8 +60,11 @@ public sealed class ZalgoSanitizerFuzzTests
     [Property]
     public void Sanitize_GenerativeZalgo_StripsExcessCombining(string baseText, int combiningCount)
     {
-        if (string.IsNullOrEmpty(baseText)) return;
-        
+        if (string.IsNullOrEmpty(baseText))
+        {
+            return;
+        }
+
         // Normalize combiningCount to a reasonable positive range to prevent huge string sizes
         var count = Math.Min(Math.Abs(combiningCount) % 100, 50);
 

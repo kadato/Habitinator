@@ -1,5 +1,6 @@
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+
 using FluentAssertions;
 
 namespace App.Shared.RCL.Tests;
@@ -188,7 +189,7 @@ public sealed class ActivityStatisticsCalculatorTests
         var start = new DateOnly(2026, 1, 1);
         var end = new DateOnly(2026, 12, 31);
         var todayCutoff = new DateOnly(2026, 5, 26);
-        
+
         var dashboard = ActivityStatisticsCalculator.BuildDashboard(
             [],
             DailyGraphPeriods.ForCalendarYear(2026),

@@ -2,11 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+
 using FluentAssertions;
+
 using MudBlazor;
+
 using NSubstitute;
+
 using Xunit;
 
 namespace App.Shared.Tests;
@@ -361,7 +366,7 @@ public sealed class UndoableBoardDataServiceTests
         var itemId = Guid.NewGuid();
         var originalItem = new BoardItem(itemId, "Original Name");
         var editedItem = new BoardItem(itemId, "Edited Name");
-        
+
         // Mock snapshot to return our items when requested
         _inner.GetSnapshotAsync(Arg.Any<CancellationToken>())
             .Returns(
@@ -392,7 +397,7 @@ public sealed class UndoableBoardDataServiceTests
         // 1. Rename item from "Original Name" to "Edited Name"
         _inner.RenameItemAsync(BoardSection.Habit, itemId, "Edited Name", Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<BoardItem?>(editedItem));
-            
+
         await _undoableService.RenameItemAsync(BoardSection.Habit, itemId, "Edited Name");
 
         // 2. Delete item
@@ -400,7 +405,7 @@ public sealed class UndoableBoardDataServiceTests
             .Returns(Task.FromResult(true));
         _inner.CreateItemAsync(BoardSection.Habit, "Edited Name", itemId, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(editedItem));
-            
+
         await _undoableService.DeleteItemAsync(BoardSection.Habit, itemId);
 
         // Assert: We captured both callbacks
@@ -409,7 +414,7 @@ public sealed class UndoableBoardDataServiceTests
 
         // 3. Simulate undoing delete first, which should recreate the item using its original Guid
         await deleteUndoCallback!();
-        
+
         // Verify that CreateItemAsync was called with the original itemId
         await _inner.Received(1).CreateItemAsync(
             BoardSection.Habit,

@@ -1,7 +1,9 @@
 using System;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Components.Authorization;
+
 using App.Shared.RCL.Services;
+
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace App.Web.Client.Services;
 

@@ -1,5 +1,6 @@
-using Microsoft.JSInterop;
 using App.Shared.RCL.Services;
+
+using Microsoft.JSInterop;
 
 namespace App.Web.Client.Services;
 
@@ -14,7 +15,11 @@ public sealed class WasmLocalSettingsStore : ILocalSettingsStore
 
     public string? Get(string key, string? defaultValue = null)
     {
-        if (_js is null) return defaultValue;
+        if (_js is null)
+        {
+            return defaultValue;
+        }
+
         try
         {
             var val = _js.Invoke<string?>("localStorage.getItem", key);
@@ -28,7 +33,11 @@ public sealed class WasmLocalSettingsStore : ILocalSettingsStore
 
     public void Set(string key, string value)
     {
-        if (_js is null) return;
+        if (_js is null)
+        {
+            return;
+        }
+
         try
         {
             _js.InvokeVoid("localStorage.setItem", key, value);

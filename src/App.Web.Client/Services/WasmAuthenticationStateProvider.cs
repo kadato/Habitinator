@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Threading.Tasks;
+
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 
@@ -22,7 +23,10 @@ public sealed class WasmAuthenticationStateProvider : AuthenticationStateProvide
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
-        if (_cache is not null) return _cache;
+        if (_cache is not null)
+        {
+            return _cache;
+        }
 
         // 1. Try to get the persisted state from the server prerendering
         if (_state.TryTakeFromJson<AuthStatusDto>("auth_state", out var status) && status is not null)

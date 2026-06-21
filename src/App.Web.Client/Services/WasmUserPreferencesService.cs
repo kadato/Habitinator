@@ -5,11 +5,12 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.JSInterop;
 
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.JSInterop;
 
 namespace App.Web.Client.Services;
 
@@ -42,7 +43,7 @@ public sealed class WasmUserPreferencesService : IUserPreferencesService
     private async Task<string> GetKeyAsync()
     {
         var authState = await _authStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
-        var email = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value 
+        var email = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
                     ?? authState.User.Identity?.Name;
         return string.IsNullOrEmpty(email) ? PreferencesKey : $"{PreferencesKey}_{email}";
     }
@@ -111,7 +112,11 @@ public sealed class WasmUserPreferencesService : IUserPreferencesService
 
     private UserPreferences ReadLocal(string key)
     {
-        if (_js is null) return new UserPreferences();
+        if (_js is null)
+        {
+            return new UserPreferences();
+        }
+
         try
         {
             var json = _js.Invoke<string?>("localStorage.getItem", key);
@@ -125,7 +130,11 @@ public sealed class WasmUserPreferencesService : IUserPreferencesService
 
     private void WriteLocal(string key, UserPreferences preferences)
     {
-        if (_js is null) return;
+        if (_js is null)
+        {
+            return;
+        }
+
         try
         {
             _js.InvokeVoid("localStorage.setItem", key, UserPreferencesJson.Serialize(preferences));

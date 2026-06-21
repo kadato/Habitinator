@@ -8,10 +8,16 @@ internal static class JwtAccessTokenDisplayClaims
 {
     public static string? TryGetEmail(string? jwt)
     {
-        if (string.IsNullOrEmpty(jwt)) return null;
+        if (string.IsNullOrEmpty(jwt))
+        {
+            return null;
+        }
 
         var parts = jwt.Split('.');
-        if (parts.Length < 2) return null;
+        if (parts.Length < 2)
+        {
+            return null;
+        }
 
         try
         {

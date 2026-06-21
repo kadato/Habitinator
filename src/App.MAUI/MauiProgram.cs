@@ -135,9 +135,15 @@ public static class MauiProgram
         var resourceName = assembly
             .GetManifestResourceNames()
             .FirstOrDefault(n => n.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));
-        if (resourceName is null) return;
+        if (resourceName is null)
+        {
+            return;
+        }
 
         using var stream = assembly.GetManifestResourceStream(resourceName);
-        if (stream is not null) builder.Configuration.AddJsonStream(stream);
+        if (stream is not null)
+        {
+            builder.Configuration.AddJsonStream(stream);
+        }
     }
 }

@@ -15,7 +15,10 @@ public sealed class AuthMessageHandler : DelegatingHandler
         CancellationToken cancellationToken)
     {
         var t = await _tokens.GetAccessTokenAsync(cancellationToken);
-        if (!string.IsNullOrEmpty(t)) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", t);
+        if (!string.IsNullOrEmpty(t))
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", t);
+        }
 
         return await base.SendAsync(request, cancellationToken);
     }

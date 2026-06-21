@@ -25,7 +25,10 @@ public sealed class ApiAuthService
     {
         var client = _http.CreateClient("apiAuth");
         using var res = await client.PostAsJsonAsync("api/auth/login", request, Serializer, cancellationToken);
-        if (!res.IsSuccessStatusCode) return null;
+        if (!res.IsSuccessStatusCode)
+        {
+            return null;
+        }
 
         return await res.Content.ReadFromJsonAsync<LoginResponse>(Serializer, cancellationToken);
     }
@@ -35,7 +38,10 @@ public sealed class ApiAuthService
     {
         var client = _http.CreateClient("apiAuth");
         using var res = await client.PostAsync("api/auth/guest-jwt", null, cancellationToken);
-        if (!res.IsSuccessStatusCode) return null;
+        if (!res.IsSuccessStatusCode)
+        {
+            return null;
+        }
 
         return await res.Content.ReadFromJsonAsync<LoginResponse>(Serializer, cancellationToken);
     }

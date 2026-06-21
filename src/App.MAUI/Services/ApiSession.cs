@@ -1,6 +1,5 @@
-using App.Shared.RCL.Models;
-
 using App.MAUI.Services.LocalBoard;
+using App.Shared.RCL.Models;
 
 using Microsoft.Extensions.Logging;
 
@@ -61,7 +60,10 @@ public sealed class ApiSession : IApiSession
         if (string.IsNullOrEmpty(e) && !string.IsNullOrEmpty(t))
         {
             e = JwtAccessTokenDisplayClaims.TryGetEmail(t);
-            if (!string.IsNullOrEmpty(e)) await _store.SetEmailAsync(e, cancellationToken);
+            if (!string.IsNullOrEmpty(e))
+            {
+                await _store.SetEmailAsync(e, cancellationToken);
+            }
         }
 
         IsLoggedIn = !string.IsNullOrEmpty(t);
@@ -70,7 +72,9 @@ public sealed class ApiSession : IApiSession
         OnChanged();
 
         if (IsLoggedIn)
+        {
             StartBackgroundHubAndSync();
+        }
     }
 
     public async Task SetSessionAsync(LoginResponse response, CancellationToken cancellationToken = default)

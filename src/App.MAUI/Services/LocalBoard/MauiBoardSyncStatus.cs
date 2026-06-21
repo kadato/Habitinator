@@ -32,7 +32,11 @@ public sealed class MauiBoardSyncStatus : IBoardSyncStatus, IDisposable
         get => _isOffline;
         internal set
         {
-            if (_isOffline == value) return;
+            if (_isOffline == value)
+            {
+                return;
+            }
+
             _isOffline = value;
             OnChanged();
         }
@@ -43,7 +47,11 @@ public sealed class MauiBoardSyncStatus : IBoardSyncStatus, IDisposable
         get => _isSyncing;
         internal set
         {
-            if (_isSyncing == value) return;
+            if (_isSyncing == value)
+            {
+                return;
+            }
+
             _isSyncing = value;
             OnChanged();
         }
@@ -54,7 +62,11 @@ public sealed class MauiBoardSyncStatus : IBoardSyncStatus, IDisposable
         get => _lastSyncedUtc;
         internal set
         {
-            if (_lastSyncedUtc == value) return;
+            if (_lastSyncedUtc == value)
+            {
+                return;
+            }
+
             _lastSyncedUtc = value;
             OnChanged();
         }
@@ -65,7 +77,11 @@ public sealed class MauiBoardSyncStatus : IBoardSyncStatus, IDisposable
         get => _syncProblemMessage;
         internal set
         {
-            if (_syncProblemMessage == value) return;
+            if (_syncProblemMessage == value)
+            {
+                return;
+            }
+
             _syncProblemMessage = value;
             OnChanged();
         }

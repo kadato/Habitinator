@@ -14,11 +14,17 @@ public static class MauiAppSettings
     public static string ResolveApiBaseUrl(IConfiguration configuration)
     {
         var env = Environment.GetEnvironmentVariable(EnvApiBaseUrl);
-        if (!string.IsNullOrWhiteSpace(env)) return env.Trim().TrimEnd('/');
+        if (!string.IsNullOrWhiteSpace(env))
+        {
+            return env.Trim().TrimEnd('/');
+        }
 
         // Optional override; omit in appsettings so Android uses 10.0.2.2 and Windows uses 127.0.0.1.
         var fromConfig = configuration["Api:BaseUrl"];
-        if (!string.IsNullOrWhiteSpace(fromConfig)) return fromConfig.Trim().TrimEnd('/');
+        if (!string.IsNullOrWhiteSpace(fromConfig))
+        {
+            return fromConfig.Trim().TrimEnd('/');
+        }
 
         return DefaultApiBaseUrlNoSlash();
     }

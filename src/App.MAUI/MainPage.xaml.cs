@@ -1,4 +1,4 @@
-﻿namespace App.MAUI;
+namespace App.MAUI;
 
 public partial class MainPage : ContentPage
 {

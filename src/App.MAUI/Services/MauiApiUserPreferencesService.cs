@@ -54,7 +54,10 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
         {
             try
             {
-                if (!_apiSession.IsLoggedIn) return;
+                if (!_apiSession.IsLoggedIn)
+                {
+                    return;
+                }
 
                 using var res = await Client.GetAsync("api/settings/preferences", cancellationToken).ConfigureAwait(false);
                 if (res.IsSuccessStatusCode)
@@ -102,7 +105,10 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
 
     private async Task EnsureSessionReadyAsync(CancellationToken cancellationToken)
     {
-        if (!_apiSession.IsReady) await _apiSession.LoadAsync(cancellationToken).ConfigureAwait(false);
+        if (!_apiSession.IsReady)
+        {
+            await _apiSession.LoadAsync(cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private UserPreferences ReadLocal(string key)

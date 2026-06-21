@@ -50,7 +50,10 @@ public sealed class MauiDailyReminderService : IDisposable
 
     public async Task SynchronizeAsync(CancellationToken cancellationToken = default)
     {
-        if (!LocalNotificationCenter.Current.IsSupported) return;
+        if (!LocalNotificationCenter.Current.IsSupported)
+        {
+            return;
+        }
 
         try
         {
@@ -58,7 +61,10 @@ public sealed class MauiDailyReminderService : IDisposable
             center.Cancel(NotificationId);
 
             var settings = await _notificationSettings.GetAsync(cancellationToken);
-            if (!settings.DailyReminderEnabled || !settings.DailyReminderTime.HasValue) return;
+            if (!settings.DailyReminderEnabled || !settings.DailyReminderTime.HasValue)
+            {
+                return;
+            }
 
             await _dateFormatService.InitializeAsync(cancellationToken).ConfigureAwait(false);
 
@@ -72,12 +78,14 @@ public sealed class MauiDailyReminderService : IDisposable
 
             var perm = new NotificationPermission { AskPermission = true };
             if (!await center.AreNotificationsEnabled(perm).ConfigureAwait(false))
+            {
                 if (!await center.RequestNotificationPermission(perm).ConfigureAwait(false)
                     || !await center.AreNotificationsEnabled(perm).ConfigureAwait(false))
                 {
                     _logger.LogDebug("Daily reminder not scheduled: notification permission denied.");
                     return;
                 }
+            }
 
             var request = new NotificationRequest
             {
@@ -108,7 +116,10 @@ public sealed class MauiDailyReminderService : IDisposable
     /// <summary>Next <paramref name="timeOfDay" /> on the device clock (today if still ahead, else tomorrow).</summary>
     internal static DateTime NextLocalNotificationTime(TimeSpan timeOfDay)
     {
-        if (timeOfDay < TimeSpan.Zero || timeOfDay >= TimeSpan.FromDays(1)) timeOfDay = TimeSpan.FromHours(7);
+        if (timeOfDay < TimeSpan.Zero || timeOfDay >= TimeSpan.FromDays(1))
+        {
+            timeOfDay = TimeSpan.FromHours(7);
+        }
 
         var now = DateTime.Now;
         var today = now.Date;

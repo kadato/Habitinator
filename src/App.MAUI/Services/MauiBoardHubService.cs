@@ -30,12 +30,18 @@ public sealed class MauiBoardHubService
     public async Task EnsureConnectedAsync(CancellationToken cancellationToken = default)
     {
         var t = await _tokens.GetAccessTokenAsync(cancellationToken);
-        if (string.IsNullOrEmpty(t)) return;
+        if (string.IsNullOrEmpty(t))
+        {
+            return;
+        }
 
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            if (_connection is { State: HubConnectionState.Connected }) return;
+            if (_connection is { State: HubConnectionState.Connected })
+            {
+                return;
+            }
 
             if (_connection is not null)
             {

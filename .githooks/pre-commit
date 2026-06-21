@@ -1,0 +1,30 @@
+#!/bin/sh
+
+# Get list of staged C# files
+files=$(git diff --cached --name-only --diff-filter=ACM | grep '\.cs$')
+
+if [ -z "$files" ]; then
+    exit 0
+fi
+
+echo ""
+echo "=================================================="
+echo "Automatically formatting staged C# files..."
+echo "=================================================="
+echo ""
+
+# Run dotnet format style and whitespace on staged C# files
+dotnet format Habitinator.slnx --include $files
+
+# Re-add modified C# files to the commit
+echo "$files" | while read -r file; do
+    if [ -f "$file" ]; then
+        git add "$file"
+    fi
+done
+
+echo ""
+echo "=================================================="
+echo "Formatting completed successfully."
+echo "=================================================="
+echo ""

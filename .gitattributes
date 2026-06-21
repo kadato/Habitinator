@@ -1,0 +1,14 @@
+# Handle line endings automatically for files detected as text
+* text=auto
+
+# Enforce CRLF line endings for .NET files to align with .editorconfig
+*.cs text eol=crlf
+*.razor text eol=crlf
+*.csproj text eol=crlf
+*.sln text eol=crlf
+*.slnx text eol=crlf
+*.json text eol=crlf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
+*.bash text eol=lf

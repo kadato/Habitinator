@@ -15,6 +15,18 @@ echo ""
 
 # Run dotnet format style and whitespace on staged C# files
 dotnet format Habitinator.slnx --include $files
+format_exit_code=$?
+
+if [ $format_exit_code -ne 0 ]; then
+    echo ""
+    echo "=================================================="
+    echo "ERROR: dotnet format failed with exit code $format_exit_code."
+    echo "Please verify you have the required workloads installed"
+    echo "(run 'dotnet workload restore') and that there are no build errors."
+    echo "=================================================="
+    echo ""
+    exit $format_exit_code
+fi
 
 # Re-add modified C# files to the commit
 echo "$files" | while read -r file; do

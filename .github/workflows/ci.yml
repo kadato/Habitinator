@@ -48,7 +48,9 @@ jobs:
           dotnet workload restore Habitinator.slnx
 
       - name: Verify Code Formatting
-        run: dotnet format --verify-no-changes
+        run: |
+          dotnet format whitespace --verify-no-changes
+          dotnet format style --verify-no-changes
 
       - name: Build
         run: dotnet build Habitinator.slnx --configuration Release

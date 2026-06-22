@@ -69,9 +69,9 @@ public sealed class DemoDataInitializationHostedService : BackgroundService
                 }
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogInformation("Demo data seeding was canceled because the application host is shutting down.");
+            _logger.LogInformation(ex, "Demo data seeding was canceled because the application host is shutting down.");
         }
     }
 }

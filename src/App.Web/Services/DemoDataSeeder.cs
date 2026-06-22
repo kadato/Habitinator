@@ -106,7 +106,7 @@ public static class DemoDataSeeder
             }
 
             logger.LogWarning(
-                "Demo guest activity reseeded ({Flag}). Turn off {Section}:{Flag} when finished.",
+                "Demo guest activity reseeded ({Flag}). Turn off {Section}:{FlagName} when finished.",
                 nameof(demo.ForceReseedActivity),
                 DemoUserOptions.SectionName,
                 nameof(demo.ForceReseedActivity));

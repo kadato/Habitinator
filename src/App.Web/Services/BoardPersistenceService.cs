@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 
 using App.Shared.RCL;
@@ -9,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace App.Web.Services;
 
-public sealed class BoardPersistenceService
+public sealed class BoardPersistenceService : IDisposable
 {
     private readonly BoardSnapshotCache _snapshotCache;
     private readonly IBoardChangeNotifier _boardChangeNotifier;
@@ -1361,9 +1362,9 @@ public sealed class BoardPersistenceService
         return ToModelWithToday(entity, today, streaks);
     }
 
-    private async Task<IReadOnlyDictionary<Guid, int>> BuildDailyStreakMapAsync(
+    private static async Task<IReadOnlyDictionary<Guid, int>> BuildDailyStreakMapAsync(
         Guid userId,
-        IReadOnlyList<BoardItemEntity> dailies,
+        List<BoardItemEntity> dailies,
         DateOnly today,
         ApplicationDbContext forQueries,
         CancellationToken cancellationToken = default)
@@ -1597,5 +1598,10 @@ public sealed class BoardPersistenceService
             DurationSeconds = type == ActivityEventType.TimerSession ? durationSeconds : null,
             CustomLabel = customLabel
         });
+    }
+
+    public void Dispose()
+    {
+        _gate.Dispose();
     }
 }

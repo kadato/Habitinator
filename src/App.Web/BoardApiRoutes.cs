@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -52,7 +53,7 @@ internal static class BoardApiRoutes
                     return Results.BadRequest(new { detail = "Query parameter 'cursor' is required (ISO 8601 watermark)." });
                 }
 
-                if (!DateTimeOffset.TryParse(cursorRaw, out var cursor))
+                if (!DateTimeOffset.TryParse(cursorRaw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var cursor))
                 {
                     return Results.BadRequest(new { detail = "Invalid cursor; expected ISO-8601 DateTimeOffset." });
                 }
@@ -549,7 +550,7 @@ internal static class BoardApiRoutes
         if (request.Headers.TryGetValue("X-Board-Expected-Updated-At-Utc", out var custom))
         {
             var s = custom.ToString();
-            if (DateTimeOffset.TryParse(s, out var d))
+            if (DateTimeOffset.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
             {
                 return d;
             }
@@ -563,7 +564,7 @@ internal static class BoardApiRoutes
                 raw = raw[1..^1];
             }
 
-            if (DateTimeOffset.TryParse(raw, out var d2))
+            if (DateTimeOffset.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d2))
             {
                 return d2;
             }

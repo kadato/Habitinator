@@ -1,3 +1,5 @@
+using System.Globalization;
+
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 using App.Web.Data;
@@ -55,7 +57,7 @@ public sealed class ActivityStatisticsService
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
             .ToListAsync(cancellationToken);
 
-        IReadOnlyList<Guid> boardIds = rows
+        List<Guid> boardIds = rows
             .Select(x => x.BoardItemId)
             .Where(x => x.HasValue)
             .Select(x => x!.Value)
@@ -184,7 +186,7 @@ public sealed class ActivityStatisticsService
         return result;
     }
 
-    private async Task<IReadOnlyList<string>> GetDistinctTagsForUserAsync(
+    private static async Task<IReadOnlyList<string>> GetDistinctTagsForUserAsync(
         ApplicationDbContext db,
         Guid userId,
         CancellationToken cancellationToken)
@@ -206,7 +208,7 @@ public sealed class ActivityStatisticsService
         return set.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
-    private async Task<HashSet<Guid>?> GetBoardItemIdsMatchingTagOrNullAsync(
+    private static async Task<HashSet<Guid>?> GetBoardItemIdsMatchingTagOrNullAsync(
         ApplicationDbContext db,
         Guid userId,
         string? tag,
@@ -230,19 +232,13 @@ public sealed class ActivityStatisticsService
             .Select(b => new { b.Id, b.Tags })
             .ToListAsync(cancellationToken);
 
-        var set = new HashSet<Guid>();
-        foreach (var r in rows)
-        {
-            if (BoardTagUtil.ParseTags(r.Tags).Any(t => wantedSet.Contains(t)))
-            {
-                set.Add(r.Id);
-            }
-        }
-
-        return set;
+        return rows
+            .Where(r => BoardTagUtil.ParseTags(r.Tags).Any(t => wantedSet.Contains(t)))
+            .Select(r => r.Id)
+            .ToHashSet();
     }
 
-    private async Task<IReadOnlyList<DailyGraphPeriodOption>> BuildDailyPeriodOptionsAsync(
+    private static async Task<IReadOnlyList<DailyGraphPeriodOption>> BuildDailyPeriodOptionsAsync(
         ApplicationDbContext db,
         Guid userId,
         DateOnly utcToday,
@@ -267,7 +263,7 @@ public sealed class ActivityStatisticsService
         };
         for (var y = maxYear; y >= minYear; y--)
         {
-            list.Add(new DailyGraphPeriodOption(DailyGraphPeriods.ForCalendarYear(y), y.ToString()));
+            list.Add(new DailyGraphPeriodOption(DailyGraphPeriods.ForCalendarYear(y), y.ToString(CultureInfo.InvariantCulture)));
         }
 
         return list;

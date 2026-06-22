@@ -52,15 +52,19 @@
         }
         catch (JSDisconnectedException)
         {
+            // Ignored during page navigation
         }
         catch (TaskCanceledException)
         {
+            // Ignored during page navigation
         }
         catch (InvalidOperationException)
         {
+            // Ignored during page navigation
         }
         catch (JSException)
         {
+            // Ignored during page navigation
         }
     }
 
@@ -75,15 +79,19 @@
             }
             catch (JSDisconnectedException)
             {
+                // Ignored during page navigation
             }
             catch (JSException)
             {
+                // Ignored during page navigation
             }
             catch (TaskCanceledException)
             {
+                // Ignored during page navigation
             }
             catch (InvalidOperationException)
             {
+                // Ignored during page navigation
             }
         }
 

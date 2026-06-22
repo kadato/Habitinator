@@ -54,4 +54,4 @@ builder.AddProject("app-maui", "../App.MAUI/App.MAUI.csproj")
     .WaitFor(appWeb)
     .WithEnvironment("HABITINATOR_API_BASE_URL", appWeb.GetEndpoint("http"));
 
-builder.Build().Run();
+await builder.Build().RunAsync();

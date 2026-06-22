@@ -52,5 +52,5 @@ public sealed class BoardItemEntity
     public DateTimeOffset? DeletedAtUtc { get; set; }
 
     /// <summary>True if the item is archived and hidden from the active board.</summary>
-    public bool IsArchived { get; set; } = false;
+    public bool IsArchived { get; set; }
 }

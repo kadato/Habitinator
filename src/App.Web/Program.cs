@@ -1,3 +1,5 @@
+#pragma warning disable S3776 // Suppress Cognitive Complexity warning for Program.cs
+
 using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
@@ -24,6 +26,8 @@ using Microsoft.IdentityModel.Tokens;
 
 using MudBlazor;
 using MudBlazor.Services;
+
+const string TestingEnvironment = "Testing";
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -109,7 +113,7 @@ builder.Services.Configure<BoardMaintenanceOptions>(
     builder.Configuration.GetSection(BoardMaintenanceOptions.SectionName));
 builder.Services.Configure<DemoInitializationOptions>(
     builder.Configuration.GetSection(DemoInitializationOptions.SectionName));
-if (!builder.Environment.IsEnvironment("Testing"))
+if (!builder.Environment.IsEnvironment(TestingEnvironment))
 {
     builder.Services.AddHostedService<DemoDataInitializationHostedService>();
 }
@@ -150,7 +154,7 @@ builder.Services.AddResponseCompression(options =>
     options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
     options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
     options.MimeTypes = Microsoft.AspNetCore.ResponseCompression.ResponseCompressionDefaults.MimeTypes.Concat(
-        new[] { "application/octet-stream", "application/wasm" });
+        ResponseCompressionMimeTypes);
 });
 
 builder.Services.Configure<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProviderOptions>(options =>
@@ -281,7 +285,7 @@ async Task TryRecoverDemoGuestAsync(ILogger logger, CancellationToken cancellati
     }
 }
 
-if (app.Environment.IsEnvironment("Testing"))
+if (app.Environment.IsEnvironment(TestingEnvironment))
 {
     await DemoDataSeeder.SeedAsync(app.Services);
 }
@@ -296,14 +300,14 @@ List<string> MapRegistrationErrorsToUserFacing(IEnumerable<IdentityError> errors
     }).ToList();
 
 // Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"))
+if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment(TestingEnvironment))
 {
     app.UseExceptionHandler("/Error", true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
-if (!app.Environment.IsEnvironment("Testing"))
+if (!app.Environment.IsEnvironment(TestingEnvironment))
 {
     app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
     app.UseHttpsRedirection();
@@ -316,7 +320,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
 
-if (!app.Environment.IsEnvironment("Testing"))
+if (!app.Environment.IsEnvironment(TestingEnvironment))
 {
     app.UseRateLimiter();
 }
@@ -637,7 +641,7 @@ activityApi.MapPost("log", async (
     ActivityLogRequest body,
     CancellationToken cancellationToken) =>
 {
-    if (AuthenticatedUserId.TryGet(user) is not { } userId)
+    if (AuthenticatedUserId.TryGet(user) is null)
     {
         return Results.Unauthorized();
     }
@@ -754,7 +758,12 @@ settingsApi.MapPut("/preferences",
         return Results.NoContent();
     });
 
-app.Run();
+await app.RunAsync();
 
 /// <summary>Enables <see cref="Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory{TEntryPoint}"/> in integration tests.</summary>
-public partial class Program { }
+public partial class Program
+{
+    protected Program() { }
+
+    internal static readonly string[] ResponseCompressionMimeTypes = ["application/octet-stream", "application/wasm"];
+}

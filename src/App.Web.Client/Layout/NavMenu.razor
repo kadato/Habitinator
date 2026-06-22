@@ -2,11 +2,21 @@
 @inject NavigationManager Nav
 
 @{
-    var navClass = MobileTopBar
-        ? "app-mobile-nav"
-        : BottomBar
-            ? "app-bottom-nav"
-            : $"app-header-nav {(Vertical ? "flex-column align-stretch w-100" : "d-flex flex-wrap align-center")}";
+    var navClass = "";
+    if (MobileTopBar)
+    {
+        navClass = "app-mobile-nav";
+    }
+    else if (BottomBar)
+    {
+        navClass = "app-bottom-nav";
+    }
+    else
+    {
+        var suffix = Vertical ? "flex-column align-stretch w-100" : "d-flex flex-wrap align-center";
+        navClass = $"app-header-nav {suffix}";
+    }
+
     if (!MobileTopBar && !BottomBar && Mode == AppNavMode.AuthLinks)
     {
         navClass += " app-header-nav--auth";

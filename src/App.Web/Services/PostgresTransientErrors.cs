@@ -26,12 +26,9 @@ public static class PostgresTransientErrors
         {
             if (ex is AggregateException agg)
             {
-                foreach (var inner in agg.Flatten().InnerExceptions)
+                if (agg.Flatten().InnerExceptions.Any(IsTransient))
                 {
-                    if (IsTransient(inner))
-                    {
-                        return true;
-                    }
+                    return true;
                 }
 
                 continue;
@@ -84,14 +81,6 @@ public static class PostgresTransientErrors
             return false;
         }
 
-        foreach (var fragment in MessageSubstrings)
-        {
-            if (message.Contains(fragment, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return MessageSubstrings.Any(fragment => message.Contains(fragment, StringComparison.OrdinalIgnoreCase));
     }
 }

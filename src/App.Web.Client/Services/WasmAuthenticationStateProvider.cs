@@ -54,7 +54,7 @@ public sealed class WasmAuthenticationStateProvider : AuthenticationStateProvide
         return _cache;
     }
 
-    private AuthenticationState CreateAuthenticationState(AuthStatusDto status)
+    private static AuthenticationState CreateAuthenticationState(AuthStatusDto status)
     {
         if (status.IsAuthenticated && status.Email is not null)
         {

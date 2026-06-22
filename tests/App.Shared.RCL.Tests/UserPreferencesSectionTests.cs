@@ -396,7 +396,7 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
     public void Displays_ErrorAlert_OnLoadException()
     {
         // Arrange
-        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(x => Task.FromException<UserPreferences>(new Exception("Network failure")));
+        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(x => Task.FromException<UserPreferences>(new InvalidOperationException("Network failure")));
 
         // Act
         var cut = _ctx.Render<UserPreferencesSection>();

@@ -219,7 +219,7 @@ public sealed class NotificationSettingsSectionTests : IAsyncDisposable
     public void Displays_ErrorAlert_OnLoadException()
     {
         // Arrange
-        _settingsService.GetAsync(Arg.Any<CancellationToken>()).Returns(x => Task.FromException<NotificationSettings>(new Exception("Database error")));
+        _settingsService.GetAsync(Arg.Any<CancellationToken>()).Returns(x => Task.FromException<NotificationSettings>(new InvalidOperationException("Database error")));
 
         // Act
         var cut = _ctx.Render<NotificationSettingsSection>();

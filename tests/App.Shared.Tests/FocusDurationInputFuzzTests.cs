@@ -11,7 +11,8 @@ public sealed class FocusDurationInputFuzzTests
     public void TryParse_NeverThrows(string? input)
     {
         // Parsing arbitrary inputs must never throw exceptions
-        FocusDurationInput.TryParse(input, out _);
+        var exception = Xunit.Record.Exception(() => FocusDurationInput.TryParse(input, out _));
+        Assert.Null(exception);
     }
 
     [Property]

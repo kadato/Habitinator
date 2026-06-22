@@ -134,7 +134,7 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         var buttons = cut.FindComponents<MudButton>();
 
         _accountActions.ChangePasswordAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(x => Task.FromException(new Exception("Invalid current password")));
+            .Returns(x => Task.FromException(new InvalidOperationException("Invalid current password")));
 
         // Fill fields correctly
         await cut.InvokeAsync(() => inputs[0].Instance.ValueChanged.InvokeAsync("wrongCurrent"));

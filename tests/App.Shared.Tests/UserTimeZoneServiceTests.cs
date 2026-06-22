@@ -1,3 +1,5 @@
+#pragma warning disable CA2012 // NSubstitute Returns() on ValueTask causes false positive CA2012
+
 using App.Shared.RCL.Services;
 
 using FluentAssertions;

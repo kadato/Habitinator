@@ -193,6 +193,8 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
             return Task.CompletedTask;
         }
 
+#pragma warning disable CS0067
         public event Action? Changed;
+#pragma warning restore CS0067
     }
 }

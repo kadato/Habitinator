@@ -103,5 +103,7 @@ public sealed class BoardApiIsolationTests(PostgresWebAppFactory factory)
     }
 }
 
+#pragma warning disable CA1711 // Allow 'Collection' suffix for xUnit collection definition
 [CollectionDefinition(nameof(IntegrationCollection))]
 public sealed class IntegrationCollection : ICollectionFixture<PostgresWebAppFactory>;
+#pragma warning restore CA1711

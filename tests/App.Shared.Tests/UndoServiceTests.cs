@@ -16,7 +16,7 @@ using Xunit;
 
 namespace App.Shared.Tests;
 
-public sealed class UndoServiceTests
+public sealed class UndoServiceTests : IDisposable
 {
     private readonly ISnackbar _snackbar = Substitute.For<ISnackbar>();
     private readonly INotificationSettingsService _settingsService = Substitute.For<INotificationSettingsService>();
@@ -31,6 +31,11 @@ public sealed class UndoServiceTests
             .Returns(12_000);
 
         _undoService = new UndoService(_snackbar, _settingsService, _notificationRules);
+    }
+
+    public void Dispose()
+    {
+        _undoService.Dispose();
     }
 
     [Fact]
@@ -143,7 +148,7 @@ public sealed class UndoServiceTests
 
         await _undoService.UndoAsync(firstId);
 
-        undone.Should().Equal(["first"]);
+        undone.Should().Equal("first");
         _undoService.CanUndo.Should().BeTrue();
         _undoService.LastActionDescription.Should().Be("Third");
     }
@@ -167,7 +172,7 @@ public sealed class UndoServiceTests
         await _undoService.UndoAsync(firstId);
         await _undoService.UndoAsync(secondId);
 
-        undone.Should().Equal(["first", "second"]);
+        undone.Should().Equal("first", "second");
     }
 
     [Fact]
@@ -196,7 +201,7 @@ public sealed class UndoServiceTests
 
         await Task.WhenAll(task1, task2);
 
-        undone.Should().Equal(["second", "first"]);
+        undone.Should().Equal("second", "first");
     }
 }
 
@@ -383,11 +388,11 @@ public sealed class UndoableBoardDataServiceTests
             {
                 var desc = (string)x[0];
                 var callback = (Func<Task>)x[1];
-                if (desc.StartsWith("Rename"))
+                if (desc.StartsWith("Rename", StringComparison.Ordinal))
                 {
                     renameUndoCallback = callback;
                 }
-                else if (desc.StartsWith("Delete"))
+                else if (desc.StartsWith("Delete", StringComparison.Ordinal))
                 {
                     deleteUndoCallback = callback;
                 }

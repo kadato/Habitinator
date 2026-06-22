@@ -17,7 +17,8 @@ public sealed class DailyScheduleFuzzTests
         var repeat = (DailyRepeatType)(Math.Abs(repeatVal) % 4);
 
         // This call should be completely exception-safe for any input
-        DailySchedule.IsScheduledOn(start, repeat, interval, on);
+        var exception = Xunit.Record.Exception(() => DailySchedule.IsScheduledOn(start, repeat, interval, on));
+        Assert.Null(exception);
     }
 
     [Property]
@@ -56,7 +57,8 @@ public sealed class DailyScheduleFuzzTests
         DateOnly notAfter = ToDateOnly(notAfterDt);
         var repeat = (DailyRepeatType)(Math.Abs(repeatVal) % 4);
 
-        DailySchedule.StreakHistoryScheduleStart(start, notAfter, repeat, interval, streakWindow);
+        var exception = Xunit.Record.Exception(() => DailySchedule.StreakHistoryScheduleStart(start, notAfter, repeat, interval, streakWindow));
+        Assert.Null(exception);
     }
 
     [Property]

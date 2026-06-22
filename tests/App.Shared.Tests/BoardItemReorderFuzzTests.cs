@@ -25,8 +25,12 @@ public sealed class BoardItemReorderFuzzTests
     [Property]
     public void ComputeMoveUpDown_NeverThrows(int source, int listCount)
     {
-        BoardItemReorder.ComputeMoveUpIndex(source);
-        BoardItemReorder.ComputeMoveDownIndex(source, listCount);
+        var exception = Xunit.Record.Exception(() =>
+        {
+            BoardItemReorder.ComputeMoveUpIndex(source);
+            BoardItemReorder.ComputeMoveDownIndex(source, listCount);
+        });
+        Assert.Null(exception);
     }
 
     [Property]
@@ -81,7 +85,8 @@ public sealed class BoardItemReorderFuzzTests
         var nextResolved = nextSortVal ?? 2; // listIndex = 2
 
         // Discard cases where they are distinct but so close that floating-point limits prevent finding a strict midpoint
-        if (prevResolved != nextResolved && Math.Abs(prevResolved - nextResolved) < 1e-9)
+        var diff = Math.Abs(prevResolved - nextResolved);
+        if (diff >= double.Epsilon && diff < 1e-9)
         {
             return;
         }

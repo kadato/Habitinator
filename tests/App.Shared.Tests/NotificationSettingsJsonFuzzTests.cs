@@ -12,7 +12,8 @@ public sealed class NotificationSettingsJsonFuzzTests
     public void DeserializeOrDefault_NeverThrows(string? json)
     {
         // Deserializing arbitrary JSON/strings must never crash
-        NotificationSettingsJson.DeserializeOrDefault(json);
+        var exception = Xunit.Record.Exception(() => NotificationSettingsJson.DeserializeOrDefault(json));
+        Assert.Null(exception);
     }
 
     [Property]

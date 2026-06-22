@@ -31,7 +31,7 @@ public sealed class TestTimeZoneService : IUserTimeZoneService
 public sealed class NotificationSettingsRulesTests
 {
     private static readonly DateTime UtcNoon = new(2026, 4, 26, 12, 0, 0, DateTimeKind.Utc);
-    private readonly INotificationSettingsRules _rules = new NotificationSettingsRules(new TestTimeZoneService());
+    private readonly NotificationSettingsRules _rules = new NotificationSettingsRules(new TestTimeZoneService());
 
     [Fact]
     public void Master_switch_off_blocks_all_severities()

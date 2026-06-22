@@ -174,15 +174,13 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
         // 1. Create three todos
         var t1 = await CreateTodoAsync(client, token, "Todo 1");
         var t2 = await CreateTodoAsync(client, token, "Todo 2");
-        var t3 = await CreateTodoAsync(client, token, "Todo 3");
+        await CreateTodoAsync(client, token, "Todo 3");
 
         // 2. Fetch the snapshot to see initial sort orders
         var snapshot = await GetSnapshotAsync(client, token);
         var todo1 = snapshot.Todos.First(x => x.Id == t1.Id);
-        var todo2 = snapshot.Todos.First(x => x.Id == t2.Id);
-        var todo3 = snapshot.Todos.First(x => x.Id == t3.Id);
 
-        // 3. Update Todo 2's sort order to be extremely close to Todo 1's sort order (1e-12 difference)
+        // 3. Update the second item's sort order to be extremely close to the first item's sort order (1e-12 difference)
         var targetSortOrder = todo1.SortOrder - 1e-12;
         using var put = new HttpRequestMessage(HttpMethod.Put, $"/api/board/todos/{t2.Id}");
         put.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);

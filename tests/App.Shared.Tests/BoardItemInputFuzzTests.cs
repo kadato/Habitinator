@@ -24,7 +24,8 @@ public sealed class BoardItemInputFuzzTests
     [Property]
     public void DailyChecklistJson_Parse_NeverThrows(string? json)
     {
-        DailyChecklistJson.Parse(json);
+        var exception = Xunit.Record.Exception(() => DailyChecklistJson.Parse(json));
+        Assert.Null(exception);
     }
 
     [Property]

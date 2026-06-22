@@ -228,7 +228,7 @@
     private List<ChecklistRow> _checklistRows = [];
     private bool _checklistOpen = true;
     private DateTime? _dueDate;
-    private bool _saving => false;
+    private static bool _saving => false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -363,6 +363,7 @@
             }
             catch
             {
+                // Ignored: focus attempt may fail if element is not in DOM
             }
         }
     }

@@ -285,19 +285,19 @@
     private BoardItem LocalItem => Conflict.LocalItem;
     private BoardItem ServerItem => Conflict.ServerItem;
 
-    private string GetFieldClass<T>(T value1, T value2)
+    private static string GetFieldClass<T>(T value1, T value2)
     {
         return EqualityComparer<T>.Default.Equals(value1, value2)
             ? "field-value"
             : "field-value field-value--different";
     }
 
-    private bool HasChecklist(BoardItem item)
+    private static bool HasChecklist(BoardItem item)
     {
         return !string.IsNullOrEmpty(item.ChecklistJson) && item.ChecklistJson != "[]";
     }
 
-    private string RenderChecklistSummary(BoardItem item)
+    private static string RenderChecklistSummary(BoardItem item)
     {
         if (string.IsNullOrEmpty(item.ChecklistJson)) return "(None)";
         try

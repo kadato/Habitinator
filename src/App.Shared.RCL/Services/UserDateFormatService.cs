@@ -35,10 +35,10 @@ public sealed class UserDateFormatService : IUserDateFormatService
         ApplyFromPreferences(prefs);
     }
 
-    public string Format(DateOnly date)
+    public string Format(DateOnly dateValue)
     {
         var format = _initialized ? _dateFormat : UserPreferences.CreateDefault().DateFormat;
-        return date.ToString(format, CultureInfo.InvariantCulture);
+        return dateValue.ToString(format, CultureInfo.InvariantCulture);
     }
 
     public string Format(DateTime dateTime)
@@ -62,6 +62,7 @@ public sealed class UserDateFormatService : IUserDateFormatService
         }
         catch
         {
+            // Fall back to default format on preference retrieval error
             _dateFormat = UserPreferences.CreateDefault().DateFormat;
         }
     }

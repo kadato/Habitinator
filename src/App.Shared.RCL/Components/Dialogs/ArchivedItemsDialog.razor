@@ -54,7 +54,7 @@
                 }
 
                 <div class="archived-list">
-                    @if (FilteredItems.Count == 0)
+                    @if (GetFilteredItems().Count == 0)
                     {
                         <div class="empty-state">
                             <MudIcon Icon="@Icons.Material.Filled.SearchOff" Class="empty-icon" />
@@ -64,7 +64,7 @@
                     }
                     else
                     {
-                        @foreach (var entry in FilteredItems)
+                        @foreach (var entry in GetFilteredItems())
                         {
                             var item = entry.Item;
                             var section = entry.Section;
@@ -185,16 +185,13 @@
     private readonly Dictionary<Guid, Task> _inFlightTasks = new();
     private bool _isClosing;
 
-    private List<ArchivedItemEntry> FilteredItems
+    private List<ArchivedItemEntry> GetFilteredItems()
     {
-        get
-        {
-            var query = _searchQuery?.Trim() ?? "";
-            return _allEntries
-                .Where(x => _selectedSection == null || x.Section == _selectedSection)
-                .Where(x => string.IsNullOrEmpty(query) || x.Item.Title.Contains(query, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-        }
+        var query = _searchQuery?.Trim() ?? "";
+        return _allEntries
+            .Where(x => _selectedSection == null || x.Section == _selectedSection)
+            .Where(x => string.IsNullOrEmpty(query) || x.Item.Title.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 
     protected override async Task OnInitializedAsync()

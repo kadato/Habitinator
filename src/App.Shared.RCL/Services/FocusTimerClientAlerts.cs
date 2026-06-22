@@ -43,9 +43,11 @@ public sealed class FocusTimerClientAlerts : IFocusTimerClientAlerts
         }
         catch (JSDisconnectedException)
         {
+            // Ignored when JS is disconnected during disposal/navigation
         }
         catch (JSException)
         {
+            // Ignored if JS execution fails or is not supported
         }
     }
 }

@@ -1,4 +1,3 @@
-@using System.Globalization
 @using Microsoft.JSInterop
 @using App.Shared.RCL.Components.Dialogs
 @inject GlobalTimerService TimerService
@@ -424,13 +423,10 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (IsItemDraggable() && VisibleItems().Count > 0)
+        if (IsItemDraggable() && VisibleItems().Count > 0 && (firstRender || _needRefresh))
         {
-            if (firstRender || _needRefresh)
-            {
-                _needRefresh = false;
-                await InitSortableAsync();
-            }
+            _needRefresh = false;
+            await InitSortableAsync();
         }
     }
 
@@ -443,8 +439,14 @@
             _selfRef ??= DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("HabitinatorSortable.init", Section.ToString(), _containerRef, _selfRef);
         }
-        catch (JSDisconnectedException) { }
-        catch (TaskCanceledException) { }
+        catch (JSDisconnectedException)
+        {
+            // Ignored during page navigation or hot reload
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignored during page navigation or hot reload
+        }
     }
 
     private void PruneSortOrderOverrides()
@@ -530,12 +532,9 @@
 
     private void PruneOptimisticCreations()
     {
-        foreach (var id in _optimisticCreations.Keys.ToList())
+        foreach (var id in _optimisticCreations.Keys.Where(id => Items.Any(x => x.Id == id)).ToList())
         {
-            if (Items.Any(x => x.Id == id))
-            {
-                _optimisticCreations.Remove(id);
-            }
+            _optimisticCreations.Remove(id);
         }
     }
 
@@ -766,10 +765,22 @@
                 await JS.InvokeVoidAsync("HabitinatorSortable.destroy", Section.ToString());
             }
         }
-        catch (JSDisconnectedException) { }
-        catch (JSException) { }
-        catch (TaskCanceledException) { }
-        catch (InvalidOperationException) { }
+        catch (JSDisconnectedException)
+        {
+            // Ignored during page navigation or hot reload
+        }
+        catch (JSException)
+        {
+            // Ignored during page navigation or hot reload
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignored during page navigation or hot reload
+        }
+        catch (InvalidOperationException)
+        {
+            // Ignored during page navigation or hot reload
+        }
         finally
         {
             _selfRef?.Dispose();
@@ -1009,16 +1020,6 @@
         }
     }
 
-    private static string HabitCounterLabel(BoardItem item)
-    {
-        return (item.TrackPlus, item.TrackMinus) switch
-        {
-            (true, true) => $"≫ +{item.Counter} | −{item.NegativeCounter}",
-            (true, false) => $"≫ +{item.Counter}",
-            (false, true) => $"≫ −{item.NegativeCounter}",
-            _ => "≫"
-        };
-    }
 
     private static string HabitCounterTitle(BoardItem item)
     {

@@ -1,3 +1,5 @@
+#pragma warning disable S3776 // Suppress Cognitive Complexity warning for statistics calculator methods
+
 using App.Shared.RCL.Models;
 
 namespace App.Shared.RCL.Services;
@@ -29,7 +31,7 @@ public static class ActivityStatisticsCalculator
         };
         for (var y = maxYear; y >= minYear; y--)
         {
-            list.Add(new DailyGraphPeriodOption(DailyGraphPeriods.ForCalendarYear(y), y.ToString()));
+            list.Add(new DailyGraphPeriodOption(DailyGraphPeriods.ForCalendarYear(y), y.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         }
 
         return list;
@@ -99,7 +101,11 @@ public static class ActivityStatisticsCalculator
                 acc = (0, 0);
             }
 
-            var focus = r is { EventType: ActivityEventType.TimerSession, DurationSeconds: int s } ? s : 0;
+            var focus = 0;
+            if (r.EventType == ActivityEventType.TimerSession && r.DurationSeconds is int s)
+            {
+                focus = s;
+            }
             perDay[d] = (acc.count + 1, acc.focusSec + focus);
         }
 
@@ -370,19 +376,12 @@ public static class ActivityStatisticsCalculator
             if (r.BoardItemId is { } boardId)
             {
                 var utcDay = DateOnly.FromDateTime(r.OccurredAtUtc.UtcDateTime);
-                if (r.EventType is ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete)
+                if ((r.EventType is ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete
+                     && !ShouldIncludeNetToggleRow(r, lastDailyToggle, boardId, utcDay, ActivityEventType.DailyComplete))
+                    || (r.EventType is ActivityEventType.TodoComplete or ActivityEventType.TodoUncomplete
+                     && !ShouldIncludeNetToggleRow(r, lastTodoToggle, boardId, utcDay, ActivityEventType.TodoComplete)))
                 {
-                    if (!ShouldIncludeNetToggleRow(r, lastDailyToggle, boardId, utcDay, ActivityEventType.DailyComplete))
-                    {
-                        continue;
-                    }
-                }
-                else if (r.EventType is ActivityEventType.TodoComplete or ActivityEventType.TodoUncomplete)
-                {
-                    if (!ShouldIncludeNetToggleRow(r, lastTodoToggle, boardId, utcDay, ActivityEventType.TodoComplete))
-                    {
-                        continue;
-                    }
+                    continue;
                 }
             }
             else if (r.EventType is ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete
@@ -412,7 +411,7 @@ public static class ActivityStatisticsCalculator
 
     private static bool ShouldIncludeNetToggleRow(
         UserActivityEventRecord row,
-        IReadOnlyDictionary<(Guid id, DateOnly d), UserActivityEventRecord> lastToggleByItemDay,
+        Dictionary<(Guid id, DateOnly d), UserActivityEventRecord> lastToggleByItemDay,
         Guid boardId,
         DateOnly utcDay,
         ActivityEventType completeType)
@@ -434,7 +433,7 @@ public static class ActivityStatisticsCalculator
         DateOnly rangeStart,
         DateOnly rangeEnd,
         DateOnly todayCutoff,
-        IReadOnlyDictionary<DateOnly, int> countByDay,
+        Dictionary<DateOnly, int> countByDay,
         int maxInRange)
     {
         var gridStartMonday = StartOfIsoWeek(rangeStart);

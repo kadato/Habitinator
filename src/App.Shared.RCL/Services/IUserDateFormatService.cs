@@ -11,7 +11,7 @@ public interface IUserDateFormatService
 
     Task InitializeAsync(CancellationToken cancellationToken = default);
 
-    string Format(DateOnly date);
+    string Format(DateOnly dateValue);
 
     string Format(DateTime dateTime);
 

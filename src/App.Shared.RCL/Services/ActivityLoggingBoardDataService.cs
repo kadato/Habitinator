@@ -67,6 +67,7 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
             }
             catch (Exception)
             {
+                // Log failure is non-critical, proceed with the UI action
             }
         }
 
@@ -98,11 +99,13 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
         var updated = await _inner.ToggleItemAsync(section, itemId, cancellationToken);
         if (updated is not null)
         {
-            var type = section == BoardSection.Daily
-                ? wasComplete ? ActivityEventType.DailyUncomplete : ActivityEventType.DailyComplete
-                : wasComplete
-                    ? ActivityEventType.TodoUncomplete
-                    : ActivityEventType.TodoComplete;
+            var type = (section, wasComplete) switch
+            {
+                (BoardSection.Daily, true) => ActivityEventType.DailyUncomplete,
+                (BoardSection.Daily, false) => ActivityEventType.DailyComplete,
+                (_, true) => ActivityEventType.TodoUncomplete,
+                (_, false) => ActivityEventType.TodoComplete
+            };
             try
             {
                 await _activityLog.LogActivityAsync(type, itemId, itemTitleSnapshot: updated.Title, cancellationToken: cancellationToken);
@@ -131,6 +134,7 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
             }
             catch (Exception)
             {
+                // Log failure is non-critical, proceed with the UI action
             }
         }
 
@@ -152,6 +156,7 @@ public sealed class ActivityLoggingBoardDataService : IBoardDataService
             }
             catch (Exception)
             {
+                // Log failure is non-critical, proceed with the UI action
             }
         }
 

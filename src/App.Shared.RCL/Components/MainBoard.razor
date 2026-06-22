@@ -242,8 +242,7 @@
 
                 <div class="board-stat-filters">
                     <div class="board-search-wrapper flex-grow-1" style="position: relative; display: flex; align-items: center;">
-                        <MudTextField @ref="_searchField"
-                                      @bind-Value="_searchText"
+                        <MudTextField @bind-Value="_searchText"
                                       Placeholder="Search"
                                       Variant="Variant.Outlined"
                                       Margin="Margin.Dense"
@@ -275,14 +274,14 @@
                             <ChildContent>
                                 <MudPaper Class="board-tags-menu-panel pa-3" Elevation="0">
                                     <MudText Typo="Typo.subtitle1" Class="mb-1">Tags</MudText>
-                                    @if (AllTagNamesForMenu.Count == 0)
+                                    @if (GetAllTagNamesForMenu().Count == 0)
                                     {
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">No tags on the board yet. Add tags in an item&rsquo;s details.</MudText>
                                     }
                                     else
                                     {
                                         <div class="board-tag-filter-grid board-tags-menu-body">
-                                            @foreach (var tag in AllTagNamesForMenu)
+                                            @foreach (var tag in GetAllTagNamesForMenu())
                                             {
                                                 <MudCheckBox Value="IsFilterTagSelected(tag)"
                                                              ValueChanged="@((bool b) => OnFilterTagChanged(tag, b))"
@@ -347,22 +346,19 @@
                          Elevation="0"
                          Outlined="false">
                     <MudTabPanel Text="@($"Habits ({FilteredHabits.Count})")">
-                        <BoardColumn @ref="_habitColumnMobile"
-                                        Section="BoardSection.Habit"
+                        <BoardColumn Section="BoardSection.Habit"
                                         Items="FilteredHabits"
                                         IsBoardFilterExcludingAll="Habits.Count > 0 && FilteredHabits.Count == 0"
                                         OnChanged="OnBoardChanged"/>
                     </MudTabPanel>
                     <MudTabPanel Text="@($"Dailies ({DailiesDueOpenCount})")">
-                        <BoardColumn @ref="_dailyColumnMobile"
-                                        Section="BoardSection.Daily"
+                        <BoardColumn Section="BoardSection.Daily"
                                         Items="FilteredDailies"
                                         IsBoardFilterExcludingAll="Dailies.Count > 0 && FilteredDailies.Count == 0"
                                         OnChanged="OnBoardChanged"/>
                     </MudTabPanel>
                     <MudTabPanel Text="@($"To-dos ({OpenTodoCount})")">
-                        <BoardColumn @ref="_todoColumnMobile"
-                                        Section="BoardSection.Todo"
+                        <BoardColumn Section="BoardSection.Todo"
                                         Items="FilteredTodos"
                                         IsBoardFilterExcludingAll="Todos.Count > 0 && FilteredTodos.Count == 0"
                                         OnChanged="OnBoardChanged"/>
@@ -372,22 +368,19 @@
             <div class="board-columns-desktop">
                 <MudGrid Spacing="2" Class="board-columns-grid w-100">
                     <MudItem xs="12" md="4">
-                        <BoardColumn @ref="_habitColumn"
-                                        Section="BoardSection.Habit"
+                        <BoardColumn Section="BoardSection.Habit"
                                         Items="FilteredHabits"
                                         IsBoardFilterExcludingAll="Habits.Count > 0 && FilteredHabits.Count == 0"
                                         OnChanged="OnBoardChanged"/>
                     </MudItem>
                     <MudItem xs="12" md="4">
-                        <BoardColumn @ref="_dailyColumn"
-                                        Section="BoardSection.Daily"
+                        <BoardColumn Section="BoardSection.Daily"
                                         Items="FilteredDailies"
                                         IsBoardFilterExcludingAll="Dailies.Count > 0 && FilteredDailies.Count == 0"
                                         OnChanged="OnBoardChanged"/>
                     </MudItem>
                     <MudItem xs="12" md="4">
-                        <BoardColumn @ref="_todoColumn"
-                                        Section="BoardSection.Todo"
+                        <BoardColumn Section="BoardSection.Todo"
                                         Items="FilteredTodos"
                                         IsBoardFilterExcludingAll="Todos.Count > 0 && FilteredTodos.Count == 0"
                                         OnChanged="OnBoardChanged"/>
@@ -439,7 +432,7 @@
 @implements IAsyncDisposable
 
 @code {
-    private RenderFragment<BoardSection> RenderColumnSkeleton => section => __builder =>
+    private static RenderFragment<BoardSection> RenderColumnSkeleton => section => __builder =>
     {
         var accentClass = section switch
         {
@@ -530,13 +523,7 @@
 
     [Parameter] public string? SignedInEmail { get; set; }
 
-    private MudTextField<string>? _searchField;
-    private BoardColumn? _habitColumn;
-    private BoardColumn? _dailyColumn;
-    private BoardColumn? _todoColumn;
-    private BoardColumn? _habitColumnMobile;
-    private BoardColumn? _dailyColumnMobile;
-    private BoardColumn? _todoColumnMobile;
+
     private List<BoardItem> Habits { get; set; } = [];
     private List<BoardItem> Dailies { get; set; } = [];
     private List<BoardItem> Todos { get; set; } = [];
@@ -566,37 +553,34 @@
 
     private int _mobileSectionIndex;
 
-    private IReadOnlyList<string> AllTagNamesForMenu
+    private IReadOnlyList<string> GetAllTagNamesForMenu()
     {
-        get
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in Habits)
         {
-            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var item in Habits)
+            foreach (var t in BoardTagUtil.ParseTags(item.Tags))
             {
-                foreach (var t in BoardTagUtil.ParseTags(item.Tags))
-                {
-                    set.Add(t);
-                }
+                set.Add(t);
             }
-
-            foreach (var item in Dailies)
-            {
-                foreach (var t in BoardTagUtil.ParseTags(item.Tags))
-                {
-                    set.Add(t);
-                }
-            }
-
-            foreach (var item in Todos)
-            {
-                foreach (var t in BoardTagUtil.ParseTags(item.Tags))
-                {
-                    set.Add(t);
-                }
-            }
-
-            return set.OrderBy(t => t, StringComparer.OrdinalIgnoreCase).ToList();
         }
+
+        foreach (var item in Dailies)
+        {
+            foreach (var t in BoardTagUtil.ParseTags(item.Tags))
+            {
+                set.Add(t);
+            }
+        }
+
+        foreach (var item in Todos)
+        {
+            foreach (var t in BoardTagUtil.ParseTags(item.Tags))
+            {
+                set.Add(t);
+            }
+        }
+
+        return set.OrderBy(t => t, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
     private int SelectedFilterTagCount => _selectedFilterTags.Count;
@@ -674,15 +658,19 @@
             }
             catch (JSDisconnectedException)
             {
+                // Ignored during page navigation/disposal
             }
             catch (JSException)
             {
+                // Ignored during page navigation/disposal
             }
             catch (TaskCanceledException)
             {
+                // Ignored during page navigation/disposal
             }
             catch (InvalidOperationException)
             {
+                // Ignored during page navigation/disposal
             }
 
             try
@@ -691,15 +679,19 @@
             }
             catch (JSDisconnectedException)
             {
+                // Ignored during page navigation/disposal
             }
             catch (JSException)
             {
+                // Ignored during page navigation/disposal
             }
             catch (TaskCanceledException)
             {
+                // Ignored during page navigation/disposal
             }
             catch (InvalidOperationException)
             {
+                // Ignored during page navigation/disposal
             }
         }
 
@@ -741,12 +733,15 @@
         }
         catch (JSDisconnectedException)
         {
+            // Ignored during page navigation
         }
         catch (TaskCanceledException)
         {
+            // Ignored during page navigation
         }
         catch (InvalidOperationException)
         {
+            // Ignored during page navigation
         }
         catch (JSException)
         {
@@ -801,12 +796,9 @@
             _isLoading = false;
         }
 
-        if (_loadError is null)
+        if (_loadError is null && _dailyRetroClientReady)
         {
-            if (_dailyRetroClientReady)
-            {
-                await TryOpenDailyYesterdayRetroIfNeededAsync();
-            }
+            await TryOpenDailyYesterdayRetroIfNeededAsync();
         }
     }
 
@@ -872,12 +864,9 @@
             return true;
         }
 
-        foreach (var line in DailyChecklistJson.Parse(item.ChecklistJson))
+        if (DailyChecklistJson.Parse(item.ChecklistJson).Any(line => line.Text.Contains(q, StringComparison.OrdinalIgnoreCase)))
         {
-            if (line.Text.Contains(q, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
+            return true;
         }
 
         return false;
@@ -907,7 +896,7 @@
             return;
         }
 
-        var available = new HashSet<string>(AllTagNamesForMenu, StringComparer.OrdinalIgnoreCase);
+        var available = new HashSet<string>(GetAllTagNamesForMenu(), StringComparer.OrdinalIgnoreCase);
         _selectedFilterTags.RemoveWhere(f => !available.Contains(f));
     }
 
@@ -925,17 +914,6 @@
         await LoadBoardAsync();
     }
 
-    private static string EmailLocalPart(string? email)
-    {
-        if (string.IsNullOrWhiteSpace(email))
-        {
-            return string.Empty;
-        }
-
-        var at = email.IndexOf('@');
-        return at > 0 ? email[..at] : email;
-    }
-
     private async Task TryOpenDailyYesterdayRetroIfNeededAsync()
     {
         if (_dailyRetroSessionOffered)
@@ -944,8 +922,6 @@
         }
 
         _dailyRetroSessionOffered = true;
-        List<Guid> completedIds = [];
-        DateOnly yesterdayDate = default;
         try
         {
             var prefs = await PreferencesService.GetAsync();
@@ -963,7 +939,7 @@
                 return;
             }
 
-            yesterdayDate = today.AddDays(-1);
+            var yesterdayDate = today.AddDays(-1);
             var options = new DialogOptions
             {
                 MaxWidth = MaxWidth.Small,
@@ -981,28 +957,24 @@
             var dialog = await DialogService.ShowAsync<DailyYesterdayRetroDialog>(
                 string.Empty, parameters, options);
             var result = await dialog.Result;
-            if (result is { Canceled: false, Data: List<Guid> ids })
+
+            try
             {
-                completedIds = ids;
+                await DailyRetroStore.SetPromptResolvedForTodayAsync();
+            }
+            catch (Exception)
+            {
+                // Ignore error when saving daily retro status as it's non-critical local UI state
+            }
+
+            if (result is { Canceled: false, Data: List<Guid> ids } && ids.Count > 0)
+            {
+                _ = CompleteDailiesInBackgroundAsync(ids, yesterdayDate);
             }
         }
         catch (Exception)
         {
             _dailyRetroSessionOffered = false;
-            return;
-        }
-
-        try
-        {
-            await DailyRetroStore.SetPromptResolvedForTodayAsync();
-        }
-        catch (Exception)
-        {
-        }
-
-        if (completedIds.Count > 0)
-        {
-            _ = CompleteDailiesInBackgroundAsync(completedIds, yesterdayDate);
         }
     }
 
@@ -1028,6 +1000,7 @@
         }
         catch (Exception)
         {
+            // Handled individually inside Tasks
         }
         finally
         {
@@ -1037,6 +1010,7 @@
             }
             catch (Exception)
             {
+                // Ignore load errors in background cleanup
             }
             await InvokeAsync(StateHasChanged);
         }

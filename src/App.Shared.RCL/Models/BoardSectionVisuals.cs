@@ -15,7 +15,7 @@ public static class BoardSectionVisuals
         };
     }
 
-    /// <summary>Matches <see cref="BoardSection" /> <c>ToString()</c> values: Habit, Daily, Todo.</summary>
+    /// <summary>Matches target type string representation.</summary>
     public static string GetMudIconForTargetType(string? targetType)
     {
         return targetType switch

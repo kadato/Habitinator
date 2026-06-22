@@ -10,7 +10,7 @@ using MudBlazor;
 
 namespace App.Shared.RCL.Services;
 
-public sealed class UndoService : IUndoService
+public sealed class UndoService : IUndoService, IDisposable
 {
     private const string UndoSnackbarKeyPrefix = "habitinator-undo";
 
@@ -214,6 +214,11 @@ public sealed class UndoService : IUndoService
             Description = description;
             UndoFunc = undoFunc;
         }
+    }
+
+    public void Dispose()
+    {
+        _undoLock.Dispose();
     }
 
     private sealed class UndoBatch : IDisposable

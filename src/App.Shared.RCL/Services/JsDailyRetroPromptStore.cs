@@ -33,7 +33,7 @@ public sealed class JsDailyRetroPromptStore : IDailyRetroPromptStore
             return null;
         }
 
-        if (string.IsNullOrWhiteSpace(s) || !DateOnly.TryParse(s, out var d))
+        if (string.IsNullOrWhiteSpace(s) || !DateOnly.TryParse(s, CultureInfo.InvariantCulture, out var d))
         {
             return null;
         }
@@ -50,9 +50,11 @@ public sealed class JsDailyRetroPromptStore : IDailyRetroPromptStore
         }
         catch (JSDisconnectedException)
         {
+            // JS Interop disconnected/failed during navigation/disposal, safe to ignore
         }
         catch (JSException)
         {
+            // JS Interop disconnected/failed during navigation/disposal, safe to ignore
         }
     }
 }

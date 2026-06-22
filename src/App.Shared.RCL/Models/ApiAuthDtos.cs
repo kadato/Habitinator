@@ -9,10 +9,21 @@ public sealed record RegisterRequest(
 /// <summary>Outcome of <c>POST /api/auth/register</c> for MAUI and other API clients.</summary>
 public sealed record RegistrationResult(bool Succeeded, IReadOnlyList<string>? ErrorDetails = null, string? OtherError = null)
 {
-    public string Message =>
-        Succeeded
-            ? string.Empty
-            : (ErrorDetails is { Count: > 0 } ? string.Join(" ", ErrorDetails) : (OtherError ?? "Registration failed."));
+    public string Message
+    {
+        get
+        {
+            if (Succeeded)
+            {
+                return string.Empty;
+            }
+            if (ErrorDetails is { Count: > 0 })
+            {
+                return string.Join(" ", ErrorDetails);
+            }
+            return OtherError ?? "Registration failed.";
+        }
+    }
 }
 
 public sealed record LoginRequest(

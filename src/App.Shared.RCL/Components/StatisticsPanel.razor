@@ -635,11 +635,12 @@
         }
 
         var period = GetSelectedPeriodLabel();
-        var tags = _selectedTags.Count == 0
-            ? "All tags"
-            : _selectedTags.Count == 1
-                ? _selectedTags.First()
-                : $"{_selectedTags.Count} tags";
+        var tags = _selectedTags.Count switch
+        {
+            0 => "All tags",
+            1 => _selectedTags.First(),
+            _ => $"{_selectedTags.Count} tags"
+        };
         return $"{period} · {tags}";
     }
 
@@ -658,7 +659,7 @@
         return DateFormatService.Format(day);
     }
 
-    private string GetMultiSelectionText(IReadOnlyList<string> selectedValues)
+    private static string GetMultiSelectionText(IReadOnlyList<string> selectedValues)
     {
         if (selectedValues is null || selectedValues.Count == 0)
         {

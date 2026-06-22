@@ -83,21 +83,16 @@
         // 2. Sync problem message transition
         if (_prevSyncProblemMessage != currentProblem)
         {
-            if (!string.IsNullOrEmpty(currentProblem))
+            if (!string.IsNullOrEmpty(currentProblem)
+                && !(currentOffline && currentProblem.Contains("Offline", StringComparison.OrdinalIgnoreCase)))
             {
-                // Suppress problem toast if it is just reporting offline, as we already show the offline warning
-                if (!(currentOffline && currentProblem.Contains("Offline", StringComparison.OrdinalIgnoreCase)))
-                {
-                    await UserNotifier.NotifyAsync(currentProblem, MudBlazor.Severity.Error);
-                }
+                await UserNotifier.NotifyAsync(currentProblem, MudBlazor.Severity.Error);
             }
-            else if (!string.IsNullOrEmpty(_prevSyncProblemMessage))
+            else if (!string.IsNullOrEmpty(_prevSyncProblemMessage)
+                && !currentOffline
+                && !_prevSyncProblemMessage.Contains("Offline", StringComparison.OrdinalIgnoreCase))
             {
-                // Suppress resolved toast if the previous message was just the offline message
-                if (!currentOffline && !_prevSyncProblemMessage.Contains("Offline", StringComparison.OrdinalIgnoreCase))
-                {
-                    await UserNotifier.NotifyAsync("Sync issues resolved. All changes synchronized.", MudBlazor.Severity.Success);
-                }
+                await UserNotifier.NotifyAsync("Sync issues resolved. All changes synchronized.", MudBlazor.Severity.Success);
             }
         }
 

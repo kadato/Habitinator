@@ -25,13 +25,6 @@ public static class DailySchedule
         return LocalToday(tz, dayStartLocalTime).AddDays(-1);
     }
 
-    /// <summary>
-    ///     Legacy property for backward compatibility - returns UTC today.
-    ///     New code should use <see cref="LocalToday" /> with IUserTimeZoneService.
-    /// </summary>
-    [Obsolete("Use LocalToday(IUserTimeZoneService) for proper timezone support")]
-    public static DateOnly UtcToday => DateOnly.FromDateTime(DateTime.UtcNow);
-
     private static DateOnly GetLocalDate(IUserTimeZoneService? tz, DateTimeOffset utcNow, TimeSpan? dayStartLocalTime)
     {
         var local = tz is { IsDetected: true }
@@ -39,12 +32,9 @@ public static class DailySchedule
             : utcNow;
 
         var localDateTime = local.DateTime;
-        if (dayStartLocalTime is { } start && start > TimeSpan.Zero && start < TimeSpan.FromDays(1))
+        if (dayStartLocalTime is { } start && start > TimeSpan.Zero && start < TimeSpan.FromDays(1) && localDateTime.TimeOfDay < start)
         {
-            if (localDateTime.TimeOfDay < start)
-            {
-                localDateTime = localDateTime.AddDays(-1);
-            }
+            localDateTime = localDateTime.AddDays(-1);
         }
 
         return DateOnly.FromDateTime(localDateTime);
@@ -174,10 +164,9 @@ public static class DailySchedule
         DateOnly today)
     {
         var yesterday = today.AddDays(-1);
-        return dailies
+        return [.. dailies
             .Where(d => d.DailyLastCompletedOn != today
-                        && IsDueOnDate(d, yesterday))
-            .ToList();
+                        && IsDueOnDate(d, yesterday))];
     }
 
     private static bool IsEveryNDaysFrom(DateOnly start, DateOnly on, int n)

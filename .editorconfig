@@ -16,3 +16,17 @@ csharp_style_var_elsewhere = false:suggestion
 
 csharp_prefer_braces = true:warning
 csharp_style_namespace_declarations = file_scoped:warning
+
+# Global performance analyzer suppressions for non-hot-path logging
+dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA1873.severity = none
+dotnet_diagnostic.S108.severity = none
+dotnet_diagnostic.S2486.severity = none
+
+# Test-specific rule configurations
+[tests/**/*.cs]
+dotnet_diagnostic.CA1707.severity = none
+
+# Migration-specific rule configurations
+[**/Migrations/*.cs]
+dotnet_diagnostic.CA1861.severity = none

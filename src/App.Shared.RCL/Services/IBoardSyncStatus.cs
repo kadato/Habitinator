@@ -25,7 +25,7 @@ public sealed class NoOpBoardSyncStatus : IBoardSyncStatus
 
     public event EventHandler? Changed
     {
-        add { }
-        remove { }
+        add { /* No-op */ }
+        remove { /* No-op */ }
     }
 }

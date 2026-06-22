@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace App.Shared.RCL.Services;
@@ -80,7 +81,7 @@ public static class FocusDurationInput
 
         if (h == 0 && s == 0)
         {
-            return m.ToString();
+            return m.ToString(CultureInfo.InvariantCulture);
         }
 
         if (h == 0)
@@ -288,9 +289,9 @@ public static class FocusDurationInput
         var a = Regex.Match(s, @"^(\d{1,2})h(\d{1,2})m(\d{1,2})s$", RegexOptions.IgnoreCase);
         if (a.Success)
         {
-            var h = int.Parse(a.Groups[1].Value);
-            var m = int.Parse(a.Groups[2].Value);
-            var sec = int.Parse(a.Groups[3].Value);
+            var h = int.Parse(a.Groups[1].Value, CultureInfo.InvariantCulture);
+            var m = int.Parse(a.Groups[2].Value, CultureInfo.InvariantCulture);
+            var sec = int.Parse(a.Groups[3].Value, CultureInfo.InvariantCulture);
             if (m is < 0 or > 59 || sec is < 0 or > 59 || h is < 0 or > 23)
             {
                 return false;
@@ -307,8 +308,8 @@ public static class FocusDurationInput
         var b = Regex.Match(s, @"^(\d{1,2})h(\d{1,2})m$", RegexOptions.IgnoreCase);
         if (b.Success)
         {
-            var h = int.Parse(b.Groups[1].Value);
-            var m = int.Parse(b.Groups[2].Value);
+            var h = int.Parse(b.Groups[1].Value, CultureInfo.InvariantCulture);
+            var m = int.Parse(b.Groups[2].Value, CultureInfo.InvariantCulture);
             if (m is < 0 or > 59 || h is < 0 or > 23)
             {
                 return false;
@@ -325,8 +326,8 @@ public static class FocusDurationInput
         var c = Regex.Match(s, @"^(\d{1,2})h(\d{1,2})s$", RegexOptions.IgnoreCase);
         if (c.Success)
         {
-            var h = int.Parse(c.Groups[1].Value);
-            var sec = int.Parse(c.Groups[2].Value);
+            var h = int.Parse(c.Groups[1].Value, CultureInfo.InvariantCulture);
+            var sec = int.Parse(c.Groups[2].Value, CultureInfo.InvariantCulture);
             if (sec is < 0 or > 59 || h is < 0 or > 23)
             {
                 return false;
@@ -355,8 +356,8 @@ public static class FocusDurationInput
             return false;
         }
 
-        var h = int.Parse(m.Groups[1].Value);
-        var min = m.Groups[2].Success ? int.Parse(m.Groups[2].Value) : 0;
+        var h = int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
+        var min = m.Groups[2].Success ? int.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture) : 0;
         if (min is < 0 or > 59 || h is < 0 or > 23)
         {
             return false;
@@ -378,7 +379,7 @@ public static class FocusDurationInput
             return false;
         }
 
-        var mins = int.Parse(s);
+        var mins = int.Parse(s, CultureInfo.InvariantCulture);
         if (mins <= 0)
         {
             return false;

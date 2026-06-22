@@ -284,7 +284,7 @@
     private bool _checklistOpen = true;
     private int _streak;
     private bool _advancedOpen;
-    private bool _saving => false;
+    private static bool _saving => false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -434,6 +434,7 @@
             }
             catch
             {
+                // Ignored: focus attempt may fail if element is not in DOM
             }
         }
     }

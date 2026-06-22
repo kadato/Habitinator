@@ -1,3 +1,5 @@
+using System;
+
 using App.Shared.RCL.Hubs;
 using App.Shared.RCL.Services;
 
@@ -6,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace App.MAUI.Services;
 
-public sealed class MauiBoardHubService
+public sealed class MauiBoardHubService : IDisposable
 {
     private readonly MauiApiEndpointOptions _api;
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -125,5 +127,10 @@ public sealed class MauiBoardHubService
         {
             _gate.Release();
         }
+    }
+
+    public void Dispose()
+    {
+        _gate.Dispose();
     }
 }

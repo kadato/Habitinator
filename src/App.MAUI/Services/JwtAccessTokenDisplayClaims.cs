@@ -39,6 +39,7 @@ internal static class JwtAccessTokenDisplayClaims
         }
         catch
         {
+            // Fall back to returning null if parsing or base64 decoding fails
         }
 
         return null;

@@ -2,9 +2,11 @@ using ObjCRuntime;
 
 using UIKit;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
+
 namespace App.MAUI;
 
-public class Program
+public static class Program
 {
     // This is the main entry point of the application.
     static void Main(string[] args)

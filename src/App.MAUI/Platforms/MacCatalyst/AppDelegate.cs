@@ -1,3 +1,5 @@
+#pragma warning disable CA1711 // MacCatalyst AppDelegate names should end in 'Delegate'
+
 using Foundation;
 
 namespace App.MAUI;

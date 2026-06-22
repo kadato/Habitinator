@@ -85,6 +85,7 @@ public sealed class ApiAuthService
                 }
                 catch (JsonException)
                 {
+                    // Fall back to general error if JSON parsing fails
                 }
             }
 

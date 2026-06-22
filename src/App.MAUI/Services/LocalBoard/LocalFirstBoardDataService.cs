@@ -19,7 +19,7 @@ public sealed class LocalFirstBoardDataService(
     IUserTimeZoneService timeZone,
     MauiBoardSyncStatus syncStatus,
     ILogger<LocalFirstBoardDataService> logger)
-    : IBoardDataService, IMauiBoardLocalStoreLifecycle
+    : IBoardDataService, IMauiBoardLocalStoreLifecycle, IDisposable
 {
     private static volatile bool _schemaReady;
     private static readonly SemaphoreSlim SchemaLock = new(1, 1);
@@ -971,7 +971,10 @@ public sealed class LocalFirstBoardDataService(
             await ApplySyncDeltaAsync(db, userKey, delta, skipIds, cancellationToken);
 
             LocalBoardStoreMetaRow? metaRow = await db.Meta.FindAsync([1], cancellationToken);
-            metaRow?.LastSyncCursorUtc = delta.NextCursor;
+            if (metaRow is not null)
+            {
+                metaRow.LastSyncCursorUtc = delta.NextCursor;
+            }
 
             await db.SaveChangesAsync(cancellationToken);
             return (true, true);
@@ -1534,7 +1537,10 @@ public sealed class LocalFirstBoardDataService(
         await db.SaveChangesAsync(cancellationToken);
 
         LocalBoardStoreMetaRow? meta = await db.Meta.FindAsync([1], cancellationToken);
-        meta?.LastSyncCursorUtc = ComputeMirrorCursor(snap);
+        if (meta is not null)
+        {
+            meta.LastSyncCursorUtc = ComputeMirrorCursor(snap);
+        }
 
         await db.SaveChangesAsync(cancellationToken);
     }
@@ -1723,5 +1729,10 @@ public sealed class LocalFirstBoardDataService(
         {
             item.SortOrder = seq;
         }
+    }
+
+    public void Dispose()
+    {
+        _gate.Dispose();
     }
 }

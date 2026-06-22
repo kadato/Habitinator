@@ -1,3 +1,5 @@
+#pragma warning disable S1075 // Suppress hardcoded URI warning for local fallback development endpoints
+
 using Microsoft.Extensions.Configuration;
 
 namespace App.MAUI;
@@ -26,14 +28,13 @@ public static class MauiAppSettings
             return fromConfig.Trim().TrimEnd('/');
         }
 
-        return DefaultApiBaseUrlNoSlash();
+        return DefaultApiBaseUrlNoSlash;
     }
 
     /// <summary>Fallback when env and appsettings do not set <c>Api:BaseUrl</c>.</summary>
-    public static string DefaultApiBaseUrlNoSlash() =>
 #if ANDROID
-        "http://10.0.2.2:5033";
+    public const string DefaultApiBaseUrlNoSlash = "http://10.0.2.2:5033";
 #else
-        "http://127.0.0.1:5033";
+    public const string DefaultApiBaseUrlNoSlash = "http://127.0.0.1:5033";
 #endif
 }

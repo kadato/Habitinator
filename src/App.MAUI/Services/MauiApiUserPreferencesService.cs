@@ -111,13 +111,13 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
         }
     }
 
-    private UserPreferences ReadLocal(string key)
+    private static UserPreferences ReadLocal(string key)
     {
         var json = Preferences.Get(key, null);
         return UserPreferencesJson.DeserializeOrDefault(json);
     }
 
-    private void WriteLocal(string key, UserPreferences preferences)
+    private static void WriteLocal(string key, UserPreferences preferences)
     {
         Preferences.Set(key, UserPreferencesJson.Serialize(preferences));
     }

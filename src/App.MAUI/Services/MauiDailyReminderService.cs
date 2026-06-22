@@ -77,14 +77,12 @@ public sealed class MauiDailyReminderService : IDisposable
             var (title, body) = DailyReminderText.Build(snapshot, localToday, _dateFormatService.DateFormat);
 
             var perm = new NotificationPermission { AskPermission = true };
-            if (!await center.AreNotificationsEnabled(perm).ConfigureAwait(false))
+            if (!await center.AreNotificationsEnabled(perm).ConfigureAwait(false)
+                && (!await center.RequestNotificationPermission(perm).ConfigureAwait(false)
+                    || !await center.AreNotificationsEnabled(perm).ConfigureAwait(false)))
             {
-                if (!await center.RequestNotificationPermission(perm).ConfigureAwait(false)
-                    || !await center.AreNotificationsEnabled(perm).ConfigureAwait(false))
-                {
-                    _logger.LogDebug("Daily reminder not scheduled: notification permission denied.");
-                    return;
-                }
+                _logger.LogDebug("Daily reminder not scheduled: notification permission denied.");
+                return;
             }
 
             var request = new NotificationRequest

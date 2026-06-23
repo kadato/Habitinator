@@ -49,28 +49,28 @@ public static class TodoOrdering
         int insertAt,
         Func<BoardItem, double?> getSortOrder)
     {
-        var item = reordered[insertAt];
-        var hasPrev = insertAt > 0;
-        var hasNext = insertAt < reordered.Count - 1;
-        var prev = hasPrev ? reordered[insertAt - 1] : null;
-        var next = hasNext ? reordered[insertAt + 1] : null;
-        var itemDated = item.TodoDueDate.HasValue;
-        var prevDated = prev?.TodoDueDate.HasValue ?? false;
-        var nextDated = next?.TodoDueDate.HasValue ?? false;
+        BoardItem item = reordered[insertAt];
+        bool hasPrev = insertAt > 0;
+        bool hasNext = insertAt < reordered.Count - 1;
+        BoardItem? prev = hasPrev ? reordered[insertAt - 1] : null;
+        BoardItem? next = hasNext ? reordered[insertAt + 1] : null;
+        bool itemDated = item.TodoDueDate.HasValue;
+        bool prevDated = prev?.TodoDueDate.HasValue ?? false;
+        bool nextDated = next?.TodoDueDate.HasValue ?? false;
 
         // Undated item placed just above the dated block: step above previous undated neighbour.
-        if (!itemDated && hasPrev && !prevDated && (!hasNext || nextDated))
+        if (IsPlacedJustAboveDatedBlock(itemDated, hasPrev, prevDated, hasNext, nextDated))
         {
             return ToStoredSortOrder(item, GetActiveDisplayOrder(prev!, getSortOrder) + 1.0);
         }
 
         // Dated item placed at the top of the dated block (directly under undated items).
-        if (itemDated && hasPrev && !prevDated)
+        if (IsPlacedAtTopOfDatedBlock(itemDated, hasPrev, prevDated))
         {
             if (hasNext && nextDated)
             {
-                var nextDisplay = GetActiveDisplayOrder(next!, getSortOrder);
-                var midDisplay = (DatedSortOrderOffset + nextDisplay) / 2.0;
+                double nextDisplay = GetActiveDisplayOrder(next!, getSortOrder);
+                double midDisplay = (DatedSortOrderOffset + nextDisplay) / 2.0;
                 return ToStoredSortOrder(item, midDisplay);
             }
 
@@ -78,7 +78,7 @@ public static class TodoOrdering
         }
 
         // Undated at the very top (no undated neighbour above).
-        if (!itemDated && !hasPrev)
+        if (IsPlacedAtVeryTop(itemDated, hasPrev))
         {
             if (hasNext && !nextDated)
             {
@@ -89,10 +89,19 @@ public static class TodoOrdering
                 reordered.Where(x => !x.TodoDueDate.HasValue).Select(getSortOrder).Min());
         }
 
-        var displayMid = BoardItemReorder.ComputeMidpointSortOrder(
+        double? displayMid = BoardItemReorder.ComputeMidpointSortOrder(
             reordered,
             insertAt,
             i => GetActiveDisplayOrder(i, getSortOrder));
         return displayMid is null ? null : ToStoredSortOrder(item, displayMid.Value);
     }
+
+    private static bool IsPlacedJustAboveDatedBlock(bool itemDated, bool hasPrev, bool prevDated, bool hasNext, bool nextDated) =>
+        !itemDated && hasPrev && !prevDated && (!hasNext || nextDated);
+
+    private static bool IsPlacedAtTopOfDatedBlock(bool itemDated, bool hasPrev, bool prevDated) =>
+        itemDated && hasPrev && !prevDated;
+
+    private static bool IsPlacedAtVeryTop(bool itemDated, bool hasPrev) =>
+        !itemDated && !hasPrev;
 }

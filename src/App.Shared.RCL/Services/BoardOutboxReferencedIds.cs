@@ -20,66 +20,26 @@ public static class BoardOutboxReferencedIds
 
     private static void CollectOne(BoardOutboxOperationKind kind, string json, HashSet<Guid> set)
     {
-        switch (kind)
+        Guid? itemId = ExtractItemId(kind, json);
+        if (itemId.HasValue)
         {
-            case BoardOutboxOperationKind.Create:
-                if (JsonSerializer.Deserialize<CreateOutboxPayload>(json, BoardOutboxJson.Options) is { } c)
-                {
-                    set.Add(c.ClientItemId);
-                }
-
-                break;
-            case BoardOutboxOperationKind.Rename:
-                if (JsonSerializer.Deserialize<RenameOutboxPayload>(json, BoardOutboxJson.Options) is { } r)
-                {
-                    set.Add(r.ItemId);
-                }
-
-                break;
-            case BoardOutboxOperationKind.Delete:
-            case BoardOutboxOperationKind.Toggle:
-                if (JsonSerializer.Deserialize<SectionItemOutboxPayload>(json, BoardOutboxJson.Options) is { } s)
-                {
-                    set.Add(s.ItemId);
-                }
-
-                break;
-            case BoardOutboxOperationKind.CompleteDailyForDate:
-                if (JsonSerializer.Deserialize<CompleteDailyOutboxPayload>(json, BoardOutboxJson.Options) is { } d)
-                {
-                    set.Add(d.ItemId);
-                }
-
-                break;
-            case BoardOutboxOperationKind.HabitIncrement:
-            case BoardOutboxOperationKind.HabitDecrement:
-                if (JsonSerializer.Deserialize<ItemIdOutboxPayload>(json, BoardOutboxJson.Options) is { } i)
-                {
-                    set.Add(i.ItemId);
-                }
-
-                break;
-            case BoardOutboxOperationKind.UpdateHabit:
-                if (JsonSerializer.Deserialize<UpdateHabitOutboxPayload>(json, BoardOutboxJson.Options) is { } h)
-                {
-                    set.Add(h.ItemId);
-                }
-
-                break;
-            case BoardOutboxOperationKind.UpdateTodo:
-                if (JsonSerializer.Deserialize<UpdateTodoOutboxPayload>(json, BoardOutboxJson.Options) is { } t)
-                {
-                    set.Add(t.ItemId);
-                }
-
-                break;
-            case BoardOutboxOperationKind.UpdateDaily:
-                if (JsonSerializer.Deserialize<UpdateDailyOutboxPayload>(json, BoardOutboxJson.Options) is { } u)
-                {
-                    set.Add(u.ItemId);
-                }
-
-                break;
+            set.Add(itemId.Value);
         }
+    }
+
+    private static Guid? ExtractItemId(BoardOutboxOperationKind kind, string json)
+    {
+        return kind switch
+        {
+            BoardOutboxOperationKind.Create => JsonSerializer.Deserialize<CreateOutboxPayload>(json, BoardOutboxJson.Options)?.ClientItemId,
+            BoardOutboxOperationKind.Rename => JsonSerializer.Deserialize<RenameOutboxPayload>(json, BoardOutboxJson.Options)?.ItemId,
+            BoardOutboxOperationKind.Delete or BoardOutboxOperationKind.Toggle => JsonSerializer.Deserialize<SectionItemOutboxPayload>(json, BoardOutboxJson.Options)?.ItemId,
+            BoardOutboxOperationKind.CompleteDailyForDate => JsonSerializer.Deserialize<CompleteDailyOutboxPayload>(json, BoardOutboxJson.Options)?.ItemId,
+            BoardOutboxOperationKind.HabitIncrement or BoardOutboxOperationKind.HabitDecrement => JsonSerializer.Deserialize<ItemIdOutboxPayload>(json, BoardOutboxJson.Options)?.ItemId,
+            BoardOutboxOperationKind.UpdateHabit => JsonSerializer.Deserialize<UpdateHabitOutboxPayload>(json, BoardOutboxJson.Options)?.ItemId,
+            BoardOutboxOperationKind.UpdateTodo => JsonSerializer.Deserialize<UpdateTodoOutboxPayload>(json, BoardOutboxJson.Options)?.ItemId,
+            BoardOutboxOperationKind.UpdateDaily => JsonSerializer.Deserialize<UpdateDailyOutboxPayload>(json, BoardOutboxJson.Options)?.ItemId,
+            _ => null
+        };
     }
 }

@@ -1,8 +1,8 @@
-window.habitinatorLoadScript = function (src) {
-    var resolvedSrc = (window.habitinatorAssets && window.habitinatorAssets[src]) || src;
-    var existing = document.querySelector('script[data-habitinator-src="' + src + '"]');
+globalThis.habitinatorLoadScript = function (src) {
+    const resolvedSrc = (globalThis.habitinatorAssets?.[src]) || src;
+    const existing = document.querySelector('script[data-habitinator-src="' + src + '"]');
     if (existing) {
-        if (existing.getAttribute('data-habitinator-loaded') === '1') {
+        if (existing.dataset.habitinatorLoaded === '1') {
             return Promise.resolve();
         }
 
@@ -15,12 +15,12 @@ window.habitinatorLoadScript = function (src) {
     }
 
     return new Promise(function (resolve, reject) {
-        var s = document.createElement('script');
+        const s = document.createElement('script');
         s.src = resolvedSrc;
         s.async = true;
-        s.setAttribute('data-habitinator-src', src);
+        s.dataset.habitinatorSrc = src;
         s.onload = function () {
-            s.setAttribute('data-habitinator-loaded', '1');
+            s.dataset.habitinatorLoaded = '1';
             resolve();
         };
         s.onerror = function () {

@@ -1,4 +1,4 @@
-window.HabitinatorSortable = {
+globalThis.HabitinatorSortable = {
     instances: {},
     init: function (columnId, containerElement, dotNetRef) {
         if (this.instances[columnId]) {
@@ -11,15 +11,15 @@ window.HabitinatorSortable = {
 
         if (!containerElement) return;
 
-        var instance = new Sortable(containerElement, {
+        const instance = new Sortable(containerElement, {
             animation: 150,
             ghostClass: 'board-sortable-ghost',
             chosenClass: 'board-sortable-chosen',
             dragClass: 'board-sortable-drag',
             handle: '.board-card',
             onEnd: function (evt) {
-                var oldIndex = evt.oldIndex;
-                var newIndex = evt.newIndex;
+                const oldIndex = evt.oldIndex;
+                const newIndex = evt.newIndex;
 
                 if (oldIndex === undefined || newIndex === undefined || oldIndex === newIndex) {
                     return;
@@ -36,7 +36,7 @@ window.HabitinatorSortable = {
                     }
                 }
 
-                var currentDotNetRef = instance.dotNetRef;
+                const currentDotNetRef = instance.dotNetRef;
                 if (currentDotNetRef) {
                     currentDotNetRef.invokeMethodAsync('OnJsReorderAsync', oldIndex, newIndex);
                 }

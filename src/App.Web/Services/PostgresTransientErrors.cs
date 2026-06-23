@@ -22,53 +22,47 @@ public static class PostgresTransientErrors
 
     public static bool IsTransient(Exception? exception)
     {
-        for (var ex = exception; ex is not null; ex = ex.InnerException)
+        for (Exception? ex = exception; ex is not null; ex = ex.InnerException)
         {
-            if (ex is AggregateException agg)
-            {
-                if (agg.Flatten().InnerExceptions.Any(IsTransient))
-                {
-                    return true;
-                }
-
-                continue;
-            }
-
-            if (ex is DbUpdateException dbUpdate && IsTransient(dbUpdate.InnerException))
+            if (IsSingleExceptionTransient(ex, out bool stopCheckingChain))
             {
                 return true;
             }
 
-            if (ex is PostgresException pg)
+            if (stopCheckingChain)
             {
-                if (SqlStates.Contains(pg.SqlState, StringComparer.Ordinal))
-                {
-                    return true;
-                }
-
-                if (MessageMatches(pg.Message))
-                {
-                    return true;
-                }
+                break;
             }
+        }
 
-            if (ex is NpgsqlException npg)
-            {
-                if (npg.IsTransient)
-                {
-                    return true;
-                }
+        return false;
+    }
 
-                if (!string.IsNullOrEmpty(npg.SqlState) && SqlStates.Contains(npg.SqlState, StringComparer.Ordinal))
-                {
-                    return true;
-                }
+    private static bool IsSingleExceptionTransient(Exception ex, out bool stopCheckingChain)
+    {
+        stopCheckingChain = false;
 
-                if (MessageMatches(npg.Message))
-                {
-                    return true;
-                }
-            }
+        if (ex is AggregateException agg)
+        {
+            stopCheckingChain = true;
+            return agg.Flatten().InnerExceptions.Any(IsTransient);
+        }
+
+        if (ex is DbUpdateException dbUpdate)
+        {
+            return IsTransient(dbUpdate.InnerException);
+        }
+
+        if (ex is PostgresException pg)
+        {
+            return SqlStates.Contains(pg.SqlState, StringComparer.Ordinal) || MessageMatches(pg.Message);
+        }
+
+        if (ex is NpgsqlException npg)
+        {
+            return npg.IsTransient
+                || (!string.IsNullOrEmpty(npg.SqlState) && SqlStates.Contains(npg.SqlState, StringComparer.Ordinal))
+                || MessageMatches(npg.Message);
         }
 
         return false;

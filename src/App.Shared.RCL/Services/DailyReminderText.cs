@@ -26,17 +26,15 @@ public static class DailyReminderText
         string? dateFormat,
         int maxBodyLength = 1800)
     {
-        var dailies = snapshot.Dailies
+        List<string> dailies = [.. snapshot.Dailies
             .Where(d => DailySchedule.IsDueOnDate(d, todayUtc))
             .Select(d => d.Title)
-            .OrderBy(t => t, StringComparer.Ordinal)
-            .ToList();
+            .OrderBy(t => t, StringComparer.Ordinal)];
 
-        var deadlineTodos = snapshot.Todos
+        List<BoardItem> deadlineTodos = [.. snapshot.Todos
             .Where(t => !t.IsCompleted && t.TodoDueDate is { } due && due <= todayUtc)
             .OrderBy(t => t.TodoDueDate)
-            .ThenBy(t => t.Title, StringComparer.Ordinal)
-            .ToList();
+            .ThenBy(t => t.Title, StringComparer.Ordinal)];
 
         if (dailies.Count == 0 && deadlineTodos.Count == 0)
         {
@@ -44,7 +42,7 @@ public static class DailyReminderText
                 "You have no dailies due and no to-dos with a due date for today. Open the app to work on your habits and tasks.");
         }
 
-        var sb = new StringBuilder(256);
+        StringBuilder sb = new(256);
         if (dailies.Count > 0)
         {
             sb.Append("Dailies due: ");
@@ -58,31 +56,10 @@ public static class DailyReminderText
                 sb.AppendLine();
             }
 
-            sb.Append("To-dos (deadline): ");
-            for (var i = 0; i < deadlineTodos.Count; i++)
-            {
-                if (i > 0)
-                {
-                    sb.Append(", ");
-                }
-
-                var t = deadlineTodos[i];
-                var due = t.TodoDueDate!.Value;
-                var suffix = due < todayUtc
-                    ? " (overdue)"
-                    : string.Empty;
-                sb.Append(t.Title);
-                if (due != todayUtc)
-                {
-                    sb.Append(" — ");
-                    sb.Append(FormatDate(due, dateFormat));
-                }
-
-                sb.Append(suffix);
-            }
+            AppendDeadlineTodos(sb, deadlineTodos, todayUtc, dateFormat);
         }
 
-        var body = sb.ToString();
+        string body = sb.ToString();
         if (body.Length > maxBodyLength)
         {
             body = body[..(maxBodyLength - 1)] + "…";
@@ -91,9 +68,39 @@ public static class DailyReminderText
         return (DefaultTitle, body);
     }
 
+    private static void AppendDeadlineTodos(
+        StringBuilder sb,
+        List<BoardItem> deadlineTodos,
+        DateOnly todayUtc,
+        string? dateFormat)
+    {
+        sb.Append("To-dos (deadline): ");
+        for (int i = 0; i < deadlineTodos.Count; i++)
+        {
+            if (i > 0)
+            {
+                sb.Append(", ");
+            }
+
+            BoardItem t = deadlineTodos[i];
+            DateOnly due = t.TodoDueDate!.Value;
+            string suffix = due < todayUtc
+                ? " (overdue)"
+                : string.Empty;
+            sb.Append(t.Title);
+            if (due != todayUtc)
+            {
+                sb.Append(" — ");
+                sb.Append(FormatDate(due, dateFormat));
+            }
+
+            sb.Append(suffix);
+        }
+    }
+
     private static string FormatDate(DateOnly date, string? dateFormat)
     {
-        var format = string.IsNullOrWhiteSpace(dateFormat) ? "yyyy/MM/dd" : dateFormat;
+        string format = string.IsNullOrWhiteSpace(dateFormat) ? "yyyy/MM/dd" : dateFormat;
         return date.ToString(format, CultureInfo.InvariantCulture);
     }
 }

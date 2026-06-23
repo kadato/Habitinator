@@ -1,0 +1,290 @@
+@using App.Shared.RCL.Models
+@using MudBlazor
+@inject IUserTimeZoneService TimeZoneService
+@inject IUserDateFormatService DateFormatService
+
+<div class="@GetCardClass()">
+    @if (Section == BoardSection.Habit)
+    {
+        <div class="board-card__habit-btns board-card__left">
+            @if (Item.TrackPlus)
+            {
+                <button type="button" class="board-sq board-sq--good" title="Log +" draggable="false" @onclick="OnHabitUp" @onclick:stopPropagation="true">+</button>
+            }
+            else
+            {
+                <span class="board-sq-spacer" aria-hidden="true"></span>
+            }
+            @if (Item.TrackMinus)
+            {
+                <button type="button" class="board-sq board-sq--bad" title="Log −" draggable="false" @onclick="OnHabitDown" @onclick:stopPropagation="true">−</button>
+            }
+            else
+            {
+                <span class="board-sq-spacer" aria-hidden="true"></span>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="board-card__check-col board-card__left">
+            <button type="button"
+                    class="board-check @GetCheckClass()"
+                    title="Toggle"
+                    draggable="false"
+                    @onclick="OnToggle"
+                    @onclick:stopPropagation="true"
+                    aria-pressed="@(Item.IsCompleted ? "true" : "false")"
+                    aria-checked="@(Item.IsCompleted ? "true" : "false")"
+                    role="checkbox">
+                @if (Item.IsCompleted)
+                {
+                    <svg class="board-check-glyph"
+                         viewBox="0 0 24 24"
+                         width="14"
+                         height="14"
+                         fill="none"
+                         xmlns="http://www.w3.org/2000/svg"
+                         aria-hidden="true">
+                        <path d="M5 12l5 5L19 5"
+                              stroke="currentColor"
+                              stroke-width="2.6"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"/>
+                    </svg>
+                }
+            </button>
+        </div>
+    }
+    <div class="board-card__head">
+        <div class="board-card__title" draggable="false" @onclick="OnOpenEditor">
+            <span class="board-card__title-text">@Item.Title</span>
+        </div>
+        <div class="board-card__head-actions">
+            <MudMenu AnchorOrigin="Origin.BottomRight"
+                     TransformOrigin="Origin.TopRight"
+                     Dense="true">
+                <ActivatorContent Context="itemMenu">
+                    <span @onclick:stopPropagation="true">
+                        <MudIconButton Icon="@Icons.Material.Filled.MoreVert"
+                                       Size="Size.Small"
+                                       Class="ma-0 board-card__delete"
+                                       title="Options"
+                                       OnClick="@(e => itemMenu.ToggleAsync(e))"/>
+                    </span>
+                </ActivatorContent>
+                <ChildContent>
+                    <MudMenuItem OnClick="OnMoveToTop" Disabled="@(!CanReorder)">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"/>
+                            <MudText Typo="Typo.body2">Move to Top</MudText>
+                        </div>
+                    </MudMenuItem>
+                    <MudMenuItem OnClick="OnMoveToBottom" Disabled="@(!CanReorder)">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"/>
+                            <MudText Typo="Typo.body2">Move to Bottom</MudText>
+                        </div>
+                    </MudMenuItem>
+                    <MudMenuItem OnClick="OnDelete">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" Color="Color.Error"/>
+                            <MudText Typo="Typo.body2" Color="Color.Error">Delete</MudText>
+                        </div>
+                    </MudMenuItem>
+                </ChildContent>
+            </MudMenu>
+        </div>
+    </div>
+    @{
+        IReadOnlyList<DailyChecklistItem> checklist = DailyChecklistJson.Parse(Item.ChecklistJson);
+        int subDone = checklist.Count(x => x.IsDone);
+        int subTotal = checklist.Count;
+        List<string> tagsList = [.. BoardTagUtil.ParseTags(Item.Tags)];
+        bool hasBodyExtra = !string.IsNullOrWhiteSpace(Item.Notes) || subTotal > 0 || tagsList.Count > 0;
+    }
+    @if (hasBodyExtra)
+    {
+        <div class="board-card__extra">
+            @if (tagsList.Count > 0)
+            {
+                <div class="board-card__tags">
+                    @if (tagsList.Count <= 3)
+                    {
+                        @foreach (var tag in tagsList)
+                        {
+                            <span class="board-card__tag-badge" title="@tag">@tag</span>
+                        }
+                    }
+                    else
+                    {
+                        @foreach (var tag in tagsList.Take(2))
+                        {
+                            <span class="board-card__tag-badge" title="@tag">@tag</span>
+                        }
+                        <span class="board-card__tag-badge board-card__tag-badge--more" title='@(string.Join(", ", tagsList.Skip(2)))'>+@(tagsList.Count - 2)</span>
+                    }
+                </div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Item.Notes))
+            {
+                <MudText Typo="Typo.caption" Class="board-card__notes" Color="Color.Secondary">@Item.Notes</MudText>
+            }
+            @if (subTotal > 0)
+            {
+                <button type="button"
+                        class="board-subtask-pill"
+                        @onclick="ToggleSubtasksExpand"
+                        @onclick:stopPropagation="true">
+                    <MudIcon Icon="@Icons.Material.Filled.List" Size="Size.Small" Class="me-1"/>
+                    <span class="board-subtask-pill__count">@subDone / @subTotal</span>
+                    <MudIcon Icon="@(_subtasksExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small" Class="ms-1"/>
+                </button>
+            }
+            @if (subTotal > 0 && _subtasksExpanded)
+            {
+                <ul class="board-subtask-list">
+                    @foreach (var line in checklist)
+                    {
+                        <li class="board-subtask-list__row" @key="line.Id">
+                            <MudCheckBox T="bool"
+                                         Value="line.IsDone"
+                                         ValueChanged="@(v => OnSetChecklistItemDone.InvokeAsync((line.Id, v)))"
+                                         Label="@line.Text"
+                                         Class="ma-0 board-subtask-cb"
+                                         Color="Color.Secondary"
+                                         Dense="true"/>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+    @if (ShouldShowItemFooter(Section, Item))
+    {
+        <div class="board-card__foot">
+            <div class="board-card__foot-left">
+                @if (Section == BoardSection.Todo && Item.TodoDueDate is { } due)
+                {
+                    <div class="@TodoDueCssClass(due)">
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Class="me-1" Size="Size.Small"/>
+                        <span class="board-todo-due__date">@DateFormatService.Format(due)</span>
+                        <span class="board-todo-due__sep" aria-hidden="true">·</span>
+                        <span class="board-todo-due__relative">@TodoDueRelativeLabel(due)</span>
+                    </div>
+                }
+            </div>
+            <div class="board-card__foot-right">
+                @if (Section == BoardSection.Habit)
+                {
+                    <div class="board-streak" title="@HabitCounterTitle()">
+                        <MudIcon Icon="@Icons.Material.Filled.FastForward" Size="Size.Small" Class="me-1"/>
+                        <span class="board-streak__text">@HabitStreakLabel()</span>
+                    </div>
+                }
+                else if (Section == BoardSection.Daily)
+                {
+                    <div class="board-streak" title="Streak">
+                        <MudIcon Icon="@Icons.Material.Filled.FastForward" Size="Size.Small" Class="me-1"/>
+                        <span class="board-streak__text">@Item.Counter</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] [EditorRequired] public BoardItem Item { get; set; } = null!;
+    [Parameter] [EditorRequired] public BoardSection Section { get; set; }
+    [Parameter] public bool CanReorder { get; set; }
+
+    [Parameter] public EventCallback OnHabitUp { get; set; }
+    [Parameter] public EventCallback OnHabitDown { get; set; }
+    [Parameter] public EventCallback OnToggle { get; set; }
+    [Parameter] public EventCallback OnOpenEditor { get; set; }
+    [Parameter] public EventCallback OnMoveToTop { get; set; }
+    [Parameter] public EventCallback OnMoveToBottom { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+    [Parameter] public EventCallback<(Guid ChecklistItemId, bool IsDone)> OnSetChecklistItemDone { get; set; }
+
+    private bool _subtasksExpanded = true;
+
+    private void ToggleSubtasksExpand()
+    {
+        _subtasksExpanded = !_subtasksExpanded;
+    }
+
+    private string GetCardClass() => $"board-card {GetRowClass()}";
+
+    private string GetRowClass()
+    {
+        return Section switch
+        {
+            BoardSection.Habit => "board-row--habit",
+            BoardSection.Daily => Item.IsCompleted ? "board-row--done" : "board-row--daily-open",
+            BoardSection.Todo => Item.IsCompleted ? "board-row--done" : "board-row--todo-open",
+            _ => string.Empty
+        };
+    }
+
+    private string GetCheckClass()
+    {
+        if (Item.IsCompleted)
+        {
+            return "board-check--ok";
+        }
+
+        return Section == BoardSection.Daily ? "board-check--daily" : "board-check--todo";
+    }
+
+    private string TodoDueCssClass(DateOnly due)
+    {
+        var days = due.DayNumber - BoardToday().DayNumber;
+        var state = days switch
+        {
+            < 0 => "overdue",
+            0 => "today",
+            _ => "upcoming"
+        };
+
+        return $"board-todo-due board-todo-due--{state}";
+    }
+
+    private string TodoDueRelativeLabel(DateOnly due) =>
+        TodoDueRelativeText.Format(due, BoardToday());
+
+    private DateOnly BoardToday() => DailySchedule.LocalToday(TimeZoneService);
+
+    private string HabitStreakLabel()
+    {
+        return (Item.TrackPlus, Item.TrackMinus) switch
+        {
+            (true, true) => $"+{Item.Counter} / −{Item.NegativeCounter}",
+            (true, false) => $"{Item.Counter}",
+            (false, true) => $"−{Item.NegativeCounter}",
+            _ => "—"
+        };
+    }
+
+    private string HabitCounterTitle()
+    {
+        return (Item.TrackPlus, Item.TrackMinus) switch
+        {
+            (true, true) => "+ count and − count",
+            (true, false) => "+ count only",
+            (false, true) => "− count only",
+            _ => "Counters"
+        };
+    }
+
+    private static bool ShouldShowItemFooter(BoardSection section, BoardItem item)
+    {
+        return section switch
+        {
+            BoardSection.Todo => item.TodoDueDate is not null,
+            BoardSection.Habit or BoardSection.Daily => true,
+            _ => false
+        };
+    }
+}

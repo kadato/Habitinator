@@ -87,28 +87,41 @@ public sealed class BoardIdempotencyService(
                 continue;
             }
 
-            try
-            {
-                var outcome = await execute();
-                claim.ResponseStatusCode = outcome.statusCode;
-                claim.ResponseBody = outcome.body;
-                await db.SaveChangesAsync(cancellationToken);
-                return outcome;
-            }
-            catch
-            {
-                try
-                {
-                    db.BoardRequestIdempotencies.Remove(claim);
-                    await db.SaveChangesAsync(CancellationToken.None);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Could not remove pending idempotency row {Key}.", idempotencyKey);
-                }
+            return await ExecuteAndSaveOutcomeAsync(claim, execute, idempotencyKey, cancellationToken);
+        }
+    }
 
-                throw;
-            }
+    private async Task<(int statusCode, string body, string? contentType)> ExecuteAndSaveOutcomeAsync(
+        BoardRequestIdempotencyEntity claim,
+        Func<Task<(int statusCode, string body, string? contentType)>> execute,
+        string idempotencyKey,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var outcome = await execute();
+            claim.ResponseStatusCode = outcome.statusCode;
+            claim.ResponseBody = outcome.body;
+            await db.SaveChangesAsync(cancellationToken);
+            return outcome;
+        }
+        catch
+        {
+            await SafeRemoveClaimAsync(claim, idempotencyKey);
+            throw;
+        }
+    }
+
+    private async Task SafeRemoveClaimAsync(BoardRequestIdempotencyEntity claim, string idempotencyKey)
+    {
+        try
+        {
+            db.BoardRequestIdempotencies.Remove(claim);
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not remove pending idempotency row {Key}.", idempotencyKey);
         }
     }
 

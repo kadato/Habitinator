@@ -35,31 +35,9 @@
 
             foreach (var file in frameworkDir)
             {
-                if (file.IsDirectory)
-                    continue;
-
-                var name = file.Name;
-
-                // Skip compressed variants — the browser/CDN handles Accept-Encoding
-                if (name.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) ||
-                    name.EndsWith(".br", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                // Skip source maps and PDB debug symbols
-                if (name.EndsWith(".map", StringComparison.OrdinalIgnoreCase) ||
-                    name.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                // Skip ICU globalization data files — HybridGlobalization uses browser APIs instead
-                if (name.StartsWith("icudt_", StringComparison.OrdinalIgnoreCase) ||
-                    name.StartsWith("icudt.", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                // Include .wasm (assemblies + native runtime) and .js (dotnet runtime scripts)
-                if (name.EndsWith(".wasm", StringComparison.OrdinalIgnoreCase) ||
-                    name.EndsWith(".js", StringComparison.OrdinalIgnoreCase))
+                if (!file.IsDirectory && ShouldPrefetch(file.Name))
                 {
-                    urls.Add($"_framework/{name}");
+                    urls.Add($"_framework/{file.Name}");
                 }
             }
         }
@@ -69,5 +47,27 @@
         }
 
         return urls;
+    }
+
+    private static bool ShouldPrefetch(string name)
+    {
+        // Skip compressed variants — the browser/CDN handles Accept-Encoding
+        if (name.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) ||
+            name.EndsWith(".br", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // Skip source maps and PDB debug symbols
+        if (name.EndsWith(".map", StringComparison.OrdinalIgnoreCase) ||
+            name.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // Skip ICU globalization data files — HybridGlobalization uses browser APIs instead
+        if (name.StartsWith("icudt_", StringComparison.OrdinalIgnoreCase) ||
+            name.StartsWith("icudt.", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // Include .wasm (assemblies + native runtime) and .js (dotnet runtime scripts)
+        return name.EndsWith(".wasm", StringComparison.OrdinalIgnoreCase) ||
+               name.EndsWith(".js", StringComparison.OrdinalIgnoreCase);
     }
 }

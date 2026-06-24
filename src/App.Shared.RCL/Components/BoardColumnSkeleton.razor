@@ -1,0 +1,93 @@
+@namespace App.Shared.RCL.Components
+
+<MudCard Class="@($"board-column {GetAccentClass()}")" Elevation="0" Outlined="false">
+    <MudCardHeader Class="pb-2">
+        <CardHeaderContent>
+            <div class="board-column-header-flex">
+                <div class="board-column-header-left board-column-header-row">
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                        <MudSkeleton Width="24px" Height="24px" SkeletonType="SkeletonType.Rectangle" Class="rounded" />
+                        <MudText Typo="Typo.subtitle1" Class="board-title">@GetTitle()</MudText>
+                    </MudStack>
+                </div>
+                <MudStack Row="true" Spacing="1" Class="flex-wrap board-filter-toolbar">
+                    @if (Section == BoardSection.Habit)
+                    {
+                        <MudSkeleton Width="40px" Height="26px" />
+                        <MudSkeleton Width="45px" Height="26px" />
+                        <MudSkeleton Width="50px" Height="26px" />
+                    }
+                    else if (Section == BoardSection.Daily)
+                    {
+                        <MudSkeleton Width="40px" Height="26px" />
+                        <MudSkeleton Width="40px" Height="26px" />
+                        <MudSkeleton Width="60px" Height="26px" />
+                    }
+                    else
+                    {
+                        <MudSkeleton Width="50px" Height="26px" />
+                        <MudSkeleton Width="65px" Height="26px" />
+                    }
+                </MudStack>
+            </div>
+        </CardHeaderContent>
+    </MudCardHeader>
+
+    <MudCardContent Class="pt-0">
+        <div class="board-add-wrap mb-3">
+            <MudSkeleton Width="100%" Height="40px" />
+        </div>
+
+        <div class="board-list">
+            @for (int cardIdx = 0; cardIdx < 3; cardIdx++)
+            {
+                <div class="@($"board-card {GetRowClass()} pa-2 mb-1.5 d-flex align-center gap-3")" style="min-height: 48px;">
+                    <div class="board-card__left d-flex gap-1 align-center">
+                        <MudSkeleton Width="26px" Height="26px" SkeletonType="SkeletonType.Rectangle" Class="rounded" />
+                        @if (Section == BoardSection.Habit)
+                        {
+                            <MudSkeleton Width="26px" Height="26px" SkeletonType="SkeletonType.Rectangle" Class="rounded" />
+                        }
+                    </div>
+                    <div class="flex-grow-1">
+                        <MudSkeleton Width="60%" Height="16px" Class="mb-1" />
+                        <MudSkeleton Width="40%" Height="12px" />
+                    </div>
+                </div>
+            }
+        </div>
+    </MudCardContent>
+
+    <MudCardActions Class="board-col-foot px-4 pb-3 pt-0">
+        <MudSkeleton Width="100%" Height="16px" />
+    </MudCardActions>
+</MudCard>
+
+@code {
+    [Parameter]
+    public BoardSection Section { get; set; }
+
+    private string GetAccentClass() => Section switch
+    {
+        BoardSection.Habit => "board-column--habit",
+        BoardSection.Daily => "board-column--daily",
+        BoardSection.Todo => "board-column--todo",
+        _ => string.Empty
+    };
+
+    private string GetTitle() => Section switch
+    {
+        BoardSection.Habit => "Habits",
+        BoardSection.Daily => "Dailies",
+        BoardSection.Todo => "To Do's",
+        _ => "Board"
+    };
+
+    private string GetRowClass() => Section switch
+    {
+        BoardSection.Habit => "board-row--habit",
+        BoardSection.Daily => "board-row--daily-open",
+        BoardSection.Todo => "board-row--todo-open",
+        _ => string.Empty
+    };
+}

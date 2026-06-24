@@ -395,26 +395,26 @@
             <div class="board-columns-mobile">
                 <MudTabs Centered="true" Rounded="true" Color="Color.Primary" Elevation="0" Outlined="false">
                     <MudTabPanel Text="Habits">
-                        @RenderColumnSkeleton(BoardSection.Habit)
+                        <BoardColumnSkeleton Section="BoardSection.Habit" />
                     </MudTabPanel>
                     <MudTabPanel Text="Dailies">
-                        @RenderColumnSkeleton(BoardSection.Daily)
+                        <BoardColumnSkeleton Section="BoardSection.Daily" />
                     </MudTabPanel>
                     <MudTabPanel Text="To Do's">
-                        @RenderColumnSkeleton(BoardSection.Todo)
+                        <BoardColumnSkeleton Section="BoardSection.Todo" />
                     </MudTabPanel>
                 </MudTabs>
             </div>
             <div class="board-columns-desktop">
                 <MudGrid Spacing="2" Class="board-columns-grid w-100">
                     <MudItem xs="12" md="4">
-                        @RenderColumnSkeleton(BoardSection.Habit)
+                        <BoardColumnSkeleton Section="BoardSection.Habit" />
                     </MudItem>
                     <MudItem xs="12" md="4">
-                        @RenderColumnSkeleton(BoardSection.Daily)
+                        <BoardColumnSkeleton Section="BoardSection.Daily" />
                     </MudItem>
                     <MudItem xs="12" md="4">
-                        @RenderColumnSkeleton(BoardSection.Todo)
+                        <BoardColumnSkeleton Section="BoardSection.Todo" />
                     </MudItem>
                 </MudGrid>
             </div>
@@ -432,95 +432,6 @@
 @implements IAsyncDisposable
 
 @code {
-    private static RenderFragment<BoardSection> RenderColumnSkeleton => section => __builder =>
-    {
-        var accentClass = section switch
-        {
-            BoardSection.Habit => "board-column--habit",
-            BoardSection.Daily => "board-column--daily",
-            BoardSection.Todo => "board-column--todo",
-            _ => string.Empty
-        };
-        var title = section switch
-        {
-            BoardSection.Habit => "Habits",
-            BoardSection.Daily => "Dailies",
-            BoardSection.Todo => "To Do's",
-            _ => "Board"
-        };
-        var isHabit = section == BoardSection.Habit;
-
-        <MudCard Class="@($"board-column {accentClass}")" Elevation="0" Outlined="false">
-            <MudCardHeader Class="pb-2">
-                <CardHeaderContent>
-                    <div class="board-column-header-flex">
-                        <div class="board-column-header-left board-column-header-row">
-                            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
-                                <MudSkeleton Width="24px" Height="24px" SkeletonType="SkeletonType.Rectangle" Class="rounded" />
-                                <MudText Typo="Typo.subtitle1" Class="board-title">@title</MudText>
-                            </MudStack>
-                        </div>
-                        <MudStack Row="true" Spacing="1" Class="flex-wrap board-filter-toolbar">
-                            @if (section == BoardSection.Habit)
-                            {
-                                <MudSkeleton Width="40px" Height="26px" />
-                                <MudSkeleton Width="45px" Height="26px" />
-                                <MudSkeleton Width="50px" Height="26px" />
-                            }
-                            else if (section == BoardSection.Daily)
-                            {
-                                <MudSkeleton Width="40px" Height="26px" />
-                                <MudSkeleton Width="40px" Height="26px" />
-                                <MudSkeleton Width="60px" Height="26px" />
-                            }
-                            else
-                            {
-                                <MudSkeleton Width="50px" Height="26px" />
-                                <MudSkeleton Width="65px" Height="26px" />
-                            }
-                        </MudStack>
-                    </div>
-                </CardHeaderContent>
-            </MudCardHeader>
-
-            <MudCardContent Class="pt-0">
-                <div class="board-add-wrap mb-3">
-                    <MudSkeleton Width="100%" Height="40px" />
-                </div>
-
-                <div class="board-list">
-                    @for (int cardIdx = 0; cardIdx < 3; cardIdx++)
-                    {
-                        var rowClass = section switch
-                        {
-                            BoardSection.Habit => "board-row--habit",
-                            BoardSection.Daily => "board-row--daily-open",
-                            BoardSection.Todo => "board-row--todo-open",
-                            _ => string.Empty
-                        };
-                        <div class="@($"board-card {rowClass} pa-2 mb-1.5 d-flex align-center gap-3")" style="min-height: 48px;">
-                            <div class="board-card__left d-flex gap-1 align-center">
-                                <MudSkeleton Width="26px" Height="26px" SkeletonType="SkeletonType.Rectangle" Class="rounded" />
-                                @if (isHabit)
-                                {
-                                    <MudSkeleton Width="26px" Height="26px" SkeletonType="SkeletonType.Rectangle" Class="rounded" />
-                                }
-                            </div>
-                            <div class="flex-grow-1">
-                                <MudSkeleton Width="60%" Height="16px" Class="mb-1" />
-                                <MudSkeleton Width="40%" Height="12px" />
-                            </div>
-                        </div>
-                    }
-                </div>
-            </MudCardContent>
-
-            <MudCardActions Class="board-col-foot px-4 pb-3 pt-0">
-                <MudSkeleton Width="100%" Height="16px" />
-            </MudCardActions>
-        </MudCard>
-    };
-
     [Parameter] public string? SignedInEmail { get; set; }
 
 
@@ -652,47 +563,8 @@
         ConflictResolution.ConflictDetected -= HandleConflictDetected;
         if (_boardClientScriptsStarted)
         {
-            try
-            {
-                await JS.InvokeVoidAsync("HabitinatorBoardVisibility.stop");
-            }
-            catch (JSDisconnectedException)
-            {
-                // Ignored during page navigation/disposal
-            }
-            catch (JSException)
-            {
-                // Ignored during page navigation/disposal
-            }
-            catch (TaskCanceledException)
-            {
-                // Ignored during page navigation/disposal
-            }
-            catch (InvalidOperationException)
-            {
-                // Ignored during page navigation/disposal
-            }
-
-            try
-            {
-                await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.stop");
-            }
-            catch (JSDisconnectedException)
-            {
-                // Ignored during page navigation/disposal
-            }
-            catch (JSException)
-            {
-                // Ignored during page navigation/disposal
-            }
-            catch (TaskCanceledException)
-            {
-                // Ignored during page navigation/disposal
-            }
-            catch (InvalidOperationException)
-            {
-                // Ignored during page navigation/disposal
-            }
+            await SafeInvokeVoidAsync("HabitinatorBoardVisibility.stop");
+            await SafeInvokeVoidAsync("HabitinatorKeyboardShortcuts.stop");
         }
 
         _visibilityRef?.Dispose();
@@ -700,6 +572,18 @@
         _selfRef?.Dispose();
         _selfRef = null;
         _subscription.Dispose();
+    }
+
+    private async ValueTask SafeInvokeVoidAsync(string identifier, params object?[]? args)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync(identifier, args);
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or InvalidOperationException)
+        {
+            // Ignored during page navigation/disposal
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

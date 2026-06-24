@@ -1,5 +1,5 @@
 // When the tab or WebView becomes visible again, reload the board (covers missed SignalR pushes).
-window.HabitinatorBoardVisibility = (function () {
+globalThis.HabitinatorBoardVisibility = (function () {
   let dotNetHelper = null;
 
   function onVisibilityChange() {
@@ -21,14 +21,13 @@ window.HabitinatorBoardVisibility = (function () {
   };
 })();
 
-window.HabitinatorKeyboardShortcuts = (function () {
+globalThis.HabitinatorKeyboardShortcuts = (function () {
   let layoutHelper = null;
   let boardHelper = null;
   let isListenersAdded = false;
 
   let isAltHeld = false;
   let isShiftHeld = false;
-
 
   // Shift Shortcut Overlay State
   let shortcutModeActive = false;
@@ -38,8 +37,6 @@ window.HabitinatorKeyboardShortcuts = (function () {
   let overlayContainer = null;
 
   const availableKeys = ['A', 'C', 'E', 'I', 'J', 'K', 'L', 'M', 'N', 'Q', 'U', 'V', 'W', 'X', 'Y', 'Z'];
-
-
 
   function updateShortcutOverlay() {
     if (isEditing()) {
@@ -102,40 +99,53 @@ window.HabitinatorKeyboardShortcuts = (function () {
   }
 
   function getScrollableContainer(container) {
-    if (!container) return window;
+    if (!container) return globalThis;
     const known = container.querySelector('.edit-daily-body, .edit-habit-body, .archived-list, .daily-yesterday-body');
     if (known) return known;
 
     const dialogContent = container.querySelector('.mud-dialog-content');
     if (dialogContent) {
-      const style = window.getComputedStyle(dialogContent);
+      const style = globalThis.getComputedStyle(dialogContent);
       if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
         return dialogContent;
       }
     }
 
     const all = container.querySelectorAll('*');
-    for (let i = 0; i < all.length; i++) {
-      const style = window.getComputedStyle(all[i]);
+    for (const element of all) {
+      const style = globalThis.getComputedStyle(element);
       if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
-        return all[i];
+        return element;
       }
     }
     return container;
   }
 
   function scrollTargetElement(target, amount) {
-    if (target === window) {
-      window.scrollBy({ top: amount, behavior: 'smooth' });
+    if (target === globalThis) {
+      globalThis.scrollBy({ top: amount, behavior: 'smooth' });
     } else {
       target.scrollBy({ top: amount, behavior: 'smooth' });
     }
   }
 
+  // Helper for generating shortcut keys to avoid duplication (S4144)
+  function getDynamicKey(index, useTwoChars) {
+    if (!useTwoChars) {
+      return availableKeys[index];
+    }
+    const firstIdx = Math.floor(index / availableKeys.length);
+    const secondIdx = index % availableKeys.length;
+    if (firstIdx < availableKeys.length) {
+      return availableKeys[firstIdx] + availableKeys[secondIdx];
+    }
+    return 'X' + index;
+  }
+
   function scrollToPosition(target, position) {
-    if (target === window) {
+    if (target === globalThis) {
       const scrollingEl = document.scrollingElement || document.documentElement || document.body;
-      window.scrollTo({ top: position === 'top' ? 0 : scrollingEl.scrollHeight, behavior: 'smooth' });
+      globalThis.scrollTo({ top: position === 'top' ? 0 : scrollingEl.scrollHeight, behavior: 'smooth' });
     } else {
       target.scrollTo({ top: position === 'top' ? 0 : target.scrollHeight, behavior: 'smooth' });
     }
@@ -157,23 +167,22 @@ window.HabitinatorKeyboardShortcuts = (function () {
   }
 
   function isElementVisible(el) {
-    // Check if element or any parent is display: none (skip fixed position elements which can have null offsetParent)
-    if (el.offsetParent === null && window.getComputedStyle(el).position !== 'fixed') {
+    if (el.offsetParent === null && globalThis.getComputedStyle(el).position !== 'fixed') {
       return false;
     }
 
     const rect = el.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return false;
 
-    const style = window.getComputedStyle(el);
+    const style = globalThis.getComputedStyle(el);
     if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
 
     // Check if it's within viewport bounds
     const inViewport = (
       rect.top >= -rect.height &&
       rect.left >= -rect.width &&
-      rect.top <= (window.innerHeight || document.documentElement.clientHeight) &&
-      rect.left <= (window.innerWidth || document.documentElement.clientWidth)
+      rect.top <= (globalThis.innerHeight || document.documentElement.clientHeight) &&
+      rect.left <= (globalThis.innerWidth || document.documentElement.clientWidth)
     );
     return inViewport;
   }
@@ -194,7 +203,7 @@ window.HabitinatorKeyboardShortcuts = (function () {
       return a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? 1 : -1;
     });
     
-    return activeContainers[activeContainers.length - 1];
+    return activeContainers.at(-1);
   }
 
   function buildShortcutTargets() {
@@ -231,30 +240,18 @@ window.HabitinatorKeyboardShortcuts = (function () {
       const useTwoChars = totalDynamicElements > availableKeys.length;
       let dynamicIndex = 0;
 
-      function getDynamicKey(index) {
-        if (!useTwoChars) {
-          return availableKeys[index];
-        }
-        const firstIdx = Math.floor(index / availableKeys.length);
-        const secondIdx = index % availableKeys.length;
-        if (firstIdx < availableKeys.length) {
-          return availableKeys[firstIdx] + availableKeys[secondIdx];
-        }
-        return 'X' + index;
-      }
-
       inputs.forEach(el => {
-        const key = getDynamicKey(dynamicIndex++);
+        const key = getDynamicKey(dynamicIndex++, useTwoChars);
         addTarget(el, key, "input");
       });
 
       toggles.forEach(el => {
-        const key = getDynamicKey(dynamicIndex++);
+        const key = getDynamicKey(dynamicIndex++, useTwoChars);
         addTarget(el, key, "input");
       });
 
       clickables.forEach(el => {
-        const key = getDynamicKey(dynamicIndex++);
+        const key = getDynamicKey(dynamicIndex++, useTwoChars);
         addTarget(el, key, "nav");
       });
 
@@ -284,8 +281,6 @@ window.HabitinatorKeyboardShortcuts = (function () {
       return href.includes('settings') || txt === 'settings' || txt === 'preferences';
     });
     addTarget(settingsEl, "P", "nav");
-
-
 
     // 2. Common Inputs (fixed shortcuts)
     const searchInput = document.querySelector('.board-search-field input, #board-search') ||
@@ -326,30 +321,18 @@ window.HabitinatorKeyboardShortcuts = (function () {
     const useTwoChars = totalDynamicElements > availableKeys.length;
     let dynamicIndex = 0;
 
-    function getDynamicKey(index) {
-      if (!useTwoChars) {
-        return availableKeys[index];
-      }
-      const firstIdx = Math.floor(index / availableKeys.length);
-      const secondIdx = index % availableKeys.length;
-      if (firstIdx < availableKeys.length) {
-        return availableKeys[firstIdx] + availableKeys[secondIdx];
-      }
-      return 'X' + index;
-    }
-
     inputs.forEach(el => {
-      const key = getDynamicKey(dynamicIndex++);
+      const key = getDynamicKey(dynamicIndex++, useTwoChars);
       addTarget(el, key, "input");
     });
 
     toggles.forEach(el => {
-      const key = getDynamicKey(dynamicIndex++);
+      const key = getDynamicKey(dynamicIndex++, useTwoChars);
       addTarget(el, key, "input");
     });
 
     clickables.forEach(el => {
-      const key = getDynamicKey(dynamicIndex++);
+      const key = getDynamicKey(dynamicIndex++, useTwoChars);
       addTarget(el, key, "nav");
     });
   }
@@ -381,10 +364,8 @@ window.HabitinatorKeyboardShortcuts = (function () {
       overlayContainer = null;
     }
 
-
     targets = [];
-    document.body.classList.remove("hab-show-shortcuts");
-    document.body.classList.remove("hab-shortcuts-modal-open");
+    document.body.classList.remove("hab-show-shortcuts", "hab-shortcuts-modal-open");
   }
 
   function renderOverlays() {
@@ -401,14 +382,14 @@ window.HabitinatorKeyboardShortcuts = (function () {
       // Position badge
       const isInputEl = t.type === 'input';
       const isTagPicker = t.element.classList.contains('habit-tag-picker__control');
-      const top = rect.top + window.scrollY + (rect.height / 2);
+      const top = rect.top + globalThis.scrollY + (rect.height / 2);
       let left;
       if (isTagPicker) {
-        left = rect.right + window.scrollX - 24;
+        left = rect.right + globalThis.scrollX - 24;
       } else {
         left = isInputEl 
-          ? rect.left + window.scrollX + 16 
-          : rect.left + window.scrollX + (rect.width / 2);
+          ? rect.left + globalThis.scrollX + 16 
+          : rect.left + globalThis.scrollX + (rect.width / 2);
       }
 
       badge.style.top = `${top}px`;
@@ -417,8 +398,8 @@ window.HabitinatorKeyboardShortcuts = (function () {
 
       // Render shortcut characters
       let html = '';
-      for (let i = 0; i < t.shortcut.length; i++) {
-        html += `<span class="key-char key-char--untyped">${t.shortcut[i]}</span>`;
+      for (const char of t.shortcut) {
+        html += `<span class="key-char key-char--untyped">${char}</span>`;
       }
       badge.innerHTML = html;
 
@@ -428,7 +409,6 @@ window.HabitinatorKeyboardShortcuts = (function () {
       setTimeout(() => badge.classList.add('hab-shortcut-hint--visible'), 10);
     });
   }
-
 
   function handleKeystrokeInShortcutMode(e) {
     const key = e.key;
@@ -520,13 +500,139 @@ window.HabitinatorKeyboardShortcuts = (function () {
     }
   }
 
-  function onKeyDown(e) {
-    // If a select dropdown or popover is open, do not intercept scroll keys or keyboard inputs,
-    // but prevent browser from scrolling when Arrow/Space/Page/Home/End keys are pressed.
-    if (!shortcutModeActive && document.querySelector('.mud-popover-open')) {
-      if (e.key === 'Escape' || e.key === 'Esc') {
-        // Let Escape pass through to the escape/blur handler below
+  // Extracted helper functions for Escape key handling to reduce Cognitive Complexity (S3776)
+  function handleTagPickerEscape(e, activeElement) {
+    if (activeElement?.classList.contains('habit-tag-picker__search')) {
+      e.preventDefault();
+      e.stopPropagation();
+      const picker = activeElement.closest('.habit-tag-picker');
+      const control = picker?.querySelector('.habit-tag-picker__control');
+      if (control) {
+        control.click();
+        control.focus();
+      }
+      return true;
+    }
+    return false;
+  }
+
+  // Extracted helper functions for Escape key handling to reduce Cognitive Complexity (S3776)
+  function handleTagsPopoverEscape(activeElement) {
+    const tagsPopover = document.querySelector('.board-tags-menu-popover');
+    if (tagsPopover && isElementVisible(tagsPopover)) {
+      const activator = document.querySelector('.board-tags-trigger');
+      if (activator) {
+        activator.click();
+        activeElement?.blur();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Extracted helper functions for Escape key handling to reduce Cognitive Complexity (S3776)
+  function handleOpenPopoverEscape(activeElement) {
+    const openPopover = Array.from(document.querySelectorAll('.mud-popover')).find(isElementVisible);
+    if (openPopover) {
+      activeElement?.blur();
+      setTimeout(() => {
+        const events = ['pointerdown', 'mousedown', 'mouseup', 'pointerup', 'click'];
+        events.forEach(type => {
+          document.body.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }));
+        });
+        
+        // Blur any select slot or input control that got focused back by Blazor's popover closing logic
+        const newActive = document.activeElement;
+        if (newActive && (
+          newActive.classList.contains('mud-input-slot') || 
+          newActive.closest('.mud-input-slot') ||
+          newActive.closest('.mud-select') ||
+          newActive.closest('.mud-input-control')
+        )) {
+          newActive.blur();
+        }
+      }, 50);
+      return true;
+    }
+    return false;
+  }
+
+  // Extracted helper functions for Escape key handling to reduce Cognitive Complexity (S3776)
+  function handleEditModeEscape(e, activeElement, isEdit) {
+    if (isEdit && activeElement && !activeElement.closest('.mud-popover')) {
+      if (activeElement.closest('.edit-daily-dialog, .edit-habit-dialog')) {
+        if (!activeElement.classList.contains('habit-tag-picker__search')) {
+          activeElement.blur();
+          e.preventDefault();
+          e.stopPropagation();
+        }
       } else {
+        activeElement.blur();
+        e.preventDefault();
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function handleEscapeKey(e, activeElement, isEdit) {
+    if (shortcutModeActive) {
+      shiftLock = false;
+      deactivateShortcutMode();
+    }
+
+    if (activeElement?.closest('.timer-target-field')) {
+      const openPopover = Array.from(document.querySelectorAll('.mud-popover')).find(isElementVisible);
+      if (openPopover) {
+        return;
+      }
+    }
+
+    if (handleTagPickerEscape(e, activeElement)) return;
+    if (handleTagsPopoverEscape(activeElement)) return;
+    if (handleOpenPopoverEscape(activeElement)) return;
+    handleEditModeEscape(e, activeElement, isEdit);
+  }
+
+  function handleScrolling(e, activeElement) {
+    if (e.ctrlKey || e.metaKey || e.altKey) {
+      return;
+    }
+    // Check if interactive element should consume the key
+    if ((e.key === ' ' || e.key === 'Space') && isInteractiveElement(activeElement)) {
+      return;
+    }
+    if (['ArrowDown', 'ArrowUp'].includes(e.key) && needsArrowKeys(activeElement)) {
+      return;
+    }
+
+    e.preventDefault();
+
+    const activeContainer = getActiveOpenContainer();
+    const target = activeContainer ? getScrollableContainer(activeContainer) : globalThis;
+
+    const scrollSpeed = 100; // px
+    const pageSpeed = target === globalThis ? globalThis.innerHeight * 0.8 : target.clientHeight * 0.8;
+
+    if (e.key === 'ArrowDown' || e.key === 'j' || e.key === 'J') {
+      scrollTargetElement(target, scrollSpeed);
+    } else if (e.key === 'ArrowUp' || e.key === 'k' || e.key === 'K') {
+      scrollTargetElement(target, -scrollSpeed);
+    } else if (e.key === 'PageDown' || ((e.key === ' ' || e.key === 'Space') && !e.shiftKey)) {
+      scrollTargetElement(target, pageSpeed);
+    } else if (e.key === 'PageUp' || ((e.key === ' ' || e.key === 'Space') && e.shiftKey)) {
+      scrollTargetElement(target, -pageSpeed);
+    } else if (e.key === 'Home') {
+      scrollToPosition(target, 'top');
+    } else if (e.key === 'End') {
+      scrollToPosition(target, 'bottom');
+    }
+  }
+
+  // Extracted helper functions for onKeyDown to reduce Cognitive Complexity (S3776)
+  function preventPopoverScroll(e) {
+    if (!shortcutModeActive && document.querySelector('.mud-popover-open')) {
+      if (e.key !== 'Escape' && e.key !== 'Esc') {
         const scrollKeys = ['ArrowDown', 'ArrowUp', 'Space', ' ', 'PageDown', 'PageUp', 'Home', 'End'];
         if (scrollKeys.includes(e.key)) {
           const activeElement = document.activeElement;
@@ -535,102 +641,19 @@ window.HabitinatorKeyboardShortcuts = (function () {
             activeElement.tagName.toLowerCase() === 'textarea' || 
             activeElement.isContentEditable
           );
-          if (isInput && (e.key === ' ' || e.key === 'Space')) {
-            // Let space be typed normally in inputs
-          } else {
+          if (!(isInput && (e.key === ' ' || e.key === 'Space'))) {
             e.preventDefault();
           }
         }
-        return;
+        return true;
       }
     }
+    return false;
+  }
 
-    // Escape blur functionality (from original codebase)
-    const activeElement = document.activeElement;
-    const isEdit = isEditing();
-    
-    if (e.code === 'Escape' || e.key === 'Escape') {
-      if (shortcutModeActive) {
-        shiftLock = false;
-        deactivateShortcutMode();
-      }
-
-      if (activeElement && activeElement.closest('.timer-target-field')) {
-        const openPopover = Array.from(document.querySelectorAll('.mud-popover')).find(isElementVisible);
-        if (openPopover) {
-          return;
-        }
-      }
-
-      if (activeElement && activeElement.classList.contains('habit-tag-picker__search')) {
-        e.preventDefault();
-        e.stopPropagation();
-        const picker = activeElement.closest('.habit-tag-picker');
-        if (picker) {
-          const control = picker.querySelector('.habit-tag-picker__control');
-          if (control) {
-            control.click();
-            control.focus();
-          }
-        }
-        return;
-      }
-      
-      const tagsPopover = document.querySelector('.board-tags-menu-popover');
-      if (tagsPopover && isElementVisible(tagsPopover)) {
-        const activator = document.querySelector('.board-tags-trigger');
-        if (activator) {
-          activator.click();
-          if (activeElement) {
-            activeElement.blur();
-          }
-          return;
-        }
-      }
-      
-      const openPopover = Array.from(document.querySelectorAll('.mud-popover')).find(isElementVisible);
-      if (openPopover) {
-        if (activeElement) {
-          activeElement.blur();
-        }
-        setTimeout(() => {
-          const events = ['pointerdown', 'mousedown', 'mouseup', 'pointerup', 'click'];
-          events.forEach(type => {
-            document.body.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }));
-          });
-          
-          // Blur any select slot or input control that got focused back by Blazor's popover closing logic
-          const newActive = document.activeElement;
-          if (newActive && (
-            newActive.classList.contains('mud-input-slot') || 
-            newActive.closest('.mud-input-slot') ||
-            newActive.closest('.mud-select') ||
-            newActive.closest('.mud-input-control')
-          )) {
-            newActive.blur();
-          }
-        }, 50);
-        return;
-      }
-      
-      if (isEdit && activeElement && !activeElement.closest('.mud-popover')) {
-        if (activeElement.closest('.edit-daily-dialog, .edit-habit-dialog')) {
-          if (!activeElement.classList.contains('habit-tag-picker__search')) {
-            activeElement.blur();
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        } else {
-          activeElement.blur();
-          e.preventDefault();
-        }
-        return;
-      }
-    }
-
-    // Shift key toggle
+  function handleShiftKey(e, isEdit) {
     if (e.key === 'Shift') {
-      if (isEdit) return;
+      if (isEdit) return true;
       if (!e.repeat) {
         shiftLock = !shiftLock;
         if (shiftLock) {
@@ -640,14 +663,39 @@ window.HabitinatorKeyboardShortcuts = (function () {
         }
         updateShortcutOverlay();
       }
-      return;
+      return true;
     }
+    return false;
+  }
 
+  function handleAltKey(e) {
     if (e.key === 'Alt') {
       isAltHeld = true;
       updateShortcutOverlay();
+      return true;
+    }
+    return false;
+  }
+
+  function handleEditModeScrolling(e, activeElement) {
+    if (activeElement && (activeElement.classList.contains('mud-input-slot') || activeElement.closest('.mud-popover') || activeElement.closest('.mud-list')) && ['ArrowUp', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault();
+    }
+  }
+
+  function onKeyDown(e) {
+    if (preventPopoverScroll(e)) return;
+
+    const activeElement = document.activeElement;
+    const isEdit = isEditing();
+    
+    if (e.code === 'Escape' || e.key === 'Escape') {
+      handleEscapeKey(e, activeElement, isEdit);
       return;
     }
+
+    if (handleShiftKey(e, isEdit)) return;
+    if (handleAltKey(e)) return;
 
     // Capture keystrokes in shortcut overlay mode
     if (shortcutModeActive) {
@@ -662,58 +710,21 @@ window.HabitinatorKeyboardShortcuts = (function () {
     const isUndo = (e.ctrlKey || e.metaKey) && e.code === 'KeyZ';
 
     if (isEdit) {
-      // Prevent browser from scrolling when Arrow keys are pressed on select slots or popover list items
-      if (activeElement && (activeElement.classList.contains('mud-input-slot') || activeElement.closest('.mud-popover') || activeElement.closest('.mud-list')) && ['ArrowUp', 'ArrowDown'].includes(e.key)) {
-        e.preventDefault();
-      }
+      handleEditModeScrolling(e, activeElement);
       return;
     }
 
     // Keyboard scrolling when not editing
     const scrollKeys = ['ArrowDown', 'ArrowUp', 'Space', ' ', 'PageDown', 'PageUp', 'Home', 'End', 'j', 'J', 'k', 'K'];
     if (scrollKeys.includes(e.key)) {
-      if (e.ctrlKey || e.metaKey || e.altKey) {
-        return;
-      }
-      // Check if interactive element should consume the key
-      if ((e.key === ' ' || e.key === 'Space') && isInteractiveElement(activeElement)) {
-        return;
-      }
-      if (['ArrowDown', 'ArrowUp'].includes(e.key) && needsArrowKeys(activeElement)) {
-        return;
-      }
-
-      e.preventDefault();
-
-      const activeContainer = getActiveOpenContainer();
-      const target = activeContainer ? getScrollableContainer(activeContainer) : window;
-
-      const scrollSpeed = 100; // px
-      const pageSpeed = target === window ? window.innerHeight * 0.8 : target.clientHeight * 0.8;
-
-      if (e.key === 'ArrowDown' || e.key === 'j' || e.key === 'J') {
-        scrollTargetElement(target, scrollSpeed);
-      } else if (e.key === 'ArrowUp' || e.key === 'k' || e.key === 'K') {
-        scrollTargetElement(target, -scrollSpeed);
-      } else if (e.key === 'PageDown' || ((e.key === ' ' || e.key === 'Space') && !e.shiftKey)) {
-        scrollTargetElement(target, pageSpeed);
-      } else if (e.key === 'PageUp' || ((e.key === ' ' || e.key === 'Space') && e.shiftKey)) {
-        scrollTargetElement(target, -pageSpeed);
-      } else if (e.key === 'Home') {
-        scrollToPosition(target, 'top');
-      } else if (e.key === 'End') {
-        scrollToPosition(target, 'bottom');
-      }
+      handleScrolling(e, activeElement);
       return;
     }
 
     if (isUndo) {
       e.preventDefault();
       dotNetHelper.invokeMethodAsync("OnCtrlZPressed").catch(function () {});
-      return;
     }
-
-
   }
 
   function onKeyUp(e) {
@@ -740,9 +751,9 @@ window.HabitinatorKeyboardShortcuts = (function () {
 
   function ensureListeners() {
     if (isListenersAdded) return;
-    window.addEventListener("keydown", onKeyDown, true); // Use capture phase to intercept input keys in shortcut mode
-    window.addEventListener("keyup", onKeyUp);
-    window.addEventListener("blur", onWindowBlur);
+    globalThis.addEventListener("keydown", onKeyDown, true); // Use capture phase to intercept input keys in shortcut mode
+    globalThis.addEventListener("keyup", onKeyUp);
+    globalThis.addEventListener("blur", onWindowBlur);
     isListenersAdded = true;
   }
 

@@ -7,16 +7,10 @@ using App.Shared.RCL.Models;
 
 namespace App.Shared.RCL.Services;
 
-public sealed class UndoableBoardDataService : IBoardDataService
+public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoService undoService) : IBoardDataService
 {
-    private readonly IBoardDataService _inner;
-    private readonly IUndoService _undoService;
-
-    public UndoableBoardDataService(IBoardDataService inner, IUndoService undoService)
-    {
-        _inner = inner;
-        _undoService = undoService;
-    }
+    private readonly IBoardDataService _inner = inner;
+    private readonly IUndoService _undoService = undoService;
 
     public Task<BoardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
     {
@@ -25,13 +19,13 @@ public sealed class UndoableBoardDataService : IBoardDataService
 
     public async Task<BoardItem?> ArchiveItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
     {
-        var item = await FindItemAsync(itemId, cancellationToken);
+        BoardItem? item = await FindItemAsync(itemId, cancellationToken);
         if (item is null)
         {
             return await _inner.ArchiveItemAsync(section, itemId, cancellationToken);
         }
 
-        var result = await _inner.ArchiveItemAsync(section, itemId, cancellationToken);
+        BoardItem? result = await _inner.ArchiveItemAsync(section, itemId, cancellationToken);
         if (result is not null && !_undoService.IsUndoing)
         {
             _undoService.RegisterUndo($"Archive \"{item.Title}\"", async () =>
@@ -44,7 +38,7 @@ public sealed class UndoableBoardDataService : IBoardDataService
 
     public async Task<BoardItem?> UnarchiveItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
     {
-        var result = await _inner.UnarchiveItemAsync(section, itemId, cancellationToken);
+        BoardItem? result = await _inner.UnarchiveItemAsync(section, itemId, cancellationToken);
         if (result is not null && !_undoService.IsUndoing)
         {
             _undoService.RegisterUndo($"Unarchive \"{result.Title}\"", async () =>
@@ -62,7 +56,7 @@ public sealed class UndoableBoardDataService : IBoardDataService
 
     public async Task<BoardItem> CreateItemAsync(BoardSection section, string title, Guid? itemId = null, CancellationToken cancellationToken = default)
     {
-        var item = await _inner.CreateItemAsync(section, title, itemId, cancellationToken);
+        BoardItem item = await _inner.CreateItemAsync(section, title, itemId, cancellationToken);
         if (!_undoService.IsUndoing)
         {
             _undoService.RegisterUndo($"Add \"{item.Title}\"", async () =>
@@ -75,14 +69,14 @@ public sealed class UndoableBoardDataService : IBoardDataService
 
     public async Task<BoardItem?> RenameItemAsync(BoardSection section, Guid itemId, string title, CancellationToken cancellationToken = default)
     {
-        var item = await FindItemAsync(itemId, cancellationToken);
+        BoardItem? item = await FindItemAsync(itemId, cancellationToken);
         if (item is null)
         {
             return await _inner.RenameItemAsync(section, itemId, title, cancellationToken);
         }
 
-        var oldTitle = item.Title;
-        var result = await _inner.RenameItemAsync(section, itemId, title, cancellationToken);
+        string oldTitle = item.Title;
+        BoardItem? result = await _inner.RenameItemAsync(section, itemId, title, cancellationToken);
         if (result is not null && !_undoService.IsUndoing)
         {
             _undoService.RegisterUndo($"Rename \"{oldTitle}\" to \"{result.Title}\"", async () =>
@@ -95,80 +89,85 @@ public sealed class UndoableBoardDataService : IBoardDataService
 
     public async Task<bool> DeleteItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
     {
-        var item = await FindItemAsync(itemId, cancellationToken);
+        BoardItem? item = await FindItemAsync(itemId, cancellationToken);
         if (item is null)
         {
             return await _inner.DeleteItemAsync(section, itemId, cancellationToken);
         }
 
-        var success = await _inner.DeleteItemAsync(section, itemId, cancellationToken);
+        bool success = await _inner.DeleteItemAsync(section, itemId, cancellationToken);
         if (success && !_undoService.IsUndoing)
         {
             _undoService.RegisterUndo($"Delete \"{item.Title}\"", async () =>
             {
-                var recreated = await _inner.CreateItemAsync(section, item.Title, item.Id, CancellationToken.None);
-                if (section == BoardSection.Habit)
-                {
-                    await _inner.UpdateHabitAsync(
-                        recreated.Id,
-                        item.Title,
-                        item.Notes,
-                        item.Tags,
-                        item.TrackPlus,
-                        item.TrackMinus,
-                        item.ResetPeriod,
-                        item.Counter,
-                        item.NegativeCounter,
-                        item.ChecklistJson,
-                        item.SortOrder,
-                        CancellationToken.None);
-                }
-                else if (section == BoardSection.Daily)
-                {
-                    await _inner.UpdateDailyAsync(
-                        recreated.Id,
-                        item.Title,
-                        item.Notes,
-                        item.Tags,
-                        item.DailyStartDate?.ToDateTime(TimeOnly.MinValue),
-                        item.DailyRepeat,
-                        item.DailyRepeatInterval,
-                        item.ChecklistJson,
-                        item.Counter,
-                        item.SortOrder,
-                        CancellationToken.None);
-                    if (item.IsCompleted)
-                    {
-                        await _inner.ToggleItemAsync(BoardSection.Daily, recreated.Id, CancellationToken.None);
-                    }
-                }
-                else if (section == BoardSection.Todo)
-                {
-                    await _inner.UpdateTodoAsync(
-                        recreated.Id,
-                        item.Title,
-                        item.Notes,
-                        item.Tags,
-                        item.ChecklistJson,
-                        item.TodoDueDate?.ToDateTime(TimeOnly.MinValue),
-                        item.SortOrder,
-                        CancellationToken.None);
-                    if (item.IsCompleted)
-                    {
-                        await _inner.ToggleItemAsync(BoardSection.Todo, recreated.Id, CancellationToken.None);
-                    }
-                }
+                await RestoreDeletedItemAsync(section, item).ConfigureAwait(false);
             });
         }
         return success;
     }
 
+    private async Task RestoreDeletedItemAsync(BoardSection section, BoardItem item)
+    {
+        BoardItem recreated = await _inner.CreateItemAsync(section, item.Title, item.Id, CancellationToken.None).ConfigureAwait(false);
+        if (section == BoardSection.Habit)
+        {
+            await _inner.UpdateHabitAsync(
+                recreated.Id,
+                item.Title,
+                item.Notes,
+                item.Tags,
+                item.TrackPlus,
+                item.TrackMinus,
+                item.ResetPeriod,
+                item.Counter,
+                item.NegativeCounter,
+                item.ChecklistJson,
+                item.SortOrder,
+                CancellationToken.None).ConfigureAwait(false);
+        }
+        else if (section == BoardSection.Daily)
+        {
+            await _inner.UpdateDailyAsync(
+                recreated.Id,
+                item.Title,
+                item.Notes,
+                item.Tags,
+                item.DailyStartDate?.ToDateTime(TimeOnly.MinValue),
+                item.DailyRepeat,
+                item.DailyRepeatInterval,
+                item.ChecklistJson,
+                item.Counter,
+                item.SortOrder,
+                CancellationToken.None).ConfigureAwait(false);
+            if (item.IsCompleted)
+            {
+                await _inner.ToggleItemAsync(BoardSection.Daily, recreated.Id, CancellationToken.None).ConfigureAwait(false);
+            }
+        }
+        else if (section == BoardSection.Todo)
+        {
+            await _inner.UpdateTodoAsync(
+                recreated.Id,
+                item.Title,
+                item.Notes,
+                item.Tags,
+                item.ChecklistJson,
+                item.TodoDueDate?.ToDateTime(TimeOnly.MinValue),
+                item.SortOrder,
+                CancellationToken.None).ConfigureAwait(false);
+            if (item.IsCompleted)
+            {
+                await _inner.ToggleItemAsync(BoardSection.Todo, recreated.Id, CancellationToken.None).ConfigureAwait(false);
+            }
+        }
+    }
+
     public async Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
     {
-        var result = await _inner.ToggleItemAsync(section, itemId, cancellationToken);
+        BoardItem? result = await _inner.ToggleItemAsync(section, itemId, cancellationToken);
         if (result is not null && !_undoService.IsUndoing)
         {
-            var actionVerb = result.IsCompleted ? "Complete" : "Uncomplete";
+            string actionVerb = result.IsCompleted ? "Complete" : "Uncomplete";
             _undoService.RegisterUndo($"{actionVerb} \"{result.Title}\"", async () =>
             {
                 await _inner.ToggleItemAsync(section, itemId, CancellationToken.None);
@@ -184,18 +183,18 @@ public sealed class UndoableBoardDataService : IBoardDataService
 
     public async Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
-        var item = await FindItemAsync(itemId, cancellationToken);
+        BoardItem? item = await FindItemAsync(itemId, cancellationToken);
         if (item is null)
         {
             return await _inner.IncrementHabitPlusAsync(itemId, cancellationToken);
         }
 
-        var result = await _inner.IncrementHabitPlusAsync(itemId, cancellationToken);
+        BoardItem? result = await _inner.IncrementHabitPlusAsync(itemId, cancellationToken);
         if (result is not null && !_undoService.IsUndoing)
         {
             _undoService.RegisterUndo($"Increment + for \"{item.Title}\"", async () =>
             {
-                var current = await FindItemAsync(itemId, CancellationToken.None);
+                BoardItem? current = await FindItemAsync(itemId, CancellationToken.None);
                 if (current is not null)
                 {
                     await _inner.UpdateHabitAsync(
@@ -219,18 +218,18 @@ public sealed class UndoableBoardDataService : IBoardDataService
 
     public async Task<BoardItem?> IncrementHabitMinusAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
-        var item = await FindItemAsync(itemId, cancellationToken);
+        BoardItem? item = await FindItemAsync(itemId, cancellationToken);
         if (item is null)
         {
             return await _inner.IncrementHabitMinusAsync(itemId, cancellationToken);
         }
 
-        var result = await _inner.IncrementHabitMinusAsync(itemId, cancellationToken);
+        BoardItem? result = await _inner.IncrementHabitMinusAsync(itemId, cancellationToken);
         if (result is not null && !_undoService.IsUndoing)
         {
             _undoService.RegisterUndo($"Increment − for \"{item.Title}\"", async () =>
             {
-                var current = await FindItemAsync(itemId, CancellationToken.None);
+                BoardItem? current = await FindItemAsync(itemId, CancellationToken.None);
                 if (current is not null)
                 {
                     await _inner.UpdateHabitAsync(
@@ -266,7 +265,7 @@ public sealed class UndoableBoardDataService : IBoardDataService
         double? sortOrder = null,
         CancellationToken cancellationToken = default)
     {
-        var item = await FindItemAsync(itemId, cancellationToken);
+        BoardItem? item = await FindItemAsync(itemId, cancellationToken);
         if (item is null)
         {
             return await _inner.UpdateHabitAsync(
@@ -274,7 +273,7 @@ public sealed class UndoableBoardDataService : IBoardDataService
                 counter, negativeCounter, checklistJson, sortOrder, cancellationToken);
         }
 
-        var result = await _inner.UpdateHabitAsync(
+        BoardItem? result = await _inner.UpdateHabitAsync(
             itemId, title, notes, tags, trackPlus, trackMinus, resetPeriod,
             counter, negativeCounter, checklistJson, sortOrder, cancellationToken);
 
@@ -311,13 +310,13 @@ public sealed class UndoableBoardDataService : IBoardDataService
         double? sortOrder = null,
         CancellationToken cancellationToken = default)
     {
-        var item = await FindItemAsync(itemId, cancellationToken);
+        BoardItem? item = await FindItemAsync(itemId, cancellationToken);
         if (item is null)
         {
             return await _inner.UpdateTodoAsync(itemId, title, notes, tags, checklistJson, dueDate, sortOrder, cancellationToken);
         }
 
-        var result = await _inner.UpdateTodoAsync(itemId, title, notes, tags, checklistJson, dueDate, sortOrder, cancellationToken);
+        BoardItem? result = await _inner.UpdateTodoAsync(itemId, title, notes, tags, checklistJson, dueDate, sortOrder, cancellationToken);
 
         if (result is not null && !_undoService.IsUndoing
             && !IsTodoReorderOnly(item, title, notes, tags, checklistJson, dueDate, sortOrder))
@@ -351,14 +350,14 @@ public sealed class UndoableBoardDataService : IBoardDataService
         double? sortOrder = null,
         CancellationToken cancellationToken = default)
     {
-        var item = await FindItemAsync(itemId, cancellationToken);
+        BoardItem? item = await FindItemAsync(itemId, cancellationToken);
         if (item is null)
         {
             return await _inner.UpdateDailyAsync(
                 itemId, title, notes, tags, startDate, repeatType, repeatInterval, checklistJson, streak, sortOrder, cancellationToken);
         }
 
-        var result = await _inner.UpdateDailyAsync(
+        BoardItem? result = await _inner.UpdateDailyAsync(
             itemId, title, notes, tags, startDate, repeatType, repeatInterval, checklistJson, streak, sortOrder, cancellationToken);
 
         if (result is not null && !_undoService.IsUndoing
@@ -459,7 +458,7 @@ public sealed class UndoableBoardDataService : IBoardDataService
 
     private async Task<BoardItem?> FindItemAsync(Guid id, CancellationToken cancellationToken)
     {
-        var snap = await _inner.GetSnapshotAsync(cancellationToken);
+        BoardSnapshot snap = await _inner.GetSnapshotAsync(cancellationToken);
         return snap.Habits.FirstOrDefault(x => x.Id == id)
             ?? snap.Dailies.FirstOrDefault(x => x.Id == id)
             ?? snap.Todos.FirstOrDefault(x => x.Id == id);

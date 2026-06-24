@@ -2,72 +2,34 @@ using App.Shared.RCL.Models;
 
 namespace App.Shared.RCL.Services;
 
-public sealed class TimerSessionLogService : ITimerSessionLogService
+public sealed class TimerSessionLogService(
+    GlobalTimerService timer,
+    IBoardDataService boardData,
+    IUserActivityLogService userActivityLog,
+    IUserTimeZoneService timeZoneService,
+    IRemoteBoardRefreshService remoteBoardRefresh) : ITimerSessionLogService
 {
-    private readonly IBoardDataService _boardData;
-    private readonly IRemoteBoardRefreshService _remoteBoardRefresh;
-    private readonly GlobalTimerService _timer;
-    private readonly IUserActivityLogService _userActivityLog;
-    private readonly IUserTimeZoneService _timeZoneService;
-
-    public TimerSessionLogService(
-        GlobalTimerService timer,
-        IBoardDataService boardData,
-        IUserActivityLogService userActivityLog,
-        IUserTimeZoneService timeZoneService,
-        IRemoteBoardRefreshService remoteBoardRefresh)
-    {
-        _timer = timer;
-        _boardData = boardData;
-        _userActivityLog = userActivityLog;
-        _timeZoneService = timeZoneService;
-        _remoteBoardRefresh = remoteBoardRefresh;
-    }
+    private readonly IBoardDataService _boardData = boardData;
+    private readonly IRemoteBoardRefreshService _remoteBoardRefresh = remoteBoardRefresh;
+    private readonly GlobalTimerService _timer = timer;
+    private readonly IUserActivityLogService _userActivityLog = userActivityLog;
+    private readonly IUserTimeZoneService _timeZoneService = timeZoneService;
 
     public async Task<TimerSessionLogResult> LogStoppedSessionAsync(
         TimeSpan duration,
         CancellationToken cancellationToken = default)
     {
-        var targetType = _timer.TargetType;
-        var targetId = _timer.TargetId;
-        var boardId = _timer.BoardItemId ?? await ResolveBoardItemIdFromTitleAsync(targetType, targetId, cancellationToken)
+        string? targetType = _timer.TargetType;
+        string? targetId = _timer.TargetId;
+        Guid? boardId = _timer.BoardItemId ?? await ResolveBoardItemIdFromTitleAsync(targetType, targetId, cancellationToken)
             .ConfigureAwait(false);
-        var boardError = false;
+        bool boardError = false;
 
         if (boardId is Guid id && targetType is "Habit" or "Daily" or "Todo")
         {
             try
             {
-                var snapshot = await _boardData.GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
-                var progressed = false;
-
-                if (targetType == "Habit")
-                {
-                    var updated = await _boardData.IncrementHabitPlusAsync(id, cancellationToken).ConfigureAwait(false);
-                    progressed = updated is not null;
-                }
-                else if (targetType == "Daily")
-                {
-                    var daily = snapshot.Dailies.FirstOrDefault(d => d.Id == id);
-                    var today = DailySchedule.LocalToday(_timeZoneService);
-                    if (daily is not null && !DailySchedule.IsCompleteForDate(daily, today))
-                    {
-                        var updated = await _boardData.ToggleItemAsync(BoardSection.Daily, id, cancellationToken)
-                            .ConfigureAwait(false);
-                        progressed = updated is not null;
-                    }
-                }
-                else if (targetType == "Todo")
-                {
-                    var todo = snapshot.Todos.FirstOrDefault(t => t.Id == id);
-                    if (todo is { IsCompleted: false })
-                    {
-                        var updated = await _boardData.ToggleItemAsync(BoardSection.Todo, id, cancellationToken)
-                            .ConfigureAwait(false);
-                        progressed = updated is not null;
-                    }
-                }
-
+                bool progressed = await UpdateBoardItemProgressAsync(id, targetType, cancellationToken).ConfigureAwait(false);
                 if (progressed)
                 {
                     _timer.SetManualTarget(null);
@@ -82,7 +44,7 @@ public sealed class TimerSessionLogService : ITimerSessionLogService
 
         try
         {
-            var customLabel = boardId is null ? targetId : null;
+            string? customLabel = boardId is null ? targetId : null;
             await _userActivityLog
                 .LogTimerSessionAsync(duration, boardId, customLabel, cancellationToken)
                 .ConfigureAwait(false);
@@ -104,6 +66,44 @@ public sealed class TimerSessionLogService : ITimerSessionLogService
             $"Timer log saved for {targetType ?? "Unassigned"} '{targetId ?? "-"}' with duration {duration:hh\\:mm\\:ss}.");
     }
 
+    private async Task<bool> UpdateBoardItemProgressAsync(Guid id, string targetType, CancellationToken cancellationToken)
+    {
+        BoardSnapshot snapshot = await _boardData.GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
+
+        if (targetType == "Habit")
+        {
+            BoardItem? updated = await _boardData.IncrementHabitPlusAsync(id, cancellationToken).ConfigureAwait(false);
+            return updated is not null;
+        }
+
+        if (targetType == "Daily")
+        {
+            BoardItem? daily = snapshot.Dailies.FirstOrDefault(d => d.Id == id);
+            DateOnly today = DailySchedule.LocalToday(_timeZoneService);
+            if (daily is not null && !DailySchedule.IsCompleteForDate(daily, today))
+            {
+                BoardItem? updated = await _boardData.ToggleItemAsync(BoardSection.Daily, id, cancellationToken)
+                    .ConfigureAwait(false);
+                return updated is not null;
+            }
+            return false;
+        }
+
+        if (targetType == "Todo")
+        {
+            BoardItem? todo = snapshot.Todos.FirstOrDefault(t => t.Id == id);
+            if (todo is { IsCompleted: false })
+            {
+                BoardItem? updated = await _boardData.ToggleItemAsync(BoardSection.Todo, id, cancellationToken)
+                    .ConfigureAwait(false);
+                return updated is not null;
+            }
+            return false;
+        }
+
+        return false;
+    }
+
     private async Task<Guid?> ResolveBoardItemIdFromTitleAsync(
         string? targetType,
         string? title,
@@ -114,7 +114,7 @@ public sealed class TimerSessionLogService : ITimerSessionLogService
             return null;
         }
 
-        var snapshot = await _boardData.GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
+        BoardSnapshot snapshot = await _boardData.GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
 
         return targetType switch
         {
@@ -125,3 +125,4 @@ public sealed class TimerSessionLogService : ITimerSessionLogService
         };
     }
 }
+

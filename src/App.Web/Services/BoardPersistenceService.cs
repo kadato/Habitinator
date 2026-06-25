@@ -10,6 +10,46 @@ using Microsoft.EntityFrameworkCore;
 
 namespace App.Web.Services;
 
+public sealed record UpdateHabitArgs(
+    string Title,
+    string? Notes,
+    string? Tags,
+    bool TrackPlus,
+    bool TrackMinus,
+    HabitResetPeriod ResetPeriod,
+    int Counter,
+    int NegativeCounter,
+    string? ChecklistJson = null,
+    double? SortOrder = null,
+    DateTimeOffset? ExpectedUpdatedAtUtc = null);
+
+public sealed record UpdateDailyArgs(
+    string Title,
+    string? Notes,
+    string? Tags,
+    DateTime? StartDate,
+    DailyRepeatType RepeatType,
+    int RepeatInterval,
+    string? ChecklistJson,
+    int Streak,
+    double? SortOrder = null,
+    DateTimeOffset? ExpectedUpdatedAtUtc = null);
+
+public sealed record UpdateTodoArgs(
+    string Title,
+    string? Notes,
+    string? Tags,
+    string? ChecklistJson,
+    DateTime? DueDate,
+    double? SortOrder = null,
+    DateTimeOffset? ExpectedUpdatedAtUtc = null);
+
+internal sealed record DailyBackfillArgs(
+    DateOnly? DailyStart,
+    DailyRepeatType Repeat,
+    int Interval,
+    int Streak);
+
 public sealed class BoardPersistenceService : IDisposable
 {
     private readonly BoardSnapshotCache _snapshotCache;
@@ -509,33 +549,11 @@ public sealed class BoardPersistenceService : IDisposable
 
             if (section == BoardSection.Daily)
             {
-                var today = Today();
-                var wasCompleteForToday = IsDailyEntityCompleteForToday(entity, today);
-                if (wasCompleteForToday)
-                {
-                    entity.DailyLastCompletedOn = null;
-                    entity.IsCompleted = false;
-                }
-                else
-                {
-                    entity.DailyLastCompletedOn =
-                        new DateTime(today.Year, today.Month, today.Day, 0, 0, 0, DateTimeKind.Utc);
-                    entity.IsCompleted = true;
-                }
-
-                AddActivityEvent(userId,
-                    wasCompleteForToday ? ActivityEventType.DailyUncomplete : ActivityEventType.DailyComplete,
-                    itemId,
-                    customLabel: entity.Title);
+                ToggleDaily(entity, Today(), userId, itemId);
             }
             else
             {
-                var wasCompleted = entity.IsCompleted;
-                entity.IsCompleted = !entity.IsCompleted;
-                AddActivityEvent(userId,
-                    wasCompleted ? ActivityEventType.TodoUncomplete : ActivityEventType.TodoComplete,
-                    itemId,
-                    customLabel: entity.Title);
+                ToggleTodo(entity, userId, itemId);
             }
 
             entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
@@ -673,50 +691,17 @@ public sealed class BoardPersistenceService : IDisposable
     public async Task<BoardItem?> UpdateHabitAsync(
         Guid userId,
         Guid itemId,
-        string title,
-        string? notes,
-        string? tags,
-        bool trackPlus,
-        bool trackMinus,
-        HabitResetPeriod resetPeriod,
-        int counter,
-        int negativeCounter,
-        string? checklistJson = null,
-        double? sortOrder = null,
+        UpdateHabitArgs args,
         CancellationToken cancellationToken = default)
     {
-        var r = await UpdateHabitForApiAsync(
-            userId,
-            itemId,
-            title,
-            notes,
-            tags,
-            trackPlus,
-            trackMinus,
-            resetPeriod,
-            counter,
-            negativeCounter,
-            checklistJson,
-            sortOrder,
-            null,
-            cancellationToken);
+        var r = await UpdateHabitForApiAsync(userId, itemId, args, cancellationToken);
         return r.Status == BoardMutationStatus.Ok ? r.Item : null;
     }
 
     public Task<BoardMutationResult> UpdateHabitForApiAsync(
         Guid userId,
         Guid itemId,
-        string title,
-        string? notes,
-        string? tags,
-        bool trackPlus,
-        bool trackMinus,
-        HabitResetPeriod resetPeriod,
-        int counter,
-        int negativeCounter,
-        string? checklistJson = null,
-        double? sortOrder = null,
-        DateTimeOffset? expectedUpdatedAtUtc = null,
+        UpdateHabitArgs args,
         CancellationToken cancellationToken = default) =>
         LockAsync(async () =>
         {
@@ -729,7 +714,7 @@ public sealed class BoardPersistenceService : IDisposable
                 return new BoardMutationResult(BoardMutationStatus.NotFound, null);
             }
 
-            var st = MatchExpected(entity, expectedUpdatedAtUtc);
+            var st = MatchExpected(entity, args.ExpectedUpdatedAtUtc);
             if (st == BoardMutationStatus.Conflict)
             {
                 return new BoardMutationResult(
@@ -737,39 +722,28 @@ public sealed class BoardPersistenceService : IDisposable
                     await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken));
             }
 
+            var trackPlus = args.TrackPlus;
+            var trackMinus = args.TrackMinus;
             if (!trackPlus && !trackMinus)
             {
                 trackPlus = true;
                 trackMinus = true;
             }
 
-            entity.Title = ZalgoSanitizer.SanitizeAndTrim(title);
-            entity.Notes = string.IsNullOrWhiteSpace(notes) ? null : ZalgoSanitizer.SanitizeAndTrim(notes);
-            entity.Tags = string.IsNullOrWhiteSpace(tags) ? null : ZalgoSanitizer.SanitizeAndTrim(tags);
+            entity.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
+            entity.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
+            entity.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
             entity.TrackPlus = trackPlus;
             entity.TrackMinus = trackMinus;
-            entity.ResetPeriod = (int)resetPeriod;
-            entity.Counter = Math.Max(0, counter);
-            entity.NegativeCounter = Math.Max(0, negativeCounter);
-            entity.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson)
+            entity.ResetPeriod = (int)args.ResetPeriod;
+            entity.Counter = Math.Max(0, args.Counter);
+            entity.NegativeCounter = Math.Max(0, args.NegativeCounter);
+            entity.ChecklistJson = string.IsNullOrWhiteSpace(args.ChecklistJson)
                 ? null
-                : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(checklistJson));
-            if (sortOrder.HasValue)
-            {
-                entity.SortOrder = sortOrder.Value;
+                : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(args.ChecklistJson));
 
-                var needsRebalance = await _dbContext.BoardItems
-                    .AnyAsync(x => x.UserId == userId
-                                && x.Section == BoardSection.Habit
-                                && x.DeletedAtUtc == null
-                                && x.Id != itemId
-                                && Math.Abs(x.SortOrder - sortOrder.Value) < 1e-9,
-                              cancellationToken);
-                if (needsRebalance)
-                {
-                    await RebalanceSortOrdersAsync(userId, BoardSection.Habit, cancellationToken);
-                }
-            }
+            await UpdateSortOrderIfNeededAsync(userId, BoardSection.Habit, entity, args.SortOrder, cancellationToken);
+
             entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
             await _dbContext.SaveChangesAsync(cancellationToken);
             var habit = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
@@ -780,38 +754,17 @@ public sealed class BoardPersistenceService : IDisposable
     public async Task<BoardItem?> UpdateTodoAsync(
         Guid userId,
         Guid itemId,
-        string title,
-        string? notes,
-        string? tags,
-        string? checklistJson,
-        DateTime? dueDate,
-        double? sortOrder = null,
+        UpdateTodoArgs args,
         CancellationToken cancellationToken = default)
     {
-        var r = await UpdateTodoForApiAsync(
-            userId,
-            itemId,
-            title,
-            notes,
-            tags,
-            checklistJson,
-            dueDate,
-            sortOrder,
-            null,
-            cancellationToken);
+        var r = await UpdateTodoForApiAsync(userId, itemId, args, cancellationToken);
         return r.Status == BoardMutationStatus.Ok ? r.Item : null;
     }
 
     public Task<BoardMutationResult> UpdateTodoForApiAsync(
         Guid userId,
         Guid itemId,
-        string title,
-        string? notes,
-        string? tags,
-        string? checklistJson,
-        DateTime? dueDate,
-        double? sortOrder = null,
-        DateTimeOffset? expectedUpdatedAtUtc = null,
+        UpdateTodoArgs args,
         CancellationToken cancellationToken = default) =>
         LockAsync(async () =>
         {
@@ -824,7 +777,7 @@ public sealed class BoardPersistenceService : IDisposable
                 return new BoardMutationResult(BoardMutationStatus.NotFound, null);
             }
 
-            var st = MatchExpected(entity, expectedUpdatedAtUtc);
+            var st = MatchExpected(entity, args.ExpectedUpdatedAtUtc);
             if (st == BoardMutationStatus.Conflict)
             {
                 return new BoardMutationResult(
@@ -832,33 +785,20 @@ public sealed class BoardPersistenceService : IDisposable
                     await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken));
             }
 
-            DateTime? dueUtc = dueDate is { } d
+            DateTime? dueUtc = args.DueDate is { } d
                 ? new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc)
                 : null;
 
-            entity.Title = ZalgoSanitizer.SanitizeAndTrim(title);
-            entity.Notes = string.IsNullOrWhiteSpace(notes) ? null : ZalgoSanitizer.SanitizeAndTrim(notes);
-            entity.Tags = string.IsNullOrWhiteSpace(tags) ? null : ZalgoSanitizer.SanitizeAndTrim(tags);
-            entity.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson)
+            entity.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
+            entity.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
+            entity.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
+            entity.ChecklistJson = string.IsNullOrWhiteSpace(args.ChecklistJson)
                 ? null
-                : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(checklistJson));
+                : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(args.ChecklistJson));
             entity.DailyStartDate = dueUtc;
-            if (sortOrder.HasValue)
-            {
-                entity.SortOrder = sortOrder.Value;
 
-                var needsRebalance = await _dbContext.BoardItems
-                    .AnyAsync(x => x.UserId == userId
-                                && x.Section == BoardSection.Todo
-                                && x.DeletedAtUtc == null
-                                && x.Id != itemId
-                                && Math.Abs(x.SortOrder - sortOrder.Value) < 1e-9,
-                              cancellationToken);
-                if (needsRebalance)
-                {
-                    await RebalanceSortOrdersAsync(userId, BoardSection.Todo, cancellationToken);
-                }
-            }
+            await UpdateSortOrderIfNeededAsync(userId, BoardSection.Todo, entity, args.SortOrder, cancellationToken);
+
             entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
             await _dbContext.SaveChangesAsync(cancellationToken);
             var todo = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
@@ -869,47 +809,17 @@ public sealed class BoardPersistenceService : IDisposable
     public async Task<BoardItem?> UpdateDailyAsync(
         Guid userId,
         Guid itemId,
-        string title,
-        string? notes,
-        string? tags,
-        DateTime? startDate,
-        DailyRepeatType repeatType,
-        int repeatInterval,
-        string? checklistJson,
-        int streak,
-        double? sortOrder = null,
+        UpdateDailyArgs args,
         CancellationToken cancellationToken = default)
     {
-        var r = await UpdateDailyForApiAsync(
-            userId,
-            itemId,
-            title,
-            notes,
-            tags,
-            startDate,
-            repeatType,
-            repeatInterval,
-            checklistJson,
-            streak,
-            sortOrder,
-            null,
-            cancellationToken);
+        var r = await UpdateDailyForApiAsync(userId, itemId, args, cancellationToken);
         return r.Status == BoardMutationStatus.Ok ? r.Item : null;
     }
 
     public Task<BoardMutationResult> UpdateDailyForApiAsync(
         Guid userId,
         Guid itemId,
-        string title,
-        string? notes,
-        string? tags,
-        DateTime? startDate,
-        DailyRepeatType repeatType,
-        int repeatInterval,
-        string? checklistJson,
-        int streak,
-        double? sortOrder = null,
-        DateTimeOffset? expectedUpdatedAtUtc = null,
+        UpdateDailyArgs args,
         CancellationToken cancellationToken = default) =>
         LockAsync(async () =>
         {
@@ -922,7 +832,7 @@ public sealed class BoardPersistenceService : IDisposable
                 return new BoardMutationResult(BoardMutationStatus.NotFound, null);
             }
 
-            var st = MatchExpected(entity, expectedUpdatedAtUtc);
+            var st = MatchExpected(entity, args.ExpectedUpdatedAtUtc);
             if (st == BoardMutationStatus.Conflict)
             {
                 return new BoardMutationResult(
@@ -933,49 +843,37 @@ public sealed class BoardPersistenceService : IDisposable
             var today = Today();
             var wasCompleteForToday = IsDailyEntityCompleteForToday(entity, today);
 
-            var n = Math.Max(1, Math.Min(999, repeatInterval));
-            DateTime? startUtc = startDate is { } s
+            var n = Math.Max(1, Math.Min(999, args.RepeatInterval));
+            DateTime? startUtc = args.StartDate is { } s
                 ? new DateTime(s.Year, s.Month, s.Day, 0, 0, 0, DateTimeKind.Utc)
                 : null;
-            var streakClamped = Math.Max(0, Math.Min(9999, streak));
+            var streakClamped = Math.Max(0, Math.Min(9999, args.Streak));
 
             DateOnly? newStartD = startUtc is { } su ? DateOnly.FromDateTime(su) : null;
 
-            entity.Title = ZalgoSanitizer.SanitizeAndTrim(title);
-            entity.Notes = string.IsNullOrWhiteSpace(notes) ? null : ZalgoSanitizer.SanitizeAndTrim(notes);
-            entity.Tags = string.IsNullOrWhiteSpace(tags) ? null : ZalgoSanitizer.SanitizeAndTrim(tags);
+            entity.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
+            entity.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
+            entity.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
             entity.DailyStartDate = startUtc;
-            entity.DailyRepeatType = (int)repeatType;
+            entity.DailyRepeatType = (int)args.RepeatType;
             entity.DailyRepeatInterval = n;
-            entity.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson)
+            entity.ChecklistJson = string.IsNullOrWhiteSpace(args.ChecklistJson)
                 ? null
-                : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(checklistJson));
+                : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(args.ChecklistJson));
             entity.Counter = streakClamped;
-            if (sortOrder.HasValue)
-            {
-                entity.SortOrder = sortOrder.Value;
 
-                var needsRebalance = await _dbContext.BoardItems
-                    .AnyAsync(x => x.UserId == userId
-                                && x.Section == BoardSection.Daily
-                                && x.DeletedAtUtc == null
-                                && x.Id != itemId
-                                && Math.Abs(x.SortOrder - sortOrder.Value) < 1e-9,
-                              cancellationToken);
-                if (needsRebalance)
-                {
-                    await RebalanceSortOrdersAsync(userId, BoardSection.Daily, cancellationToken);
-                }
-            }
+            await UpdateSortOrderIfNeededAsync(userId, BoardSection.Daily, entity, args.SortOrder, cancellationToken);
+
             entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
 
             // Always reconcile streak backfill, not only when Counter/schedule appear to change. Otherwise a save
             // with the same values (e.g. only title changed) or a previously skipped run leaves no DailyComplete
             // rows, so statistics/heatmap never match the daily streak.
             var streakNotAfter = today.AddDays(-1);
-            await ReconcileDailyStreakBackfillAsync(userId, itemId, newStartD, repeatType, n, streakClamped,
+            await ReconcileDailyStreakBackfillAsync(userId, itemId,
+                new DailyBackfillArgs(newStartD, args.RepeatType, n, streakClamped),
                 streakNotAfter, cancellationToken);
-            ApplyManualStreakToEntity(entity, newStartD, repeatType, n, streakClamped, today, wasCompleteForToday);
+            ApplyManualStreakToEntity(entity, newStartD, args.RepeatType, n, streakClamped, today, wasCompleteForToday);
 
             await _dbContext.SaveChangesAsync(cancellationToken);
             var daily = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
@@ -1037,15 +935,12 @@ public sealed class BoardPersistenceService : IDisposable
     private async Task ReconcileDailyStreakBackfillAsync(
         Guid userId,
         Guid itemId,
-        DateOnly? dailyStart,
-        DailyRepeatType repeat,
-        int interval,
-        int streak,
+        DailyBackfillArgs args,
         DateOnly notAfter,
         CancellationToken cancellationToken)
     {
         var newSet = new HashSet<DateOnly>(DailyStreakBackfill.GetLastNScheduledCompletionDays(
-            dailyStart, repeat, interval, streak, notAfter));
+            args.DailyStart, args.Repeat, args.Interval, args.Streak, notAfter));
 
         var toRemove = await _dbContext.UserActivityEvents
             .Where(e => e.UserId == userId && e.BoardItemId == itemId && e.EventType == ActivityEventType.DailyComplete)
@@ -1464,44 +1359,65 @@ public sealed class BoardPersistenceService : IDisposable
         return ToModelWithToday(entity, today, EmptyDailyStreaks);
     }
 
+    private static (DateOnly? start, DateOnly? todoDue) ResolveDates(BoardItemEntity entity)
+    {
+        if (entity.Section == BoardSection.Daily)
+        {
+            return (entity.DailyStartDate is { } d0 ? DateOnly.FromDateTime(d0) : null, null);
+        }
+        if (entity.Section == BoardSection.Todo)
+        {
+            return (null, entity.DailyStartDate is { } d1 ? DateOnly.FromDateTime(d1) : null);
+        }
+        return (null, null);
+    }
+
+    private static (DailyRepeatType repeat, int interval) ResolveSchedule(BoardItemEntity entity)
+    {
+        if (entity.Section != BoardSection.Daily)
+        {
+            return (DailyRepeatType.Daily, 1);
+        }
+
+        DailyRepeatType repeat = Enum.IsDefined(typeof(DailyRepeatType), entity.DailyRepeatType)
+            ? (DailyRepeatType)entity.DailyRepeatType
+            : DailyRepeatType.Daily;
+        int interval = entity.DailyRepeatInterval < 1 ? 1 : Math.Min(999, entity.DailyRepeatInterval);
+        return (repeat, interval);
+    }
+
+    private static HabitResetPeriod ResolveResetPeriod(BoardItemEntity entity)
+    {
+        return Enum.IsDefined(typeof(HabitResetPeriod), entity.ResetPeriod)
+            ? (HabitResetPeriod)entity.ResetPeriod
+            : HabitResetPeriod.Daily;
+    }
+
     private static BoardItem ToModelWithToday(
         BoardItemEntity entity,
         DateOnly today,
         IReadOnlyDictionary<Guid, int> dailyStreakById)
     {
-        DateOnly? start = null;
-        DateOnly? todoDue = null;
-        if (entity.Section == BoardSection.Daily)
-        {
-            start = entity.DailyStartDate is { } d0 ? DateOnly.FromDateTime(d0) : null;
-        }
-        else if (entity.Section == BoardSection.Todo)
-        {
-            todoDue = entity.DailyStartDate is { } d1 ? DateOnly.FromDateTime(d1) : null;
-        }
-
-        var repeat = Enum.IsDefined(typeof(DailyRepeatType), entity.DailyRepeatType)
-            ? (DailyRepeatType)entity.DailyRepeatType
-            : DailyRepeatType.Daily;
-        var interval = entity.DailyRepeatInterval < 1 ? 1 : Math.Min(999, entity.DailyRepeatInterval);
+        var (start, todoDue) = ResolveDates(entity);
+        var (repeat, interval) = ResolveSchedule(entity);
         DateOnly? lastCompleted = entity.DailyLastCompletedOn is { } lc
             ? DateOnly.FromDateTime(lc)
             : null;
-        bool isCompleted;
+        bool isCompleted = entity.Section == BoardSection.Daily
+            ? IsDailyEntityCompleteForToday(entity, today)
+            : entity.IsCompleted;
+
+        int displayCounter;
         if (entity.Section == BoardSection.Daily)
         {
-            isCompleted = IsDailyEntityCompleteForToday(entity, today);
+            displayCounter = dailyStreakById.TryGetValue(entity.Id, out int computedStreak)
+                ? computedStreak
+                : entity.Counter;
         }
         else
         {
-            isCompleted = entity.IsCompleted;
+            displayCounter = entity.Counter;
         }
-
-        // Dailies: Counter column holds the value from the edit dialog (and backfill). Event-derived streak
-        // is the live picture; take the max so manual saves show up when they exceed computed (e.g. just set).
-        var displayCounter = entity.Section == BoardSection.Daily
-            ? Math.Max(dailyStreakById.GetValueOrDefault(entity.Id, 0), entity.Counter)
-            : entity.Counter;
 
         return new BoardItem(
             entity.Id,
@@ -1513,12 +1429,10 @@ public sealed class BoardPersistenceService : IDisposable
             entity.TrackPlus,
             entity.TrackMinus,
             entity.NegativeCounter,
-            Enum.IsDefined(typeof(HabitResetPeriod), entity.ResetPeriod)
-                ? (HabitResetPeriod)entity.ResetPeriod
-                : HabitResetPeriod.Daily,
+            ResolveResetPeriod(entity),
             start,
-            entity.Section == BoardSection.Daily ? repeat : DailyRepeatType.Daily,
-            entity.Section == BoardSection.Daily ? interval : 1,
+            repeat,
+            interval,
             entity.ChecklistJson,
             lastCompleted,
             todoDue,
@@ -1536,6 +1450,63 @@ public sealed class BoardPersistenceService : IDisposable
         }
 
         return entity.DailyLastCompletedOn is null && entity.IsCompleted;
+    }
+
+    private async Task UpdateSortOrderIfNeededAsync(
+        Guid userId,
+        BoardSection section,
+        BoardItemEntity entity,
+        double? sortOrder,
+        CancellationToken cancellationToken)
+    {
+        if (!sortOrder.HasValue)
+        {
+            return;
+        }
+
+        entity.SortOrder = sortOrder.Value;
+        var needsRebalance = await _dbContext.BoardItems
+            .AnyAsync(x => x.UserId == userId
+                        && x.Section == section
+                        && x.DeletedAtUtc == null
+                        && x.Id != entity.Id
+                        && Math.Abs(x.SortOrder - sortOrder.Value) < 1e-9,
+                      cancellationToken);
+        if (needsRebalance)
+        {
+            await RebalanceSortOrdersAsync(userId, section, cancellationToken);
+        }
+    }
+
+    private void ToggleDaily(BoardItemEntity entity, DateOnly today, Guid userId, Guid itemId)
+    {
+        var wasCompleteForToday = IsDailyEntityCompleteForToday(entity, today);
+        if (wasCompleteForToday)
+        {
+            entity.DailyLastCompletedOn = null;
+            entity.IsCompleted = false;
+        }
+        else
+        {
+            entity.DailyLastCompletedOn =
+                new DateTime(today.Year, today.Month, today.Day, 0, 0, 0, DateTimeKind.Utc);
+            entity.IsCompleted = true;
+        }
+
+        AddActivityEvent(userId,
+            wasCompleteForToday ? ActivityEventType.DailyUncomplete : ActivityEventType.DailyComplete,
+            itemId,
+            customLabel: entity.Title);
+    }
+
+    private void ToggleTodo(BoardItemEntity entity, Guid userId, Guid itemId)
+    {
+        var wasCompleted = entity.IsCompleted;
+        entity.IsCompleted = !entity.IsCompleted;
+        AddActivityEvent(userId,
+            wasCompleted ? ActivityEventType.TodoUncomplete : ActivityEventType.TodoComplete,
+            itemId,
+            customLabel: entity.Title);
     }
 
     private async Task<double> GetInitialSortOrderAsync(Guid userId, BoardSection section, CancellationToken cancellationToken)

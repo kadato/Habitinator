@@ -114,16 +114,7 @@ public sealed class WebBoardDataService : IBoardDataService
         return await _boardPersistenceService.UpdateHabitAsync(
             userId,
             itemId,
-            title,
-            notes,
-            tags,
-            trackPlus,
-            trackMinus,
-            resetPeriod,
-            counter,
-            negativeCounter,
-            checklistJson,
-            sortOrder,
+            new UpdateHabitArgs(title, notes, tags, trackPlus, trackMinus, resetPeriod, counter, negativeCounter, checklistJson, sortOrder),
             cancellationToken);
     }
 
@@ -141,12 +132,7 @@ public sealed class WebBoardDataService : IBoardDataService
         return await _boardPersistenceService.UpdateTodoAsync(
             userId,
             itemId,
-            title,
-            notes,
-            tags,
-            checklistJson,
-            dueDate,
-            sortOrder,
+            new UpdateTodoArgs(title, notes, tags, checklistJson, dueDate, sortOrder),
             cancellationToken);
     }
 
@@ -167,15 +153,7 @@ public sealed class WebBoardDataService : IBoardDataService
         return await _boardPersistenceService.UpdateDailyAsync(
             userId,
             itemId,
-            title,
-            notes,
-            tags,
-            startDate,
-            repeatType,
-            repeatInterval,
-            checklistJson,
-            streak,
-            sortOrder,
+            new UpdateDailyArgs(title, notes, tags, startDate, repeatType, repeatInterval, checklistJson, streak, sortOrder),
             cancellationToken);
     }
 

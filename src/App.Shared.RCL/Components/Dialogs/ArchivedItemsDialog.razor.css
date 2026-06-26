@@ -17,7 +17,7 @@
 }
 
 /* deep targets the dialog wrapper since it is dynamically appended by MudBlazor */
-::deep(.archived-dialog) {
+::deep .archived-dialog {
     background: var(--mud-palette-surface) !important;
     border: 1px solid var(--mud-palette-divider) !important;
     border-radius: 16px !important;
@@ -58,16 +58,16 @@
     width: 100%;
 }
 
-.search-container ::deep(.mud-input-outlined-border) {
+.search-container ::deep .mud-input-outlined-border {
     border-color: var(--mud-palette-divider) !important;
     border-radius: 8px !important;
 }
 
-.search-container ::deep(.mud-input-outlined:hover .mud-input-outlined-border) {
+.search-container ::deep .mud-input-outlined:hover .mud-input-outlined-border {
     border-color: var(--mud-palette-text-secondary) !important;
 }
 
-.search-container ::deep(.mud-input-outlined.mud-input-focused .mud-input-outlined-border) {
+.search-container ::deep .mud-input-outlined.mud-input-focused .mud-input-outlined-border {
     border-color: var(--mud-palette-primary) !important;
     border-width: 1.5px !important;
 }

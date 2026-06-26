@@ -31,7 +31,7 @@ Write-Host "Starting SonarQube Scanner..."
 dotnet tool run dotnet-sonarscanner begin `
     /k:"Habitinator" `
     /d:sonar.token="$token" `
-    /d:sonar.host.url="http://localhost:9000" `
+    /d:sonar.host.url="http://localhost:9900" `
     /d:sonar.cs.vstest.reportsPaths="TestResults/*.trx" `
     /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
 

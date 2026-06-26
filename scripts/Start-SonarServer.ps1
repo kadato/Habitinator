@@ -1,10 +1,17 @@
 # Check if SonarQube container is already running
 $containerName = "sonarqube"
+$port = 9900
 $isRunning = docker ps --filter "name=$containerName" --filter "status=running" --format "{{.Names}}"
 
 if (-not $isRunning) {
-    Write-Host "Starting SonarQube container..."
-    docker run -d --name $containerName -p 9000:9000 sonarqube:latest
+    # Check if a stopped container with the same name exists, if so, remove it
+    $hasContainer = docker ps -a --filter "name=$containerName" --format "{{.Names}}"
+    if ($hasContainer) {
+        Write-Host "Removing stopped SonarQube container..."
+        docker rm $containerName
+    }
+    Write-Host "Starting SonarQube container on port $port..."
+    docker run -d --name $containerName -p "${port}:9000" sonarqube:latest
 } else {
     Write-Host "SonarQube container is already running."
 }
@@ -13,7 +20,7 @@ if (-not $isRunning) {
 Write-Host "Waiting for SonarQube to start..."
 while ($true) {
     try {
-        $status = Invoke-RestMethod -Uri "http://localhost:9000/api/system/status" -Method Get -TimeoutSec 5
+        $status = Invoke-RestMethod -Uri "http://localhost:$port/api/system/status" -Method Get -TimeoutSec 5
         if ($status.status -eq "UP") {
             Write-Host "SonarQube is UP!"
             break
@@ -32,7 +39,7 @@ $basicAuthHeader = @{ Authorization = "Basic $base64" }
 
 # Change password from admin to SonarAdmin123!
 try {
-    $res = Invoke-RestMethod -Uri "http://localhost:9000/api/users/change_password?login=admin&previousPassword=admin&password=SonarAdmin123!" -Method Post -Headers $basicAuthHeader
+    $res = Invoke-RestMethod -Uri "http://localhost:$port/api/users/change_password?login=admin&previousPassword=admin&password=SonarAdmin123!" -Method Post -Headers $basicAuthHeader
     Write-Host "Password changed successfully to SonarAdmin123!"
 } catch {
     Write-Host "Failed to change password with admin:admin. Checking if already updated..."
@@ -46,7 +53,7 @@ $newAuthHeader = @{ Authorization = "Basic $base64New" }
 
 # Create Project
 try {
-    $res = Invoke-RestMethod -Uri "http://localhost:9000/api/projects/create?project=Habitinator&name=Habitinator" -Method Post -Headers $newAuthHeader
+    $res = Invoke-RestMethod -Uri "http://localhost:$port/api/projects/create?project=Habitinator&name=Habitinator" -Method Post -Headers $newAuthHeader
     Write-Host "Project 'Habitinator' created."
 } catch {
     Write-Host "Project might already exist: $_"
@@ -54,12 +61,12 @@ try {
 
 # Revoke existing token if any
 try {
-    $res = Invoke-RestMethod -Uri "http://localhost:9000/api/user_tokens/revoke?name=HabitinatorScanner" -Method Post -Headers $newAuthHeader
+    $res = Invoke-RestMethod -Uri "http://localhost:$port/api/user_tokens/revoke?name=HabitinatorScanner" -Method Post -Headers $newAuthHeader
     Write-Host "Revoked old token if it existed."
 } catch {}
 
 # Generate new token
-$tokenRes = Invoke-RestMethod -Uri "http://localhost:9000/api/user_tokens/generate?name=HabitinatorScanner" -Method Post -Headers $newAuthHeader
+$tokenRes = Invoke-RestMethod -Uri "http://localhost:$port/api/user_tokens/generate?name=HabitinatorScanner" -Method Post -Headers $newAuthHeader
 $token = $tokenRes.token
 Write-Host "Generated Token: $token"
 

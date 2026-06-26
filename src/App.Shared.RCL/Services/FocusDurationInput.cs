@@ -289,59 +289,50 @@ public static class FocusDurationInput
         var a = Regex.Match(s, @"^(\d{1,2})h(\d{1,2})m(\d{1,2})s$", RegexOptions.IgnoreCase);
         if (a.Success)
         {
-            var h = int.Parse(a.Groups[1].Value, CultureInfo.InvariantCulture);
-            var m = int.Parse(a.Groups[2].Value, CultureInfo.InvariantCulture);
-            var sec = int.Parse(a.Groups[3].Value, CultureInfo.InvariantCulture);
-            if (m is < 0 or > 59 || sec is < 0 or > 59 || h is < 0 or > 23)
-            {
-                return false;
-            }
-
-            if (h == 0 && m == 0 && sec == 0)
-            {
-                return false;
-            }
-
-            return TryFromTotalSeconds(h * 3600L + m * 60L + sec, out duration);
+            return TryValidateAndCreate(
+                int.Parse(a.Groups[1].Value, CultureInfo.InvariantCulture),
+                int.Parse(a.Groups[2].Value, CultureInfo.InvariantCulture),
+                int.Parse(a.Groups[3].Value, CultureInfo.InvariantCulture),
+                out duration);
         }
 
         var b = Regex.Match(s, @"^(\d{1,2})h(\d{1,2})m$", RegexOptions.IgnoreCase);
         if (b.Success)
         {
-            var h = int.Parse(b.Groups[1].Value, CultureInfo.InvariantCulture);
-            var m = int.Parse(b.Groups[2].Value, CultureInfo.InvariantCulture);
-            if (m is < 0 or > 59 || h is < 0 or > 23)
-            {
-                return false;
-            }
-
-            if (h == 0 && m == 0)
-            {
-                return false;
-            }
-
-            return TryFromTotalSeconds(h * 3600L + m * 60L, out duration);
+            return TryValidateAndCreate(
+                int.Parse(b.Groups[1].Value, CultureInfo.InvariantCulture),
+                int.Parse(b.Groups[2].Value, CultureInfo.InvariantCulture),
+                0,
+                out duration);
         }
 
         var c = Regex.Match(s, @"^(\d{1,2})h(\d{1,2})s$", RegexOptions.IgnoreCase);
         if (c.Success)
         {
-            var h = int.Parse(c.Groups[1].Value, CultureInfo.InvariantCulture);
-            var sec = int.Parse(c.Groups[2].Value, CultureInfo.InvariantCulture);
-            if (sec is < 0 or > 59 || h is < 0 or > 23)
-            {
-                return false;
-            }
-
-            if (h == 0 && sec == 0)
-            {
-                return false;
-            }
-
-            return TryFromTotalSeconds(h * 3600L + sec, out duration);
+            return TryValidateAndCreate(
+                int.Parse(c.Groups[1].Value, CultureInfo.InvariantCulture),
+                0,
+                int.Parse(c.Groups[2].Value, CultureInfo.InvariantCulture),
+                out duration);
         }
 
         return false;
+    }
+
+    private static bool TryValidateAndCreate(int h, int m, int sec, out TimeSpan? duration)
+    {
+        duration = null;
+        if (m is < 0 or > 59 || sec is < 0 or > 59 || h is < 0 or > 23)
+        {
+            return false;
+        }
+
+        if (h == 0 && m == 0 && sec == 0)
+        {
+            return false;
+        }
+
+        return TryFromTotalSeconds(h * 3600L + m * 60L + sec, out duration);
     }
 
     private static bool TryParseHMSuffixForm(string s, out TimeSpan? duration)

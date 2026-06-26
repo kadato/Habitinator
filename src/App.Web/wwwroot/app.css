@@ -41,8 +41,8 @@ a:hover, .btn-link:hover {
 
 .btn-primary {
     color: #fff;
-    background-color: #3b82f6;
-    border-color: #2563eb;
+    background-color: #2563eb;
+    border-color: #1d4ed8;
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {

@@ -294,18 +294,18 @@
 }
 
 .badge-habit {
-    background: rgba(139, 92, 246, 0.12);
-    color: #8b5cf6;
+    background-color: #f3effe;
+    color: #6d28d9;
 }
 
 .badge-daily {
-    background: rgba(13, 148, 136, 0.12);
-    color: #0d9488;
+    background-color: #e6f4f3;
+    color: #0f766e;
 }
 
 .badge-todo {
-    background: rgba(245, 158, 11, 0.12);
-    color: #b45309; /* Slightly darker amber for text readability */
+    background-color: #fef5e6;
+    color: #92400e; /* Slightly darker amber for text readability */
 }
 
 /* Action button styling */

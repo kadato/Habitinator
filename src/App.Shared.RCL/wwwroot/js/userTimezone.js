@@ -1,5 +1,5 @@
 // Timezone detection for user local time
-window.habitinatorGetUserTimezone = function () {
+globalThis.habitinatorGetUserTimezone = function () {
     try {
         return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
     } catch (e) {
@@ -7,7 +7,7 @@ window.habitinatorGetUserTimezone = function () {
     }
 };
 
-window.habitinatorGetTimezoneOffsetMinutes = function () {
+globalThis.habitinatorGetTimezoneOffsetMinutes = function () {
     try {
         return new Date().getTimezoneOffset();
     } catch (e) {
@@ -15,7 +15,7 @@ window.habitinatorGetTimezoneOffsetMinutes = function () {
     }
 };
 
-window.habitinatorSetTheme = function (theme) {
+globalThis.habitinatorSetTheme = function (theme) {
     try {
         const root = document.documentElement;
         const updateTheme = () => {
@@ -32,7 +32,7 @@ window.habitinatorSetTheme = function (theme) {
             document.cookie = "habitinator_theme=" + theme + "; path=/; max-age=31536000; SameSite=Lax";
         };
 
-        if (document.startViewTransition && window.matchMedia('(prefers-reduced-motion: no-preference)').matches) {
+        if (document.startViewTransition && globalThis.matchMedia('(prefers-reduced-motion: no-preference)').matches) {
             document.startViewTransition(updateTheme);
         } else {
             updateTheme();

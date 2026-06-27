@@ -19,7 +19,7 @@
     min-height: 48px;
 }
 
-.app-header-nav.flex-column :deep .app-header-nav-btn.mud-button-root {
+.app-header-nav.flex-column ::deep .app-header-nav-btn.mud-button-root {
     justify-content: flex-start;
     width: 100%;
     min-height: 48px;

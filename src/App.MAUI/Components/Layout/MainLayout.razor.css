@@ -71,8 +71,9 @@
     margin-right: 0.9rem;
     flex-shrink: 0;
     font-weight: 850 !important;
-    letter-spacing: -0.03em !important;
+    letter-spacing: -0.03em;
     background: linear-gradient(135deg, var(--mud-palette-primary) 0%, var(--mud-palette-tertiary) 100%);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     line-height: 1.15 !important;

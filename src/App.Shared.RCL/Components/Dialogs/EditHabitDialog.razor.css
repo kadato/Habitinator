@@ -1,4 +1,4 @@
-.edit-habit-dialog :deep(.edit-habit-dialog__content) {
+﻿.edit-habit-dialog ::deep .edit-habit-dialog__content {
     padding: 0 !important;
     overflow: visible;
 }
@@ -61,7 +61,7 @@
     text-transform: none !important;
     font-size: 0.9375rem !important;
     font-weight: 650 !important;
-    letter-spacing: 0.02em !important;
+    letter-spacing: 0.02em;
     min-width: 5.5rem !important;
     padding: 0.5rem 1.35rem !important;
     border-radius: 8px !important;
@@ -87,33 +87,33 @@
     text-transform: uppercase;
 }
 
-.edit-habit-field-header :deep(.mud-input-slot) {
+.edit-habit-field-header ::deep .mud-input-slot {
     color: var(--mud-palette-text-primary);
     font-size: 0.9rem;
     line-height: 1.45;
 }
 
-.edit-habit-field-header :deep(input),
-.edit-habit-field-header :deep(textarea) {
+.edit-habit-field-header ::deep input,
+.edit-habit-field-header ::deep textarea {
     color: var(--mud-palette-text-primary) !important;
 }
 
-.edit-habit-field-header :deep(textarea.mud-input-slot) {
+.edit-habit-field-header ::deep textarea.mud-input-slot {
     field-sizing: content;
     height: auto;
     min-height: 3lh;
     max-height: 10lh;
 }
 
-.edit-habit-field-header :deep(.mud-input-outlined-border) {
+.edit-habit-field-header ::deep .mud-input-outlined-border {
     border-color: var(--mud-palette-divider) !important;
 }
 
-.edit-habit-field-header :deep(.mud-input-outlined:hover .mud-input-outlined-border) {
+.edit-habit-field-header ::deep .mud-input-outlined:hover .mud-input-outlined-border {
     border-color: var(--mud-palette-text-secondary) !important;
 }
 
-.edit-habit-field-header :deep(.mud-input-label) {
+.edit-habit-field-header ::deep .mud-input-label {
     color: var(--mud-palette-text-secondary) !important;
 }
 
@@ -132,16 +132,16 @@
     letter-spacing: 0.03em;
 }
 
-.edit-habit-field-body :deep(.mud-input-outlined-border) {
+.edit-habit-field-body ::deep .mud-input-outlined-border {
     border-color: var(--mud-palette-divider) !important;
 }
 
-.edit-habit-field-body :deep(.mud-input-slot) {
+.edit-habit-field-body ::deep .mud-input-slot {
     color: var(--mud-palette-text-primary);
     font-size: 0.9rem;
 }
 
-.edit-habit-field-body :deep(.mud-input-label) {
+.edit-habit-field-body ::deep .mud-input-label {
     color: var(--mud-palette-text-secondary) !important;
 }
 
@@ -149,12 +149,12 @@
     width: 100%;
 }
 
-.edit-habit-select :deep(.mud-input-slot) {
+.edit-habit-select ::deep .mud-input-slot {
     width: 100%;
     color: var(--mud-palette-text-primary);
 }
 
-.edit-habit-select :deep(.mud-input.mud-input-outlined.mud-input-focused .mud-input-outlined-border) {
+.edit-habit-select ::deep .mud-input.mud-input-outlined.mud-input-focused .mud-input-outlined-border {
     border-color: var(--mud-palette-primary) !important;
     box-shadow: 0 0 0 1px var(--mud-palette-primary-lighten);
 }
@@ -225,18 +225,18 @@
     font-size: 0.8rem;
 }
 
-.edit-habit-advanced :deep(.mud-expand-panel) {
+.edit-habit-advanced ::deep .mud-expand-panel {
     background: var(--mud-palette-background-gray) !important;
     border: 1px solid var(--mud-palette-divider);
     border-radius: 0.375rem;
 }
 
-.edit-habit-advanced :deep(.mud-expand-panel-header) {
+.edit-habit-advanced ::deep .mud-expand-panel-header {
     padding: 0.45rem 0.65rem;
     min-height: unset;
 }
 
-.edit-habit-advanced :deep(.mud-expand-panel-content) {
+.edit-habit-advanced ::deep .mud-expand-panel-content {
     border-top: 1px solid var(--mud-palette-divider);
     padding: 0.65rem;
 }
@@ -257,7 +257,7 @@
     flex-shrink: 0;
 }
 
-.counter-adjust__field :deep(.mud-input-outlined-border) {
+.counter-adjust__field ::deep .mud-input-outlined-border {
     border-color: var(--mud-palette-divider) !important;
 }
 
@@ -269,7 +269,7 @@
     border-top: 1px solid var(--mud-palette-divider);
 }
 
-.edit-habit-delete-wrap :deep(.mud-button-label) {
+.edit-habit-delete-wrap ::deep .mud-button-label {
     text-transform: none;
     font-weight: 600;
     font-size: 0.8rem;
@@ -521,19 +521,19 @@
     color: var(--mud-palette-primary-darken);
 }
 
-.edit-daily-checklist-panels :deep(.mud-expand-panel) {
+.edit-daily-checklist-panels ::deep .mud-expand-panel {
     background: var(--mud-palette-background-gray) !important;
     border: 1px solid var(--mud-palette-divider);
     border-radius: 0.375rem;
     margin-bottom: 0.75rem;
 }
 
-.edit-daily-checklist-panels :deep(.mud-expand-panel-header) {
+.edit-daily-checklist-panels ::deep .mud-expand-panel-header {
     padding: 0.45rem 0.65rem;
     min-height: unset;
 }
 
-.edit-daily-checklist-panels :deep(.mud-expand-panel-content) {
+.edit-daily-checklist-panels ::deep .mud-expand-panel-content {
     border-top: 1px solid var(--mud-palette-divider);
     padding: 0.5rem 0.65rem 0.65rem;
 }
@@ -550,11 +550,11 @@
     border-bottom: none;
 }
 
-.edit-daily-checklist__input :deep(.mud-input-outlined-border) {
+.edit-daily-checklist__input ::deep .mud-input-outlined-border {
     border: none !important;
 }
 
-.edit-daily-checklist__input :deep(.mud-input-root) {
+.edit-daily-checklist__input ::deep .mud-input-root {
     color: var(--mud-palette-text-primary);
 }
 
@@ -599,3 +599,4 @@
 .edit-daily-checklist__add:hover .edit-daily-checklist__add-text {
     color: var(--mud-palette-primary);
 }
+

@@ -1,4 +1,4 @@
-.daily-yesterday-dialog :deep(.daily-yesterday-dialog__content) {
+﻿.daily-yesterday-dialog ::deep .daily-yesterday-dialog__content {
     padding: 0 !important;
     overflow: visible;
 }
@@ -235,3 +235,4 @@
         transform: rotate(360deg);
     }
 }
+

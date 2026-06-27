@@ -442,37 +442,40 @@ public partial class BoardColumn : IAsyncDisposable
         {
             BoardSection.Habit => BoardData.UpdateHabitAsync(
                 item.Id,
-                item.Title,
-                item.Notes,
-                item.Tags,
-                item.TrackPlus,
-                item.TrackMinus,
-                item.ResetPeriod,
-                item.Counter,
-                item.NegativeCounter,
-                item.ChecklistJson,
-                sortOrder: newSortOrder),
+                new UpdateHabitArgs(
+                    item.Title,
+                    item.Notes,
+                    item.Tags,
+                    item.TrackPlus,
+                    item.TrackMinus,
+                    item.ResetPeriod,
+                    item.Counter,
+                    item.NegativeCounter,
+                    item.ChecklistJson,
+                    SortOrder: newSortOrder)),
 
             BoardSection.Daily => BoardData.UpdateDailyAsync(
                 item.Id,
-                item.Title,
-                item.Notes,
-                item.Tags,
-                item.DailyStartDate?.ToDateTime(TimeOnly.MinValue),
-                item.DailyRepeat,
-                item.DailyRepeatInterval,
-                item.ChecklistJson,
-                item.Counter,
-                sortOrder: newSortOrder),
+                new UpdateDailyArgs(
+                    item.Title,
+                    item.Notes,
+                    item.Tags,
+                    item.DailyStartDate?.ToDateTime(TimeOnly.MinValue),
+                    item.DailyRepeat,
+                    item.DailyRepeatInterval,
+                    item.ChecklistJson,
+                    item.Counter,
+                    SortOrder: newSortOrder)),
 
             BoardSection.Todo => BoardData.UpdateTodoAsync(
                 item.Id,
-                item.Title,
-                item.Notes,
-                item.Tags,
-                item.ChecklistJson,
-                item.TodoDueDate?.ToDateTime(TimeOnly.MinValue),
-                sortOrder: newSortOrder),
+                new UpdateTodoArgs(
+                    item.Title,
+                    item.Notes,
+                    item.Tags,
+                    item.ChecklistJson,
+                    item.TodoDueDate?.ToDateTime(TimeOnly.MinValue),
+                    SortOrder: newSortOrder)),
 
             _ => Task.CompletedTask
         };
@@ -507,38 +510,41 @@ public partial class BoardColumn : IAsyncDisposable
         {
             mutation = BoardData.UpdateDailyAsync(
                 item.Id,
-                item.Title,
-                item.Notes,
-                item.Tags,
-                item.DailyStartDate?.ToDateTime(TimeOnly.MinValue),
-                item.DailyRepeat,
-                item.DailyRepeatInterval,
-                json,
-                item.Counter);
+                new UpdateDailyArgs(
+                    item.Title,
+                    item.Notes,
+                    item.Tags,
+                    item.DailyStartDate?.ToDateTime(TimeOnly.MinValue),
+                    item.DailyRepeat,
+                    item.DailyRepeatInterval,
+                    json,
+                    item.Counter));
         }
         else if (Section == BoardSection.Todo)
         {
             mutation = BoardData.UpdateTodoAsync(
                 item.Id,
-                item.Title,
-                item.Notes,
-                item.Tags,
-                json,
-                item.TodoDueDate?.ToDateTime(TimeOnly.MinValue));
+                new UpdateTodoArgs(
+                    item.Title,
+                    item.Notes,
+                    item.Tags,
+                    json,
+                    item.TodoDueDate?.ToDateTime(TimeOnly.MinValue)));
         }
         else
         {
             mutation = BoardData.UpdateHabitAsync(
                 item.Id,
-                item.Title,
-                item.Notes,
-                item.Tags,
-                item.TrackPlus,
-                item.TrackMinus,
-                item.ResetPeriod,
-                item.Counter,
-                item.NegativeCounter,
-                json);
+                new UpdateHabitArgs(
+                    item.Title,
+                    item.Notes,
+                    item.Tags,
+                    item.TrackPlus,
+                    item.TrackMinus,
+                    item.ResetPeriod,
+                    item.Counter,
+                    item.NegativeCounter,
+                    json));
         }
 
         bool ok = await TryMutateAsync(() => mutation);
@@ -696,15 +702,16 @@ public partial class BoardColumn : IAsyncDisposable
         {
             bool ok = await TryMutateAsync(() => BoardData.UpdateHabitAsync(
                 item.Id,
-                r.Title,
-                r.Notes,
-                r.Tags,
-                r.TrackPlus,
-                r.TrackMinus,
-                r.ResetPeriod,
-                r.Counter,
-                r.NegativeCounter,
-                r.ChecklistJson
+                new UpdateHabitArgs(
+                    r.Title,
+                    r.Notes,
+                    r.Tags,
+                    r.TrackPlus,
+                    r.TrackMinus,
+                    r.ResetPeriod,
+                    r.Counter,
+                    r.NegativeCounter,
+                    r.ChecklistJson)
             ));
             if (!ok)
             {
@@ -810,14 +817,15 @@ public partial class BoardColumn : IAsyncDisposable
         {
             bool ok = await TryMutateAsync(() => BoardData.UpdateDailyAsync(
                 item.Id,
-                r.Title,
-                r.Notes,
-                r.Tags,
-                r.StartDate,
-                r.Repeat,
-                r.RepeatInterval,
-                r.ChecklistJson,
-                r.Streak
+                new UpdateDailyArgs(
+                    r.Title,
+                    r.Notes,
+                    r.Tags,
+                    r.StartDate,
+                    r.Repeat,
+                    r.RepeatInterval,
+                    r.ChecklistJson,
+                    r.Streak)
             ));
             if (!ok)
             {
@@ -920,11 +928,12 @@ public partial class BoardColumn : IAsyncDisposable
         {
             bool ok = await TryMutateAsync(() => BoardData.UpdateTodoAsync(
                 item.Id,
-                r.Title,
-                r.Notes,
-                r.Tags,
-                r.ChecklistJson,
-                r.DueDate
+                new UpdateTodoArgs(
+                    r.Title,
+                    r.Notes,
+                    r.Tags,
+                    r.ChecklistJson,
+                    r.DueDate)
             ));
             if (!ok)
             {

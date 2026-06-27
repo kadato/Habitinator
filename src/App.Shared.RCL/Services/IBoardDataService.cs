@@ -2,6 +2,37 @@ using App.Shared.RCL.Models;
 
 namespace App.Shared.RCL.Services;
 
+public sealed record UpdateHabitArgs(
+    string Title,
+    string? Notes,
+    string? Tags,
+    bool TrackPlus,
+    bool TrackMinus,
+    HabitResetPeriod ResetPeriod,
+    int Counter,
+    int NegativeCounter,
+    string? ChecklistJson = null,
+    double? SortOrder = null);
+
+public sealed record UpdateTodoArgs(
+    string Title,
+    string? Notes,
+    string? Tags,
+    string? ChecklistJson,
+    DateTime? DueDate,
+    double? SortOrder = null);
+
+public sealed record UpdateDailyArgs(
+    string Title,
+    string? Notes,
+    string? Tags,
+    DateTime? StartDate,
+    DailyRepeatType RepeatType,
+    int RepeatInterval,
+    string? ChecklistJson,
+    int Streak,
+    double? SortOrder = null);
+
 public interface IBoardDataService
 {
     Task<BoardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default);
@@ -31,38 +62,16 @@ public interface IBoardDataService
 
     Task<BoardItem?> UpdateHabitAsync(
         Guid itemId,
-        string title,
-        string? notes,
-        string? tags,
-        bool trackPlus,
-        bool trackMinus,
-        HabitResetPeriod resetPeriod,
-        int counter,
-        int negativeCounter,
-        string? checklistJson = null,
-        double? sortOrder = null,
+        UpdateHabitArgs args,
         CancellationToken cancellationToken = default);
 
     Task<BoardItem?> UpdateTodoAsync(
         Guid itemId,
-        string title,
-        string? notes,
-        string? tags,
-        string? checklistJson,
-        DateTime? dueDate,
-        double? sortOrder = null,
+        UpdateTodoArgs args,
         CancellationToken cancellationToken = default);
 
     Task<BoardItem?> UpdateDailyAsync(
         Guid itemId,
-        string title,
-        string? notes,
-        string? tags,
-        DateTime? startDate,
-        DailyRepeatType repeatType,
-        int repeatInterval,
-        string? checklistJson,
-        int streak,
-        double? sortOrder = null,
+        UpdateDailyArgs args,
         CancellationToken cancellationToken = default);
 }

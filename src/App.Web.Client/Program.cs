@@ -1,4 +1,5 @@
 using App.Shared.RCL.Services;
+using App.Shared.RCL.Services.Remote;
 using App.Web.Client.Services;
 
 using Microsoft.AspNetCore.Components.Authorization;
@@ -9,7 +10,7 @@ using Microsoft.JSInterop;
 using MudBlazor;
 using MudBlazor.Services;
 
-var builder = WebAssemblyHostBuilder.CreateDefault(args);
+WebAssemblyHostBuilder builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 // Suppress verbose HttpClient logs (only show warnings/errors)
 builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
@@ -25,7 +26,7 @@ builder.Services.AddMudServices(config =>
 });
 
 // Configure Named HttpClient "api" referencing the host's base URL
-var baseUri = new Uri(builder.HostEnvironment.BaseAddress);
+Uri baseUri = new(builder.HostEnvironment.BaseAddress);
 builder.Services.AddHttpClient("api", client => client.BaseAddress = baseUri);
 
 // Register platform abstractions
@@ -52,8 +53,8 @@ builder.Services.AddScoped<IUndoService, UndoService>();
 builder.Services.AddScoped<RemoteBoardDataService>();
 builder.Services.AddScoped<IBoardDataService>(sp =>
 {
-    var inner = sp.GetRequiredService<RemoteBoardDataService>();
-    var undoService = sp.GetRequiredService<IUndoService>();
+    RemoteBoardDataService inner = sp.GetRequiredService<RemoteBoardDataService>();
+    IUndoService undoService = sp.GetRequiredService<IUndoService>();
     return new UndoableBoardDataService(inner, undoService);
 });
 
@@ -69,10 +70,10 @@ builder.Services.AddScoped<INotificationSettingsRules, NotificationSettingsRules
 builder.Services.AddScoped<IUserDateFormatService, UserDateFormatService>();
 builder.Services.AddScoped<IAccountActionsService, RemoteAccountActionsService>();
 
-var host = builder.Build();
+WebAssemblyHost host = builder.Build();
 try
 {
-    var js = host.Services.GetRequiredService<IJSRuntime>();
+    IJSRuntime js = host.Services.GetRequiredService<IJSRuntime>();
     await js.InvokeVoidAsync("habitinatorSetWasmLoaded");
 }
 catch

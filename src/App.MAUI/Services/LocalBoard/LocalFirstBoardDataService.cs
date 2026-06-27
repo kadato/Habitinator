@@ -1,17 +1,16 @@
 using App.MAUI.Data;
-using App.MAUI.Services;
 using App.Shared.RCL;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+using App.Shared.RCL.Services.Remote;
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace App.MAUI.Services.LocalBoard;
 
 /// <summary>SQLite-backed board with outbound outbox; network I/O is driven by <see cref="MauiBoardSyncCoordinator" />.</summary>
-public sealed class LocalFirstBoardDataService(
+public sealed partial class LocalFirstBoardDataService(
     IDbContextFactory<LocalBoardDbContext> dbFactory,
     IAuthTokenStore tokens,
     RemoteBoardDataService remote,
@@ -37,7 +36,7 @@ public sealed class LocalFirstBoardDataService(
             await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
             await db.BoardItems.ExecuteDeleteAsync(cancellationToken);
             await db.Outbox.ExecuteDeleteAsync(cancellationToken);
-            LocalBoardStoreMetaRow? meta = await db.Meta.FindAsync([1], cancellationToken);
+            LocalBoardStoreMetaRow? meta = await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken);
             if (meta is null)
             {
                 db.Meta.Add(new LocalBoardStoreMetaRow { Id = 1, BoundUserKey = null });
@@ -428,16 +427,7 @@ public sealed class LocalFirstBoardDataService(
 
     public Task<BoardItem?> UpdateHabitAsync(
         Guid itemId,
-        string title,
-        string? notes,
-        string? tags,
-        bool trackPlus,
-        bool trackMinus,
-        HabitResetPeriod resetPeriod,
-        int counter,
-        int negativeCounter,
-        string? checklistJson = null,
-        double? sortOrder = null,
+        UpdateHabitArgs args,
         CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
             async (db, userKey) =>
@@ -451,19 +441,19 @@ public sealed class LocalFirstBoardDataService(
                 }
 
                 DateTimeOffset? expected = row.ServerUpdatedAtUtc;
-                row.Title = ZalgoSanitizer.SanitizeAndTrim(title);
-                row.Notes = string.IsNullOrWhiteSpace(notes) ? null : ZalgoSanitizer.SanitizeAndTrim(notes);
-                row.Tags = string.IsNullOrWhiteSpace(tags) ? null : ZalgoSanitizer.SanitizeAndTrim(tags);
-                row.TrackPlus = trackPlus;
-                row.TrackMinus = trackMinus;
-                row.ResetPeriod = resetPeriod;
-                row.Counter = counter;
-                row.NegativeCounter = negativeCounter;
-                row.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson)
+                row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
+                row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
+                row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
+                row.TrackPlus = args.TrackPlus;
+                row.TrackMinus = args.TrackMinus;
+                row.ResetPeriod = args.ResetPeriod;
+                row.Counter = args.Counter;
+                row.NegativeCounter = args.NegativeCounter;
+                row.ChecklistJson = string.IsNullOrWhiteSpace(args.ChecklistJson)
                     ? null
-                    : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(checklistJson));
+                    : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(args.ChecklistJson));
 
-                await HandleSortOrderUpdateAsync(db, userKey, BoardSection.Habit, itemId, sortOrder, row, cancellationToken);
+                await HandleSortOrderUpdateAsync(db, userKey, BoardSection.Habit, itemId, args.SortOrder, row, cancellationToken);
 
                 Enqueue(
                     db,
@@ -489,12 +479,7 @@ public sealed class LocalFirstBoardDataService(
 
     public Task<BoardItem?> UpdateTodoAsync(
         Guid itemId,
-        string title,
-        string? notes,
-        string? tags,
-        string? checklistJson,
-        DateTime? dueDate,
-        double? sortOrder = null,
+        UpdateTodoArgs args,
         CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
             async (db, userKey) =>
@@ -508,15 +493,15 @@ public sealed class LocalFirstBoardDataService(
                 }
 
                 DateTimeOffset? expectedTodo = row.ServerUpdatedAtUtc;
-                row.Title = ZalgoSanitizer.SanitizeAndTrim(title);
-                row.Notes = string.IsNullOrWhiteSpace(notes) ? null : ZalgoSanitizer.SanitizeAndTrim(notes);
-                row.Tags = string.IsNullOrWhiteSpace(tags) ? null : ZalgoSanitizer.SanitizeAndTrim(tags);
-                row.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson)
+                row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
+                row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
+                row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
+                row.ChecklistJson = string.IsNullOrWhiteSpace(args.ChecklistJson)
                     ? null
-                    : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(checklistJson));
-                row.TodoDueDate = dueDate.HasValue ? DateOnly.FromDateTime(dueDate.Value.Date) : null;
+                    : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(args.ChecklistJson));
+                row.TodoDueDate = args.DueDate.HasValue ? DateOnly.FromDateTime(args.DueDate.Value.Date) : null;
 
-                await HandleSortOrderUpdateAsync(db, userKey, BoardSection.Todo, itemId, sortOrder, row, cancellationToken);
+                await HandleSortOrderUpdateAsync(db, userKey, BoardSection.Todo, itemId, args.SortOrder, row, cancellationToken);
 
                 Enqueue(
                     db,
@@ -528,7 +513,7 @@ public sealed class LocalFirstBoardDataService(
                         row.Notes,
                         row.Tags,
                         row.ChecklistJson,
-                        dueDate,
+                        args.DueDate,
                         expectedTodo,
                         row.SortOrder));
                 await db.SaveChangesAsync(cancellationToken);
@@ -538,15 +523,7 @@ public sealed class LocalFirstBoardDataService(
 
     public Task<BoardItem?> UpdateDailyAsync(
         Guid itemId,
-        string title,
-        string? notes,
-        string? tags,
-        DateTime? startDate,
-        DailyRepeatType repeatType,
-        int repeatInterval,
-        string? checklistJson,
-        int streak,
-        double? sortOrder = null,
+        UpdateDailyArgs args,
         CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
             async (db, userKey) =>
@@ -560,18 +537,18 @@ public sealed class LocalFirstBoardDataService(
                 }
 
                 DateTimeOffset? expectedDaily = row.ServerUpdatedAtUtc;
-                row.Title = ZalgoSanitizer.SanitizeAndTrim(title);
-                row.Notes = string.IsNullOrWhiteSpace(notes) ? null : ZalgoSanitizer.SanitizeAndTrim(notes);
-                row.Tags = string.IsNullOrWhiteSpace(tags) ? null : ZalgoSanitizer.SanitizeAndTrim(tags);
-                row.DailyStartDate = startDate.HasValue ? DateOnly.FromDateTime(startDate.Value.Date) : null;
-                row.DailyRepeat = repeatType;
-                row.DailyRepeatInterval = repeatInterval;
-                row.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson)
+                row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
+                row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
+                row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
+                row.DailyStartDate = args.StartDate.HasValue ? DateOnly.FromDateTime(args.StartDate.Value.Date) : null;
+                row.DailyRepeat = args.RepeatType;
+                row.DailyRepeatInterval = args.RepeatInterval;
+                row.ChecklistJson = string.IsNullOrWhiteSpace(args.ChecklistJson)
                     ? null
-                    : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(checklistJson));
-                row.Counter = streak;
+                    : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(args.ChecklistJson));
+                row.Counter = args.Streak;
 
-                await HandleSortOrderUpdateAsync(db, userKey, BoardSection.Daily, itemId, sortOrder, row, cancellationToken);
+                await HandleSortOrderUpdateAsync(db, userKey, BoardSection.Daily, itemId, args.SortOrder, row, cancellationToken);
 
                 Enqueue(
                     db,
@@ -582,11 +559,11 @@ public sealed class LocalFirstBoardDataService(
                         row.Title,
                         row.Notes,
                         row.Tags,
-                        startDate,
-                        repeatType,
-                        repeatInterval,
+                        args.StartDate,
+                        args.RepeatType,
+                        args.RepeatInterval,
                         row.ChecklistJson,
-                        streak,
+                        args.Streak,
                         expectedDaily,
                         row.SortOrder));
                 await db.SaveChangesAsync(cancellationToken);
@@ -900,7 +877,7 @@ public sealed class LocalFirstBoardDataService(
                 return false;
             }
 
-            LocalBoardStoreMetaRow? metaRow = await db.Meta.FindAsync([1], cancellationToken);
+            LocalBoardStoreMetaRow? metaRow = await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken);
             cursor = metaRow?.LastSyncCursorUtc;
         }
         finally
@@ -938,8 +915,7 @@ public sealed class LocalFirstBoardDataService(
             try
             {
                 await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
-                LocalBoardStoreMetaRow? metaRow = await db.Meta.FindAsync([1], cancellationToken);
-                if (metaRow is not null)
+                if (await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken) is { } metaRow)
                 {
                     metaRow.LastSyncCursorUtc = null;
                     await db.SaveChangesAsync(cancellationToken);
@@ -970,8 +946,7 @@ public sealed class LocalFirstBoardDataService(
 
             await ApplySyncDeltaAsync(db, userKey, delta, skipIds, cancellationToken);
 
-            LocalBoardStoreMetaRow? metaRow = await db.Meta.FindAsync([1], cancellationToken);
-            if (metaRow is not null)
+            if (await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken) is { } metaRow)
             {
                 metaRow.LastSyncCursorUtc = delta.NextCursor;
             }
@@ -1129,16 +1104,17 @@ public sealed class LocalFirstBoardDataService(
                             ?? throw new InvalidOperationException("Invalid habit update payload.");
                     BoardItem? updated = await api.UpdateHabitAsync(
                         p.ItemId,
-                        p.Title,
-                        p.Notes,
-                        p.Tags,
-                        p.TrackPlus,
-                        p.TrackMinus,
-                        p.ResetPeriod,
-                        p.Counter,
-                        p.NegativeCounter,
-                        p.ChecklistJson,
-                        p.SortOrder,
+                        new UpdateHabitArgs(
+                            p.Title,
+                            p.Notes,
+                            p.Tags,
+                            p.TrackPlus,
+                            p.TrackMinus,
+                            p.ResetPeriod,
+                            p.Counter,
+                            p.NegativeCounter,
+                            p.ChecklistJson,
+                            p.SortOrder),
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
@@ -1151,12 +1127,13 @@ public sealed class LocalFirstBoardDataService(
                             ?? throw new InvalidOperationException("Invalid todo update payload.");
                     BoardItem? updated = await api.UpdateTodoAsync(
                         p.ItemId,
-                        p.Title,
-                        p.Notes,
-                        p.Tags,
-                        p.ChecklistJson,
-                        p.DueDate,
-                        p.SortOrder,
+                        new UpdateTodoArgs(
+                            p.Title,
+                            p.Notes,
+                            p.Tags,
+                            p.ChecklistJson,
+                            p.DueDate,
+                            p.SortOrder),
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
@@ -1169,15 +1146,16 @@ public sealed class LocalFirstBoardDataService(
                             ?? throw new InvalidOperationException("Invalid daily update payload.");
                     BoardItem? updated = await api.UpdateDailyAsync(
                         p.ItemId,
-                        p.Title,
-                        p.Notes,
-                        p.Tags,
-                        p.StartDate,
-                        p.RepeatType,
-                        p.RepeatInterval,
-                        p.ChecklistJson,
-                        p.Streak,
-                        p.SortOrder,
+                        new UpdateDailyArgs(
+                            p.Title,
+                            p.Notes,
+                            p.Tags,
+                            p.StartDate,
+                            p.RepeatType,
+                            p.RepeatInterval,
+                            p.ChecklistJson,
+                            p.Streak,
+                            p.SortOrder),
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
@@ -1438,7 +1416,7 @@ public sealed class LocalFirstBoardDataService(
 
     private static async Task EnsureUserScopeAsync(LocalBoardDbContext db, string userKey, CancellationToken cancellationToken)
     {
-        LocalBoardStoreMetaRow? meta = await db.Meta.FindAsync([1], cancellationToken);
+        LocalBoardStoreMetaRow? meta = await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken);
         if (meta is null)
         {
             db.Meta.Add(new LocalBoardStoreMetaRow { Id = 1, BoundUserKey = userKey });
@@ -1536,8 +1514,7 @@ public sealed class LocalFirstBoardDataService(
 
         await db.SaveChangesAsync(cancellationToken);
 
-        LocalBoardStoreMetaRow? meta = await db.Meta.FindAsync([1], cancellationToken);
-        if (meta is not null)
+        if (await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken) is { } meta)
         {
             meta.LastSyncCursorUtc = ComputeMirrorCursor(snap);
         }

@@ -1,7 +1,6 @@
 import { chromium } from 'playwright';
 import lighthouse from 'lighthouse';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
 
 async function run() {
   console.log('Launching browser with remote debugging port 9222...');
@@ -103,4 +102,9 @@ function getScores(lhr) {
   };
 }
 
-run().catch(console.error);
+try {
+  await run();
+} catch (err) {
+  console.error(err);
+  process.exit(1);
+}

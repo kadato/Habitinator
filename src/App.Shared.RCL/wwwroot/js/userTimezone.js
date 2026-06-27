@@ -3,6 +3,7 @@ globalThis.habitinatorGetUserTimezone = function () {
     try {
         return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
     } catch (e) {
+        console.warn("Timezone detection failed, defaulting to empty.", e);
         return "";
     }
 };
@@ -11,6 +12,7 @@ globalThis.habitinatorGetTimezoneOffsetMinutes = function () {
     try {
         return new Date().getTimezoneOffset();
     } catch (e) {
+        console.warn("Timezone offset detection failed, defaulting to 0.", e);
         return 0;
     }
 };

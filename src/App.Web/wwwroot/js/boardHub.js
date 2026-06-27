@@ -1,11 +1,11 @@
 // Requires global `signalR` from @microsoft/signalr (see App.razor).
-window.HabitinatorBoardHub = (function () {
+globalThis.HabitinatorBoardHub = (function () {
   let connection = null;
   let dotNetHelper = null;
 
   return {
     start: function (helper) {
-      const signalR = window.signalR;
+      const signalR = globalThis.signalR;
       if (!signalR) {
         return Promise.reject(new Error("signalR is not defined"));
       }

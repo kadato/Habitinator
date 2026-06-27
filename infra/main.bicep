@@ -55,12 +55,12 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
   name: webAppName
   location: location
   kind: 'app,linux'
+  identity: {
+    type: 'SystemAssigned'
+  }
   tags: {
     'azd-service-name': 'web'
     'azd-env-name': environmentName
-  }
-  identity: {
-    type: 'SystemAssigned'
   }
   properties: {
     serverFarmId: appServicePlan.id

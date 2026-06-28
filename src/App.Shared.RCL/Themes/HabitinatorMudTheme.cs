@@ -7,22 +7,25 @@ namespace App.Shared.RCL.Themes;
 /// </summary>
 public static class HabitinatorMudTheme
 {
+    private const string White = "#ffffff";
+    private const string Gray200 = "#e5e7eb";
+
     public static readonly MudTheme Default = new()
     {
         PaletteLight = new PaletteLight
         {
             Primary = "#2563eb",
-            PrimaryContrastText = "#ffffff",
+            PrimaryContrastText = White,
             Secondary = "#64748b",
-            SecondaryContrastText = "#ffffff",
+            SecondaryContrastText = White,
             Tertiary = "#a78bfa",
             Black = "#0f172a",
             Background = "#f8fafc",
             BackgroundGray = "#f1f5f9",
-            Surface = "#ffffff",
-            DrawerBackground = "#ffffff",
+            Surface = White,
+            DrawerBackground = White,
             DrawerText = "#1e293b",
-            AppbarBackground = "#ffffff",
+            AppbarBackground = White,
             AppbarText = "#1e293b",
             TextPrimary = "#0f172a",
             TextSecondary = "#475569",
@@ -33,12 +36,12 @@ public static class HabitinatorMudTheme
             TableLines = "#e2e8f0",
             LinesDefault = "#e2e8f0",
             Dark = "#0f172a",
-            DarkContrastText = "#ffffff"
+            DarkContrastText = White
         },
         PaletteDark = new PaletteDark
         {
             Primary = "#2563eb",
-            PrimaryContrastText = "#ffffff",
+            PrimaryContrastText = White,
             Secondary = "#94a3b8",
             SecondaryContrastText = "#f8fafc",
             Tertiary = "#a78bfa",
@@ -47,10 +50,10 @@ public static class HabitinatorMudTheme
             BackgroundGray = "#1f2937",
             Surface = "#111827",
             DrawerBackground = "#111827",
-            DrawerText = "#e5e7eb",
+            DrawerText = Gray200,
             AppbarBackground = "#111827",
-            AppbarText = "#e5e7eb",
-            TextPrimary = "#e5e7eb",
+            AppbarText = Gray200,
+            TextPrimary = Gray200,
             TextSecondary = "#9ca3af",
             TextDisabled = "#6b7280",
             ActionDefault = "#9ca3af",
@@ -59,7 +62,7 @@ public static class HabitinatorMudTheme
             TableLines = "#374151",
             LinesDefault = "#374151",
             Dark = "#030712",
-            DarkContrastText = "#e5e7eb"
+            DarkContrastText = Gray200
         },
         LayoutProperties = new LayoutProperties
         {

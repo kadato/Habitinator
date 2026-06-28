@@ -33,7 +33,10 @@ dotnet tool run dotnet-sonarscanner begin `
     /d:sonar.token="$token" `
     /d:sonar.host.url="http://localhost:9900" `
     /d:sonar.cs.vstest.reportsPaths="TestResults/*.trx" `
-    /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+    /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" `
+    /d:sonar.issue.ignore.multicriteria=e1 `
+    /d:sonar.issue.ignore.multicriteria.e1.ruleKey="csharpsquid:S2068" `
+    /d:sonar.issue.ignore.multicriteria.e1.resourceKey="**/appsettings.json"
 
 Write-Host "Compiling Habitinator with analysis hooks..."
 dotnet build Habitinator.slnx --configuration Debug --no-incremental

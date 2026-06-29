@@ -6,12 +6,13 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next)
     {
         var headers = context.Response.Headers;
 
-        headers["X-Content-Type-Options"] = "nosniff";
+        headers.XContentTypeOptions = "nosniff";
         headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
         headers["Permissions-Policy"] =
             "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()";
-        headers["X-Frame-Options"] = "DENY";
-        headers["Content-Security-Policy"] =
+        headers.XFrameOptions = "DENY";
+#pragma warning disable S7039 // Suppress Content Security Policies restriction warning for Blazor Server compatibility
+        headers.ContentSecurityPolicy =
             "default-src 'self'; " +
             "base-uri 'self'; " +
             "form-action 'self'; " +
@@ -23,6 +24,7 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next)
             "connect-src 'self' https: wss: ws:; " +
             "object-src 'none'; " +
             "upgrade-insecure-requests";
+#pragma warning restore S7039
 
         return next(context);
     }

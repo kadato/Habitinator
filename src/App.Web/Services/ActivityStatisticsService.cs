@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 
 using App.Shared.RCL.Models;
@@ -8,21 +9,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace App.Web.Services;
 
-public sealed class ActivityStatisticsService
+public sealed class ActivityStatisticsService(
+    IDbContextFactory<ApplicationDbContext> dbFactory,
+    IUserTimeZoneService timeZone,
+    ActivityStatisticsCache cache)
 {
-    private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
-    private readonly IUserTimeZoneService _timeZone;
-    private readonly ActivityStatisticsCache _cache;
-
-    public ActivityStatisticsService(
-        IDbContextFactory<ApplicationDbContext> dbFactory,
-        IUserTimeZoneService timeZone,
-        ActivityStatisticsCache cache)
-    {
-        _dbFactory = dbFactory;
-        _timeZone = timeZone;
-        _cache = cache;
-    }
+    private readonly IDbContextFactory<ApplicationDbContext> _dbFactory = dbFactory;
+    private readonly IUserTimeZoneService _timeZone = timeZone;
+    private readonly ActivityStatisticsCache _cache = cache;
 
     private DateOnly Today() => DailySchedule.LocalToday(_timeZone);
 
@@ -32,18 +26,18 @@ public sealed class ActivityStatisticsService
         string? tag,
         CancellationToken cancellationToken = default)
     {
-        var userCache = _cache.GetOrCreate(userId);
-        var cacheKey = (day, tag);
-        if (userCache.DayDetail.TryGetValue(cacheKey, out var cached))
+        ActivityStatisticsCache.UserCache userCache = _cache.GetOrCreate(userId);
+        (DateOnly, string?) cacheKey = (day, tag);
+        if (userCache.DayDetail.TryGetValue(cacheKey, out ActivityDayDetailDto? cached))
         {
             return cached;
         }
 
-        var fromUtc = day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var toUtc = day.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        DateTime fromUtc = day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        DateTime toUtc = day.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
-        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-        var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, tag, cancellationToken);
+        await using ApplicationDbContext db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        HashSet<Guid>? allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, tag, cancellationToken);
 
         IQueryable<UserActivityEventEntity> ev = db.UserActivityEvents.AsNoTracking()
             .Where(e => e.UserId == userId && e.OccurredAtUtc >= fromUtc && e.OccurredAtUtc < toUtc);
@@ -52,25 +46,24 @@ public sealed class ActivityStatisticsService
             ev = ev.Where(e => e.BoardItemId != null && allowedIds.Contains(e.BoardItemId.Value));
         }
 
-        var rows = await ev
+        List<UserActivityEventRecord> rows = await ev
             .OrderBy(e => e.OccurredAtUtc)
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
             .ToListAsync(cancellationToken);
 
-        List<Guid> boardIds = rows
+        List<Guid> boardIds = [.. rows
             .Select(x => x.BoardItemId)
             .Where(x => x.HasValue)
             .Select(x => x!.Value)
-            .Distinct()
-            .ToList();
+            .Distinct()];
 
         IReadOnlyDictionary<Guid, string> titles = boardIds.Count == 0
-            ? new Dictionary<Guid, string>()
+            ? ImmutableDictionary<Guid, string>.Empty
             : await db.BoardItems.AsNoTracking()
                 .Where(b => b.UserId == userId && boardIds.Contains(b.Id))
                 .ToDictionaryAsync(b => b.Id, b => b.Title, cancellationToken);
 
-        var result = ActivityStatisticsCalculator.BuildDayDetail(day, rows, titles);
+        ActivityDayDetailDto result = ActivityStatisticsCalculator.BuildDayDetail(day, rows, titles);
         userCache.DayDetail[cacheKey] = result;
         return result;
     }
@@ -81,23 +74,23 @@ public sealed class ActivityStatisticsService
         string? tag,
         CancellationToken cancellationToken = default)
     {
-        var utcToday = Today();
-        var userCache = _cache.GetOrCreate(userId);
-        var cacheKey = (periodKey, tag, utcToday);
-        if (userCache.Dashboard.TryGetValue(cacheKey, out var cached))
+        DateOnly utcToday = Today();
+        ActivityStatisticsCache.UserCache userCache = _cache.GetOrCreate(userId);
+        (string?, string?, DateOnly) cacheKey = (periodKey, tag, utcToday);
+        if (userCache.Dashboard.TryGetValue(cacheKey, out ActivityDashboardDto? cached))
         {
             return cached;
         }
 
-        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-        var options = await BuildDailyPeriodOptionsAsync(db, userId, utcToday, cancellationToken);
-        var (key, start, end) = ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, utcToday, options);
+        await using ApplicationDbContext db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        IReadOnlyList<DailyGraphPeriodOption> options = await BuildDailyPeriodOptionsAsync(db, userId, utcToday, cancellationToken);
+        (string key, DateOnly start, DateOnly end) = ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, utcToday, options);
 
-        var fromUtc = start.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var toUtc = end.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        DateTime fromUtc = start.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        DateTime toUtc = end.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
-        var availableTags = await GetDistinctTagsForUserAsync(db, userId, cancellationToken);
-        var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, tag, cancellationToken);
+        IReadOnlyList<string> availableTags = await GetDistinctTagsForUserAsync(db, userId, cancellationToken);
+        HashSet<Guid>? allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, tag, cancellationToken);
 
         IQueryable<UserActivityEventEntity> evq = db.UserActivityEvents.AsNoTracking()
             .Where(e => e.UserId == userId && e.OccurredAtUtc >= fromUtc && e.OccurredAtUtc < toUtc);
@@ -106,12 +99,12 @@ public sealed class ActivityStatisticsService
             evq = evq.Where(e => e.BoardItemId != null && allowedIds.Contains(e.BoardItemId.Value));
         }
 
-        var rows = await evq
+        List<UserActivityEventRecord> rows = await evq
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
             .ToListAsync(cancellationToken);
 
-        var built = ActivityStatisticsCalculator.BuildDashboard(rows, key, start, end, utcToday);
-        var result = built with { AvailableTags = availableTags };
+        ActivityDashboardDto built = ActivityStatisticsCalculator.BuildDashboard(rows, key, start, end, utcToday);
+        ActivityDashboardDto result = built with { AvailableTags = availableTags };
         userCache.Dashboard[cacheKey] = result;
         return result;
     }
@@ -122,23 +115,23 @@ public sealed class ActivityStatisticsService
         string? tag,
         CancellationToken cancellationToken = default)
     {
-        var utcToday = Today();
-        var userCache = _cache.GetOrCreate(userId);
-        var cacheKey = (periodKey, tag, utcToday);
-        if (userCache.DailyContributions.TryGetValue(cacheKey, out var cached))
+        DateOnly utcToday = Today();
+        ActivityStatisticsCache.UserCache userCache = _cache.GetOrCreate(userId);
+        (string?, string?, DateOnly) cacheKey = (periodKey, tag, utcToday);
+        if (userCache.DailyContributions.TryGetValue(cacheKey, out DailyContributionsViewDto? cached))
         {
             return cached;
         }
 
-        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-        var options = await BuildDailyPeriodOptionsAsync(db, userId, utcToday, cancellationToken);
-        var (key, rangeStart, rangeEnd) =
+        await using ApplicationDbContext db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        IReadOnlyList<DailyGraphPeriodOption> options = await BuildDailyPeriodOptionsAsync(db, userId, utcToday, cancellationToken);
+        (string key, DateOnly rangeStart, DateOnly rangeEnd) =
             ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, utcToday, options);
 
-        var fromUtc = rangeStart.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var toUtc = rangeEnd.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        DateTime fromUtc = rangeStart.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        DateTime toUtc = rangeEnd.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
-        var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, tag, cancellationToken);
+        HashSet<Guid>? allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, tag, cancellationToken);
 
         IQueryable<BoardItemEntity> dailyQ = db.BoardItems.AsNoTracking()
             .Where(b => b.UserId == userId && b.DeletedAtUtc == null && b.Section == BoardSection.Daily);
@@ -152,12 +145,12 @@ public sealed class ActivityStatisticsService
             .Select(b => new { b.Id, b.Title, b.DailyStartDate, b.CreatedAtUtc })
             .ToListAsync(cancellationToken);
 
-        var dailyItemRows = dailyItemRawRows.Select(b => new DailyItemStatsDto(
+        List<DailyItemStatsDto> dailyItemRows = [.. dailyItemRawRows.Select(b => new DailyItemStatsDto(
             b.Id,
             b.Title,
             b.DailyStartDate != null ? DateOnly.FromDateTime(b.DailyStartDate.Value) : null,
             DateOnly.FromDateTime(_timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime)
-        )).ToList();
+        ))];
 
         IQueryable<UserActivityEventEntity> evQ = db.UserActivityEvents.AsNoTracking()
             .Where(e =>
@@ -169,11 +162,11 @@ public sealed class ActivityStatisticsService
             evQ = evQ.Where(e => e.BoardItemId != null && allowedIds.Contains(e.BoardItemId.Value));
         }
 
-        var eventRows = await evQ
+        List<UserActivityEventRecord> eventRows = await evQ
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
             .ToListAsync(cancellationToken);
 
-        var result = ActivityStatisticsCalculator.BuildDailyContributions(
+        DailyContributionsViewDto result = ActivityStatisticsCalculator.BuildDailyContributions(
             eventRows,
             dailyItemRows,
             key,
@@ -191,21 +184,16 @@ public sealed class ActivityStatisticsService
         Guid userId,
         CancellationToken cancellationToken)
     {
-        var tagStrings = await db.BoardItems.AsNoTracking()
+        List<string?> tagStrings = await db.BoardItems.AsNoTracking()
             .Where(b => b.UserId == userId && b.DeletedAtUtc == null)
             .Select(b => b.Tags)
             .ToListAsync(cancellationToken);
 
-        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var ts in tagStrings)
-        {
-            foreach (var t in BoardTagUtil.ParseTags(ts))
-            {
-                set.Add(t);
-            }
-        }
+        HashSet<string> set = new(
+            tagStrings.SelectMany(BoardTagUtil.ParseTags),
+            StringComparer.OrdinalIgnoreCase);
 
-        return set.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
+        return [.. set.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)];
     }
 
     private static async Task<HashSet<Guid>?> GetBoardItemIdsMatchingTagOrNullAsync(
@@ -219,23 +207,22 @@ public sealed class ActivityStatisticsService
             return null;
         }
 
-        var wantedTags = tag.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        string[] wantedTags = tag.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (wantedTags.Length == 0)
         {
             return null;
         }
 
-        var wantedSet = new HashSet<string>(wantedTags, StringComparer.OrdinalIgnoreCase);
+        HashSet<string> wantedSet = new(wantedTags, StringComparer.OrdinalIgnoreCase);
 
         var rows = await db.BoardItems.AsNoTracking()
             .Where(b => b.UserId == userId && b.DeletedAtUtc == null)
             .Select(b => new { b.Id, b.Tags })
             .ToListAsync(cancellationToken);
 
-        return rows
+        return [.. rows
             .Where(r => BoardTagUtil.ParseTags(r.Tags).Any(t => wantedSet.Contains(t)))
-            .Select(r => r.Id)
-            .ToHashSet();
+            .Select(r => r.Id)];
     }
 
     private static async Task<IReadOnlyList<DailyGraphPeriodOption>> BuildDailyPeriodOptionsAsync(
@@ -244,24 +231,24 @@ public sealed class ActivityStatisticsService
         DateOnly utcToday,
         CancellationToken cancellationToken)
     {
-        var maxYear = utcToday.Year;
-        var first = await db.UserActivityEvents.AsNoTracking()
+        int maxYear = utcToday.Year;
+        DateTimeOffset? first = await db.UserActivityEvents.AsNoTracking()
             .Where(e => e.UserId == userId && e.EventType == ActivityEventType.DailyComplete)
             .OrderBy(e => e.OccurredAtUtc)
             .Select(e => (DateTimeOffset?)e.OccurredAtUtc)
             .FirstOrDefaultAsync(cancellationToken);
 
-        var minYear = first is { } f ? f.UtcDateTime.Year : maxYear;
+        int minYear = first is { } f ? f.UtcDateTime.Year : maxYear;
         if (minYear > maxYear)
         {
             minYear = maxYear;
         }
 
-        var list = new List<DailyGraphPeriodOption>
-        {
+        List<DailyGraphPeriodOption> list =
+        [
             new(DailyGraphPeriods.Rolling370Days, "Last 370 days")
-        };
-        for (var y = maxYear; y >= minYear; y--)
+        ];
+        for (int y = maxYear; y >= minYear; y--)
         {
             list.Add(new DailyGraphPeriodOption(DailyGraphPeriods.ForCalendarYear(y), y.ToString(CultureInfo.InvariantCulture)));
         }

@@ -1315,7 +1315,7 @@ public sealed class BoardPersistenceService : IDisposable
 
             if (!byItem.TryGetValue(bid, out var list))
             {
-                list = new List<(DateTimeOffset, ActivityEventType)>();
+                list = [];
                 byItem[bid] = list;
             }
 
@@ -1326,7 +1326,7 @@ public sealed class BoardPersistenceService : IDisposable
         foreach (var ent in dailies)
         {
             byItem.TryGetValue(ent.Id, out var evList);
-            var grouped = DailyStreakCalculator.GroupDailyEventsByUtcDay(evList ?? new List<(DateTimeOffset, ActivityEventType)>());
+            var grouped = DailyStreakCalculator.GroupDailyEventsByUtcDay(evList ?? []);
             var lastC = ent.DailyLastCompletedOn is { } l ? DateOnly.FromDateTime(l) : (DateOnly?)null;
             GetDailyEntitySchedule(ent, out var start, out var repeat, out var interval);
             outMap[ent.Id] = DailyStreakCalculator.ComputeStreak(

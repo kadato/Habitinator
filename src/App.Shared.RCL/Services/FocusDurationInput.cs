@@ -16,6 +16,17 @@ public static class FocusDurationInput
 
     public static TimeSpan MaxFocusDuration { get; } = new(23, 59, 59);
 
+    private static readonly Regex SecondsSuffixRegex = new(@"^(\d+)\s*s$", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(250));
+    private static readonly Regex MinutesSecondsRegex = new(@"^(\d+)\s*m\s*(\d+)\s*s$", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(250));
+    private static readonly Regex ThreePartColonRegex = new(@"^(\d+):(\d+):(\d+)$", RegexOptions.None, TimeSpan.FromMilliseconds(250));
+    private static readonly Regex TwoPartColonRegex = new(@"^(\d+):(\d+)$", RegexOptions.None, TimeSpan.FromMilliseconds(250));
+    private static readonly Regex MinutesOnlySuffixRegex = new(@"^(\d+)\s*m$", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(250));
+    private static readonly Regex HmsLongFormARegex = new(@"^(\d{1,2})h(\d{1,2})m(\d{1,2})s$", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(250));
+    private static readonly Regex HmsLongFormBRegex = new(@"^(\d{1,2})h(\d{1,2})m$", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(250));
+    private static readonly Regex HmsLongFormCRegex = new(@"^(\d{1,2})h(\d{1,2})s$", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(250));
+    private static readonly Regex HMSuffixFormRegex = new(@"^(\d{1,2})\s*h(?:\s*(\d{1,2})\s*m?)?$", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(250));
+    private static readonly Regex PlainMinutesRegex = new(@"^\d{1,4}$", RegexOptions.None, TimeSpan.FromMilliseconds(250));
+
     public static string FormatForAlertLabel(TimeSpan t)
     {
         t = Clamp(t);
@@ -26,20 +37,20 @@ public static class FocusDurationInput
 
         if (t.TotalSeconds < 60)
         {
-            var s = (int)Math.Ceiling(t.TotalSeconds);
+            int s = (int)Math.Ceiling(t.TotalSeconds);
             return $"{s}s";
         }
 
         if (t.Seconds == 0 && t.Milliseconds == 0)
         {
-            var min = (int)Math.Ceiling(t.TotalMinutes);
+            int min = (int)Math.Ceiling(t.TotalMinutes);
             if (min < 60)
             {
                 return $"{min} min";
             }
 
-            var h = min / 60;
-            var rest = min % 60;
+            int h = min / 60;
+            int rest = min % 60;
             if (rest == 0)
             {
                 return $"{h}h";
@@ -71,9 +82,9 @@ public static class FocusDurationInput
         }
 
         t = Clamp(t);
-        var h = t.Hours;
-        var m = t.Minutes;
-        var s = t.Seconds;
+        int h = t.Hours;
+        int m = t.Minutes;
+        int s = t.Seconds;
         if (h == 0 && m == 0)
         {
             return $"{s}s";
@@ -108,43 +119,43 @@ public static class FocusDurationInput
             return true;
         }
 
-        var input = raw.Trim();
-        if (TryParseSecondsSuffix(input, out var sec))
+        string input = raw.Trim();
+        if (TryParseSecondsSuffix(input, out TimeSpan? sec))
         {
             return Assign(ref duration, sec);
         }
 
-        if (TryParseMinutesSeconds(input, out var ms))
+        if (TryParseMinutesSeconds(input, out TimeSpan? ms))
         {
             return Assign(ref duration, ms);
         }
 
-        if (TryParseThreePartColon(input, out var three))
+        if (TryParseThreePartColon(input, out TimeSpan? three))
         {
             return Assign(ref duration, three);
         }
 
-        if (TryParseTwoPartColon(input, out var two))
+        if (TryParseTwoPartColon(input, out TimeSpan? two))
         {
             return Assign(ref duration, two);
         }
 
-        if (TryParseMinutesOnlySuffix(input, out var mOnly))
+        if (TryParseMinutesOnlySuffix(input, out TimeSpan? mOnly))
         {
             return Assign(ref duration, mOnly);
         }
 
-        if (TryParseHmsLongForm(input, out var hms))
+        if (TryParseHmsLongForm(input, out TimeSpan? hms))
         {
             return Assign(ref duration, hms);
         }
 
-        if (TryParseHMSuffixForm(input, out var hm))
+        if (TryParseHMSuffixForm(input, out TimeSpan? hm))
         {
             return Assign(ref duration, hm);
         }
 
-        if (TryParsePlainMinutes(input, out var plain))
+        if (TryParsePlainMinutes(input, out TimeSpan? plain))
         {
             return Assign(ref duration, plain);
         }
@@ -172,13 +183,13 @@ public static class FocusDurationInput
     private static bool TryParseSecondsSuffix(string s, out TimeSpan? duration)
     {
         duration = null;
-        var m = Regex.Match(s, @"^(\d+)\s*s$", RegexOptions.IgnoreCase);
+        Match m = SecondsSuffixRegex.Match(s);
         if (!m.Success)
         {
             return false;
         }
 
-        if (!int.TryParse(m.Groups[1].Value, out var sec) || sec <= 0)
+        if (!int.TryParse(m.Groups[1].Value, out int sec) || sec <= 0)
         {
             return false;
         }
@@ -189,14 +200,14 @@ public static class FocusDurationInput
     private static bool TryParseMinutesSeconds(string s, out TimeSpan? duration)
     {
         duration = null;
-        var m = Regex.Match(s, @"^(\d+)\s*m\s*(\d+)\s*s$", RegexOptions.IgnoreCase);
+        Match m = MinutesSecondsRegex.Match(s);
         if (!m.Success)
         {
             return false;
         }
 
-        if (!int.TryParse(m.Groups[1].Value, out var min) ||
-            !int.TryParse(m.Groups[2].Value, out var sec))
+        if (!int.TryParse(m.Groups[1].Value, out int min) ||
+            !int.TryParse(m.Groups[2].Value, out int sec))
         {
             return false;
         }
@@ -212,15 +223,15 @@ public static class FocusDurationInput
     private static bool TryParseThreePartColon(string s, out TimeSpan? duration)
     {
         duration = null;
-        var m = Regex.Match(s, @"^(\d+):(\d+):(\d+)$");
+        Match m = ThreePartColonRegex.Match(s);
         if (!m.Success)
         {
             return false;
         }
 
-        if (!int.TryParse(m.Groups[1].Value, out var h) ||
-            !int.TryParse(m.Groups[2].Value, out var min) ||
-            !int.TryParse(m.Groups[3].Value, out var sec))
+        if (!int.TryParse(m.Groups[1].Value, out int h) ||
+            !int.TryParse(m.Groups[2].Value, out int min) ||
+            !int.TryParse(m.Groups[3].Value, out int sec))
         {
             return false;
         }
@@ -241,14 +252,14 @@ public static class FocusDurationInput
     private static bool TryParseTwoPartColon(string s, out TimeSpan? duration)
     {
         duration = null;
-        var m = Regex.Match(s, @"^(\d+):(\d+)$");
+        Match m = TwoPartColonRegex.Match(s);
         if (!m.Success)
         {
             return false;
         }
 
-        if (!int.TryParse(m.Groups[1].Value, out var h) ||
-            !int.TryParse(m.Groups[2].Value, out var min))
+        if (!int.TryParse(m.Groups[1].Value, out int h) ||
+            !int.TryParse(m.Groups[2].Value, out int min))
         {
             return false;
         }
@@ -269,13 +280,13 @@ public static class FocusDurationInput
     private static bool TryParseMinutesOnlySuffix(string s, out TimeSpan? duration)
     {
         duration = null;
-        var m = Regex.Match(s, @"^(\d+)\s*m$", RegexOptions.IgnoreCase);
+        Match m = MinutesOnlySuffixRegex.Match(s);
         if (!m.Success)
         {
             return false;
         }
 
-        if (!int.TryParse(m.Groups[1].Value, out var mins) || mins <= 0)
+        if (!int.TryParse(m.Groups[1].Value, out int mins) || mins <= 0)
         {
             return false;
         }
@@ -286,7 +297,7 @@ public static class FocusDurationInput
     private static bool TryParseHmsLongForm(string s, out TimeSpan? duration)
     {
         duration = null;
-        var a = Regex.Match(s, @"^(\d{1,2})h(\d{1,2})m(\d{1,2})s$", RegexOptions.IgnoreCase);
+        Match a = HmsLongFormARegex.Match(s);
         if (a.Success)
         {
             return TryValidateAndCreate(
@@ -296,7 +307,7 @@ public static class FocusDurationInput
                 out duration);
         }
 
-        var b = Regex.Match(s, @"^(\d{1,2})h(\d{1,2})m$", RegexOptions.IgnoreCase);
+        Match b = HmsLongFormBRegex.Match(s);
         if (b.Success)
         {
             return TryValidateAndCreate(
@@ -306,7 +317,7 @@ public static class FocusDurationInput
                 out duration);
         }
 
-        var c = Regex.Match(s, @"^(\d{1,2})h(\d{1,2})s$", RegexOptions.IgnoreCase);
+        Match c = HmsLongFormCRegex.Match(s);
         if (c.Success)
         {
             return TryValidateAndCreate(
@@ -338,17 +349,14 @@ public static class FocusDurationInput
     private static bool TryParseHMSuffixForm(string s, out TimeSpan? duration)
     {
         duration = null;
-        var m = Regex.Match(
-            s,
-            @"^(\d{1,2})\s*h(?:\s*(\d{1,2})\s*m?)?$",
-            RegexOptions.IgnoreCase);
+        Match m = HMSuffixFormRegex.Match(s);
         if (!m.Success)
         {
             return false;
         }
 
-        var h = int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
-        var min = m.Groups[2].Success ? int.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture) : 0;
+        int h = int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
+        int min = m.Groups[2].Success ? int.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture) : 0;
         if (min is < 0 or > 59 || h is < 0 or > 23)
         {
             return false;
@@ -365,12 +373,12 @@ public static class FocusDurationInput
     private static bool TryParsePlainMinutes(string s, out TimeSpan? duration)
     {
         duration = null;
-        if (!Regex.IsMatch(s, @"^\d{1,4}$"))
+        if (!PlainMinutesRegex.IsMatch(s))
         {
             return false;
         }
 
-        var mins = int.Parse(s, CultureInfo.InvariantCulture);
+        int mins = int.Parse(s, CultureInfo.InvariantCulture);
         if (mins <= 0)
         {
             return false;
@@ -392,7 +400,7 @@ public static class FocusDurationInput
             return false;
         }
 
-        var t = TimeSpan.FromSeconds(totalSec);
+        TimeSpan t = TimeSpan.FromSeconds(totalSec);
         duration = t;
         return true;
     }

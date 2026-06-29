@@ -22,7 +22,7 @@ public sealed record ConflictInfo(
 
 public sealed class ConflictResolutionService
 {
-    private readonly Dictionary<Guid, TaskCompletionSource<ConflictResolutionChoice>> _pendingConflicts = new();
+    private readonly Dictionary<Guid, TaskCompletionSource<ConflictResolutionChoice>> _pendingConflicts = [];
     private readonly object _lock = new();
 
     public event Action<ConflictInfo>? ConflictDetected;

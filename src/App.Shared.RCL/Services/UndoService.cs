@@ -14,7 +14,7 @@ public sealed class UndoService : IUndoService, IDisposable
 {
     private const string UndoSnackbarKeyPrefix = "habitinator-undo";
 
-    private readonly List<UndoAction> _undoStack = new();
+    private readonly List<UndoAction> _undoStack = [];
     private readonly ISnackbar _snackbar;
     private readonly INotificationSettingsService _settingsService;
     private readonly INotificationSettingsRules _notificationRules;
@@ -68,7 +68,7 @@ public sealed class UndoService : IUndoService, IDisposable
 
     private void StartBatch(string description)
     {
-        _currentBatch = new List<Func<Task>>();
+        _currentBatch = [];
         _currentBatchDescription = description;
     }
 

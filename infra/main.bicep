@@ -65,6 +65,7 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
   properties: {
     serverFarmId: appServicePlan.id
     httpsOnly: true
+    clientCertEnabled: false
     siteConfig: {
       linuxFxVersion: 'DOTNETCORE|10.0'
       appCommandLine: 'dotnet App.Web.dll'

@@ -2,12 +2,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace App.MAUI.Data;
 
-public sealed class LocalBoardDbContext : DbContext
+public sealed partial class LocalBoardDbContext(DbContextOptions<LocalBoardDbContext> options) : DbContext(options)
 {
-    public LocalBoardDbContext(DbContextOptions<LocalBoardDbContext> options)
-        : base(options)
-    {
-    }
 
     public DbSet<LocalBoardItemRow> BoardItems => Set<LocalBoardItemRow>();
 

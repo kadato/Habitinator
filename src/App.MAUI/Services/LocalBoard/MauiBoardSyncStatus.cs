@@ -4,7 +4,7 @@ using Microsoft.Maui.Networking;
 
 namespace App.MAUI.Services.LocalBoard;
 
-public sealed class MauiBoardSyncStatus : IBoardSyncStatus, IDisposable
+public sealed partial class MauiBoardSyncStatus : IBoardSyncStatus, IDisposable
 {
     private volatile bool _isOffline;
     private volatile bool _isSyncing;

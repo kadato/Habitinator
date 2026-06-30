@@ -8,30 +8,18 @@ using Microsoft.Extensions.Logging;
 
 namespace App.MAUI.Services;
 
-public sealed class MauiBoardHubService : IDisposable
+public sealed partial class MauiBoardHubService(
+    IAuthTokenStore tokens,
+    IRemoteBoardRefreshService refresh,
+    MauiApiEndpointOptions api,
+    ILogger<MauiBoardHubService> logger) : IDisposable
 {
-    private readonly MauiApiEndpointOptions _api;
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly ILogger<MauiBoardHubService> _logger;
-    private readonly IRemoteBoardRefreshService _refresh;
-    private readonly IAuthTokenStore _tokens;
     private HubConnection? _connection;
-
-    public MauiBoardHubService(
-        IAuthTokenStore tokens,
-        IRemoteBoardRefreshService refresh,
-        MauiApiEndpointOptions api,
-        ILogger<MauiBoardHubService> logger)
-    {
-        _tokens = tokens;
-        _refresh = refresh;
-        _api = api;
-        _logger = logger;
-    }
 
     public async Task EnsureConnectedAsync(CancellationToken cancellationToken = default)
     {
-        var t = await _tokens.GetAccessTokenAsync(cancellationToken);
+        var t = await tokens.GetAccessTokenAsync(cancellationToken);
         if (string.IsNullOrEmpty(t))
         {
             return;
@@ -59,18 +47,18 @@ public sealed class MauiBoardHubService : IDisposable
                 _connection = null;
             }
 
-            var baseAddress = new Uri(_api.BaseUrlWithTrailingSlash, UriKind.Absolute);
+            var baseAddress = new Uri(api.BaseUrlWithTrailingSlash, UriKind.Absolute);
             var hubUri = new Uri(baseAddress, "hubs/board");
             var hub = new HubConnectionBuilder()
                 .WithUrl(
                     hubUri,
-                    o => { o.AccessTokenProvider = () => _tokens.GetAccessTokenAsync(CancellationToken.None); })
+                    o => { o.AccessTokenProvider = () => tokens.GetAccessTokenAsync(CancellationToken.None); })
                 .WithAutomaticReconnect()
                 .Build();
 
             hub.On(
                 BoardHubClient.BoardChanged,
-                () => _refresh.NotifyFromRemoteAsync(CancellationToken.None));
+                () => refresh.NotifyFromRemoteAsync(CancellationToken.None));
             _connection = hub;
             try
             {
@@ -82,7 +70,7 @@ public sealed class MauiBoardHubService : IDisposable
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(
+                logger.LogWarning(
                     ex,
                     "SignalR board hub could not connect to {HubUrl}. Live sync is off until the API is running and reachable.",
                     hubUri);

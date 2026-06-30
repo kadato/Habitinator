@@ -14,7 +14,7 @@ namespace App.MAUI.Services;
 ///     the current board. Reschedules when settings change or the app is foregrounded so the message stays
 ///     up to date.
 /// </summary>
-public sealed class MauiDailyReminderService : IDisposable
+public sealed partial class MauiDailyReminderService : IDisposable
 {
     public const int NotificationId = 42_001;
 

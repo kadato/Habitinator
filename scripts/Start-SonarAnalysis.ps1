@@ -33,10 +33,27 @@ dotnet tool run dotnet-sonarscanner begin `
     /d:sonar.token="$token" `
     /d:sonar.host.url="http://localhost:9900" `
     /d:sonar.cs.vstest.reportsPaths="TestResults/*.trx" `
-    /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+    /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" `
+    /d:sonar.cpd.exclusions="src/App.MAUI/**/*.cs"
 
 Write-Host "Compiling Habitinator with analysis hooks..."
 dotnet build Habitinator.slnx --configuration Debug --no-incremental
+
+Write-Host "Running tests with coverage collection..."
+$testProjects = @(
+    "tests/App.Shared.Tests/App.Shared.Tests.csproj",
+    "tests/App.Shared.RCL.Tests/App.Shared.RCL.Tests.csproj",
+    "tests/App.Web.IntegrationTests/App.Web.IntegrationTests.csproj"
+)
+foreach ($proj in $testProjects) {
+    dotnet test $proj `
+        --configuration Debug `
+        --no-build `
+        --results-directory TestResults `
+        --logger "trx" `
+        --collect:"XPlat Code Coverage" `
+        -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+}
 
 Write-Host "Finalizing SonarQube analysis..."
 dotnet tool run dotnet-sonarscanner end /d:sonar.token="$token"

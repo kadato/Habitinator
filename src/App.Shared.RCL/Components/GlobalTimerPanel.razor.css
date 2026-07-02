@@ -23,6 +23,13 @@
     max-width: 100%;
     min-width: 0;
     box-sizing: border-box;
+    padding: 8px 12px !important;
+}
+
+@media (min-width: 600px) {
+    .timer-panel__content {
+        padding: 12px 18px !important;
+    }
 }
 
 .timer-panel::before {
@@ -66,15 +73,17 @@
 }
 
 .timer-running-strip__actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    justify-content: center;
     gap: 0.5rem;
     width: 100%;
 }
 
-.timer-running-strip__actions ::deep .timer-btn {
-    width: 100%;
-    justify-content: center;
+@media (min-width: 960px) {
+    .timer-running-strip__actions {
+        justify-content: flex-end;
+        width: auto;
+    }
 }
 
 .timer-settings-panels {
@@ -89,45 +98,108 @@
  * Toolbar: CSS grid so the middle column always consumes space between clock and buttons.
  */
 .timer-compact {
-    display: grid;
-    gap: 0.4rem 0.6rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
     min-width: 0;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
 }
 
+.timer-compact__left-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.timer-compact__center-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.timer-compact__right-col {
+    width: 100%;
+}
+
 @media (min-width: 960px) {
     .timer-compact {
-        grid-template-columns: max-content minmax(0, 1fr) auto;
+        display: grid;
+        grid-template-columns: max-content auto 1fr max-content;
+        grid-template-rows: auto;
         align-items: center;
+        gap: 0 1.5rem;
+    }
+
+    .timer-compact__left-col {
+        grid-column: 1;
+        grid-row: 1;
+        align-self: center;
+        align-items: flex-start;
+        width: auto;
+    }
+
+    .timer-compact__center-col {
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: start;
+        align-self: center;
+        padding: 0 1.5rem;
+        border-left: 1px solid color-mix(in srgb, var(--mud-palette-divider) 15%, transparent);
+        border-right: 1px solid color-mix(in srgb, var(--mud-palette-divider) 15%, transparent);
+        min-height: 48px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 360px;
+        min-width: 360px;
+        box-sizing: border-box;
+    }
+
+    .timer-compact__right-col {
+        grid-column: 3;
+        grid-row: 1;
+        width: 100%;
+        min-width: 260px;
+        max-width: 450px;
+        align-self: center;
+    }
+
+    .timer-compact__actions {
+        grid-column: 4;
+        grid-row: 1;
+        justify-content: flex-end;
+        align-self: center;
+        width: auto;
     }
 }
 
 @media (max-width: 959.98px) {
-    .timer-compact {
-        grid-template-columns: minmax(0, 1fr);
+    .timer-compact__left-col {
+        order: 1;
     }
 
-    .timer-compact .timer-clock-header {
-        justify-self: center;
-        width: 100% !important;
-        max-width: 100%;
-        justify-content: center !important;
+    .timer-compact__center-col {
+        order: 2;
+        width: 100%;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px dashed color-mix(in srgb, var(--mud-palette-divider) 15%, transparent);
+    }
+
+    .timer-compact__right-col {
+        order: 3;
     }
 
     .timer-compact__actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.5rem;
-        width: 100%;
-        justify-self: stretch;
-        justify-content: stretch;
-    }
-
-    .timer-compact__actions ::deep .timer-btn {
-        width: 100%;
+        order: 4;
+        display: flex;
         justify-content: center;
+        gap: 0.75rem;
+        width: 100%;
     }
 
     .timer-running-strip__main {
@@ -160,8 +232,8 @@
 .timer-clock-icon {
     flex-shrink: 0;
     opacity: 0.92;
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 2.15rem;
+    height: 2.15rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -173,8 +245,8 @@
 }
 
 .timer-clock-icon ::deep svg {
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 2.15rem;
+    height: 2.15rem;
     display: block;
 }
 
@@ -183,14 +255,14 @@
     height: 1.5rem;
 }
 
-.timer-value {
+::deep .timer-value {
     font-family: var(--hab-font-mono) !important;
-    font-size: 1.5rem !important;
-    line-height: 1.2 !important;
+    font-size: 4rem !important;
+    line-height: 1 !important;
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
-    font-weight: 600 !important;
-    letter-spacing: 0.04em;
+    font-weight: 700 !important;
+    letter-spacing: 0.02em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -199,8 +271,8 @@
     padding: 0;
 }
 
-.timer-value--strip {
-    font-size: 1.35rem !important;
+::deep .timer-value--strip {
+    font-size: 1.75rem !important;
 }
 
 .timer-clock-header ::deep .timer-value {
@@ -220,6 +292,10 @@
     align-items: end;
     width: 100%;
     min-width: 0;
+}
+
+.timer-inputs-pair--single {
+    grid-template-columns: minmax(0, 1fr) !important;
 }
 
 .timer-target-input-row,
@@ -243,12 +319,12 @@
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .timer-value {
-        font-size: 2.25rem !important;
+    ::deep .timer-value {
+        font-size: 3.25rem !important;
     }
 
-    .timer-value--strip {
-        font-size: 2rem !important;
+    ::deep .timer-value--strip {
+        font-size: 2.25rem !important;
     }
 
     .timer-clock-icon {
@@ -427,6 +503,17 @@
     letter-spacing: 0.02em;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
     white-space: nowrap;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+::deep .timer-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+::deep .timer-btn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
 }
 
 @media (max-width: 959.98px) {
@@ -477,5 +564,158 @@
 
     .timer-running-strip__actions ::deep .timer-btn {
         width: auto;
+    }
+}
+
+/* Custom Segmented Control styling */
+.custom-timer-toggle {
+    display: inline-flex;
+    background-color: var(--mud-palette-background-grey);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 30%, transparent);
+    border-radius: 9999px;
+    padding: 3px;
+    gap: 2px;
+    position: relative;
+    user-select: none;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.custom-timer-toggle .toggle-btn {
+    border: none;
+    background: transparent;
+    border-radius: 9999px;
+    padding: 6px;
+    color: var(--mud-palette-text-secondary);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 34px;
+    min-width: 42px;
+}
+
+.custom-timer-toggle .toggle-btn:hover {
+    color: var(--mud-palette-text-primary);
+}
+
+.custom-timer-toggle .toggle-btn.active {
+    background-color: var(--mud-palette-surface);
+    color: var(--mud-palette-primary);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.timer-focus-rounds {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 20px;
+}
+
+/* Pomodoro integrated info in center column (idle state) */
+.timer-display-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.9rem;
+    flex-wrap: nowrap;
+}
+
+@media (max-width: 959.98px) {
+    .timer-display-row {
+        justify-content: center;
+        width: 100%;
+        margin-top: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+}
+
+.timer-pomodoro-status-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--mud-palette-primary);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    line-height: 1.2;
+    flex-shrink: 0;
+}
+
+.timer-pomodoro-progress-bar {
+    display: inline-flex;
+    gap: 4px;
+    height: 7px;
+    width: 64px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.progress-segment {
+    flex: 1;
+    height: 100%;
+    background-color: color-mix(in srgb, var(--mud-palette-divider) 35%, transparent);
+    border-radius: 3px;
+    transition: background-color 0.3s ease;
+}
+
+.progress-segment.completed {
+    background-color: var(--mud-palette-secondary);
+}
+
+/* Active strip Pomodoro info styling */
+.timer-pomodoro-status-strip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* Circular Icon Button Styles */
+::deep .timer-icon-btn {
+    border-radius: 50% !important; /* circular buttons */
+    width: 2.25rem !important;
+    height: 2.25rem !important;
+    min-width: 2.25rem !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+::deep .timer-icon-btn:hover:not(:disabled) {
+    transform: translateY(-1.5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+::deep .timer-icon-btn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+::deep .timer-icon-btn--start:not(:disabled) {
+    box-shadow: 0 3px 12px color-mix(in srgb, var(--mud-palette-success) 35%, transparent) !important;
+}
+
+::deep .timer-icon-btn--pause:not(:disabled) {
+    box-shadow: 0 3px 12px color-mix(in srgb, var(--mud-palette-warning) 30%, transparent) !important;
+}
+
+::deep .timer-icon-btn--stop:not(:disabled) {
+    box-shadow: 0 3px 12px color-mix(in srgb, var(--mud-palette-primary) 25%, transparent) !important;
+}
+
+@media (max-width: 959.98px) {
+    ::deep .timer-icon-btn {
+        width: 2.75rem !important;
+        height: 2.75rem !important;
+        min-width: 2.75rem !important;
     }
 }

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+
 @font-face {
     font-family: "Plus Jakarta Sans";
     font-style: normal;
@@ -24,7 +26,7 @@
 
 :root {
     --hab-font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --hab-font-mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
+    --hab-font-mono: "JetBrains Mono", ui-monospace, Consolas, "Cascadia Code", "Segoe UI Mono", monospace;
     --bs-body-font-family: var(--hab-font-sans);
     --bs-font-sans-serif: var(--hab-font-sans);
 }

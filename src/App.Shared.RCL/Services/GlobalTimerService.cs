@@ -1,8 +1,16 @@
 namespace App.Shared.RCL.Services;
 
-public sealed class GlobalTimerService
+public enum PomodoroState
 {
-    private readonly IClock _clock;
+    Idle,
+    Work,
+    ShortBreak,
+    LongBreak
+}
+
+public sealed class GlobalTimerService(IClock clock)
+{
+    private readonly IClock _clock = clock;
     private TimeSpan _accumulated = TimeSpan.Zero;
 
     /// <summary>Total <see cref="Elapsed" /> at which the next "time's up" event fires, when focus duration is set.</summary>
@@ -10,10 +18,20 @@ public sealed class GlobalTimerService
 
     private DateTimeOffset? _runningSince;
 
-    public GlobalTimerService(IClock clock)
-    {
-        _clock = clock;
-    }
+    public bool PomodoroModeEnabled { get; set; }
+
+    public PomodoroState CurrentPomodoroState { get; private set; } = PomodoroState.Idle;
+
+    public int CompletedWorkIntervalsCount { get; private set; }
+
+    // Configurable durations populated from UserPreferences (in UI component)
+    public TimeSpan WorkDuration { get; set; } = TimeSpan.FromMinutes(25);
+
+    public TimeSpan ShortBreakDuration { get; set; } = TimeSpan.FromMinutes(5);
+
+    public TimeSpan LongBreakDuration { get; set; } = TimeSpan.FromMinutes(15);
+
+    public int IntervalsBeforeLongBreak { get; set; } = 4;
 
     public string? TargetType { get; private set; }
 
@@ -28,7 +46,7 @@ public sealed class GlobalTimerService
     /// </summary>
     public TimeSpan? FocusAlertAfter
     {
-        get => field;
+        get;
         set
         {
             if (field == value)
@@ -127,6 +145,12 @@ public sealed class GlobalTimerService
             return;
         }
 
+        if (PomodoroModeEnabled && CurrentPomodoroState == PomodoroState.Idle)
+        {
+            CurrentPomodoroState = PomodoroState.Work;
+            FocusAlertAfter = WorkDuration;
+        }
+
         if (_nextFocusMilestoneAtElapsed is null
             && FocusAlertAfter is { } f
             && f > TimeSpan.Zero)
@@ -212,9 +236,48 @@ public sealed class GlobalTimerService
     {
         FocusAlertAfter = null;
         _nextFocusMilestoneAtElapsed = null;
-        TargetType = null;
-        TargetId = null;
-        BoardItemId = null;
+        if (!PomodoroModeEnabled)
+        {
+            TargetType = null;
+            TargetId = null;
+            BoardItemId = null;
+        }
+    }
+
+    public void IncrementCompletedIntervals()
+    {
+        CompletedWorkIntervalsCount++;
+    }
+
+    public void TransitionToBreak()
+    {
+        var cycleNum = CompletedWorkIntervalsCount;
+        if (cycleNum > 0 && cycleNum % IntervalsBeforeLongBreak == 0)
+        {
+            CurrentPomodoroState = PomodoroState.LongBreak;
+            FocusAlertAfter = LongBreakDuration;
+        }
+        else
+        {
+            CurrentPomodoroState = PomodoroState.ShortBreak;
+            FocusAlertAfter = ShortBreakDuration;
+        }
+        Reset();
+    }
+
+    public void TransitionToWork()
+    {
+        CurrentPomodoroState = PomodoroState.Work;
+        FocusAlertAfter = WorkDuration;
+        Reset();
+    }
+
+    public void ResetPomodoroSession()
+    {
+        Reset();
+        CurrentPomodoroState = PomodoroState.Idle;
+        CompletedWorkIntervalsCount = 0;
+        FocusAlertAfter = null;
     }
 
     public void RestoreFromPersistedStart(DateTimeOffset persistedStartUtc)

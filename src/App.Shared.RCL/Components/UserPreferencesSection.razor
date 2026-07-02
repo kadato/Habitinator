@@ -81,6 +81,53 @@
 
         <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
+                <MudText Typo="Typo.subtitle1" Class="mb-1">Pomodoro Timer</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
+                    Customize focus and break durations for the Pomodoro timer.
+                </MudText>
+                <MudGrid>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="int" Label="Work duration (minutes)"
+                                         Variant="Variant.Outlined" dense="true"
+                                         Min="1" Max="180"
+                                         Value="_model.PomodoroWorkDurationMinutes"
+                                         ValueChanged="OnWorkDurationChanged"
+                                         Immediate="true"
+                                         OnBlur="AutoSaveAsync" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="int" Label="Short break (minutes)"
+                                         Variant="Variant.Outlined" dense="true"
+                                         Min="1" Max="60"
+                                         Value="_model.PomodoroShortBreakMinutes"
+                                         ValueChanged="OnShortBreakChanged"
+                                         Immediate="true"
+                                         OnBlur="AutoSaveAsync" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="int" Label="Long break (minutes)"
+                                         Variant="Variant.Outlined" dense="true"
+                                         Min="1" Max="120"
+                                         Value="_model.PomodoroLongBreakMinutes"
+                                         ValueChanged="OnLongBreakChanged"
+                                         Immediate="true"
+                                         OnBlur="AutoSaveAsync" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="int" Label="Sessions before long break"
+                                         Variant="Variant.Outlined" dense="true"
+                                         Min="1" Max="20"
+                                         Value="_model.PomodoroCyclesBeforeLongBreak"
+                                         ValueChanged="OnCyclesChanged"
+                                         Immediate="true"
+                                         OnBlur="AutoSaveAsync" />
+                    </MudItem>
+                </MudGrid>
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
                 <MudText Typo="Typo.subtitle1" Class="mb-1">Day start &amp; timezone</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
                     Set when your day starts and override the detected timezone if you travel or prefer a fixed zone.
@@ -228,7 +275,11 @@
             DayStartLocalTime = s.DayStartLocalTime,
             TimeZoneOverrideId = s.TimeZoneOverrideId,
             DisplayName = s.DisplayName,
-            Theme = s.Theme
+            Theme = s.Theme,
+            PomodoroWorkDurationMinutes = s.PomodoroWorkDurationMinutes,
+            PomodoroShortBreakMinutes = s.PomodoroShortBreakMinutes,
+            PomodoroLongBreakMinutes = s.PomodoroLongBreakMinutes,
+            PomodoroCyclesBeforeLongBreak = s.PomodoroCyclesBeforeLongBreak
         };
     }
 
@@ -289,6 +340,30 @@
         _themeSelection = value;
         _model.Theme = value;
         await AutoSaveAsync();
+    }
+
+    private void OnWorkDurationChanged(int value)
+    {
+        if (_model is null) return;
+        _model.PomodoroWorkDurationMinutes = Math.Clamp(value, 1, 180);
+    }
+
+    private void OnShortBreakChanged(int value)
+    {
+        if (_model is null) return;
+        _model.PomodoroShortBreakMinutes = Math.Clamp(value, 1, 60);
+    }
+
+    private void OnLongBreakChanged(int value)
+    {
+        if (_model is null) return;
+        _model.PomodoroLongBreakMinutes = Math.Clamp(value, 1, 120);
+    }
+
+    private void OnCyclesChanged(int value)
+    {
+        if (_model is null) return;
+        _model.PomodoroCyclesBeforeLongBreak = Math.Clamp(value, 1, 20);
     }
 
     private bool ValidateInputs()

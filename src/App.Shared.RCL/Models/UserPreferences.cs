@@ -15,6 +15,14 @@ public sealed class UserPreferences
 
     public AppTheme Theme { get; set; } = AppTheme.System;
 
+    public int PomodoroWorkDurationMinutes { get; set; } = 25;
+
+    public int PomodoroShortBreakMinutes { get; set; } = 5;
+
+    public int PomodoroLongBreakMinutes { get; set; } = 15;
+
+    public int PomodoroCyclesBeforeLongBreak { get; set; } = 4;
+
     public static UserPreferences CreateDefault()
     {
         return new UserPreferences();

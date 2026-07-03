@@ -406,4 +406,25 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         alert.Instance.Severity.Should().Be(Severity.Error);
         cut.Markup.Should().Contain("Network failure");
     }
+
+    [Fact]
+    public async Task Changes_EnableKeyboardShortcuts_And_Saves()
+    {
+        // Arrange
+        var prefs = new UserPreferences
+        {
+            EnableKeyboardShortcuts = true
+        };
+        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(prefs));
+
+        var cut = _ctx.Render<UserPreferencesSection>();
+        var switchComponent = cut.FindComponent<MudSwitch<bool>>();
+        switchComponent.Instance.Value.Should().BeTrue();
+
+        // Act
+        await cut.InvokeAsync(() => switchComponent.Instance.ValueChanged.InvokeAsync(false));
+
+        // Assert
+        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => !p.EnableKeyboardShortcuts));
+    }
 }

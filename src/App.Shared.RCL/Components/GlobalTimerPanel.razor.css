@@ -60,7 +60,7 @@
 .timer-running-strip__main {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.35rem;
     min-width: 0;
 }
 
@@ -69,7 +69,8 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     max-width: 100%;
-    font-weight: 500;
+    font-weight: 600;
+    font-size: 1.5rem;
 }
 
 .timer-running-strip__actions {
@@ -129,7 +130,7 @@
 @media (min-width: 960px) {
     .timer-compact {
         display: grid;
-        grid-template-columns: max-content auto 1fr max-content;
+        grid-template-columns: max-content 1fr max-content;
         grid-template-rows: auto;
         align-items: center;
         gap: 0 1.5rem;
@@ -141,36 +142,21 @@
         align-self: center;
         align-items: flex-start;
         width: auto;
-    }
-
-    .timer-compact__center-col {
-        grid-column: 2;
-        grid-row: 1;
-        justify-self: start;
-        align-self: center;
-        padding: 0 1.5rem;
-        border-left: 1px solid color-mix(in srgb, var(--mud-palette-divider) 15%, transparent);
+        padding-right: 1.5rem;
         border-right: 1px solid color-mix(in srgb, var(--mud-palette-divider) 15%, transparent);
-        min-height: 48px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        width: 360px;
-        min-width: 360px;
-        box-sizing: border-box;
     }
 
     .timer-compact__right-col {
-        grid-column: 3;
+        grid-column: 2;
         grid-row: 1;
         width: 100%;
         min-width: 260px;
-        max-width: 450px;
+        max-width: 650px;
         align-self: center;
     }
 
     .timer-compact__actions {
-        grid-column: 4;
+        grid-column: 3;
         grid-row: 1;
         justify-content: flex-end;
         align-self: center;
@@ -183,19 +169,12 @@
         order: 1;
     }
 
-    .timer-compact__center-col {
-        order: 2;
-        width: 100%;
-        padding-bottom: 0.5rem;
-        border-bottom: 1px dashed color-mix(in srgb, var(--mud-palette-divider) 15%, transparent);
-    }
-
     .timer-compact__right-col {
-        order: 3;
+        order: 2;
     }
 
     .timer-compact__actions {
-        order: 4;
+        order: 3;
         display: flex;
         justify-content: center;
         gap: 0.75rem;
@@ -215,6 +194,7 @@
 
     .timer-running-target {
         text-align: center;
+        font-size: 1.3rem;
     }
 }
 
@@ -227,6 +207,16 @@
 
 .timer-clock-header--strip {
     width: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (min-width: 960px) {
+    .timer-clock-header--strip {
+        min-width: 8.5ch;
+        justify-content: flex-start;
+    }
 }
 
 .timer-clock-icon {
@@ -240,8 +230,8 @@
 }
 
 .timer-clock-icon--strip {
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 1.85rem;
+    height: 1.85rem;
 }
 
 .timer-clock-icon ::deep svg {
@@ -251,8 +241,8 @@
 }
 
 .timer-clock-icon--strip ::deep svg {
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 1.85rem;
+    height: 1.85rem;
 }
 
 ::deep .timer-value {
@@ -272,7 +262,7 @@
 }
 
 ::deep .timer-value--strip {
-    font-size: 1.75rem !important;
+    font-size: 3.5rem !important;
 }
 
 .timer-clock-header ::deep .timer-value {
@@ -324,7 +314,7 @@
     }
 
     ::deep .timer-value--strip {
-        font-size: 2.25rem !important;
+        font-size: 3.0rem !important;
     }
 
     .timer-clock-icon {
@@ -333,8 +323,8 @@
     }
 
     .timer-clock-icon--strip {
-        width: 2rem !important;
-        height: 2rem !important;
+        width: 2.35rem !important;
+        height: 2.35rem !important;
     }
 
     .timer-clock-icon ::deep svg {
@@ -343,8 +333,8 @@
     }
 
     .timer-clock-icon--strip ::deep svg {
-        width: 2rem !important;
-        height: 2rem !important;
+        width: 2.35rem !important;
+        height: 2.35rem !important;
     }
 }
 
@@ -377,13 +367,13 @@
 .timer-mobile-header-text {
     display: inline-flex;
     align-items: center;
-    font-size: 0.875rem;
+    font-size: 1.05rem;
     color: var(--mud-palette-text-primary);
     max-width: 100%;
 }
 
-.max-w-160 {
-    max-width: 160px;
+.max-w-240 {
+    max-width: 240px;
     display: inline-block;
 }
 
@@ -552,7 +542,7 @@
         flex: 1 1 auto;
         flex-direction: row;
         align-items: center;
-        gap: 0.75rem;
+        gap: 1.25rem;
     }
 
     .timer-running-strip__actions {
@@ -625,7 +615,10 @@
 
 @media (max-width: 959.98px) {
     .timer-display-row {
+        flex-direction: column;
         justify-content: center;
+        align-items: center;
+        gap: 0.4rem;
         width: 100%;
         margin-top: 0.25rem;
         margin-bottom: 0.25rem;
@@ -672,6 +665,7 @@
 .timer-pomodoro-status-strip {
     display: inline-flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
     flex-shrink: 0;
 }
@@ -717,5 +711,113 @@
         width: 2.75rem !important;
         height: 2.75rem !important;
         min-width: 2.75rem !important;
+    }
+}
+
+.timer-pomodoro-status-badge.timer-pomodoro-next-badge {
+    color: var(--mud-palette-text-secondary);
+    background-color: color-mix(in srgb, var(--mud-palette-divider) 15%, transparent);
+}
+
+.timer-pomodoro-info-field {
+    min-width: 0;
+    width: 100%;
+}
+
+.timer-pomodoro-field-control ::deep .mud-input-control {
+    width: 100%;
+    min-width: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.timer-pomodoro-field-control ::deep .mud-input-outlined {
+    height: 2.5rem !important;
+    align-items: center !important;
+    padding: 0 0.5rem !important;
+}
+
+.timer-pomodoro-field-control ::deep .timer-pomodoro-info-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%;
+    gap: 0.5rem;
+}
+
+.timer-pomodoro-field-control ::deep .timer-pomodoro-info-item {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.825rem;
+    font-weight: 500;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.timer-pomodoro-field-control ::deep .timer-pomodoro-info-item .info-label {
+    margin-right: 0.25rem;
+    opacity: 0.8;
+}
+
+.timer-pomodoro-field-control ::deep .timer-pomodoro-info-item .info-value {
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+}
+
+.timer-pomodoro-field-control ::deep .timer-pomodoro-info-divider {
+    height: 16px;
+    width: 1px;
+    background-color: color-mix(in srgb, var(--mud-palette-divider) 40%, transparent);
+}
+
+.timer-pomodoro-status-badge.timer-pomodoro-done-badge {
+    color: var(--mud-palette-success);
+    background-color: color-mix(in srgb, var(--mud-palette-success) 8%, transparent);
+}
+
+.timer-pomodoro-status-badge.timer-pomodoro-cycle-badge {
+    color: var(--mud-palette-secondary);
+    background-color: color-mix(in srgb, var(--mud-palette-secondary) 8%, transparent);
+}
+
+/* Modern visual Pomodoro dots */
+.timer-pomodoro-field-control ::deep .pomodoro-dots-container {
+    display: inline-flex;
+    gap: 5px;
+    align-items: center;
+    margin: 0 4px;
+    flex-shrink: 0;
+}
+
+.timer-pomodoro-field-control ::deep .pomodoro-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--mud-palette-divider) 35%, transparent);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 55%, transparent);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-block;
+}
+
+.timer-pomodoro-field-control ::deep .pomodoro-dot.completed {
+    background-color: var(--mud-palette-secondary);
+    border-color: var(--mud-palette-secondary);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--mud-palette-secondary) 50%, transparent);
+    transform: scale(1.1);
+}
+
+/* Responsive styles for Pomodoro info box: hide labels to fit neatly on narrow viewports when side-by-side */
+@media (min-width: 960px) and (max-width: 1220px) {
+    .timer-pomodoro-field-control ::deep .timer-pomodoro-info-container .info-label {
+        display: none !important;
+    }
+    .timer-pomodoro-field-control ::deep .timer-pomodoro-info-container .pomodoro-dots-container {
+        display: none !important;
+    }
+    .timer-pomodoro-field-control ::deep .timer-pomodoro-info-container {
+        justify-content: space-between;
+        padding: 0 2px;
     }
 }

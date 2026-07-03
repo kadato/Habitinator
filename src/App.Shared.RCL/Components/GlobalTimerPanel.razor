@@ -10,20 +10,20 @@
          aria-label="Toggle timer panel">
         <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="w-100 px-3 py-2">
             <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="min-w-0 flex-grow-1">
-                <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Primary" Size="Size.Small"/>
+                <MudIcon Icon="@(TimerService.PomodoroModeEnabled ? Icons.Material.Filled.Alarm : Icons.Material.Filled.Timer)" Color="Color.Primary" Size="Size.Medium"/>
                 @if (IsSessionActive)
                 {
                     <MudText Typo="Typo.subtitle2" Class="font-weight-bold timer-mobile-header-text">
                         @GetDisplayTime()
                         @if (!string.IsNullOrWhiteSpace(GetRunningTargetLabel()))
                         {
-                            <span class="mud-text-secondary font-weight-normal text-truncate max-w-160"> · @GetRunningTargetLabel()</span>
+                            <span class="mud-text-secondary font-weight-normal text-truncate max-w-240"> · @GetRunningTargetLabel()</span>
                         }
                     </MudText>
                 }
                 else
                 {
-                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold timer-mobile-header-text">Focus Timer</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold timer-mobile-header-text">@(TimerService.PomodoroModeEnabled ? "Pomodoro" : "Focus Timer")</MudText>
                 }
             </MudStack>
             <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
@@ -40,17 +40,7 @@
         {
             <div class="timer-running-strip" role="group" aria-label="Active session timer">
                 <div class="timer-running-strip__main">
-                    <MudStack Row="true"
-                              Spacing="2"
-                              AlignItems="AlignItems.Center"
-                              Justify="Justify.Center"
-                              Class="timer-clock-header timer-clock-header--strip"
-                              Wrap="Wrap.NoWrap">
-                        <MudIcon Icon="@Icons.Material.Filled.AccessTime"
-                                 Color="Color.Tertiary"
-                                 Size="Size.Medium"
-                                 Class="timer-clock-icon timer-clock-icon--strip"
-                                 title="Session timer"/>
+                    <div class="timer-clock-header timer-clock-header--strip">
                         <MudText Typo="Typo.h5"
                                  Color="Color.Default"
                                  GutterBottom="false"
@@ -59,7 +49,7 @@
                                  aria-live="polite">
                             @GetDisplayTime()
                         </MudText>
-                    </MudStack>
+                    </div>
                     @if (!string.IsNullOrWhiteSpace(GetRunningTargetLabel()))
                     {
                         <MudText Typo="Typo.body2"
@@ -71,17 +61,36 @@
                     @if (TimerService.PomodoroModeEnabled)
                     {
                         <div class="timer-pomodoro-status-strip">
-                            @if (TimerService.CurrentPomodoroState != PomodoroState.Idle)
+                            @if (TimerService.CurrentPomodoroState != PomodoroState.Idle && TimerService.CurrentPomodoroState != PomodoroState.Work)
                             {
                                 <span class="timer-pomodoro-status-badge">@GetPomodoroStatusLabel()</span>
                             }
-                            <div class="timer-pomodoro-progress-bar" title="Rounds: @(TimerService.CompletedWorkIntervalsCount) completed">
+                            <span class="timer-pomodoro-status-badge timer-pomodoro-next-badge" title="Next pomodoro duration">
+                                Next: @GetNextPomodoroLabelAndDuration()
+                            </span>
+                            <span class="timer-pomodoro-status-badge timer-pomodoro-done-badge" title="Total accomplished work sessions">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1 done-icon" Color="Color.Success" style="font-size: 0.85rem;" />
+                                Done: @TimerService.CompletedWorkIntervalsCount
+                            </span>
+                            <span class="timer-pomodoro-status-badge timer-pomodoro-cycle-badge" title="Sessions completed in current cycle before long break">
+                                Cycle: @GetCompletedInCurrentCycle()/@TimerService.IntervalsBeforeLongBreak
+                            </span>
+                            <div class="timer-pomodoro-progress-bar" title="Cycle progress: @GetCompletedInCurrentCycle() of @TimerService.IntervalsBeforeLongBreak completed before long break">
                                 @for (int i = 0; i < TimerService.IntervalsBeforeLongBreak; i++)
                                 {
-                                    var completed = i < (TimerService.CompletedWorkIntervalsCount % TimerService.IntervalsBeforeLongBreak);
+                                    var completed = i < GetCompletedInCurrentCycle();
                                     <div class="@GetProgressSegmentClass(completed)"></div>
                                 }
                             </div>
+                        </div>
+                    }
+                    else if (TimerService.FocusAlertAfter.HasValue)
+                    {
+                        <div class="timer-pomodoro-status-strip">
+                            <span class="timer-pomodoro-status-badge" style="color: var(--mud-palette-warning); background-color: color-mix(in srgb, var(--mud-palette-warning) 8%, transparent);">
+                                <MudIcon Icon="@Icons.Material.Filled.NotificationsActive" Size="Size.Small" Class="mr-1" style="font-size: 0.85rem;" />
+                                Alert: @FocusDurationInput.FormatForAlertLabel(TimerService.FocusAlertAfter.Value)
+                            </span>
                         </div>
                     }
                 </div>
@@ -129,25 +138,30 @@
                                        Disabled="@(!IsSessionActive)"
                                        aria-label="Stop and log session" />
                     </MudTooltip>
+                    <MudTooltip Text="Reset timer">
+                        <MudIconButton Variant="Variant.Outlined"
+                                       Color="Color.Error"
+                                       Icon="@Icons.Material.Filled.Refresh"
+                                       Class="timer-icon-btn timer-icon-btn--reset"
+                                       OnClick="Reset"
+                                       Disabled="@(!CanReset)"
+                                       aria-label="Reset timer" />
+                    </MudTooltip>
+                    <MudTooltip Text="@(_settingsExpanded ? "Hide settings" : "Show settings")">
+                        <MudIconButton Variant="Variant.Outlined"
+                                       Color="Color.Default"
+                                       Icon="@(_settingsExpanded ? Icons.Material.Filled.KeyboardArrowUp : Icons.Material.Filled.KeyboardArrowDown)"
+                                       Class="timer-icon-btn timer-icon-btn--settings-toggle"
+                                       OnClick="ToggleSettings"
+                                       aria-label="Toggle settings" />
+                    </MudTooltip>
                 </div>
             </div>
-
-            <MudExpansionPanels Class="timer-settings-panels mt-2" Elevation="0">
-                <MudExpansionPanel @bind-Expanded="_settingsExpanded" Text="Timer settings">
+            <MudCollapse Expanded="@_settingsExpanded">
+                <div class="timer-settings-collapsed-content mt-2">
                     @RenderTimerInputs
-                    <div class="timer-compact__actions timer-compact__actions--settings mt-2">
-                        <MudTooltip Text="Reset timer">
-                            <MudIconButton Variant="Variant.Outlined"
-                                           Color="Color.Error"
-                                           Icon="@Icons.Material.Filled.Refresh"
-                                           Class="timer-icon-btn timer-icon-btn--reset"
-                                           OnClick="Reset"
-                                           Disabled="@(!CanReset)"
-                                           aria-label="Reset timer" />
-                        </MudTooltip>
-                    </div>
-                </MudExpansionPanel>
-            </MudExpansionPanels>
+                </div>
+            </MudCollapse>
         }
         else
         {
@@ -172,34 +186,7 @@
                     </div>
                 </div>
 
-                <div class="timer-compact__center-col">
-                    <div class="timer-display-row">
-                        <div class="timer-clock-header" role="group" aria-label="Session timer">
-                            <MudText Typo="Typo.h5"
-                                     Color="Color.Default"
-                                     GutterBottom="false"
-                                     Class="timer-value"
-                                     role="timer"
-                                     aria-live="polite">
-                                @GetDisplayTime()
-                            </MudText>
-                        </div>
-                        @if (TimerService.PomodoroModeEnabled)
-                        {
-                            @if (TimerService.CurrentPomodoroState != PomodoroState.Idle)
-                            {
-                                <span class="timer-pomodoro-status-badge">@GetPomodoroStatusLabel()</span>
-                            }
-                            <div class="timer-pomodoro-progress-bar" title="Rounds: @(TimerService.CompletedWorkIntervalsCount) completed">
-                                @for (int i = 0; i < TimerService.IntervalsBeforeLongBreak; i++)
-                                {
-                                    var completed = i < (TimerService.CompletedWorkIntervalsCount % TimerService.IntervalsBeforeLongBreak);
-                                    <div class="@GetProgressSegmentClass(completed)"></div>
-                                }
-                            </div>
-                        }
-                    </div>
-                </div>
+
 
                 <div class="timer-compact__right-col">
                     @RenderTimerInputs
@@ -279,7 +266,6 @@
     private static string GetProgressSegmentClass(bool completed) => completed ? "progress-segment completed" : "progress-segment";
     private string StopwatchToggleClass => !TimerService.PomodoroModeEnabled ? "toggle-btn active" : "toggle-btn";
     private string PomodoroToggleClass => TimerService.PomodoroModeEnabled ? "toggle-btn active" : "toggle-btn";
-    private string TimerInputsPairClass => TimerService.PomodoroModeEnabled ? "timer-inputs-pair timer-inputs-pair--single" : "timer-inputs-pair";
 
     private string FocusDurationText
     {
@@ -340,86 +326,104 @@
         return _sessionTargetText;
     }
      private RenderFragment RenderTimerInputs => __builder =>
-    {
-        <div class="@TimerInputsPairClass">
-            <div class="timer-target-input-row">
-                <MudAutocomplete T="string"
-                                 Value="@_sessionTargetText"
-                                 ValueChanged="OnSessionTargetValueChanged"
-                                 SearchFunc="SearchSessionTargetsAsync"
-                                 Label="Session target"
-                                 Placeholder="Search board or type a custom label"
-                                 Variant="Variant.Outlined"
-                                 Margin="Margin.Dense"
-                                 Class="timer-target-field flex-grow-1"
-                                 Immediate="true"
-                                 CoerceValue="true"
-                                 Strict="false"
-                                 MinCharacters="0"
-                                 Clearable="true"
-                                 Adornment="Adornment.Start"
-                                 AdornmentIcon="@GetTimerTargetLeadIcon()"
-                                 ResetValueOnEmptyText="true">
-                    <ItemTemplate Context="rowKey">
-                        @{
-                            _sessionLabelToTarget.TryGetValue(rowKey, out (string TargetType, string TargetTitle, Guid _) entry);
-                        }
-                        <MudStack Row="true"
-                                  Spacing="2"
-                                  AlignItems="AlignItems.Center"
-                                  Class="w-100">
-                            <MudIcon Color="Color.Default"
-                                     Icon="@BoardSectionVisuals.GetMudIconForTargetType(entry.TargetType)"
-                                     Size="Size.Small"/>
-                            <MudText Typo="Typo.body2" Class="flex-grow-1 text-truncate">@rowKey</MudText>
-                        </MudStack>
-                    </ItemTemplate>
-                </MudAutocomplete>
-            </div>
-            @if (!TimerService.PomodoroModeEnabled)
-            {
-                <div class="timer-focus-field" @onkeydown="OnFocusDurationKeyDown">
-                    <MudStack Row="true"
-                               Spacing="0"
-                               AlignItems="AlignItems.Center"
-                               Class="timer-focus-input-row">
-                        <MudTextField T="string"
-                                      @bind-Text="FocusDurationText"
-                                      OnBlur="OnFocusDurationBlur"
-                                      Label="Time's up after"
-                                      Placeholder="e.g. 25, 1:20, 90s, 0:0:30"
-                                      Clearable="true"
-                                      Variant="Variant.Outlined"
-                                      Margin="Margin.Dense"
-                                      Class="timer-focus-textfield w-100 flex-grow-1"
-                                      Immediate="true"
-                                      Error="@_focusDurationParseError"
-                                      ErrorText="@_focusDurationErrorText"/>
-                        <MudTooltip ShowOnHover="true"
-                                    ShowOnClick="true"
-                                    ShowOnFocus="true"
-                                    Delay="100"
-                                    Arrow="true"
-                                    Placement="Placement.Top">
-                            <ChildContent>
-                                <MudIconButton Icon="@Icons.Material.Filled.Info"
-                                               Variant="Variant.Text"
-                                               Size="Size.Small"
-                                               Color="Color.Default"
-                                               Class="timer-focus-info-icon"
-                                               aria-label="How time's up alert works"/>
-                            </ChildContent>
-                            <TooltipContent>
-                                <MudText Typo="Typo.caption" Class="focus-duration-help-text">
-                                    @FocusDurationInput.HelpTooltip
-                                </MudText>
-                            </TooltipContent>
-                        </MudTooltip>
-                    </MudStack>
-                </div>
-            }
-        </div>
-    };
+     {
+          <div class="timer-inputs-pair">
+             <div class="timer-target-input-row">
+                 <MudAutocomplete T="string"
+                                  Value="@_sessionTargetText"
+                                  ValueChanged="OnSessionTargetValueChanged"
+                                  SearchFunc="SearchSessionTargetsAsync"
+                                  Label="Session target"
+                                  Placeholder="Search board or type a custom label"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Class="timer-target-field flex-grow-1"
+                                  Immediate="true"
+                                  CoerceValue="true"
+                                  Strict="false"
+                                  MinCharacters="0"
+                                  Clearable="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@GetTimerTargetLeadIcon()"
+                                  ResetValueOnEmptyText="true">
+                     <ItemTemplate Context="rowKey">
+                         @{
+                             _sessionLabelToTarget.TryGetValue(rowKey, out (string TargetType, string TargetTitle, Guid _) entry);
+                         }
+                         <MudStack Row="true"
+                                   Spacing="2"
+                                   AlignItems="AlignItems.Center"
+                                   Class="w-100">
+                             <MudIcon Color="Color.Default"
+                                      Icon="@BoardSectionVisuals.GetMudIconForTargetType(entry.TargetType)"
+                                      Size="Size.Small"/>
+                             <MudText Typo="Typo.body2" Class="flex-grow-1 text-truncate">@rowKey</MudText>
+                         </MudStack>
+                     </ItemTemplate>
+                 </MudAutocomplete>
+             </div>
+             @if (!TimerService.PomodoroModeEnabled)
+             {
+                 <div class="timer-focus-field" @onkeydown="OnFocusDurationKeyDown">
+                     <MudStack Row="true"
+                                Spacing="0"
+                                AlignItems="AlignItems.Center"
+                                Class="timer-focus-input-row">
+                         <MudTextField T="string"
+                                       @bind-Text="FocusDurationText"
+                                       OnBlur="OnFocusDurationBlur"
+                                       Label="Time's up after"
+                                       Placeholder="e.g. 25, 1:20, 90s, 0:0:30"
+                                       Clearable="true"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       Class="timer-focus-textfield w-100 flex-grow-1"
+                                       Immediate="true"
+                                       Error="@_focusDurationParseError"
+                                       ErrorText="@_focusDurationErrorText"/>
+                         <MudTooltip ShowOnHover="true"
+                                     ShowOnClick="true"
+                                     ShowOnFocus="true"
+                                     Delay="100"
+                                     Arrow="true"
+                                     Placement="Placement.Top">
+                             <ChildContent>
+                                 <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                                Variant="Variant.Text"
+                                                Size="Size.Small"
+                                                Color="Color.Default"
+                                                Class="timer-focus-info-icon"
+                                                aria-label="How time's up alert works"/>
+                             </ChildContent>
+                             <TooltipContent>
+                                 <MudText Typo="Typo.caption" Class="focus-duration-help-text">
+                                     @FocusDurationInput.HelpTooltip
+                                 </MudText>
+                             </TooltipContent>
+                         </MudTooltip>
+                     </MudStack>
+                 </div>
+             }
+             else
+             {
+                  <div class="timer-pomodoro-info-field">
+                      <MudField Label="Pomodoro session" Variant="Variant.Outlined" Margin="Margin.Dense" Class="timer-pomodoro-field-control" tabindex="-1">
+                          <div class="timer-pomodoro-info-container" style="display: flex !important; align-items: center !important; justify-content: space-between !important; width: 100% !important; height: 100% !important; gap: 8px !important; white-space: nowrap !important; overflow: hidden !important;">
+                              <div class="timer-pomodoro-info-item timer-pomodoro-info-item--next" style="display: inline-flex !important; align-items: center !important; white-space: nowrap !important; flex-shrink: 0 !important;" title="Next Pomodoro: @GetNextPomodoroLabelAndDuration()">
+                                  <MudIcon Icon="@Icons.Material.Filled.ArrowCircleRight" Size="Size.Small" Class="mr-1 next-icon" />
+                                  <span class="info-value next-value">@GetNextPomodoroLabelAndDuration()</span>
+                              </div>
+                              <div class="timer-pomodoro-info-divider"></div>
+                              <div class="timer-pomodoro-info-item timer-pomodoro-info-item--done" style="display: inline-flex !important; align-items: center !important; white-space: nowrap !important; flex-shrink: 0 !important;" title="Completed: @TimerService.CompletedWorkIntervalsCount overall, @GetCompletedInCurrentCycle() of @TimerService.IntervalsBeforeLongBreak in current cycle">
+                                  <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1 done-icon" Color="Color.Success" />
+                                  <span class="info-value total-value">@TimerService.CompletedWorkIntervalsCount (@GetCompletedInCurrentCycle()/@TimerService.IntervalsBeforeLongBreak)</span>
+                              </div>
+                          </div>
+                      </MudField>
+                  </div>
+              }
+         </div>
+     };
 
     protected override async Task OnInitializedAsync()
     {
@@ -757,7 +761,7 @@
         {
             if (TimerService.CurrentPomodoroState == PomodoroState.Idle)
             {
-                return TimerService.WorkDuration.ToString(@"mm\:ss");
+                return FormatTimeSpan(TimerService.WorkDuration);
             }
 
             if (TimerService.FocusAlertAfter.HasValue)
@@ -767,10 +771,42 @@
                 {
                     remaining = TimeSpan.Zero;
                 }
-                return remaining.ToString(@"mm\:ss");
+                return FormatTimeSpan(remaining);
             }
         }
-        return TimerService.Elapsed.ToString(@"hh\:mm\:ss");
+        return FormatTimeSpan(TimerService.Elapsed);
+    }
+
+    private string GetNextPomodoroLabelAndDuration()
+    {
+        var nextState = TimerService.CurrentPomodoroState switch
+        {
+            PomodoroState.Idle => "Work",
+            PomodoroState.Work => (TimerService.CompletedWorkIntervalsCount + 1) % TimerService.IntervalsBeforeLongBreak == 0 ? "Long Break" : "Short Break",
+            PomodoroState.ShortBreak => "Work",
+            PomodoroState.LongBreak => "Work",
+            _ => "Work"
+        };
+
+        var nextDuration = TimerService.CurrentPomodoroState switch
+        {
+            PomodoroState.Idle => TimerService.WorkDuration,
+            PomodoroState.Work => (TimerService.CompletedWorkIntervalsCount + 1) % TimerService.IntervalsBeforeLongBreak == 0 ? TimerService.LongBreakDuration : TimerService.ShortBreakDuration,
+            PomodoroState.ShortBreak => TimerService.WorkDuration,
+            PomodoroState.LongBreak => TimerService.WorkDuration,
+            _ => TimerService.WorkDuration
+        };
+
+        return $"{nextState} ({FormatTimeSpan(nextDuration)})";
+    }
+
+    private static string FormatTimeSpan(TimeSpan ts)
+    {
+        if (ts.TotalHours >= 1)
+        {
+            return ts.ToString(@"hh\:mm\:ss");
+        }
+        return ts.ToString(@"mm\:ss");
     }
 
     private string GetPomodoroStatusLabel()
@@ -782,6 +818,17 @@
             PomodoroState.LongBreak => "Long Break",
             _ => "Get Ready"
         };
+    }
+
+    private int GetCompletedInCurrentCycle()
+    {
+        if (TimerService.IntervalsBeforeLongBreak <= 0) return 0;
+        var count = TimerService.CompletedWorkIntervalsCount % TimerService.IntervalsBeforeLongBreak;
+        if (count == 0 && TimerService.CompletedWorkIntervalsCount > 0 && TimerService.CurrentPomodoroState == PomodoroState.LongBreak)
+        {
+            return TimerService.IntervalsBeforeLongBreak;
+        }
+        return count;
     }
 
     private async Task StopAndLog()
@@ -804,6 +851,11 @@
     private void ToggleExpanded()
     {
         _expanded = !_expanded;
+    }
+
+    private void ToggleSettings()
+    {
+        _settingsExpanded = !_settingsExpanded;
     }
 
     public void Dispose()

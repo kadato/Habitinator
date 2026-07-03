@@ -25,6 +25,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
   let layoutHelper = null;
   let boardHelper = null;
   let isListenersAdded = false;
+  let isEnabled = true;
 
   let isAltHeld = false;
   let isShiftHeld = false;
@@ -750,6 +751,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
   }
 
   function ensureListeners() {
+    if (!isEnabled) return;
     if (isListenersAdded) return;
     globalThis.addEventListener("keydown", onKeyDown, true); // Use capture phase to intercept input keys in shortcut mode
     globalThis.addEventListener("keyup", onKeyUp);
@@ -757,7 +759,26 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     isListenersAdded = true;
   }
 
+  function removeListeners() {
+    if (!isListenersAdded) return;
+    globalThis.removeEventListener("keydown", onKeyDown, true);
+    globalThis.removeEventListener("keyup", onKeyUp);
+    globalThis.removeEventListener("blur", onWindowBlur);
+    isListenersAdded = false;
+  }
+
   return {
+    setEnabled: function (enabled) {
+      isEnabled = !!enabled;
+      if (isEnabled) {
+        if (layoutHelper || boardHelper) {
+          ensureListeners();
+        }
+      } else {
+        deactivateShortcutMode();
+        removeListeners();
+      }
+    },
     startGlobal: function (dotNetRef) {
       layoutHelper = dotNetRef;
       ensureListeners();
@@ -768,6 +789,9 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     },
     stopBoard: function () {
       boardHelper = null;
+      if (!layoutHelper && !boardHelper) {
+        removeListeners();
+      }
     },
     // Compatibility methods for old calls
     start: function (dotNetRef) {
@@ -777,6 +801,9 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     stop: function () {
       boardHelper = null;
       deactivateShortcutMode();
+      if (!layoutHelper && !boardHelper) {
+        removeListeners();
+      }
     },
     toggle: function () {
       if (shortcutModeActive) {

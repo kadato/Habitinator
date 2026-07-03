@@ -23,6 +23,8 @@ public sealed class UserPreferences
 
     public int PomodoroCyclesBeforeLongBreak { get; set; } = 4;
 
+    public bool EnableKeyboardShortcuts { get; set; } = true;
+
     public static UserPreferences CreateDefault()
     {
         return new UserPreferences();

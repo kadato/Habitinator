@@ -169,6 +169,17 @@
             </MudStack>
         </MudPaper>
 
+        <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.subtitle1" Class="mb-1">Keyboard Shortcuts</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
+                    Enable keyboard shortcuts to navigate and control the app quickly.
+                </MudText>
+                <MudSwitch T="bool" Label="Enable keyboard shortcuts" Color="Color.Primary"
+                           Value="_model.EnableKeyboardShortcuts" ValueChanged="OnEnableKeyboardShortcutsChanged" />
+            </MudStack>
+        </MudPaper>
+
         @* Settings are saved automatically on change or blur *@
     }
 </MudStack>
@@ -279,7 +290,8 @@
             PomodoroWorkDurationMinutes = s.PomodoroWorkDurationMinutes,
             PomodoroShortBreakMinutes = s.PomodoroShortBreakMinutes,
             PomodoroLongBreakMinutes = s.PomodoroLongBreakMinutes,
-            PomodoroCyclesBeforeLongBreak = s.PomodoroCyclesBeforeLongBreak
+            PomodoroCyclesBeforeLongBreak = s.PomodoroCyclesBeforeLongBreak,
+            EnableKeyboardShortcuts = s.EnableKeyboardShortcuts
         };
     }
 
@@ -339,6 +351,13 @@
         if (_model is null) return;
         _themeSelection = value;
         _model.Theme = value;
+        await AutoSaveAsync();
+    }
+
+    private async Task OnEnableKeyboardShortcutsChanged(bool value)
+    {
+        if (_model is null) return;
+        _model.EnableKeyboardShortcuts = value;
         await AutoSaveAsync();
     }
 

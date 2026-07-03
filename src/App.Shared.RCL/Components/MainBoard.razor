@@ -313,9 +313,12 @@
                                OnClick="OpenArchivedItemsDialogAsync">
                         Archive
                     </MudButton>
-                    <span class="board-shortcuts-hint mud-text-secondary">
-                        Press <kbd style="background: var(--mud-palette-background-grey); color: var(--mud-palette-text-primary); border: 1px solid var(--mud-palette-divider); border-radius: 4px; padding: 1px 4px; font-family: monospace; font-size: 0.65rem; box-shadow: 0 1px 0 rgba(0,0,0,0.15); margin: 0 2px;">Shift</kbd> to toggle shortcuts
-                    </span>
+                    @if (_shortcutsEnabled)
+                    {
+                        <span class="board-shortcuts-hint mud-text-secondary">
+                            Press <kbd style="background: var(--mud-palette-background-grey); color: var(--mud-palette-text-primary); border: 1px solid var(--mud-palette-divider); border-radius: 4px; padding: 1px 4px; font-family: monospace; font-size: 0.65rem; box-shadow: 0 1px 0 rgba(0,0,0,0.15); margin: 0 2px;">Shift</kbd> to toggle shortcuts
+                        </span>
+                    }
                 </div>
             </div>
         </MudPaper>
@@ -447,6 +450,7 @@
     private bool _dailyRetroSessionOffered;
     private bool _dailyRetroClientReady;
     private bool _boardClientScriptsStarted;
+    private bool _shortcutsEnabled = true;
     private DotNetObjectReference<BoardRemoteNotifyBridge>? _visibilityRef;
     private DotNetObjectReference<MainBoard>? _selfRef;
     private DateTimeOffset _lastLocalMutationTime = DateTimeOffset.MinValue;
@@ -505,6 +509,8 @@
         UndoService.OnStateChanged += HandleUndoStateChanged;
         UndoService.OnUndoPerformed += HandleUndoPerformed;
         ConflictResolution.ConflictDetected += HandleConflictDetected;
+        PreferencesService.Changed += OnPreferencesChanged;
+        await LoadShortcutsPreferenceAsync();
         await InitialLoadAsync();
     }
 
@@ -522,6 +528,28 @@
     private void OnBoardSyncStatusChanged(object? sender, EventArgs e)
     {
         _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void OnPreferencesChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await LoadShortcutsPreferenceAsync();
+            StateHasChanged();
+        });
+    }
+
+    private async Task LoadShortcutsPreferenceAsync()
+    {
+        try
+        {
+            var prefs = await PreferencesService.GetAsync();
+            _shortcutsEnabled = prefs.EnableKeyboardShortcuts;
+        }
+        catch
+        {
+            // Ignore if settings storage fails
+        }
     }
 
     /// <summary>
@@ -561,6 +589,7 @@
         UndoService.OnStateChanged -= HandleUndoStateChanged;
         UndoService.OnUndoPerformed -= HandleUndoPerformed;
         ConflictResolution.ConflictDetected -= HandleConflictDetected;
+        PreferencesService.Changed -= OnPreferencesChanged;
         if (_boardClientScriptsStarted)
         {
             await SafeInvokeVoidAsync("HabitinatorBoardVisibility.stop");

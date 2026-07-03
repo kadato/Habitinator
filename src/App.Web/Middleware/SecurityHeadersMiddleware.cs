@@ -18,8 +18,8 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next)
             "form-action 'self'; " +
             "frame-ancestors 'none'; " +
             "img-src 'self' data: blob:; " +
-            "font-src 'self' data:; " +
-            "style-src 'self' 'unsafe-inline'; " +
+            "font-src 'self' data: https://fonts.gstatic.com; " +
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
             "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; " +
             "connect-src 'self' https: wss: ws:; " +
             "object-src 'none'; " +

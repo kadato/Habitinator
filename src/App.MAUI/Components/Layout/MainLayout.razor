@@ -138,6 +138,7 @@
                 await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardVisibility.js");
                 _layoutSelfRef = DotNetObjectReference.Create(this);
                 await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.startGlobal", _layoutSelfRef);
+                await SyncKeyboardShortcutsEnabledAsync();
             }
             catch
             {
@@ -202,6 +203,20 @@
     {
         _preferences = await PreferencesService.GetAsync();
         await ResolveThemeAsync();
+        await SyncKeyboardShortcutsEnabledAsync();
+    }
+
+    private async Task SyncKeyboardShortcutsEnabledAsync()
+    {
+        if (_preferences is null) return;
+        try
+        {
+            await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.setEnabled", _preferences.EnableKeyboardShortcuts);
+        }
+        catch
+        {
+            // Ignore if JS is not available
+        }
     }
 
     private async Task SyncHtmlThemeAsync()

@@ -58,7 +58,7 @@ public sealed partial class MauiBoardSyncCoordinator : IDisposable
         _status.RefreshConnectivity();
         if (_status.IsOffline)
         {
-            _status.SyncProblemMessage = "Offline — board changes stay on this device until you reconnect.";
+            _status.SyncProblemMessage = "Offline - board changes stay on this device until you reconnect.";
             return;
         }
 

@@ -755,27 +755,7 @@
         _focusDurationText = FocusDurationInput.FormatForField(TimerService.FocusAlertAfter);
     }
 
-    private string GetDisplayTime()
-    {
-        if (TimerService.PomodoroModeEnabled)
-        {
-            if (TimerService.CurrentPomodoroState == PomodoroState.Idle)
-            {
-                return FormatTimeSpan(TimerService.WorkDuration);
-            }
-
-            if (TimerService.FocusAlertAfter.HasValue)
-            {
-                var remaining = TimerService.FocusAlertAfter.Value - TimerService.Elapsed;
-                if (remaining < TimeSpan.Zero)
-                {
-                    remaining = TimeSpan.Zero;
-                }
-                return FormatTimeSpan(remaining);
-            }
-        }
-        return FormatTimeSpan(TimerService.Elapsed);
-    }
+    private string GetDisplayTime() => TimerService.GetDisplayTime();
 
     private string GetNextPomodoroLabelAndDuration()
     {
@@ -797,28 +777,10 @@
             _ => TimerService.WorkDuration
         };
 
-        return $"{nextState} ({FormatTimeSpan(nextDuration)})";
+        return $"{nextState} ({GlobalTimerService.FormatTimeSpan(nextDuration)})";
     }
 
-    private static string FormatTimeSpan(TimeSpan ts)
-    {
-        if (ts.TotalHours >= 1)
-        {
-            return ts.ToString(@"hh\:mm\:ss");
-        }
-        return ts.ToString(@"mm\:ss");
-    }
-
-    private string GetPomodoroStatusLabel()
-    {
-        return TimerService.CurrentPomodoroState switch
-        {
-            PomodoroState.Work => "Focusing",
-            PomodoroState.ShortBreak => "Short Break",
-            PomodoroState.LongBreak => "Long Break",
-            _ => "Get Ready"
-        };
-    }
+    private string GetPomodoroStatusLabel() => TimerService.GetStatusLabel();
 
     private int GetCompletedInCurrentCycle()
     {

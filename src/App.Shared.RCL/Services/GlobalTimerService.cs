@@ -302,4 +302,50 @@ public sealed class GlobalTimerService(IClock clock)
             _nextFocusMilestoneAtElapsed = _accumulated + FocusAlertAfter.Value;
         }
     }
+
+    public string GetDisplayTime()
+    {
+        if (PomodoroModeEnabled)
+        {
+            if (CurrentPomodoroState == PomodoroState.Idle)
+            {
+                return FormatTimeSpan(WorkDuration);
+            }
+
+            if (FocusAlertAfter.HasValue)
+            {
+                var remaining = FocusAlertAfter.Value - Elapsed;
+                if (remaining < TimeSpan.Zero)
+                {
+                    remaining = TimeSpan.Zero;
+                }
+                return FormatTimeSpan(remaining);
+            }
+        }
+        return FormatTimeSpan(Elapsed);
+    }
+
+    public string GetStatusLabel()
+    {
+        if (PomodoroModeEnabled)
+        {
+            return CurrentPomodoroState switch
+            {
+                PomodoroState.Work => "Focusing",
+                PomodoroState.ShortBreak => "Short Break",
+                PomodoroState.LongBreak => "Long Break",
+                _ => "Get Ready"
+            };
+        }
+        return "Focusing";
+    }
+
+    public static string FormatTimeSpan(TimeSpan ts)
+    {
+        if (ts.TotalHours >= 1)
+        {
+            return ts.ToString(@"hh\:mm\:ss", System.Globalization.CultureInfo.InvariantCulture);
+        }
+        return ts.ToString(@"mm\:ss", System.Globalization.CultureInfo.InvariantCulture);
+    }
 }

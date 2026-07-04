@@ -276,6 +276,49 @@ public sealed class GlobalTimerServiceTests
         Assert.False(timer.IsRunning);
     }
 
+    [Fact]
+    public void DisplayTimeAndStatusLabel_ReflectsStateCorrectly()
+    {
+        var clock = new FakeClock(new DateTimeOffset(2026, 4, 24, 10, 0, 0, TimeSpan.Zero));
+        var timer = new GlobalTimerService(clock)
+        {
+            PomodoroModeEnabled = true,
+            WorkDuration = TimeSpan.FromMinutes(25)
+        };
+
+        // Idle state
+        Assert.Equal("25:00", timer.GetDisplayTime());
+        Assert.Equal("Get Ready", timer.GetStatusLabel());
+
+        // Start work state
+        timer.Start();
+        Assert.Equal("Focusing", timer.GetStatusLabel());
+        Assert.Equal("25:00", timer.GetDisplayTime());
+        clock.Advance(TimeSpan.FromSeconds(10));
+        Assert.Equal("24:50", timer.GetDisplayTime());
+
+        // Transition to Short Break
+        timer.IncrementCompletedIntervals();
+        timer.TransitionToBreak();
+        Assert.Equal("Short Break", timer.GetStatusLabel());
+        Assert.Equal("05:00", timer.GetDisplayTime());
+
+        // Non-Pomodoro mode (Stopwatch)
+        timer.PomodoroModeEnabled = false;
+        timer.Reset();
+        timer.Start();
+        clock.Advance(TimeSpan.FromMinutes(5).Add(TimeSpan.FromSeconds(23)));
+        Assert.Equal("Focusing", timer.GetStatusLabel());
+        Assert.Equal("05:23", timer.GetDisplayTime());
+    }
+
+    [Fact]
+    public void FormatTimeSpan_HandlesHoursCorrectly()
+    {
+        Assert.Equal("01:05:23", GlobalTimerService.FormatTimeSpan(TimeSpan.FromHours(1).Add(TimeSpan.FromMinutes(5)).Add(TimeSpan.FromSeconds(23))));
+        Assert.Equal("05:23", GlobalTimerService.FormatTimeSpan(TimeSpan.FromMinutes(5).Add(TimeSpan.FromSeconds(23))));
+    }
+
     private sealed class FakeClock(DateTimeOffset initial) : IClock
     {
         public DateTimeOffset UtcNow { get; private set; } = initial;

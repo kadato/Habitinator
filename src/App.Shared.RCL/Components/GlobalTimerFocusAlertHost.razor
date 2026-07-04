@@ -7,15 +7,34 @@
 
 @* Runs on every authenticated page so "time's up" dialogs are not tied to the board timer panel. *@
 
+@if (TimerService.IsRunning)
+{
+    <PageTitle>@GetTabTitle()</PageTitle>
+}
+
 @code {
     private PeriodicTimer? _focusTick;
     private CancellationTokenSource? _focusTickCts;
+    private bool _wasRunningForTitle;
 
     protected override void OnInitialized()
     {
         _focusTickCts = new CancellationTokenSource();
         _focusTick = new PeriodicTimer(TimeSpan.FromSeconds(1));
         _ = RunFocusTickAsync(_focusTickCts.Token);
+    }
+
+    private string GetTabTitle()
+    {
+        var timeStr = TimerService.GetDisplayTime();
+        var statusStr = TimerService.CurrentPomodoroState switch
+        {
+            PomodoroState.Work => "Work",
+            PomodoroState.ShortBreak => "Break",
+            PomodoroState.LongBreak => "Break",
+            _ => TimerService.PomodoroModeEnabled ? "Ready" : "Focus"
+        };
+        return $"{timeStr} {statusStr} - Habitinator";
     }
 
     private async Task RunFocusTickAsync(CancellationToken cancellationToken)
@@ -29,7 +48,14 @@
         {
             while (await _focusTick.WaitForNextTickAsync(cancellationToken))
             {
-                if (TimerService.IsRunning && TimerService.TryConsumeFocusDurationReached())
+                bool isRunning = TimerService.IsRunning;
+                if (isRunning || isRunning != _wasRunningForTitle)
+                {
+                    _wasRunningForTitle = isRunning;
+                    await InvokeAsync(StateHasChanged);
+                }
+
+                if (isRunning && TimerService.TryConsumeFocusDurationReached())
                 {
                     if (TimerService.PomodoroModeEnabled)
                     {

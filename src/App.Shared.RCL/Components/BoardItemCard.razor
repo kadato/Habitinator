@@ -9,19 +9,20 @@
         <div class="board-card__habit-btns board-card__left">
             @if (Item.TrackPlus)
             {
-                <button type="button" class="board-sq board-sq--good" title="Log +" draggable="false" @onclick="OnHabitUp" @onclick:stopPropagation="true">+</button>
-            }
-            else
-            {
-                <span class="board-sq-spacer" aria-hidden="true"></span>
+                <button type="button" class="board-sq board-sq--good" title="Log +" draggable="false" @onclick="OnHabitUp" @onclick:stopPropagation="true">
+                    <svg class="board-habit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </button>
             }
             @if (Item.TrackMinus)
             {
-                <button type="button" class="board-sq board-sq--bad" title="Log −" draggable="false" @onclick="OnHabitDown" @onclick:stopPropagation="true">−</button>
-            }
-            else
-            {
-                <span class="board-sq-spacer" aria-hidden="true"></span>
+                <button type="button" class="board-sq board-sq--bad" title="Log −" draggable="false" @onclick="OnHabitDown" @onclick:stopPropagation="true">
+                    <svg class="board-habit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </button>
             }
         </div>
     }
@@ -173,21 +174,43 @@
                         <span class="board-todo-due__relative">@TodoDueRelativeLabel(due)</span>
                     </div>
                 }
-            </div>
-            <div class="board-card__foot-right">
                 @if (Section == BoardSection.Habit)
                 {
-                    <div class="board-streak" title="@HabitCounterTitle()">
-                        <MudIcon Icon="@Icons.Material.Filled.FastForward" Size="Size.Small" Class="me-1"/>
-                        <span class="board-streak__text">@HabitStreakLabel()</span>
+                    <div class="board-habit-counters" title="@HabitCounterTitle()">
+                        @if (Item.TrackPlus)
+                        {
+                            <span class="board-habit-badge board-habit-badge--plus" title="Positive logs">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="me-1"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                @Item.Counter
+                            </span>
+                        }
+                        @if (Item.TrackMinus)
+                        {
+                            <span class="board-habit-badge board-habit-badge--minus" title="Negative logs">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="me-1"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                @Item.NegativeCounter
+                            </span>
+                        }
                     </div>
                 }
-                else if (Section == BoardSection.Daily)
+            </div>
+            <div class="board-card__foot-right">
+                @if (Section == BoardSection.Daily)
                 {
-                    <div class="board-streak" title="Streak">
-                        <MudIcon Icon="@Icons.Material.Filled.FastForward" Size="Size.Small" Class="me-1"/>
-                        <span class="board-streak__text">@Item.Counter</span>
-                    </div>
+                    @if (Item.Counter > 0)
+                    {
+                        <div class="board-streak board-streak--active" title="Daily streak: @Item.Counter days">
+                            <MudIcon Icon="@Icons.Material.Filled.Whatshot" Size="Size.Small" Class="me-1 streak-flame-icon"/>
+                            <span class="board-streak__text">@Item.Counter</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="board-streak board-streak--inactive" title="No current streak">
+                            <MudIcon Icon="@Icons.Material.Outlined.Whatshot" Size="Size.Small" Class="me-1 streak-flame-icon-inactive"/>
+                            <span class="board-streak__text">0</span>
+                        </div>
+                    }
                 }
             </div>
         </div>
@@ -256,16 +279,7 @@
 
     private DateOnly BoardToday() => DailySchedule.LocalToday(TimeZoneService);
 
-    private string HabitStreakLabel()
-    {
-        return (Item.TrackPlus, Item.TrackMinus) switch
-        {
-            (true, true) => $"+{Item.Counter} / −{Item.NegativeCounter}",
-            (true, false) => $"{Item.Counter}",
-            (false, true) => $"−{Item.NegativeCounter}",
-            _ => "—"
-        };
-    }
+
 
     private string HabitCounterTitle()
     {

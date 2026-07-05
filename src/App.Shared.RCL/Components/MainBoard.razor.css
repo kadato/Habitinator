@@ -3,6 +3,7 @@
     color: var(--mud-palette-text-primary);
     display: flex;
     flex-direction: column;
+    gap: 0.35rem !important; /* more compact gap between elements */
     /* App bar + MudMainContent padding */
     min-height: calc(100vh - 7rem);
     min-height: calc(100dvh - 7rem);
@@ -20,7 +21,8 @@
     flex-direction: column;
     justify-content: flex-start;
     min-height: 0;
-    padding: 0.15rem 0.25rem 0.75rem;
+    padding: 0 0.25rem 0.75rem; /* reduced top padding from 0.15rem */
+    margin-top: -0.25rem; /* pull lists closer to search */
 }
 
 /* Mobile: MudTabs with one column per panel. Desktop: three-column grid only. */
@@ -116,4 +118,150 @@
 
 .habitica-board-wrap {
     max-width: 100%;
+}
+
+/* Centered search and tags filter row on desktop */
+.board-stat-strip-row {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.65rem 1rem !important;
+    width: 100% !important;
+}
+
+.board-stat-filters {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.75rem !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 45rem !important; /* desktop max-width: wider search bar */
+}
+
+/* Search field */
+.board-search-pill {
+    flex-grow: 1 !important;
+    min-width: 0 !important;
+}
+
+.board-search-pill ::deep .mud-input-outlined {
+    border-radius: 9999px !important;
+    height: 2.5rem !important; /* matching height */
+    align-items: center !important;
+}
+
+.board-search-pill ::deep .mud-input-control {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.board-search-pill ::deep .mud-input-slot input {
+    font-size: 0.875rem !important;
+    height: 100% !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* Hide helper container to remove bottom space */
+.board-stat-filters ::deep .mud-input-control-helper-container {
+    display: none !important;
+}
+
+/* Tags Button */
+.board-tags-trigger--strip {
+    height: 2.5rem !important; /* matching height */
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    font-size: 0.85rem !important;
+    border-radius: 8px !important; /* squared tags button */
+}
+
+/* board-column-header-flex has been moved to BoardColumn.razor.css for CSS isolation */
+
+/* Mobile overrides */
+@media (max-width: 959.98px) {
+    .board-stat-filters {
+        width: 100% !important;
+        max-width: none !important;
+        justify-content: space-between !important;
+    }
+
+    .board-search-pill {
+        width: 100% !important;
+        max-width: none !important;
+    }
+
+    /* Hide column card titles ("Habits", "Dailies", etc.) and badges in mobile tabbed view */
+    .board-columns-mobile ::deep .board-column-header-row {
+        display: none !important;
+    }
+
+    .board-columns-mobile ::deep .mud-card-header {
+        padding-top: 0.35rem !important;
+        padding-bottom: 0.25rem !important;
+    }
+
+    /* More space below mobile nav tabs */
+    .board-section-tabs ::deep .mud-tab-panel-content {
+        padding-top: 1.25rem !important;
+    }
+
+    /* Align filter buttons to the right on mobile */
+    .board-columns-mobile ::deep .board-filter-toolbar {
+        justify-content: flex-end !important;
+    }
+}
+
+.board-shortcuts-hint {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    opacity: 0.8;
+    font-size: 0.75rem;
+    margin-left: 0.25rem;
+}
+
+@media (max-width: 959.98px) {
+    .board-shortcuts-hint {
+        display: none !important;
+    }
+}
+
+/* Keyboard Shortcuts Overlay and Legend */
+.hab-shortcut-badge {
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.8);
+    transition: opacity 0.15s ease, visibility 0.15s ease, transform 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f172a;
+    color: #f8fafc;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 0.65rem;
+    font-family: monospace;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+    vertical-align: middle;
+    pointer-events: none;
+}
+
+:global(.dark) .hab-shortcut-badge {
+    background: #cbd5e1;
+    color: #0f172a;
+    border: 1px solid #94a3b8;
+}
+
+:global(body.hab-show-shortcuts) .hab-shortcut-badge {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
 }

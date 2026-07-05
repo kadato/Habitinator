@@ -325,14 +325,50 @@ public partial class BoardColumn : IAsyncDisposable
         };
     }
 
-    private string GetEmptyMessage()
-    {
-        if (IsBoardFilterExcludingAll)
-        {
-            return "No items match your search or tag filters.";
-        }
 
-        return "No items here yet. Add one above.";
+
+    private string GetEmptyStateIcon()
+    {
+        return Section switch
+        {
+            BoardSection.Habit => Icons.Material.Outlined.Bolt,
+            BoardSection.Daily => Icons.Material.Outlined.CalendarToday,
+            BoardSection.Todo => Icons.Material.Outlined.PlaylistAddCheck,
+            _ => Icons.Material.Outlined.Info
+        };
+    }
+
+    private string GetEmptyStateTitle()
+    {
+        return Section switch
+        {
+            BoardSection.Habit => "Establish New Habits",
+            BoardSection.Daily => "Track Daily Routines",
+            BoardSection.Todo => "Capture To-Dos",
+            _ => "No items here yet"
+        };
+    }
+
+    private string GetEmptyStateDesc()
+    {
+        return Section switch
+        {
+            BoardSection.Habit => "Habits are long-term routines you want to build or break. Log them continuously using the +/- buttons.",
+            BoardSection.Daily => "Dailies repeat on custom schedules (like daily or weekly). Check them off when completed for the day.",
+            BoardSection.Todo => "To-Dos are one-off tasks. Use them to manage specific deadlines, checklists, and single actions.",
+            _ => "Add an item above to get started."
+        };
+    }
+
+    private string GetGlossaryText()
+    {
+        return Section switch
+        {
+            BoardSection.Habit => "Habits are long-term behaviors you want to build or break. They have +/− counters that track your performance over time without a final 'done' state.",
+            BoardSection.Daily => "Dailies are recurring tasks (daily, weekly, etc.). They reset automatically at midnight and must be checked off for each scheduled period to sustain your streak.",
+            BoardSection.Todo => "To-Dos are one-off tasks with specific due dates, checklist steps, and notes. They are marked complete once and remain on the board or in the archive.",
+            _ => string.Empty
+        };
     }
 
     private string GetFooterText()

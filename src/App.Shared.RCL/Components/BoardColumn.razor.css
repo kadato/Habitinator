@@ -29,7 +29,7 @@
 }
 
 .board-column ::deep .mud-card-header {
-    padding: 0.65rem 0.85rem 0.35rem !important;
+    padding: 0.35rem 0.85rem 0.2rem !important;
 }
 
 .board-column ::deep .mud-card-content {
@@ -51,6 +51,7 @@
 .board-title {
     font-weight: 600;
     letter-spacing: 0.02em;
+    line-height: 1.2 !important;
 }
 
 .board-title-stack {
@@ -191,4 +192,105 @@
     .board-column {
         min-height: auto;
     }
+}
+
+/* Column header glossary popover */
+:global(.board-column-info-popover) {
+    max-width: 260px !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--mud-palette-divider) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+}
+
+.board-column-info-text {
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--mud-palette-text-secondary);
+}
+
+.board-column ::deep .board-column-info-btn {
+    opacity: 0.5;
+    margin-left: -6px !important;
+    transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.board-column ::deep .board-column-info-btn .mud-icon-button {
+    padding: 3px !important;
+}
+
+.board-column ::deep .board-column-info-btn:hover {
+    opacity: 0.95;
+    transform: scale(1.08);
+}
+
+/* Header flex row for desktop, moved from MainBoard.razor.css to fix CSS isolation */
+.board-column-header-flex {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.35rem 0.5rem !important;
+    width: 100% !important;
+}
+
+/* Empty state styling */
+.board-column-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem 1rem;
+    border: 1.5px dashed color-mix(in srgb, var(--mud-palette-text-primary) 12%, transparent);
+    border-radius: 0.75rem;
+    background-color: color-mix(in srgb, var(--mud-palette-background-grey) 25%, transparent);
+    margin: 0.5rem 0;
+}
+
+.empty-state-icon-container {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    margin-bottom: 0.75rem;
+}
+
+.board-column--habit .empty-state-icon-container {
+    background-color: color-mix(in srgb, #10b981 12%, transparent);
+    color: #10b981;
+}
+
+.board-column--daily .empty-state-icon-container {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
+    color: var(--mud-palette-primary);
+}
+
+.board-column--todo .empty-state-icon-container {
+    background-color: color-mix(in srgb, #f59e0b 12%, transparent);
+    color: #f59e0b;
+}
+
+.empty-state-icon-container--filter {
+    background-color: color-mix(in srgb, var(--mud-palette-text-secondary) 12%, transparent) !important;
+    color: var(--mud-palette-text-secondary) !important;
+}
+
+.empty-state-icon {
+    font-size: 1.5rem !important;
+}
+
+.empty-state-title {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--mud-palette-text-primary);
+}
+
+.empty-state-desc {
+    color: var(--mud-palette-text-secondary);
+    max-width: 14rem;
+    line-height: 1.4;
+    font-size: 0.75rem;
 }

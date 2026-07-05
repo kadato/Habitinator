@@ -6,9 +6,24 @@
             <MudStack Spacing="1">
                 <div class="board-column-header-flex">
                     <div class="board-column-header-left board-column-header-row">
-                        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="board-title-stack">
+                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="board-title-stack">
                             <span class="board-count-badge">@VisibleItems().Count</span>
                             <MudText Typo="Typo.subtitle1" Class="board-title">@GetTitle()</MudText>
+                            <MudMenu Icon="@Icons.Material.Outlined.Info"
+                                     Size="Size.Small"
+                                     Dense="true"
+                                     AnchorOrigin="Origin.BottomLeft"
+                                     TransformOrigin="Origin.TopLeft"
+                                     PopoverClass="board-column-info-popover pa-3"
+                                     Class="board-column-info-btn"
+                                     title="What is this column?">
+                                <ChildContent>
+                                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold mb-1" Color="Color.Primary">@GetTitle()</MudText>
+                                    <MudText Typo="Typo.body2" Class="board-column-info-text">
+                                        @GetGlossaryText()
+                                    </MudText>
+                                </ChildContent>
+                            </MudMenu>
                         </MudStack>
                     </div>
                     <MudStack Row="true" Spacing="1" Class="flex-wrap board-filter-toolbar" role="toolbar">
@@ -124,9 +139,24 @@
             }
             @if (visibleItems.Count == 0)
             {
-                <MudAlert Severity="Severity.Normal" Variant="Variant.Text" Dense="true" Class="ma-0" NoIcon="true">
-                    @GetEmptyMessage()
-                </MudAlert>
+                <div class="board-column-empty-state">
+                    @if (IsBoardFilterExcludingAll)
+                    {
+                        <div class="empty-state-icon-container empty-state-icon-container--filter">
+                            <MudIcon Icon="@Icons.Material.Outlined.SearchOff" Class="empty-state-icon"/>
+                        </div>
+                        <MudText Typo="Typo.subtitle2" Class="empty-state-title">No matches found</MudText>
+                        <MudText Typo="Typo.caption" Class="empty-state-desc">Try adjusting your search text or removing selected tags.</MudText>
+                    }
+                    else
+                    {
+                        <div class="empty-state-icon-container">
+                            <MudIcon Icon="@GetEmptyStateIcon()" Class="empty-state-icon"/>
+                        </div>
+                        <MudText Typo="Typo.subtitle2" Class="empty-state-title">@GetEmptyStateTitle()</MudText>
+                        <MudText Typo="Typo.caption" Class="empty-state-desc">@GetEmptyStateDesc()</MudText>
+                    }
+                </div>
             }
             else if (canReorder)
             {

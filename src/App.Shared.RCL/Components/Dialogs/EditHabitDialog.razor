@@ -91,13 +91,15 @@
     <div class="habit-track">
         <button type="button"
                 class="habit-track__option @(_trackPlus ? "habit-track__option--on-good" : string.Empty)"
-                @onclick="@(() => _trackPlus = !_trackPlus)">
+                @onclick="@(() => _trackPlus = !_trackPlus)"
+                aria-pressed="@(_trackPlus ? "true" : "false")">
             <span class="habit-track__circle habit-track__circle--good">+</span>
             <span class="habit-track__label">Plus (+)</span>
         </button>
         <button type="button"
                 class="habit-track__option @(_trackMinus ? "habit-track__option--on-bad" : string.Empty)"
-                @onclick="@(() => _trackMinus = !_trackMinus)">
+                @onclick="@(() => _trackMinus = !_trackMinus)"
+                aria-pressed="@(_trackMinus ? "true" : "false")">
             <span class="habit-track__circle habit-track__circle--bad">−</span>
             <span class="habit-track__label">Minus (−)</span>
         </button>

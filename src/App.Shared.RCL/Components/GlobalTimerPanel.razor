@@ -5,7 +5,9 @@
 <MudCard Class="@GetTimerPanelClass()" Elevation="0" Outlined="true">
     <div class="@MobileHeaderClass"
          @onclick="ToggleExpanded"
+         @onkeydown="OnMobileHeaderKeyDown"
          role="button"
+         tabindex="0"
          aria-expanded="@AriaExpanded"
          aria-label="Toggle timer panel">
         <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="w-100 px-3 py-2">
@@ -166,21 +168,23 @@
         else
         {
             <div class="timer-compact timer-compact--idle">                <div class="timer-compact__left-col">
-                    <div class="custom-timer-toggle">
+                    <div class="custom-timer-toggle" role="group" aria-label="Timer mode selection">
                         <MudTooltip Text="Stopwatch mode">
                             <button type="button" 
                                     class="@StopwatchToggleClass" 
                                     @onclick="() => OnPomodoroModeToggleChanged(false)"
+                                    aria-pressed="@(!TimerService.PomodoroModeEnabled ? "true" : "false")"
                                     aria-label="Stopwatch mode">
-                                <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Medium" />
+                                <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Medium" aria-hidden="true"/>
                             </button>
                         </MudTooltip>
                         <MudTooltip Text="Pomodoro mode">
                             <button type="button" 
                                     class="@PomodoroToggleClass" 
                                     @onclick="() => OnPomodoroModeToggleChanged(true)"
+                                    aria-pressed="@(TimerService.PomodoroModeEnabled ? "true" : "false")"
                                     aria-label="Pomodoro mode">
-                                <MudIcon Icon="@Icons.Material.Filled.Alarm" Size="Size.Medium" />
+                                <MudIcon Icon="@Icons.Material.Filled.Alarm" Size="Size.Medium" aria-hidden="true"/>
                             </button>
                         </MudTooltip>
                     </div>
@@ -813,6 +817,14 @@
     private void ToggleExpanded()
     {
         _expanded = !_expanded;
+    }
+
+    private void OnMobileHeaderKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is " " or "Enter")
+        {
+            ToggleExpanded();
+        }
     }
 
     private void ToggleSettings()

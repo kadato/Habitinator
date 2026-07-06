@@ -58,9 +58,9 @@
         </div>
     }
     <div class="board-card__head">
-        <div class="board-card__title" draggable="false" @onclick="OnOpenEditor">
+        <button type="button" class="board-card__title" draggable="false" @onclick="OnOpenEditor">
             <span class="board-card__title-text">@Item.Title</span>
-        </div>
+        </button>
         <div class="board-card__head-actions">
             <MudMenu AnchorOrigin="Origin.BottomRight"
                      TransformOrigin="Origin.TopRight"
@@ -136,10 +136,12 @@
                 <button type="button"
                         class="board-subtask-pill"
                         @onclick="ToggleSubtasksExpand"
-                        @onclick:stopPropagation="true">
-                    <MudIcon Icon="@Icons.Material.Filled.List" Size="Size.Small" Class="me-1"/>
+                        @onclick:stopPropagation="true"
+                        aria-expanded="@(_subtasksExpanded ? "true" : "false")"
+                        aria-label="@($"Subtasks: {subDone} completed out of {subTotal}")">
+                    <MudIcon Icon="@Icons.Material.Filled.List" Size="Size.Small" Class="me-1" aria-hidden="true"/>
                     <span class="board-subtask-pill__count">@subDone / @subTotal</span>
-                    <MudIcon Icon="@(_subtasksExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small" Class="ms-1"/>
+                    <MudIcon Icon="@(_subtasksExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small" Class="ms-1" aria-hidden="true"/>
                 </button>
             }
             @if (subTotal > 0 && _subtasksExpanded)

@@ -68,7 +68,9 @@
                     <div class="stats-sidebar-block stats-sidebar-controls">
                         <div class="stats-filters-mobile-header @(_filtersExpanded ? "stats-filters-mobile-header--expanded" : "")"
                              @onclick="ToggleFiltersExpanded"
+                             @onkeydown="OnToggleFiltersKeyDown"
                              role="button"
+                             tabindex="0"
                              aria-expanded="@(_filtersExpanded ? "true" : "false")"
                              aria-label="Toggle statistics filters">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="w-100 stats-filters-mobile-header-inner">
@@ -178,7 +180,7 @@
                                                         aria-current="@(IsHeatmapToday(cell.Date) ? "date" : null)"
                                                         data-row="@r"
                                                         data-col="@c"
-                                                        tabindex="-1"
+                                                        tabindex="0"
                                                         @onclick="() => OpenDayDetailAsync(cell.Date)">
                                                 </button>
                                             }
@@ -311,7 +313,9 @@
                     <div class="stats-sidebar-block stats-sidebar-controls">
                         <div class="stats-filters-mobile-header @(_filtersExpanded ? "stats-filters-mobile-header--expanded" : "")"
                              @onclick="ToggleFiltersExpanded"
+                             @onkeydown="OnToggleFiltersKeyDown"
                              role="button"
+                             tabindex="0"
                              aria-expanded="@(_filtersExpanded ? "true" : "false")"
                              aria-label="Toggle statistics filters">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="w-100 stats-filters-mobile-header-inner">
@@ -625,6 +629,14 @@
     private void ToggleFiltersExpanded()
     {
         _filtersExpanded = !_filtersExpanded;
+    }
+
+    private void OnToggleFiltersKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is " " or "Enter")
+        {
+            ToggleFiltersExpanded();
+        }
     }
 
     private string GetFiltersHeaderSummary()

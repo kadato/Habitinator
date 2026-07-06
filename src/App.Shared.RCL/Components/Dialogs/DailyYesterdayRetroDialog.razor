@@ -35,9 +35,10 @@
                              @key="item.Id"
                              @onclick="@(() => ToggleItem(item))"
                              @onkeydown="@(e => HandleKeyDown(e, item))"
-                             role="button"
+                             role="checkbox"
                              tabindex="0"
                              aria-label="@item.Title"
+                             aria-checked="@(isCompleted ? "true" : "false")"
                              aria-disabled="false">
                             <div class="daily-yesterday-row__check-col">
                                 <div class="daily-yesterday-check @(isCompleted ? "daily-yesterday-check--ok" : "daily-yesterday-check--daily")"

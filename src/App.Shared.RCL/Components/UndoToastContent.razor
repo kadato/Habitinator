@@ -1,4 +1,10 @@
-<div class="undo-toast-body" @onclick="HandleDismiss" @onclick:stopPropagation="true">
+<div class="undo-toast-body"
+     @onclick="HandleDismiss"
+     @onclick:stopPropagation="true"
+     @onkeydown="HandleKeyDown"
+     role="button"
+     tabindex="0"
+     aria-label="Dismiss notification">
     <span class="undo-toast-message">@Description</span>
     <button class="undo-toast-btn" @onclick="HandleUndo" @onclick:stopPropagation="true">
         Undo
@@ -24,5 +30,13 @@
     {
         if (OnDismiss is not null)
             await OnDismiss();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is " " or "Enter")
+        {
+            await HandleDismiss();
+        }
     }
 }

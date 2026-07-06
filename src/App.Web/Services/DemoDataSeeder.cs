@@ -1,3 +1,4 @@
+using App.Shared.RCL.Models;
 using App.Web.Data;
 
 using Microsoft.AspNetCore.Identity;
@@ -52,7 +53,7 @@ public static class DemoDataSeeder
                 UserName = demo.Email,
                 Email = demo.Email,
                 EmailConfirmed = true,
-                UserPreferencesJson = "{}"
+                UserPreferences = UserPreferences.CreateDefault()
             };
 
             var createResult = await userManager.CreateAsync(guest, demo.Password);
@@ -74,8 +75,8 @@ public static class DemoDataSeeder
             }
 
             await ClearGuestDataAsync(dbContext, guest.Id, cancellationToken);
-            guest.NotificationSettingsJson = null;
-            guest.UserPreferencesJson = "{}";
+            guest.NotificationSettings = null;
+            guest.UserPreferences = UserPreferences.CreateDefault();
             await userManager.UpdateAsync(guest);
 
             try

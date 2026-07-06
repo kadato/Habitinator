@@ -61,9 +61,7 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
 
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
             var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-            var prefs = row is null
-                ? UserPreferences.CreateDefault()
-                : UserPreferencesJson.DeserializeOrDefault(row.UserPreferencesJson);
+            var prefs = row?.UserPreferences ?? UserPreferences.CreateDefault();
 
             if (prefs.Theme == AppTheme.System)
             {
@@ -123,7 +121,7 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
             return;
         }
 
-        row.UserPreferencesJson = UserPreferencesJson.Serialize(preferences);
+        row.UserPreferences = preferences;
         await db.SaveChangesAsync(cancellationToken);
         _cachedUserId = userId;
         _cachedPreferences = preferences;

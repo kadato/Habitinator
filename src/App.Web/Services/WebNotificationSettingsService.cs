@@ -7,24 +7,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace App.Web.Services;
 
-public sealed class WebNotificationSettingsService : INotificationSettingsService
+public sealed class WebNotificationSettingsService(
+    AuthenticationStateProvider authenticationStateProvider,
+    DemoUserResolver demoUserResolver,
+    IDbContextFactory<ApplicationDbContext> dbFactory,
+    IBoardChangeNotifier boardChangeNotifier) : INotificationSettingsService
 {
-    private readonly AuthenticationStateProvider _authenticationStateProvider;
-    private readonly IBoardChangeNotifier _boardChangeNotifier;
-    private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
-    private readonly DemoUserResolver _demoUserResolver;
-
-    public WebNotificationSettingsService(
-        AuthenticationStateProvider authenticationStateProvider,
-        DemoUserResolver demoUserResolver,
-        IDbContextFactory<ApplicationDbContext> dbFactory,
-        IBoardChangeNotifier boardChangeNotifier)
-    {
-        _authenticationStateProvider = authenticationStateProvider;
-        _demoUserResolver = demoUserResolver;
-        _dbFactory = dbFactory;
-        _boardChangeNotifier = boardChangeNotifier;
-    }
+    private readonly AuthenticationStateProvider _authenticationStateProvider = authenticationStateProvider;
+    private readonly IBoardChangeNotifier _boardChangeNotifier = boardChangeNotifier;
+    private readonly IDbContextFactory<ApplicationDbContext> _dbFactory = dbFactory;
+    private readonly DemoUserResolver _demoUserResolver = demoUserResolver;
 
     public event Action? Changed;
 
@@ -40,12 +32,7 @@ public sealed class WebNotificationSettingsService : INotificationSettingsServic
         var userId = await _demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-        if (row is null)
-        {
-            return NotificationSettings.CreateDefault();
-        }
-
-        return NotificationSettingsJson.DeserializeOrDefault(row.NotificationSettingsJson);
+        return row?.NotificationSettings ?? NotificationSettings.CreateDefault();
     }
 
     public async Task SaveAsync(NotificationSettings settings, CancellationToken cancellationToken = default)
@@ -65,7 +52,7 @@ public sealed class WebNotificationSettingsService : INotificationSettingsServic
             return;
         }
 
-        row.NotificationSettingsJson = NotificationSettingsJson.Serialize(settings);
+        row.NotificationSettings = settings;
         await db.SaveChangesAsync(cancellationToken);
         Changed?.Invoke();
         await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);

@@ -1,10 +1,12 @@
+using App.Shared.RCL.Models;
+
 using Microsoft.AspNetCore.Identity;
 
 namespace App.Web.Data;
 
 public sealed class ApplicationUser : IdentityUser<Guid>
 {
-    public string? NotificationSettingsJson { get; set; }
+    public NotificationSettings? NotificationSettings { get; set; }
 
-    public string? UserPreferencesJson { get; set; }
+    public UserPreferences? UserPreferences { get; set; }
 }

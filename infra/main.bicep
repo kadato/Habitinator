@@ -105,6 +105,15 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
   }
 }
 
+resource authSettings 'Microsoft.Web/sites/config@2023-12-01' = {
+  parent: web
+  name: 'authsettingsv2'
+  properties: {
+    enabled: false
+  }
+}
+
+
 output AZURE_WEBAPP_NAME string = web.name
 output AZURE_WEBAPP_URL string = 'https://${web.properties.defaultHostName}'
 output PRODUCTION_API_BASE_URL string = 'https://${web.properties.defaultHostName}'

@@ -207,7 +207,7 @@ button.stats-heatmap-day-btn.stats-heatmap-day--today:hover {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 600;
-    word-break: break-word;
+    overflow-wrap: break-word;
     line-height: 1.3;
 }
 
@@ -430,7 +430,7 @@ button.stats-heatmap-day-btn.stats-heatmap-day--today:hover {
     line-height: 1.2;
     font-variant-numeric: tabular-nums;
     color: var(--mud-palette-text-primary);
-    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .stats-kpi-strip__value--date {

@@ -267,11 +267,6 @@
             </div>
         </div>
     }
-
-    @if (!string.IsNullOrWhiteSpace(LastEvent))
-    {
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@LastEvent</MudAlert>
-    }
 </MudStack>
 
 @using App.Shared.RCL.Components.Dialogs
@@ -285,7 +280,6 @@
     private List<BoardItem> Habits { get; set; } = [];
     private List<BoardItem> Dailies { get; set; } = [];
     private List<BoardItem> Todos { get; set; } = [];
-    private string? LastEvent { get; set; }
     private bool _isLoading;
     private bool _initialLoadComplete;
     private string? _loadError;
@@ -667,7 +661,7 @@
     {
         _lastLocalMutationTime = DateTimeOffset.UtcNow;
         var result = await TimerSessionLog.LogStoppedSessionAsync(duration);
-        LastEvent = result.UserMessage;
+        await Notifier.NotifyAsync(result.UserMessage, result.BoardUpdateFailed ? Severity.Error : Severity.Success);
         await LoadBoardAsync();
     }
 

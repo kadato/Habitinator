@@ -49,34 +49,11 @@
             while (await _focusTick.WaitForNextTickAsync(cancellationToken))
             {
                 bool isRunning = TimerService.IsRunning;
-                if (isRunning || isRunning != _wasRunningForTitle)
-                {
-                    _wasRunningForTitle = isRunning;
-                    await InvokeAsync(StateHasChanged);
-                }
+                await UpdateTitleIfStateChangedAsync(isRunning);
 
                 if (isRunning && TimerService.TryConsumeFocusDurationReached())
                 {
-                    if (TimerService.PomodoroModeEnabled)
-                    {
-                        TimerService.PauseForFocusTimeUp();
-                        var state = TimerService.CurrentPomodoroState;
-                        _ = InvokeAsync(async () =>
-                        {
-                            await OnPomodoroDurationReachedAsync(state, cancellationToken);
-                        });
-                    }
-                    else
-                    {
-                        var label = string.IsNullOrEmpty(TimerService.TargetId) ? "Open session" : TimerService.TargetId;
-                        var dur = FocusDurationInput.FormatForAlertLabel(TimerService.FocusAlertAfter!.Value);
-                        var message = $"Time's up ({dur}) — {label}";
-                        TimerService.PauseForFocusTimeUp();
-                        _ = InvokeAsync(async () =>
-                        {
-                            await OnFocusDurationReachedAsync(message, dur, label, cancellationToken);
-                        });
-                    }
+                    HandleFocusDurationReached(cancellationToken);
                 }
             }
         }
@@ -86,86 +63,129 @@
         }
     }
 
+    private async Task UpdateTitleIfStateChangedAsync(bool isRunning)
+    {
+        if (isRunning || isRunning != _wasRunningForTitle)
+        {
+            _wasRunningForTitle = isRunning;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void HandleFocusDurationReached(CancellationToken cancellationToken)
+    {
+        if (TimerService.PomodoroModeEnabled)
+        {
+            TimerService.PauseForFocusTimeUp();
+            var state = TimerService.CurrentPomodoroState;
+            _ = InvokeAsync(async () =>
+            {
+                await OnPomodoroDurationReachedAsync(state, cancellationToken);
+            });
+        }
+        else
+        {
+            var label = string.IsNullOrEmpty(TimerService.TargetId) ? "Open session" : TimerService.TargetId;
+            var dur = FocusDurationInput.FormatForAlertLabel(TimerService.FocusAlertAfter!.Value);
+            var message = $"Time's up ({dur}) — {label}";
+            TimerService.PauseForFocusTimeUp();
+            _ = InvokeAsync(async () =>
+            {
+                await OnFocusDurationReachedAsync(message, dur, label, cancellationToken);
+            });
+        }
+    }
+
     private async Task OnPomodoroDurationReachedAsync(PomodoroState state, CancellationToken cancellationToken)
     {
         if (state == PomodoroState.Work)
         {
-            var label = string.IsNullOrEmpty(TimerService.TargetId) ? "Focus Session" : TimerService.TargetId;
-            var durLabel = FocusDurationInput.FormatForAlertLabel(TimerService.FocusAlertAfter ?? TimeSpan.Zero);
-            var message = $"Focus session complete ({durLabel}) — {label}";
-
-            try
-            {
-                await FocusClientAlerts.NotifyTimeUpAsync("Focus Complete", message, cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                TimerService.ResumeAfterFocusPromptNotDone();
-                return;
-            }
-
-            bool? confirmed;
-            try
-            {
-                confirmed = await DialogService.ShowMessageBoxAsync(
-                    "Focus session complete!",
-                    $"Focus session is complete for \"{label}\". Would you like to log this progress to the board?",
-                    "Yes, log session",
-                    "No");
-            }
-            catch (Exception)
-            {
-                await UserNotifier.NotifyAsync("Focus complete. Log progress using Stop & log on the timer.", Severity.Info, cancellationToken);
-                TimerService.ResumeAfterFocusPromptNotDone();
-                return;
-            }
-
-            if (confirmed == true)
-            {
-                var logDuration = TimerService.FocusAlertAfter;
-                var elapsed = TimerService.Stop();
-                var duration = logDuration ?? elapsed;
-                if (duration > TimeSpan.Zero)
-                {
-                    var result = await TimerSessionLog.LogStoppedSessionAsync(duration, cancellationToken);
-                    await UserNotifier.NotifyAsync(result.UserMessage, Severity.Success, cancellationToken);
-                }
-            }
-            else
-            {
-                TimerService.Stop();
-            }
-
-            TimerService.IncrementCompletedIntervals();
-            TimerService.TransitionToBreak();
+            await OnPomodoroWorkDurationReachedAsync(cancellationToken);
         }
         else if (state == PomodoroState.ShortBreak || state == PomodoroState.LongBreak)
         {
-            var message = "Break is over! Time to start the next focus session.";
-            try
-            {
-                await FocusClientAlerts.NotifyBreakTimeUpAsync("Break Complete", message, cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                TimerService.ResumeAfterFocusPromptNotDone();
-                return;
-            }
-
-            try
-            {
-                await DialogService.ShowMessageBoxAsync(
-                    "Break complete",
-                    message,
-                    "OK");
-            }
-            catch (Exception)
-            {
-                await UserNotifier.NotifyAsync(message, Severity.Info, cancellationToken);
-            }
-
-            TimerService.TransitionToWork();
+            await OnPomodoroBreakDurationReachedAsync(cancellationToken);
         }
+    }
+
+    private async Task OnPomodoroWorkDurationReachedAsync(CancellationToken cancellationToken)
+    {
+        var label = string.IsNullOrEmpty(TimerService.TargetId) ? "Focus Session" : TimerService.TargetId;
+        var durLabel = FocusDurationInput.FormatForAlertLabel(TimerService.FocusAlertAfter ?? TimeSpan.Zero);
+        var message = $"Focus session complete ({durLabel}) — {label}";
+
+        try
+        {
+            await FocusClientAlerts.NotifyTimeUpAsync("Focus Complete", message, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            TimerService.ResumeAfterFocusPromptNotDone();
+            return;
+        }
+
+        bool? confirmed;
+        try
+        {
+            confirmed = await DialogService.ShowMessageBoxAsync(
+                "Focus session complete!",
+                $"Focus session is complete for \"{label}\". Would you like to log this progress to the board?",
+                "Yes, log session",
+                "No");
+        }
+        catch (Exception)
+        {
+            await UserNotifier.NotifyAsync("Focus complete. Log progress using Stop & log on the timer.", Severity.Info, cancellationToken);
+            TimerService.ResumeAfterFocusPromptNotDone();
+            return;
+        }
+
+        if (confirmed == true)
+        {
+            var logDuration = TimerService.FocusAlertAfter;
+            var elapsed = TimerService.Stop();
+            var duration = logDuration ?? elapsed;
+            if (duration > TimeSpan.Zero)
+            {
+                var result = await TimerSessionLog.LogStoppedSessionAsync(duration, cancellationToken);
+                await UserNotifier.NotifyAsync(result.UserMessage, Severity.Success, cancellationToken);
+            }
+        }
+        else
+        {
+            TimerService.Stop();
+        }
+
+        TimerService.IncrementCompletedIntervals();
+        TimerService.TransitionToBreak();
+    }
+
+    private async Task OnPomodoroBreakDurationReachedAsync(CancellationToken cancellationToken)
+    {
+        var message = "Break is over! Time to start the next focus session.";
+        try
+        {
+            await FocusClientAlerts.NotifyBreakTimeUpAsync("Break Complete", message, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            TimerService.ResumeAfterFocusPromptNotDone();
+            return;
+        }
+
+        try
+        {
+            await DialogService.ShowMessageBoxAsync(
+                "Break complete",
+                message,
+                "OK");
+        }
+        catch (Exception)
+        {
+            await UserNotifier.NotifyAsync(message, Severity.Info, cancellationToken);
+        }
+
+        TimerService.TransitionToWork();
     }
 
     private async Task OnFocusDurationReachedAsync(

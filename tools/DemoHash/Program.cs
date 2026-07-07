@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Identity;
 
 if (args.Length == 0 || string.IsNullOrEmpty(args[0]))
 {
-    Console.Error.WriteLine("Usage: DemoHash <plain-password>");
+    await Console.Error.WriteLineAsync("Usage: DemoHash <plain-password>");
     Environment.Exit(1);
 }
 

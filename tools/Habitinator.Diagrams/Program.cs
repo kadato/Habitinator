@@ -4,9 +4,9 @@ using System.Xml.Linq;
 
 if (args.Length > 0 && (args[0] == "-h" || args[0] == "--help"))
 {
-    Console.WriteLine("Usage: Habitinator.Diagrams [repoRoot] [outputDir]");
-    Console.WriteLine("  Default repoRoot: current directory");
-    Console.WriteLine("  Default outputDir: {repoRoot}/artifacts/diagrams");
+    await Console.Out.WriteLineAsync("Usage: Habitinator.Diagrams [repoRoot] [outputDir]");
+    await Console.Out.WriteLineAsync("  Default repoRoot: current directory");
+    await Console.Out.WriteLineAsync("  Default outputDir: {repoRoot}/artifacts/diagrams");
     return;
 }
 
@@ -19,21 +19,21 @@ var snapshotPath = Path.Combine(repoRoot, "src", "App.Web", "Data", "Migrations"
 
 if (!File.Exists(slnxPath))
 {
-    Console.Error.WriteLine($"Solution not found: {slnxPath}");
+    await Console.Error.WriteLineAsync($"Solution not found: {slnxPath}");
     Environment.Exit(1);
 }
 
 await File.WriteAllTextAsync(Path.Combine(outDir, "solution-graph.mmd"), BuildSolutionMermaid(slnxPath, repoRoot), Encoding.UTF8);
-Console.WriteLine($"Wrote {Path.Combine(outDir, "solution-graph.mmd")}");
+await Console.Out.WriteLineAsync($"Wrote {Path.Combine(outDir, "solution-graph.mmd")}");
 
 if (File.Exists(snapshotPath))
 {
     await File.WriteAllTextAsync(Path.Combine(outDir, "database-schema.mmd"), BuildErMermaid(snapshotPath), Encoding.UTF8);
-    Console.WriteLine($"Wrote {Path.Combine(outDir, "database-schema.mmd")}");
+    await Console.Out.WriteLineAsync($"Wrote {Path.Combine(outDir, "database-schema.mmd")}");
 }
 else
 {
-    Console.WriteLine($"Skip ER diagram (snapshot missing): {snapshotPath}");
+    await Console.Out.WriteLineAsync($"Skip ER diagram (snapshot missing): {snapshotPath}");
 }
 
 static string BuildSolutionMermaid(string slnxPath, string repoRoot)
@@ -44,28 +44,8 @@ static string BuildSolutionMermaid(string slnxPath, string repoRoot)
         .Select(e => e.Attribute("Path")!.Value.Replace('\\', Path.DirectorySeparatorChar))
         .ToList();
 
-    var nodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-    foreach (var rel in projectPaths)
-    {
-        var full = Path.GetFullPath(Path.Combine(repoRoot, rel));
-        if (!File.Exists(full)) continue;
-        var name = Path.GetFileNameWithoutExtension(full);
-        nodes[full] = name;
-    }
-
-    var edges = new List<(string From, string To)>();
-    foreach (var (fullPath, _) in nodes)
-    {
-        foreach (var line in File.ReadAllLines(fullPath))
-        {
-            var m = Regex.Match(line, @"<ProjectReference\s+Include=""([^""]+)""");
-            if (!m.Success) continue;
-            var refRel = m.Groups[1].Value.Replace('\\', Path.DirectorySeparatorChar);
-            var refFull = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(fullPath)!, refRel));
-            if (nodes.TryGetValue(refFull, out var toName) && nodes.TryGetValue(fullPath, out var fromName))
-                edges.Add((fromName, toName));
-        }
-    }
+    var nodes = ParseProjects(projectPaths, repoRoot);
+    var edges = ParseProjectEdges(nodes);
 
     var sb = new StringBuilder();
     sb.AppendLine("flowchart LR");
@@ -77,6 +57,46 @@ static string BuildSolutionMermaid(string slnxPath, string repoRoot)
         sb.AppendLine($"  {SanitizeMermaidId(from)} --> {SanitizeMermaidId(to)}");
 
     return sb.ToString();
+}
+
+static Dictionary<string, string> ParseProjects(IEnumerable<string> projectPaths, string repoRoot)
+{
+    var nodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var rel in projectPaths)
+    {
+        var full = Path.GetFullPath(Path.Combine(repoRoot, rel));
+        if (File.Exists(full))
+        {
+            nodes[full] = Path.GetFileNameWithoutExtension(full);
+        }
+    }
+    return nodes;
+}
+
+static List<(string From, string To)> ParseProjectEdges(Dictionary<string, string> nodes)
+{
+    var edges = new List<(string From, string To)>();
+    foreach (var (fullPath, _) in nodes)
+    {
+        ParseProjectFileEdges(fullPath, nodes, edges);
+    }
+    return edges;
+}
+
+static void ParseProjectFileEdges(string fullPath, Dictionary<string, string> nodes, List<(string From, string To)> edges)
+{
+    foreach (var line in File.ReadAllLines(fullPath))
+    {
+        var m = Regex.Match(line, @"<ProjectReference\s+Include=""([^""]+)""");
+        if (!m.Success) continue;
+
+        var refRel = m.Groups[1].Value.Replace('\\', Path.DirectorySeparatorChar);
+        var refFull = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(fullPath)!, refRel));
+        if (nodes.TryGetValue(refFull, out var toName) && nodes.TryGetValue(fullPath, out var fromName))
+        {
+            edges.Add((fromName, toName));
+        }
+    }
 }
 
 static string SanitizeMermaidId(string name)

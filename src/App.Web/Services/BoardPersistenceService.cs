@@ -50,28 +50,19 @@ internal sealed record DailyBackfillArgs(
     int Interval,
     int Streak);
 
-public sealed class BoardPersistenceService : IDisposable
+public sealed class BoardPersistenceService(
+    ApplicationDbContext dbContext,
+    IDbContextFactory<ApplicationDbContext> dbContextFactory,
+    BoardSnapshotCache snapshotCache,
+    IBoardChangeNotifier boardChangeNotifier,
+    IUserTimeZoneService timeZone) : IDisposable
 {
-    private readonly BoardSnapshotCache _snapshotCache;
-    private readonly IBoardChangeNotifier _boardChangeNotifier;
-    private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
-    private readonly ApplicationDbContext _dbContext;
-    private readonly IUserTimeZoneService _timeZone;
+    private readonly BoardSnapshotCache _snapshotCache = snapshotCache;
+    private readonly IBoardChangeNotifier _boardChangeNotifier = boardChangeNotifier;
+    private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory = dbContextFactory;
+    private readonly ApplicationDbContext _dbContext = dbContext;
+    private readonly IUserTimeZoneService _timeZone = timeZone;
     private readonly SemaphoreSlim _gate = new(1, 1);
-
-    public BoardPersistenceService(
-        ApplicationDbContext dbContext,
-        IDbContextFactory<ApplicationDbContext> dbContextFactory,
-        BoardSnapshotCache snapshotCache,
-        IBoardChangeNotifier boardChangeNotifier,
-        IUserTimeZoneService timeZone)
-    {
-        _dbContext = dbContext;
-        _dbContextFactory = dbContextFactory;
-        _snapshotCache = snapshotCache;
-        _boardChangeNotifier = boardChangeNotifier;
-        _timeZone = timeZone;
-    }
 
     private async Task<T> LockAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken)
     {
@@ -182,28 +173,25 @@ public sealed class BoardPersistenceService : IDisposable
         var dailies = items.Where(x => x.Section == BoardSection.Daily).ToList();
         var dailyStreaks = await BuildDailyStreakMapAsync(userId, dailies, today, readDb, cancellationToken);
         var snapshot = new BoardSnapshot(
-            items.Where(x => x.Section == BoardSection.Habit)
+            [.. items.Where(x => x.Section == BoardSection.Habit)
                 .OrderBy(x => x.SortOrder)
                 .ThenBy(x => x.CreatedAtUtc)
                 .ThenBy(x => x.Id)
-                .Select(x => ToModelWithToday(x, today, dailyStreaks))
-                .ToList(),
-            dailies
+                .Select(x => ToModelWithToday(x, today, dailyStreaks))],
+            [.. dailies
                 .OrderBy(x => IsDailyEntityCompleteForToday(x, today) ? 1 : 0)
                 .ThenBy(x => x.SortOrder)
                 .ThenBy(x => x.CreatedAtUtc)
                 .ThenBy(x => x.Id)
-                .Select(x => ToModelWithToday(x, today, dailyStreaks))
-                .ToList(),
-            items.Where(x => x.Section == BoardSection.Todo)
+                .Select(x => ToModelWithToday(x, today, dailyStreaks))],
+            [.. items.Where(x => x.Section == BoardSection.Todo)
                 .OrderBy(x => x.IsCompleted)
                 .ThenBy(x => x.DailyStartDate == null ? 0 : 1)
                 .ThenBy(x => x.DailyStartDate ?? DateTime.MaxValue)
                 .ThenBy(x => x.SortOrder)
                 .ThenBy(x => x.CreatedAtUtc)
                 .ThenBy(x => x.Id)
-                .Select(x => ToModelWithToday(x, today, dailyStreaks))
-                .ToList());
+                .Select(x => ToModelWithToday(x, today, dailyStreaks))]);
         _snapshotCache.Set(userId, snapshot);
         return snapshot;
     }
@@ -423,24 +411,21 @@ public sealed class BoardPersistenceService : IDisposable
         var today = Today();
         var dailyStreaks = new Dictionary<Guid, int>();
         return new BoardSnapshot(
-            items.Where(x => x.Section == BoardSection.Habit)
+            [.. items.Where(x => x.Section == BoardSection.Habit)
                 .OrderBy(x => x.SortOrder)
                 .ThenBy(x => x.CreatedAtUtc)
                 .ThenBy(x => x.Id)
-                .Select(x => ToModelWithToday(x, today, dailyStreaks))
-                .ToList(),
-            items.Where(x => x.Section == BoardSection.Daily)
+                .Select(x => ToModelWithToday(x, today, dailyStreaks))],
+            [.. items.Where(x => x.Section == BoardSection.Daily)
                 .OrderBy(x => x.SortOrder)
                 .ThenBy(x => x.CreatedAtUtc)
                 .ThenBy(x => x.Id)
-                .Select(x => ToModelWithToday(x, today, dailyStreaks))
-                .ToList(),
-            items.Where(x => x.Section == BoardSection.Todo)
+                .Select(x => ToModelWithToday(x, today, dailyStreaks))],
+            [.. items.Where(x => x.Section == BoardSection.Todo)
                 .OrderBy(x => x.SortOrder)
                 .ThenBy(x => x.CreatedAtUtc)
                 .ThenBy(x => x.Id)
-                .Select(x => ToModelWithToday(x, today, dailyStreaks))
-                .ToList());
+                .Select(x => ToModelWithToday(x, today, dailyStreaks))]);
     }
 
     public async Task<BoardItem?> CompleteDailyForDateAsync(
@@ -1269,24 +1254,14 @@ public sealed class BoardPersistenceService : IDisposable
             return new Dictionary<Guid, int>();
         }
 
-        var ids = dailies.Select(x => x.Id).ToList();
-        DateOnly? minHistoryStart = null;
-        foreach (var daily in dailies)
+        var minHistoryStart = FindMinHistoryStart(dailies, today);
+        if (minHistoryStart is null)
         {
-            GetDailyEntitySchedule(daily, out var start, out var repeat, out var interval);
-            var historyStart = DailySchedule.StreakHistoryScheduleStart(
-                start,
-                today,
-                repeat,
-                interval,
-                DailyStreakCalculator.MaxStreak);
-            minHistoryStart = minHistoryStart is null || historyStart < minHistoryStart
-                ? historyStart
-                : minHistoryStart;
+            return new Dictionary<Guid, int>();
         }
 
         var historyStartUtc = new DateTimeOffset(
-            minHistoryStart!.Value.Year,
+            minHistoryStart.Value.Year,
             minHistoryStart.Value.Month,
             minHistoryStart.Value.Day,
             0,
@@ -1295,6 +1270,8 @@ public sealed class BoardPersistenceService : IDisposable
             TimeSpan.Zero);
         var endUtcExclusive = new DateTimeOffset(today.Year, today.Month, today.Day, 0, 0, 0, TimeSpan.Zero)
             .AddDays(1);
+
+        var ids = dailies.Select(x => x.Id).ToList();
         var eventRows = await forQueries.UserActivityEvents.AsNoTracking()
             .Where(e => e.UserId == userId
                         && e.BoardItemId != null
@@ -1305,6 +1282,7 @@ public sealed class BoardPersistenceService : IDisposable
                         && e.OccurredAtUtc < endUtcExclusive)
             .Select(e => new { e.BoardItemId, e.OccurredAtUtc, e.EventType })
             .ToListAsync(cancellationToken);
+
         var byItem = new Dictionary<Guid, List<(DateTimeOffset, ActivityEventType)>>();
         foreach (var e in eventRows)
         {
@@ -1322,6 +1300,34 @@ public sealed class BoardPersistenceService : IDisposable
             list.Add((e.OccurredAtUtc, e.EventType));
         }
 
+        return ComputeDailyStreaks(dailies, today, byItem);
+    }
+
+    private static DateOnly? FindMinHistoryStart(List<BoardItemEntity> dailies, DateOnly today)
+    {
+        DateOnly? minHistoryStart = null;
+        foreach (var daily in dailies)
+        {
+            GetDailyEntitySchedule(daily, out var start, out var repeat, out var interval);
+            var historyStart = DailySchedule.StreakHistoryScheduleStart(
+                start,
+                today,
+                repeat,
+                interval,
+                DailyStreakCalculator.MaxStreak);
+            if (minHistoryStart == null || historyStart < minHistoryStart)
+            {
+                minHistoryStart = historyStart;
+            }
+        }
+        return minHistoryStart;
+    }
+
+    private static Dictionary<Guid, int> ComputeDailyStreaks(
+        List<BoardItemEntity> dailies,
+        DateOnly today,
+        Dictionary<Guid, List<(DateTimeOffset, ActivityEventType)>> byItem)
+    {
         var outMap = new Dictionary<Guid, int>(dailies.Count);
         foreach (var ent in dailies)
         {
@@ -1337,7 +1343,6 @@ public sealed class BoardPersistenceService : IDisposable
                 grouped,
                 lastC);
         }
-
         return outMap;
     }
 

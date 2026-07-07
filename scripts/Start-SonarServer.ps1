@@ -26,7 +26,7 @@ while ($true) {
             break
         }
     } catch {
-        # Server not ready yet
+        Write-Verbose "Server not ready yet: $_"
     }
     Start-Sleep -Seconds 5
 }
@@ -63,7 +63,9 @@ try {
 try {
     $res = Invoke-RestMethod -Uri "http://localhost:$port/api/user_tokens/revoke?name=HabitinatorScanner" -Method Post -Headers $newAuthHeader
     Write-Host "Revoked old token if it existed."
-} catch {}
+} catch {
+    Write-Verbose "Failed to revoke old token (might not exist): $_"
+}
 
 # Generate new token
 $tokenRes = Invoke-RestMethod -Uri "http://localhost:$port/api/user_tokens/generate?name=HabitinatorScanner" -Method Post -Headers $newAuthHeader

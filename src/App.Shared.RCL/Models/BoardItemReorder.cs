@@ -57,9 +57,9 @@ public static class BoardItemReorder
             return prevOrder.Value + 1.0;
         }
 
-        if (prevOrder is not null && nextOrder is not null)
+        if (prevOrder is not null)
         {
-            return (prevOrder.Value + nextOrder.Value) / 2.0;
+            return (prevOrder.Value + nextOrder!.Value) / 2.0;
         }
 
         return insertAt;

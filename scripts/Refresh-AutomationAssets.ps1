@@ -65,7 +65,7 @@ function Sync-ReadmeMermaidEmbeds {
     }
 
     [System.IO.File]::WriteAllText($readmePath, $text, $utf8NoBom)
-    Write-Host "== README Mermaid embeds synced from docs/automation/*.mmd"
+    Write-Output "== README Mermaid embeds synced from docs/automation/*.mmd"
 }
 
 Write-Host "== Diagrams (Mermaid) -> $docsAutomation"

@@ -533,8 +533,8 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
 
   // Extracted helper functions for Escape key handling to reduce Cognitive Complexity (S3776)
   function handleOpenPopoverEscape(activeElement) {
-    const openPopover = Array.from(document.querySelectorAll('.mud-popover')).find(isElementVisible);
-    if (openPopover) {
+    const hasOpenPopover = Array.from(document.querySelectorAll('.mud-popover')).some(isElementVisible);
+    if (hasOpenPopover) {
       activeElement?.blur();
       setTimeout(() => {
         const events = ['pointerdown', 'mousedown', 'mouseup', 'pointerup', 'click'];
@@ -583,8 +583,8 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     }
 
     if (activeElement?.closest('.timer-target-field')) {
-      const openPopover = Array.from(document.querySelectorAll('.mud-popover')).find(isElementVisible);
-      if (openPopover) {
+      const hasOpenPopover = Array.from(document.querySelectorAll('.mud-popover')).some(isElementVisible);
+      if (hasOpenPopover) {
         return;
       }
     }

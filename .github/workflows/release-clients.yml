@@ -9,9 +9,6 @@ concurrency:
   group: release-clients-${{ github.repository }}-${{ github.ref }}
   cancel-in-progress: false
 
-permissions:
-  contents: read
-  id-token: write
 
 env:
   DOTNET_NO_LOGO: true
@@ -20,6 +17,9 @@ env:
 jobs:
   resolve-production-url:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     # Same GitHub Environment as deploy-azure-web so OIDC subject is
     # repo:OWNER/REPO:environment:production (one Entra federated credential for CI + tag releases).
     environment: production
@@ -100,6 +100,8 @@ jobs:
   build-android:
     needs: [resolve-production-url]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
@@ -161,6 +163,8 @@ jobs:
   build-windows:
     needs: [resolve-production-url]
     runs-on: windows-latest
+    permissions:
+      contents: read
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
@@ -245,7 +249,7 @@ jobs:
           EOF
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b
         with:
           body_path: release-notes.md
           files: |

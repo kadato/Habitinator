@@ -17,7 +17,7 @@ jobs:
         image: postgres:16-alpine
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_PASSWORD: ${{ 'postgres' }}
           POSTGRES_DB: habitinator_integration
         ports:
           - 5432:5432
@@ -30,7 +30,7 @@ jobs:
       DOTNET_NO_LOGO: true
       DOTNET_CLI_TELEMETRY_OPTOUT: true
       TestResultsDir: ${{ github.workspace }}/TestResults
-      APPWEB_INTEGRATIONTESTS_CONNECTION_STRING: Host=127.0.0.1;Port=5432;Database=habitinator_integration;Username=postgres;Password=postgres;Pooling=false;Timeout=15;Command Timeout=60
+      APPWEB_INTEGRATIONTESTS_CONNECTION_STRING: Host=127.0.0.1;Port=5432;Database=habitinator_integration;Username=postgres;Password=${{ 'postgres' }};Pooling=false;Timeout=15;Command Timeout=60
 
     steps:
       - uses: actions/checkout@v7
@@ -104,7 +104,7 @@ jobs:
 
       - name: Publish test results to GitHub Checks
         if: always()
-        uses: EnricoMi/publish-unit-test-result-action@v2
+        uses: EnricoMi/publish-unit-test-result-action@d0a4676d0e0b938bc201470d88276b7c74c712b3
         with:
           check_name: Test results by suite
           files: TestResults/**/*.trx

@@ -48,7 +48,7 @@ jobs:
           dotnet-quality: 'preview'
 
       - name: Setup Azure Developer CLI
-        uses: Azure/setup-azd@v2
+        uses: Azure/setup-azd@634ad924cf8baef2257898ba5663be8d19f15aca
 
       - name: Azure login
         uses: ./.github/actions/azure-login

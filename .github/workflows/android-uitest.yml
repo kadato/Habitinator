@@ -38,7 +38,7 @@ jobs:
           dotnet build tests/App.MAUI.UITests/App.MAUI.UITests.csproj -c Debug
 
       - name: Emulator + Appium + dotnet test
-        uses: reactivecircus/android-emulator-runner@v2
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
           api-level: 34
           arch: x86_64

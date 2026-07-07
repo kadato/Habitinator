@@ -1,9 +1,6 @@
-@using App.Shared.RCL.Models
-@using MudBlazor
-@inject IUserTimeZoneService TimeZoneService
-@inject IUserDateFormatService DateFormatService
 
-<div class="@GetCardClass()">
+
+<div class="@CardClass">
     @if (Section == BoardSection.Habit)
     {
         <div class="board-card__habit-btns board-card__left">
@@ -30,7 +27,7 @@
     {
         <div class="board-card__check-col board-card__left">
             <button type="button"
-                    class="board-check @GetCheckClass()"
+                    class="board-check @CheckClass"
                     title="Toggle"
                     draggable="false"
                     @onclick="OnToggle"
@@ -97,33 +94,26 @@
             </MudMenu>
         </div>
     </div>
-    @{
-        IReadOnlyList<DailyChecklistItem> checklist = DailyChecklistJson.Parse(Item.ChecklistJson);
-        int subDone = checklist.Count(x => x.IsDone);
-        int subTotal = checklist.Count;
-        List<string> tagsList = [.. BoardTagUtil.ParseTags(Item.Tags)];
-        bool hasBodyExtra = !string.IsNullOrWhiteSpace(Item.Notes) || subTotal > 0 || tagsList.Count > 0;
-    }
-    @if (hasBodyExtra)
+    @if (HasBodyExtra)
     {
         <div class="board-card__extra">
-            @if (tagsList.Count > 0)
+            @if (TagsList.Count > 0)
             {
                 <div class="board-card__tags">
-                    @if (tagsList.Count <= 3)
+                    @if (TagsList.Count <= 3)
                     {
-                        @foreach (var tag in tagsList)
+                        @foreach (var tag in TagsList)
                         {
                             <span class="board-card__tag-badge" title="@tag">@tag</span>
                         }
                     }
                     else
                     {
-                        @foreach (var tag in tagsList.Take(2))
+                        @foreach (var tag in TagsList.Take(2))
                         {
                             <span class="board-card__tag-badge" title="@tag">@tag</span>
                         }
-                        <span class="board-card__tag-badge board-card__tag-badge--more" title='@(string.Join(", ", tagsList.Skip(2)))'>+@(tagsList.Count - 2)</span>
+                        <span class="board-card__tag-badge board-card__tag-badge--more" title='@(string.Join(", ", TagsList.Skip(2)))'>+@(TagsList.Count - 2)</span>
                     }
                 </div>
             }
@@ -131,23 +121,23 @@
             {
                 <MudText Typo="Typo.caption" Class="board-card__notes" Color="Color.Secondary">@Item.Notes</MudText>
             }
-            @if (subTotal > 0)
+            @if (SubTotal > 0)
             {
                 <button type="button"
                         class="board-subtask-pill"
                         @onclick="ToggleSubtasksExpand"
                         @onclick:stopPropagation="true"
                         aria-expanded="@(_subtasksExpanded ? "true" : "false")"
-                        aria-label="@($"Subtasks: {subDone} completed out of {subTotal}")">
+                        aria-label="@($"Subtasks: {SubDone} completed out of {SubTotal}")">
                     <MudIcon Icon="@Icons.Material.Filled.List" Size="Size.Small" Class="me-1" aria-hidden="true"/>
-                    <span class="board-subtask-pill__count">@subDone / @subTotal</span>
+                    <span class="board-subtask-pill__count">@SubDone / @SubTotal</span>
                     <MudIcon Icon="@(_subtasksExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small" Class="ms-1" aria-hidden="true"/>
                 </button>
             }
-            @if (subTotal > 0 && _subtasksExpanded)
+            @if (SubTotal > 0 && _subtasksExpanded)
             {
                 <ul class="board-subtask-list">
-                    @foreach (var line in checklist)
+                    @foreach (var line in Checklist)
                     {
                         <li class="board-subtask-list__row" @key="line.Id">
                             <MudCheckBox T="bool"
@@ -220,6 +210,9 @@
 </div>
 
 @code {
+    [Inject] private IUserTimeZoneService TimeZoneService { get; set; } = null!;
+    [Inject] private IUserDateFormatService DateFormatService { get; set; } = null!;
+
     [Parameter] [EditorRequired] public BoardItem Item { get; set; } = null!;
     [Parameter] [EditorRequired] public BoardSection Section { get; set; }
     [Parameter] public bool CanReorder { get; set; }
@@ -235,53 +228,57 @@
 
     private bool _subtasksExpanded = true;
 
+    private IReadOnlyList<DailyChecklistItem> Checklist => DailyChecklistJson.Parse(Item.ChecklistJson);
+    private int SubDone => Checklist.Count(x => x.IsDone);
+    private int SubTotal => Checklist.Count;
+    private List<string> TagsList => [.. BoardTagUtil.ParseTags(Item.Tags)];
+    private bool HasBodyExtra => !string.IsNullOrWhiteSpace(Item.Notes) || SubTotal > 0 || TagsList.Count > 0;
+
+    private string CardClass => $"board-card {RowClass}";
+    private string RowClass => GetRowClass(Section, Item);
+    private string CheckClass => GetCheckClass(Section, Item);
+
     private void ToggleSubtasksExpand()
     {
         _subtasksExpanded = !_subtasksExpanded;
     }
 
-    private string GetCardClass() => $"board-card {GetRowClass()}";
-
-    private string GetRowClass()
+    private static string GetRowClass(BoardSection section, BoardItem item)
     {
-        return Section switch
+        return section switch
         {
             BoardSection.Habit => "board-row--habit",
-            BoardSection.Daily => Item.IsCompleted ? "board-row--done" : "board-row--daily-open",
-            BoardSection.Todo => Item.IsCompleted ? "board-row--done" : "board-row--todo-open",
+            BoardSection.Daily => item.IsCompleted ? "board-row--done" : "board-row--daily-open",
+            BoardSection.Todo => item.IsCompleted ? "board-row--done" : "board-row--todo-open",
             _ => string.Empty
         };
     }
 
-    private string GetCheckClass()
+    private static string GetCheckClass(BoardSection section, BoardItem item)
     {
-        if (Item.IsCompleted)
+        if (item.IsCompleted)
         {
             return "board-check--ok";
         }
 
-        return Section == BoardSection.Daily ? "board-check--daily" : "board-check--todo";
+        return section == BoardSection.Daily ? "board-check--daily" : "board-check--todo";
     }
 
     private string TodoDueCssClass(DateOnly due)
     {
         var days = due.DayNumber - BoardToday().DayNumber;
-        var state = days switch
+        return days switch
         {
-            < 0 => "overdue",
-            0 => "today",
-            _ => "upcoming"
+            < 0 => "board-todo-due board-todo-due--overdue",
+            0 => "board-todo-due board-todo-due--today",
+            _ => "board-todo-due board-todo-due--upcoming"
         };
-
-        return $"board-todo-due board-todo-due--{state}";
     }
 
     private string TodoDueRelativeLabel(DateOnly due) =>
         TodoDueRelativeText.Format(due, BoardToday());
 
     private DateOnly BoardToday() => DailySchedule.LocalToday(TimeZoneService);
-
-
 
     private string HabitCounterTitle()
     {

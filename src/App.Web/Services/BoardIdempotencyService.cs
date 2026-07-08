@@ -83,6 +83,7 @@ public sealed class BoardIdempotencyService(
             }
             catch (DbUpdateException)
             {
+                db.Entry(claim).State = EntityState.Detached; // Detach failed entry from change tracker
                 await Task.Delay(25, cancellationToken);
                 continue;
             }

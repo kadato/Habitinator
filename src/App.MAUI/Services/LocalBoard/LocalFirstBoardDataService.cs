@@ -58,44 +58,69 @@ public sealed partial class LocalFirstBoardDataService(
     public async Task<BoardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
     {
         await EnsureLocalStoreSchemaAsync(cancellationToken);
+
+        string? userKey = null;
+        BoardSnapshot snap;
+        bool shouldFetchRemote = false;
+
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
-
             if (!await HasAuthAsync(cancellationToken))
             {
                 return EmptySnapshot();
             }
 
-            string? userKey = await ResolveUserKeyAsync(cancellationToken);
+            userKey = await ResolveUserKeyAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(userKey))
             {
                 return EmptySnapshot();
             }
 
+            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
             await EnsureUserScopeAsync(db, userKey, cancellationToken);
-            BoardSnapshot snap = ReadSnapshot(db, userKey);
+            snap = ReadSnapshot(db, userKey);
+
             if (IsEmpty(snap) && !syncStatus.IsSyncing)
             {
-                try
-                {
-                    BoardSnapshot fresh = await remote.GetSnapshotAsync(cancellationToken);
-                    await ReplaceMirrorAsync(db, userKey, fresh, cancellationToken);
-                    snap = ReadSnapshot(db, userKey);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogDebug(ex, "Initial board hydrate from API skipped (offline or error).");
-                }
+                shouldFetchRemote = true;
             }
-
-            return snap;
         }
         finally
         {
             _gate.Release();
         }
+
+        if (shouldFetchRemote && !string.IsNullOrWhiteSpace(userKey))
+        {
+            BoardSnapshot? fresh = null;
+            try
+            {
+                // Network HTTP call happens OUTSIDE the _gate lock:
+                fresh = await remote.GetSnapshotAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Initial board hydrate from API skipped (offline or error).");
+            }
+
+            if (fresh is not null)
+            {
+                await _gate.WaitAsync(cancellationToken);
+                try
+                {
+                    await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
+                    await ReplaceMirrorAsync(db, userKey, fresh, cancellationToken);
+                    snap = ReadSnapshot(db, userKey);
+                }
+                finally
+                {
+                    _gate.Release();
+                }
+            }
+        }
+
+        return snap;
     }
 
     private async Task EnsureLocalStoreSchemaAsync(CancellationToken cancellationToken)

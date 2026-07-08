@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 
 using App.Shared.RCL.Models;
+using App.Shared.RCL.Services;
 
 using FluentAssertions;
 
@@ -100,6 +101,70 @@ public sealed class BoardApiIsolationTests(PostgresWebAppFactory factory)
 
         created.Should().NotBeNull();
         created!.Title.Should().Be("karoly");
+    }
+
+    [Theory]
+    [InlineData(-10)]
+    [InlineData(86401)]
+    [InlineData(100000)]
+    public async Task LogActivity_WithInvalidDuration_ReturnsBadRequest(int invalidDuration)
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var email = $"activity-user-{suffix}@integration.test";
+        const string password = "TestUser1!Aa";
+
+        (await client.PostAsJsonAsync("/api/auth/register",
+            new RegisterRequest(email, password))).IsSuccessStatusCode.Should().BeTrue();
+
+        var login = await client.PostAsJsonAsync("/api/auth/login",
+            new LoginRequest(email, password, RememberMe: false));
+        login.EnsureSuccessStatusCode();
+        var token = (await login.Content.ReadFromJsonAsync<LoginResponse>(s_json))!.AccessToken;
+
+        using var requestLog = new HttpRequestMessage(HttpMethod.Post, "/api/activity/log");
+        requestLog.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        requestLog.Content = JsonContent.Create(new ActivityLogRequest(
+            ActivityEventType.TimerSession,
+            BoardItemId: null,
+            DurationSeconds: invalidDuration,
+            CustomLabel: "Invalid duration test"));
+
+        var logRes = await client.SendAsync(requestLog);
+        logRes.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var body = await logRes.Content.ReadAsStringAsync();
+        body.Should().Contain("Duration must be between 0 and 86,400 seconds (24 hours).");
+    }
+
+    [Fact]
+    public async Task LogActivity_WithValidDuration_ReturnsNoContent()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var email = $"activity-valid-user-{suffix}@integration.test";
+        const string password = "TestUser1!Aa";
+
+        (await client.PostAsJsonAsync("/api/auth/register",
+            new RegisterRequest(email, password))).IsSuccessStatusCode.Should().BeTrue();
+
+        var login = await client.PostAsJsonAsync("/api/auth/login",
+            new LoginRequest(email, password, RememberMe: false));
+        login.EnsureSuccessStatusCode();
+        var token = (await login.Content.ReadFromJsonAsync<LoginResponse>(s_json))!.AccessToken;
+
+        using var requestLog = new HttpRequestMessage(HttpMethod.Post, "/api/activity/log");
+        requestLog.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        requestLog.Content = JsonContent.Create(new ActivityLogRequest(
+            ActivityEventType.TimerSession,
+            BoardItemId: null,
+            DurationSeconds: 3600,
+            CustomLabel: "Valid duration test"));
+
+        var logRes = await client.SendAsync(requestLog);
+        logRes.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 }
 

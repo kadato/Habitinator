@@ -12,7 +12,7 @@ public sealed partial class MauiBoardHubService(
     IAuthTokenStore tokens,
     IRemoteBoardRefreshService refresh,
     MauiApiEndpointOptions api,
-    ILogger<MauiBoardHubService> logger) : IDisposable
+    ILogger<MauiBoardHubService> logger) : IDisposable, IAsyncDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private HubConnection? _connection;
@@ -119,6 +119,24 @@ public sealed partial class MauiBoardHubService(
 
     public void Dispose()
     {
+        try
+        {
+            if (_connection is not null)
+            {
+                _connection.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                _connection = null;
+            }
+        }
+        catch
+        {
+            // ignore
+        }
+        _gate.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await DisconnectAsync();
         _gate.Dispose();
     }
 }

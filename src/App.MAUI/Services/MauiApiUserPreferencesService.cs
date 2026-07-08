@@ -59,10 +59,10 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
                     return;
                 }
 
-                using var res = await Client.GetAsync("api/settings/preferences", cancellationToken).ConfigureAwait(false);
+                using var res = await Client.GetAsync("api/settings/preferences", CancellationToken.None).ConfigureAwait(false);
                 if (res.IsSuccessStatusCode)
                 {
-                    var remote = await res.Content.ReadFromJsonAsync<UserPreferences>(Serializer, cancellationToken).ConfigureAwait(false);
+                    var remote = await res.Content.ReadFromJsonAsync<UserPreferences>(Serializer, CancellationToken.None).ConfigureAwait(false);
                     if (remote is not null)
                     {
                         var remoteJson = UserPreferencesJson.Serialize(remote);
@@ -79,7 +79,7 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
             {
                 // Best-effort remote sync, ignore errors in background task
             }
-        }, cancellationToken);
+        }, CancellationToken.None);
 
         return localPrefs;
     }

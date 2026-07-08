@@ -62,10 +62,10 @@ public sealed class RemoteNotificationSettingsService : INotificationSettingsSer
         {
             try
             {
-                using var res = await Client.GetAsync("api/settings/notifications", cancellationToken).ConfigureAwait(false);
+                using var res = await Client.GetAsync("api/settings/notifications", CancellationToken.None).ConfigureAwait(false);
                 if (res.IsSuccessStatusCode)
                 {
-                    var remote = await res.Content.ReadFromJsonAsync<NotificationSettings>(Serializer, cancellationToken).ConfigureAwait(false);
+                    var remote = await res.Content.ReadFromJsonAsync<NotificationSettings>(Serializer, CancellationToken.None).ConfigureAwait(false);
                     if (remote is not null)
                     {
                         var remoteJson = NotificationSettingsJson.Serialize(remote);
@@ -82,7 +82,7 @@ public sealed class RemoteNotificationSettingsService : INotificationSettingsSer
             {
                 // Best-effort remote sync, ignore errors in background task
             }
-        }, cancellationToken);
+        }, CancellationToken.None);
 
         return localSettings;
     }

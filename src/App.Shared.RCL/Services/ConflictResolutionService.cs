@@ -48,10 +48,20 @@ public sealed class ConflictResolutionService
             }
         }
 
-        // Handle cancellation
-        await using (cancellationToken.Register(() => tcs.TrySetResult(ConflictResolutionChoice.Cancel)))
+        try
         {
-            return await tcs.Task;
+            // Handle cancellation
+            await using (cancellationToken.Register(() => tcs.TrySetResult(ConflictResolutionChoice.Cancel)))
+            {
+                return await tcs.Task;
+            }
+        }
+        finally
+        {
+            lock (_lock)
+            {
+                _pendingConflicts.Remove(conflict.OperationId);
+            }
         }
     }
 

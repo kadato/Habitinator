@@ -109,9 +109,22 @@ public sealed partial class MauiBoardSyncCoordinator : IDisposable
     {
         try
         {
-            while (!_initialLoad.IsComplete && !cancellationToken.IsCancellationRequested)
+            if (!_initialLoad.IsComplete)
             {
-                await Task.Delay(250, cancellationToken);
+                var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                void OnCompleted() => tcs.TrySetResult();
+                _initialLoad.Completed += OnCompleted;
+                try
+                {
+                    if (!_initialLoad.IsComplete)
+                    {
+                        await tcs.Task.WaitAsync(cancellationToken);
+                    }
+                }
+                finally
+                {
+                    _initialLoad.Completed -= OnCompleted;
+                }
             }
 
             while (await _timer.WaitForNextTickAsync(cancellationToken))

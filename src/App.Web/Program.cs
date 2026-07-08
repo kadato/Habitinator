@@ -43,7 +43,7 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.NewestOnTop = true;
 });
 
-builder.Services.AddWebOptions(builder.Configuration);
+builder.Services.AddWebOptions(builder.Configuration, builder.Environment);
 builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddWebAuthenticationAndAuthorization(builder.Configuration, builder.Environment);
 builder.Services.AddApplicationServices(builder.Environment);

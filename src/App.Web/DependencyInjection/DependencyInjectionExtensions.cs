@@ -15,10 +15,12 @@ using App.Web.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 
 using Npgsql;
@@ -29,11 +31,25 @@ public static class DependencyInjectionExtensions
 {
     private const string TestingEnvironment = "Testing";
 
-    public static IServiceCollection AddWebOptions(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddWebOptions(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
     {
         services.AddOptions<JwtOptions>()
             .BindConfiguration(JwtOptions.SectionName)
             .ValidateDataAnnotations()
+            .Validate(options =>
+            {
+                if (!environment.IsDevelopment())
+                {
+                    var key = options.SigningKey;
+                    if (string.Equals(key, "replace-with-long-random-key-change-in-production", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(key, "replace-this-with-a-long-random-64-char-minimum-key", StringComparison.OrdinalIgnoreCase) ||
+                        key.Contains("replace-", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return false; // Validation fails
+                    }
+                }
+                return true;
+            }, "JWT SigningKey must be changed in non-development environments.")
             .ValidateOnStart();
 
         services.AddOptions<SitePublicOptions>()

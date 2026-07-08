@@ -872,11 +872,6 @@ public sealed partial class LocalFirstBoardDataService(
             await EnsureSqliteBoardColumnsAsync(db, cancellationToken);
             await EnsureUserScopeAsync(db, userKey, cancellationToken);
 
-            if (await db.Outbox.AnyAsync(o => o.UserKey == userKey, cancellationToken))
-            {
-                return false;
-            }
-
             LocalBoardStoreMetaRow? metaRow = await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken);
             cursor = metaRow?.LastSyncCursorUtc;
         }
@@ -933,11 +928,6 @@ public sealed partial class LocalFirstBoardDataService(
         try
         {
             await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            if (await db.Outbox.AnyAsync(o => o.UserKey == userKey, cancellationToken))
-            {
-                return (true, false);
-            }
-
             List<BoardOutboxRow> pending = await db.Outbox
                 .Where(o => o.UserKey == userKey)
                 .ToListAsync(cancellationToken);

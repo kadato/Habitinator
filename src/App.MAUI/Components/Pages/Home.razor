@@ -1,7 +1,8 @@
-﻿@page "/"
+@page "/"
 @inject IApiSession Session
 @inject ApiAuthService Auth
 @inject NavigationManager Nav
+@implements IDisposable
 
 @if (Session.IsLoggedIn)
 {
@@ -23,6 +24,21 @@ else
 
 @code {
 
+    protected override void OnInitialized()
+    {
+        Session.Changed += OnSessionChanged;
+    }
+
+    public void Dispose()
+    {
+        Session.Changed -= OnSessionChanged;
+    }
+
+    private void OnSessionChanged(object? sender, EventArgs e)
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
     private async Task ContinueAsDemoGuestAsync()
     {
         var r = await Auth.GuestJwtLoginAsync();
@@ -33,6 +49,9 @@ else
         }
 
         await Session.SetSessionAsync(r);
-        Nav.NavigateTo("/", replace: true);
+        // SetSessionAsync fires Session.Changed → OnSessionChanged → StateHasChanged,
+        // which re-renders this component and switches from HomeLanding to MainBoard.
+        // No NavigateTo("/") needed — we are already on "/" and the router would not
+        // re-create the page component anyway, leaving the board invisible.
     }
 }

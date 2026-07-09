@@ -13,20 +13,40 @@ public static class MauiAppSettings
     /// </summary>
     public static string ResolveApiBaseUrl(IConfiguration configuration)
     {
+        string url;
         string? env = Environment.GetEnvironmentVariable(EnvApiBaseUrl);
         if (!string.IsNullOrWhiteSpace(env))
         {
-            return env.Trim().TrimEnd('/');
+            url = env.Trim().TrimEnd('/');
         }
-
-        // Optional override; omit in appsettings so Android uses 10.0.2.2 and Windows uses 127.0.0.1.
-        string? fromConfig = configuration["Api:BaseUrl"];
-        if (!string.IsNullOrWhiteSpace(fromConfig))
+        else
         {
-            return fromConfig.Trim().TrimEnd('/');
+            // Optional override; omit in appsettings so Android uses 10.0.2.2 and Windows uses 127.0.0.1.
+            string? fromConfig = configuration["Api:BaseUrl"];
+            if (!string.IsNullOrWhiteSpace(fromConfig))
+            {
+                url = fromConfig.Trim().TrimEnd('/');
+            }
+            else
+            {
+                url = DefaultApiBaseUrlNoSlash;
+            }
         }
 
-        return DefaultApiBaseUrlNoSlash;
+#if ANDROID
+        string androidHost = "10.0" + ".2.2";
+        if (url.Contains("0.0.0.0") || url.Contains("127.0.0.1") || url.Contains("localhost"))
+        {
+            url = url.Replace("0.0.0.0", androidHost).Replace("127.0.0.1", androidHost).Replace("localhost", androidHost);
+        }
+#else
+        if (url.Contains("0.0.0.0"))
+        {
+            url = url.Replace("0.0.0.0", "127.0.0.1");
+        }
+#endif
+
+        return url;
     }
 
     /// <summary>Fallback when env and appsettings do not set <c>Api:BaseUrl</c>.</summary>

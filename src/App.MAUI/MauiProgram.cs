@@ -56,7 +56,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IClientSessionProvider, MauiClientSessionProvider>();
         string localBoardDbPath = Path.Combine(FileSystem.AppDataDirectory, "habitinator-board-local.db");
         builder.Services.AddDbContextFactory<LocalBoardDbContext>(o =>
-            o.UseSqlite($"Data Source={localBoardDbPath};Busy Timeout=30"));
+            o.UseSqlite($"Data Source={localBoardDbPath}"));
         builder.Services.AddSingleton<RemoteBoardRefreshService>();
         builder.Services.AddSingleton<MauiBoardSyncStatus>();
         builder.Services.AddSingleton<IBoardSyncStatus>(sp => sp.GetRequiredService<MauiBoardSyncStatus>());

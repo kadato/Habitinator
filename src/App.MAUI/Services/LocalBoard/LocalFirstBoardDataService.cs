@@ -140,6 +140,14 @@ public sealed partial class LocalFirstBoardDataService(
 
             await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
             await db.Database.EnsureCreatedAsync(cancellationToken);
+            try
+            {
+                await db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;", cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogTrace(ex, "Failed to enable WAL mode.");
+            }
             await EnsureSqliteBoardColumnsAsync(db, cancellationToken);
             MarkSchemaReady();
         }
@@ -282,9 +290,8 @@ public sealed partial class LocalFirstBoardDataService(
 
     public async Task<BoardSnapshot> GetArchivedSnapshotAsync(CancellationToken cancellationToken = default)
     {
+        await EnsureLocalStoreSchemaAsync(cancellationToken);
         await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
-        await db.Database.EnsureCreatedAsync(cancellationToken);
-        await EnsureSqliteBoardColumnsAsync(db, cancellationToken);
 
         string? userKey = await ResolveUserKeyAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(userKey))
@@ -601,12 +608,12 @@ public sealed partial class LocalFirstBoardDataService(
     {
         Guid operationId;
 
+        await EnsureLocalStoreSchemaAsync(cancellationToken);
+
         await _gate.WaitAsync(cancellationToken);
         try
         {
             await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            await db.Database.EnsureCreatedAsync(cancellationToken);
-            await EnsureSqliteBoardColumnsAsync(db, cancellationToken);
             if (!await HasAuthAsync(cancellationToken))
             {
                 return false;
@@ -843,12 +850,12 @@ public sealed partial class LocalFirstBoardDataService(
 
     public async Task<string?> TryGetStuckOutboxHintAsync(int minAttempts, CancellationToken cancellationToken = default)
     {
+        await EnsureLocalStoreSchemaAsync(cancellationToken);
+
         await _gate.WaitAsync(cancellationToken);
         try
         {
             await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            await db.Database.EnsureCreatedAsync(cancellationToken);
-            await EnsureSqliteBoardColumnsAsync(db, cancellationToken);
             if (!await HasAuthAsync(cancellationToken))
             {
                 return null;
@@ -888,13 +895,13 @@ public sealed partial class LocalFirstBoardDataService(
             return false;
         }
 
+        await EnsureLocalStoreSchemaAsync(cancellationToken);
+
         string? cursor;
         await _gate.WaitAsync(cancellationToken);
         try
         {
             await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            await db.Database.EnsureCreatedAsync(cancellationToken);
-            await EnsureSqliteBoardColumnsAsync(db, cancellationToken);
             await EnsureUserScopeAsync(db, userKey, cancellationToken);
 
             LocalBoardStoreMetaRow? metaRow = await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken);
@@ -1336,12 +1343,12 @@ public sealed partial class LocalFirstBoardDataService(
 
     private async Task<T> MutateAsync<T>(Func<LocalBoardDbContext, string, Task<T>> action, CancellationToken cancellationToken)
     {
+        await EnsureLocalStoreSchemaAsync(cancellationToken);
+
         await _gate.WaitAsync(cancellationToken);
         try
         {
             await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            await db.Database.EnsureCreatedAsync(cancellationToken);
-            await EnsureSqliteBoardColumnsAsync(db, cancellationToken);
 
             if (!await HasAuthAsync(cancellationToken))
             {
@@ -1511,30 +1518,40 @@ public sealed partial class LocalFirstBoardDataService(
     private static async Task ReplaceMirrorAsync(LocalBoardDbContext db, string userKey, BoardSnapshot snap,
         CancellationToken cancellationToken)
     {
-        await db.BoardItems.Where(x => x.UserKey == userKey).ExecuteDeleteAsync(cancellationToken);
-        foreach (BoardItem h in snap.Habits)
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        try
         {
-            db.BoardItems.Add(LocalBoardItemRow.FromModel(BoardSection.Habit, userKey, h, false));
-        }
+            await db.BoardItems.Where(x => x.UserKey == userKey).ExecuteDeleteAsync(cancellationToken);
+            foreach (BoardItem h in snap.Habits)
+            {
+                db.BoardItems.Add(LocalBoardItemRow.FromModel(BoardSection.Habit, userKey, h, false));
+            }
 
-        foreach (BoardItem d in snap.Dailies)
+            foreach (BoardItem d in snap.Dailies)
+            {
+                db.BoardItems.Add(LocalBoardItemRow.FromModel(BoardSection.Daily, userKey, d, false));
+            }
+
+            foreach (BoardItem t in snap.Todos)
+            {
+                db.BoardItems.Add(LocalBoardItemRow.FromModel(BoardSection.Todo, userKey, t, false));
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+
+            if (await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken) is { } meta)
+            {
+                meta.LastSyncCursorUtc = ComputeMirrorCursor(snap);
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
         {
-            db.BoardItems.Add(LocalBoardItemRow.FromModel(BoardSection.Daily, userKey, d, false));
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
         }
-
-        foreach (BoardItem t in snap.Todos)
-        {
-            db.BoardItems.Add(LocalBoardItemRow.FromModel(BoardSection.Todo, userKey, t, false));
-        }
-
-        await db.SaveChangesAsync(cancellationToken);
-
-        if (await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken) is { } meta)
-        {
-            meta.LastSyncCursorUtc = ComputeMirrorCursor(snap);
-        }
-
-        await db.SaveChangesAsync(cancellationToken);
     }
 
     private static bool IsEmpty(BoardSnapshot s) =>

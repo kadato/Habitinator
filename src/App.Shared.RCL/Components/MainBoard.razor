@@ -42,37 +42,7 @@
         </MudAlert>
     }
 
-    @if (BoardSync.IsOffline || BoardSync.IsSyncing || !string.IsNullOrEmpty(BoardSync.SyncProblemMessage) ||
-         BoardSync.LastSyncedUtc is not null)
-    {
-        <MudStack Spacing="1">
-            @if (BoardSync.IsOffline)
-            {
-                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Class="ma-0">
-                    You appear to be offline. Changes stay on this device and sync when you reconnect.
-                </MudAlert>
-            }
-            @if (BoardSync.IsSyncing && !BoardSync.IsOffline)
-            {
-                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="ma-0"
-                          Icon="@Icons.Material.Filled.CloudSync">
-                    Syncing with the server…
-                </MudAlert>
-            }
-            @if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage))
-            {
-                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true" Class="ma-0">
-                    @BoardSync.SyncProblemMessage
-                </MudAlert>
-            }
-            @if (BoardSync.LastSyncedUtc is { } syncedAt && !BoardSync.IsOffline && !_isLoading)
-            {
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                    Last synced @DateFormatService.Format(syncedAt.LocalDateTime)
-                </MudText>
-            }
-        </MudStack>
-    }
+
 
     <GlobalTimerPanel OnLogSaved="HandleTimerLogSavedAsync"
                       Habits="Habits"

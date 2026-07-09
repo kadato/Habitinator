@@ -50,7 +50,7 @@
 
 @media (max-width: 959.98px) {
     .board-shell {
-        --board-sticky-top: var(--app-top-bar-offset, 6.25rem);
+        --board-sticky-top: var(--app-top-bar-offset, 7.0rem);
     }
 
     .board-columns-mobile {

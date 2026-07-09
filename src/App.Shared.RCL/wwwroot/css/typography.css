@@ -1,4 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+@font-face {
+    font-family: "JetBrains Mono";
+    font-style: normal;
+    font-weight: 100 800;
+    font-display: swap;
+    src: url("../fonts/JetBrainsMono.woff2") format("woff2");
+}
 
 @font-face {
     font-family: "Plus Jakarta Sans";

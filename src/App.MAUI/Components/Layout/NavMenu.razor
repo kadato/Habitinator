@@ -80,10 +80,6 @@ else
         Session.Changed -= OnSessionChanged;
     }
 
-    private void NavigateAndRefresh(string uri)
-    {
-        Nav.NavigateTo(uri);
-    }
 
     private bool IsActivePath(string path, NavLinkMatch match)
     {
@@ -108,41 +104,39 @@ else
         return rel.StartsWith(p, StringComparison.OrdinalIgnoreCase);
     }
 
-    private RenderFragment MobileNavItem(string uri, string path, NavLinkMatch match, string icon, string label) => __builder =>
+    private RenderFragment MobileNavItem(string href, string path, NavLinkMatch match, string icon, string label) => __builder =>
     {
         var active = IsActivePath(path, match);
         var itemClass = active ? "app-mobile-nav__item app-mobile-nav__item--active" : "app-mobile-nav__item";
-        <button type="button"
-                class="@itemClass"
-                aria-current="@(active ? "page" : null)"
-                @onclick="@(() => NavigateAndRefresh(uri))">
+        <a href="@href"
+           class="@itemClass"
+           aria-current="@(active ? "page" : null)">
             <MudIcon Icon="@icon" Class="app-mobile-nav__icon" />
             <span class="app-mobile-nav__label">@label</span>
-        </button>
+        </a>
     };
 
-    private RenderFragment BottomNavItem(string uri, string path, NavLinkMatch match, string icon, string label) => __builder =>
+    private RenderFragment BottomNavItem(string href, string path, NavLinkMatch match, string icon, string label) => __builder =>
     {
         var active = IsActivePath(path, match);
         var itemClass = active ? "app-bottom-nav__item app-bottom-nav__item--active" : "app-bottom-nav__item";
-        <button type="button"
-                class="@itemClass"
-                aria-current="@(active ? "page" : null)"
-                aria-label="@label"
-                @onclick="@(() => NavigateAndRefresh(uri))">
+        <a href="@href"
+           class="@itemClass"
+           aria-current="@(active ? "page" : null)"
+           aria-label="@label">
             <span class="app-bottom-nav__icon-wrap" aria-hidden="true">
                 <MudIcon Icon="@icon" Class="app-bottom-nav__icon" />
             </span>
             <span class="app-bottom-nav__label">@label</span>
-        </button>
+        </a>
     };
 
-    private RenderFragment HeaderNavItem(string uri, string path, NavLinkMatch match, string icon, string label) => __builder =>
+    private RenderFragment HeaderNavItem(string href, string path, NavLinkMatch match, string icon, string label) => __builder =>
     {
         var active = IsActivePath(path, match);
         var slotClass = active ? "app-header-nav-slot app-header-nav-slot--active" : "app-header-nav-slot";
         <span class="@slotClass">
-            <MudButton OnClick="@(() => NavigateAndRefresh(uri))"
+            <MudButton Href="@href"
                        Variant="@(active ? Variant.Filled : Variant.Text)"
                        Color="@(active ? Color.Primary : Color.Default)"
                        Size="Size.Medium"

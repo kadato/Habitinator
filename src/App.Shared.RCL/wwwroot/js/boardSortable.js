@@ -11,12 +11,19 @@ globalThis.HabitinatorSortable = {
 
         if (!containerElement) return;
 
+        const isMaui = !!window.habitinatorIsMaui;
         const instance = new Sortable(containerElement, {
-            animation: 150,
+            animation: 0,
             ghostClass: 'board-sortable-ghost',
             chosenClass: 'board-sortable-chosen',
             dragClass: 'board-sortable-drag',
             handle: '.board-card',
+            forceFallback: isMaui,
+            fallbackOnBody: true,
+            fallbackClass: 'board-sortable-fallback-drag',
+            filter: '.board-sq, .board-check, .board-card__delete, .board-subtask-pill, .board-subtask-cb, [data-no-drag]',
+            preventOnFilter: false,
+            touchStartThreshold: 5,
             onEnd: function (evt) {
                 const oldIndex = evt.oldIndex;
                 const newIndex = evt.newIndex;

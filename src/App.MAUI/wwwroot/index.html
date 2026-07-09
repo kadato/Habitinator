@@ -25,10 +25,15 @@
     <span class="dismiss">🗙</span>
 </div>
 
+<script>window.habitinatorIsMaui = true;</script>
 <script src="_content/App.Shared.RCL/js/scriptLoader.js"></script>
 <script src="_content/MudBlazor/MudBlazor.min.js"></script>
-<script src="_content/App.Shared.RCL/js/sortable.min.js"></script>
-<script src="_content/App.Shared.RCL/js/boardSortable.js"></script>
+<script src="_content/App.Shared.RCL/js/sortable.min.js"
+        data-habitinator-src="_content/App.Shared.RCL/js/sortable.min.js"
+        data-habitinator-loaded="1"></script>
+<script src="_content/App.Shared.RCL/js/boardSortable.js"
+        data-habitinator-src="_content/App.Shared.RCL/js/boardSortable.js"
+        data-habitinator-loaded="1"></script>
 <script src="_content/App.Shared.RCL/js/focusTimerAlert.js"></script>
 <script src="_content/App.Shared.RCL/js/userTimezone.js"></script>
 <script src="_framework/blazor.webview.js" autostart="false"></script>

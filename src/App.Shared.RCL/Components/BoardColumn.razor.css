@@ -154,6 +154,8 @@
 .board-sortable-item {
     padding-top: 0.2rem;
     padding-bottom: 0.2rem;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .board-sortable-item ::deep .board-card {
@@ -178,8 +180,14 @@
 
 .board-sortable-drag {
     opacity: 0.92;
-    transform: rotate(1.2deg);
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2) !important;
+}
+
+.board-sortable-fallback-drag {
+    opacity: 0.92;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2) !important;
+    z-index: 99999 !important;
+    pointer-events: none !important;
 }
 
 .board-col-foot {

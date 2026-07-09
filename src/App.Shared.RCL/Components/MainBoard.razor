@@ -425,9 +425,28 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            // Eagerly preload SortableJS and board reordering scripts during initial data load
+            _ = PreloadSortableScriptsAsync();
+        }
+
         if (_initialLoadComplete && _loadError is null && !_boardClientScriptsStarted)
         {
             await StartBoardClientScriptsAsync();
+        }
+    }
+
+    private async Task PreloadSortableScriptsAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/sortable.min.js");
+            await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardSortable.js");
+        }
+        catch (Exception)
+        {
+            // Ignored during background preload
         }
     }
 

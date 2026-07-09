@@ -55,9 +55,9 @@
         </div>
     }
     <div class="board-card__head">
-        <button type="button" class="board-card__title" draggable="false" @onclick="OnOpenEditor">
+        <div class="board-card__title" role="button" tabindex="0" @onclick="OnOpenEditor" @onkeydown="OnTitleKeyDown">
             <span class="board-card__title-text">@Item.Title</span>
-        </button>
+        </div>
         <div class="board-card__head-actions">
             <MudMenu AnchorOrigin="Origin.BottomRight"
                      TransformOrigin="Origin.TopRight"
@@ -299,5 +299,13 @@
             BoardSection.Habit or BoardSection.Daily => true,
             _ => false
         };
+    }
+
+    private async Task OnTitleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or " ")
+        {
+            await OnOpenEditor.InvokeAsync();
+        }
     }
 }

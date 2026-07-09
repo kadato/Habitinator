@@ -1,0 +1,16 @@
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+::deep .animate-spin {
+    animation: spin 2s linear infinite;
+}
+
+::deep .opacity-60 {
+    opacity: 0.6;
+}

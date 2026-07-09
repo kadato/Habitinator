@@ -288,8 +288,8 @@ h1:focus {
 
     /* Stacked brand row + mobile nav; offset main content below fixed app bar */
     .app-shell-layout {
-        --app-top-bar-offset: 6.25rem;
-        --board-sticky-top: 6.25rem;
+        --app-top-bar-offset: 7.0rem;
+        --board-sticky-top: 7.0rem;
     }
 
     .app-shell-layout .app-shell-main.mud-main-content {

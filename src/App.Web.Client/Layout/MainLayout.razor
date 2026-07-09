@@ -10,6 +10,7 @@
 @inject IUserDateFormatService DateFormatService
 @inject IJSRuntime JS
 @inject NavigationManager Nav
+@inject IBoardSyncStatus BoardSync
 
 <PageTitle>@SeoDefaults.DefaultTitle</PageTitle>
 
@@ -46,6 +47,7 @@
                         <div class="app-top-bar__flex-spacer" aria-hidden="true"></div>
                         <div class="app-top-bar__right d-flex align-center">
                             <div class="app-header-user-rail d-flex align-center">
+                                <SyncStatusIndicator IconOnly="true" />
                                 <MudMenu AnchorOrigin="Origin.BottomRight"
                                          TransformOrigin="Origin.TopRight"
                                          Dense="true"
@@ -73,6 +75,7 @@
                                             <MudText Typo="Typo.caption" Class="text-secondary text-truncate dropdown-email">@auth.User.FindFirst(ClaimTypes.Email)?.Value</MudText>
                                         </div>
                                         <MudDivider Class="my-1"/>
+                                        <SyncStatusIndicator IconOnly="false" />
                                         <MudMenuItem Icon="@Icons.Material.Filled.Logout" IconColor="Color.Error" Class="text-danger" OnClick="TriggerLogout">
                                             <MudText Color="Color.Error" Class="font-weight-semibold">Log out</MudText>
                                         </MudMenuItem>

@@ -7,6 +7,7 @@
 @inject IUserPreferencesService PreferencesService
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@inject IBoardSyncStatus BoardSync
 
 <PageTitle>@PageTitles.Brand</PageTitle>
 
@@ -33,6 +34,7 @@
                     <div class="app-top-bar__flex-spacer" aria-hidden="true"></div>
                     <div class="app-top-bar__right d-flex align-center">
                         <div class="app-header-user-rail d-flex align-center">
+                            <SyncStatusIndicator IconOnly="true" />
                             <MudMenu AnchorOrigin="Origin.BottomRight"
                                      TransformOrigin="Origin.TopRight"
                                      Dense="true"
@@ -60,6 +62,7 @@
                                         <MudText Typo="Typo.caption" Class="text-secondary text-truncate dropdown-email">@Session.Email</MudText>
                                     </div>
                                     <MudDivider Class="my-1"/>
+                                    <SyncStatusIndicator IconOnly="false" />
                                     <MudMenuItem Icon="@Icons.Material.Filled.Logout" IconColor="Color.Error" OnClick="LogoutAsync" Class="app-dropdown-logout-btn text-danger">
                                         <MudText Color="Color.Error" Class="font-weight-semibold">Log out</MudText>
                                     </MudMenuItem>
@@ -73,7 +76,7 @@
         </MudAppBar>
     }
     <MudMainContent Class="app-shell-main">
-        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pt-1 pb-3 px-4 px-sm-5 board-main-container">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pt-5 pb-3 px-4 px-sm-5 board-main-container">
             @if (!_sessionInitialized)
             {
                 <MudProgressLinear Indeterminate="true"/>

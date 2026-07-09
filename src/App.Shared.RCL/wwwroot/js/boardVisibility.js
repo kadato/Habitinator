@@ -750,12 +750,21 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     updateShortcutOverlay();
   }
 
+  function onPointerDown(e) {
+    if (shortcutModeActive) {
+      shiftLock = false;
+      deactivateShortcutMode();
+    }
+  }
+
   function ensureListeners() {
     if (!isEnabled) return;
     if (isListenersAdded) return;
     globalThis.addEventListener("keydown", onKeyDown, true); // Use capture phase to intercept input keys in shortcut mode
     globalThis.addEventListener("keyup", onKeyUp);
     globalThis.addEventListener("blur", onWindowBlur);
+    globalThis.addEventListener("mousedown", onPointerDown, true);
+    globalThis.addEventListener("touchstart", onPointerDown, true);
     isListenersAdded = true;
   }
 
@@ -764,6 +773,8 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     globalThis.removeEventListener("keydown", onKeyDown, true);
     globalThis.removeEventListener("keyup", onKeyUp);
     globalThis.removeEventListener("blur", onWindowBlur);
+    globalThis.removeEventListener("mousedown", onPointerDown, true);
+    globalThis.removeEventListener("touchstart", onPointerDown, true);
     isListenersAdded = false;
   }
 

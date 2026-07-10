@@ -6,7 +6,7 @@
   <ItemGroup>
     <!-- Global / Shared tooling -->
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.28.0.143324" />
-    <PackageVersion Include="Microsoft.OpenApi" Version="2.7.5" />
+    <PackageVersion Include="Microsoft.OpenApi" Version="3.8.0" />
 
     <!-- MAUI dependencies -->
     <PackageVersion Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
@@ -16,10 +16,10 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.9" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.9" />
-    <PackageVersion Include="MudBlazor" Version="9.6.0" />
-    <PackageVersion Include="Plugin.LocalNotification" Version="14.1.0" />
+    <PackageVersion Include="MudBlazor" Version="9.7.0" />
+    <PackageVersion Include="Plugin.LocalNotification" Version="14.1.1" />
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
 
     <!-- Shared UI & Webassembly Client dependencies -->
@@ -37,16 +37,16 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.9" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
-    <PackageVersion Include="Npgsql.DependencyInjection" Version="10.0.2" />
+    <PackageVersion Include="Npgsql.DependencyInjection" Version="10.0.3" />
     <PackageVersion Include="Polly" Version="8.7.0" />
 
     <!-- Aspire AppHost dependencies -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.4.6" />
-    <PackageVersion Include="MessagePack" Version="3.1.7" />
+    <PackageVersion Include="MessagePack" Version="3.1.8" />
 
     <!-- Testing dependencies -->
-    <PackageVersion Include="Appium.WebDriver" Version="8.3.0" />
+    <PackageVersion Include="Appium.WebDriver" Version="8.3.1" />
     <PackageVersion Include="FluentAssertions" Version="8.10.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />

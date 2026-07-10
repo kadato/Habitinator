@@ -79,7 +79,10 @@
                         </div>
                     }
                     <button type="button" class="edit-daily-checklist__add" @onclick="AddChecklistLine">
-                        <span class="edit-daily-checklist__add-icon" aria-hidden="true">+</span>
+                        <svg class="edit-daily-checklist__add-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: block;">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
                         <span class="edit-daily-checklist__add-text">New checklist item</span>
                     </button>
                 </div>
@@ -93,15 +96,24 @@
                 class="habit-track__option @(_trackPlus ? "habit-track__option--on-good" : string.Empty)"
                 @onclick="@(() => _trackPlus = !_trackPlus)"
                 aria-pressed="@(_trackPlus ? "true" : "false")">
-            <span class="habit-track__circle habit-track__circle--good">+</span>
-            <span class="habit-track__label">Plus (+)</span>
+            <span class="habit-track__circle habit-track__circle--good">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+            </span>
+            <span class="habit-track__label">Plus</span>
         </button>
         <button type="button"
                 class="habit-track__option @(_trackMinus ? "habit-track__option--on-bad" : string.Empty)"
                 @onclick="@(() => _trackMinus = !_trackMinus)"
                 aria-pressed="@(_trackMinus ? "true" : "false")">
-            <span class="habit-track__circle habit-track__circle--bad">−</span>
-            <span class="habit-track__label">Minus (−)</span>
+            <span class="habit-track__circle habit-track__circle--bad">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+            </span>
+            <span class="habit-track__label">Minus</span>
         </button>
     </div>
     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1 mb-0">Turn on one or both. At least one must stay on when you save.</MudText>
@@ -133,7 +145,10 @@
                                     @onclick="() => RemoveTag(tag)"
                                     @onclick:stopPropagation="true"
                                     aria-label="@($"Remove {tag}")">
-                                ×
+                                <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
                             </button>
                         </span>
                     }

@@ -86,4 +86,8 @@
       <ProjectReference Include="..\App.Shared.RCL\App.Shared.RCL.csproj" />
     </ItemGroup>
 
+    <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+      <PackageReference Include="System.Drawing.Common" />
+    </ItemGroup>
+
 </Project>

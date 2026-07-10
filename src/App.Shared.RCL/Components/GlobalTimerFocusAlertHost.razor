@@ -3,6 +3,7 @@
 @inject IFocusTimerClientAlerts FocusClientAlerts
 @inject IDialogService DialogService
 @inject ITimerSessionLogService TimerSessionLog
+@inject IAppWindowProgressService AppWindowProgress
 @implements IDisposable
 
 @* Runs on every authenticated page so "time's up" dialogs are not tied to the board timer panel. *@
@@ -69,7 +70,34 @@
         {
             _wasRunningForTitle = isRunning;
             await InvokeAsync(StateHasChanged);
+            UpdateNativeWindowProgress(isRunning);
         }
+    }
+
+    private void UpdateNativeWindowProgress(bool isRunning)
+    {
+        if (!isRunning)
+        {
+            AppWindowProgress.SetTitle("Habitinator");
+            AppWindowProgress.ClearTaskbarBadge();
+            return;
+        }
+
+        var title = GetTabTitle();
+        AppWindowProgress.SetTitle(title);
+
+        int remainingMinutes = 0;
+        if (TimerService.FocusAlertAfter.HasValue)
+        {
+            var remaining = TimerService.FocusAlertAfter.Value - TimerService.Elapsed;
+            remainingMinutes = (int)Math.Max(0, Math.Ceiling(remaining.TotalMinutes));
+        }
+        else
+        {
+            remainingMinutes = (int)TimerService.Elapsed.TotalMinutes;
+        }
+
+        AppWindowProgress.SetTaskbarTimeBadge(remainingMinutes);
     }
 
     private void HandleFocusDurationReached(CancellationToken cancellationToken)
@@ -249,5 +277,7 @@
         _focusTickCts?.Cancel();
         _focusTick?.Dispose();
         _focusTickCts?.Dispose();
+        AppWindowProgress.ClearTaskbarBadge();
+        AppWindowProgress.SetTitle("Habitinator");
     }
 }

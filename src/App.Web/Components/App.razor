@@ -137,9 +137,18 @@
             }
         })();
     </script>
-    <link rel="preload" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Regular.woff2"]" as="font" type="font/woff2" crossorigin="anonymous"/>
-    <link rel="preload" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Medium.woff2"]" as="font" type="font/woff2" crossorigin="anonymous"/>
-    <link rel="preload" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2"]" as="font" type="font/woff2" crossorigin="anonymous"/>
+    @if (HttpContext?.User?.Identity?.IsAuthenticated == true)
+    {
+        <link rel="preload" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Regular.woff2"]" as="font" type="font/woff2" crossorigin="anonymous"/>
+        <link rel="preload" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Medium.woff2"]" as="font" type="font/woff2" crossorigin="anonymous"/>
+        <link rel="preload" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2"]" as="font" type="font/woff2" crossorigin="anonymous"/>
+    }
+    else
+    {
+        <link rel="prefetch" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Regular.woff2"]" as="font" crossorigin="anonymous"/>
+        <link rel="prefetch" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Medium.woff2"]" as="font" crossorigin="anonymous"/>
+        <link rel="prefetch" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2"]" as="font" crossorigin="anonymous"/>
+    }
     <link rel="preload" href="@Assets["_framework/blazor.web.js"]" as="script" crossorigin="anonymous"/>
     <link rel="preload" href="@Assets["_content/MudBlazor/MudBlazor.min.js"]" as="script" crossorigin="anonymous"/>
 
@@ -199,6 +208,7 @@
     </style>
     <link rel="stylesheet" href="@Assets["_content/MudBlazor/MudBlazor.min.css"]"/>
     <link rel="stylesheet" href="@Assets["_content/App.Shared.RCL/css/typography.css"]"/>
+    <link rel="stylesheet" href="@Assets["_content/App.Shared.RCL/css/app.css"]"/>
     <link rel="stylesheet" href="@Assets["app.css"]"/>
     <link rel="stylesheet" href="@Assets["_content/App.Shared.RCL/css/auth-pages.css"]"/>
     <link rel="stylesheet" href="@Assets["App.Web.styles.css"]" media="print" onload="this.media='all'"/>

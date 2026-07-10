@@ -126,6 +126,7 @@ public static class DependencyInjectionExtensions
         services.AddScoped<JwtTokenService>();
         services.AddSingleton<IClock, SystemClock>();
         services.AddScoped<GlobalTimerService>();
+        services.AddSingleton<IAppWindowProgressService, FallbackAppWindowProgressService>();
         services.AddScoped<ITimerSessionLogService, TimerSessionLogService>();
         services.AddHttpContextAccessor();
         services.AddScoped<DemoUserResolver>();

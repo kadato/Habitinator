@@ -137,18 +137,9 @@
             }
         })();
     </script>
-    @if (HttpContext?.User?.Identity?.IsAuthenticated == true)
-    {
-        <link rel="preload" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Regular.woff2"]" as="font" type="font/woff2" crossorigin="anonymous"/>
-        <link rel="preload" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Medium.woff2"]" as="font" type="font/woff2" crossorigin="anonymous"/>
-        <link rel="preload" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2"]" as="font" type="font/woff2" crossorigin="anonymous"/>
-    }
-    else
-    {
-        <link rel="prefetch" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Regular.woff2"]" as="font" crossorigin="anonymous"/>
-        <link rel="prefetch" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Medium.woff2"]" as="font" crossorigin="anonymous"/>
-        <link rel="prefetch" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2"]" as="font" crossorigin="anonymous"/>
-    }
+    <link rel="prefetch" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Regular.woff2"]" as="font" crossorigin="anonymous"/>
+    <link rel="prefetch" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Medium.woff2"]" as="font" crossorigin="anonymous"/>
+    <link rel="prefetch" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2"]" as="font" crossorigin="anonymous"/>
     <link rel="preload" href="@Assets["_framework/blazor.web.js"]" as="script" crossorigin="anonymous"/>
     <link rel="preload" href="@Assets["_content/MudBlazor/MudBlazor.min.js"]" as="script" crossorigin="anonymous"/>
 
@@ -166,46 +157,6 @@
         };
     </script>
 
-    <style>
-        :root {
-            --hab-bg-light: #f8fafc;
-            --hab-bg-dark: #0b0f19;
-        }
-        html, body {
-            background-color: var(--hab-bg-light);
-        }
-        html.dark-theme, html.dark-theme body {
-            background-color: var(--hab-bg-dark);
-        }
-        @@media (prefers-color-scheme: dark) {
-            html:not(.light-theme), html:not(.light-theme) body {
-                background-color: var(--hab-bg-dark);
-            }
-        }
-
-        /* Top Loading Bar */
-        #habitinator-loading-bar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 50%, #3b82f6 100%);
-            background-size: 200% 100%;
-            opacity: 0;
-            animation: habLoading 1.5s infinite linear, habFadeIn 0.3s forwards;
-            animation-delay: 0s, 0.8s;
-            z-index: 20000;
-            transition: opacity 0.25s ease, visibility 0.25s ease;
-        }
-        @@keyframes habLoading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-        @@keyframes habFadeIn {
-            to { opacity: 1; }
-        }
-    </style>
     <link rel="stylesheet" href="@Assets["_content/MudBlazor/MudBlazor.min.css"]"/>
     <link rel="stylesheet" href="@Assets["_content/App.Shared.RCL/css/typography.css"]"/>
     <link rel="stylesheet" href="@Assets["_content/App.Shared.RCL/css/app.css"]"/>
@@ -213,31 +164,6 @@
     <link rel="stylesheet" href="@Assets["_content/App.Shared.RCL/css/auth-pages.css"]"/>
     <link rel="stylesheet" href="@Assets["App.Web.styles.css"]" media="print" onload="this.media='all'"/>
     <noscript><link rel="stylesheet" href="@Assets["App.Web.styles.css"]"/></noscript>
-    <style>
-        @@font-face {
-            font-family: "Plus Jakarta Sans";
-            font-style: normal;
-            font-weight: 400;
-            font-display: swap;
-            src: url("@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Regular.woff2"]") format("woff2");
-        }
-
-        @@font-face {
-            font-family: "Plus Jakarta Sans";
-            font-style: normal;
-            font-weight: 500;
-            font-display: swap;
-            src: url("@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Medium.woff2"]") format("woff2");
-        }
-
-        @@font-face {
-            font-family: "Plus Jakarta Sans";
-            font-style: normal;
-            font-weight: 700;
-            font-display: swap;
-            src: url("@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2"]") format("woff2");
-        }
-    </style>
     <ImportMap/>
     <link rel="icon" href="/favicon.ico" sizes="any"/>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>

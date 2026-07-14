@@ -706,6 +706,40 @@ public sealed partial class LocalFirstBoardDataService(
         }
     }
 
+    private static bool AreItemsContentEqual(BoardItem a, BoardItem b)
+    {
+        return string.Equals(a.Title, b.Title, StringComparison.Ordinal) &&
+               a.IsCompleted == b.IsCompleted &&
+               a.Counter == b.Counter &&
+               string.Equals(a.Notes ?? string.Empty, b.Notes ?? string.Empty, StringComparison.Ordinal) &&
+               string.Equals(a.Tags ?? string.Empty, b.Tags ?? string.Empty, StringComparison.Ordinal) &&
+               a.TrackPlus == b.TrackPlus &&
+               a.TrackMinus == b.TrackMinus &&
+               a.NegativeCounter == b.NegativeCounter &&
+               a.ResetPeriod == b.ResetPeriod &&
+               a.DailyStartDate == b.DailyStartDate &&
+               a.DailyRepeat == b.DailyRepeat &&
+               a.DailyRepeatInterval == b.DailyRepeatInterval &&
+               string.Equals(a.ChecklistJson ?? string.Empty, b.ChecklistJson ?? string.Empty, StringComparison.Ordinal) &&
+               a.DailyLastCompletedOn == b.DailyLastCompletedOn &&
+               a.TodoDueDate == b.TodoDueDate &&
+               NullableDoubleEquals(a.SortOrder, b.SortOrder) &&
+               a.IsArchived == b.IsArchived;
+    }
+
+    private static bool NullableDoubleEquals(double? a, double? b)
+    {
+        if (a is null && b is null)
+        {
+            return true;
+        }
+        if (a is null || b is null)
+        {
+            return false;
+        }
+        return Math.Abs(a.Value - b.Value) < 0.0001;
+    }
+
     private async Task<bool> HandleRemoteConflictAsync(
         Guid operationId,
         BoardRemoteConflictException ex,
@@ -724,6 +758,8 @@ public sealed partial class LocalFirstBoardDataService(
 
         BoardItem? localItem = null;
         BoardSection section = BoardSection.Todo;
+        DateTimeOffset localTime = DateTimeOffset.MinValue;
+
         await _gate.WaitAsync(cancellationToken);
         try
         {
@@ -733,6 +769,12 @@ public sealed partial class LocalFirstBoardDataService(
             {
                 localItem = row.ToModel();
                 section = row.Section;
+            }
+
+            BoardOutboxRow? opRow = await db.Outbox.FindAsync([operationId], cancellationToken);
+            if (opRow is not null)
+            {
+                localTime = new DateTimeOffset(opRow.CreatedAtUtc, TimeSpan.Zero);
             }
         }
         finally
@@ -748,25 +790,28 @@ public sealed partial class LocalFirstBoardDataService(
             return false;
         }
 
-        ConflictResolutionService conflictService = services.GetRequiredService<ConflictResolutionService>();
-        ConflictInfo conflictInfo = new(operationId, localItem, serverItem, section);
-
-        ConflictResolutionChoice choice = await conflictService.WaitForResolutionAsync(conflictInfo, cancellationToken);
-        if (choice == ConflictResolutionChoice.KeepMine)
+        // 1. Content-Aware check: if user-facing fields match exactly, resolve keeping Server version silently.
+        if (AreItemsContentEqual(localItem, serverItem))
         {
-            await ResolveConflictKeepMineAsync(operationId, serverItem, cancellationToken);
-            return false;
-        }
-        else if (choice == ConflictResolutionChoice.KeepServer)
-        {
+            logger.LogInformation("Conflict detected but items are content-identical. Auto-resolving by keeping Server version silently.");
             await ResolveConflictKeepServerAsync(operationId, serverItem, section, cancellationToken);
             return false;
         }
+
+        // 2. Last-Write-Wins (LWW) check: compare local update enqueued time against server updated timestamp.
+        DateTimeOffset serverTime = serverItem.ServerUpdatedAtUtc ?? DateTimeOffset.MinValue;
+        if (localTime >= serverTime)
+        {
+            logger.LogInformation("Conflict auto-resolved via Last-Write-Wins: Keeping Device version (Local: {LocalTime} >= Server: {ServerTime}).", localTime, serverTime);
+            await ResolveConflictKeepMineAsync(operationId, serverItem, cancellationToken);
+        }
         else
         {
-            logger.LogInformation("Conflict resolution postponed or cancelled.");
-            return false;
+            logger.LogInformation("Conflict auto-resolved via Last-Write-Wins: Keeping Server version (Local: {LocalTime} < Server: {ServerTime}).", localTime, serverTime);
+            await ResolveConflictKeepServerAsync(operationId, serverItem, section, cancellationToken);
         }
+
+        return false;
     }
 
     private async Task ResolveConflictKeepMineAsync(Guid operationId, BoardItem serverItem, CancellationToken cancellationToken)

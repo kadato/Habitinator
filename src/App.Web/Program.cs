@@ -48,7 +48,8 @@ builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddWebAuthenticationAndAuthorization(builder.Configuration, builder.Environment);
 builder.Services.AddApplicationServices(builder.Environment);
 builder.Services.AddSignalR();
-builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddOpenApiDocument();
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);

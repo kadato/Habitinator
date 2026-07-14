@@ -39,7 +39,10 @@ internal static class PipelineExtensions
         app.MapGet("/health", () => Results.Text("OK", "text/plain"));
 
         app.MapGet("/.well-known/change-password", () => Results.Redirect("/settings", permanent: false));
-        app.MapOpenApi();
+        app.UseOpenApi(options =>
+        {
+            options.Path = "/openapi/v1.json";
+        });
         app.UseResponseCompression();
         app.MapStaticAssets();
         app.MapRazorComponents<App.Web.Components.App>()

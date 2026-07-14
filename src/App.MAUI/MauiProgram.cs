@@ -94,6 +94,7 @@ public static class MauiProgram
 #else
         builder.Services.AddSingleton<IAppWindowProgressService, Services.MauiAppWindowProgressService>();
 #endif
+        builder.Services.AddSingleton<IAppUpdaterService, Services.MauiAppUpdaterService>();
         builder.Services.AddScoped<ITimerSessionLogService, TimerSessionLogService>();
         builder.Services.AddSingleton<IUserActivityLogService, RemoteUserActivityLogService>();
         builder.Services.AddScoped<IUndoService, UndoService>();

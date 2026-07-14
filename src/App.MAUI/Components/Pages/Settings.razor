@@ -1,8 +1,113 @@
 @page "/settings"
+@using global::App.Shared.RCL.Services
+@inject IAppUpdaterService UpdaterService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
 
 <PageTitle>@PageTitles.Page("Settings")</PageTitle>
 
 <MudText Typo="Typo.h4" Class="app-page-title">Settings</MudText>
 <UserPreferencesSection/>
 <NotificationSettingsSection/>
+
+<MudPaper Class="pa-4 settings-section-paper mb-3" Elevation="0" Outlined="true">
+    <MudStack Spacing="2">
+        <MudText Typo="Typo.subtitle1" Class="mb-1">App Updates</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
+            Check for new releases and update the application.
+        </MudText>
+
+        <div class="d-flex align-center justify-space-between border rounded-lg p-3 py-2">
+            <div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Current Version</MudText>
+                <MudText Typo="Typo.body2" Class="font-weight-bold">v@_currentVersion</MudText>
+            </div>
+            
+            @if (UpdaterService.IsSupported)
+            {
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary" 
+                           Size="Size.Small" 
+                           OnClick="CheckForUpdatesAsync"
+                           Disabled="@_isChecking"
+                           StartIcon="@Icons.Material.Filled.SystemUpdate">
+                    @if (_isChecking)
+                    {
+                        <span class="mr-2">Checking...</span>
+                        <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
+                    }
+                    else
+                    {
+                        <span>Check for Updates</span>
+                    }
+                </MudButton>
+            }
+            else
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    Updates are managed by the platform.
+                </MudText>
+            }
+        </div>
+    </MudStack>
+</MudPaper>
+
 <AccountActionsSection/>
+
+@code {
+    private string _currentVersion = "1.0.0";
+    private bool _isChecking;
+
+    protected override void OnInitialized()
+    {
+        try
+        {
+            _currentVersion = Microsoft.Maui.ApplicationModel.AppInfo.Current.VersionString;
+        }
+        catch
+        {
+            // Fallback for Web/tests
+        }
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        _isChecking = true;
+        StateHasChanged();
+
+        var result = await UpdaterService.CheckForUpdateAsync();
+
+        _isChecking = false;
+        StateHasChanged();
+
+        if (!string.IsNullOrEmpty(result.ErrorMessage))
+        {
+            Snackbar.Add(result.ErrorMessage, Severity.Error);
+            return;
+        }
+
+        if (result.UpdateAvailable)
+        {
+            var parameters = new DialogParameters<UpdateDialog>
+            {
+                { x => x.LatestVersion, result.LatestVersion },
+                { x => x.ReleaseNotes, result.ReleaseNotes },
+                { x => x.DownloadUrl, result.DownloadUrl }
+            };
+
+            var options = new DialogOptions 
+            { 
+                CloseButton = false, 
+                MaxWidth = MaxWidth.Small,
+                FullWidth = true
+            };
+
+            await DialogService.ShowAsync<UpdateDialog>("New Update Available", parameters, options);
+        }
+        else
+        {
+            Snackbar.Add("Habitinator is up to date!", Severity.Success);
+        }
+    }
+}
+

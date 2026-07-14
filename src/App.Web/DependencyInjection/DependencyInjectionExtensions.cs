@@ -31,7 +31,7 @@ public static class DependencyInjectionExtensions
 {
     private const string TestingEnvironment = "Testing";
 
-    public static IServiceCollection AddWebOptions(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
+    public static IServiceCollection AddWebOptions(this IServiceCollection services, IConfiguration _, IWebHostEnvironment environment)
     {
         services.AddOptions<JwtOptions>()
             .BindConfiguration(JwtOptions.SectionName)
@@ -127,6 +127,7 @@ public static class DependencyInjectionExtensions
         services.AddSingleton<IClock, SystemClock>();
         services.AddScoped<GlobalTimerService>();
         services.AddSingleton<IAppWindowProgressService, FallbackAppWindowProgressService>();
+        services.AddSingleton<IAppUpdaterService, FallbackAppUpdaterService>();
         services.AddScoped<ITimerSessionLogService, TimerSessionLogService>();
         services.AddHttpContextAccessor();
         services.AddScoped<DemoUserResolver>();

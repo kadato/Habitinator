@@ -42,6 +42,7 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddScoped<GlobalTimerService>();
 builder.Services.AddSingleton<IAppWindowProgressService, FallbackAppWindowProgressService>();
+builder.Services.AddSingleton<IAppUpdaterService, FallbackAppUpdaterService>();
 builder.Services.AddScoped<ITimerSessionLogService, TimerSessionLogService>();
 builder.Services.AddScoped<RemoteBoardRefreshService>();
 builder.Services.AddScoped<IRemoteBoardRefreshService>(sp => sp.GetRequiredService<RemoteBoardRefreshService>());

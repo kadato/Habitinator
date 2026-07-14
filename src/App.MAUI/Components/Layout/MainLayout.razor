@@ -8,6 +8,9 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject IBoardSyncStatus BoardSync
+@inject IAppUpdaterService UpdaterService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
 
 <PageTitle>@PageTitles.Brand</PageTitle>
 
@@ -147,6 +150,8 @@
             {
                 // Ignore JS errors on prerendering or test hosts
             }
+
+            _ = Task.Run(async () => await CheckForUpdatesOnStartupAsync());
         }
     }
 
@@ -320,6 +325,55 @@
 
         _sessionInitialized = true;
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CheckForUpdatesOnStartupAsync()
+    {
+        if (!UpdaterService.IsSupported) return;
+
+        // Add a slight delay so it doesn't interfere with initial startup rendering
+        await Task.Delay(3000);
+
+        try
+        {
+            var result = await UpdaterService.CheckForUpdateAsync();
+            if (result.UpdateAvailable)
+            {
+                await InvokeAsync(() =>
+                {
+                    Snackbar.Add(
+                        $"A new version of Habitinator is available (v{result.LatestVersion}).",
+                        Severity.Info,
+                        config =>
+                        {
+                            config.Action = "View Update";
+                            config.ActionColor = Color.Primary;
+                            config.OnClick = async snackbar =>
+                            {
+                                var parameters = new DialogParameters<UpdateDialog>
+                                {
+                                    { x => x.LatestVersion, result.LatestVersion },
+                                    { x => x.ReleaseNotes, result.ReleaseNotes },
+                                    { x => x.DownloadUrl, result.DownloadUrl }
+                                };
+
+                                var options = new DialogOptions 
+                                { 
+                                    CloseButton = false, 
+                                    MaxWidth = MaxWidth.Small,
+                                    FullWidth = true
+                                };
+
+                                await DialogService.ShowAsync<UpdateDialog>("New Update Available", parameters, options);
+                            };
+                        });
+                });
+            }
+        }
+        catch
+        {
+            // Suppress background startup update failures to not interrupt user experience
+        }
     }
 
     private static bool GetSystemDarkMode()

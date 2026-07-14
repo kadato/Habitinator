@@ -92,9 +92,11 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy("auth", context =>
     {
         var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown-ip";
+        var isDevOrTest = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment(TestingEnvironment);
+        var limit = isDevOrTest ? 100 : 20;
         return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = 5,
+            PermitLimit = limit,
             Window = TimeSpan.FromSeconds(10),
             QueueLimit = 0
         });
@@ -106,12 +108,16 @@ builder.Services.AddRateLimiter(options =>
                   ?? context.Connection.RemoteIpAddress?.ToString()
                   ?? "unknown";
 
+        var isDevOrTest = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment(TestingEnvironment);
+        var limit = isDevOrTest ? 1000 : 300;
+        var queueLimit = isDevOrTest ? 50 : 10;
+
         return RateLimitPartition.GetSlidingWindowLimiter(key, _ => new SlidingWindowRateLimiterOptions
         {
-            PermitLimit = 60,
+            PermitLimit = limit,
             Window = TimeSpan.FromMinutes(1),
             SegmentsPerWindow = 6,
-            QueueLimit = 2
+            QueueLimit = queueLimit
         });
     });
 });

@@ -255,7 +255,7 @@
 }
 
 .habit-track__option--on-good .habit-track__circle--good {
-    background-color: #22c55e !important;
+    background-color: #15803d !important;
     color: #ffffff !important;
 }
 
@@ -579,7 +579,6 @@
 .habit-tag-chip__remove:hover {
     color: var(--mud-palette-primary-contrast-text, #ffffff) !important;
     background-color: var(--mud-palette-primary) !important;
-    background: var(--mud-palette-primary) !important;
 }
 
 .habit-tag-picker__dropdown {

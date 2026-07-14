@@ -30,6 +30,7 @@
                     {
                         var isCompleted = _completedById.GetValueOrDefault(item.Id);
                         var rowClass = isCompleted ? "daily-yesterday-row--completed" : "";
+                        var checkClass = isCompleted ? "daily-yesterday-check daily-yesterday-check--ok" : "daily-yesterday-check daily-yesterday-check--daily";
                         
                         <div class="daily-yesterday-row @rowClass" 
                              @key="item.Id"
@@ -38,10 +39,10 @@
                              role="checkbox"
                              tabindex="0"
                              aria-label="@item.Title"
-                             aria-checked="@(isCompleted ? "true" : "false")"
+                             @attributes="GetRowAria(isCompleted)"
                              aria-disabled="false">
                             <div class="daily-yesterday-row__check-col">
-                                <div class="daily-yesterday-check @(isCompleted ? "daily-yesterday-check--ok" : "daily-yesterday-check--daily")"
+                                <div class="@checkClass"
                                      aria-hidden="true">
                                     @if (isCompleted)
                                     {
@@ -138,4 +139,9 @@
             MudDialog.Close(DialogResult.Cancel());
         }
     }
+
+    private static Dictionary<string, object> GetRowAria(bool isCompleted) => new()
+    {
+        { "aria-checked", isCompleted ? "true" : "false" }
+    };
 }

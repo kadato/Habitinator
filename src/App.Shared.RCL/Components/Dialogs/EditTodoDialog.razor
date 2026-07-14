@@ -110,7 +110,7 @@
                          @onclick="ToggleTagPicker"
                          @onkeydown="OnControlKeydown"
                          aria-haspopup="listbox"
-                         aria-expanded="@_tagPickerOpen"
+                         @attributes="TagTriggerAria"
                          id="edit-todo-tags-trigger">
                         <div class="habit-tag-picker__chips">
                             @if (_selectedTags.Count == 0)
@@ -139,10 +139,10 @@
                         </div>
                         <span class="habit-tag-picker__chevron" aria-hidden="true">▾</span>
                     </div>
-                    <div class="habit-tag-picker__dropdown @(_tagPickerOpen ? "habit-tag-picker__dropdown--open" : "")"
+                    <div class="@DropdownClass"
                          role="listbox"
                          aria-labelledby="edit-todo-tags-trigger"
-                         aria-hidden="@(!_tagPickerOpen)">
+                         @attributes="DropdownAria">
                         <input type="text"
                                class="habit-tag-picker__search"
                                @bind="_tagSearch"
@@ -485,4 +485,7 @@
         MudDialog.Close(DialogResult.Ok(result));
     }
 
+    private string DropdownClass => _tagPickerOpen ? "habit-tag-picker__dropdown habit-tag-picker__dropdown--open" : "habit-tag-picker__dropdown";
+    private Dictionary<string, object> TagTriggerAria => new() { { "aria-expanded", _tagPickerOpen ? "true" : "false" } };
+    private Dictionary<string, object> DropdownAria => new() { { "aria-hidden", !_tagPickerOpen ? "true" : "false" } };
 }

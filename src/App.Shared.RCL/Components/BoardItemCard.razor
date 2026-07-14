@@ -32,8 +32,7 @@
                     draggable="false"
                     @onclick="OnToggle"
                     @onclick:stopPropagation="true"
-                    aria-pressed="@(Item.IsCompleted ? "true" : "false")"
-                    aria-checked="@(Item.IsCompleted ? "true" : "false")"
+                    @attributes="ToggleAria"
                     role="checkbox">
                 @if (Item.IsCompleted)
                 {
@@ -127,8 +126,7 @@
                         class="board-subtask-pill"
                         @onclick="ToggleSubtasksExpand"
                         @onclick:stopPropagation="true"
-                        aria-expanded="@(_subtasksExpanded ? "true" : "false")"
-                        aria-label="@($"Subtasks: {SubDone} completed out of {SubTotal}")">
+                        @attributes="SubtasksAria">
                     <MudIcon Icon="@Icons.Material.Filled.List" Size="Size.Small" Class="me-1" aria-hidden="true"/>
                     <span class="board-subtask-pill__count">@SubDone / @SubTotal</span>
                     <MudIcon Icon="@(_subtasksExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small" Class="ms-1" aria-hidden="true"/>
@@ -210,6 +208,10 @@
 </div>
 
 @code {
+#pragma warning disable S1199 // Extract nested code block
+#pragma warning disable S1481 // Unused local variable
+#pragma warning disable S2325 // Make member static
+
     [Inject] private IUserTimeZoneService TimeZoneService { get; set; } = null!;
     [Inject] private IUserDateFormatService DateFormatService { get; set; } = null!;
 
@@ -301,6 +303,18 @@
         };
     }
 
+    private Dictionary<string, object> ToggleAria => new()
+    {
+        { "aria-pressed", Item.IsCompleted ? "true" : "false" },
+        { "aria-checked", Item.IsCompleted ? "true" : "false" }
+    };
+
+    private Dictionary<string, object> SubtasksAria => new()
+    {
+        { "aria-expanded", _subtasksExpanded ? "true" : "false" },
+        { "aria-label", $"Subtasks: {SubDone} completed out of {SubTotal}" }
+    };
+
     private async Task OnTitleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key is "Enter" or " ")
@@ -308,4 +322,8 @@
             await OnOpenEditor.InvokeAsync();
         }
     }
+
+#pragma warning restore S1199
+#pragma warning restore S1481
+#pragma warning restore S2325
 }

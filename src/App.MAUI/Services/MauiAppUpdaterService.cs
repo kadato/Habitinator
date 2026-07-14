@@ -1,15 +1,16 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using System.Linq;
 
 using App.Shared.RCL.Services;
 
 #if ANDROID
 using Android.Content;
 using Android.OS;
+#endif
 
 using Microsoft.Maui.ApplicationModel;
-#endif
 
 namespace App.MAUI.Services;
 
@@ -31,7 +32,7 @@ public sealed class MauiAppUpdaterService : IAppUpdaterService, IDisposable
     }
 
     public bool IsSupported =>
-#if ANDROID
+#if ANDROID || WINDOWS
         true;
 #else
         false;
@@ -86,16 +87,25 @@ public sealed class MauiAppUpdaterService : IAppUpdaterService, IDisposable
             var currentVersion = AppInfo.Current.Version;
             var updateAvailable = latestVersion > currentVersion;
 
-            // Find Android APK asset
-            var apkAsset = release.Assets.FirstOrDefault(a => a.Name.EndsWith(".apk", StringComparison.OrdinalIgnoreCase));
-            var downloadUrl = apkAsset?.BrowserDownloadUrl ?? string.Empty;
+            // Find platform-specific installer asset
+#if ANDROID
+            var asset = release.Assets.FirstOrDefault(a => a.Name.EndsWith(".apk", StringComparison.OrdinalIgnoreCase));
+            var expectedAssetType = "Android APK (.apk)";
+#elif WINDOWS
+            var asset = release.Assets.FirstOrDefault(a => a.Name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase) || a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+            var expectedAssetType = "Windows Installer (.msi/.exe)";
+#else
+            GitHubAsset? asset = null;
+            var expectedAssetType = "supported platform installer";
+#endif
+            var downloadUrl = asset?.BrowserDownloadUrl ?? string.Empty;
 
             if (updateAvailable && string.IsNullOrEmpty(downloadUrl))
             {
                 return new UpdateCheckResult
                 {
                     UpdateAvailable = false,
-                    ErrorMessage = "Update available but no Android APK asset was found in the release."
+                    ErrorMessage = $"Update available but no {expectedAssetType} was found in the release."
                 };
             }
 
@@ -126,8 +136,18 @@ public sealed class MauiAppUpdaterService : IAppUpdaterService, IDisposable
 
 #if ANDROID
         var localPath = Path.Combine(FileSystem.CacheDirectory, "update.apk");
+#elif WINDOWS
+        var uri = new Uri(downloadUrl);
+        var fileName = Path.GetFileName(uri.LocalPath);
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            fileName = "update.msi";
+        }
+        var localPath = Path.Combine(FileSystem.CacheDirectory, fileName);
+#endif
 
-        // 1. Download APK with progress report
+        // 1. Download file with progress report
+#if ANDROID || WINDOWS
         using (var response = await _httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead))
         {
             response.EnsureSuccessStatusCode();
@@ -152,8 +172,10 @@ public sealed class MauiAppUpdaterService : IAppUpdaterService, IDisposable
                 }
             }
         }
+#endif
 
-        // 2. Launch Package Installer on Android
+        // 2. Launch Installer
+#if ANDROID
         var context = Platform.CurrentActivity ?? Android.App.Application.Context;
         var file = new Java.IO.File(localPath);
 
@@ -185,6 +207,36 @@ public sealed class MauiAppUpdaterService : IAppUpdaterService, IDisposable
         installIntent.AddFlags(ActivityFlags.NewTask);
 
         context.StartActivity(installIntent);
+#elif WINDOWS
+        if (!File.Exists(localPath))
+        {
+            throw new FileNotFoundException("Downloaded installer file not found.", localPath);
+        }
+
+        var processInfo = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = localPath,
+            UseShellExecute = true
+        };
+        System.Diagnostics.Process.Start(processInfo);
+
+        // Safely close the application windows to allow installer to overwrite
+        if (Application.Current is not null)
+        {
+            var windows = Application.Current.Windows.ToArray();
+            foreach (var window in windows)
+            {
+                try
+                {
+                    Application.Current.CloseWindow(window);
+                }
+                catch
+                {
+                    // Ignore exceptions during close
+                }
+            }
+        }
+        Environment.Exit(0);
 #else
         await Task.CompletedTask;
 #endif

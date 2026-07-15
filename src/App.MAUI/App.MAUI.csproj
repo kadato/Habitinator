@@ -4,13 +4,13 @@
         <!-- Speed up build: Build only a single target framework locally during Debug configuration -->
         <SingleTfmOnly Condition="'$(SingleTfmOnly)' == '' and '$(Configuration)' == 'Debug' and '$(CI)' != 'true' and '$(GITHUB_ACTIONS)' != 'true'">true</SingleTfmOnly>
 
-        <TargetFrameworks Condition="'$(SingleTfmOnly)' == 'true' and $([MSBuild]::IsOSPlatform('windows'))">net10.0-windows10.0.19041.0</TargetFrameworks>
-        <TargetFrameworks Condition="'$(SingleTfmOnly)' == 'true' and $([MSBuild]::IsOSPlatform('osx'))">net10.0-maccatalyst</TargetFrameworks>
-        <TargetFrameworks Condition="'$(SingleTfmOnly)' == 'true' and !$([MSBuild]::IsOSPlatform('windows')) and !$([MSBuild]::IsOSPlatform('osx'))">net10.0-android</TargetFrameworks>
+        <TargetFrameworks Condition="'$(SingleTfmOnly)' == 'true' and $([MSBuild]::IsOSPlatform('windows'))">net11.0-windows10.0.19041.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(SingleTfmOnly)' == 'true' and $([MSBuild]::IsOSPlatform('osx'))">net11.0-maccatalyst</TargetFrameworks>
+        <TargetFrameworks Condition="'$(SingleTfmOnly)' == 'true' and !$([MSBuild]::IsOSPlatform('windows')) and !$([MSBuild]::IsOSPlatform('osx'))">net11.0-android</TargetFrameworks>
 
-        <TargetFrameworks Condition="'$(SingleTfmOnly)' != 'true'">net10.0-android</TargetFrameworks>
-        <TargetFrameworks Condition="'$(SingleTfmOnly)' != 'true' and !$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
-        <TargetFrameworks Condition="'$(SingleTfmOnly)' != 'true' and $([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(SingleTfmOnly)' != 'true'">net11.0-android</TargetFrameworks>
+        <TargetFrameworks Condition="'$(SingleTfmOnly)' != 'true' and !$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net11.0-ios;net11.0-maccatalyst</TargetFrameworks>
+        <TargetFrameworks Condition="'$(SingleTfmOnly)' != 'true' and $([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net11.0-windows10.0.19041.0</TargetFrameworks>
 
         <!-- Note for MacCatalyst:
             The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.

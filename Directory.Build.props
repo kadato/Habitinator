@@ -8,7 +8,7 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <AnalysisMode>All</AnalysisMode>
-    <NoWarn>$(NoWarn);CA1716</NoWarn>
+    <NoWarn>$(NoWarn);CA1716;NU1605</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Debug' and '$(CI)' != 'true' and '$(GITHUB_ACTIONS)' != 'true'">

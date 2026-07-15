@@ -1,5 +1,3 @@
-using System;
-
 using App.Shared.RCL.Hubs;
 using App.Shared.RCL.Services;
 

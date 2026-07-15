@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Configuration;
-
 using Npgsql;
 
 namespace App.Web.Services;

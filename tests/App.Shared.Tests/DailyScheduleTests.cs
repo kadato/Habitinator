@@ -2,8 +2,6 @@ using App.Shared.RCL.Models;
 
 using FluentAssertions;
 
-using Xunit;
-
 namespace App.Shared.Tests;
 
 public class DailyScheduleTests

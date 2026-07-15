@@ -1,5 +1,3 @@
-using System;
-
 using App.Shared.RCL.Services;
 
 namespace App.MAUI.Services;

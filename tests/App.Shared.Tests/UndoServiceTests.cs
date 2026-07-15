@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 
@@ -11,8 +6,6 @@ using FluentAssertions;
 using MudBlazor;
 
 using NSubstitute;
-
-using Xunit;
 
 namespace App.Shared.Tests;
 

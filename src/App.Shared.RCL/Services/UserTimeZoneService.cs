@@ -1,5 +1,3 @@
-using System.Globalization;
-
 using Microsoft.JSInterop;
 
 namespace App.Shared.RCL.Services;

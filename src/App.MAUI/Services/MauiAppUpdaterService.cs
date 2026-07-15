@@ -1,7 +1,5 @@
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using System.Linq;
 
 using App.Shared.RCL.Services;
 
@@ -10,7 +8,6 @@ using Android.Content;
 using Android.OS;
 #endif
 
-using Microsoft.Maui.ApplicationModel;
 
 namespace App.MAUI.Services;
 

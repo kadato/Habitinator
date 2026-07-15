@@ -6,7 +6,6 @@ using App.Shared.RCL.Services.Remote;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Logging;
 
 using MudBlazor;

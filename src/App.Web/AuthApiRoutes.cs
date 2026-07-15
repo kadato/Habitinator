@@ -1,17 +1,11 @@
 using System.Security.Claims;
-using System.Text;
 
-using App.Shared.RCL;
 using App.Shared.RCL.Models;
-using App.Shared.RCL.Services;
 using App.Web.Auth;
 using App.Web.Data;
 using App.Web.Models;
 using App.Web.Services;
 
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 

@@ -4,8 +4,6 @@ using OpenQA.Selenium.Appium;
 using OpenQA.Selenium.Appium.Android;
 using OpenQA.Selenium.Support.UI;
 
-using Xunit;
-
 namespace App.MAUI.UITests;
 
 /// <summary>Native-shell checks for the MAUI Blazor app on Android (Appium + UiAutomator2).</summary>

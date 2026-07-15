@@ -2,7 +2,6 @@
 #pragma warning disable SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute'
 #pragma warning disable SYSLIB1096 // Use 'GeneratedComInterfaceAttribute' instead of 'ComImportAttribute'
 
-using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;

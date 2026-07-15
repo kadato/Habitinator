@@ -1,8 +1,5 @@
 using App.Shared.RCL.Services;
 
-using Microsoft.Maui.ApplicationModel;
-using Microsoft.Maui.Controls;
-
 namespace App.MAUI.Services;
 
 public class MauiAppWindowProgressService : IAppWindowProgressService

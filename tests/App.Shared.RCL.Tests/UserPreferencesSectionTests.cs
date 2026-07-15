@@ -1,9 +1,6 @@
 #pragma warning disable MUD0012
 
-using System;
 using System.Globalization;
-using System.Threading;
-using System.Threading.Tasks;
 
 using App.Shared.RCL.Components;
 using App.Shared.RCL.Models;
@@ -19,8 +16,6 @@ using MudBlazor;
 using MudBlazor.Services;
 
 using NSubstitute;
-
-using Xunit;
 
 namespace App.Shared.RCL.Tests;
 

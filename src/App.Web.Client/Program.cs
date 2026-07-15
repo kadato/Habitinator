@@ -4,7 +4,6 @@ using App.Web.Client.Services;
 
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
 using MudBlazor;

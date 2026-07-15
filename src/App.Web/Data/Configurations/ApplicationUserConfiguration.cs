@@ -1,5 +1,3 @@
-using App.Shared.RCL.Models;
-
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

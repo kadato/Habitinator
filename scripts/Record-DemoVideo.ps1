@@ -23,7 +23,7 @@ $videoOutDir = $docsAutomation
 Write-Host "== Building E2E test project..."
 dotnet build (Join-Path $repoRoot "tests" "App.Web.E2E" "App.Web.E2E.csproj") --configuration Release
 
-$pw = Join-Path $repoRoot "tests" "App.Web.E2E" "bin" "Release" "net10.0" "playwright.ps1"
+$pw = Join-Path $repoRoot "tests" "App.Web.E2E" "bin" "Release" "net11.0" "playwright.ps1"
 if (Test-Path $pw) {
     & $pw install chromium
 }

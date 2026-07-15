@@ -19,7 +19,7 @@ internal static class AndroidUiTestEnvironment
 
     internal static string? SkipReason { get; private set; }
 
-    /// <summary>Resolve APK: explicit path, then newest *Signed*.apk under MAUI bin/Debug/net10.0-android.</summary>
+    /// <summary>Resolve APK: explicit path, then newest *Signed*.apk under MAUI bin/Debug/net11.0-android.</summary>
     internal static bool TryGetApkPath([NotNullWhen(true)] out string? apkPath)
     {
         apkPath = null;
@@ -46,11 +46,11 @@ internal static class AndroidUiTestEnvironment
             return false;
         }
 
-        var outDir = Path.Combine(root, "src", "App.MAUI", "bin", "Debug", "net10.0-android");
+        var outDir = Path.Combine(root, "src", "App.MAUI", "bin", "Debug", "net11.0-android");
         if (!Directory.Exists(outDir))
         {
             SkipReason =
-                $"Build the Android target first: dotnet build src/App.MAUI/App.MAUI.csproj -f net10.0-android -c Debug. Expected output folder: {outDir}";
+                $"Build the Android target first: dotnet build src/App.MAUI/App.MAUI.csproj -f net11.0-android -c Debug. Expected output folder: {outDir}";
             return false;
         }
 

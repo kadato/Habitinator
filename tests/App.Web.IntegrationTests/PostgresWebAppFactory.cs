@@ -18,6 +18,7 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
         Environment.GetEnvironmentVariable("APPWEB_INTEGRATIONTESTS_CONNECTION_STRING");
 
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine")
+        .WithReuse(true)
         .Build();
 
     public async Task InitializeAsync()

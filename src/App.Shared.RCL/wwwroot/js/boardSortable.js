@@ -11,7 +11,7 @@ globalThis.HabitinatorSortable = {
 
         if (!containerElement) return;
 
-        const isMaui = !!window.habitinatorIsMaui;
+        const isMaui = !!globalThis.habitinatorIsMaui;
         const instance = new Sortable(containerElement, {
             animation: 0,
             ghostClass: 'board-sortable-ghost',

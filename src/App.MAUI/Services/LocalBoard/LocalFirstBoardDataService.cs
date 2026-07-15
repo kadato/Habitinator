@@ -959,7 +959,7 @@ public sealed partial class LocalFirstBoardDataService(
 
         if (!string.IsNullOrWhiteSpace(cursor))
         {
-            (bool hasResult, bool success) = await TryPullDeltaMirrorAsync(userKey, cursor!, cancellationToken);
+            (bool hasResult, bool success) = await TryPullDeltaMirrorAsync(userKey, cursor, cancellationToken);
             if (hasResult)
             {
                 return success;

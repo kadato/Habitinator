@@ -16,19 +16,19 @@ public static class TodoOrdering
         Func<BoardItem, double?>? getSortOrder = null)
     {
         getSortOrder ??= static x => x.SortOrder;
-        return items
+        return [.. items
             .OrderBy(x => GetActiveDisplayOrder(x, getSortOrder))
-            .ThenBy(x => x.Id)
-            .ToList();
+            .ThenBy(x => x.Id)];
     }
 
     /// <summary>Scheduled tab: due date ascending (caller filters to dated items only).</summary>
-    public static IReadOnlyList<BoardItem> OrderForScheduledTab(IEnumerable<BoardItem> items) =>
-        items
+    public static IReadOnlyList<BoardItem> OrderForScheduledTab(IEnumerable<BoardItem> items)
+    {
+        return [.. items
             .OrderBy(x => x.TodoDueDate ?? DateOnly.MaxValue)
             .ThenBy(x => x.SortOrder ?? double.MaxValue)
-            .ThenBy(x => x.Id)
-            .ToList();
+            .ThenBy(x => x.Id)];
+    }
 
     /// <summary>Maps stored <see cref="BoardItem.SortOrder"/> to the value used for Active-tab ordering and drag midpoints.</summary>
     public static double GetActiveDisplayOrder(BoardItem item, Func<BoardItem, double?> getSortOrder)

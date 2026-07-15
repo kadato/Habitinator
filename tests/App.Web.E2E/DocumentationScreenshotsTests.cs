@@ -39,8 +39,20 @@ public sealed class DocumentationScreenshotsTests
             ColorScheme = scheme
         };
 
+    private static bool? _isBaseUrlReachable;
+
     private static async Task EnsureBaseUrlReachableAsync()
     {
+        if (_isBaseUrlReachable.HasValue)
+        {
+            if (!_isBaseUrlReachable.Value)
+            {
+                throw Xunit.Sdk.SkipException.ForSkip(
+                    $"E2E_BASE_URL '{BaseUrl}' is not reachable (cached check).");
+            }
+            return;
+        }
+
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
         try
@@ -48,6 +60,7 @@ public sealed class DocumentationScreenshotsTests
             using var res = await client.GetAsync($"{BaseUrl}/health", cts.Token);
             if (res.IsSuccessStatusCode)
             {
+                _isBaseUrlReachable = true;
                 return;
             }
         }
@@ -56,6 +69,7 @@ public sealed class DocumentationScreenshotsTests
             // Ignore and fall through to skip.
         }
 
+        _isBaseUrlReachable = false;
         throw Xunit.Sdk.SkipException.ForSkip(
             $"E2E_BASE_URL '{BaseUrl}' is not reachable. Start App.Web before running Playwright tests.");
     }

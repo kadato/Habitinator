@@ -113,11 +113,11 @@ jobs:
             11.0.x
           dotnet-quality: 'preview'
 
-      - name: Setup Java (Temurin 17)
+      - name: Setup Java (Temurin 21)
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Install MAUI Android workload
         run: dotnet workload install maui-android
@@ -158,7 +158,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: android-release
-          path: artifacts/android/*
+          path: |
+            artifacts/android/Habitinator-android.apk
+            artifacts/android/Habitinator-android.apk.sha256
 
   build-windows:
     needs: [resolve-production-url]
@@ -223,7 +225,11 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: windows-release
-          path: artifacts/windows/*
+          path: |
+            artifacts/windows/Habitinator-windows-x64-setup.exe
+            artifacts/windows/Habitinator-windows-x64-setup.exe.sha256
+            artifacts/windows/Habitinator-windows-x64.zip
+            artifacts/windows/Habitinator-windows-x64.zip.sha256
 
   publish-release:
     needs: [resolve-production-url, build-android, build-windows]

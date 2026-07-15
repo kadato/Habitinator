@@ -1,15 +1,11 @@
 using App.Shared.RCL.Services;
 
-using Microsoft.Maui.Networking;
-
 namespace App.MAUI.Services.LocalBoard;
 
 public sealed partial class MauiBoardSyncStatus : IBoardSyncStatus, IDisposable
 {
     private volatile bool _isOffline;
     private volatile bool _isSyncing;
-    private DateTimeOffset? _lastSyncedUtc;
-    private string? _syncProblemMessage;
 
     public MauiBoardSyncStatus()
     {
@@ -59,37 +55,40 @@ public sealed partial class MauiBoardSyncStatus : IBoardSyncStatus, IDisposable
 
     public DateTimeOffset? LastSyncedUtc
     {
-        get => _lastSyncedUtc;
+        get;
         internal set
         {
-            if (_lastSyncedUtc == value)
+            if (field == value)
             {
                 return;
             }
 
-            _lastSyncedUtc = value;
+            field = value;
             OnChanged();
         }
     }
 
     public string? SyncProblemMessage
     {
-        get => _syncProblemMessage;
+        get;
         internal set
         {
-            if (_syncProblemMessage == value)
+            if (field == value)
             {
                 return;
             }
 
-            _syncProblemMessage = value;
+            field = value;
             OnChanged();
         }
     }
 
     public event EventHandler? Changed;
 
-    private void OnChanged() => Changed?.Invoke(this, EventArgs.Empty);
+    private void OnChanged()
+    {
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
 
     internal void RefreshConnectivity()
     {

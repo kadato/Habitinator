@@ -11,6 +11,11 @@
     <NoWarn>$(NoWarn);CA1716</NoWarn>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug' and '$(CI)' != 'true' and '$(GITHUB_ACTIONS)' != 'true'">
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="SonarAnalyzer.CSharp" PrivateAssets="all" Condition="'$(MSBuildProjectExtension)' == '.csproj'" />
     <PackageReference Include="Microsoft.OpenApi" Condition="'$(MSBuildProjectExtension)' == '.csproj'" />

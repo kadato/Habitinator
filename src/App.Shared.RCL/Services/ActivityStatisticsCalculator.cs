@@ -1,5 +1,3 @@
-#pragma warning disable S3776 // Suppress Cognitive Complexity warning for statistics calculator methods
-
 using App.Shared.RCL.Models;
 
 namespace App.Shared.RCL.Services;
@@ -43,19 +41,9 @@ public static class ActivityStatisticsCalculator
         IReadOnlyList<DailyGraphPeriodOption> options)
     {
         HashSet<string> optionKeys = [.. options.Select(o => o.Key)];
-        string key;
-        if (string.IsNullOrWhiteSpace(periodKey))
-        {
-            key = DailyGraphPeriods.Rolling370Days;
-        }
-        else if (!optionKeys.Contains(periodKey))
-        {
-            key = DailyGraphPeriods.Rolling370Days;
-        }
-        else
-        {
-            key = periodKey;
-        }
+        string key = string.IsNullOrWhiteSpace(periodKey) || !optionKeys.Contains(periodKey)
+            ? DailyGraphPeriods.Rolling370Days
+            : periodKey;
 
         if (string.Equals(key, DailyGraphPeriods.Rolling370Days, StringComparison.Ordinal))
         {
@@ -80,12 +68,73 @@ public static class ActivityStatisticsCalculator
         DateOnly end,
         DateOnly todayCutoff)
     {
+        var perDay = PopulatePerDayCounts(rows);
+        var (maxDayCount, busiestDay) = FindBusiestDay(perDay);
+
+        var totalEvents = rows.Count;
+        var totalFocusSec = rows
+            .Where(x => x.EventType == ActivityEventType.TimerSession)
+            .Sum(x => x.DurationSeconds.GetValueOrDefault());
+        var totalFocusMinutes = (totalFocusSec + 30) / 60;
+
+        var actualEnd = end > todayCutoff ? todayCutoff : end;
+        var startWeek = StartOfIsoWeek(start);
+        var endWeek = StartOfIsoWeek(actualEnd);
+        var weekSpan = (endWeek.DayNumber - startWeek.DayNumber) / 7;
+        if (weekSpan < 0)
+        {
+            weekSpan = 0;
+        }
+
+        var weekCount = weekSpan + 1;
+        var weekBars = BuildWeekBars(perDay, start, actualEnd, startWeek, weekCount);
+
+        var weekBarsRangeStart = weekCount > 0 ? weekBars[0].WeekStart : startWeek;
+        var weekBarsRangeEnd = weekCount > 0 ? weekBars[^1].WeekStart.AddDays(6) : actualEnd;
+
+        var heatmapSpanDays = actualEnd.DayNumber - start.DayNumber + 1;
+        if (heatmapSpanDays < 1)
+        {
+            heatmapSpanDays = 1;
+        }
+
+        var gridStartMonday = StartOfIsoWeek(start);
+        var endMonday = StartOfIsoWeek(actualEnd);
+        var gridWeekColumns = ((endMonday.DayNumber - gridStartMonday.DayNumber) / 7) + 1;
+        if (gridWeekColumns < 1)
+        {
+            gridWeekColumns = 1;
+        }
+
+        var heat = BuildHeatmapGrid(perDay, start, end, todayCutoff, gridStartMonday, gridWeekColumns, maxDayCount);
+
+        return new ActivityDashboardDto(
+            periodKey,
+            weekBars,
+            heat,
+            gridWeekColumns,
+            totalEvents,
+            totalFocusMinutes,
+            maxDayCount,
+            busiestDay,
+            start,
+            actualEnd,
+            heatmapSpanDays,
+            weekBarsRangeStart,
+            weekBarsRangeEnd,
+            []);
+    }
+
+    private static Dictionary<DateOnly, (int count, int focusSec)> PopulatePerDayCounts(
+        IReadOnlyList<UserActivityEventRecord> rows)
+    {
         var perDay = new Dictionary<DateOnly, (int count, int focusSec)>();
         var netDailyItemDay = BuildNetDailyItemDayMap(rows);
         var netTodoItemDay = BuildNetToggleItemDayMap(
             rows,
             ActivityEventType.TodoComplete,
             ActivityEventType.TodoUncomplete);
+
         foreach (var r in rows)
         {
             if (r.BoardItemId is { }
@@ -111,7 +160,12 @@ public static class ActivityStatisticsCalculator
 
         ApplyNetToggleCountsToPerDay(perDay, netDailyItemDay);
         ApplyNetToggleCountsToPerDay(perDay, netTodoItemDay);
+        return perDay;
+    }
 
+    private static (int maxDayCount, DateOnly? busiestDay) FindBusiestDay(
+        Dictionary<DateOnly, (int count, int focusSec)> perDay)
+    {
         var maxDayCount = 0;
         DateOnly? busiestDay = null;
         foreach (var kv in perDay)
@@ -126,24 +180,17 @@ public static class ActivityStatisticsCalculator
                 busiestDay = kv.Key;
             }
         }
+        return (maxDayCount, busiestDay);
+    }
 
-        var totalEvents = rows.Count;
-        var totalFocusSec = rows
-            .Where(x => x.EventType == ActivityEventType.TimerSession)
-            .Sum(x => x.DurationSeconds.GetValueOrDefault());
-        var totalFocusMinutes = (totalFocusSec + 30) / 60;
-
-        var actualEnd = end > todayCutoff ? todayCutoff : end;
-        var startWeek = StartOfIsoWeek(start);
-        var endWeek = StartOfIsoWeek(actualEnd);
-        var weekSpan = (endWeek.DayNumber - startWeek.DayNumber) / 7;
-        if (weekSpan < 0)
-        {
-            weekSpan = 0;
-        }
-
-        var weekCount = weekSpan + 1;
-        var weekBars = new List<ActivityWeekBarDto>(weekCount);
+    private static List<ActivityWeekBarDto> BuildWeekBars(
+        Dictionary<DateOnly, (int count, int focusSec)> perDay,
+        DateOnly start,
+        DateOnly actualEnd,
+        DateOnly startWeek,
+        int weekCount)
+    {
+        List<ActivityWeekBarDto> weekBars = [with(capacity: weekCount)];
         for (var i = 0; i < weekCount; i++)
         {
             var ws = startWeek.AddDays(i * 7);
@@ -170,30 +217,24 @@ public static class ActivityStatisticsCalculator
 
             weekBars.Add(new ActivityWeekBarDto(i, ws, ev, (focus + 30) / 60));
         }
+        return weekBars;
+    }
 
-        var weekBarsRangeStart = weekCount > 0 ? weekBars[0].WeekStart : startWeek;
-        var weekBarsRangeEnd = weekCount > 0 ? weekBars[^1].WeekStart.AddDays(6) : actualEnd;
-
-        var heatmapSpanDays = actualEnd.DayNumber - start.DayNumber + 1;
-        if (heatmapSpanDays < 1)
-        {
-            heatmapSpanDays = 1;
-        }
-
-        var gridStartMonday = StartOfIsoWeek(start);
-        var endMonday = StartOfIsoWeek(actualEnd);
-        var gridWeekColumns = (endMonday.DayNumber - gridStartMonday.DayNumber) / 7 + 1;
-        if (gridWeekColumns < 1)
-        {
-            gridWeekColumns = 1;
-        }
-
-        var heat = new List<ActivityHeatmapCellDto>(gridWeekColumns * 7);
+    private static List<ActivityHeatmapCellDto> BuildHeatmapGrid(
+        Dictionary<DateOnly, (int count, int focusSec)> perDay,
+        DateOnly start,
+        DateOnly end,
+        DateOnly todayCutoff,
+        DateOnly gridStartMonday,
+        int gridWeekColumns,
+        int maxDayCount)
+    {
+        List<ActivityHeatmapCellDto> heat = [with(capacity: gridWeekColumns * 7)];
         for (var c = 0; c < gridWeekColumns; c++)
         {
             for (var r = 0; r < 7; r++)
             {
-                var date = gridStartMonday.AddDays(c * 7 + r);
+                var date = gridStartMonday.AddDays((c * 7) + r);
                 var inRange = date >= start && date <= end && date <= todayCutoff;
                 if (!inRange)
                 {
@@ -207,22 +248,7 @@ public static class ActivityStatisticsCalculator
                 }
             }
         }
-
-        return new ActivityDashboardDto(
-            periodKey,
-            weekBars,
-            heat,
-            gridWeekColumns,
-            totalEvents,
-            totalFocusMinutes,
-            maxDayCount,
-            busiestDay,
-            start,
-            actualEnd,
-            heatmapSpanDays,
-            weekBarsRangeStart,
-            weekBarsRangeEnd,
-            []);
+        return heat;
     }
 
     public static DailyContributionsViewDto BuildDailyContributions(
@@ -245,6 +271,22 @@ public static class ActivityStatisticsCalculator
         }
 
         var dailyIds = dailyItemRows.Select(x => x.Id).ToHashSet();
+        var byItem = BuildItemCompletionMap(eventRowsInRange, dailyIds);
+        var (commonStart, commonEnd) = FindCommonDates(dailyItemRows, byItem, rangeStart, rangeEnd, todayCutoff);
+        var graphs = BuildDailyContributionGraphs(dailyItemRows, byItem, commonStart, commonEnd, todayCutoff);
+
+        return new DailyContributionsViewDto(
+            periodKey,
+            options,
+            graphs,
+            commonStart,
+            commonEnd);
+    }
+
+    private static Dictionary<Guid, Dictionary<DateOnly, int>> BuildItemCompletionMap(
+        IReadOnlyList<UserActivityEventRecord> eventRowsInRange,
+        HashSet<Guid> dailyIds)
+    {
         var inRange = eventRowsInRange
             .Where(e =>
                 e.BoardItemId is { } bid &&
@@ -277,17 +319,22 @@ public static class ActivityStatisticsCalculator
 
             map[d] = 1;
         }
+        return byItem;
+    }
 
-        // Calculate the common range for all visible daily graphs.
-        // Cap the end date at todayCutoff.
+    private static (DateOnly commonStart, DateOnly commonEnd) FindCommonDates(
+        IReadOnlyList<DailyItemStatsDto> dailyItemRows,
+        Dictionary<Guid, Dictionary<DateOnly, int>> byItem,
+        DateOnly rangeStart,
+        DateOnly rangeEnd,
+        DateOnly todayCutoff)
+    {
         var commonEnd = rangeEnd > todayCutoff ? todayCutoff : rangeEnd;
-
-        // Find the earliest start date among all visible daily items.
         var earliestDailyStart = commonEnd; // Default
         foreach (var di in dailyItemRows)
         {
             var dailyStart = di.DailyStartDate ?? di.CreatedAt;
-            byItem.TryGetValue(di.Id, out var countByDay);
+            _ = byItem.TryGetValue(di.Id, out var countByDay);
             if (countByDay is { Keys.Count: > 0 })
             {
                 var firstCompletion = countByDay.Keys.Min();
@@ -308,11 +355,20 @@ public static class ActivityStatisticsCalculator
         {
             commonStart = commonEnd;
         }
+        return (commonStart, commonEnd);
+    }
 
-        var graphs = new List<DailyContributionGraphDto>(dailyItemRows.Count);
+    private static List<DailyContributionGraphDto> BuildDailyContributionGraphs(
+        IReadOnlyList<DailyItemStatsDto> dailyItemRows,
+        Dictionary<Guid, Dictionary<DateOnly, int>> byItem,
+        DateOnly commonStart,
+        DateOnly commonEnd,
+        DateOnly todayCutoff)
+    {
+        List<DailyContributionGraphDto> graphs = [with(capacity: dailyItemRows.Count)];
         foreach (var di in dailyItemRows)
         {
-            byItem.TryGetValue(di.Id, out var countByDay);
+            _ = byItem.TryGetValue(di.Id, out var countByDay);
             countByDay ??= [];
 
             var maxInRange = 0;
@@ -333,7 +389,7 @@ public static class ActivityStatisticsCalculator
 
             var gStartW = StartOfIsoWeek(commonStart);
             var gEndW = StartOfIsoWeek(commonEnd);
-            var columns = (gEndW.DayNumber - gStartW.DayNumber) / 7 + 1;
+            var columns = ((gEndW.DayNumber - gStartW.DayNumber) / 7) + 1;
             if (columns < 1)
             {
                 columns = 1;
@@ -341,13 +397,7 @@ public static class ActivityStatisticsCalculator
 
             graphs.Add(new DailyContributionGraphDto(di.Id, di.Title, graphHeat, columns, maxInRange));
         }
-
-        return new DailyContributionsViewDto(
-            periodKey,
-            options,
-            graphs,
-            commonStart,
-            commonEnd);
+        return graphs;
     }
 
     public static ActivityDayDetailDto BuildDayDetail(
@@ -364,28 +414,11 @@ public static class ActivityStatisticsCalculator
             ActivityEventType.TodoComplete,
             ActivityEventType.TodoUncomplete);
 
-        var list = new List<ActivityDayEventDto>(rows.Count);
+        List<ActivityDayEventDto> list = [with(capacity: rows.Count)];
         var focusSec = 0;
         foreach (var r in rows.OrderBy(x => x.OccurredAtUtc))
         {
-            if (r.EventType is ActivityEventType.DailyUncomplete or ActivityEventType.TodoUncomplete)
-            {
-                continue;
-            }
-
-            if (r.BoardItemId is { } boardId)
-            {
-                var utcDay = DateOnly.FromDateTime(r.OccurredAtUtc.UtcDateTime);
-                if ((r.EventType is ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete
-                     && !ShouldIncludeNetToggleRow(r, lastDailyToggle, boardId, utcDay, ActivityEventType.DailyComplete))
-                    || (r.EventType is ActivityEventType.TodoComplete or ActivityEventType.TodoUncomplete
-                     && !ShouldIncludeNetToggleRow(r, lastTodoToggle, boardId, utcDay, ActivityEventType.TodoComplete)))
-                {
-                    continue;
-                }
-            }
-            else if (r.EventType is ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete
-                     or ActivityEventType.TodoComplete or ActivityEventType.TodoUncomplete)
+            if (ShouldSkipEventRow(r, lastDailyToggle, lastTodoToggle))
             {
                 continue;
             }
@@ -409,6 +442,27 @@ public static class ActivityStatisticsCalculator
         return new ActivityDayDetailDto(day, list, focusMinutesTotal);
     }
 
+    private static bool ShouldSkipEventRow(
+        UserActivityEventRecord r,
+        Dictionary<(Guid id, DateOnly d), UserActivityEventRecord> lastDailyToggle,
+        Dictionary<(Guid id, DateOnly d), UserActivityEventRecord> lastTodoToggle)
+    {
+        if (r.EventType is ActivityEventType.DailyUncomplete or ActivityEventType.TodoUncomplete)
+        {
+            return true;
+        }
+
+        if (r.BoardItemId is not { } boardId)
+        {
+            return r.EventType is ActivityEventType.DailyComplete or ActivityEventType.TodoComplete;
+        }
+
+        var utcDay = DateOnly.FromDateTime(r.OccurredAtUtc.UtcDateTime);
+        return r.EventType == ActivityEventType.DailyComplete
+            ? !ShouldIncludeNetToggleRow(r, lastDailyToggle, boardId, utcDay, ActivityEventType.DailyComplete)
+            : r.EventType == ActivityEventType.TodoComplete && !ShouldIncludeNetToggleRow(r, lastTodoToggle, boardId, utcDay, ActivityEventType.TodoComplete);
+    }
+
     private static bool ShouldIncludeNetToggleRow(
         UserActivityEventRecord row,
         Dictionary<(Guid id, DateOnly d), UserActivityEventRecord> lastToggleByItemDay,
@@ -416,17 +470,9 @@ public static class ActivityStatisticsCalculator
         DateOnly utcDay,
         ActivityEventType completeType)
     {
-        if (!lastToggleByItemDay.TryGetValue((boardId, utcDay), out var last))
-        {
-            return false;
-        }
-
-        if (last.OccurredAtUtc != row.OccurredAtUtc || last.EventType != row.EventType)
-        {
-            return false;
-        }
-
-        return last.EventType == completeType;
+        return lastToggleByItemDay.TryGetValue((boardId, utcDay), out var last) && last.OccurredAtUtc == row.OccurredAtUtc &&
+               last.EventType == row.EventType &&
+               last.EventType == completeType;
     }
 
     private static List<ActivityHeatmapCellDto> BuildRangeContributionHeatmap(
@@ -438,18 +484,18 @@ public static class ActivityStatisticsCalculator
     {
         var gridStartMonday = StartOfIsoWeek(rangeStart);
         var endMonday = StartOfIsoWeek(rangeEnd);
-        var gridWeekColumns = (endMonday.DayNumber - gridStartMonday.DayNumber) / 7 + 1;
+        var gridWeekColumns = ((endMonday.DayNumber - gridStartMonday.DayNumber) / 7) + 1;
         if (gridWeekColumns < 1)
         {
             gridWeekColumns = 1;
         }
 
-        var heat = new List<ActivityHeatmapCellDto>(gridWeekColumns * 7);
+        List<ActivityHeatmapCellDto> heat = [with(capacity: gridWeekColumns * 7)];
         for (var c = 0; c < gridWeekColumns; c++)
         {
             for (var r = 0; r < 7; r++)
             {
-                var date = gridStartMonday.AddDays(c * 7 + r);
+                var date = gridStartMonday.AddDays((c * 7) + r);
                 var inWindow = date >= rangeStart && date <= rangeEnd;
                 if (!inWindow)
                 {
@@ -514,11 +560,13 @@ public static class ActivityStatisticsCalculator
     }
 
     private static Dictionary<(Guid id, DateOnly d), bool> BuildNetDailyItemDayMap(
-        IReadOnlyList<UserActivityEventRecord> rows) =>
-        BuildNetToggleItemDayMap(
+        IReadOnlyList<UserActivityEventRecord> rows)
+    {
+        return BuildNetToggleItemDayMap(
             rows,
             ActivityEventType.DailyComplete,
             ActivityEventType.DailyUncomplete);
+    }
 
     private static Dictionary<(Guid id, DateOnly d), UserActivityEventRecord> BuildLastToggleItemDayMap(
         IReadOnlyList<UserActivityEventRecord> rows,
@@ -567,7 +615,9 @@ public static class ActivityStatisticsCalculator
         return eventType switch
         {
             ActivityEventType.DailyComplete => name is not null ? $"Completed daily: {name}" : "Completed daily",
+            ActivityEventType.DailyUncomplete => name ?? eventType.ToString(),
             ActivityEventType.TodoComplete => name is not null ? $"Completed to-do: {name}" : "Completed to-do",
+            ActivityEventType.TodoUncomplete => name ?? eventType.ToString(),
             ActivityEventType.HabitPlus => name is not null ? $"Habit +: {name}" : "Habit +",
             ActivityEventType.HabitMinus => name is not null ? $"Habit −: {name}" : "Habit −",
             ActivityEventType.TimerSession => name is not null ? $"Focus session: {name}" : "Focus session",
@@ -583,26 +633,14 @@ public static class ActivityStatisticsCalculator
 
     private static int IntensityFor(int count, int maxInRange)
     {
-        if (count <= 0 || maxInRange <= 0)
-        {
-            return 0;
-        }
-
-        if (count == 1)
-        {
-            return 1;
-        }
-
-        if (count <= 3)
-        {
-            return 2;
-        }
-
-        if (count <= 5)
-        {
-            return 3;
-        }
-
-        return 4;
+        return count > 0 && maxInRange > 0
+            ? count switch
+            {
+                1 => 1,
+                <= 3 => 2,
+                <= 5 => 3,
+                _ => 4
+            }
+            : 0;
     }
 }

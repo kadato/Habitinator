@@ -58,10 +58,10 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 
 ```powershell
 # Windows
-dotnet build -t:Run -f net10.0-windows10.0.19041.0
+dotnet build -t:Run -f net11.0-windows10.0.19041.0
 
 # Android (requires Android SDK)
-dotnet build -t:Run -f net10.0-android
+dotnet build -t:Run -f net11.0-android
 ```
 
 ### Installation instructions

@@ -110,7 +110,7 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            10.0.x
+            11.0.x
           dotnet-quality: 'preview'
 
       - name: Setup Java (Temurin 17)
@@ -141,7 +141,7 @@ jobs:
         shell: bash
         run: |
           dotnet publish src/App.MAUI/App.MAUI.csproj \
-            -f net10.0-android \
+            -f net11.0-android \
             -c Release \
             -p:AndroidPackageFormat=apk
 
@@ -149,8 +149,8 @@ jobs:
         shell: bash
         run: |
           mkdir -p artifacts/android
-          APK="$(ls -1 src/App.MAUI/bin/Release/net10.0-android/*-Signed.apk 2>/dev/null | head -1 || true)"
-          if [ -z "$APK" ]; then APK="$(ls -1 src/App.MAUI/bin/Release/net10.0-android/*.apk | head -1)"; fi
+          APK="$(ls -1 src/App.MAUI/bin/Release/net11.0-android/*-Signed.apk 2>/dev/null | head -1 || true)"
+          if [ -z "$APK" ]; then APK="$(ls -1 src/App.MAUI/bin/Release/net11.0-android/*.apk | head -1)"; fi
           cp "$APK" "artifacts/android/Habitinator-android.apk"
           (cd artifacts/android && sha256sum "Habitinator-android.apk" > "Habitinator-android.apk.sha256")
 
@@ -173,7 +173,7 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            10.0.x
+            11.0.x
           dotnet-quality: 'preview'
 
       - name: Install MAUI workload
@@ -193,17 +193,31 @@ jobs:
         shell: pwsh
         run: >
           dotnet publish src/App.MAUI/App.MAUI.csproj
-          -f net10.0-windows10.0.19041.0
+          -f net11.0-windows10.0.19041.0
           -c Release
           -p:WindowsPackageType=None
           -o artifacts/windows/publish
 
-      - name: Package Windows artifact
+      - name: Package Windows ZIP
         shell: pwsh
         run: |
           Compress-Archive -Path artifacts/windows/publish/* -DestinationPath artifacts/windows/Habitinator-windows-x64.zip -Force
           $hash = Get-FileHash artifacts/windows/Habitinator-windows-x64.zip -Algorithm SHA256
           "$($hash.Hash.ToLower())  Habitinator-windows-x64.zip" | Set-Content artifacts/windows/Habitinator-windows-x64.zip.sha256
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y
+
+      - name: Build Windows Installer
+        shell: pwsh
+        run: iscc /dMyAppVersion="${{ github.ref_name }}" scripts/windows-installer.iss
+
+      - name: Hash Windows Installer
+        shell: pwsh
+        run: |
+          $hash = Get-FileHash artifacts/windows/Habitinator-windows-x64-setup.exe -Algorithm SHA256
+          "$($hash.Hash.ToLower())  Habitinator-windows-x64-setup.exe" | Set-Content artifacts/windows/Habitinator-windows-x64-setup.exe.sha256
 
       - name: Upload Windows release artifacts
         uses: actions/upload-artifact@v7
@@ -238,7 +252,8 @@ jobs:
           cat > release-notes.md <<EOF
           ## Downloads
           - Android APK: \`Habitinator-android.apk\`
-          - Windows ZIP: \`Habitinator-windows-x64.zip\`
+          - Windows Installer: \`Habitinator-windows-x64-setup.exe\` (Recommended for auto-updates)
+          - Windows Portable: \`Habitinator-windows-x64.zip\`
           - Checksums: included as \`.sha256\` files
 
           ## Hosted web app
@@ -255,5 +270,7 @@ jobs:
           files: |
             artifacts/android/Habitinator-android.apk
             artifacts/android/Habitinator-android.apk.sha256
+            artifacts/windows/Habitinator-windows-x64-setup.exe
+            artifacts/windows/Habitinator-windows-x64-setup.exe.sha256
             artifacts/windows/Habitinator-windows-x64.zip
             artifacts/windows/Habitinator-windows-x64.zip.sha256

@@ -21,7 +21,7 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            10.0.x
+            11.0.x
           dotnet-quality: 'preview'
 
       - name: Setup Node.js (Appium)
@@ -34,7 +34,7 @@ jobs:
 
       - name: Build Android app and test project
         run: |
-          dotnet build src/App.MAUI/App.MAUI.csproj -f net10.0-android -c Debug
+          dotnet build src/App.MAUI/App.MAUI.csproj -f net11.0-android -c Debug
           dotnet build tests/App.MAUI.UITests/App.MAUI.UITests.csproj -c Debug
 
       - name: Emulator + Appium + dotnet test
@@ -49,8 +49,8 @@ jobs:
             appium driver install uiautomator2
             appium --log-level error &
             sleep 8
-            APK="$(ls -1 src/App.MAUI/bin/Debug/net10.0-android/*-Signed.apk 2>/dev/null | head -1 || true)"
-            if [ -z "$APK" ]; then APK="$(ls -1 src/App.MAUI/bin/Debug/net10.0-android/*.apk | head -1)"; fi
+            APK="$(ls -1 src/App.MAUI/bin/Debug/net11.0-android/*-Signed.apk 2>/dev/null | head -1 || true)"
+            if [ -z "$APK" ]; then APK="$(ls -1 src/App.MAUI/bin/Debug/net11.0-android/*.apk | head -1)"; fi
             test -f "$APK"
             export ANDROID_UI_TESTS=1
             export ANDROID_APP_PATH="$(readlink -f "$APK")"

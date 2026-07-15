@@ -90,15 +90,16 @@ public sealed class MauiAppUpdaterService : IAppUpdaterService, IDisposable
             // Find platform-specific installer asset
 #if ANDROID
             var asset = release.Assets.FirstOrDefault(a => a.Name.EndsWith(".apk", StringComparison.OrdinalIgnoreCase));
+            var downloadUrl = asset?.BrowserDownloadUrl ?? string.Empty;
             var expectedAssetType = "Android APK (.apk)";
 #elif WINDOWS
             var asset = release.Assets.FirstOrDefault(a => a.Name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase) || a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+            var downloadUrl = asset?.BrowserDownloadUrl ?? string.Empty;
             var expectedAssetType = "Windows Installer (.msi/.exe)";
 #else
-            GitHubAsset? asset = null;
+            var downloadUrl = string.Empty;
             var expectedAssetType = "supported platform installer";
 #endif
-            var downloadUrl = asset?.BrowserDownloadUrl ?? string.Empty;
 
             if (updateAvailable && string.IsNullOrEmpty(downloadUrl))
             {

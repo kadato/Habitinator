@@ -3,7 +3,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace App.Shared.RCL.Services;
+namespace App.Shared.RCL.Services.Remote;
 
 public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
 {

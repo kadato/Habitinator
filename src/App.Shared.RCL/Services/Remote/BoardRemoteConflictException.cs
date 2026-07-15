@@ -2,7 +2,7 @@ using System.Text.Json;
 
 using App.Shared.RCL.Models;
 
-namespace App.Shared.RCL.Services;
+namespace App.Shared.RCL.Services.Remote;
 
 /// <summary>HTTP 409 from the board API (version conflict or idempotency fingerprint mismatch).</summary>
 public sealed class BoardRemoteConflictException : Exception

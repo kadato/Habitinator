@@ -1,4 +1,4 @@
-namespace App.Shared.RCL.Services;
+namespace App.Shared.RCL.Services.Remote;
 
 public sealed class RemoteAccountActionsService : IAccountActionsService
 {

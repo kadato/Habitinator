@@ -1,6 +1,6 @@
 using App.Shared.RCL.Models;
 
-namespace App.Shared.RCL.Services;
+namespace App.Shared.RCL.Services.Remote;
 
 public sealed class RemoteUserActivityLogService : IUserActivityLogService
 {

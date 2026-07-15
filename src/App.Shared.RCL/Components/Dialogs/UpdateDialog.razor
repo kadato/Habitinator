@@ -120,7 +120,7 @@
                 Update Now
             </MudButton>
         }
-        else if (_isDownloading && !string.IsNullOrEmpty(_errorMessage))
+        else if (!string.IsNullOrEmpty(_errorMessage))
         {
             <MudButton Variant="Variant.Text" OnClick="Cancel" Color="Color.Secondary">Close</MudButton>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="StartUpdate" StartIcon="@Icons.Material.Filled.Refresh">

@@ -86,7 +86,7 @@ public static class TodoOrdering
             }
 
             return BoardItemReorder.SortOrderForNewItem(
-                reordered.Where(x => !x.TodoDueDate.HasValue).Select(getSortOrder).Min());
+                reordered.Where(x => !x.TodoDueDate.HasValue).Min(getSortOrder));
         }
 
         double? displayMid = BoardItemReorder.ComputeMidpointSortOrder(

@@ -15,8 +15,11 @@ public static class SeoDefaults
 
     public static string CanonicalPathFor(string relativePath)
     {
-        return string.IsNullOrWhiteSpace(relativePath) || relativePath == "/"
-            ? "/"
-            : relativePath.StartsWith('/') ? relativePath : "/" + relativePath;
+        if (string.IsNullOrWhiteSpace(relativePath) || relativePath == "/")
+        {
+            return "/";
+        }
+
+        return relativePath.StartsWith('/') ? relativePath : "/" + relativePath;
     }
 }

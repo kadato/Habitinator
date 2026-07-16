@@ -9,6 +9,25 @@ fi
 
 echo ""
 echo "=================================================="
+echo "Checking if backend and shared projects compile..."
+echo "=================================================="
+echo ""
+
+dotnet build src/App.Web/App.Web.csproj --configuration Release -p:TreatWarningsAsErrors=true
+build_exit_code=$?
+
+if [ $build_exit_code -ne 0 ]; then
+    echo ""
+    echo "=================================================="
+    echo "ERROR: dotnet build failed with exit code $build_exit_code."
+    echo "Please resolve the compilation errors before committing."
+    echo "=================================================="
+    echo ""
+    exit $build_exit_code
+fi
+
+echo ""
+echo "=================================================="
 echo "Automatically formatting staged C# files..."
 echo "=================================================="
 echo ""

@@ -21,6 +21,7 @@ env:
   JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}
   DEMO_USER_EMAIL: ${{ vars.DEMO_USER_EMAIL }}
   DEMO_USER_PASSWORD: ${{ secrets.DEMO_USER_PASSWORD }}
+  PUBLISH_SELF_CONTAINED: true
 
 jobs:
   deploy:

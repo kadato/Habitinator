@@ -68,7 +68,7 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
     clientCertEnabled: false
     siteConfig: {
       linuxFxVersion: 'DOTNETCORE|10.0'
-      appCommandLine: 'dotnet App.Web.dll'
+      appCommandLine: 'chmod +x App.Web && ./App.Web'
       minTlsVersion: '1.2'
       alwaysOn: true
       appSettings: [

@@ -26,11 +26,8 @@ public sealed class DemoUserResolver
             return parsedUserId;
         }
 
-        var guestUser = await _userManager.FindByEmailAsync(_options.Email);
-        if (guestUser is null)
-        {
-            throw new InvalidOperationException("Demo guest user does not exist. Seed data has not run.");
-        }
+        var guestUser = await _userManager.FindByEmailAsync(_options.Email)
+            ?? throw new InvalidOperationException("Demo guest user does not exist. Seed data has not run.");
 
         return guestUser.Id;
     }

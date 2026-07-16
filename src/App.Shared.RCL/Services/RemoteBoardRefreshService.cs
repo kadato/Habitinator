@@ -3,7 +3,7 @@ namespace App.Shared.RCL.Services;
 public sealed class RemoteBoardRefreshService : IRemoteBoardRefreshService
 {
     private readonly List<Func<Task>> _callbacks = [];
-    private readonly object _lock = new();
+    private readonly System.Threading.Lock _lock = new();
 
     public void RegisterForRemoteRefresh(Func<Task> onRefresh)
     {

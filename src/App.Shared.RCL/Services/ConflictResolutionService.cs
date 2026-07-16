@@ -18,7 +18,7 @@ public sealed record ConflictInfo(
 public sealed class ConflictResolutionService
 {
     private readonly Dictionary<Guid, TaskCompletionSource<ConflictResolutionChoice>> _pendingConflicts = [];
-    private readonly object _lock = new();
+    private readonly System.Threading.Lock _lock = new();
 
     public event Action<ConflictInfo>? ConflictDetected;
 

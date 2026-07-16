@@ -41,7 +41,7 @@ public static class ActivityStatisticsCalculator
         IReadOnlyList<DailyGraphPeriodOption> options)
     {
         HashSet<string> optionKeys = [.. options.Select(o => o.Key)];
-        string key = string.IsNullOrWhiteSpace(periodKey) || !optionKeys.Contains(periodKey)
+        var key = string.IsNullOrWhiteSpace(periodKey) || !optionKeys.Contains(periodKey)
             ? DailyGraphPeriods.Rolling370Days
             : periodKey;
 
@@ -89,8 +89,8 @@ public static class ActivityStatisticsCalculator
         var weekCount = weekSpan + 1;
         var weekBars = BuildWeekBars(perDay, start, actualEnd, startWeek, weekCount);
 
-        var weekBarsRangeStart = weekCount > 0 ? weekBars[0].WeekStart : startWeek;
-        var weekBarsRangeEnd = weekCount > 0 ? weekBars[^1].WeekStart.AddDays(6) : actualEnd;
+        var weekBarsRangeStart = weekBars[0].WeekStart;
+        var weekBarsRangeEnd = weekBars[^1].WeekStart.AddDays(6);
 
         var heatmapSpanDays = actualEnd.DayNumber - start.DayNumber + 1;
         if (heatmapSpanDays < 1)

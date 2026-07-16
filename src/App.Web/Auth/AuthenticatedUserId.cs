@@ -1,7 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
-namespace App.Web;
+namespace App.Web.Auth;
 
 internal static class AuthenticatedUserId
 {

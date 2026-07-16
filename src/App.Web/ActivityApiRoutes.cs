@@ -1,7 +1,8 @@
 using System.Security.Claims;
 
 using App.Shared.RCL.Models;
-using App.Shared.RCL.Services;
+using App.Shared.RCL.Services.Remote;
+using App.Web.Auth;
 using App.Web.Services;
 
 namespace App.Web;

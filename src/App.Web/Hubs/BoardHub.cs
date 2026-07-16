@@ -1,3 +1,5 @@
+using App.Web.Auth;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 

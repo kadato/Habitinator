@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 
 using App.Shared.RCL;
 using App.Shared.RCL.Models;
+using App.Web.Auth;
 using App.Web.Services;
 
 namespace App.Web;
@@ -261,8 +262,8 @@ internal static class BoardApiRoutes
                     BoardMutationResult r = await board.DeleteItemForApiAsync(userId, section, itemId, expected, cancellationToken);
                     return r.Status switch
                     {
-                        BoardMutationStatus.Ok => (204, "", (string?)null),
-                        BoardMutationStatus.NotFound => (404, "", (string?)null),
+                        BoardMutationStatus.Ok => (204, "", null),
+                        BoardMutationStatus.NotFound => (404, "", null),
                         BoardMutationStatus.Conflict => (
                             409,
                             JsonSerializer.Serialize(new { problem = "version_conflict", item = r.Item }, Json),

@@ -2,6 +2,7 @@ using System.Security.Claims;
 
 using App.Shared.RCL;
 using App.Shared.RCL.Models;
+using App.Web.Auth;
 using App.Web.Data;
 using App.Web.Services;
 

@@ -3,7 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 
 using App.Shared.RCL.Models;
-using App.Shared.RCL.Services;
+using App.Shared.RCL.Services.Remote;
 
 using FluentAssertions;
 

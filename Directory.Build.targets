@@ -1,0 +1,25 @@
+<Project>
+  <!-- Automatically configure git hooks path for developers on local builds -->
+  <Target Name="ConfigureGitHooks" BeforeTargets="PrepareForBuild" Condition="'$(CI)' != 'true' and '$(GITHUB_ACTIONS)' != 'true' and '$(MSBuildProjectName)' == 'App.Shared.RCL'">
+    <!-- Read the current hooksPath (read-only, no lock) -->
+    <Exec Command="git config core.hooksPath" 
+          ConsoleToMSBuild="true" 
+          IgnoreExitCode="true" 
+          IgnoreStandardErrorWarningFormat="true" 
+          StandardOutputImportance="low" 
+          StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitHooksPath" />
+    </Exec>
+    
+    <!-- Only write if the hooksPath is not already set to .githooks -->
+    <Exec Command="git config core.hooksPath .githooks" 
+          Condition="'$(GitHooksPath)' != '.githooks'" 
+          ConsoleToMSBuild="true"
+          IgnoreExitCode="true" 
+          IgnoreStandardErrorWarningFormat="true" 
+          StandardOutputImportance="low" 
+          StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitHooksWriteOutput" />
+    </Exec>
+  </Target>
+</Project>

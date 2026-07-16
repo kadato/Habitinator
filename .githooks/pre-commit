@@ -1,61 +1,178 @@
-#!/bin/sh
+#!/bin/bash
 
-# Get list of staged C# files
-files=$(git diff --cached --name-only --diff-filter=ACM | grep '\.cs$')
+# Function to find closest parent .csproj file
+find_project_file() {
+    local dir
+    dir=$(dirname "$1")
+    while [ "$dir" != "." ] && [ "$dir" != "/" ] && [ -n "$dir" ]; do
+        for f in "$dir"/*.csproj; do
+            if [ -f "$f" ]; then
+                echo "$f"
+                return 0
+            fi
+        done
+        dir=$(dirname "$dir")
+    done
+    return 1
+}
 
-if [ -z "$files" ]; then
+# 1. Expand change detection
+# Get list of all staged files
+staged_files=$(git diff --cached --name-only --diff-filter=ACM)
+
+# Filter for relevant files: C#, csproj, slnx, props, targets, json
+relevant_files=$(echo "$staged_files" | grep -E '\.(cs|csproj|slnx|props|targets|json)$')
+
+if [ -z "$relevant_files" ]; then
     exit 0
 fi
 
-echo ""
-echo "=================================================="
-echo "Checking if backend and shared projects compile..."
-echo "=================================================="
-echo ""
+# Get list of staged C# files specifically for formatting
+cs_files=$(echo "$relevant_files" | grep '\.cs$')
 
-dotnet build src/App.Web/App.Web.csproj --configuration Release -p:TreatWarningsAsErrors=true
-build_exit_code=$?
+# Check if global build configurations were changed
+global_change=$(echo "$relevant_files" | grep -E '\.(slnx|props|targets|json)$')
 
-if [ $build_exit_code -ne 0 ]; then
-    echo ""
-    echo "=================================================="
-    echo "ERROR: dotnet build failed with exit code $build_exit_code."
-    echo "Please resolve the compilation errors before committing."
-    echo "=================================================="
-    echo ""
-    exit $build_exit_code
+# Determine projects to build
+projects_to_build=()
+build_all_solution=false
+
+if [ -n "$global_change" ]; then
+    build_all_solution=true
+else
+    # Resolve projects for staged files
+    for file in $relevant_files; do
+        if [[ "$file" == *.csproj ]]; then
+            # If the csproj itself was modified
+            if [[ ! " ${projects_to_build[*]} " =~ " ${file} " ]]; then
+                projects_to_build+=("$file")
+            fi
+        else
+            proj=$(find_project_file "$file")
+            if [ -n "$proj" ]; then
+                if [[ ! " ${projects_to_build[*]} " =~ " ${proj} " ]]; then
+                    projects_to_build+=("$proj")
+                fi
+            fi
+        fi
+    done
 fi
 
 echo ""
 echo "=================================================="
-echo "Automatically formatting staged C# files..."
+echo "Verifying changes before commit..."
 echo "=================================================="
-echo ""
 
-# Run dotnet format style and whitespace on staged C# files
-dotnet format Habitinator.slnx --include $files
-format_exit_code=$?
+# Flag to track build errors
+build_failed=false
 
-if [ $format_exit_code -ne 0 ]; then
-    echo ""
-    echo "=================================================="
-    echo "ERROR: dotnet format failed with exit code $format_exit_code."
-    echo "Please verify you have the required workloads installed"
-    echo "(run 'dotnet workload restore') and that there are no build errors."
-    echo "=================================================="
-    echo ""
-    exit $format_exit_code
-fi
-
-# Re-add modified C# files to the commit
-echo "$files" | while read -r file; do
-    if [ -f "$file" ]; then
-        git add "$file"
+if [ "$build_all_solution" = true ]; then
+    echo "Global configuration change detected. Building entire solution..."
+    dotnet build Habitinator.slnx --configuration Release -p:TreatWarningsAsErrors=true
+    if [ $? -ne 0 ]; then
+        build_failed=true
     fi
-done
+else
+    if [ ${#projects_to_build[@]} -gt 0 ]; then
+        echo "Building affected projects: ${projects_to_build[*]}"
+        for proj in "${projects_to_build[@]}"; do
+            echo "Building $proj..."
+            dotnet build "$proj" --configuration Release -p:TreatWarningsAsErrors=true
+            if [ $? -ne 0 ]; then
+                build_failed=true
+                break
+            fi
+        done
+    else
+        echo "No buildable C# projects affected."
+    fi
+fi
+
+if [ "$build_failed" = true ]; then
+    echo ""
+    echo "=================================================="
+    echo "ERROR: dotnet build failed."
+    echo "Please resolve compilation / style errors before committing."
+    echo "=================================================="
+    echo ""
+    exit 1
+fi
+
+# Run unit tests if relevant projects are modified
+# Let's run App.Shared.Tests and App.Shared.RCL.Tests if they or their source projects are built
+run_shared_tests=false
+run_rcl_tests=false
+
+if [ "$build_all_solution" = true ]; then
+    run_shared_tests=true
+    run_rcl_tests=true
+else
+    for proj in "${projects_to_build[@]}"; do
+        if [[ "$proj" == *App.Shared.Tests* || "$proj" == *App.Shared.RCL* ]]; then
+            run_shared_tests=true
+        fi
+        if [[ "$proj" == *App.Shared.RCL.Tests* || "$proj" == *App.Shared.RCL* ]]; then
+            run_rcl_tests=true
+        fi
+    done
+fi
+
+if [ "$run_shared_tests" = true ] || [ "$run_rcl_tests" = true ]; then
+    echo ""
+    echo "=================================================="
+    echo "Running affected unit tests..."
+    echo "=================================================="
+fi
+
+if [ "$run_shared_tests" = true ]; then
+    echo "Running App.Shared.Tests..."
+    dotnet test tests/App.Shared.Tests/App.Shared.Tests.csproj --configuration Release --no-build
+    if [ $? -ne 0 ]; then
+        echo "ERROR: App.Shared.Tests failed."
+        exit 1
+    fi
+fi
+
+if [ "$run_rcl_tests" = true ]; then
+    echo "Running App.Shared.RCL.Tests..."
+    dotnet test tests/App.Shared.RCL.Tests/App.Shared.RCL.Tests.csproj --configuration Release --no-build
+    if [ $? -ne 0 ]; then
+        echo "ERROR: App.Shared.RCL.Tests failed."
+        exit 1
+    fi
+fi
+
+# Run formatting on C# files
+if [ -n "$cs_files" ]; then
+    echo ""
+    echo "=================================================="
+    echo "Automatically formatting staged C# files..."
+    echo "=================================================="
+    echo ""
+
+    # Run dotnet format style and whitespace on staged C# files
+    dotnet format Habitinator.slnx --include $cs_files
+    format_exit_code=$?
+
+    if [ $format_exit_code -ne 0 ]; then
+        echo ""
+        echo "=================================================="
+        echo "ERROR: dotnet format failed with exit code $format_exit_code."
+        echo "=================================================="
+        echo ""
+        exit $format_exit_code
+    fi
+
+    # Re-add modified C# files to the commit
+    echo "$cs_files" | while read -r file; do
+        if [ -f "$file" ]; then
+            git add "$file"
+        fi
+    done
+fi
 
 echo ""
 echo "=================================================="
-echo "Formatting completed successfully."
+echo "Verification and formatting completed successfully."
 echo "=================================================="
 echo ""

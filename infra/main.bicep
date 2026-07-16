@@ -109,7 +109,9 @@ resource authSettings 'Microsoft.Web/sites/config@2023-12-01' = {
   parent: web
   name: 'authsettingsv2'
   properties: {
-    enabled: false
+    platform: {
+      enabled: false
+    }
   }
 }
 

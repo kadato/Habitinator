@@ -45,3 +45,10 @@ dotnet_diagnostic.CA1707.severity = none
 # Migration-specific rule configurations
 [**/Migrations/*.cs]
 dotnet_diagnostic.CA1861.severity = none
+
+# Suppress SonarQube rules that are false positives in Razor file parsing
+[*.razor]
+dotnet_diagnostic.S1199.severity = none
+dotnet_diagnostic.S1481.severity = none
+dotnet_diagnostic.S2325.severity = none
+

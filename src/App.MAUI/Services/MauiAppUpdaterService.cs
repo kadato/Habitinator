@@ -5,14 +5,13 @@ using App.Shared.RCL.Services;
 
 #if ANDROID
 using Android.Content;
-using Android.OS;
 #endif
 
 
 namespace App.MAUI.Services;
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1075:URIs should not be hardcoded", Justification = "Update URL is static and pointing to public GitHub Releases API")]
-public sealed class MauiAppUpdaterService : IAppUpdaterService, IDisposable
+public sealed partial class MauiAppUpdaterService : IAppUpdaterService, IDisposable
 {
     private readonly HttpClient _httpClient;
 

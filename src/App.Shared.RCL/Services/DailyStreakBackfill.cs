@@ -27,7 +27,7 @@ public static class DailyStreakBackfill
     {
         if (streakCount <= 0)
         {
-            return Array.Empty<DateOnly>();
+            return [];
         }
 
         var n = Math.Min(9999, streakCount);

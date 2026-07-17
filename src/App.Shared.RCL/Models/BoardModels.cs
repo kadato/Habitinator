@@ -97,7 +97,7 @@ public static class DailyChecklistJson
     {
         if (string.IsNullOrWhiteSpace(json))
         {
-            return Array.Empty<DailyChecklistItem>();
+            return [];
         }
 
         try
@@ -107,7 +107,7 @@ public static class DailyChecklistJson
         }
         catch
         {
-            return Array.Empty<DailyChecklistItem>();
+            return [];
         }
     }
 

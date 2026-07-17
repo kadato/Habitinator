@@ -7,32 +7,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace App.Web.Services;
 
-public sealed class WebUserPreferencesService : IUserPreferencesService
+public sealed class WebUserPreferencesService(
+    AuthenticationStateProvider authenticationStateProvider,
+    DemoUserResolver demoUserResolver,
+    IDbContextFactory<ApplicationDbContext> dbFactory,
+    IBoardChangeNotifier boardChangeNotifier,
+    IHttpContextAccessor httpContextAccessor,
+    ILogger<WebUserPreferencesService> logger) : IUserPreferencesService
 {
-    private readonly AuthenticationStateProvider _authenticationStateProvider;
-    private readonly IBoardChangeNotifier _boardChangeNotifier;
-    private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
-    private readonly DemoUserResolver _demoUserResolver;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly ILogger<WebUserPreferencesService> _logger;
     private Guid? _cachedUserId;
     private UserPreferences? _cachedPreferences;
-
-    public WebUserPreferencesService(
-        AuthenticationStateProvider authenticationStateProvider,
-        DemoUserResolver demoUserResolver,
-        IDbContextFactory<ApplicationDbContext> dbFactory,
-        IBoardChangeNotifier boardChangeNotifier,
-        IHttpContextAccessor httpContextAccessor,
-        ILogger<WebUserPreferencesService> logger)
-    {
-        _authenticationStateProvider = authenticationStateProvider;
-        _demoUserResolver = demoUserResolver;
-        _dbFactory = dbFactory;
-        _boardChangeNotifier = boardChangeNotifier;
-        _httpContextAccessor = httpContextAccessor;
-        _logger = logger;
-    }
 
     public event Action? Changed;
 
@@ -40,7 +24,7 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
     {
         try
         {
-            var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
+            var state = await authenticationStateProvider.GetAuthenticationStateAsync();
             var user = state.User;
             if (user.Identity?.IsAuthenticated != true)
             {
@@ -51,13 +35,13 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
                 return guestPrefs;
             }
 
-            var userId = await _demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
+            var userId = await demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
             if (_cachedUserId == userId && _cachedPreferences is not null)
             {
                 return _cachedPreferences;
             }
 
-            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
             var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
             var prefs = row?.UserPreferences ?? UserPreferences.CreateDefault();
 
@@ -72,7 +56,7 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Could not load user preferences; using defaults.");
+            logger.LogWarning(ex, "Could not load user preferences; using defaults.");
             var fallbackPrefs = UserPreferences.CreateDefault();
             ApplyThemeFromCookie(fallbackPrefs);
             return fallbackPrefs;
@@ -83,7 +67,7 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
     {
         try
         {
-            var httpContext = _httpContextAccessor.HttpContext;
+            var httpContext = httpContextAccessor.HttpContext;
             if (httpContext is not null && httpContext.Request.Cookies.TryGetValue("habitinator_theme", out var themeCookie))
             {
                 if (themeCookie == "light")
@@ -104,15 +88,15 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
 
     public async Task SaveAsync(UserPreferences preferences, CancellationToken cancellationToken = default)
     {
-        var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
+        var state = await authenticationStateProvider.GetAuthenticationStateAsync();
         var user = state.User;
         if (user.Identity?.IsAuthenticated != true)
         {
             return;
         }
 
-        var userId = await _demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
-        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var userId = await demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
         if (row is null)
         {
@@ -124,6 +108,6 @@ public sealed class WebUserPreferencesService : IUserPreferencesService
         _cachedUserId = userId;
         _cachedPreferences = preferences;
         Changed?.Invoke();
-        await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+        await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
     }
 }

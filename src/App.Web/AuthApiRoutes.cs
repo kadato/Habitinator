@@ -51,7 +51,7 @@ internal static class AuthApiRoutes
     {
         if (!RegistrationEmailValidation.IsValid(request.Email))
         {
-            return Results.BadRequest(new List<string> { "Enter a valid email address." });
+            return Results.BadRequest<IEnumerable<string>>(["Enter a valid email address."]);
         }
 
         ApplicationUser user = new ApplicationUser

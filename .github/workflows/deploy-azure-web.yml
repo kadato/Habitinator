@@ -42,7 +42,7 @@ jobs:
           test -n "${SUBSCRIPTION_ID}" || { echo "::error::Set repository variable AZURE_SUBSCRIPTION_ID when AZURE_CLIENT_ID (OIDC) is set."; exit 1; }
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             11.0.x

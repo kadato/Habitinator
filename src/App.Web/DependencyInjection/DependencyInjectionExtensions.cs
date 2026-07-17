@@ -154,6 +154,7 @@ public static class DependencyInjectionExtensions
         services.AddScoped<IUserNotifier, UserNotifier>();
         services.AddScoped<IFocusTimerClientAlerts, FocusTimerClientAlerts>();
         services.AddScoped<IDailyRetroPromptStore, JsDailyRetroPromptStore>();
+        services.AddScoped<IClientSessionProvider, WebClientSessionProvider>();
         services.AddScoped<IUserTimeZoneService, UserTimeZoneService>();
         services.AddScoped<INotificationSettingsRules, NotificationSettingsRules>();
         services.AddScoped<IUserDateFormatService, UserDateFormatService>();

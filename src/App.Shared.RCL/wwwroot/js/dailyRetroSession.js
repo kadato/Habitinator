@@ -1,16 +1,16 @@
 // UTC calendar day (yyyy-MM-dd) for which the user last dismissed the "yesterday dailies" prompt.
-globalThis.habitinatorGetDailyRetroResolved = function () {
+globalThis.habitinatorGetDailyRetroResolved = function (key) {
     try {
-        return localStorage.getItem("habitinator.dailyRetro.ymd") || "";
+        return localStorage.getItem(key || "habitinator.dailyRetro.ymd") || "";
     } catch (e) {
         console.warn("Failed to get daily retro from localStorage.", e);
         return "";
     }
 };
 
-globalThis.habitinatorSetDailyRetroResolved = function (ymd) {
+globalThis.habitinatorSetDailyRetroResolved = function (key, ymd) {
     try {
-        localStorage.setItem("habitinator.dailyRetro.ymd", ymd);
+        localStorage.setItem(key || "habitinator.dailyRetro.ymd", ymd);
     } catch (e) {
         console.error("Failed to set daily retro in localStorage.", e);
     }

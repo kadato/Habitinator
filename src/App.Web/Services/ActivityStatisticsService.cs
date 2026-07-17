@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+using System.Collections.Frozen;
 using System.Globalization;
 
 using App.Shared.RCL.Models;
@@ -14,11 +14,7 @@ public sealed class ActivityStatisticsService(
     IUserTimeZoneService timeZone,
     ActivityStatisticsCache cache)
 {
-    private readonly IDbContextFactory<ApplicationDbContext> _dbFactory = dbFactory;
-    private readonly IUserTimeZoneService _timeZone = timeZone;
-    private readonly ActivityStatisticsCache _cache = cache;
-
-    private DateOnly Today() => DailySchedule.LocalToday(_timeZone);
+    private DateOnly Today() => DailySchedule.LocalToday(timeZone);
 
     public async Task<ActivityDayDetailDto> GetActivityDayDetailAsync(
         Guid userId,
@@ -26,7 +22,7 @@ public sealed class ActivityStatisticsService(
         string? tag,
         CancellationToken cancellationToken = default)
     {
-        ActivityStatisticsCache.UserCache userCache = _cache.GetOrCreate(userId);
+        ActivityStatisticsCache.UserCache userCache = cache.GetOrCreate(userId);
         (DateOnly, string?) cacheKey = (day, tag);
         if (userCache.DayDetail.TryGetValue(cacheKey, out ActivityDayDetailDto? cached))
         {
@@ -36,7 +32,7 @@ public sealed class ActivityStatisticsService(
         DateTime fromUtc = day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         DateTime toUtc = day.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
-        await using ApplicationDbContext db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        await using ApplicationDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
         HashSet<Guid>? allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, tag, cancellationToken);
 
         IQueryable<UserActivityEventEntity> ev = db.UserActivityEvents.AsNoTracking()
@@ -58,7 +54,7 @@ public sealed class ActivityStatisticsService(
             .Distinct()];
 
         IReadOnlyDictionary<Guid, string> titles = boardIds.Count == 0
-            ? ImmutableDictionary<Guid, string>.Empty
+            ? FrozenDictionary<Guid, string>.Empty
             : await db.BoardItems.AsNoTracking()
                 .Where(b => b.UserId == userId && boardIds.Contains(b.Id))
                 .ToDictionaryAsync(b => b.Id, b => b.Title, cancellationToken);
@@ -75,14 +71,14 @@ public sealed class ActivityStatisticsService(
         CancellationToken cancellationToken = default)
     {
         DateOnly utcToday = Today();
-        ActivityStatisticsCache.UserCache userCache = _cache.GetOrCreate(userId);
+        ActivityStatisticsCache.UserCache userCache = cache.GetOrCreate(userId);
         (string?, string?, DateOnly) cacheKey = (periodKey, tag, utcToday);
         if (userCache.Dashboard.TryGetValue(cacheKey, out ActivityDashboardDto? cached))
         {
             return cached;
         }
 
-        await using ApplicationDbContext db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        await using ApplicationDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
         IReadOnlyList<DailyGraphPeriodOption> options = await BuildDailyPeriodOptionsAsync(db, userId, utcToday, cancellationToken);
         (string key, DateOnly start, DateOnly end) = ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, utcToday, options);
 
@@ -116,14 +112,14 @@ public sealed class ActivityStatisticsService(
         CancellationToken cancellationToken = default)
     {
         DateOnly utcToday = Today();
-        ActivityStatisticsCache.UserCache userCache = _cache.GetOrCreate(userId);
+        ActivityStatisticsCache.UserCache userCache = cache.GetOrCreate(userId);
         (string?, string?, DateOnly) cacheKey = (periodKey, tag, utcToday);
         if (userCache.DailyContributions.TryGetValue(cacheKey, out DailyContributionsViewDto? cached))
         {
             return cached;
         }
 
-        await using ApplicationDbContext db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        await using ApplicationDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
         IReadOnlyList<DailyGraphPeriodOption> options = await BuildDailyPeriodOptionsAsync(db, userId, utcToday, cancellationToken);
         (string key, DateOnly rangeStart, DateOnly rangeEnd) =
             ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, utcToday, options);
@@ -149,7 +145,7 @@ public sealed class ActivityStatisticsService(
             b.Id,
             b.Title,
             b.DailyStartDate != null ? DateOnly.FromDateTime(b.DailyStartDate.Value) : null,
-            DateOnly.FromDateTime(_timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime)
+            DateOnly.FromDateTime(timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime)
         ))];
 
         IQueryable<UserActivityEventEntity> evQ = db.UserActivityEvents.AsNoTracking()

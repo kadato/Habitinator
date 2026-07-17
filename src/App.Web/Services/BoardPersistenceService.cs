@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+
 using App.Shared.RCL;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
@@ -54,11 +56,6 @@ public sealed class BoardPersistenceService(
     IBoardChangeNotifier boardChangeNotifier,
     IUserTimeZoneService timeZone) : IDisposable
 {
-    private readonly BoardSnapshotCache _snapshotCache = snapshotCache;
-    private readonly IBoardChangeNotifier _boardChangeNotifier = boardChangeNotifier;
-    private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory = dbContextFactory;
-    private readonly ApplicationDbContext _dbContext = dbContext;
-    private readonly IUserTimeZoneService _timeZone = timeZone;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     private async Task<T> LockAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken)
@@ -87,7 +84,7 @@ public sealed class BoardPersistenceService(
         }
     }
 
-    private DateOnly Today() => DailySchedule.LocalToday(_timeZone);
+    private DateOnly Today() => DailySchedule.LocalToday(timeZone);
 
     private static IQueryable<BoardItemEntity> LiveBoardItems(ApplicationDbContext db, Guid userId) =>
         db.BoardItems.Where(x => x.UserId == userId && x.DeletedAtUtc == null && !x.IsArchived);
@@ -114,7 +111,7 @@ public sealed class BoardPersistenceService(
         DateTimeOffset cursorExclusive,
         CancellationToken cancellationToken = default)
     {
-        await using var readDb = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var changed = await readDb.BoardItems
             .AsNoTracking()
             .Where(x => x.UserId == userId
@@ -153,12 +150,12 @@ public sealed class BoardPersistenceService(
 
     public async Task<BoardSnapshot> GetSnapshotAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        if (_snapshotCache.TryGet(userId, out var cached))
+        if (snapshotCache.TryGet(userId, out var cached))
         {
             return cached;
         }
 
-        await using var readDb = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var items = await LiveBoardItems(readDb, userId)
             .AsNoTracking()
             .OrderBy(x => x.SortOrder)
@@ -189,7 +186,7 @@ public sealed class BoardPersistenceService(
                 .ThenBy(x => x.CreatedAtUtc)
                 .ThenBy(x => x.Id)
                 .Select(x => ToModelWithToday(x, today, dailyStreaks))]);
-        _snapshotCache.Set(userId, snapshot);
+        snapshotCache.Set(userId, snapshot);
         return snapshot;
     }
 
@@ -201,16 +198,16 @@ public sealed class BoardPersistenceService(
             var utcNow = DateTimeOffset.UtcNow;
             if (itemId is { } id)
             {
-                var existing = await _dbContext.BoardItems
+                var existing = await dbContext.BoardItems
                     .FirstOrDefaultAsync(x => x.UserId == userId && x.Id == id, cancellationToken);
                 if (existing is not null)
                 {
                     existing.DeletedAtUtc = null;
                     existing.Title = ZalgoSanitizer.SanitizeAndTrim(title);
                     existing.UpdatedAtUtc = utcNow;
-                    await _dbContext.SaveChangesAsync(cancellationToken);
+                    await dbContext.SaveChangesAsync(cancellationToken);
                     var restored = await ToModelWithDailyStreaksAsync(userId, existing, cancellationToken);
-                    await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+                    await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
                     return restored;
                 }
             }
@@ -240,10 +237,10 @@ public sealed class BoardPersistenceService(
                 SortOrder = await GetInitialSortOrderAsync(userId, section, cancellationToken)
             };
 
-            _dbContext.BoardItems.Add(entity);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            dbContext.BoardItems.Add(entity);
+            await dbContext.SaveChangesAsync(cancellationToken);
             var created = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
-            await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+            await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
             return created;
         }, cancellationToken);
 
@@ -263,7 +260,7 @@ public sealed class BoardPersistenceService(
         CancellationToken cancellationToken = default) =>
         LockAsync(async () =>
         {
-            var entity = await _dbContext.BoardItems
+            var entity = await dbContext.BoardItems
                 .FirstOrDefaultAsync(
                     x => x.UserId == userId && x.Section == section && x.Id == itemId && x.DeletedAtUtc == null,
                     cancellationToken);
@@ -282,9 +279,9 @@ public sealed class BoardPersistenceService(
 
             entity!.Title = ZalgoSanitizer.SanitizeAndTrim(title);
             entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
             var renamed = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
-            await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+            await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
             return new BoardMutationResult(BoardMutationStatus.Ok, renamed);
         }, cancellationToken);
 
@@ -303,7 +300,7 @@ public sealed class BoardPersistenceService(
         CancellationToken cancellationToken = default) =>
         LockAsync(async () =>
         {
-            var entity = await _dbContext.BoardItems
+            var entity = await dbContext.BoardItems
                 .FirstOrDefaultAsync(
                     x => x.UserId == userId && x.Section == section && x.Id == itemId && x.DeletedAtUtc == null,
                     cancellationToken);
@@ -323,8 +320,8 @@ public sealed class BoardPersistenceService(
             var utc = DateTimeOffset.UtcNow;
             entity!.DeletedAtUtc = utc;
             entity.UpdatedAtUtc = utc;
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
             return new BoardMutationResult(BoardMutationStatus.Ok, null);
         }, cancellationToken);
 
@@ -336,7 +333,7 @@ public sealed class BoardPersistenceService(
         CancellationToken cancellationToken = default) =>
         LockAsync(async () =>
         {
-            var entity = await _dbContext.BoardItems
+            var entity = await dbContext.BoardItems
                 .FirstOrDefaultAsync(
                     x => x.UserId == userId && x.Section == section && x.Id == itemId && x.DeletedAtUtc == null,
                     cancellationToken);
@@ -355,9 +352,9 @@ public sealed class BoardPersistenceService(
 
             entity!.IsArchived = true;
             entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
             var archived = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
-            await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+            await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
             return new BoardMutationResult(BoardMutationStatus.Ok, archived);
         }, cancellationToken);
 
@@ -369,7 +366,7 @@ public sealed class BoardPersistenceService(
         CancellationToken cancellationToken = default) =>
         LockAsync(async () =>
         {
-            var entity = await _dbContext.BoardItems
+            var entity = await dbContext.BoardItems
                 .FirstOrDefaultAsync(
                     x => x.UserId == userId && x.Section == section && x.Id == itemId && x.DeletedAtUtc == null,
                     cancellationToken);
@@ -388,15 +385,15 @@ public sealed class BoardPersistenceService(
 
             entity!.IsArchived = false;
             entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
             var unarchived = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
-            await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+            await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
             return new BoardMutationResult(BoardMutationStatus.Ok, unarchived);
         }, cancellationToken);
 
     public async Task<BoardSnapshot> GetArchivedSnapshotAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        await using var readDb = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var items = await readDb.BoardItems
             .AsNoTracking()
             .Where(x => x.UserId == userId && x.DeletedAtUtc == null && x.IsArchived)
@@ -449,7 +446,7 @@ public sealed class BoardPersistenceService(
                 return new BoardMutationResult(BoardMutationStatus.NotFound, null);
             }
 
-            var entity = await _dbContext.BoardItems
+            var entity = await dbContext.BoardItems
                 .FirstOrDefaultAsync(
                     x => x.UserId == userId && x.Section == BoardSection.Daily && x.Id == itemId
                          && x.DeletedAtUtc == null,
@@ -478,22 +475,15 @@ public sealed class BoardPersistenceService(
                 return new BoardMutationResult(BoardMutationStatus.NotFound, null);
             }
 
-            entity.DailyLastCompletedOn = new DateTime(
-                completedOn.Year,
-                completedOn.Month,
-                completedOn.Day,
-                0,
-                0,
-                0,
-                DateTimeKind.Utc);
+            entity.DailyLastCompletedOn = completedOn.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
             entity.IsCompleted = true;
             entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
             AddActivityEvent(userId, ActivityEventType.DailyComplete, itemId, null, entity.Title,
                 DailyStreakCalculator.BackdatedDailyEventOccurredAt(completedOn));
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
             await SyncDailyStreakCounterToComputedAsync(userId, entity, cancellationToken);
             var completed = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
-            await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+            await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
             return new BoardMutationResult(BoardMutationStatus.Ok, completed);
         }, cancellationToken);
 
@@ -512,7 +502,7 @@ public sealed class BoardPersistenceService(
         CancellationToken cancellationToken = default) =>
         LockAsync(async () =>
         {
-            var entity = await _dbContext.BoardItems
+            var entity = await dbContext.BoardItems
                 .FirstOrDefaultAsync(
                     x => x.UserId == userId && x.Section == section && x.Id == itemId && x.DeletedAtUtc == null,
                     cancellationToken);
@@ -539,14 +529,14 @@ public sealed class BoardPersistenceService(
             }
 
             entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
             if (section == BoardSection.Daily)
             {
                 await SyncDailyStreakCounterToComputedAsync(userId, entity, cancellationToken);
             }
 
             var toggled = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
-            await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+            await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
             return new BoardMutationResult(BoardMutationStatus.Ok, toggled);
         }, cancellationToken);
 
@@ -559,16 +549,16 @@ public sealed class BoardPersistenceService(
         BoardItemEntity dailyEntity,
         CancellationToken cancellationToken)
     {
-        var dailies = await LiveBoardItems(_dbContext, userId).AsNoTracking()
+        var dailies = await LiveBoardItems(dbContext, userId).AsNoTracking()
             .Where(x => x.Section == BoardSection.Daily)
             .ToListAsync(cancellationToken);
         var today = Today();
-        var map = await BuildDailyStreakMapAsync(userId, dailies, today, _dbContext, cancellationToken);
+        var map = await BuildDailyStreakMapAsync(userId, dailies, today, dbContext, cancellationToken);
         if (map.TryGetValue(dailyEntity.Id, out var streak))
         {
             dailyEntity.Counter = streak;
             dailyEntity.UpdatedAtUtc = DateTimeOffset.UtcNow;
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
     }
 
@@ -587,7 +577,7 @@ public sealed class BoardPersistenceService(
             }
 
             AddActivityEvent(userId, ActivityEventType.TimerSession, boardItemId, sec, customLabel);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
         }, cancellationToken);
 
     public async Task<BoardItem?> IncrementHabitPlusAsync(Guid userId, Guid itemId,
@@ -604,7 +594,7 @@ public sealed class BoardPersistenceService(
         CancellationToken cancellationToken = default) =>
         LockAsync(async () =>
         {
-            var entity = await _dbContext.BoardItems
+            var entity = await dbContext.BoardItems
                 .FirstOrDefaultAsync(
                     x => x.UserId == userId && x.Section == BoardSection.Habit && x.Id == itemId && x.DeletedAtUtc == null,
                     cancellationToken);
@@ -624,9 +614,9 @@ public sealed class BoardPersistenceService(
             entity.Counter++;
             entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
             AddActivityEvent(userId, ActivityEventType.HabitPlus, itemId, customLabel: entity.Title);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
             var afterPlus = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
-            await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+            await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
             return new BoardMutationResult(BoardMutationStatus.Ok, afterPlus);
         }, cancellationToken);
 
@@ -644,7 +634,7 @@ public sealed class BoardPersistenceService(
         CancellationToken cancellationToken = default) =>
         LockAsync(async () =>
         {
-            var entity = await _dbContext.BoardItems
+            var entity = await dbContext.BoardItems
                 .FirstOrDefaultAsync(
                     x => x.UserId == userId && x.Section == BoardSection.Habit && x.Id == itemId && x.DeletedAtUtc == null,
                     cancellationToken);
@@ -664,9 +654,9 @@ public sealed class BoardPersistenceService(
             entity.NegativeCounter++;
             entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
             AddActivityEvent(userId, ActivityEventType.HabitMinus, itemId, customLabel: entity.Title);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
             var afterMinus = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
-            await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+            await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
             return new BoardMutationResult(BoardMutationStatus.Ok, afterMinus);
         }, cancellationToken);
 
@@ -687,7 +677,7 @@ public sealed class BoardPersistenceService(
         CancellationToken cancellationToken = default) =>
         LockAsync(async () =>
         {
-            var entity = await _dbContext.BoardItems
+            var entity = await dbContext.BoardItems
                 .FirstOrDefaultAsync(
                     x => x.UserId == userId && x.Section == BoardSection.Habit && x.Id == itemId && x.DeletedAtUtc == null,
                     cancellationToken);
@@ -727,9 +717,9 @@ public sealed class BoardPersistenceService(
             await UpdateSortOrderIfNeededAsync(userId, BoardSection.Habit, entity, args.SortOrder, cancellationToken);
 
             entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
             var habit = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
-            await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+            await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
             return new BoardMutationResult(BoardMutationStatus.Ok, habit);
         }, cancellationToken);
 
@@ -750,7 +740,7 @@ public sealed class BoardPersistenceService(
         CancellationToken cancellationToken = default) =>
         LockAsync(async () =>
         {
-            var entity = await _dbContext.BoardItems
+            var entity = await dbContext.BoardItems
                 .FirstOrDefaultAsync(
                     x => x.UserId == userId && x.Section == BoardSection.Todo && x.Id == itemId && x.DeletedAtUtc == null,
                     cancellationToken);
@@ -782,9 +772,9 @@ public sealed class BoardPersistenceService(
             await UpdateSortOrderIfNeededAsync(userId, BoardSection.Todo, entity, args.SortOrder, cancellationToken);
 
             entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
             var todo = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
-            await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+            await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
             return new BoardMutationResult(BoardMutationStatus.Ok, todo);
         }, cancellationToken);
 
@@ -805,7 +795,7 @@ public sealed class BoardPersistenceService(
         CancellationToken cancellationToken = default) =>
         LockAsync(async () =>
         {
-            var entity = await _dbContext.BoardItems
+            var entity = await dbContext.BoardItems
                 .FirstOrDefaultAsync(
                     x => x.UserId == userId && x.Section == BoardSection.Daily && x.Id == itemId && x.DeletedAtUtc == null,
                     cancellationToken);
@@ -857,9 +847,9 @@ public sealed class BoardPersistenceService(
                 streakNotAfter, cancellationToken);
             ApplyManualStreakToEntity(entity, newStartD, args.RepeatType, n, streakClamped, today, wasCompleteForToday);
 
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
             var daily = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
-            await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+            await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
             return new BoardMutationResult(BoardMutationStatus.Ok, daily);
         }, cancellationToken);
 
@@ -886,8 +876,7 @@ public sealed class BoardPersistenceService(
         {
             if (wasCompleteForToday)
             {
-                entity.DailyLastCompletedOn =
-                    new DateTime(today.Year, today.Month, today.Day, 0, 0, 0, DateTimeKind.Utc);
+                entity.DailyLastCompletedOn = today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
                 entity.IsCompleted = true;
             }
             else
@@ -902,14 +891,12 @@ public sealed class BoardPersistenceService(
         var newest = days[0];
         if (wasCompleteForToday)
         {
-            entity.DailyLastCompletedOn =
-                new DateTime(today.Year, today.Month, today.Day, 0, 0, 0, DateTimeKind.Utc);
+            entity.DailyLastCompletedOn = today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
             entity.IsCompleted = true;
         }
         else
         {
-            entity.DailyLastCompletedOn =
-                new DateTime(newest.Year, newest.Month, newest.Day, 0, 0, 0, DateTimeKind.Utc);
+            entity.DailyLastCompletedOn = newest.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
             entity.IsCompleted = false;
         }
     }
@@ -924,7 +911,7 @@ public sealed class BoardPersistenceService(
         var newSet = new HashSet<DateOnly>(DailyStreakBackfill.GetLastNScheduledCompletionDays(
             args.DailyStart, args.Repeat, args.Interval, args.Streak, notAfter));
 
-        var toRemove = await _dbContext.UserActivityEvents
+        var toRemove = await dbContext.UserActivityEvents
             .Where(e => e.UserId == userId && e.BoardItemId == itemId && e.EventType == ActivityEventType.DailyComplete)
             .ToListAsync(cancellationToken);
         foreach (var e in toRemove)
@@ -940,14 +927,14 @@ public sealed class BoardPersistenceService(
                 continue;
             }
 
-            _dbContext.UserActivityEvents.Remove(e);
+            dbContext.UserActivityEvents.Remove(e);
         }
 
         foreach (var d in newSet)
         {
             var dayStart = new DateTimeOffset(d.Year, d.Month, d.Day, 0, 0, 0, TimeSpan.Zero);
             var dayEnd = dayStart.AddDays(1);
-            var hasAny = await _dbContext.UserActivityEvents.AnyAsync(
+            var hasAny = await dbContext.UserActivityEvents.AnyAsync(
                 e => e.UserId == userId
                      && e.BoardItemId == itemId
                      && e.EventType == ActivityEventType.DailyComplete
@@ -959,7 +946,7 @@ public sealed class BoardPersistenceService(
                 continue;
             }
 
-            _dbContext.UserActivityEvents.Add(new UserActivityEventEntity
+            dbContext.UserActivityEvents.Add(new UserActivityEventEntity
             {
                 Id = Guid.NewGuid(),
                 UserId = userId,
@@ -972,7 +959,7 @@ public sealed class BoardPersistenceService(
 
     public async Task SeedBoardDataIfMissingAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        if (await LiveBoardItems(_dbContext, userId).AnyAsync(cancellationToken))
+        if (await LiveBoardItems(dbContext, userId).AnyAsync(cancellationToken))
         {
             return;
         }
@@ -986,8 +973,8 @@ public sealed class BoardPersistenceService(
     {
         var utcNow = DateTimeOffset.UtcNow;
         var today = Today();
-        var dayStart = new DateTime(today.Year, today.Month, today.Day, 0, 0, 0, DateTimeKind.Utc);
-        var firstOfMonth = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var dayStart = today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var firstOfMonth = new DateOnly(today.Year, today.Month, 1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
         static DateTime UtcDay(DateOnly d) => new(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc);
 
@@ -1038,7 +1025,7 @@ public sealed class BoardPersistenceService(
             var t = utcNow.AddSeconds(seq);
             row.CreatedAtUtc = t;
             row.UpdatedAtUtc = t;
-            _dbContext.BoardItems.Add(row);
+            dbContext.BoardItems.Add(row);
         }
 
         AddBoardRow(new BoardItemEntity
@@ -1198,7 +1185,7 @@ public sealed class BoardPersistenceService(
         for (var i = 0; i < 3; i++)
         {
             var d = today.AddDays(-(2 - i));
-            _dbContext.UserActivityEvents.Add(new UserActivityEventEntity
+            dbContext.UserActivityEvents.Add(new UserActivityEventEntity
             {
                 Id = Guid.NewGuid(),
                 UserId = userId,
@@ -1209,12 +1196,12 @@ public sealed class BoardPersistenceService(
             });
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        await _boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
     }
 
     private static readonly IReadOnlyDictionary<Guid, int> EmptyDailyStreaks =
-        new Dictionary<Guid, int>();
+        FrozenDictionary<Guid, int>.Empty;
 
     /// <summary>Maps entity to API model (queries the DB for daily streaks). Streak queries use
     /// <see cref="IDbContextFactory{ApplicationDbContext}"/> so they do not overlap the scoped
@@ -1230,7 +1217,7 @@ public sealed class BoardPersistenceService(
             return ToModelWithToday(entity, today, EmptyDailyStreaks);
         }
 
-        await using var readDb = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var dailies = await LiveBoardItems(readDb, userId)
             .AsNoTracking()
             .Where(x => x.Section == BoardSection.Daily)
@@ -1350,7 +1337,7 @@ public sealed class BoardPersistenceService(
         out int interval)
     {
         start = entity.DailyStartDate is { } d0 ? DateOnly.FromDateTime(d0) : null;
-        repeat = Enum.IsDefined(typeof(DailyRepeatType), entity.DailyRepeatType)
+        repeat = Enum.IsDefined((DailyRepeatType)entity.DailyRepeatType)
             ? (DailyRepeatType)entity.DailyRepeatType
             : DailyRepeatType.Daily;
         interval = entity.DailyRepeatInterval < 1 ? 1 : Math.Min(999, entity.DailyRepeatInterval);
@@ -1381,7 +1368,7 @@ public sealed class BoardPersistenceService(
             return (DailyRepeatType.Daily, 1);
         }
 
-        DailyRepeatType repeat = Enum.IsDefined(typeof(DailyRepeatType), entity.DailyRepeatType)
+        DailyRepeatType repeat = Enum.IsDefined((DailyRepeatType)entity.DailyRepeatType)
             ? (DailyRepeatType)entity.DailyRepeatType
             : DailyRepeatType.Daily;
         int interval = entity.DailyRepeatInterval < 1 ? 1 : Math.Min(999, entity.DailyRepeatInterval);
@@ -1390,7 +1377,7 @@ public sealed class BoardPersistenceService(
 
     private static HabitResetPeriod ResolveResetPeriod(BoardItemEntity entity)
     {
-        return Enum.IsDefined(typeof(HabitResetPeriod), entity.ResetPeriod)
+        return Enum.IsDefined((HabitResetPeriod)entity.ResetPeriod)
             ? (HabitResetPeriod)entity.ResetPeriod
             : HabitResetPeriod.Daily;
     }
@@ -1467,7 +1454,7 @@ public sealed class BoardPersistenceService(
         }
 
         entity.SortOrder = sortOrder.Value;
-        var needsRebalance = await _dbContext.BoardItems
+        var needsRebalance = await dbContext.BoardItems
             .AnyAsync(x => x.UserId == userId
                         && x.Section == section
                         && x.DeletedAtUtc == null
@@ -1490,8 +1477,7 @@ public sealed class BoardPersistenceService(
         }
         else
         {
-            entity.DailyLastCompletedOn =
-                new DateTime(today.Year, today.Month, today.Day, 0, 0, 0, DateTimeKind.Utc);
+            entity.DailyLastCompletedOn = today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
             entity.IsCompleted = true;
         }
 
@@ -1513,7 +1499,7 @@ public sealed class BoardPersistenceService(
 
     private async Task<double> GetInitialSortOrderAsync(Guid userId, BoardSection section, CancellationToken cancellationToken)
     {
-        var min = await _dbContext.BoardItems
+        var min = await dbContext.BoardItems
             .Where(x => x.UserId == userId && x.Section == section && x.DeletedAtUtc == null)
             .Select(x => (double?)x.SortOrder)
             .MinAsync(cancellationToken);
@@ -1522,7 +1508,7 @@ public sealed class BoardPersistenceService(
 
     private async Task RebalanceSortOrdersAsync(Guid userId, BoardSection section, CancellationToken cancellationToken)
     {
-        var items = await _dbContext.BoardItems
+        var items = await dbContext.BoardItems
             .Where(x => x.UserId == userId && x.Section == section && x.DeletedAtUtc == null)
             .OrderBy(x => x.SortOrder)
             .ThenBy(x => x.CreatedAtUtc)
@@ -1550,7 +1536,7 @@ public sealed class BoardPersistenceService(
         LockAsync(async () =>
         {
             AddActivityEvent(userId, type, boardItemId, durationSeconds, itemTitleSnapshot);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
         }, cancellationToken);
 
     private void AddActivityEvent(
@@ -1561,7 +1547,7 @@ public sealed class BoardPersistenceService(
         string? customLabel = null,
         DateTimeOffset? occurredAtUtc = null)
     {
-        _dbContext.UserActivityEvents.Add(new UserActivityEventEntity
+        dbContext.UserActivityEvents.Add(new UserActivityEventEntity
         {
             Id = Guid.NewGuid(),
             UserId = userId,

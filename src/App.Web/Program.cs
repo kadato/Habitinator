@@ -16,6 +16,7 @@ const string TestingEnvironment = "Testing";
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddMemoryCache();
 builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
 builder.Services.AddCascadingAuthenticationState();

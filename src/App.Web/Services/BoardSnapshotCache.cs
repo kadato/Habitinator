@@ -1,36 +1,18 @@
-using System.Collections.Concurrent;
-
 using App.Shared.RCL.Models;
+
+using Microsoft.Extensions.Caching.Memory;
 
 namespace App.Web.Services;
 
-public sealed class BoardSnapshotCache
+public sealed class BoardSnapshotCache(IMemoryCache cache)
 {
     private static readonly TimeSpan Ttl = TimeSpan.FromSeconds(4);
-    private readonly ConcurrentDictionary<Guid, CacheEntry> _entries = new();
 
-    public bool TryGet(Guid userId, out BoardSnapshot snapshot)
-    {
-        snapshot = default!;
-        if (!_entries.TryGetValue(userId, out var entry))
-        {
-            return false;
-        }
-
-        if (DateTimeOffset.UtcNow - entry.StoredAtUtc > Ttl)
-        {
-            _entries.TryRemove(userId, out _);
-            return false;
-        }
-
-        snapshot = entry.Snapshot;
-        return true;
-    }
+    public bool TryGet(Guid userId, out BoardSnapshot snapshot) =>
+        cache.TryGetValue(userId, out snapshot!);
 
     public void Set(Guid userId, BoardSnapshot snapshot) =>
-        _entries[userId] = new CacheEntry(snapshot, DateTimeOffset.UtcNow);
+        cache.Set(userId, snapshot, Ttl);
 
-    public void Invalidate(Guid userId) => _entries.TryRemove(userId, out _);
-
-    private sealed record CacheEntry(BoardSnapshot Snapshot, DateTimeOffset StoredAtUtc);
+    public void Invalidate(Guid userId) => cache.Remove(userId);
 }

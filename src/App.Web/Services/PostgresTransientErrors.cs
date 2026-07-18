@@ -1,3 +1,5 @@
+using System.Buffers;
+
 using Microsoft.EntityFrameworkCore;
 
 using Npgsql;
@@ -7,7 +9,8 @@ namespace App.Web.Services;
 /// <summary>Detects PostgreSQL / Neon connection failures that are safe to retry.</summary>
 public static class PostgresTransientErrors
 {
-    private static readonly string[] SqlStates = ["57P01", "08006", "08003"];
+    private static readonly SearchValues<string> SqlStates = SearchValues.Create(
+        ["57P01", "08006", "08003"], StringComparison.Ordinal);
 
     private static readonly string[] MessageSubstrings =
     [
@@ -55,13 +58,13 @@ public static class PostgresTransientErrors
 
         if (ex is PostgresException pg)
         {
-            return SqlStates.Contains(pg.SqlState, StringComparer.Ordinal) || MessageMatches(pg.Message);
+            return SqlStates.Contains(pg.SqlState) || MessageMatches(pg.Message);
         }
 
         if (ex is NpgsqlException npg)
         {
             return npg.IsTransient
-                || (!string.IsNullOrEmpty(npg.SqlState) && SqlStates.Contains(npg.SqlState, StringComparer.Ordinal))
+                || (!string.IsNullOrEmpty(npg.SqlState) && SqlStates.Contains(npg.SqlState))
                 || MessageMatches(npg.Message);
         }
 

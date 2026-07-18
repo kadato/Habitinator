@@ -228,13 +228,11 @@ public sealed class ActivityStatisticsService(
         CancellationToken cancellationToken)
     {
         int maxYear = utcToday.Year;
-        DateTimeOffset? first = await db.UserActivityEvents.AsNoTracking()
+        var firstEvent = await db.UserActivityEvents.AsNoTracking()
             .Where(e => e.UserId == userId && e.EventType == ActivityEventType.DailyComplete)
-            .OrderBy(e => e.OccurredAtUtc)
-            .Select(e => (DateTimeOffset?)e.OccurredAtUtc)
-            .FirstOrDefaultAsync(cancellationToken);
+            .MinByAsync(e => e.OccurredAtUtc, cancellationToken);
 
-        int minYear = first is { } f ? f.UtcDateTime.Year : maxYear;
+        int minYear = firstEvent is { } f ? f.OccurredAtUtc.UtcDateTime.Year : maxYear;
         if (minYear > maxYear)
         {
             minYear = maxYear;

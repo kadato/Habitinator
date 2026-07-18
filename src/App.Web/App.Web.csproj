@@ -32,6 +32,7 @@
     <TargetFramework>net11.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <Features>runtime-async=on</Features>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
     <UserSecretsId>c0c26a95-11d1-492c-ab6e-559ddb4124cc</UserSecretsId>
   </PropertyGroup>

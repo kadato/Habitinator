@@ -23,6 +23,8 @@ public sealed class BoardItemConfiguration : IEntityTypeConfiguration<BoardItemE
         builder.Property(x => x.SortOrder).IsRequired();
         builder.Property(x => x.UpdatedAtUtc).IsRequired();
         builder.HasIndex(x => new { x.UserId, x.Section });
+        builder.HasIndex(x => new { x.UserId, x.DeletedAtUtc });
+        builder.HasIndex(x => new { x.UserId, x.UpdatedAtUtc });
         builder.HasOne(x => x.User)
             .WithMany()
             .HasForeignKey(x => x.UserId)

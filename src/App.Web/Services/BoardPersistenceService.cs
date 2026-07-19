@@ -481,8 +481,8 @@ public sealed class BoardPersistenceService(
             AddActivityEvent(userId, ActivityEventType.DailyComplete, itemId, null, entity.Title,
                 DailyStreakCalculator.BackdatedDailyEventOccurredAt(completedOn));
             await dbContext.SaveChangesAsync(cancellationToken);
-            await SyncDailyStreakCounterToComputedAsync(userId, entity, cancellationToken);
-            var completed = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
+            var streakMap = await SyncDailyStreakCounterToComputedAsync(userId, entity, cancellationToken);
+            var completed = ToModelWithDailyStreaksAsync(entity, streakMap);
             await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
             return new BoardMutationResult(BoardMutationStatus.Ok, completed);
         }, cancellationToken);
@@ -530,12 +530,15 @@ public sealed class BoardPersistenceService(
 
             entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
             await dbContext.SaveChangesAsync(cancellationToken);
+            IReadOnlyDictionary<Guid, int>? streakMap = null;
             if (section == BoardSection.Daily)
             {
-                await SyncDailyStreakCounterToComputedAsync(userId, entity, cancellationToken);
+                streakMap = await SyncDailyStreakCounterToComputedAsync(userId, entity, cancellationToken);
             }
 
-            var toggled = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
+            var toggled = streakMap is not null
+                ? ToModelWithDailyStreaksAsync(entity, streakMap)
+                : await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
             await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
             return new BoardMutationResult(BoardMutationStatus.Ok, toggled);
         }, cancellationToken);
@@ -544,7 +547,7 @@ public sealed class BoardPersistenceService(
     ///     Persists <see cref="BoardItemEntity.Counter" /> to the event-derived streak so the board, edit dialog,
     ///     and statistics stay aligned after check/uncheck (avoids Max(computed, counter) sticking on an old manual value).
     /// </summary>
-    private async Task SyncDailyStreakCounterToComputedAsync(
+    private async Task<IReadOnlyDictionary<Guid, int>> SyncDailyStreakCounterToComputedAsync(
         Guid userId,
         BoardItemEntity dailyEntity,
         CancellationToken cancellationToken)
@@ -560,6 +563,8 @@ public sealed class BoardPersistenceService(
             dailyEntity.UpdatedAtUtc = DateTimeOffset.UtcNow;
             await dbContext.SaveChangesAsync(cancellationToken);
         }
+
+        return map;
     }
 
     public Task LogTimerSessionAsync(
@@ -930,30 +935,40 @@ public sealed class BoardPersistenceService(
             dbContext.UserActivityEvents.Remove(e);
         }
 
-        foreach (var d in newSet)
+        if (newSet.Count > 0)
         {
-            var dayStart = new DateTimeOffset(d.Year, d.Month, d.Day, 0, 0, 0, TimeSpan.Zero);
-            var dayEnd = dayStart.AddDays(1);
-            var hasAny = await dbContext.UserActivityEvents.AnyAsync(
-                e => e.UserId == userId
-                     && e.BoardItemId == itemId
-                     && e.EventType == ActivityEventType.DailyComplete
-                     && e.OccurredAtUtc >= dayStart
-                     && e.OccurredAtUtc < dayEnd,
-                cancellationToken);
-            if (hasAny)
-            {
-                continue;
-            }
+            var minDay = newSet.Min();
+            var maxDay = newSet.Max();
+            var rangeStart = new DateTimeOffset(minDay.Year, minDay.Month, minDay.Day, 0, 0, 0, TimeSpan.Zero);
+            var rangeEnd = new DateTimeOffset(maxDay.Year, maxDay.Month, maxDay.Day, 0, 0, 0, TimeSpan.Zero).AddDays(1);
 
-            dbContext.UserActivityEvents.Add(new UserActivityEventEntity
+            var existingDates = await dbContext.UserActivityEvents
+                .Where(e => e.UserId == userId
+                            && e.BoardItemId == itemId
+                            && e.EventType == ActivityEventType.DailyComplete
+                            && e.OccurredAtUtc >= rangeStart
+                            && e.OccurredAtUtc < rangeEnd)
+                .Select(e => e.OccurredAtUtc)
+                .ToListAsync(cancellationToken);
+            var existingSet = new HashSet<DateOnly>(
+                existingDates.Select(d => DateOnly.FromDateTime(d.UtcDateTime)));
+
+            foreach (var d in newSet)
             {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                OccurredAtUtc = DailyStreakBackfill.StreakBackfillOccurredAt(d),
-                EventType = ActivityEventType.DailyComplete,
-                BoardItemId = itemId
-            });
+                if (existingSet.Contains(d))
+                {
+                    continue;
+                }
+
+                dbContext.UserActivityEvents.Add(new UserActivityEventEntity
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    OccurredAtUtc = DailyStreakBackfill.StreakBackfillOccurredAt(d),
+                    EventType = ActivityEventType.DailyComplete,
+                    BoardItemId = itemId
+                });
+            }
         }
     }
 
@@ -1223,6 +1238,14 @@ public sealed class BoardPersistenceService(
             .Where(x => x.Section == BoardSection.Daily)
             .ToListAsync(cancellationToken);
         var streaks = await BuildDailyStreakMapAsync(userId, dailies, today, readDb, cancellationToken);
+        return ToModelWithToday(entity, today, streaks);
+    }
+
+    private BoardItem ToModelWithDailyStreaksAsync(
+        BoardItemEntity entity,
+        IReadOnlyDictionary<Guid, int> streaks)
+    {
+        var today = Today();
         return ToModelWithToday(entity, today, streaks);
     }
 

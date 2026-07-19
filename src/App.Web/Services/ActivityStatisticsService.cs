@@ -209,6 +209,27 @@ public sealed class ActivityStatisticsService(
             return null;
         }
 
+        if (wantedTags.Length == 1)
+        {
+            var t = wantedTags[0].Trim();
+            if (t.Length == 0)
+            {
+                return null;
+            }
+
+            var ids = await db.BoardItems.AsNoTracking()
+                .Where(b => b.UserId == userId && b.DeletedAtUtc == null
+                    && b.Tags != null
+                    && (b.Tags == t
+                        || b.Tags.StartsWith(t + ",")
+                        || b.Tags.Contains("," + t + ",")
+                        || b.Tags.EndsWith("," + t)))
+                .Select(b => b.Id)
+                .ToListAsync(cancellationToken);
+
+            return [.. ids];
+        }
+
         HashSet<string> wantedSet = new(wantedTags, StringComparer.OrdinalIgnoreCase);
 
         var rows = await db.BoardItems.AsNoTracking()

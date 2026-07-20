@@ -32,6 +32,7 @@ html {
     --scrollbar-track: var(--mud-palette-background);
     scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
     scrollbar-width: thin;
+    scrollbar-gutter: stable;
 }
 
 @supports not (scrollbar-color: auto) {
@@ -54,7 +55,7 @@ html, body {
     background-color: var(--hab-bg-light);
     color: var(--mud-palette-text-primary);
     -webkit-tap-highlight-color: transparent;
-    accent-color: var(--mud-palette-primary);
+    accent-color: light-dark(#2563eb, #60a5fa);
 }
 
 html.dark-theme, html.dark-theme body {
@@ -113,6 +114,11 @@ a:hover, .btn-link:hover {
 
 .form-check-label {
     color: var(--mud-palette-text-secondary);
+}
+
+/* Cap content line lengths for readability */
+.board-card__notes {
+    max-width: 55ch;
 }
 
 .form-check-input {
@@ -258,6 +264,7 @@ h1:focus {
     border-bottom: 1px solid var(--mud-palette-divider);
     padding-bottom: 0.5rem;
     margin-bottom: 1rem;
+    max-width: 75ch;
 }
 
 /* App bar: MudToolBar can shrink-wrap; force full width + flex spacer so user/logout stay on the right edge */

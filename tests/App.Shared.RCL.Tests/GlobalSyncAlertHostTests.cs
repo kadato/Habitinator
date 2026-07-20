@@ -41,7 +41,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
 
         // Act - Transition to Offline
         _boardSync.IsOffline = true;
-        await cut.InvokeAsync(() => _boardSync.RaiseChanged());
+        await cut.InvokeAsync(_boardSync.RaiseChanged);
 
         // Assert
         await _notifier.Received(1).NotifyAsync(
@@ -59,7 +59,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
 
         // Act - Transition to Online
         _boardSync.IsOffline = false;
-        await cut.InvokeAsync(() => _boardSync.RaiseChanged());
+        await cut.InvokeAsync(_boardSync.RaiseChanged);
 
         // Assert
         await _notifier.Received(1).NotifyAsync(
@@ -77,7 +77,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
 
         // Act - Transition to Sync Problem
         _boardSync.SyncProblemMessage = "Stuck outbox item.";
-        await cut.InvokeAsync(() => _boardSync.RaiseChanged());
+        await cut.InvokeAsync(_boardSync.RaiseChanged);
 
         // Assert
         await _notifier.Received(1).NotifyAsync(
@@ -95,7 +95,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
 
         // Act - Transition to Null (resolved)
         _boardSync.SyncProblemMessage = null;
-        await cut.InvokeAsync(() => _boardSync.RaiseChanged());
+        await cut.InvokeAsync(_boardSync.RaiseChanged);
 
         // Assert
         await _notifier.Received(1).NotifyAsync(
@@ -115,7 +115,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         // Act - Transition to Offline and Offline problem message simultaneously
         _boardSync.IsOffline = true;
         _boardSync.SyncProblemMessage = "Offline — board changes stay on this device...";
-        await cut.InvokeAsync(() => _boardSync.RaiseChanged());
+        await cut.InvokeAsync(_boardSync.RaiseChanged);
 
         // Assert - Warn was sent, Error was suppressed
         await _notifier.Received(1).NotifyAsync(
@@ -136,7 +136,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
 
         // Act - Transition to Offline
         _boardSync.IsOffline = true;
-        await cut.InvokeAsync(() => _boardSync.RaiseChanged());
+        await cut.InvokeAsync(_boardSync.RaiseChanged);
 
         // Assert
         await _notifier.DidNotReceive().NotifyAsync(Arg.Any<string>(), Arg.Any<Severity>());

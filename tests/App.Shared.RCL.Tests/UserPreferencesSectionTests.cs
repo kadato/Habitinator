@@ -91,8 +91,12 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         var tzSelect = cut.FindComponent<MudSelect<string>>();
         tzSelect.Instance.Value.Should().Be("America/New_York");
 
-        var themeSelect = cut.FindComponent<MudSelect<AppTheme>>();
-        themeSelect.Instance.Value.Should().Be(AppTheme.Dark);
+        // Theme is now a 2-state toggle (MudSwitch + MudButton), not a MudSelect
+        var themeSwitch = cut.FindComponents<MudSwitch<bool>>()[0];
+        // Preference is Dark (pinned), so "Sync with system" is OFF
+        themeSwitch.Instance.Value.Should().BeFalse();
+        // The toggle button label should reflect the opposite of pinned (Light mode)
+        cut.Markup.Should().Contain("Light mode");
     }
 
     [Fact]
@@ -182,7 +186,7 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task AutoSaves_Theme_Immediately()
+    public async Task AutoSaves_Theme_WhenTogglingOffSystemSync()
     {
         // Arrange
         var prefs = new UserPreferences
@@ -192,10 +196,41 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(prefs));
 
         var cut = _ctx.Render<UserPreferencesSection>();
-        var themeSelect = cut.FindComponent<MudSelect<AppTheme>>();
 
-        // Act - change theme
-        await cut.InvokeAsync(() => themeSelect.Instance.ValueChanged.InvokeAsync(AppTheme.Light));
+        // The first MudSwitch<bool> is the "Sync with system" theme switch
+        var themeSwitch = cut.FindComponents<MudSwitch<bool>>()[0];
+
+        // Initial: Sync with system is ON
+        themeSwitch.Instance.Value.Should().BeTrue();
+
+        // Act - turn off system sync (pins to dark)
+        await cut.InvokeAsync(() => themeSwitch.Instance.ValueChanged.InvokeAsync(false));
+
+        // Assert - default pinned theme is Dark when unpinning
+        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p.Theme == AppTheme.Dark));
+    }
+
+    [Fact]
+    public async Task AutoSaves_Theme_WhenTogglingPinnedTheme()
+    {
+        // Arrange
+        var prefs = new UserPreferences
+        {
+            Theme = AppTheme.Dark
+        };
+        _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(prefs));
+
+        var cut = _ctx.Render<UserPreferencesSection>();
+
+        // Theme is dark, so "Sync with system" is OFF, and button shows "Light mode"
+        var themeSwitch = cut.FindComponents<MudSwitch<bool>>()[0];
+        themeSwitch.Instance.Value.Should().BeFalse();
+
+        // Find the theme toggle button (the MudButton next to the switch)
+        var themeBtn = cut.FindAll(".text-transform-none").First(b => b.TextContent.Contains("mode"));
+
+        // Act - click the toggle button to switch from Dark to Light
+        await cut.InvokeAsync(() => themeBtn.Click());
 
         // Assert
         await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p.Theme == AppTheme.Light));
@@ -215,7 +250,7 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         var displayNameField = cut.FindComponents<MudTextField<string>>()[0];
 
         // Act - set long name and blur
-        string longName = new string('A', 41);
+        var longName = new string('A', 41);
         await cut.InvokeAsync(() => displayNameField.Instance.ValueChanged.InvokeAsync(longName));
         await cut.InvokeAsync(() => displayNameField.Instance.OnBlur.InvokeAsync(new Microsoft.AspNetCore.Components.Web.FocusEventArgs()));
 
@@ -413,11 +448,14 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         _preferencesService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(prefs));
 
         var cut = _ctx.Render<UserPreferencesSection>();
-        var switchComponent = cut.FindComponent<MudSwitch<bool>>();
-        switchComponent.Instance.Value.Should().BeTrue();
+        // There are now 2 MudSwitch<bool>: theme sync + keyboard shortcuts
+        // The keyboard shortcuts switch is labeled "Enable keyboard shortcuts"
+        var switches = cut.FindComponents<MudSwitch<bool>>();
+        var kbSwitch = switches.Last(s => s.Instance.Label == "Enable keyboard shortcuts");
+        kbSwitch.Instance.Value.Should().BeTrue();
 
         // Act
-        await cut.InvokeAsync(() => switchComponent.Instance.ValueChanged.InvokeAsync(false));
+        await cut.InvokeAsync(() => kbSwitch.Instance.ValueChanged.InvokeAsync(false));
 
         // Assert
         await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => !p.EnableKeyboardShortcuts));

@@ -158,14 +158,26 @@
             <MudStack Spacing="2">
                 <MudText Typo="Typo.subtitle1" Class="mb-1">Theme</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
-                    Choose your visual theme or sync with system preferences.
+                    Sync with your system theme or pin a specific mode.
                 </MudText>
-                <MudSelect T="AppTheme" Label="Theme mode" Variant="Variant.Outlined" dense="true"
-                           Value="_themeSelection" ValueChanged="OnThemeChanged">
-                    <MudSelectItem Value="@AppTheme.System">System default</MudSelectItem>
-                    <MudSelectItem Value="@AppTheme.Light">Light mode</MudSelectItem>
-                    <MudSelectItem Value="@AppTheme.Dark">Dark mode</MudSelectItem>
-                </MudSelect>
+                <div class="d-flex flex-row align-center flex-wrap gap-2">
+                    <MudSwitch T="bool"
+                               Value="_useSystemTheme"
+                               ValueChanged="OnUseSystemThemeChanged"
+                               Color="Color.Primary"
+                               Label="Sync with system" />
+                    <MudButton Variant="@(_pinnedThemeBtnVariant)"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               Class="text-transform-none"
+                               Disabled="@_useSystemTheme"
+                               OnClick="TogglePinnedTheme">
+                        @_pinnedThemeBtnLabel
+                    </MudButton>
+                </div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    @_themeStatusText
+                </MudText>
             </MudStack>
         </MudPaper>
 
@@ -201,7 +213,10 @@
     private string? _displayNameError;
     private string? _dateFormatError;
     private string? _dayStartError;
-    private AppTheme _themeSelection = AppTheme.System;
+    private bool _useSystemTheme = true;
+    private string _pinnedThemeBtnLabel = "Light mode";
+    private Variant _pinnedThemeBtnVariant = Variant.Outlined;
+    private string _themeStatusText = string.Empty;
 
     private readonly List<(string Id, string Label)> _timeZones = new();
 
@@ -235,7 +250,8 @@
         _timeZoneSelection = string.IsNullOrWhiteSpace(_model.TimeZoneOverrideId)
             ? AutoTimeZoneValue
             : _model.TimeZoneOverrideId;
-        _themeSelection = _model.Theme;
+        _useSystemTheme = _model.Theme == AppTheme.System;
+        UpdatePinnedThemeState();
         _detectedTimeZoneLabel = TimeZoneService.TimeZoneId ?? "Unknown";
         UpdateTimeZoneList();
         UpdateDatePreview();
@@ -346,12 +362,51 @@
         await AutoSaveAsync();
     }
 
-    private async Task OnThemeChanged(AppTheme value)
+    private async Task OnUseSystemThemeChanged(bool useSystem)
     {
         if (_model is null) return;
-        _themeSelection = value;
-        _model.Theme = value;
+        _useSystemTheme = useSystem;
+        if (useSystem)
+        {
+            _model.Theme = AppTheme.System;
+        }
+        else
+        {
+            // Pin to dark mode (app default) when unpinning from system; user can toggle with button
+            _model.Theme = AppTheme.Dark;
+        }
+        UpdatePinnedThemeState();
         await AutoSaveAsync();
+    }
+
+    private async Task TogglePinnedTheme()
+    {
+        if (_model is null) return;
+        // Flip pinned theme: light → dark, dark → light
+        _model.Theme = _model.Theme == AppTheme.Dark ? AppTheme.Light : AppTheme.Dark;
+        UpdatePinnedThemeState();
+        await AutoSaveAsync();
+    }
+
+    private void UpdatePinnedThemeState()
+    {
+        if (_model is null) return;
+        if (_model.Theme == AppTheme.System)
+        {
+            _useSystemTheme = true;
+            _pinnedThemeBtnLabel = "Switch theme";
+            _pinnedThemeBtnVariant = Variant.Outlined;
+            _themeStatusText = "Following system preference";
+        }
+        else
+        {
+            _useSystemTheme = false;
+            var pinned = _model.Theme == AppTheme.Dark ? "dark" : "light";
+            var opposite = _model.Theme == AppTheme.Dark ? "light" : "dark";
+            _pinnedThemeBtnLabel = $"{char.ToUpper(opposite[0]) + opposite[1..]} mode";
+            _pinnedThemeBtnVariant = Variant.Filled;
+            _themeStatusText = $"{char.ToUpper(pinned[0]) + pinned[1..]} theme (pinned)";
+        }
     }
 
     private async Task OnEnableKeyboardShortcutsChanged(bool value)

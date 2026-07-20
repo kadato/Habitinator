@@ -1,3 +1,11 @@
+/* Container queries: board cards adapt to their column width, not the viewport */
+@supports (container-type: inline-size) {
+    .board-sortable-list {
+        container-type: inline-size;
+        container-name: board-col;
+    }
+}
+
 .board-card {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
@@ -535,5 +543,50 @@
         width: 1.3rem;
         height: 1.3rem;
     }
+}
+
+/* Container query: narrow columns get more compact cards */
+@container board-col (max-width: 280px) {
+    .board-card {
+        padding: 0.25rem 0.4rem;
+        column-gap: 0.35rem;
+    }
+    .board-card__title-text {
+        font-size: 0.825rem;
+    }
+    .board-card__foot {
+        flex-wrap: wrap;
+        gap: 0.15rem;
+    }
+    .board-card__tags {
+        gap: 0.2rem;
+    }
+}
+
+/* Container query: wide columns get more spacious cards */
+@container board-col (min-width: 380px) {
+    .board-card {
+        padding: 0.45rem 0.65rem;
+        column-gap: 0.65rem;
+    }
+}
+
+/* Content-aware card styling with :has() */
+.board-card:has(.board-card__notes) {
+    padding-bottom: 0.5rem;
+}
+
+.board-card:has(.board-card__tags .board-card__tag-badge) .board-card__head {
+    margin-bottom: 0.1rem;
+}
+
+/* Card without any tags/notes gets tighter spacing */
+.board-card:not(:has(.board-card__tags .board-card__tag-badge)):not(:has(.board-card__notes)) .board-card__extra {
+    margin-bottom: -0.1rem;
+}
+
+/* Completed cards with no notes look cleaner */
+.board-card.board-row--done:not(:has(.board-card__notes)) {
+    opacity: 0.7;
 }
 

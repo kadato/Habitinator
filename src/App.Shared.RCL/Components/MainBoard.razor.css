@@ -63,6 +63,14 @@
     }
 }
 
+/* content-visibility: defer rendering of off-screen tab panels on mobile for faster initial paint */
+@media (max-width: 959.98px) {
+    .board-section-tabs ::deep .mud-tab-panel:not([aria-hidden="false"]) {
+        content-visibility: auto;
+        contain-intrinsic-size: auto 500px;
+    }
+}
+
 .board-columns-grid {
     flex-shrink: 0;
     margin-top: -12px !important;

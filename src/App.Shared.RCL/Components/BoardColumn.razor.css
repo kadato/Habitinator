@@ -302,3 +302,10 @@
     line-height: 1.4;
     font-size: 0.75rem;
 }
+
+/* Scroll-state container: progressive enhancement for future scroll shadow support */
+@supports (container-type: scroll-state) {
+    .board-sortable-list {
+        container-type: scroll-state;
+    }
+}

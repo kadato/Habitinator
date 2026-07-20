@@ -101,7 +101,8 @@
                                Clearable="true"
                                Margin="Margin.Dense"/>
 
-                <MudText Typo="Typo.caption" Class="edit-daily-label-body d-block mb-1 mt-2">Tags</MudText>
+                <fieldset class="mb-3" style="border: none; padding: 0; margin: 0;">
+                <legend class="edit-daily-label-body d-block mb-1 mt-2" style="font-size: 0.75rem;">Tags</legend>
                 <div class="habit-tag-picker @(_tagPickerOpen ? "habit-tag-picker--open" : null)"
                      @onclick:stopPropagation="true">
                     <div class="habit-tag-picker__control"
@@ -185,6 +186,7 @@
                         </div>
                     </div>
                 </div>
+                </fieldset>
 
                 <div class="edit-daily-delete-wrap">
                     <MudStack Row="true" Justify="Justify.SpaceBetween" Style="width: 100%;">

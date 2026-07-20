@@ -90,35 +90,38 @@
         </MudExpansionPanel>
     </MudExpansionPanels>
 
-    <MudText Typo="Typo.caption" Class="edit-habit-label-body d-block mb-2">Which counters to show</MudText>
-    <div class="habit-track">
-        <button type="button"
-                class="habit-track__option @(_trackPlus ? "habit-track__option--on-good" : string.Empty)"
-                @onclick="@(() => _trackPlus = !_trackPlus)"
-                @attributes="PlusAria">
-            <span class="habit-track__circle habit-track__circle--good">
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-            </span>
-            <span class="habit-track__label">Plus</span>
-        </button>
-        <button type="button"
-                class="habit-track__option @(_trackMinus ? "habit-track__option--on-bad" : string.Empty)"
-                @onclick="@(() => _trackMinus = !_trackMinus)"
-                @attributes="MinusAria">
-            <span class="habit-track__circle habit-track__circle--bad">
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-            </span>
-            <span class="habit-track__label">Minus</span>
-        </button>
-    </div>
-    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1 mb-0">Turn on one or both. At least one must stay on when you save.</MudText>
+    <fieldset class="mb-3" style="border: none; padding: 0; margin: 0;">
+        <legend class="edit-habit-label-body d-block mb-2" style="font-size: 0.75rem;">Which counters to show</legend>
+        <div class="habit-track">
+            <button type="button"
+                    class="habit-track__option @(_trackPlus ? "habit-track__option--on-good" : string.Empty)"
+                    @onclick="@(() => _trackPlus = !_trackPlus)"
+                    @attributes="PlusAria">
+                <span class="habit-track__circle habit-track__circle--good">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </span>
+                <span class="habit-track__label">Plus</span>
+            </button>
+            <button type="button"
+                    class="habit-track__option @(_trackMinus ? "habit-track__option--on-bad" : string.Empty)"
+                    @onclick="@(() => _trackMinus = !_trackMinus)"
+                    @attributes="MinusAria">
+                <span class="habit-track__circle habit-track__circle--bad">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </span>
+                <span class="habit-track__label">Minus</span>
+            </button>
+        </div>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1 mb-0">Turn on one or both. At least one must stay on when you save.</MudText>
+    </fieldset>
 
-    <MudText Typo="Typo.caption" Class="edit-habit-label-body d-block mb-1">Tags</MudText>
+    <fieldset class="mb-3" style="border: none; padding: 0; margin: 0;">
+    <legend class="edit-habit-label-body d-block mb-1" style="font-size: 0.75rem;">Tags</legend>
     <div class="habit-tag-picker @(_tagPickerOpen ? "habit-tag-picker--open" : null)"
          @onclick:stopPropagation="true">
         <div class="habit-tag-picker__control"
@@ -203,7 +206,10 @@
         </div>
     </div>
 
-    <MudText Typo="Typo.caption" Class="edit-habit-label-body d-block mb-1 mt-2">Reset counter</MudText>
+    </fieldset>
+
+    <fieldset class="mb-3" style="border: none; padding: 0; margin: 0;">
+    <legend class="edit-habit-label-body d-block mb-1 mt-2" style="font-size: 0.75rem;">Reset counter</legend>
     <MudSelect T="HabitResetPeriod"
                @bind-Value="_resetPeriod"
                Variant="Variant.Outlined"
@@ -216,6 +222,7 @@
         <MudSelectItem T="HabitResetPeriod" Value="HabitResetPeriod.Weekly">Weekly</MudSelectItem>
         <MudSelectItem T="HabitResetPeriod" Value="HabitResetPeriod.Monthly">Monthly</MudSelectItem>
     </MudSelect>
+    </fieldset>
 
     <MudExpansionPanels Class="edit-habit-advanced mt-2" Elevation="0">
         <MudExpansionPanel @bind-Expanded="_advancedOpen">
@@ -226,6 +233,7 @@
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">Adjust + count</MudText>
                 <div class="counter-adjust mb-3">
                     <MudIconButton Icon="@Icons.Material.Filled.Remove"
+                                   aria-label="Decrease + count"
                                    Class="counter-adjust__btn"
                                    OnClick="DecrementPlusLocal"
                                    Disabled="@(_counter < 1 || _saving)"/>
@@ -236,6 +244,7 @@
                                      HideSpinButtons="true"
                                      Margin="Margin.Dense"/>
                     <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                   aria-label="Increase + count"
                                    Class="counter-adjust__btn"
                                    OnClick="IncrementPlusLocal"
                                    Disabled="@_saving"/>
@@ -243,6 +252,7 @@
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">Adjust − count</MudText>
                 <div class="counter-adjust">
                     <MudIconButton Icon="@Icons.Material.Filled.Remove"
+                                   aria-label="Decrease − count"
                                    Class="counter-adjust__btn"
                                    OnClick="DecrementMinusLocal"
                                    Disabled="@(_negativeCounter < 1 || _saving)"/>
@@ -253,6 +263,7 @@
                                      HideSpinButtons="true"
                                      Margin="Margin.Dense"/>
                     <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                   aria-label="Increase − count"
                                    Class="counter-adjust__btn"
                                    OnClick="IncrementMinusLocal"
                                    Disabled="@_saving"/>

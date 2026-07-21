@@ -4,7 +4,122 @@
     --hab-bg-dark: #0b0f19;
 }
 
-/* Top Loading Bar */
+/* ── WASM Loading Splash Screen ─────────────────────────────────────────── */
+
+#habitinator-wasm-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--hab-bg-dark);
+    transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+
+/* Light-mode variant */
+html.light-theme #habitinator-wasm-splash {
+    background: var(--hab-bg-light);
+}
+@media (prefers-color-scheme: light) {
+    html:not(.dark-theme) #habitinator-wasm-splash {
+        background: var(--hab-bg-light);
+    }
+}
+
+.wasm-splash--hidden {
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+.wasm-splash__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.wasm-splash__logo {
+    animation: splash-pulse 2s ease-in-out infinite;
+}
+
+@keyframes splash-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+.wasm-splash__title {
+    font-family: var(--hab-font-sans, system-ui, -apple-system, sans-serif);
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #f1f5f9;
+    margin: 0;
+}
+
+html.light-theme .wasm-splash__title {
+    color: #1e293b;
+}
+@media (prefers-color-scheme: light) {
+    html:not(.dark-theme) .wasm-splash__title {
+        color: #1e293b;
+    }
+}
+
+/* Indeterminate progress bar */
+.wasm-splash__progress {
+    width: 180px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+html.light-theme .wasm-splash__progress {
+    background: rgba(0, 0, 0, 0.08);
+}
+@media (prefers-color-scheme: light) {
+    html:not(.dark-theme) .wasm-splash__progress {
+        background: rgba(0, 0, 0, 0.08);
+    }
+}
+
+.wasm-splash__progress-bar {
+    height: 100%;
+    width: 5%;
+    min-width: 4%;
+    max-width: 100%;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    border-radius: 999px;
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.wasm-splash__hint {
+    font-family: var(--hab-font-sans, system-ui, -apple-system, sans-serif);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.45);
+    margin: 0;
+}
+
+html.light-theme .wasm-splash__hint {
+    color: rgba(0, 0, 0, 0.35);
+}
+@media (prefers-color-scheme: light) {
+    html:not(.dark-theme) .wasm-splash__hint {
+        color: rgba(0, 0, 0, 0.35);
+    }
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+    .wasm-splash__logo,
+    .wasm-splash__progress-bar {
+        animation: none;
+    }
+}
+
+/* ── Top Loading Bar (legacy, inside WASM-rendered layout) ─────────────── */
 #habitinator-loading-bar {
     position: fixed;
     top: 0;

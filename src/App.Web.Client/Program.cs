@@ -75,6 +75,7 @@ WebAssemblyHost host = builder.Build();
 try
 {
     IJSRuntime js = host.Services.GetRequiredService<IJSRuntime>();
+    await js.InvokeVoidAsync("habUpdateProgress", "Starting application\u2026", 90);
     await js.InvokeVoidAsync("habitinatorSetWasmLoaded");
 }
 catch

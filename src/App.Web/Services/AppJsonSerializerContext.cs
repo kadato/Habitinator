@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 
 using App.Shared.RCL.Models;
+using App.Shared.RCL.Services.Remote;
 using App.Web.Models;
 
 namespace App.Web.Services;
@@ -22,6 +23,7 @@ namespace App.Web.Services;
 [JsonSerializable(typeof(BoardSyncDelta))]
 [JsonSerializable(typeof(BoardSyncItem))]
 [JsonSerializable(typeof(DailyChecklistItem))]
+[JsonSerializable(typeof(ActivityLogRequest))]
 public partial class AppJsonSerializerContext : JsonSerializerContext
 {
 }

@@ -2,6 +2,12 @@ namespace App.Web.Middleware;
 
 public sealed class SecurityHeadersMiddleware(RequestDelegate next)
 {
+    private static readonly HashSet<string> ImmutablePathPrefixes =
+    [
+        "/_framework/",
+        "/_content/"
+    ];
+
     public Task InvokeAsync(HttpContext context)
     {
         var headers = context.Response.Headers;
@@ -26,6 +32,24 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next)
             "upgrade-insecure-requests";
 #pragma warning restore S7039
 
+        // Set aggressive caching for fingerprinted framework assets (immutable, 1 year)
+        if (IsImmutableAsset(context.Request.Path))
+        {
+            headers.CacheControl = "public, max-age=31536000, immutable";
+        }
+
         return next(context);
+    }
+
+    private static bool IsImmutableAsset(PathString path)
+    {
+        var pathValue = path.Value;
+        if (string.IsNullOrEmpty(pathValue))
+        {
+            return false;
+        }
+
+        return ImmutablePathPrefixes.Any(prefix =>
+            pathValue.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
     }
 }

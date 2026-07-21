@@ -1,0 +1,7 @@
+<linker>
+  <!-- MudBlazor uses reflection for component discovery -->
+  <assembly fullname="MudBlazor" />
+  <!-- Keep all app types -->
+  <assembly fullname="App.Web.Client" />
+  <assembly fullname="App.Shared.RCL" />
+</linker>

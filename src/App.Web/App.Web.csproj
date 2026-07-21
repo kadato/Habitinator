@@ -35,6 +35,9 @@
     <Features>runtime-async=on</Features>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
     <UserSecretsId>c0c26a95-11d1-492c-ab6e-559ddb4124cc</UserSecretsId>
+    <!-- JSON source generation is used as preference (AppJsonSerializerContext inserted at position 0),
+         but reflection fallback is allowed for types not yet annotated with [JsonSerializable].
+         The WASM client project uses JsonSerializerIsReflectionEnabledByDefault=false for trim safety. -->
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(PUBLISH_SELF_CONTAINED)' == 'true'">

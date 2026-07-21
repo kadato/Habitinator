@@ -13,7 +13,33 @@
     <RunAOTCompilation Condition="'$(Configuration)' == 'Release'">true</RunAOTCompilation>
     <!-- Webcil: repackage DLLs as .wasm for better CDN/proxy compatibility -->
     <WasmEnableWebcil>true</WasmEnableWebcil>
+
+    <!-- ── Size optimizations (safe) ── -->
+    <EventSourceSupport>false</EventSourceSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+
+    <!-- ── AOT build optimizations (Release only, no effect in Debug) ── -->
+    <WasmNativeStrip Condition="'$(Configuration)' == 'Release'">true</WasmNativeStrip>
+    <WasmStripILAfterAOT Condition="'$(Configuration)' == 'Release'">true</WasmStripILAfterAOT>
+
+    <!-- ── Runtime performance ── -->
+    <BlazorWebAssemblyJiterpreter>true</BlazorWebAssemblyJiterpreter>
+
+    <!-- ── Trim safety ── -->
+    <!-- JsonSerializerIsReflectionEnabledByDefault is NOT set here because
+         the Blazor WASM runtime itself uses reflection-based JSON internally
+         for component parameter marshaling and state persistence. Keeping it
+         enabled allows the framework to work while our app code still benefits
+         from the TrimmerRootDescriptor for MudBlazor reflection safety. -->
+    <!-- Suppress known-safe framework trim warnings (JS interop, Blazor router) -->
+    <NoWarn>$(NoWarn);IL2026;IL2111;IL2110</NoWarn>
   </PropertyGroup>
+
+  <!-- Trim-root descriptor for reflection-dependent libraries -->
+  <ItemGroup>
+    <TrimmerRootDescriptor Include="TrimmerRoots.xml" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />

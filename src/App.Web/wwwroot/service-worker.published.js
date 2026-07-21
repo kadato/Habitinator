@@ -1,5 +1,8 @@
-const CACHE_NAME = 'habitinator-v2';
-const PRE_CACHE_ASSETS = [
+const CACHE_NAME = 'habitinator-v3';
+const FRAMEWORK_CACHE = 'habitinator-framework-v3';
+
+// Shell assets: always pre-cached for instant offline rendering
+const SHELL_ASSETS = [
     '/',
     '/manifest.webmanifest',
     '/favicon.ico',
@@ -17,10 +20,14 @@ const PRE_CACHE_ASSETS = [
     '/_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2'
 ];
 
+// Framework assets pattern: match all .wasm and .js files under _framework/
+const FRAMEWORK_ASSET_PATTERN = /^\/_framework\/(.+\.(wasm|js))$/i;
+const CONTENT_ASSET_PATTERN = /^\/_content\/(.+\.(wasm|js|css|woff2?))$/i;
+
 globalThis.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
-            return cache.addAll(PRE_CACHE_ASSETS);
+            return cache.addAll(SHELL_ASSETS);
         }).then(() => globalThis.skipWaiting())
     );
 });
@@ -30,8 +37,8 @@ globalThis.addEventListener('activate', event => {
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cacheName => {
-                    if (cacheName !== CACHE_NAME) {
-                        console.log('Deleting old cache:', cacheName);
+                    if (cacheName !== CACHE_NAME && cacheName !== FRAMEWORK_CACHE) {
+                        console.log('Habitinator SW: deleting old cache:', cacheName);
                         return caches.delete(cacheName);
                     }
                 })
@@ -57,8 +64,27 @@ globalThis.addEventListener('fetch', event => {
         return;
     }
 
-    // For navigation requests, try the network first to get the latest server-rendered content,
-    // but fall back to the cached index/shell if offline.
+    // ── Framework assets: cache-first + network update (immutable, fingerprinted) ──
+    if (FRAMEWORK_ASSET_PATTERN.test(url.pathname) || CONTENT_ASSET_PATTERN.test(url.pathname)) {
+        event.respondWith(
+            caches.open(FRAMEWORK_CACHE).then(cache =>
+                cache.match(event.request).then(cached => {
+                    const networkFetch = fetch(event.request).then(response => {
+                        if (response?.status === 200) {
+                            cache.put(event.request, response.clone());
+                        }
+                        return response;
+                    }).catch(() => cached);
+
+                    // Return cached immediately, update cache in background
+                    return cached || networkFetch;
+                })
+            )
+        );
+        return;
+    }
+
+    // ── Navigation requests: network-first, fall back to cached shell ──
     if (event.request.mode === 'navigate') {
         event.respondWith(
             fetch(event.request).catch(() => {
@@ -68,8 +94,7 @@ globalThis.addEventListener('fetch', event => {
         return;
     }
 
-    // For other assets, use cache-first strategy.
-    // This includes Blazor framework files, DLLs, static assets, etc.
+    // ── Other assets: cache-first ──
     event.respondWith(
         caches.match(event.request).then(cachedResponse => {
             if (cachedResponse) {
@@ -77,15 +102,12 @@ globalThis.addEventListener('fetch', event => {
             }
 
             return fetch(event.request).then(networkResponse => {
-                // Check if we received a valid response
                 if (networkResponse?.status === 200 && networkResponse?.type === 'basic') {
-                    // Cache the newly retrieved asset
                     const responseToCache = networkResponse.clone();
                     caches.open(CACHE_NAME).then(cache => {
                         cache.put(event.request, responseToCache);
                     });
                 }
-
                 return networkResponse;
             });
         })

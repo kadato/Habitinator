@@ -250,6 +250,14 @@
                 {
                     app.UserAppTheme = Microsoft.Maui.ApplicationModel.AppTheme.Light;
                 }
+
+                // Keep the safe area (behind transparent status bar) in sync with the theme.
+                if (app.Windows.FirstOrDefault()?.Page is { } page)
+                {
+                    page.BackgroundColor = _isDarkMode
+                        ? new Microsoft.Maui.Graphics.Color(11, 15, 25)
+                        : new Microsoft.Maui.Graphics.Color(248, 250, 252);
+                }
             }
         }
         catch

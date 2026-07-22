@@ -4,6 +4,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:components="clr-namespace:App.MAUI.Components"
              xmlns:blazorweb="clr-namespace:Microsoft.AspNetCore.Components.Web;assembly=Microsoft.AspNetCore.Components.Web"
+             SafeAreaEdges="Container"
              x:Class="App.MAUI.MainPage"
              AutomationProperties.AutomationId="uitest-main-page">
 

@@ -28,10 +28,6 @@ public class MainActivity : MauiAppCompatActivity
         Window.SetStatusBarColor(Android.Graphics.Color.Transparent);
         Window.SetNavigationBarColor(Android.Graphics.Color.Transparent);
 
-        // Fill the area behind the transparent status bar with the dark app background
-        // so punch-hole cameras don't reveal the default theme colour.
-        Window.DecorView?.SetBackgroundColor(Android.Graphics.Color.ParseColor("#0b0f19"));
-
         UpdateStatusBarAppearance();
     }
 

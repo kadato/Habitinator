@@ -44,10 +44,17 @@ var appWeb = builder.AddProject("app-web", "../App.Web/App.Web.csproj", options 
     .WithEndpoint("http", static endpoint => endpoint.IsProxied = false);
 
 // Use dotnet run so the dashboard Start button actually builds and launches the MAUI app.
-// AddMauiProject/AddWindowsDevice only sets up env vars but doesn't launch the executable.
 var mauiDir = Path.Combine(builder.AppHostDirectory, "..", "App.MAUI");
-_ = builder.AddExecutable("app-maui", "dotnet", mauiDir,
+
+_ = builder.AddExecutable("app-maui-win", "dotnet", mauiDir,
         "run", "--project", "App.MAUI.csproj", "-f", "net11.0-windows10.0.19041.0")
+    .WithExplicitStart()
+    .WaitFor(habitinatorDb)
+    .WaitFor(appWeb)
+    .WithEnvironment("HABITINATOR_API_BASE_URL", appWeb.GetEndpoint("http"));
+
+_ = builder.AddExecutable("app-maui-android", "dotnet", mauiDir,
+        "run", "--project", "App.MAUI.csproj", "-f", "net11.0-android")
     .WithExplicitStart()
     .WaitFor(habitinatorDb)
     .WaitFor(appWeb)

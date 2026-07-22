@@ -6,7 +6,7 @@ using AndroidX.Core.View;
 
 namespace App.MAUI;
 
-[Activity(Theme = "@style/Maui.MainTheme", MainLauncher = true,
+[Activity(Theme = "@style/Maui.SplashTheme", MainLauncher = true,
     ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | ConfigChanges.UiMode |
                            ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density)]
 public class MainActivity : MauiAppCompatActivity
@@ -27,6 +27,10 @@ public class MainActivity : MauiAppCompatActivity
         // Make status bar and navigation bar transparent so the app background shows through
         Window.SetStatusBarColor(Android.Graphics.Color.Transparent);
         Window.SetNavigationBarColor(Android.Graphics.Color.Transparent);
+
+        // Fill the area behind the transparent status bar with the dark app background
+        // so punch-hole cameras don't reveal the default theme colour.
+        Window.DecorView?.SetBackgroundColor(Android.Graphics.Color.ParseColor("#0b0f19"));
 
         UpdateStatusBarAppearance();
     }

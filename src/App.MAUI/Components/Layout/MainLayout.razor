@@ -232,10 +232,29 @@
         try
         {
             await JS.InvokeVoidAsync("habitinatorSetTheme", _isDarkMode ? "dark" : "light");
+
+            // Keep the native status bar icon appearance in sync with the Blazor theme.
+            // When following the system theme, let the OS decide;
+            // otherwise, lock to the user's explicit choice.
+            if (Microsoft.Maui.Controls.Application.Current is { } app)
+            {
+                if (_preferences?.Theme == AppTheme.System)
+                {
+                    app.UserAppTheme = Microsoft.Maui.ApplicationModel.AppTheme.Unspecified;
+                }
+                else if (_isDarkMode)
+                {
+                    app.UserAppTheme = Microsoft.Maui.ApplicationModel.AppTheme.Dark;
+                }
+                else
+                {
+                    app.UserAppTheme = Microsoft.Maui.ApplicationModel.AppTheme.Light;
+                }
+            }
         }
         catch
         {
-            // Ignore if JS is not available
+            // Ignore if JS or MAUI is not available
         }
     }
 

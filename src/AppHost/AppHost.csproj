@@ -10,7 +10,6 @@
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
-    <PackageReference Include="Aspire.Hosting.Maui" />
     <PackageReference Include="MessagePack" />
   </ItemGroup>
 

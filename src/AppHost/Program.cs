@@ -43,13 +43,11 @@ var appWeb = builder.AddProject("app-web", "../App.Web/App.Web.csproj", options 
     .WithHttpHealthCheck("/health")
     .WithEndpoint("http", static endpoint => endpoint.IsProxied = false);
 
-// MAUI reads HABITINATOR_API_BASE_URL first (see MauiAppSettings). This env var is only set when
-// the MAUI process is *started from the Aspire dashboard* (or F5 on App.MAUI alone). AppHost starts
-// postgres and app-web automatically; start app-maui manually when you need the hybrid client.
-// Otherwise run App.Web yourself on port 5033, or set HABITINATOR_API_BASE_URL / Api:BaseUrl in MAUI.
-var appMaui = builder.AddMauiProject("app-maui", "../App.MAUI/App.MAUI.csproj");
-
-appMaui.AddWindowsDevice()
+// Use dotnet run so the dashboard Start button actually builds and launches the MAUI app.
+// AddMauiProject/AddWindowsDevice only sets up env vars but doesn't launch the executable.
+var mauiDir = Path.Combine(builder.AppHostDirectory, "..", "App.MAUI");
+_ = builder.AddExecutable("app-maui", "dotnet", mauiDir,
+        "run", "--project", "App.MAUI.csproj", "-f", "net11.0-windows10.0.19041.0")
     .WithExplicitStart()
     .WaitFor(habitinatorDb)
     .WaitFor(appWeb)

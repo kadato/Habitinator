@@ -66,9 +66,15 @@ echo "=================================================="
 # Flag to track build errors
 build_failed=false
 
+# Build only the target framework that matches the current OS.
+# Avoids requiring every SDK (Android, iOS, MacCatalyst) to be installed
+# on every developer machine. Controlled via the SingleTfmOnly property
+# already defined in App.MAUI.csproj.
+build_args="--configuration Release -p:TreatWarningsAsErrors=true -p:SingleTfmOnly=true"
+
 if [ "$build_all_solution" = true ]; then
     echo "Global configuration change detected. Building entire solution..."
-    dotnet build Habitinator.slnx --configuration Release -p:TreatWarningsAsErrors=true
+    dotnet build Habitinator.slnx $build_args
     if [ $? -ne 0 ]; then
         build_failed=true
     fi
@@ -77,7 +83,7 @@ else
         echo "Building affected projects: ${projects_to_build[*]}"
         for proj in "${projects_to_build[@]}"; do
             echo "Building $proj..."
-            dotnet build "$proj" --configuration Release -p:TreatWarningsAsErrors=true
+            dotnet build "$proj" $build_args
             if [ $? -ne 0 ]; then
                 build_failed=true
                 break

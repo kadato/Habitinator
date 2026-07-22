@@ -6,7 +6,9 @@ using App.Shared.RCL.Services.Remote;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+#pragma warning disable IDE0005 // Required by Android TFM (not auto-imported there)
 using Microsoft.Extensions.Logging;
+#pragma warning restore IDE0005
 
 using MudBlazor;
 using MudBlazor.Services;

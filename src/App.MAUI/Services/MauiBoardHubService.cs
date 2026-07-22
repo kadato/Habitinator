@@ -119,11 +119,8 @@ public sealed partial class MauiBoardHubService(
     {
         try
         {
-            if (_connection is not null)
-            {
-                _connection.DisposeAsync().AsTask().GetAwaiter().GetResult();
-                _connection = null;
-            }
+            _connection?.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            _connection = null;
         }
         catch
         {

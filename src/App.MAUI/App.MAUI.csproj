@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
     <PropertyGroup>
-        <!-- Speed up build: Build only a single target framework locally during Debug configuration -->
-        <SingleTfmOnly Condition="'$(SingleTfmOnly)' == '' and '$(Configuration)' == 'Debug' and '$(CI)' != 'true' and '$(GITHUB_ACTIONS)' != 'true'">true</SingleTfmOnly>
-
+        <!-- SingleTfmOnly is opt-in: pass -p:SingleTfmOnly=true for single-TFM builds
+             (the pre-commit hook does this). Must remain off by default so Aspire can
+             detect all target frameworks when evaluating the project. -->
         <TargetFrameworks Condition="'$(SingleTfmOnly)' == 'true' and $([MSBuild]::IsOSPlatform('windows'))">net11.0-windows10.0.19041.0</TargetFrameworks>
         <TargetFrameworks Condition="'$(SingleTfmOnly)' == 'true' and $([MSBuild]::IsOSPlatform('osx'))">net11.0-maccatalyst</TargetFrameworks>
         <TargetFrameworks Condition="'$(SingleTfmOnly)' == 'true' and !$([MSBuild]::IsOSPlatform('windows')) and !$([MSBuild]::IsOSPlatform('osx'))">net11.0-android</TargetFrameworks>

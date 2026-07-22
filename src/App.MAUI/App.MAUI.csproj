@@ -36,10 +36,10 @@
         <MauiXamlInflator>SourceGen</MauiXamlInflator>
 
         <!-- Display name -->
-        <ApplicationTitle>App.MAUI</ApplicationTitle>
+        <ApplicationTitle>Habitinator</ApplicationTitle>
 
         <!-- App Identifier -->
-        <ApplicationId>com.companyname.app.maui</ApplicationId>
+        <ApplicationId>com.habitinator.app</ApplicationId>
 
         <!-- Versions -->
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>

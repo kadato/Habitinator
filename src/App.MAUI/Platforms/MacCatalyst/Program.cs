@@ -1,5 +1,3 @@
-using ObjCRuntime;
-
 using UIKit;
 
 namespace App.MAUI;

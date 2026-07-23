@@ -49,6 +49,7 @@ jobs:
 
       - name: Format Code
         run: |
+          dotnet restore Habitinator.slnx
           dotnet format whitespace --no-restore
           dotnet format style --no-restore
 

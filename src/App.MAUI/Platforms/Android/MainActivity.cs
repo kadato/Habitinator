@@ -2,6 +2,7 @@ using Android.App;
 using Android.Content.PM;
 using Android.Content.Res;
 using Android.OS;
+
 using AndroidX.Core.View;
 
 namespace App.MAUI;
@@ -19,7 +20,10 @@ public class MainActivity : MauiAppCompatActivity
 
     private void EnableEdgeToEdge()
     {
-        if (Window == null) return;
+        if (Window == null)
+        {
+            return;
+        }
 
         // Allow content to draw behind system bars (status bar + navigation bar)
         WindowCompat.SetDecorFitsSystemWindows(Window, false);
@@ -46,10 +50,16 @@ public class MainActivity : MauiAppCompatActivity
 
     private void UpdateStatusBarAppearance()
     {
-        if (Window?.DecorView == null) return;
+        if (Window?.DecorView == null)
+        {
+            return;
+        }
 
         var insetsController = WindowCompat.GetInsetsController(Window, Window.DecorView);
-        if (insetsController == null) return;
+        if (insetsController == null)
+        {
+            return;
+        }
 
         var isDarkMode = ResolveIsDarkMode();
 
@@ -63,8 +73,15 @@ public class MainActivity : MauiAppCompatActivity
     {
         // Respect the app's explicit theme choice when set
         var userAppTheme = Microsoft.Maui.Controls.Application.Current?.UserAppTheme;
-        if (userAppTheme == Microsoft.Maui.ApplicationModel.AppTheme.Dark) return true;
-        if (userAppTheme == Microsoft.Maui.ApplicationModel.AppTheme.Light) return false;
+        if (userAppTheme == Microsoft.Maui.ApplicationModel.AppTheme.Dark)
+        {
+            return true;
+        }
+
+        if (userAppTheme == Microsoft.Maui.ApplicationModel.AppTheme.Light)
+        {
+            return false;
+        }
 
         // Fall back to the system dark mode setting
         return (Resources?.Configuration?.UiMode & UiMode.NightMask) == UiMode.NightYes;

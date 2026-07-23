@@ -469,6 +469,7 @@
             await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.start", _selfRef);
 
             _dailyRetroClientReady = true;
+            _ = RefreshStreaksAsync();
             await TryOpenDailyYesterdayRetroIfNeededAsync();
         }
         catch (JSDisconnectedException)
@@ -746,13 +747,33 @@
         {
             try
             {
-                await LoadBoardAsync();
+                await RefreshStreaksAsync();
             }
             catch (Exception)
             {
                 // Ignore load errors in background cleanup
             }
             await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task RefreshStreaksAsync()
+    {
+        try
+        {
+            var streaks = await BoardDataService.GetStreakMapAsync();
+            for (var i = 0; i < Dailies.Count; i++)
+            {
+                var daily = Dailies[i];
+                if (streaks.TryGetValue(daily.Id, out var s) && s != daily.Counter)
+                {
+                    Dailies[i] = daily with { Counter = s };
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Silently ignore; board will reflect updated streaks on next full load
         }
     }
 

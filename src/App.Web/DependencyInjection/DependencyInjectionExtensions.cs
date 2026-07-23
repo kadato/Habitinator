@@ -125,6 +125,7 @@ public static class DependencyInjectionExtensions
         services.AddSingleton<ConflictResolutionService>();
         services.AddScoped<BoardRemoteNotifyBridge>();
         services.AddSingleton<BoardSnapshotCache>();
+        services.AddSingleton<DailyStreakMapCache>();
         services.AddSingleton<ActivityStatisticsCache>();
         services.AddSingleton<IBoardChangeNotifier, BoardChangeNotifier>();
         services.AddScoped<BoardPersistenceService>();

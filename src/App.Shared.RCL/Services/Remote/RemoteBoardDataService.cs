@@ -96,6 +96,14 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
         }
     }
 
+    public async Task<Dictionary<Guid, int>> GetStreakMapAsync(CancellationToken cancellationToken = default)
+    {
+        using HttpResponseMessage res = await Client.GetAsync("api/board/streaks", cancellationToken);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<Dictionary<Guid, int>>(Serializer, cancellationToken))
+               ?? [];
+    }
+
     public Task<BoardItem> CreateItemAsync(BoardSection section, string title, Guid? itemId = null,
         CancellationToken cancellationToken = default) =>
         CreateItemAsync(section, title, itemId, Guid.Empty, cancellationToken);

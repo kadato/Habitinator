@@ -123,6 +123,31 @@ public sealed partial class LocalFirstBoardDataService(
         return snap;
     }
 
+    public async Task<Dictionary<Guid, int>> GetStreakMapAsync(CancellationToken cancellationToken = default)
+    {
+        await EnsureLocalStoreSchemaAsync(cancellationToken);
+        string? userKey = await ResolveUserKeyAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(userKey))
+        {
+            return [];
+        }
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            var dailies = await db.BoardItems
+                .Where(x => x.UserKey == userKey && !x.IsArchived && x.Section == BoardSection.Daily)
+                .Select(x => new { x.Id, x.Counter })
+                .ToListAsync(cancellationToken);
+            return dailies.ToDictionary(x => x.Id, x => x.Counter);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     private async Task EnsureLocalStoreSchemaAsync(CancellationToken cancellationToken)
     {
         if (_schemaReady)

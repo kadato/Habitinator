@@ -153,6 +153,12 @@ public sealed class WebBoardDataService(
             cancellationToken);
     }
 
+    public async Task<Dictionary<Guid, int>> GetStreakMapAsync(CancellationToken cancellationToken = default)
+    {
+        Guid userId = await GetCurrentUserIdAsync(cancellationToken);
+        return await boardPersistenceService.GetDailyStreakMapAsync(userId, cancellationToken);
+    }
+
     private async Task<Guid> GetCurrentUserIdAsync(CancellationToken cancellationToken)
     {
         AuthenticationState authState = await authenticationStateProvider.GetAuthenticationStateAsync();

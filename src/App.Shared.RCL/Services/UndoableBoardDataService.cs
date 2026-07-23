@@ -12,6 +12,11 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         return _inner.GetSnapshotAsync(cancellationToken);
     }
 
+    public Task<Dictionary<Guid, int>> GetStreakMapAsync(CancellationToken cancellationToken = default)
+    {
+        return _inner.GetStreakMapAsync(cancellationToken);
+    }
+
     public async Task<BoardItem?> ArchiveItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
     {
         BoardItem? item = await FindItemAsync(itemId, cancellationToken);

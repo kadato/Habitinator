@@ -74,4 +74,6 @@ public interface IBoardDataService
         Guid itemId,
         UpdateDailyArgs args,
         CancellationToken cancellationToken = default);
+
+    Task<Dictionary<Guid, int>> GetStreakMapAsync(CancellationToken cancellationToken = default);
 }

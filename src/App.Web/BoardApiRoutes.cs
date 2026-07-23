@@ -85,6 +85,19 @@ internal static class BoardApiRoutes
                 BoardSnapshot snapshot = await boardPersistenceService.GetArchivedSnapshotAsync(userId);
                 return Results.Json(snapshot, Json);
             });
+
+        boardApi.MapGet("/streaks",
+            async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService,
+                CancellationToken cancellationToken) =>
+            {
+                if (AuthenticatedUserId.TryGet(user) is not Guid userId)
+                {
+                    return Results.Unauthorized();
+                }
+
+                var streaks = await boardPersistenceService.GetDailyStreakMapAsync(userId, cancellationToken);
+                return Results.Json(streaks, Json);
+            });
     }
 
     private static void MapGeneralMutationRoutes(RouteGroupBuilder boardApi)

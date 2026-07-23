@@ -186,4 +186,9 @@ public sealed class ActivityLoggingBoardDataService(IBoardDataService inner, IUs
             args,
             cancellationToken);
     }
+
+    public Task<Dictionary<Guid, int>> GetStreakMapAsync(CancellationToken cancellationToken = default)
+    {
+        return _inner.GetStreakMapAsync(cancellationToken);
+    }
 }

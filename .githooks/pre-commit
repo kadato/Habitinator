@@ -58,6 +58,35 @@ else
     done
 fi
 
+# Run formatting on C# files first, so style warnings
+# are fixed before the build step which treats warnings as errors.
+if [ -n "$cs_files" ]; then
+    echo ""
+    echo "=================================================="
+    echo "Automatically formatting staged C# files..."
+    echo "=================================================="
+    echo ""
+
+    dotnet format Habitinator.slnx --include $cs_files
+    format_exit_code=$?
+
+    if [ $format_exit_code -ne 0 ]; then
+        echo ""
+        echo "=================================================="
+        echo "ERROR: dotnet format failed with exit code $format_exit_code."
+        echo "=================================================="
+        echo ""
+        exit $format_exit_code
+    fi
+
+    # Re-add modified C# files to the commit
+    echo "$cs_files" | while read -r file; do
+        if [ -f "$file" ]; then
+            git add "$file"
+        fi
+    done
+fi
+
 echo ""
 echo "=================================================="
 echo "Verifying changes before commit..."
@@ -98,14 +127,13 @@ if [ "$build_failed" = true ]; then
     echo ""
     echo "=================================================="
     echo "ERROR: dotnet build failed."
-    echo "Please resolve compilation / style errors before committing."
+    echo "Please resolve compilation errors before committing."
     echo "=================================================="
     echo ""
     exit 1
 fi
 
 # Run unit tests if relevant projects are modified
-# Let's run App.Shared.Tests and App.Shared.RCL.Tests if they or their source projects are built
 run_shared_tests=false
 run_rcl_tests=false
 
@@ -146,35 +174,6 @@ if [ "$run_rcl_tests" = true ]; then
         echo "ERROR: App.Shared.RCL.Tests failed."
         exit 1
     fi
-fi
-
-# Run formatting on C# files
-if [ -n "$cs_files" ]; then
-    echo ""
-    echo "=================================================="
-    echo "Automatically formatting staged C# files..."
-    echo "=================================================="
-    echo ""
-
-    # Run dotnet format style and whitespace on staged C# files
-    dotnet format Habitinator.slnx --include $cs_files
-    format_exit_code=$?
-
-    if [ $format_exit_code -ne 0 ]; then
-        echo ""
-        echo "=================================================="
-        echo "ERROR: dotnet format failed with exit code $format_exit_code."
-        echo "=================================================="
-        echo ""
-        exit $format_exit_code
-    fi
-
-    # Re-add modified C# files to the commit
-    echo "$cs_files" | while read -r file; do
-        if [ -f "$file" ]; then
-            git add "$file"
-        fi
-    done
 fi
 
 echo ""

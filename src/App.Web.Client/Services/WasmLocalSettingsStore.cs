@@ -4,7 +4,7 @@ using Microsoft.JSInterop;
 
 namespace App.Web.Client.Services;
 
-public sealed class WasmLocalSettingsStore : ILocalSettingsStore
+internal sealed class WasmLocalSettingsStore : ILocalSettingsStore
 {
     private readonly IJSInProcessRuntime? _js;
 
@@ -13,7 +13,7 @@ public sealed class WasmLocalSettingsStore : ILocalSettingsStore
         _js = js as IJSInProcessRuntime;
     }
 
-    public string? Get(string key, string? defaultValue = null)
+    public string? Read(string key, string? defaultValue = null)
     {
         if (_js is null)
         {
@@ -31,7 +31,7 @@ public sealed class WasmLocalSettingsStore : ILocalSettingsStore
         }
     }
 
-    public void Set(string key, string value)
+    public void Write(string key, string value)
     {
         if (_js is null)
         {

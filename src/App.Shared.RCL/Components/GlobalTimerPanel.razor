@@ -784,7 +784,7 @@
         return $"{nextState} ({GlobalTimerService.FormatTimeSpan(nextDuration)})";
     }
 
-    private string GetPomodoroStatusLabel() => TimerService.GetStatusLabel();
+    private string GetPomodoroStatusLabel() => TimerService.StatusLabel;
 
     private int GetCompletedInCurrentCycle()
     {

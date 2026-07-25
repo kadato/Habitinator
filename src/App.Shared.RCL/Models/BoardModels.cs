@@ -105,7 +105,7 @@ public static class DailyChecklistJson
             var rows = JsonSerializer.Deserialize<DailyChecklistItem[]>(json, s_options);
             return rows?.Where(x => !string.IsNullOrWhiteSpace(x.Text)).ToList() ?? [];
         }
-        catch
+        catch (JsonException)
         {
             return [];
         }

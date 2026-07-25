@@ -17,7 +17,7 @@ public sealed class DiscoveryLinkHeadersMiddleware(RequestDelegate next, IOption
             if (accept.Contains("text/html", StringComparison.OrdinalIgnoreCase) ||
                 string.IsNullOrWhiteSpace(accept))
             {
-                var baseUrl = _site.PublicBaseUrl.TrimEnd('/');
+                var baseUrl = _site.PublicBaseUrl.OriginalString.TrimEnd('/');
                 context.Response.Headers.Append(
                     "Link",
                     $"<{baseUrl}/openapi/v1.json>; rel=\"openapi\"; type=\"application/vnd.oai.openapi+json\"");

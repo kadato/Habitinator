@@ -135,12 +135,14 @@ public static class DailySchedule
 
     public static bool IsScheduledOn(BoardItem daily, DateOnly on)
     {
+        ArgumentNullException.ThrowIfNull(daily);
         return IsScheduledOn(daily.DailyStartDate, daily.DailyRepeat, daily.DailyRepeatInterval, on);
     }
 
     /// <summary>Whether this daily is checked off for the given calendar day (local timezone).</summary>
     public static bool IsCompleteForDate(BoardItem daily, DateOnly on)
     {
+        ArgumentNullException.ThrowIfNull(daily);
         return daily.DailyLastCompletedOn == on;
     }
 

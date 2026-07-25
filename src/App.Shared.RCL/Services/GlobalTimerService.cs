@@ -325,19 +325,22 @@ public sealed class GlobalTimerService(IClock clock)
         return FormatTimeSpan(Elapsed);
     }
 
-    public string GetStatusLabel()
+    public string StatusLabel
     {
-        if (PomodoroModeEnabled)
+        get
         {
-            return CurrentPomodoroState switch
+            if (PomodoroModeEnabled)
             {
-                PomodoroState.Work => "Focusing",
-                PomodoroState.ShortBreak => "Short Break",
-                PomodoroState.LongBreak => "Long Break",
-                _ => "Get Ready"
-            };
+                return CurrentPomodoroState switch
+                {
+                    PomodoroState.Work => "Focusing",
+                    PomodoroState.ShortBreak => "Short Break",
+                    PomodoroState.LongBreak => "Long Break",
+                    _ => "Get Ready"
+                };
+            }
+            return "Focusing";
         }
-        return "Focusing";
     }
 
     public static string FormatTimeSpan(TimeSpan ts)

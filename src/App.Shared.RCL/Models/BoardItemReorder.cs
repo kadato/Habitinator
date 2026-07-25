@@ -40,6 +40,8 @@ public static class BoardItemReorder
         int insertAt,
         Func<BoardItem, double?> getSortOrder)
     {
+        ArgumentNullException.ThrowIfNull(reordered);
+        ArgumentNullException.ThrowIfNull(getSortOrder);
         double? prevOrder = insertAt > 0
             ? ResolveSortOrder(getSortOrder(reordered[insertAt - 1]), insertAt - 1)
             : null;

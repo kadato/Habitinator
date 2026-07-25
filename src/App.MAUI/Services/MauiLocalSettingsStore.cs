@@ -4,12 +4,12 @@ namespace App.MAUI.Services;
 
 public sealed class MauiLocalSettingsStore : ILocalSettingsStore
 {
-    public string? Get(string key, string? defaultValue = null)
+    public string? Read(string key, string? defaultValue = null)
     {
         return Microsoft.Maui.Storage.Preferences.Get(key, defaultValue);
     }
 
-    public void Set(string key, string value)
+    public void Write(string key, string value)
     {
         Microsoft.Maui.Storage.Preferences.Set(key, value);
     }

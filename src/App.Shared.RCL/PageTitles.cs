@@ -8,6 +8,7 @@ public static class PageTitles
 
     public static string Page(string pageName)
     {
+        ArgumentNullException.ThrowIfNull(pageName);
         return $"{pageName.Trim()} - {Brand}";
     }
 }

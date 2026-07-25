@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 
 namespace App.Web.Client.Services;
 
-public sealed class WasmAuthenticationStateProvider : AuthenticationStateProvider
+internal sealed class WasmAuthenticationStateProvider : AuthenticationStateProvider
 {
     private readonly IHttpClientFactory _http;
     private readonly PersistentComponentState _state;

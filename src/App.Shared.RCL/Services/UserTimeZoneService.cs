@@ -50,7 +50,7 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
         {
             return TimeZoneInfo.ConvertTime(utcTime, _timeZoneInfo);
         }
-        catch
+        catch (InvalidTimeZoneException)
         {
             // Fallback if conversion fails
             return utcTime.AddMinutes(-_utcOffsetMinutes);
@@ -72,7 +72,7 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
             var unspecified = DateTime.SpecifyKind(localTime.DateTime, DateTimeKind.Unspecified);
             return TimeZoneInfo.ConvertTimeToUtc(unspecified, _timeZoneInfo);
         }
-        catch
+        catch (InvalidTimeZoneException)
         {
             return localTime.AddMinutes(_utcOffsetMinutes);
         }
@@ -128,7 +128,7 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
             _utcOffsetMinutes = (int)_timeZoneInfo.BaseUtcOffset.TotalMinutes;
             _timeZoneId = _timeZoneInfo.Id;
         }
-        catch
+        catch (TimeZoneNotFoundException)
         {
             _utcOffsetMinutes = 0;
         }
@@ -168,7 +168,7 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
                 {
                     _timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
                 }
-                catch
+                catch (TimeZoneNotFoundException)
                 {
                     // Timezone not found on this system - create a custom one from offset
                     // This handles cases like "Europe/Budapest" on Windows which uses different IDs
@@ -193,7 +193,7 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
             _timeZoneInfo = TimeZoneInfo.Local;
             _timeZoneId = _timeZoneInfo?.Id;
         }
-        catch
+        catch (Exception)
         {
             // Any other error, use system local
             _timeZoneInfo = TimeZoneInfo.Local;
@@ -217,7 +217,7 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
             _timeZoneId = _overrideTimeZoneId;
             _utcOffsetMinutes = (int)_timeZoneInfo.BaseUtcOffset.TotalMinutes;
         }
-        catch
+        catch (TimeZoneNotFoundException)
         {
             // Ignore invalid override and keep detected timezone.
         }

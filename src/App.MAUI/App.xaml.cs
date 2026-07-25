@@ -1,3 +1,5 @@
+#pragma warning disable CA1724 // Type name 'App' conflicts with namespace 'App' - MAUI framework requires this naming convention
+
 using App.MAUI.Services;
 using App.MAUI.Services.LocalBoard;
 

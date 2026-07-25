@@ -33,13 +33,18 @@ public static class TodoOrdering
     /// <summary>Maps stored <see cref="BoardItem.SortOrder"/> to the value used for Active-tab ordering and drag midpoints.</summary>
     public static double GetActiveDisplayOrder(BoardItem item, Func<BoardItem, double?> getSortOrder)
     {
+        ArgumentNullException.ThrowIfNull(item);
+        ArgumentNullException.ThrowIfNull(getSortOrder);
         var order = getSortOrder(item) ?? double.MaxValue;
         return item.TodoDueDate.HasValue ? DatedSortOrderOffset + order : order;
     }
 
     /// <summary>Converts a display-order midpoint back to persisted <see cref="BoardItem.SortOrder"/>.</summary>
-    public static double ToStoredSortOrder(BoardItem item, double displayOrder) =>
-        item.TodoDueDate.HasValue ? displayOrder - DatedSortOrderOffset : displayOrder;
+    public static double ToStoredSortOrder(BoardItem item, double displayOrder)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        return item.TodoDueDate.HasValue ? displayOrder - DatedSortOrderOffset : displayOrder;
+    }
 
     /// <summary>
     /// Midpoint sort order after a drop on the Active tab; neighbours use the same ordering as <see cref="OrderForActiveTab"/>.
@@ -49,6 +54,8 @@ public static class TodoOrdering
         int insertAt,
         Func<BoardItem, double?> getSortOrder)
     {
+        ArgumentNullException.ThrowIfNull(reordered);
+        ArgumentNullException.ThrowIfNull(getSortOrder);
         BoardItem item = reordered[insertAt];
         bool hasPrev = insertAt > 0;
         bool hasNext = insertAt < reordered.Count - 1;

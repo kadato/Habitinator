@@ -1533,7 +1533,7 @@ public sealed partial class LocalFirstBoardDataService(
         string? email = await tokens.GetEmailAsync(cancellationToken);
         if (!string.IsNullOrWhiteSpace(email))
         {
-            return email.Trim().ToLowerInvariant();
+            return email.Trim().ToUpperInvariant();
         }
 
         string? jwt = await tokens.GetAccessTokenAsync(cancellationToken);
@@ -1543,7 +1543,7 @@ public sealed partial class LocalFirstBoardDataService(
         }
 
         string? fromJwt = JwtAccessTokenDisplayClaims.TryGetEmail(jwt);
-        return string.IsNullOrWhiteSpace(fromJwt) ? null : fromJwt.Trim().ToLowerInvariant();
+        return string.IsNullOrWhiteSpace(fromJwt) ? null : fromJwt.Trim().ToUpperInvariant();
     }
 
     private async Task<bool> HasAuthAsync(CancellationToken cancellationToken) =>

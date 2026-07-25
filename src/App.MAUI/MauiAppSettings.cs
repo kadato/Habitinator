@@ -29,7 +29,7 @@ public static class MauiAppSettings
             }
             else
             {
-                url = DefaultApiBaseUrlNoSlash;
+                url = DefaultApiBaseUrlNoSlash.OriginalString;
             }
         }
 
@@ -51,8 +51,8 @@ public static class MauiAppSettings
 
     /// <summary>Fallback when env and appsettings do not set <c>Api:BaseUrl</c>.</summary>
 #if ANDROID
-    public static string DefaultApiBaseUrlNoSlash => "http" + "://10.0.2.2:5033";
+    public static Uri DefaultApiBaseUrlNoSlash => new("http" + "://10.0.2.2:5033");
 #else
-    public static string DefaultApiBaseUrlNoSlash => "http" + "://127.0.0.1:5033";
+    public static Uri DefaultApiBaseUrlNoSlash => new("http" + "://127.0.0.1:5033");
 #endif
 }

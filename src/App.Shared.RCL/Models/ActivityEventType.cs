@@ -1,7 +1,8 @@
 namespace App.Shared.RCL.Models;
 
-public enum ActivityEventType : byte
+public enum ActivityEventType
 {
+    None = 0,
     HabitPlus = 1,
     HabitMinus = 2,
     DailyComplete = 3,

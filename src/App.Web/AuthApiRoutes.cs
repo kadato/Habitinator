@@ -73,7 +73,7 @@ internal static class AuthApiRoutes
         HttpContext httpContext,
         UserManager<ApplicationUser> userManager)
     {
-        IFormCollection form = await httpContext.Request.ReadFormAsync();
+        IFormCollection form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
         string email = form["Email"].ToString();
         string password = form["Password"].ToString();
 
@@ -203,7 +203,7 @@ internal static class AuthApiRoutes
         SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager)
     {
-        IFormCollection form = await httpContext.Request.ReadFormAsync();
+        IFormCollection form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
         string email = form["Email"].ToString();
         string password = form["Password"].ToString();
         bool rememberMe = form["RememberMe"] == "true";

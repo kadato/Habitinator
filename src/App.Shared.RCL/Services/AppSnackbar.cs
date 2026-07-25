@@ -11,6 +11,7 @@ public static class AppSnackbar
 
     public static void Configure(SnackbarOptions config, int visibleStateDurationMs)
     {
+        ArgumentNullException.ThrowIfNull(config);
         config.VisibleStateDuration = visibleStateDurationMs;
         config.HideIcon = true;
         config.ShowCloseIcon = false;
@@ -24,6 +25,7 @@ public static class AppSnackbar
         int visibleStateDurationMs,
         string? key = null)
     {
+        ArgumentNullException.ThrowIfNull(snackbar);
         Snackbar? toast = null;
         toast = snackbar.Add<ToastContent>(
             new Dictionary<string, object>

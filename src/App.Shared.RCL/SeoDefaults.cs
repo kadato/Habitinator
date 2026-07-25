@@ -20,6 +20,6 @@ public static class SeoDefaults
             return "/";
         }
 
-        return relativePath.StartsWith('/') ? relativePath : "/" + relativePath;
+        return relativePath.StartsWith('/', StringComparison.Ordinal) ? relativePath : "/" + relativePath;
     }
 }

@@ -29,8 +29,11 @@ public class MainActivity : MauiAppCompatActivity
         WindowCompat.SetDecorFitsSystemWindows(Window, false);
 
         // Make status bar and navigation bar transparent so the app background shows through
-        Window.SetStatusBarColor(Android.Graphics.Color.Transparent);
-        Window.SetNavigationBarColor(Android.Graphics.Color.Transparent);
+        if (!OperatingSystem.IsAndroidVersionAtLeast(35))
+        {
+            Window.SetStatusBarColor(Android.Graphics.Color.Transparent);
+            Window.SetNavigationBarColor(Android.Graphics.Color.Transparent);
+        }
 
         UpdateStatusBarAppearance();
     }
@@ -84,6 +87,12 @@ public class MainActivity : MauiAppCompatActivity
         }
 
         // Fall back to the system dark mode setting
-        return (Resources?.Configuration?.UiMode & UiMode.NightMask) == UiMode.NightYes;
+        if (OperatingSystem.IsAndroidVersionAtLeast(30))
+        {
+            return Resources?.Configuration?.IsNightModeActive == true;
+        }
+
+        var uiMode = Resources?.Configuration?.UiMode;
+        return uiMode.HasValue && ((int)uiMode.Value & (int)UiMode.NightMask) == (int)UiMode.NightYes;
     }
 }

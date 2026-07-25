@@ -29,12 +29,12 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
     {
         _http = http;
         _apiSession = apiSession;
-        _apiSession.Changed += (_, _) => Changed?.Invoke();
+        _apiSession.Changed += (_, _) => Changed?.Invoke(this, EventArgs.Empty);
     }
 
     private HttpClient Client => _http.CreateClient("api");
 
-    public event Action? Changed;
+    public event EventHandler? Changed;
 
     private string GetKey()
     {
@@ -69,7 +69,7 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
                         if (remoteJson != localJson)
                         {
                             WriteLocal(key, remote);
-                            Changed?.Invoke();
+                            Changed?.Invoke(this, EventArgs.Empty);
                         }
                     }
                 }
@@ -91,7 +91,7 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
 
         if (!_apiSession.IsLoggedIn)
         {
-            Changed?.Invoke();
+            Changed?.Invoke(this, EventArgs.Empty);
             return;
         }
 
@@ -99,7 +99,7 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
             .PutAsJsonAsync("api/settings/preferences", preferences, Serializer, cancellationToken)
             .ConfigureAwait(false);
         res.EnsureSuccessStatusCode();
-        Changed?.Invoke();
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     private async Task EnsureSessionReadyAsync(CancellationToken cancellationToken)

@@ -180,7 +180,7 @@
         _ = InvokeAsync(OnSessionChangedAsync);
     }
 
-    private void OnPreferencesChanged()
+    private void OnPreferencesChanged(object? sender, EventArgs e)
     {
         _ = InvokeAsync(async () =>
         {

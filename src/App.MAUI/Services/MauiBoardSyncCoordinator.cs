@@ -112,7 +112,7 @@ public sealed partial class MauiBoardSyncCoordinator : IDisposable
             if (!_initialLoad.IsComplete)
             {
                 var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                void OnCompleted() => tcs.TrySetResult();
+                void OnCompleted(object? sender, EventArgs e) => tcs.TrySetResult();
                 _initialLoad.Completed += OnCompleted;
                 try
                 {

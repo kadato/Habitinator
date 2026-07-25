@@ -43,7 +43,7 @@ public sealed class UndoServiceTests : IDisposable
     {
         bool actionCalled = false;
         bool stateChangedCalled = false;
-        _undoService.OnStateChanged += () => stateChangedCalled = true;
+        _undoService.OnStateChanged += (_, _) => stateChangedCalled = true;
 
         _undoService.RegisterUndo("Test Action", () =>
         {
@@ -68,7 +68,7 @@ public sealed class UndoServiceTests : IDisposable
             actionCalled = true;
             return Task.CompletedTask;
         });
-        _undoService.OnUndoPerformed += () => undoPerformedCalled = true;
+        _undoService.OnUndoPerformed += (_, _) => undoPerformedCalled = true;
 
         await _undoService.UndoAsync();
 

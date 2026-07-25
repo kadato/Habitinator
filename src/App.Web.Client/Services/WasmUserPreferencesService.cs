@@ -9,7 +9,7 @@ using Microsoft.JSInterop;
 
 namespace App.Web.Client.Services;
 
-public sealed class WasmUserPreferencesService : IUserPreferencesService
+internal sealed class WasmUserPreferencesService : IUserPreferencesService
 {
     private const string PreferencesKey = "user_preferences_v1";
 
@@ -33,7 +33,7 @@ public sealed class WasmUserPreferencesService : IUserPreferencesService
 
     private HttpClient Client => _http.CreateClient("api");
 
-    public event Action? Changed;
+    public event EventHandler? Changed;
 
     private async Task<string> GetKeyAsync()
     {
@@ -70,7 +70,7 @@ public sealed class WasmUserPreferencesService : IUserPreferencesService
                         if (remoteJson != localJson)
                         {
                             WriteLocal(key, remote);
-                            Changed?.Invoke();
+                            Changed?.Invoke(this, EventArgs.Empty);
                         }
                     }
                 }
@@ -102,7 +102,7 @@ public sealed class WasmUserPreferencesService : IUserPreferencesService
         {
             // Best-effort write to remote; local is updated
         }
-        Changed?.Invoke();
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     private UserPreferences ReadLocal(string key)

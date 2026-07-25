@@ -16,10 +16,10 @@ public sealed class MauiClientSessionProvider : IClientSessionProvider
 
     public string? Email => _session.Email;
 
-    public event Action? Changed;
+    public event EventHandler? Changed;
 
     private void OnSessionChanged(object? sender, EventArgs e)
     {
-        Changed?.Invoke();
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 }

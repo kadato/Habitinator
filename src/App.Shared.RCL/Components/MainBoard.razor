@@ -338,7 +338,7 @@
         _ = InvokeAsync(StateHasChanged);
     }
 
-    private void OnPreferencesChanged()
+    private void OnPreferencesChanged(object? sender, EventArgs e)
     {
         _ = InvokeAsync(async () =>
         {
@@ -777,12 +777,12 @@
         }
     }
 
-    private void HandleUndoStateChanged()
+    private void HandleUndoStateChanged(object? sender, EventArgs e)
     {
         _ = InvokeAsync(StateHasChanged);
     }
 
-    private void HandleUndoPerformed()
+    private void HandleUndoPerformed(object? sender, EventArgs e)
     {
         _ = InvokeAsync(async () =>
         {
@@ -897,7 +897,7 @@
 
 
 
-    private void HandleConflictDetected(ConflictInfo conflict)
+    private void HandleConflictDetected(object? sender, ConflictInfoEventArgs e)
     {
         _ = InvokeAsync(async () =>
         {
@@ -910,7 +910,7 @@
             
             var parameters = new DialogParameters<ConflictResolutionDialog>
             {
-                { x => x.Conflict, conflict }
+                { x => x.Conflict, e.Conflict }
             };
 
             var dialog = await DialogService.ShowAsync<ConflictResolutionDialog>(
@@ -919,11 +919,11 @@
             var result = await dialog.Result;
             if (result is not null && !result.Canceled && result.Data is ConflictResolutionChoice choice)
             {
-                ConflictResolution.Resolve(conflict.OperationId, choice);
+                ConflictResolution.Resolve(e.Conflict.OperationId, choice);
             }
             else
             {
-                ConflictResolution.Resolve(conflict.OperationId, ConflictResolutionChoice.Cancel);
+                ConflictResolution.Resolve(e.Conflict.OperationId, ConflictResolutionChoice.Cancel);
             }
             
             _lastLocalMutationTime = DateTimeOffset.UtcNow;

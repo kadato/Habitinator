@@ -28,12 +28,12 @@ public sealed class RemoteNotificationSettingsService : INotificationSettingsSer
         _http = http;
         _sessionProvider = sessionProvider;
         _localStore = localStore;
-        _sessionProvider.Changed += () => Changed?.Invoke();
+        _sessionProvider.Changed += (_, _) => Changed?.Invoke(this, EventArgs.Empty);
     }
 
     private HttpClient Client => _http.CreateClient("api");
 
-    public event Action? Changed;
+    public event EventHandler? Changed;
 
     private string GetKey()
     {
@@ -67,7 +67,7 @@ public sealed class RemoteNotificationSettingsService : INotificationSettingsSer
                         if (remoteJson != localJson)
                         {
                             WriteLocal(key, remote);
-                            Changed?.Invoke();
+                            Changed?.Invoke(this, EventArgs.Empty);
                         }
                     }
                 }
@@ -88,7 +88,7 @@ public sealed class RemoteNotificationSettingsService : INotificationSettingsSer
 
         if (!_sessionProvider.IsLoggedIn)
         {
-            Changed?.Invoke();
+            Changed?.Invoke(this, EventArgs.Empty);
             return;
         }
 
@@ -103,17 +103,17 @@ public sealed class RemoteNotificationSettingsService : INotificationSettingsSer
         {
             // Best effort save
         }
-        Changed?.Invoke();
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     private NotificationSettings ReadLocal(string key)
     {
-        var json = _localStore.Get(key);
+        var json = _localStore.Read(key);
         return NotificationSettingsJson.DeserializeOrDefault(json);
     }
 
     private void WriteLocal(string key, NotificationSettings settings)
     {
-        _localStore.Set(key, NotificationSettingsJson.Serialize(settings));
+        _localStore.Write(key, NotificationSettingsJson.Serialize(settings));
     }
 }

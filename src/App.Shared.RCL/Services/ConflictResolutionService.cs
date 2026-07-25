@@ -15,12 +15,17 @@ public sealed record ConflictInfo(
     BoardItem ServerItem,
     BoardSection Section);
 
+public sealed class ConflictInfoEventArgs(ConflictInfo conflict) : EventArgs
+{
+    public ConflictInfo Conflict { get; } = conflict;
+}
+
 public sealed class ConflictResolutionService
 {
     private readonly Dictionary<Guid, TaskCompletionSource<ConflictResolutionChoice>> _pendingConflicts = [];
     private readonly System.Threading.Lock _lock = new();
 
-    public event Action<ConflictInfo>? ConflictDetected;
+    public event EventHandler<ConflictInfoEventArgs>? ConflictDetected;
 
     public async Task<ConflictResolutionChoice> WaitForResolutionAsync(
         ConflictInfo conflict,
@@ -39,7 +44,7 @@ public sealed class ConflictResolutionService
                 _pendingConflicts[conflict.OperationId] = tcs;
 
                 // Notify UI listeners (subscribers like MainBoard)
-                ConflictDetected?.Invoke(conflict);
+                ConflictDetected?.Invoke(this, new ConflictInfoEventArgs(conflict));
             }
         }
 

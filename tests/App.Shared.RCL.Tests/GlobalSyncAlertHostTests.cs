@@ -186,7 +186,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         }
 
 #pragma warning disable CS0067
-        public event Action? Changed;
+        public event EventHandler? Changed;
 #pragma warning restore CS0067
     }
 }

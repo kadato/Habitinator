@@ -42,7 +42,7 @@ public sealed partial class MauiDailyReminderService : IDisposable
         _notificationSettings.Changed -= OnSettingsChanged;
     }
 
-    private void OnSettingsChanged()
+    private void OnSettingsChanged(object? sender, EventArgs e)
     {
         MainThread.BeginInvokeOnMainThread(() => { _ = SynchronizeAsync(); });
     }

@@ -60,7 +60,7 @@ public sealed class UserNotifier : IUserNotifier, IDisposable
         return _cache;
     }
 
-    private void OnSettingsChanged()
+    private void OnSettingsChanged(object? sender, EventArgs e)
     {
         _cache = null;
     }

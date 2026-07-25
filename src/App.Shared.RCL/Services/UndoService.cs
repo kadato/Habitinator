@@ -22,8 +22,8 @@ public sealed class UndoService : IUndoService, IDisposable
     public bool CanUndo => _undoStack.Count > 0;
     public string? LastActionDescription => _undoStack.Count > 0 ? _undoStack[^1].Description : null;
 
-    public event Action? OnStateChanged;
-    public event Action? OnUndoPerformed;
+    public event EventHandler? OnStateChanged;
+    public event EventHandler? OnUndoPerformed;
 
     public UndoService(
         ISnackbar snackbar,
@@ -50,7 +50,7 @@ public sealed class UndoService : IUndoService, IDisposable
 
         var action = new UndoAction(description, undoFunc);
         _undoStack.Add(action);
-        OnStateChanged?.Invoke();
+        OnStateChanged?.Invoke(this, EventArgs.Empty);
         _ = ShowUndoSnackbarAsync(action);
         return action.Id;
     }
@@ -119,7 +119,7 @@ public sealed class UndoService : IUndoService, IDisposable
         try
         {
             await action.UndoFunc().ConfigureAwait(false);
-            OnUndoPerformed?.Invoke();
+            OnUndoPerformed?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception)
         {
@@ -130,14 +130,14 @@ public sealed class UndoService : IUndoService, IDisposable
             _undoLock.Release();
             Interlocked.Decrement(ref _undoingCount);
             DismissSnackbar(action);
-            OnStateChanged?.Invoke();
+            OnStateChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
     public void Clear()
     {
         _undoStack.Clear();
-        OnStateChanged?.Invoke();
+        OnStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private async Task ShowUndoSnackbarAsync(UndoAction action)

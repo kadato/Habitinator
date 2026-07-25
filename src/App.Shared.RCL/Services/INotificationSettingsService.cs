@@ -4,7 +4,7 @@ namespace App.Shared.RCL.Services;
 
 public interface INotificationSettingsService
 {
-    event Action? Changed;
+    event EventHandler? Changed;
 
     Task<NotificationSettings> GetAsync(CancellationToken cancellationToken = default);
 

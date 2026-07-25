@@ -7,7 +7,7 @@ public interface IInitialBoardLoadGate
 
     void MarkComplete();
 
-    event Action? Completed;
+    event EventHandler? Completed;
 }
 
 public sealed class InitialBoardLoadGate : IInitialBoardLoadGate
@@ -26,7 +26,7 @@ public sealed class InitialBoardLoadGate : IInitialBoardLoadGate
 
     public bool IsComplete => _isComplete;
 
-    public event Action? Completed;
+    public event EventHandler? Completed;
 
     public void MarkComplete()
     {
@@ -37,6 +37,6 @@ public sealed class InitialBoardLoadGate : IInitialBoardLoadGate
 
         _isComplete = true;
         _mauiSignal?.MarkComplete();
-        Completed?.Invoke();
+        Completed?.Invoke(this, EventArgs.Empty);
     }
 }

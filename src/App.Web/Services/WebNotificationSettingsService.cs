@@ -13,7 +13,7 @@ public sealed class WebNotificationSettingsService(
     IDbContextFactory<ApplicationDbContext> dbFactory,
     IBoardChangeNotifier boardChangeNotifier) : INotificationSettingsService
 {
-    public event Action? Changed;
+    public event EventHandler? Changed;
 
     public async Task<NotificationSettings> GetAsync(CancellationToken cancellationToken = default)
     {
@@ -49,7 +49,7 @@ public sealed class WebNotificationSettingsService(
 
         row.NotificationSettings = settings;
         await db.SaveChangesAsync(cancellationToken);
-        Changed?.Invoke();
+        Changed?.Invoke(this, EventArgs.Empty);
         await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
     }
 }

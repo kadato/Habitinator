@@ -43,11 +43,11 @@ public sealed class WebClientSessionProvider : IClientSessionProvider, IDisposab
         }
     }
 
-    public event Action? Changed;
+    public event EventHandler? Changed;
 
     private void OnAuthenticationStateChanged(Task<AuthenticationState> task)
     {
-        Changed?.Invoke();
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public void Dispose()

@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 
 namespace App.Web.Client.Services;
 
-public sealed class WasmClientSessionProvider : IClientSessionProvider, IDisposable
+internal sealed class WasmClientSessionProvider : IClientSessionProvider, IDisposable
 {
     private readonly AuthenticationStateProvider _auth;
 
@@ -43,11 +43,11 @@ public sealed class WasmClientSessionProvider : IClientSessionProvider, IDisposa
         }
     }
 
-    public event Action? Changed;
+    public event EventHandler? Changed;
 
     private void OnAuthenticationStateChanged(Task<AuthenticationState> task)
     {
-        Changed?.Invoke();
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public void Dispose()

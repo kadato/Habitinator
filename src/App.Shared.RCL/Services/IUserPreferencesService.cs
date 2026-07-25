@@ -4,7 +4,7 @@ namespace App.Shared.RCL.Services;
 
 public interface IUserPreferencesService
 {
-    event Action? Changed;
+    event EventHandler? Changed;
 
     Task<UserPreferences> GetAsync(CancellationToken cancellationToken = default);
 

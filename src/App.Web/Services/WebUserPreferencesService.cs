@@ -18,7 +18,7 @@ public sealed class WebUserPreferencesService(
     private Guid? _cachedUserId;
     private UserPreferences? _cachedPreferences;
 
-    public event Action? Changed;
+    public event EventHandler? Changed;
 
     public async Task<UserPreferences> GetAsync(CancellationToken cancellationToken = default)
     {
@@ -107,7 +107,7 @@ public sealed class WebUserPreferencesService(
         await db.SaveChangesAsync(cancellationToken);
         _cachedUserId = userId;
         _cachedPreferences = preferences;
-        Changed?.Invoke();
+        Changed?.Invoke(this, EventArgs.Empty);
         await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
     }
 }

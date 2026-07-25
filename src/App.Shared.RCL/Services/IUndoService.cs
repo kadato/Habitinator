@@ -10,6 +10,6 @@ public interface IUndoService
     Task UndoAsync();
     Task UndoAsync(Guid actionId);
     void Clear();
-    event Action? OnStateChanged;
-    event Action? OnUndoPerformed;
+    event EventHandler? OnStateChanged;
+    event EventHandler? OnUndoPerformed;
 }

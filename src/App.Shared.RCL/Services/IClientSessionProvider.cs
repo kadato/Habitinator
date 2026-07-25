@@ -4,5 +4,5 @@ public interface IClientSessionProvider
 {
     bool IsLoggedIn { get; }
     string? Email { get; }
-    event Action? Changed;
+    event EventHandler? Changed;
 }

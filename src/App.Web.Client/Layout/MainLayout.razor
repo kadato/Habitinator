@@ -226,7 +226,7 @@
         _layoutSelfRef?.Dispose();
     }
 
-    private void OnPreferencesChanged()
+    private void OnPreferencesChanged(object? sender, EventArgs e)
     {
         _ = InvokeAsync(async () =>
         {

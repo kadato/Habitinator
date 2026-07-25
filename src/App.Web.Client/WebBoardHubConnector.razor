@@ -21,7 +21,7 @@
         }
     }
 
-    private void OnInitialBoardLoadCompleted()
+    private void OnInitialBoardLoadCompleted(object? sender, EventArgs e)
     {
         InitialBoardLoad.Completed -= OnInitialBoardLoadCompleted;
         _ = InvokeAsync(StartHubAsync);

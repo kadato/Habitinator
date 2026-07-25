@@ -5,7 +5,7 @@ public sealed class MauiInitialBoardLoadSignal
 {
     public bool IsComplete { get; private set; }
 
-    public event Action? Completed;
+    public event EventHandler? Completed;
 
     public void MarkComplete()
     {
@@ -15,6 +15,6 @@ public sealed class MauiInitialBoardLoadSignal
         }
 
         IsComplete = true;
-        Completed?.Invoke();
+        Completed?.Invoke(this, EventArgs.Empty);
     }
 }

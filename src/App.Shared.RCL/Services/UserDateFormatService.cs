@@ -20,6 +20,7 @@ public sealed class UserDateFormatService : IUserDateFormatService
 
     public void ApplyFromPreferences(UserPreferences preferences)
     {
+        ArgumentNullException.ThrowIfNull(preferences);
         _dateFormat = NormalizeFormat(preferences.DateFormat);
         _initialized = true;
     }
@@ -53,14 +54,14 @@ public sealed class UserDateFormatService : IUserDateFormatService
         return dateTimeOffset.ToString($"{format} HH:mm", CultureInfo.InvariantCulture);
     }
 
-    private async void OnPreferencesChanged()
+    private async void OnPreferencesChanged(object? sender, EventArgs e)
     {
         try
         {
             var prefs = await _preferencesService.GetAsync().ConfigureAwait(false);
             _dateFormat = NormalizeFormat(prefs.DateFormat);
         }
-        catch
+        catch (Exception)
         {
             // Fall back to default format on preference retrieval error
             _dateFormat = UserPreferences.CreateDefault().DateFormat;
@@ -80,7 +81,7 @@ public sealed class UserDateFormatService : IUserDateFormatService
             _ = DateTime.Now.ToString(format, CultureInfo.InvariantCulture);
             return format;
         }
-        catch
+        catch (FormatException)
         {
             return UserPreferences.CreateDefault().DateFormat;
         }

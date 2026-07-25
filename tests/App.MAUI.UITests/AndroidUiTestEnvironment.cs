@@ -58,12 +58,9 @@ internal static class AndroidUiTestEnvironment
             .OrderByDescending(File.GetLastWriteTimeUtc)
             .FirstOrDefault();
 
-        if (apkPath is null)
-        {
-            apkPath = Directory.GetFiles(outDir, "*.apk", SearchOption.TopDirectoryOnly)
-                .OrderByDescending(File.GetLastWriteTimeUtc)
-                .FirstOrDefault();
-        }
+        apkPath ??= Directory.GetFiles(outDir, "*.apk", SearchOption.TopDirectoryOnly)
+            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .FirstOrDefault();
 
         if (apkPath is null || !File.Exists(apkPath))
         {

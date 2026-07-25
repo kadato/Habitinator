@@ -86,7 +86,7 @@ public sealed class BoardItemReorderFuzzTests
 
         // Discard cases where they are distinct but so close that floating-point limits prevent finding a strict midpoint
         var diff = Math.Abs(prevResolved - nextResolved);
-        if (diff >= double.Epsilon && diff < 1e-9)
+        if (diff is >= double.Epsilon and < 1e-9)
         {
             return;
         }
@@ -96,7 +96,7 @@ public sealed class BoardItemReorderFuzzTests
         var itemRight = new BoardItem(Guid.NewGuid(), "Right", SortOrder: nextSortVal);
 
         // This is the list after insert but we evaluate neighbours at insertAt - 1 and insertAt + 1
-        var visibleList = new List<BoardItem> { itemLeft, new BoardItem(Guid.NewGuid(), "Inserted"), itemRight };
+        List<BoardItem> visibleList = [itemLeft, new BoardItem(Guid.NewGuid(), "Inserted"), itemRight];
 
         var mid = BoardItemReorder.ComputeMidpointSortOrder(visibleList, 1, x => x.SortOrder);
 

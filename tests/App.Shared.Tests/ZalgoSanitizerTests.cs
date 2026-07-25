@@ -54,7 +54,7 @@ public sealed class ZalgoSanitizerTests
 
     [Fact]
     public void Sanitize_Null_ReturnsNull()
-        => ZalgoSanitizer.Sanitize((string?)null).Should().BeNull();
+        => ZalgoSanitizer.Sanitize(null).Should().BeNull();
 
     [Fact]
     public void Sanitize_EmptyString_ReturnsEmpty()

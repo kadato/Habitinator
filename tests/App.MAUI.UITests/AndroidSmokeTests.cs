@@ -12,10 +12,12 @@ public sealed class AndroidSmokeTests
     private static AndroidDriver CreateDriver(string apkPath)
     {
         var uri = new Uri(AndroidUiTestEnvironment.AppiumServerUrl);
-        var options = new AppiumOptions();
-        options.PlatformName = "Android";
-        options.AutomationName = "UIAutomator2";
-        options.App = apkPath;
+        var options = new AppiumOptions
+        {
+            PlatformName = "Android",
+            AutomationName = "UIAutomator2",
+            App = apkPath
+        };
 
         return new AndroidDriver(uri, options, TimeSpan.FromMinutes(3));
     }

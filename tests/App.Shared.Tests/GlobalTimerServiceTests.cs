@@ -288,11 +288,11 @@ public sealed class GlobalTimerServiceTests
 
         // Idle state
         Assert.Equal("25:00", timer.GetDisplayTime());
-        Assert.Equal("Get Ready", timer.GetStatusLabel());
+        Assert.Equal("Get Ready", timer.StatusLabel);
 
         // Start work state
         timer.Start();
-        Assert.Equal("Focusing", timer.GetStatusLabel());
+        Assert.Equal("Focusing", timer.StatusLabel);
         Assert.Equal("25:00", timer.GetDisplayTime());
         clock.Advance(TimeSpan.FromSeconds(10));
         Assert.Equal("24:50", timer.GetDisplayTime());
@@ -300,7 +300,7 @@ public sealed class GlobalTimerServiceTests
         // Transition to Short Break
         timer.IncrementCompletedIntervals();
         timer.TransitionToBreak();
-        Assert.Equal("Short Break", timer.GetStatusLabel());
+        Assert.Equal("Short Break", timer.StatusLabel);
         Assert.Equal("05:00", timer.GetDisplayTime());
 
         // Non-Pomodoro mode (Stopwatch)
@@ -308,7 +308,7 @@ public sealed class GlobalTimerServiceTests
         timer.Reset();
         timer.Start();
         clock.Advance(TimeSpan.FromMinutes(5).Add(TimeSpan.FromSeconds(23)));
-        Assert.Equal("Focusing", timer.GetStatusLabel());
+        Assert.Equal("Focusing", timer.StatusLabel);
         Assert.Equal("05:23", timer.GetDisplayTime());
     }
 

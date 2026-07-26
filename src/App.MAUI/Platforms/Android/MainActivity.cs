@@ -89,7 +89,7 @@ public class MainActivity : MauiAppCompatActivity
         // Fall back to the system dark mode setting
         if (OperatingSystem.IsAndroidVersionAtLeast(30))
         {
-            return Resources?.Configuration?.IsNightModeActive == true;
+            return Resources?.Configuration?.IsNightModeActive ?? false;
         }
 
         var uiMode = Resources?.Configuration?.UiMode;

@@ -41,7 +41,7 @@ static string BuildSolutionMermaid(string slnxPath, string repoRoot)
     var doc = XDocument.Load(slnxPath, LoadOptions.None);
     var projectPaths = doc.Descendants()
         .Where(e => e.Name.LocalName == "Project" && e.Attribute("Path") is not null)
-        .Select(e => e.Attribute("Path")!.Value.Replace('\\', Path.DirectorySeparatorChar))
+            .Select(e => e.Attribute("Path").Value.Replace('\\', Path.DirectorySeparatorChar))
         .ToList();
 
     var nodes = ParseProjects(projectPaths, repoRoot);

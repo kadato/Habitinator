@@ -31,7 +31,7 @@ public sealed partial class MauiBoardSyncCoordinator : IDisposable
         _status = status;
         _initialLoad = initialLoad;
         _logger = logger;
-        _ = Task.Run(() => PeriodicLoopAsync(_appStopping.Token));
+        _ = Task.Run(() => PeriodicLoopAsync(_appStopping.Token), _appStopping.Token);
     }
 
     /// <summary>Fire-and-forget sync (resume / post-login).</summary>

@@ -211,9 +211,9 @@
 </div>
 
 @code {
-#pragma warning disable S1199 // Extract nested code block
-#pragma warning disable S1481 // Unused local variable
-#pragma warning disable S2325 // Make member static
+#pragma warning disable S1199 // Extract nested code block (false positives in Razor @code blocks)
+#pragma warning disable S1481 // Unused local variable (false positive TimeZoneService is used in BoardToday)
+#pragma warning disable S2325 // Make member static (false positives properties reference instance Item/Section)
 
     [Inject] private IUserTimeZoneService TimeZoneService { get; set; } = null!;
     [Inject] private IUserDateFormatService DateFormatService { get; set; } = null!;

@@ -432,6 +432,56 @@ h1:focus {
     display: none !important;
 }
 
+/* Mobile app chrome: hide the redundant brand title and collapse the bar so the
+   nav tabs and profile actions share a single compact row. */
+@media (max-width: 767.98px) {
+    .app-branding--header {
+        display: none !important;
+    }
+
+    .app-top-bar__stack {
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+    }
+
+    .app-top-bar__row {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        column-gap: 0.5rem !important;
+        min-width: 0;
+    }
+
+    .app-top-bar__right {
+        gap: 0.35rem;
+    }
+
+    .app-mobile-nav {
+        flex: 1 1 auto !important;
+        width: auto !important;
+        padding: 0 !important;
+    }
+
+    /* Compact sync/profile icons on mobile */
+    .app-header-user-rail {
+        gap: 0.35rem;
+    }
+
+    .app-header-user-rail .sync-status-indicator {
+        margin-right: 0.25rem !important;
+    }
+
+    .app-header-user-rail .sync-status-indicator .mud-icon {
+        font-size: 1.25rem !important;
+    }
+
+    .app-header-profile-btn.mud-icon-button {
+        width: 2.25rem !important;
+        height: 2.25rem !important;
+        border-radius: 10px !important;
+    }
+}
+
 .app-show-desktop-only,
 .app-show-desktop-only.mud-button-root,
 .app-show-desktop-only.mud-icon-button {
@@ -451,10 +501,10 @@ h1:focus {
         display: none !important;
     }
 
-    /* Stacked brand row + mobile nav; offset main content below fixed app bar */
+    /* Single-row mobile app bar; offset main content below fixed app bar */
     .app-shell-layout {
-        --app-top-bar-offset: 7.0rem;
-        --board-sticky-top: 7.0rem;
+        --app-top-bar-offset: 4.25rem;
+        --board-sticky-top: 4.25rem;
     }
 
     .app-shell-layout .app-shell-main.mud-main-content {
@@ -472,20 +522,21 @@ h1:focus {
 .app-header-nav-slot {
     display: inline-flex;
     align-items: center;
-    height: 2.25rem;
+    height: 2rem;
     box-sizing: border-box;
 }
 
 .app-header-nav .app-header-nav-slot .app-header-nav-btn.mud-button-root {
     box-sizing: border-box;
-    height: 2.25rem !important;
-    min-height: 2.25rem !important;
+    height: 2rem !important;
+    min-height: 2rem !important;
     margin: 0 !important;
-    padding: 0.5rem 1rem !important;
-    border: 1px solid transparent !important;
+    padding: 0.35rem 0.85rem !important;
+    border: none !important;
     border-radius: 8px !important;
     box-shadow: none !important;
     font-weight: 600;
+    font-size: 0.85rem;
     text-transform: none !important;
 }
 
@@ -500,7 +551,9 @@ h1:focus {
 }
 
 .app-header-nav .app-header-nav-slot--active .app-header-nav-btn.mud-button-filled.mud-button-filled-primary {
-    border-color: var(--mud-palette-primary) !important;
+    background-color: var(--mud-palette-primary) !important;
+    border-color: transparent !important;
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--mud-palette-primary) 30%, transparent) !important;
 }
 
 /* Mobile nav tabs inside the app bar (always rendered by MudAppBar) */
@@ -550,6 +603,19 @@ h1:focus {
 .app-mobile-nav__label {
     line-height: 1;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+@media (max-width: 359.98px) {
+    .app-mobile-nav__item {
+        gap: 0;
+    }
+
+    .app-mobile-nav__label {
+        display: none;
+    }
 }
 
 .app-mobile-nav__item--active {
@@ -582,6 +648,33 @@ h1:focus {
     max-width: 900px;
     margin: 0 auto;
     width: 100%;
+}
+
+.settings-tabs ::deep .mud-tabs-toolbar {
+    min-height: 48px;
+}
+
+.settings-tabs ::deep .mud-tab {
+    min-height: 48px;
+    text-transform: none;
+    font-weight: 600;
+}
+
+@media (max-width: 479.98px) {
+    .settings-tabs ::deep .mud-tab {
+        min-height: 40px;
+        padding-left: 0.65rem;
+        padding-right: 0.65rem;
+        font-size: 0.8rem;
+    }
+
+    .settings-tabs ::deep .mud-tabs-toolbar {
+        min-height: 40px;
+    }
+
+    .settings-page-wrapper .mud-paper.settings-section-paper {
+        padding: 0.85rem !important;
+    }
 }
 
 .stats-page-wrapper {

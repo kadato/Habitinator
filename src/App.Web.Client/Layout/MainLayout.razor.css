@@ -1,12 +1,12 @@
 ::deep .app-top-bar.mud-appbar,
 ::deep .app-top-bar {
     flex-wrap: wrap;
-    row-gap: 0.25rem;
-    padding-top: 0.25rem;
-    padding-bottom: 0.25rem;
+    row-gap: 0.15rem;
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
     padding-left: 0.5rem;
     padding-right: 0.5rem;
-    column-gap: 1rem;
+    column-gap: 0.75rem;
     backdrop-filter: blur(12px) !important;
     -webkit-backdrop-filter: blur(12px) !important;
     background-color: color-mix(in srgb, var(--mud-palette-surface) 82%, transparent) !important;
@@ -39,11 +39,11 @@
     max-width: 100%;
     min-width: 0;
     box-sizing: border-box;
-    flex-wrap: wrap;
-    row-gap: 0.25rem;
-    column-gap: 1.25rem;
+    flex-wrap: nowrap;
+    row-gap: 0.15rem;
+    column-gap: 0.75rem;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: space-between;
 }
 
 ::deep .app-top-bar__flex-spacer {
@@ -60,11 +60,12 @@
 }
 
 ::deep .app-top-bar__right {
-    gap: 0.6rem 0.9rem;
+    gap: 0.5rem;
     align-items: center;
     min-width: 0;
     flex: 0 0 auto;
     justify-content: flex-end;
+    margin-left: auto;
 }
 
 ::deep .app-top-bar__title {
@@ -89,9 +90,9 @@
 }
 
 ::deep .app-header-profile-btn.mud-icon-button {
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 12px !important;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 10px !important;
     background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent) !important;
 }
 
@@ -139,31 +140,81 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    gap: 0.35rem;
+    gap: 0.2rem;
 }
 
+/* Mobile app chrome: hide brand, profile at left edge, nav fills rest */
 @media (max-width: 767.98px) {
+    ::deep .app-branding--header {
+        display: none !important;
+    }
+
+    ::deep .app-top-bar.mud-appbar,
+    ::deep .app-top-bar {
+        padding: 0.15rem 0 !important;
+        column-gap: 0;
+    }
+
+    ::deep .app-top-bar__stack {
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 0 !important;
+    }
+
+    ::deep .app-top-bar__row {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        column-gap: 0 !important;
+        min-width: 0;
+    }
+
+    ::deep .app-top-bar__left {
+        gap: 0 !important;
+    }
+
+    ::deep .app-top-bar__right {
+        gap: 0;
+        margin-left: 0;
+        padding-left: 0.25rem;
+        padding-right: 0.15rem;
+    }
+
+    ::deep .app-header-user-rail {
+        gap: 0;
+        justify-content: flex-end;
+    }
+
+    ::deep .app-header-profile-btn.mud-icon-button {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 8px !important;
+    }
+
+    ::deep .app-header-username-btn {
+        display: none !important;
+    }
+
+    ::deep .app-mobile-nav {
+        flex: 1 1 auto !important;
+        width: auto !important;
+        padding: 0 0.15rem !important;
+    }
+
     ::deep .board-main-container.mud-container {
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
     }
 
     ::deep .app-top-bar.mud-appbar {
-        padding-left: 0.75rem;
-        padding-right: 0.75rem;
         height: auto !important;
+        min-height: 40px;
     }
 
     ::deep .app-top-bar .mud-toolbar-appbar {
         height: auto !important;
         align-items: stretch !important;
-        padding-top: 0.35rem !important;
-        padding-bottom: 0.35rem !important;
-    }
-
-    ::deep .app-top-bar__title {
-        font-size: 1.05rem !important;
-        margin-right: 0;
+        padding-top: 0.15rem !important;
+        padding-bottom: 0.15rem !important;
     }
 }
 

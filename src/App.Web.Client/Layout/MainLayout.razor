@@ -37,7 +37,7 @@
                 <div class="app-top-bar__stack w-100">
                     <div class="app-top-bar__row d-flex">
                         <div class="app-top-bar__left d-flex align-center">
-                            <div class="app-branding d-flex flex-column justify-center">
+                            <div class="app-branding app-branding--header d-flex flex-column justify-center">
                                 <MudText Typo="Typo.h6" Class="app-top-bar__title mb-0">Habitinator</MudText>
                             </div>
                             <div class="app-show-desktop-only align-center">
@@ -90,7 +90,7 @@
         </Authorized>
         <NotAuthorized>
             <MudAppBar Elevation="0" Dense="true" Class="app-top-bar app-top-bar--guest" ToolBarClass="app-top-bar-toolbar" role="banner">
-                <a href="/" data-enhance-nav="false" class="text-decoration-none"><MudText Typo="Typo.h6" Class="app-top-bar__title mb-0">Habitinator</MudText></a>
+                <a href="/" data-enhance-nav="false" class="text-decoration-none app-branding app-branding--header"><MudText Typo="Typo.h6" Class="app-top-bar__title mb-0">Habitinator</MudText></a>
                 <MudSpacer />
                 <MudButton Href="/auth/login" Target="_self" data-enhance-nav="false" Variant="Variant.Text" Color="Color.Inherit" Class="text-transform-none app-show-mobile-only">Sign in</MudButton>
                 <MudButton Href="/auth/register" Target="_self" data-enhance-nav="false" Variant="Variant.Filled" Color="Color.Primary" Class="text-transform-none ms-1">Register</MudButton>

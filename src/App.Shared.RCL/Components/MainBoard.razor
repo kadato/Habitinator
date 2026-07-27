@@ -154,33 +154,56 @@
     {
         <div class="board-columns-stage">
             <div class="board-columns-mobile">
-                <MudTabs @bind-ActivePanelIndex="_mobileSectionIndex"
-                         Class="board-section-tabs"
-                         Centered="true"
-                         ApplyEffectsToContainer="false"
-                         Rounded="true"
-                         Color="Color.Primary"
-                         Elevation="0"
-                         Outlined="false">
-                    <MudTabPanel Text="@($"Habits ({FilteredHabits.Count})")">
+                <div class="board-section-switcher" role="tablist" aria-label="Board sections">
+                    <button type="button"
+                            role="tab"
+                            aria-selected="@GetAriaSelected(0)"
+                            class="@GetSectionSwitcherClass(0)"
+                            @onclick="() => _mobileSectionIndex = 0">
+                        <span class="board-section-switcher__label">Habits</span>
+                        <span class="board-section-switcher__count">@FilteredHabits.Count</span>
+                    </button>
+                    <button type="button"
+                            role="tab"
+                            aria-selected="@GetAriaSelected(1)"
+                            class="@GetSectionSwitcherClass(1)"
+                            @onclick="() => _mobileSectionIndex = 1">
+                        <span class="board-section-switcher__label">Dailies</span>
+                        <span class="board-section-switcher__count">@DailiesDueOpenCount</span>
+                    </button>
+                    <button type="button"
+                            role="tab"
+                            aria-selected="@GetAriaSelected(2)"
+                            class="@GetSectionSwitcherClass(2)"
+                            @onclick="() => _mobileSectionIndex = 2">
+                        <span class="board-section-switcher__label">To-dos</span>
+                        <span class="board-section-switcher__count">@OpenTodoCount</span>
+                    </button>
+                </div>
+
+                <div class="board-section-tab-content">
+                    @if (_mobileSectionIndex == 0)
+                    {
                         <BoardColumn Section="BoardSection.Habit"
-                                        Items="FilteredHabits"
-                                        IsBoardFilterExcludingAll="Habits.Count > 0 && FilteredHabits.Count == 0"
-                                        OnChanged="OnBoardChanged"/>
-                    </MudTabPanel>
-                    <MudTabPanel Text="@($"Dailies ({DailiesDueOpenCount})")">
+                                     Items="FilteredHabits"
+                                     IsBoardFilterExcludingAll="Habits.Count > 0 && FilteredHabits.Count == 0"
+                                     OnChanged="OnBoardChanged"/>
+                    }
+                    else if (_mobileSectionIndex == 1)
+                    {
                         <BoardColumn Section="BoardSection.Daily"
-                                        Items="FilteredDailies"
-                                        IsBoardFilterExcludingAll="Dailies.Count > 0 && FilteredDailies.Count == 0"
-                                        OnChanged="OnBoardChanged"/>
-                    </MudTabPanel>
-                    <MudTabPanel Text="@($"To-dos ({OpenTodoCount})")">
+                                     Items="FilteredDailies"
+                                     IsBoardFilterExcludingAll="Dailies.Count > 0 && FilteredDailies.Count == 0"
+                                     OnChanged="OnBoardChanged"/>
+                    }
+                    else if (_mobileSectionIndex == 2)
+                    {
                         <BoardColumn Section="BoardSection.Todo"
-                                        Items="FilteredTodos"
-                                        IsBoardFilterExcludingAll="Todos.Count > 0 && FilteredTodos.Count == 0"
-                                        OnChanged="OnBoardChanged"/>
-                    </MudTabPanel>
-                </MudTabs>
+                                     Items="FilteredTodos"
+                                     IsBoardFilterExcludingAll="Todos.Count > 0 && FilteredTodos.Count == 0"
+                                     OnChanged="OnBoardChanged"/>
+                    }
+                </div>
             </div>
             <div class="board-columns-desktop">
                 <MudGrid Spacing="2" Class="board-columns-grid w-100">
@@ -210,17 +233,18 @@
     {
         <div class="board-columns-stage">
             <div class="board-columns-mobile">
-                <MudTabs Centered="true" Rounded="true" Color="Color.Primary" Elevation="0" Outlined="false">
-                    <MudTabPanel Text="Habits">
-                        <BoardColumnSkeleton Section="BoardSection.Habit" />
-                    </MudTabPanel>
-                    <MudTabPanel Text="Dailies">
-                        <BoardColumnSkeleton Section="BoardSection.Daily" />
-                    </MudTabPanel>
-                    <MudTabPanel Text="To Do's">
-                        <BoardColumnSkeleton Section="BoardSection.Todo" />
-                    </MudTabPanel>
-                </MudTabs>
+                <div class="board-section-switcher" role="tablist" aria-label="Loading board sections">
+                    <button type="button" role="tab" aria-selected="true" class="board-section-switcher__btn board-section-switcher__btn--active" disabled>
+                        <span class="board-section-switcher__label">Habits</span>
+                    </button>
+                    <button type="button" role="tab" aria-selected="false" class="board-section-switcher__btn" disabled>
+                        <span class="board-section-switcher__label">Dailies</span>
+                    </button>
+                    <button type="button" role="tab" aria-selected="false" class="board-section-switcher__btn" disabled>
+                        <span class="board-section-switcher__label">To-dos</span>
+                    </button>
+                </div>
+                <BoardColumnSkeleton Section="BoardSection.Habit" />
             </div>
             <div class="board-columns-desktop">
                 <MudGrid Spacing="2" Class="board-columns-grid w-100">
@@ -275,6 +299,14 @@
     private int OpenTodoCount => FilteredTodos.Count(t => !t.IsCompleted);
 
     private int _mobileSectionIndex;
+
+    private string GetSectionSwitcherClass(int index) =>
+        index == _mobileSectionIndex
+            ? "board-section-switcher__btn board-section-switcher__btn--active"
+            : "board-section-switcher__btn";
+
+    private string GetAriaSelected(int index) =>
+        index == _mobileSectionIndex ? "true" : "false";
 
     private IReadOnlyList<string> GetAllTagNamesForMenu()
     {

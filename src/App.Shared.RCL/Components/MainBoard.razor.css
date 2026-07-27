@@ -34,18 +34,79 @@
     display: block;
 }
 
-.board-section-tabs {
+/* Panel content spacing */
+.board-section-tab-content {
     width: 100%;
-}
-
-.board-section-tabs ::deep .mud-tab-panel-content {
     padding-top: 0.5rem;
-}
-
-/* Keep section tab panels from overlapping the tab bar */
-.board-section-tabs ::deep .mud-tabs-panels {
     position: relative;
     overflow: hidden;
+}
+.board-section-switcher {
+    display: none;
+    width: 100%;
+    gap: 0.35rem;
+    padding: 0.2rem;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 10px;
+}
+
+.board-section-switcher__btn {
+    flex: 1 1 0;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 40px;
+    padding: 0.35rem 0.5rem;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: none;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.15s ease;
+}
+
+.board-section-switcher__btn:active {
+    transform: scale(0.97);
+}
+
+.board-section-switcher__btn--active {
+    color: #fff;
+    background-color: var(--mud-palette-primary);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--mud-palette-primary) 35%, transparent);
+}
+
+.board-section-switcher__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.4rem;
+    height: 1.4rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+    background: color-mix(in srgb, var(--mud-palette-text-secondary) 15%, transparent);
+    color: var(--mud-palette-text-secondary);
+}
+
+.board-section-switcher__btn--active .board-section-switcher__count {
+    background: rgba(0, 0, 0, 0.2);
+    color: #fff;
+}
+
+.board-section-switcher__label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 @media (max-width: 959.98px) {
@@ -61,11 +122,20 @@
     .board-columns-desktop {
         display: none !important;
     }
+
+    .board-section-switcher {
+        display: flex;
+    }
+
+    /* Panel content spacing on mobile */
+    .board-section-tab-content {
+        padding-top: 0.75rem;
+    }
 }
 
 /* content-visibility: defer rendering of off-screen tab panels on mobile for faster initial paint */
 @media (max-width: 959.98px) {
-    .board-section-tabs ::deep .mud-tab-panel:not([aria-hidden="false"]) {
+    .board-section-tab-content {
         content-visibility: auto;
         contain-intrinsic-size: auto 500px;
     }
@@ -196,7 +266,14 @@
     .board-stat-filters {
         width: 100% !important;
         max-width: none !important;
-        justify-content: space-between !important;
+        justify-content: flex-start !important;
+        gap: 0.5rem !important;
+        flex-wrap: wrap !important;
+    }
+
+    .board-search-wrapper {
+        flex-basis: 100% !important;
+        max-width: 100% !important;
     }
 
     .board-search-pill {
@@ -215,13 +292,27 @@
     }
 
     /* More space below mobile nav tabs */
-    .board-section-tabs ::deep .mud-tab-panel-content {
+    .board-section-tab-content {
         padding-top: 1.25rem !important;
     }
 
     /* Align filter buttons to the right on mobile */
     .board-columns-mobile ::deep .board-filter-toolbar {
         justify-content: flex-end !important;
+    }
+
+    /* Section tabs on mobile: equal-width buttons so all three fit and are easy to tap. */
+}
+
+@media (max-width: 479.98px) {
+    .board-stat-filters {
+        gap: 0.4rem !important;
+    }
+
+    .board-tags-trigger--strip,
+    .board-search-pill ::deep .mud-input-outlined {
+        height: 2.25rem !important;
+        font-size: 0.8rem !important;
     }
 }
 

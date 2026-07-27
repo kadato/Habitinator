@@ -200,6 +200,32 @@
     .board-column {
         min-height: auto;
     }
+
+    .board-column ::deep .board-filter-btn.mud-button-root {
+        min-height: 40px !important;
+        padding-left: 0.6rem !important;
+        padding-right: 0.6rem !important;
+        font-size: 0.78rem !important;
+    }
+}
+
+@media (max-width: 479.98px) {
+    .board-column ::deep .board-filter-btn.mud-button-root {
+        min-height: 36px !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        font-size: 0.75rem !important;
+    }
+
+    .board-column ::deep .mud-card-header {
+        padding-left: 0.65rem !important;
+        padding-right: 0.65rem !important;
+    }
+
+    .board-column ::deep .mud-card-content {
+        padding-left: 0.65rem !important;
+        padding-right: 0.65rem !important;
+    }
 }
 
 /* Column header glossary popover */

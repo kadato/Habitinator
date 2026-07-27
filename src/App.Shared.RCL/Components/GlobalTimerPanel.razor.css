@@ -343,7 +343,8 @@
     display: none;
     cursor: pointer;
     user-select: none;
-    background: transparent;
+    background: color-mix(in srgb, var(--mud-palette-surface) 60%, transparent);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
     transition: background-color 0.2s ease;
     border-radius: 12px;
 }
@@ -352,9 +353,13 @@
     .timer-mobile-header {
         display: block;
     }
-    
-    .timer-mobile-header:active {
+
+    .timer-mobile-header:hover {
         background-color: color-mix(in srgb, var(--mud-palette-action-default) 8%, transparent);
+    }
+
+    .timer-mobile-header:active {
+        background-color: color-mix(in srgb, var(--mud-palette-action-default) 14%, transparent);
     }
 }
 
@@ -401,6 +406,37 @@
 @media (max-width: 399.98px) {
     .timer-clock-icon:not(.timer-clock-icon--strip) {
         display: none;
+    }
+
+    ::deep .timer-value {
+        font-size: 2.75rem !important;
+    }
+
+    ::deep .timer-value--strip {
+        font-size: 2.5rem !important;
+    }
+
+    .timer-mobile-header-text {
+        font-size: 0.95rem;
+    }
+
+    .timer-running-strip__actions {
+        gap: 0.4rem;
+    }
+
+    ::deep .timer-icon-btn {
+        width: 2.5rem !important;
+        height: 2.5rem !important;
+        min-width: 2.5rem !important;
+        min-height: 2.5rem !important;
+    }
+
+    .timer-compact__actions {
+        gap: 0.4rem;
+    }
+
+    .timer-inputs-pair {
+        gap: 0.35rem;
     }
 }
 

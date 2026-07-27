@@ -394,16 +394,30 @@
 
 @media (max-width: 599.98px) {
     .board-check {
-        width: 2rem;
-        height: 2rem;
-        min-width: 2rem;
-        min-height: 2rem;
+        width: 2.25rem;
+        height: 2.25rem;
+        min-width: 2.25rem;
+        min-height: 2.25rem;
     }
 
     .board-sq,
     .board-sq-spacer {
-        width: 2rem;
-        height: 2rem;
+        width: 2.25rem;
+        height: 2.25rem;
+    }
+
+    .board-card__delete.mud-icon-button {
+        width: 2.5rem;
+        height: 2.5rem;
+        min-width: 2.5rem;
+        min-height: 2.5rem;
+    }
+
+    .board-card__title-text {
+        font-size: 0.92rem;
+        line-height: 1.35;
+        padding-top: 0.15rem;
+        padding-bottom: 0.15rem;
     }
 }
 

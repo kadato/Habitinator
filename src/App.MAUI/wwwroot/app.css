@@ -188,8 +188,8 @@
 
 .app-top-bar__row {
     display: flex !important;
-    flex: 1 1 0% !important;
-    width: 100% !important;
+    flex: 1 1 0%;
+    width: 100%;
     max-width: 100% !important;
     min-width: 0 !important;
     box-sizing: border-box !important;
@@ -201,7 +201,7 @@
 }
 
 .app-top-bar__flex-spacer {
-    flex: 1 1 auto !important;
+    flex: 1 1 auto;
     min-width: 0.5rem !important;
     align-self: stretch !important;
 }
@@ -294,26 +294,8 @@
 
 @media (max-width: 767.98px) {
     .board-main-container.mud-container {
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
-    }
-
-    .app-top-bar.mud-appbar {
-        padding-left: 0.75rem;
-        padding-right: 0.75rem;
-        height: auto !important;
-    }
-
-    .app-top-bar .mud-toolbar-appbar {
-        height: auto !important;
-        align-items: stretch !important;
-        padding-top: 0.35rem !important;
-        padding-bottom: 0.35rem !important;
-    }
-
-    .app-top-bar__title {
-        font-size: 1.05rem !important;
-        margin-right: 0;
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
     }
 }
 

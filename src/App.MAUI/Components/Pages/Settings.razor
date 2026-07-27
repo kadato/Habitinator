@@ -1,12 +1,28 @@
 @page "/settings"
 @using global::App.Shared.RCL.Services
+@inject IApiSession Session
 @inject IAppUpdaterService UpdaterService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject NavigationManager Nav
 
 <PageTitle>@PageTitles.Page("Settings")</PageTitle>
 
 <MudText Typo="Typo.h4" Class="app-page-title">Settings</MudText>
+
+<MudPaper Class="pa-4 settings-section-paper mb-3" Elevation="0" Outlined="true">
+    <MudStack Spacing="2">
+        <MudText Typo="Typo.subtitle1" Class="mb-1">Account</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">
+            Signed in as <strong>@Session.Email</strong>
+        </MudText>
+        <SyncStatusIndicator IconOnly="false" />
+        <MudButton Variant="Variant.Outlined" Color="Color.Error" Class="mt-2" OnClick="LogoutAsync">
+            Log out
+        </MudButton>
+    </MudStack>
+</MudPaper>
+
 <UserPreferencesSection/>
 <NotificationSettingsSection/>
 
@@ -68,6 +84,12 @@
         {
             // Fallback for Web/tests
         }
+    }
+
+    private async Task LogoutAsync()
+    {
+        await Session.ClearSessionAsync();
+        Nav.NavigateTo("/", replace: true);
     }
 
     private async Task CheckForUpdatesAsync()

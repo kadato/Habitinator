@@ -173,7 +173,7 @@
     <ImportMap/>
     <link rel="icon" href="/favicon.ico" sizes="any"/>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
-    <link rel="icon" type="image/png" href="favicon.png"/>
+    <link rel="icon" type="image/png" href="/favicon.png"/>
     <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
     <link rel="manifest" href="/manifest.webmanifest"/>
     @* Fallback until the interactive circuit updates head; must match Routes render mode. *@
@@ -190,8 +190,14 @@
     <div class="wasm-splash__inner">
         <div class="wasm-splash__logo" aria-hidden="true">
             <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="48" height="48" rx="14" fill="url(#splash-grad)"/>
-                <path d="M15 26h3v7h-3zM21 20h3v13h-3zM27 23h3v10h-3zM33 17h3v16h-3z" fill="#fff" opacity="0.95"/>
+                <rect width="48" height="48" rx="11" fill="url(#splash-grad)"/>
+                <g fill="#ffffff">
+                    <rect x="11.5" y="26" width="6.7" height="12.5" rx="1.4"/>
+                    <rect x="20.6" y="18.2" width="6.7" height="20.2" rx="1.4"/>
+                    <rect x="29.8" y="24" width="6.7" height="14.4" rx="1.4"/>
+                    <circle cx="14.9" cy="22.1" r="1.9" fill="#3b82f6"/>
+                    <path d="M31.7 21.4l1.4 1.5 2.9-2.7" fill="none" stroke="#3b82f6" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </g>
                 <defs>
                     <linearGradient id="splash-grad" x1="0" y1="0" x2="48" y2="48">
                         <stop offset="0%" stop-color="#3b82f6"/>

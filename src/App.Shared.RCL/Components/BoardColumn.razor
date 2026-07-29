@@ -1,124 +1,130 @@
 @namespace App.Shared.RCL.Components
 
 <MudCard Class="@($"board-column {GetAccentClass()}")" Elevation="0" Outlined="false">
-    <MudCardHeader Class="pb-2">
+    <MudCardHeader Class="pb-1">
         <CardHeaderContent>
-            <MudStack Spacing="1">
-                <div class="board-column-header-flex">
-                    <div class="board-column-header-left board-column-header-row">
-                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="board-title-stack">
-                            <span class="board-count-badge">@VisibleItems().Count</span>
-                            <MudText Typo="Typo.subtitle1" Class="board-title">@GetTitle()</MudText>
-                            <MudMenu Icon="@Icons.Material.Outlined.Info"
-                                     Size="Size.Small"
-                                     Dense="true"
-                                     AnchorOrigin="Origin.BottomLeft"
-                                     TransformOrigin="Origin.TopLeft"
-                                     PopoverClass="board-column-info-popover pa-3"
-                                     Class="board-column-info-btn"
-                                     title="What is this column?">
-                                <ChildContent>
-                                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold mb-1" Color="Color.Primary">@GetTitle()</MudText>
-                                    <MudText Typo="Typo.body2" Class="board-column-info-text">
-                                        @GetGlossaryText()
-                                    </MudText>
-                                </ChildContent>
-                            </MudMenu>
-                        </MudStack>
-                    </div>
-                    <MudStack Row="true" Spacing="1" Class="flex-wrap board-filter-toolbar" role="toolbar">
-                        @if (Section == BoardSection.Habit)
-                        {
-                            <MudButton Size="Size.Small"
-                                       Class="board-filter-btn"
-                                       Variant="@FilterVariant(_habitFilter == HabitListFilter.All)"
-                                       Color="Color.Primary"
-                                       OnClick="@(() => SetHabitFilter(HabitListFilter.All))">
-                                All
-                            </MudButton>
-                            <MudButton Size="Size.Small"
-                                       Class="board-filter-btn"
-                                       Variant="@FilterVariant(_habitFilter == HabitListFilter.Weak)"
-                                       Color="Color.Primary"
-                                       OnClick="@(() => SetHabitFilter(HabitListFilter.Weak))">
-                                Weak
-                            </MudButton>
-                            <MudButton Size="Size.Small"
-                                       Class="board-filter-btn"
-                                       Variant="@FilterVariant(_habitFilter == HabitListFilter.Strong)"
-                                       Color="Color.Primary"
-                                       OnClick="@(() => SetHabitFilter(HabitListFilter.Strong))">
-                                Strong
-                            </MudButton>
-                        }
-                        else if (Section == BoardSection.Daily)
-                        {
-                            <MudButton Size="Size.Small"
-                                       Class="board-filter-btn"
-                                       Variant="@FilterVariant(_dailyFilter == DailyListFilter.All)"
-                                       Color="Color.Primary"
-                                       OnClick="@(() => SetDailyFilter(DailyListFilter.All))">
-                                All
-                            </MudButton>
-                            <MudButton Size="Size.Small"
-                                       Class="board-filter-btn"
-                                       Variant="@FilterVariant(_dailyFilter == DailyListFilter.Due)"
-                                       Color="Color.Primary"
-                                       OnClick="@(() => SetDailyFilter(DailyListFilter.Due))">
-                                Due
-                            </MudButton>
-                            <MudButton Size="Size.Small"
-                                       Class="board-filter-btn"
-                                       Variant="@FilterVariant(_dailyFilter == DailyListFilter.NotDue)"
-                                       Color="Color.Primary"
-                                       OnClick="@(() => SetDailyFilter(DailyListFilter.NotDue))">
-                                Not due
-                            </MudButton>
-                        }
-                        else
-                        {
-                            <MudButton Size="Size.Small"
-                                       Class="board-filter-btn"
-                                       Variant="@FilterVariant(_todoFilter == TodoListFilter.Active)"
-                                       Color="Color.Primary"
-                                       OnClick="@(() => SetTodoFilter(TodoListFilter.Active))">
-                                Active
-                            </MudButton>
-                            <MudButton Size="Size.Small"
-                                       Class="board-filter-btn"
-                                       Variant="@FilterVariant(_todoFilter == TodoListFilter.Scheduled)"
-                                       Color="Color.Primary"
-                                       OnClick="@(() => SetTodoFilter(TodoListFilter.Scheduled))">
-                                Scheduled
-                            </MudButton>
-                            <MudButton Size="Size.Small"
-                                       Class="board-filter-btn"
-                                       Variant="@FilterVariant(_todoFilter == TodoListFilter.Done)"
-                                       Color="Color.Primary"
-                                       OnClick="@(() => SetTodoFilter(TodoListFilter.Done))">
-                                Done
-                            </MudButton>
-                        }
-                    </MudStack>
-                </div>
-                @if (Section == BoardSection.Todo
-                     && _todoFilter == TodoListFilter.Done
-                     && VisibleItems().Count > 0)
-                {
-                    <MudButton Size="Size.Small"
-                               Variant="Variant.Text"
-                               Color="Color.Error"
-                               StartIcon="@Icons.Material.Filled.DeleteSweep"
-                               Class="align-self-start"
-                               OnClick="DeleteAllDoneTodosAsync">
-                        Delete all done
-                    </MudButton>
-                }
-            </MudStack>
+            <div class="board-column-header-row">
+                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="board-title-stack">
+                    <span class="board-count-badge">@VisibleItems().Count</span>
+                    <MudText Typo="Typo.subtitle1" Class="board-title">@GetTitle()</MudText>
+                    <MudMenu Icon="@Icons.Material.Outlined.Info"
+                             Size="Size.Small"
+                             Dense="true"
+                             AnchorOrigin="Origin.BottomLeft"
+                             TransformOrigin="Origin.TopLeft"
+                             PopoverClass="board-column-info-popover pa-3"
+                             Class="board-column-info-btn"
+                             title="What is this column?">
+                        <ChildContent>
+                            <MudText Typo="Typo.subtitle2" Class="font-weight-bold mb-1" Color="Color.Primary">@GetTitle()</MudText>
+                            <MudText Typo="Typo.body2" Class="board-column-info-text">
+                                @GetGlossaryText()
+                            </MudText>
+                        </ChildContent>
+                    </MudMenu>
+                </MudStack>
+            </div>
         </CardHeaderContent>
     </MudCardHeader>
 
     <MudCardContent Class="pt-0">
+        <div class="board-filter-toolbar mb-2" role="toolbar" style="display: flex; flex-direction: row; width: 100%; gap: 6px;">
+            @if (Section == BoardSection.Habit)
+            {
+                <MudButton Size="Size.Small"
+                           Class="board-filter-btn"
+                           Style="flex: 1 1 0px; min-width: 0;"
+                           Variant="@FilterVariant(_habitFilter == HabitListFilter.All)"
+                           Color="Color.Primary"
+                           OnClick="@(() => SetHabitFilter(HabitListFilter.All))">
+                    All
+                </MudButton>
+                <MudButton Size="Size.Small"
+                           Class="board-filter-btn"
+                           Style="flex: 1 1 0px; min-width: 0;"
+                           Variant="@FilterVariant(_habitFilter == HabitListFilter.Weak)"
+                           Color="Color.Primary"
+                           OnClick="@(() => SetHabitFilter(HabitListFilter.Weak))">
+                    Weak
+                </MudButton>
+                <MudButton Size="Size.Small"
+                           Class="board-filter-btn"
+                           Style="flex: 1 1 0px; min-width: 0;"
+                           Variant="@FilterVariant(_habitFilter == HabitListFilter.Strong)"
+                           Color="Color.Primary"
+                           OnClick="@(() => SetHabitFilter(HabitListFilter.Strong))">
+                    Strong
+                </MudButton>
+            }
+            else if (Section == BoardSection.Daily)
+            {
+                <MudButton Size="Size.Small"
+                           Class="board-filter-btn"
+                           Style="flex: 1 1 0px; min-width: 0;"
+                           Variant="@FilterVariant(_dailyFilter == DailyListFilter.All)"
+                           Color="Color.Primary"
+                           OnClick="@(() => SetDailyFilter(DailyListFilter.All))">
+                    All
+                </MudButton>
+                <MudButton Size="Size.Small"
+                           Class="board-filter-btn"
+                           Style="flex: 1 1 0px; min-width: 0;"
+                           Variant="@FilterVariant(_dailyFilter == DailyListFilter.Due)"
+                           Color="Color.Primary"
+                           OnClick="@(() => SetDailyFilter(DailyListFilter.Due))">
+                    Due
+                </MudButton>
+                <MudButton Size="Size.Small"
+                           Class="board-filter-btn"
+                           Style="flex: 1 1 0px; min-width: 0;"
+                           Variant="@FilterVariant(_dailyFilter == DailyListFilter.NotDue)"
+                           Color="Color.Primary"
+                           OnClick="@(() => SetDailyFilter(DailyListFilter.NotDue))">
+                    Not due
+                </MudButton>
+            }
+            else
+            {
+                <MudButton Size="Size.Small"
+                           Class="board-filter-btn"
+                           Style="flex: 1 1 0px; min-width: 0;"
+                           Variant="@FilterVariant(_todoFilter == TodoListFilter.Active)"
+                           Color="Color.Primary"
+                           OnClick="@(() => SetTodoFilter(TodoListFilter.Active))">
+                    Active
+                </MudButton>
+                <MudButton Size="Size.Small"
+                           Class="board-filter-btn"
+                           Style="flex: 1 1 0px; min-width: 0;"
+                           Variant="@FilterVariant(_todoFilter == TodoListFilter.Scheduled)"
+                           Color="Color.Primary"
+                           OnClick="@(() => SetTodoFilter(TodoListFilter.Scheduled))">
+                    Scheduled
+                </MudButton>
+                <MudButton Size="Size.Small"
+                           Class="board-filter-btn"
+                           Style="flex: 1 1 0px; min-width: 0;"
+                           Variant="@FilterVariant(_todoFilter == TodoListFilter.Done)"
+                           Color="Color.Primary"
+                           OnClick="@(() => SetTodoFilter(TodoListFilter.Done))">
+                    Done
+                </MudButton>
+            }
+        </div>
+
+        @if (Section == BoardSection.Todo
+             && _todoFilter == TodoListFilter.Done
+             && VisibleItems().Count > 0)
+        {
+            <MudButton Size="Size.Small"
+                       Variant="Variant.Text"
+                       Color="Color.Error"
+                       StartIcon="@Icons.Material.Filled.DeleteSweep"
+                       Class="align-self-start mb-2"
+                       OnClick="DeleteAllDoneTodosAsync">
+                Delete all done
+            </MudButton>
+        }
         <div @onkeydown="OnDraftKeyAsync" class="board-add-wrap">
             <MudTextField @ref="_draftField"
                           @bind-Value="_draft"

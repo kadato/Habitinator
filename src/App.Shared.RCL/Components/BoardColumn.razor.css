@@ -94,38 +94,59 @@
     color: #f59e0b;
 }
 
-/* Column filter toggles: softer than default primary blue (filled + outlined). */
-.board-column ::deep .board-filter-btn.mud-button-outlined.mud-button-outlined-primary {
-    color: color-mix(in srgb, var(--mud-palette-primary) 60%, var(--mud-palette-text-secondary)) !important;
-    --mud-ripple-color: color-mix(in srgb, var(--mud-palette-primary) 40%, transparent) !important;
-    border-color: color-mix(
-        in srgb,
-        var(--mud-palette-primary) 32%,
-        color-mix(in srgb, var(--mud-palette-text-primary) 14%, transparent)
-    ) !important;
+/* Column filter toolbar: sits inside MudCardContent, 100% width matching input box */
+.board-filter-toolbar {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
 }
 
-.board-column ::deep .board-filter-btn.mud-button-outlined.mud-button-outlined-primary:hover {
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent) !important;
+.board-filter-toolbar ::deep .board-filter-btn {
+    flex: 1 1 0px !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+    text-align: center !important;
 }
 
-.board-column ::deep .board-filter-btn.mud-button-filled.mud-button-filled-primary {
-    color: var(--mud-palette-primary-contrast-text) !important;
-    --mud-ripple-color: color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-primary-contrast-text)) !important;
-    background-color: color-mix(
-        in srgb,
-        var(--mud-palette-primary) 38%,
-        color-mix(in srgb, var(--mud-palette-black) 80%, transparent)
-    ) !important;
-    box-shadow: 0 1px 0 color-mix(in srgb, var(--mud-palette-surface) 15%, transparent) inset !important;
+.board-filter-toolbar ::deep .board-filter-btn .mud-button-label {
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: block !important;
 }
 
-.board-column ::deep .board-filter-btn.mud-button-filled.mud-button-filled-primary:hover {
-    background-color: color-mix(
-        in srgb,
-        var(--mud-palette-primary) 50%,
-        color-mix(in srgb, var(--mud-palette-black) 80%, transparent)
-    ) !important;
+/* Column filter toggles: vibrant primary blue for active, clean outlined for inactive */
+.board-filter-toolbar ::deep .board-filter-btn.mud-button-outlined.mud-button-outlined-primary {
+    color: var(--mud-palette-primary) !important;
+    --mud-ripple-color: color-mix(in srgb, var(--mud-palette-primary) 30%, transparent) !important;
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-divider)) !important;
+    background-color: transparent !important;
+}
+
+.board-filter-toolbar ::deep .board-filter-btn.mud-button-outlined.mud-button-outlined-primary:hover {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 10%, transparent) !important;
+    border-color: var(--mud-palette-primary) !important;
+}
+
+.board-filter-toolbar ::deep .board-filter-btn.mud-button-filled.mud-button-filled-primary {
+    color: #ffffff !important;
+    --mud-ripple-color: rgba(255, 255, 255, 0.4) !important;
+    background-color: var(--mud-palette-primary) !important;
+    border-color: var(--mud-palette-primary) !important;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--mud-palette-primary) 35%, transparent) !important;
+}
+
+.board-filter-toolbar ::deep .board-filter-btn.mud-button-filled.mud-button-filled-primary:hover {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 85%, #000000) !important;
 }
 
 .board-add-wrap ::deep .mud-input-outlined {
@@ -203,8 +224,8 @@
 
     .board-column ::deep .board-filter-btn.mud-button-root {
         min-height: 40px !important;
-        padding-left: 0.6rem !important;
-        padding-right: 0.6rem !important;
+        padding-left: 0.25rem !important;
+        padding-right: 0.25rem !important;
         font-size: 0.78rem !important;
     }
 }
@@ -212,8 +233,8 @@
 @media (max-width: 479.98px) {
     .board-column ::deep .board-filter-btn.mud-button-root {
         min-height: 36px !important;
-        padding-left: 0.5rem !important;
-        padding-right: 0.5rem !important;
+        padding-left: 0.2rem !important;
+        padding-right: 0.2rem !important;
         font-size: 0.75rem !important;
     }
 
@@ -257,15 +278,20 @@
     transform: scale(1.08);
 }
 
-/* Header flex row for desktop, moved from MainBoard.razor.css to fix CSS isolation */
+/* Column header container: stacks title row on top, filter toolbar below spanning full width */
 .board-column-header-flex {
     display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: wrap !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    gap: 0.35rem 0.5rem !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 0.5rem !important;
     width: 100% !important;
+}
+
+.board-column-header-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
 }
 
 /* Empty state styling */

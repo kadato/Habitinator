@@ -21,8 +21,8 @@
     flex-direction: column;
     justify-content: flex-start;
     min-height: 0;
-    padding: 0 0.25rem 0.75rem; /* reduced top padding from 0.15rem */
-    margin-top: -0.25rem; /* pull lists closer to search */
+    padding: 0 0.25rem 0.75rem;
+    margin-top: 0 !important;
 }
 
 /* Mobile: MudTabs with one column per panel. Desktop: three-column grid only. */
@@ -152,7 +152,7 @@
     border: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 8%, transparent);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18), inset 0 1px 0 color-mix(in srgb, var(--mud-palette-text-primary) 5%, transparent);
     backdrop-filter: blur(8px);
-    margin-bottom: 0.1rem;
+    margin-bottom: 1.25rem !important;
     padding-top: 0.4rem !important;
     padding-bottom: 0.4rem !important;
 }
@@ -202,7 +202,7 @@
 .board-stat-strip-row {
     display: flex !important;
     flex-direction: row !important;
-    flex-wrap: wrap !important;
+    flex-wrap: nowrap !important;
     align-items: center !important;
     justify-content: center !important;
     gap: 0.65rem 1rem !important;
@@ -218,7 +218,7 @@
     gap: 0.75rem !important;
     min-width: 0 !important;
     width: 100% !important;
-    max-width: 45rem !important; /* desktop max-width: wider search bar */
+    max-width: 45rem !important; /* desktop max-width: centered search bar */
 }
 
 /* Search field */
@@ -296,9 +296,9 @@
         padding-top: 1.25rem !important;
     }
 
-    /* Align filter buttons to the right on mobile */
+    /* Filter buttons on mobile: span 100% width */
     .board-columns-mobile ::deep .board-filter-toolbar {
-        justify-content: flex-end !important;
+        width: 100% !important;
     }
 
     /* Section tabs on mobile: equal-width buttons so all three fit and are easy to tap. */

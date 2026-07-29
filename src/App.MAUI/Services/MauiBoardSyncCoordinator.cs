@@ -14,6 +14,7 @@ public sealed partial class MauiBoardSyncCoordinator : IDisposable
     private readonly IAuthTokenStore _tokens;
     private readonly MauiBoardSyncStatus _status;
     private readonly MauiInitialBoardLoadSignal _initialLoad;
+    private readonly RemoteBoardRefreshService _refresh;
     private readonly ILogger<MauiBoardSyncCoordinator> _logger;
     private readonly SemaphoreSlim _run = new(1, 1);
     private readonly PeriodicTimer _timer = new(TimeSpan.FromSeconds(45));
@@ -24,12 +25,14 @@ public sealed partial class MauiBoardSyncCoordinator : IDisposable
         IAuthTokenStore tokens,
         MauiBoardSyncStatus status,
         MauiInitialBoardLoadSignal initialLoad,
+        RemoteBoardRefreshService refresh,
         ILogger<MauiBoardSyncCoordinator> logger)
     {
         _board = board;
         _tokens = tokens;
         _status = status;
         _initialLoad = initialLoad;
+        _refresh = refresh;
         _logger = logger;
         _ = Task.Run(() => PeriodicLoopAsync(_appStopping.Token), _appStopping.Token);
     }
@@ -85,6 +88,7 @@ public sealed partial class MauiBoardSyncCoordinator : IDisposable
             if (progressed)
             {
                 _status.LastSyncedUtc = DateTimeOffset.UtcNow;
+                _ = _refresh.NotifyFromRemoteAsync(cancellationToken);
             }
 
             string? stuck = await _board.TryGetStuckOutboxHintAsync(StuckAfterAttempts, cancellationToken);

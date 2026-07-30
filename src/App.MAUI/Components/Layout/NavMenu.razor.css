@@ -30,33 +30,47 @@
     display: none;
     width: 100%;
     gap: 0.4rem;
+    align-items: center;
+    height: 44px;
+    min-height: 44px;
+    overflow: visible;
 }
 
 .app-mobile-nav__item {
     flex: 1 1 0;
     min-width: 0;
     box-sizing: border-box;
-    height: 38px;
-    min-height: 38px;
+    height: 40px;
+    min-height: 40px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-    padding: 0.35rem 0.5rem;
+    gap: 0.35rem;
+    padding: 0.15rem 0.4rem;
     border-radius: 8px;
     border: none;
     background: transparent;
     color: var(--mud-palette-text-secondary);
     font-weight: 600;
-    font-size: 0.82rem;
+    font-size: 0.85rem;
+    line-height: 1.2;
     text-decoration: none;
     touch-action: manipulation;
     transition: all 0.15s ease;
+    overflow: visible;
 }
 
 .app-mobile-nav__icon {
     font-size: 1.1rem !important;
     color: inherit;
+    flex-shrink: 0;
+}
+
+.app-mobile-nav__label {
+    line-height: 1.2;
+    display: inline-block;
+    padding-bottom: 1px;
+    overflow: visible;
 }
 
 .app-mobile-nav__item--active {

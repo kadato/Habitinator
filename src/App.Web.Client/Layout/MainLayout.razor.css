@@ -143,78 +143,103 @@
     gap: 0.2rem;
 }
 
-/* Mobile app chrome: hide brand, profile at left edge, nav fills rest */
-@media (max-width: 767.98px) {
-    ::deep .app-branding--header {
+/* Mobile and small screen app chrome profile icon on left nav menu filling rest of header */
+@media (max-width: 959.98px) {
+    ::deep .app-branding--header,
+    ::deep .app-top-bar__left,
+    ::deep .app-top-bar__flex-spacer,
+    ::deep .app-header-username-btn {
         display: none !important;
     }
 
     ::deep .app-top-bar.mud-appbar,
     ::deep .app-top-bar {
-        padding: 0.15rem 0 !important;
-        column-gap: 0;
+        padding: 0 0.5rem !important;
+        height: auto !important;
+        min-height: 54px !important;
+    }
+
+    ::deep .app-top-bar .app-top-bar-toolbar,
+    ::deep .app-top-bar .mud-toolbar-appbar {
+        height: auto !important;
+        min-height: 54px !important;
+        padding-top: 0.3rem !important;
+        padding-bottom: 0.3rem !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        overflow: visible !important;
     }
 
     ::deep .app-top-bar__stack {
+        display: flex !important;
         flex-direction: row !important;
         align-items: center !important;
-        gap: 0 !important;
+        width: 100% !important;
+        gap: 0.5rem !important;
+        position: static !important;
+        padding-left: 0 !important;
     }
 
     ::deep .app-top-bar__row {
+        position: static !important;
+        transform: none !important;
+        display: flex !important;
         flex: 0 0 auto !important;
         width: auto !important;
-        column-gap: 0 !important;
-        min-width: 0;
-    }
-
-    ::deep .app-top-bar__left {
-        gap: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        order: 1 !important;
     }
 
     ::deep .app-top-bar__right {
-        gap: 0;
-        margin-left: 0;
-        padding-left: 0.25rem;
-        padding-right: 0.15rem;
+        gap: 0.25rem !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
     }
 
     ::deep .app-header-user-rail {
-        gap: 0;
-        justify-content: flex-end;
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 0.25rem !important;
+        align-items: center !important;
     }
 
     ::deep .app-header-profile-btn.mud-icon-button {
-        width: 2rem;
-        height: 2rem;
-        border-radius: 8px !important;
-    }
-
-    ::deep .app-header-username-btn {
-        display: none !important;
+        width: 2.25rem !important;
+        height: 2.25rem !important;
+        border-radius: 10px !important;
     }
 
     ::deep .app-mobile-nav {
+        display: flex !important;
         flex: 1 1 auto !important;
         width: auto !important;
-        padding: 0 0.15rem !important;
+        gap: 0.35rem !important;
+        align-items: center !important;
+        order: 2 !important;
+    }
+
+    ::deep .app-mobile-nav__item {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        height: 38px !important;
+        min-height: 38px !important;
     }
 
     ::deep .board-main-container.mud-container {
         padding-left: 0.75rem !important;
         padding-right: 0.75rem !important;
+        /* tighter nav -> stopwatch gap on small screens (offset handles clearance) */
+        padding-top: 0 !important;
     }
 
-    ::deep .app-top-bar.mud-appbar {
-        height: auto !important;
-        min-height: 40px;
-    }
-
-    ::deep .app-top-bar .mud-toolbar-appbar {
-        height: auto !important;
-        align-items: stretch !important;
-        padding-top: 0.15rem !important;
-        padding-bottom: 0.15rem !important;
+    /* Web app bar measures ~3.5rem; override the shared fallback so gap is tight */
+    ::deep .app-shell-layout {
+        --app-top-bar-offset: 3.5rem;
+        --board-sticky-top: 3.5rem;
     }
 }
 

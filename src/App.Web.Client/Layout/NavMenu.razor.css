@@ -74,7 +74,7 @@
     box-shadow: 0 2px 6px color-mix(in srgb, var(--mud-palette-primary) 30%, transparent);
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 959.98px) {
     .app-mobile-nav {
         display: flex;
     }

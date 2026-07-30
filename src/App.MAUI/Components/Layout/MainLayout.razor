@@ -23,14 +23,14 @@
 <MudLayout Class="app-shell-layout">
     @if (Session.IsLoggedIn)
     {
-        <MudAppBar Elevation="0" Dense="true" Class="app-top-bar" ToolBarClass="app-top-bar-toolbar">
+        <MudAppBar Elevation="0" Class="app-top-bar" ToolBarClass="app-top-bar-toolbar">
             <div class="app-top-bar__stack w-100">
                 <NavMenu MobileTopBar="true" />
             </div>
         </MudAppBar>
     }
     <MudMainContent Class="app-shell-main">
-        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pt-5 pb-3 px-4 px-sm-5 board-main-container">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pb-3 px-3 px-sm-4 board-main-container">
             @if (!_sessionInitialized)
             {
                 <MudProgressLinear Indeterminate="true"/>

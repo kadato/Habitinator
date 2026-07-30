@@ -25,7 +25,9 @@
                 }
                 else
                 {
-                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold timer-mobile-header-text">@(TimerService.PomodoroModeEnabled ? "Pomodoro" : "Focus Timer")</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold timer-mobile-header-text">
+                        <span class="timer-mobile-header-mode-badge">@(TimerService.PomodoroModeEnabled ? "Pomodoro" : "Stopwatch")</span>
+                    </MudText>
                 }
             </MudStack>
             <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
@@ -169,24 +171,22 @@
         {
             <div class="timer-compact timer-compact--idle">                <div class="timer-compact__left-col">
                     <div class="custom-timer-toggle" role="group" aria-label="Timer mode selection">
-                        <MudTooltip Text="Stopwatch mode">
-                            <button type="button" 
-                                    class="@StopwatchToggleClass" 
-                                    @onclick="() => OnPomodoroModeToggleChanged(false)"
-                                    aria-pressed="@(!TimerService.PomodoroModeEnabled ? "true" : "false")"
-                                    aria-label="Stopwatch mode">
-                                <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Medium" aria-hidden="true"/>
-                            </button>
-                        </MudTooltip>
-                        <MudTooltip Text="Pomodoro mode">
-                            <button type="button" 
-                                    class="@PomodoroToggleClass" 
-                                    @onclick="() => OnPomodoroModeToggleChanged(true)"
-                                    aria-pressed="@(TimerService.PomodoroModeEnabled ? "true" : "false")"
-                                    aria-label="Pomodoro mode">
-                                <MudIcon Icon="@Icons.Material.Filled.Alarm" Size="Size.Medium" aria-hidden="true"/>
-                            </button>
-                        </MudTooltip>
+                        <button type="button" 
+                                class="@StopwatchToggleClass" 
+                                @onclick="() => OnPomodoroModeToggleChanged(false)"
+                                aria-pressed="@(!TimerService.PomodoroModeEnabled ? "true" : "false")"
+                                aria-label="Stopwatch mode">
+                            <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Medium" aria-hidden="true"/>
+                            <span class="toggle-btn-label">Stopwatch</span>
+                        </button>
+                        <button type="button" 
+                                class="@PomodoroToggleClass" 
+                                @onclick="() => OnPomodoroModeToggleChanged(true)"
+                                aria-pressed="@(TimerService.PomodoroModeEnabled ? "true" : "false")"
+                                aria-label="Pomodoro mode">
+                            <MudIcon Icon="@Icons.Material.Filled.Alarm" Size="Size.Medium" aria-hidden="true"/>
+                            <span class="toggle-btn-label">Pomodoro</span>
+                        </button>
                     </div>
                 </div>
 

@@ -1,17 +1,19 @@
 ::deep .app-top-bar.mud-appbar,
 ::deep .app-top-bar {
-    padding: 0.15rem 0.4rem !important;
+    padding: 0.35rem 0.5rem !important;
     backdrop-filter: blur(12px) !important;
     -webkit-backdrop-filter: blur(12px) !important;
     background-color: color-mix(in srgb, var(--mud-palette-surface) 82%, transparent) !important;
     border-bottom: 1px solid var(--mud-palette-divider) !important;
     box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05) !important;
+    overflow: visible !important;
 }
 
 ::deep .app-top-bar.mud-appbar {
     display: flex;
     height: auto !important;
-    min-height: 40px;
+    min-height: 56px !important;
+    overflow: visible !important;
 }
 
 ::deep .app-top-bar .app-top-bar-toolbar,
@@ -22,7 +24,9 @@
     align-items: center;
     display: flex !important;
     height: auto !important;
-    padding: 0.15rem 0 !important;
+    min-height: 56px !important;
+    padding: 0.25rem 0 !important;
+    overflow: visible !important;
 }
 
 ::deep .app-top-bar__stack {
@@ -30,11 +34,35 @@
     flex-direction: row;
     width: 100%;
     align-items: center;
+    overflow: visible !important;
+}
+
+::deep .app-top-bar__stack .app-mobile-nav {
+    overflow: visible !important;
+}
+
+::deep .app-top-bar__stack .app-mobile-nav__item {
+    overflow: visible !important;
+    clip: unset !important;
+}
+
+::deep .app-top-bar__stack .app-mobile-nav__label {
+    overflow: visible !important;
+    clip: unset !important;
+    line-height: 1.3 !important;
+    padding-bottom: 2px !important;
 }
 
 ::deep .board-main-container.mud-container {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+}
+
+@media (min-width: 600px) {
+    ::deep .board-main-container.mud-container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
 }
 
 @media (min-width: 1280px) {

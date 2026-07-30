@@ -434,7 +434,7 @@ h1:focus {
 
 /* Mobile app chrome: hide the redundant brand title and collapse the bar so the
    nav tabs and profile actions share a single compact row. */
-@media (max-width: 767.98px) {
+@media (max-width: 959.98px) {
     .app-branding--header {
         display: none !important;
     }
@@ -443,28 +443,35 @@ h1:focus {
         flex-direction: row !important;
         align-items: center !important;
         gap: 0.5rem !important;
+        width: 100% !important;
     }
 
     .app-top-bar__row {
         flex: 0 0 auto !important;
         width: auto !important;
-        column-gap: 0.5rem !important;
+        column-gap: 0.25rem !important;
         min-width: 0;
+        margin: 0 !important;
+        order: 1 !important;
     }
 
     .app-top-bar__right {
-        gap: 0.35rem;
+        gap: 0.25rem;
     }
 
     .app-mobile-nav {
         flex: 1 1 auto !important;
         width: auto !important;
         padding: 0 !important;
+        order: 2 !important;
     }
 
     /* Compact sync/profile icons on mobile */
     .app-header-user-rail {
-        gap: 0.35rem;
+        flex-direction: row !important;
+        gap: 0.25rem;
+        justify-content: flex-start;
+        align-items: center;
     }
 
     .app-header-user-rail .sync-status-indicator {
@@ -488,7 +495,7 @@ h1:focus {
     display: flex !important;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 959.98px) {
     .app-show-mobile-only,
     .app-show-mobile-only.mud-button-root,
     .app-show-mobile-only.mud-icon-button {
@@ -501,14 +508,16 @@ h1:focus {
         display: none !important;
     }
 
-    /* Single-row mobile app bar; offset main content below fixed app bar */
+    /* Single-row mobile app bar; offset main content below fixed app bar.
+       Keep the extra gap small but never less than the actual app bar height,
+       so the first card sits close to the nav without clipping under it. */
     .app-shell-layout {
         --app-top-bar-offset: 4.25rem;
         --board-sticky-top: 4.25rem;
     }
 
     .app-shell-layout .app-shell-main.mud-main-content {
-        padding-top: var(--app-top-bar-offset) !important;
+        padding-top: calc(var(--app-top-bar-offset) + 0.25rem) !important;
     }
 }
 
@@ -624,22 +633,22 @@ h1:focus {
     border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, transparent);
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 959.98px) {
     .app-mobile-nav {
         display: flex;
     }
 
     .app-top-bar.mud-appbar {
         height: auto !important;
-        min-height: 56px;
+        min-height: 56px !important;
     }
 
     .app-top-bar .mud-toolbar-appbar {
         height: auto !important;
-        min-height: 56px;
-        align-items: stretch !important;
-        padding-top: 0.35rem !important;
-        padding-bottom: 0.35rem !important;
+        min-height: 56px !important;
+        align-items: center !important;
+        padding-top: 0.4rem !important;
+        padding-bottom: 0.4rem !important;
     }
 }
 

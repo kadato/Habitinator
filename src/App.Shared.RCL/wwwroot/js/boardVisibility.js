@@ -521,7 +521,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
   function handleTagsPopoverEscape(activeElement) {
     const tagsPopover = document.querySelector('.board-tags-menu-popover');
     if (tagsPopover && isElementVisible(tagsPopover)) {
-      const activator = document.querySelector('.board-tags-trigger');
+      const activator = document.querySelector('.board-tags-menu-activator .board-trigger-btn');
       if (activator) {
         activator.click();
         activeElement?.blur();

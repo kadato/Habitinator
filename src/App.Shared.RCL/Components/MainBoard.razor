@@ -75,15 +75,14 @@
                                  RelativeWidth="DropdownWidth.Ignore"
                                  PopoverClass="board-tags-menu-popover">
                             <ActivatorContent Context="tagMenu">
-                                <MudButton Variant="Variant.Outlined"
-                                           Color="Color.Default"
-                                           Class="board-tags-trigger board-tags-trigger--strip"
-                                           Size="Size.Small"
-                                           StartIcon="@Icons.Material.Filled.Tune"
-                                           EndIcon="@Icons.Material.Filled.ArrowDropDown"
-                                           OnClick="@(e => tagMenu.ToggleAsync(e))">
-                                    @(SelectedFilterTagCount > 0 ? $"Tags ({SelectedFilterTagCount})" : "Tags")
-                                </MudButton>
+                                <button type="button"
+                                        class="@GetTagsTriggerClass()"
+                                        aria-haspopup="true"
+                                        @onclick="@(e => tagMenu.ToggleAsync(e))">
+                                    <MudIcon Icon="@Icons.Material.Filled.Tune" Class="board-trigger-icon"/>
+                                    <span class="board-trigger-label">@(SelectedFilterTagCount > 0 ? $"Tags ({SelectedFilterTagCount})" : "Tags")</span>
+                                    <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Class="board-trigger-chevron"/>
+                                </button>
                             </ActivatorContent>
                             <ChildContent>
                                 <MudPaper Class="board-tags-menu-panel pa-3" Elevation="0">
@@ -119,14 +118,13 @@
                             </ChildContent>
                         </MudMenu>
                     </div>
-                    <MudButton Variant="Variant.Outlined"
-                               Color="Color.Default"
-                               Class="board-tags-trigger board-tags-trigger--strip"
-                               Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Archive"
-                               OnClick="OpenArchivedItemsDialogAsync">
-                        Archive
-                    </MudButton>
+                    <button type="button"
+                            class="board-trigger-btn board-archive-trigger"
+                            aria-label="Archive"
+                            @onclick="OpenArchivedItemsDialogAsync">
+                        <MudIcon Icon="@Icons.Material.Filled.Archive" Class="board-trigger-icon"/>
+                        <span class="board-trigger-label app-show-desktop-only">Archive</span>
+                    </button>
                     @if (_shortcutsEnabled)
                     {
                         <span class="board-shortcuts-hint mud-text-secondary">
@@ -304,6 +302,11 @@
         index == _mobileSectionIndex
             ? "board-section-switcher__btn board-section-switcher__btn--active"
             : "board-section-switcher__btn";
+
+    private string GetTagsTriggerClass() =>
+        SelectedFilterTagCount > 0
+            ? "board-trigger-btn board-trigger-btn--active"
+            : "board-trigger-btn";
 
     private string GetAriaSelected(int index) =>
         index == _mobileSectionIndex ? "true" : "false";

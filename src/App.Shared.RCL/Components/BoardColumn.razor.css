@@ -104,49 +104,66 @@
     gap: 0.35rem !important;
 }
 
-.board-filter-toolbar ::deep .board-filter-btn {
+.board-filter-btn {
     flex: 1 1 0px !important;
     width: 0 !important;
     min-width: 0 !important;
-    max-width: none !important;
-    padding-left: 0.25rem !important;
-    padding-right: 0.25rem !important;
-    text-align: center !important;
-}
-
-.board-filter-toolbar ::deep .board-filter-btn .mud-button-label {
-    width: 100% !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0.25rem 0.4rem !important;
+    border-radius: 8px !important;
+    border: 1px solid #2563eb !important;
+    border: 1px solid var(--mud-palette-primary, #2563eb) !important;
+    background-color: transparent !important;
+    color: #2563eb !important;
+    color: var(--mud-palette-primary, #2563eb) !important;
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.02em;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
-    display: block !important;
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: transparent !important;
+    transition: all 0.15s ease !important;
 }
 
-/* Column filter toggles: vibrant primary blue for active, clean outlined for inactive */
-.board-filter-toolbar ::deep .board-filter-btn.mud-button-outlined.mud-button-outlined-primary {
-    color: var(--mud-palette-primary) !important;
-    --mud-ripple-color: color-mix(in srgb, var(--mud-palette-primary) 30%, transparent) !important;
-    border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-divider)) !important;
+.board-filter-btn:hover,
+.board-filter-btn:focus,
+.board-filter-btn:focus-visible {
     background-color: transparent !important;
+    color: #2563eb !important;
+    color: var(--mud-palette-primary, #2563eb) !important;
+    border-color: #2563eb !important;
+    border-color: var(--mud-palette-primary, #2563eb) !important;
+    outline: none !important;
 }
 
-.board-filter-toolbar ::deep .board-filter-btn.mud-button-outlined.mud-button-outlined-primary:hover {
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 10%, transparent) !important;
-    border-color: var(--mud-palette-primary) !important;
+.board-filter-btn:active {
+    transform: scale(0.97);
 }
 
-.board-filter-toolbar ::deep .board-filter-btn.mud-button-filled.mud-button-filled-primary {
+.board-filter-btn.board-filter-btn--active,
+.board-filter-btn.board-filter-btn--active:hover,
+.board-filter-btn.board-filter-btn--active:focus,
+.board-filter-btn.board-filter-btn--active:focus-visible,
+.board-filter-btn--active,
+.board-filter-btn--active:hover,
+.board-filter-btn--active:focus,
+.board-filter-btn--active:focus-visible {
+    background-color: #2563eb !important;
+    background-color: var(--mud-palette-primary, #2563eb) !important;
     color: #ffffff !important;
-    --mud-ripple-color: rgba(255, 255, 255, 0.4) !important;
-    background-color: var(--mud-palette-primary) !important;
-    border-color: var(--mud-palette-primary) !important;
-    box-shadow: 0 2px 8px color-mix(in srgb, var(--mud-palette-primary) 35%, transparent) !important;
-}
-
-.board-filter-toolbar ::deep .board-filter-btn.mud-button-filled.mud-button-filled-primary:hover {
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 85%, #000000) !important;
+    border-color: #2563eb !important;
+    border-color: var(--mud-palette-primary, #2563eb) !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35) !important;
+    outline: none !important;
 }
 
 .board-add-wrap ::deep .mud-input-outlined {

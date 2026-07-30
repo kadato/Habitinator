@@ -44,22 +44,26 @@
 .board-section-switcher {
     display: none;
     width: 100%;
-    gap: 0.35rem;
+    gap: 0.25rem;
     padding: 0.2rem;
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-divider);
     border-radius: 10px;
+    box-sizing: border-box;
+    justify-content: center;
 }
 
 .board-section-switcher__btn {
-    flex: 1 1 0;
+    flex: 1 1 33.333%;
+    width: 33.333%;
     min-width: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
+    text-align: center;
+    gap: 0.35rem;
     min-height: 40px;
-    padding: 0.35rem 0.5rem;
+    padding: 0.35rem 0.4rem;
     border: none;
     border-radius: 8px;
     background: transparent;
@@ -111,7 +115,7 @@
 
 @media (max-width: 959.98px) {
     .board-shell {
-        --board-sticky-top: var(--app-top-bar-offset, 7.0rem);
+        --board-sticky-top: var(--app-top-bar-offset, 4.5rem);
     }
 
     .board-columns-mobile {
@@ -127,9 +131,9 @@
         display: flex;
     }
 
-    /* Panel content spacing on mobile */
+    /* Compact panel content spacing on mobile */
     .board-section-tab-content {
-        padding-top: 0.75rem;
+        padding-top: 0.2rem;
     }
 }
 
@@ -152,15 +156,9 @@
     border: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 8%, transparent);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18), inset 0 1px 0 color-mix(in srgb, var(--mud-palette-text-primary) 5%, transparent);
     backdrop-filter: blur(8px);
-    margin-bottom: 1.25rem !important;
+    margin-bottom: 0.5rem !important;
     padding-top: 0.4rem !important;
     padding-bottom: 0.4rem !important;
-}
-
-.board-tags-menu-activator {
-    display: inline-flex;
-    flex-shrink: 0;
-    align-self: center;
 }
 
 .board-tags-menu-body {
@@ -172,9 +170,6 @@
     z-index: calc(var(--mud-zindex-popover, 1300) + 1) !important;
 }
 
-.board-tags-trigger {
-    flex-shrink: 0;
-}
 
 .board-tags-menu-panel {
     min-width: min(17rem, 100vw - 2rem);
@@ -215,34 +210,82 @@
     flex-wrap: nowrap !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 0.75rem !important;
+    gap: 0.25rem !important;
     min-width: 0 !important;
-    width: 100% !important;
-    max-width: 45rem !important; /* desktop max-width: centered search bar */
+    width: auto !important;
+    max-width: none !important;
 }
 
-/* Search field */
+/* Search field & tags/archive buttons uniform 36px height */
+.board-search-wrapper {
+    display: flex !important;
+    align-items: center !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+}
+
+/* Desktop: centered cluster of search-tags-archive at natural widths with small gaps */
+@media (min-width: 960px) {
+    .board-search-wrapper {
+        flex: 0 0 auto !important;
+        width: 320px !important;
+    }
+}
+
 .board-search-pill {
     flex-grow: 1 !important;
     min-width: 0 !important;
-}
-
-.board-search-pill ::deep .mud-input-outlined {
-    border-radius: 9999px !important;
-    height: 2.5rem !important; /* matching height */
-    align-items: center !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
 }
 
 .board-search-pill ::deep .mud-input-control {
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.board-search-pill ::deep .mud-input-control-input-container {
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+}
+
+.board-search-pill ::deep .mud-input-outlined {
+    border-radius: 8px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
 }
 
 .board-search-pill ::deep .mud-input-slot input {
-    font-size: 0.875rem !important;
-    height: 100% !important;
+    font-size: 0.85rem !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+    line-height: 34px !important;
     padding-top: 0 !important;
     padding-bottom: 0 !important;
+}
+
+.board-search-pill ::deep .mud-input-adornment-start {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    display: flex !important;
+    align-items: center !important;
 }
 
 /* Hide helper container to remove bottom space */
@@ -250,50 +293,227 @@
     display: none !important;
 }
 
-/* Tags Button */
-.board-tags-trigger--strip {
-    height: 2.5rem !important; /* matching height */
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    font-size: 0.85rem !important;
-    border-radius: 8px !important; /* squared tags button */
+/* Tags & Archive Buttons */
+.board-tags-menu-activator {
+    display: inline-flex !important;
+    align-items: center !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    flex-shrink: 0;
 }
 
-/* board-column-header-flex has been moved to BoardColumn.razor.css for CSS isolation */
+/* Native button matching the MudTextField outlined appearance */
+.board-trigger-btn {
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    padding: 0 0.5rem !important;
+    font-size: 0.85rem !important;
+    font-weight: 600;
+    font-family: inherit;
+    line-height: 1;
+    color: var(--mud-palette-text-secondary);
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.35rem;
+    box-sizing: border-box !important;
+    cursor: pointer;
+    flex-shrink: 0;
+    white-space: nowrap;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.board-trigger-btn:hover {
+    border-color: var(--mud-palette-primary);
+    color: var(--mud-palette-text-primary);
+}
+
+.board-trigger-btn:active {
+    transform: scale(0.97);
+}
+
+.board-trigger-btn--active {
+    color: var(--mud-palette-primary) !important;
+    border-color: var(--mud-palette-primary) !important;
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent) !important;
+}
+
+.board-trigger-icon {
+    font-size: 1.15rem !important;
+    flex-shrink: 0;
+    color: inherit;
+}
+
+.board-trigger-label {
+    flex-shrink: 0;
+    color: inherit;
+}
+
+.board-trigger-chevron {
+    font-size: 1.1rem !important;
+    flex-shrink: 0;
+    color: inherit;
+    opacity: 0.6;
+    margin-left: -0.15rem;
+}
 
 /* Mobile overrides */
 @media (max-width: 959.98px) {
     .board-stat-filters {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
         width: 100% !important;
         max-width: none !important;
-        justify-content: flex-start !important;
-        gap: 0.5rem !important;
-        flex-wrap: wrap !important;
+        gap: 0.35rem !important;
+    }
+
+    .board-archive-trigger {
+        order: 1 !important;
+        margin: 0 !important;
+        flex: 0 0 auto !important;
+        width: 36px !important;
+        min-width: 36px !important;
+        max-width: 36px !important;
+        height: 36px !important;
+        min-height: 36px !important;
+        max-height: 36px !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        /* hide label text on mobile, show icon only */
+    }
+    .board-archive-trigger .board-trigger-label { display: none; }
+    .board-archive-trigger .board-trigger-icon { margin: 0; }
+
+    .board-tags-menu-activator {
+        order: 2 !important;
+        margin: 0 !important;
+        flex: 0 0 auto !important;
+        height: 36px !important;
+        min-height: 36px !important;
+        max-height: 36px !important;
+    }
+
+    .board-tags-menu-activator .board-trigger-btn {
+        height: 36px !important;
+        min-height: 36px !important;
+        max-height: 36px !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
     }
 
     .board-search-wrapper {
-        flex-basis: 100% !important;
-        max-width: 100% !important;
-    }
-
-    .board-search-pill {
+        order: 3 !important;
+        flex: 1 1 0% !important;
+        flex-grow: 1 !important;
         width: 100% !important;
-        max-width: none !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        height: 36px !important;
+        min-height: 36px !important;
+        max-height: 36px !important;
     }
 
-    /* Hide column card titles ("Habits", "Dailies", etc.) and badges in mobile tabbed view */
+    .board-search-pill,
+    .board-search-wrapper ::deep .mud-input-control {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 1 1 100% !important;
+        flex-grow: 1 !important;
+        height: 36px !important;
+        min-height: 36px !important;
+        max-height: 36px !important;
+    }
+
+    .board-search-wrapper ::deep .mud-input-control-input-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 1 1 100% !important;
+        flex-grow: 1 !important;
+    }
+
+    .board-search-wrapper ::deep .mud-input-outlined {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 1 1 100% !important;
+        flex-grow: 1 !important;
+        height: 36px !important;
+        min-height: 36px !important;
+        max-height: 36px !important;
+    }
+
+    .board-columns-stage {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .board-stat-strip {
+        width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    .board-section-switcher {
+        width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    .board-section-tab-content {
+        width: 100% !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        padding-top: 0.25rem !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        margin-top: 0.25rem !important;
+        box-sizing: border-box !important;
+    }
+
+    .board-columns-mobile .board-column,
+    .board-columns-mobile ::deep .board-column {
+        width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Hide column card header & chrome completely in mobile tabbed view so the
+       filter toolbar, add-field, item cards and footer span the same full width
+       as the section switcher above them (edges align perfectly). */
+    .board-columns-mobile ::deep .board-column {
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .board-columns-mobile ::deep .mud-card-header,
     .board-columns-mobile ::deep .board-column-header-row {
         display: none !important;
     }
 
-    .board-columns-mobile ::deep .mud-card-header {
-        padding-top: 0.35rem !important;
-        padding-bottom: 0.25rem !important;
+    .board-columns-mobile ::deep .mud-card-content {
+        padding: 0.6rem 0 !important;
     }
 
-    /* More space below mobile nav tabs */
-    .board-section-tab-content {
-        padding-top: 1.25rem !important;
+    .board-columns-mobile ::deep .board-col-foot {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
     }
 
     /* Filter buttons on mobile: span 100% width */
@@ -309,9 +529,15 @@
         gap: 0.4rem !important;
     }
 
-    .board-tags-trigger--strip,
+    .board-trigger-btn,
+    .board-archive-trigger,
+    .board-tags-menu-activator,
+    .board-search-wrapper,
+    .board-search-pill,
     .board-search-pill ::deep .mud-input-outlined {
-        height: 2.25rem !important;
+        height: 36px !important;
+        min-height: 36px !important;
+        max-height: 36px !important;
         font-size: 0.8rem !important;
     }
 }

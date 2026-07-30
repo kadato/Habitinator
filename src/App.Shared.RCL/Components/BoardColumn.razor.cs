@@ -233,10 +233,8 @@ public partial class BoardColumn : IAsyncDisposable
         Done
     }
 
-    private static Variant FilterVariant(bool active)
-    {
-        return active ? Variant.Filled : Variant.Outlined;
-    }
+    private static string GetFilterBtnClass(bool active) =>
+        active ? "board-filter-btn board-filter-btn--active" : "board-filter-btn";
 
     private IReadOnlyList<BoardItem> VisibleItems()
     {
@@ -424,7 +422,7 @@ public partial class BoardColumn : IAsyncDisposable
         _needRefresh = true;
         StateHasChanged();
 
-        bool ok = await TryMutateAsync(() => PersistReorderAsync(sourceItem, sortOrder));
+        var ok = await TryMutateAsync(() => PersistReorderAsync(sourceItem, sortOrder));
         if (!ok)
         {
             _sortOrderOverrides.Remove(sourceItem.Id);
@@ -518,7 +516,7 @@ public partial class BoardColumn : IAsyncDisposable
     {
         IReadOnlyList<DailyChecklistItem> rows = DailyChecklistJson.Parse(item.ChecklistJson);
         List<DailyChecklistItem> list = [.. rows];
-        int i = list.FindIndex(x => x.Id == lineId);
+        var i = list.FindIndex(x => x.Id == lineId);
         if (i < 0 || list[i].IsDone == done)
         {
             return;
@@ -578,7 +576,7 @@ public partial class BoardColumn : IAsyncDisposable
                     json));
         }
 
-        bool ok = await TryMutateAsync(() => mutation);
+        var ok = await TryMutateAsync(() => mutation);
         if (!ok)
         {
             _optimisticOverrides.Remove(item.Id);
@@ -604,8 +602,8 @@ public partial class BoardColumn : IAsyncDisposable
             return;
         }
 
-        string title = _draft.Trim();
-        Guid newId = Guid.NewGuid();
+        var title = _draft.Trim();
+        var newId = Guid.NewGuid();
         BoardItem tempItem = new(
             Id: newId,
             Title: title,
@@ -617,7 +615,7 @@ public partial class BoardColumn : IAsyncDisposable
         _needRefresh = true;
         StateHasChanged();
 
-        bool ok = await TryMutateAsync(() => BoardData.CreateItemAsync(Section, title, newId));
+        var ok = await TryMutateAsync(() => BoardData.CreateItemAsync(Section, title, newId));
         if (!ok)
         {
             _optimisticCreations.Remove(newId);
@@ -633,7 +631,7 @@ public partial class BoardColumn : IAsyncDisposable
         _needRefresh = true;
         StateHasChanged();
 
-        bool ok = await TryMutateAsync(() => BoardData.IncrementHabitPlusAsync(item.Id));
+        var ok = await TryMutateAsync(() => BoardData.IncrementHabitPlusAsync(item.Id));
         if (!ok)
         {
             _optimisticOverrides.Remove(item.Id);
@@ -649,7 +647,7 @@ public partial class BoardColumn : IAsyncDisposable
         _needRefresh = true;
         StateHasChanged();
 
-        bool ok = await TryMutateAsync(() => BoardData.IncrementHabitMinusAsync(item.Id));
+        var ok = await TryMutateAsync(() => BoardData.IncrementHabitMinusAsync(item.Id));
         if (!ok)
         {
             _optimisticOverrides.Remove(item.Id);
@@ -660,14 +658,14 @@ public partial class BoardColumn : IAsyncDisposable
 
     private async Task ToggleAsync(BoardItem item)
     {
-        bool nextCompleted = !item.IsCompleted;
+        var nextCompleted = !item.IsCompleted;
         DateOnly? lastCompleted = nextCompleted ? BoardToday() : null;
         BoardItem optimistic = item with { IsCompleted = nextCompleted, DailyLastCompletedOn = lastCompleted };
         _optimisticOverrides[item.Id] = optimistic;
         _needRefresh = true;
         StateHasChanged();
 
-        bool ok = await TryMutateAsync(() => BoardData.ToggleItemAsync(Section, item.Id));
+        var ok = await TryMutateAsync(() => BoardData.ToggleItemAsync(Section, item.Id));
         if (!ok)
         {
             _optimisticOverrides.Remove(item.Id);
@@ -731,7 +729,7 @@ public partial class BoardColumn : IAsyncDisposable
 
         _ = Task.Run(async () =>
         {
-            bool ok = await TryMutateAsync(() => BoardData.UpdateHabitAsync(
+            var ok = await TryMutateAsync(() => BoardData.UpdateHabitAsync(
                 item.Id,
                 new UpdateHabitArgs(
                     r.Title,
@@ -762,7 +760,7 @@ public partial class BoardColumn : IAsyncDisposable
 
         _ = Task.Run(async () =>
         {
-            bool ok = await TryMutateAsync(() => BoardData.ArchiveItemAsync(BoardSection.Habit, item.Id));
+            var ok = await TryMutateAsync(() => BoardData.ArchiveItemAsync(BoardSection.Habit, item.Id));
             if (!ok)
             {
                 _optimisticDeletions.Remove(item.Id);
@@ -781,7 +779,7 @@ public partial class BoardColumn : IAsyncDisposable
 
         _ = Task.Run(async () =>
         {
-            bool ok = await TryMutateAsync(() => BoardData.DeleteItemAsync(BoardSection.Habit, item.Id));
+            var ok = await TryMutateAsync(() => BoardData.DeleteItemAsync(BoardSection.Habit, item.Id));
             if (!ok)
             {
                 _optimisticDeletions.Remove(item.Id);
@@ -846,7 +844,7 @@ public partial class BoardColumn : IAsyncDisposable
 
         _ = Task.Run(async () =>
         {
-            bool ok = await TryMutateAsync(() => BoardData.UpdateDailyAsync(
+            var ok = await TryMutateAsync(() => BoardData.UpdateDailyAsync(
                 item.Id,
                 new UpdateDailyArgs(
                     r.Title,
@@ -876,7 +874,7 @@ public partial class BoardColumn : IAsyncDisposable
 
         _ = Task.Run(async () =>
         {
-            bool ok = await TryMutateAsync(() => BoardData.ArchiveItemAsync(BoardSection.Daily, item.Id));
+            var ok = await TryMutateAsync(() => BoardData.ArchiveItemAsync(BoardSection.Daily, item.Id));
             if (!ok)
             {
                 _optimisticDeletions.Remove(item.Id);
@@ -895,7 +893,7 @@ public partial class BoardColumn : IAsyncDisposable
 
         _ = Task.Run(async () =>
         {
-            bool ok = await TryMutateAsync(() => BoardData.DeleteItemAsync(BoardSection.Daily, item.Id));
+            var ok = await TryMutateAsync(() => BoardData.DeleteItemAsync(BoardSection.Daily, item.Id));
             if (!ok)
             {
                 _optimisticDeletions.Remove(item.Id);
@@ -957,7 +955,7 @@ public partial class BoardColumn : IAsyncDisposable
 
         _ = Task.Run(async () =>
         {
-            bool ok = await TryMutateAsync(() => BoardData.UpdateTodoAsync(
+            var ok = await TryMutateAsync(() => BoardData.UpdateTodoAsync(
                 item.Id,
                 new UpdateTodoArgs(
                     r.Title,
@@ -984,7 +982,7 @@ public partial class BoardColumn : IAsyncDisposable
 
         _ = Task.Run(async () =>
         {
-            bool ok = await TryMutateAsync(() => BoardData.ArchiveItemAsync(BoardSection.Todo, item.Id));
+            var ok = await TryMutateAsync(() => BoardData.ArchiveItemAsync(BoardSection.Todo, item.Id));
             if (!ok)
             {
                 _optimisticDeletions.Remove(item.Id);
@@ -1003,7 +1001,7 @@ public partial class BoardColumn : IAsyncDisposable
 
         _ = Task.Run(async () =>
         {
-            bool ok = await TryMutateAsync(() => BoardData.DeleteItemAsync(BoardSection.Todo, item.Id));
+            var ok = await TryMutateAsync(() => BoardData.DeleteItemAsync(BoardSection.Todo, item.Id));
             if (!ok)
             {
                 _optimisticDeletions.Remove(item.Id);
@@ -1031,7 +1029,7 @@ public partial class BoardColumn : IAsyncDisposable
         _needRefresh = true;
         StateHasChanged();
 
-        bool ok = await TryMutateAsync(() => BoardData.DeleteItemAsync(Section, id));
+        var ok = await TryMutateAsync(() => BoardData.DeleteItemAsync(Section, id));
         if (!ok)
         {
             _optimisticDeletions.Remove(id);
@@ -1043,7 +1041,7 @@ public partial class BoardColumn : IAsyncDisposable
     private async Task MoveToTopAsync(BoardItem item)
     {
         List<BoardItem> visible = [.. VisibleItems()];
-        int sourceIndex = visible.FindIndex(x => x.Id == item.Id);
+        var sourceIndex = visible.FindIndex(x => x.Id == item.Id);
         if (sourceIndex <= 0)
         {
             return;
@@ -1066,7 +1064,7 @@ public partial class BoardColumn : IAsyncDisposable
         _needRefresh = true;
         StateHasChanged();
 
-        bool ok = await TryMutateAsync(() => PersistReorderAsync(item, sortOrder));
+        var ok = await TryMutateAsync(() => PersistReorderAsync(item, sortOrder));
         if (!ok)
         {
             _sortOrderOverrides.Remove(item.Id);
@@ -1078,7 +1076,7 @@ public partial class BoardColumn : IAsyncDisposable
     private async Task MoveToBottomAsync(BoardItem item)
     {
         List<BoardItem> visible = [.. VisibleItems()];
-        int sourceIndex = visible.FindIndex(x => x.Id == item.Id);
+        var sourceIndex = visible.FindIndex(x => x.Id == item.Id);
         if (sourceIndex < 0 || sourceIndex == visible.Count - 1)
         {
             return;
@@ -1087,7 +1085,7 @@ public partial class BoardColumn : IAsyncDisposable
         List<BoardItem> reordered = [.. visible];
         reordered.RemoveAt(sourceIndex);
         reordered.Add(item);
-        int insertAt = reordered.Count - 1;
+        var insertAt = reordered.Count - 1;
 
         double? newSortOrder = Section == BoardSection.Todo && _todoFilter == TodoListFilter.Active
             ? TodoOrdering.ComputeMidpointSortOrderForActiveTab(reordered, insertAt, GetEffectiveSortOrder)
@@ -1102,7 +1100,7 @@ public partial class BoardColumn : IAsyncDisposable
         _needRefresh = true;
         StateHasChanged();
 
-        bool ok = await TryMutateAsync(() => PersistReorderAsync(item, sortOrder));
+        var ok = await TryMutateAsync(() => PersistReorderAsync(item, sortOrder));
         if (!ok)
         {
             _sortOrderOverrides.Remove(item.Id);
@@ -1136,7 +1134,7 @@ public partial class BoardColumn : IAsyncDisposable
             return;
         }
 
-        int deleted = 0;
+        var deleted = 0;
         try
         {
             using (UndoService.BeginBatch($"Delete {toDelete.Count} done to-dos"))

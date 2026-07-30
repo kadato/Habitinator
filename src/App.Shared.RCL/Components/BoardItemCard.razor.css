@@ -14,7 +14,8 @@
     align-items: start;
     min-height: auto;
     margin-bottom: 0.4rem;
-    padding: 0.35rem 0.55rem;
+    padding: 0.45rem 0.75rem;
+    box-sizing: border-box;
     background: var(--mud-palette-surface);
     border: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 10%, transparent);
     border-radius: 0.75rem;
@@ -40,6 +41,7 @@
     align-items: center;
     flex-shrink: 0;
     gap: 0;
+    margin-right: 0.15rem;
 }
 
 .board-card.board-row--done {

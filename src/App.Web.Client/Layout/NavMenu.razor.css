@@ -64,6 +64,7 @@
 }
 
 .app-mobile-nav__label {
+    line-height: 1.3;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -144,7 +145,7 @@
     font-size: 0.68rem;
     font-weight: 600;
     letter-spacing: 0.01em;
-    line-height: 1.1;
+    line-height: 1.3;
     text-align: center;
     white-space: nowrap;
     overflow: hidden;

@@ -209,6 +209,7 @@
     .board-main-container.mud-container {
         padding-left: 0.75rem !important;
         padding-right: 0.75rem !important;
+        padding-top: 0.35rem !important;
     }
 }
 

@@ -232,8 +232,7 @@
     ::deep .board-main-container.mud-container {
         padding-left: 0.75rem !important;
         padding-right: 0.75rem !important;
-        /* tighter nav -> stopwatch gap on small screens (offset handles clearance) */
-        padding-top: 0 !important;
+        padding-top: 0.35rem !important;
     }
 
     /* Web app bar measures ~3.5rem; override the shared fallback so gap is tight */

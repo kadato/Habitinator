@@ -871,27 +871,33 @@ h1:focus {
     border-radius: 10px !important;
     overflow: hidden !important;
     border-collapse: separate !important;
+    width: 100% !important;
 }
 
 .activity-day-detail-table .mud-table-container {
     background: transparent !important;
+    overflow-x: hidden !important;
 }
 
 .activity-day-detail-table .mud-table-body .mud-table-row {
     background: var(--mud-palette-surface) !important;
     transition: background-color 0.15s ease;
+    display: table-row !important;
 }
 
-/* Stripes: Alternating row background using a clearly visible 8% text-primary mix */
+/* Stripes: Alternating row background */
 .activity-day-detail-table .mud-table-body .mud-table-row:nth-of-type(even) {
-    background: color-mix(in srgb, var(--mud-palette-text-primary) 4%, var(--mud-palette-surface)) !important;
+    background: color-mix(in srgb, var(--mud-palette-text-primary) 6%, var(--mud-palette-surface)) !important;
 }
 
 .activity-day-detail-table .mud-table-body .mud-table-cell {
+    display: table-cell !important;
+    vertical-align: middle !important;
     color: var(--mud-palette-text-primary) !important;
     border-bottom: 1px solid var(--mud-palette-divider) !important;
     padding: 0.75rem 1rem !important;
     font-size: 0.9rem !important;
+    text-align: left !important;
 }
 
 .activity-day-detail-table .mud-table-body .mud-table-row:last-child .mud-table-cell {
@@ -900,32 +906,101 @@ h1:focus {
 
 /* Time Badge Column */
 .activity-time-cell {
-    width: 90px;
+    width: 70px;
+    min-width: 60px;
     font-weight: 600 !important;
     color: var(--mud-palette-text-secondary) !important;
     white-space: nowrap;
+    padding: 0.5rem 0.5rem 0.5rem 0.75rem !important;
 }
 
 .activity-time-text {
     font-family: monospace;
-    font-size: 0.825rem;
+    font-size: 0.8rem;
     letter-spacing: 0.02em;
     background: color-mix(in srgb, var(--mud-palette-text-secondary) 10%, transparent);
-    padding: 0.2rem 0.5rem;
+    padding: 0.15rem 0.4rem;
     border-radius: 6px;
+}
+
+/* ── Small-screen optimizations ── */
+@media (max-width: 480px) {
+    .activity-day-detail-dialog .activity-day-detail-dialog__content {
+        padding: 0.75rem !important;
+    }
+
+    .activity-day-detail-summary {
+        padding: 0.6rem 0.8rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .activity-day-detail-summary .mud-typography-body2 {
+        font-size: 0.825rem !important;
+    }
+
+    .activity-day-detail-table .mud-table-body .mud-table-row {
+        display: block !important;
+        padding: 0.4rem 0.5rem;
+        border-bottom: 1px solid var(--mud-palette-divider);
+    }
+
+    .activity-day-detail-table .mud-table-body .mud-table-row:last-child {
+        border-bottom: none;
+    }
+
+    .activity-day-detail-table .mud-table-body .mud-table-cell {
+        display: block !important;
+        padding: 0 !important;
+        font-size: 0.8rem !important;
+        text-align: left !important;
+        border-bottom: none !important;
+    }
+
+    .activity-time-cell {
+        width: auto;
+        min-width: 0;
+        padding: 0 0 0.1rem 0 !important;
+    }
+
+    .activity-time-text {
+        font-size: 0.72rem;
+        padding: 0;
+        background: none;
+        letter-spacing: 0.01em;
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .activity-desc-wrap {
+        gap: 0.45rem;
+        align-items: center;
+    }
+
+    .activity-detail-icon {
+        font-size: 0.95rem !important;
+        flex-shrink: 0;
+    }
+
+    .activity-text {
+        font-size: 0.82rem;
+        overflow-wrap: break-word;
+    }
 }
 
 /* Details Description & Status Indicator */
 .activity-desc-wrap {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 0.75rem;
+    min-width: 0;
+    flex-wrap: nowrap;
+    vertical-align: middle;
 }
 
 .activity-text {
     font-size: 0.9rem;
     font-weight: 500;
     color: var(--mud-palette-text-primary);
+    min-width: 0;
 }
 
 .activity-day-detail-dialog .mud-progress-linear {

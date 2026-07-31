@@ -8,71 +8,115 @@
 
 <PageTitle>@PageTitles.Page("Settings")</PageTitle>
 
-<MudText Typo="Typo.h4" Class="app-page-title">Settings</MudText>
+<div class="settings-page-wrapper">
 
-<MudPaper Class="pa-4 settings-section-paper mb-3" Elevation="0" Outlined="true">
-    <MudStack Spacing="2">
-        <MudText Typo="Typo.subtitle1" Class="mb-1">Account</MudText>
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">
-            Signed in as <strong>@Session.Email</strong>
-        </MudText>
-        <SyncStatusIndicator IconOnly="false" />
-        <MudButton Variant="Variant.Outlined" Color="Color.Error" Class="mt-2" OnClick="LogoutAsync">
-            Log out
-        </MudButton>
-    </MudStack>
-</MudPaper>
+    <div class="settings-section-switcher" role="tablist" aria-label="Settings sections">
+    <button type="button"
+            role="tab"
+            aria-selected="@(_settingsIndex == 0 ? "true" : "false")"
+            class="@GetSwitcherClass(0)"
+            @onclick="() => _settingsIndex = 0">
+        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small"/>
+        <span class="settings-section-switcher__label">Profile</span>
+    </button>
+    <button type="button"
+            role="tab"
+            aria-selected="@(_settingsIndex == 1 ? "true" : "false")"
+            class="@GetSwitcherClass(1)"
+            @onclick="() => _settingsIndex = 1">
+        <MudIcon Icon="@Icons.Material.Filled.Notifications" Size="Size.Small"/>
+        <span class="settings-section-switcher__label">Alerts</span>
+    </button>
+    <button type="button"
+            role="tab"
+            aria-selected="@(_settingsIndex == 2 ? "true" : "false")"
+            class="@GetSwitcherClass(2)"
+            @onclick="() => _settingsIndex = 2">
+        <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small"/>
+        <span class="settings-section-switcher__label">Account</span>
+    </button>
+</div>
 
-<UserPreferencesSection/>
-<NotificationSettingsSection/>
+<div class="settings-section-content">
+    @if (_settingsIndex == 0)
+    {
+        <UserPreferencesSection ShowTitle="false"/>
+    }
+    else if (_settingsIndex == 1)
+    {
+        <NotificationSettingsSection ShowTitle="false"/>
+    }
+    else
+    {
+        <MudPaper Class="pa-4 mb-3" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.subtitle1" Class="mb-1">Account</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">
+                    Signed in as <strong>@Session.Email</strong>
+                </MudText>
+                <SyncStatusIndicator IconOnly="false" />
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" Class="mt-2" OnClick="LogoutAsync">
+                    Log out
+                </MudButton>
+            </MudStack>
+        </MudPaper>
 
-<MudPaper Class="pa-4 settings-section-paper mb-3" Elevation="0" Outlined="true">
-    <MudStack Spacing="2">
-        <MudText Typo="Typo.subtitle1" Class="mb-1">App Updates</MudText>
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
-            Check for new releases and update the application.
-        </MudText>
+        <MudPaper Class="pa-4 mb-3" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.subtitle1" Class="mb-1">App Updates</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
+                    Check for new releases and update the application.
+                </MudText>
 
-        <div class="d-flex align-center justify-space-between border rounded-lg p-3 py-2">
-            <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Current Version</MudText>
-                <MudText Typo="Typo.body2" Class="font-weight-bold">v@_currentVersion</MudText>
-            </div>
-            
-            @if (UpdaterService.IsSupported)
-            {
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Primary" 
-                           Size="Size.Small" 
-                           OnClick="CheckForUpdatesAsync"
-                           Disabled="@_isChecking"
-                           StartIcon="@Icons.Material.Filled.SystemUpdate">
-                    @if (_isChecking)
+                <div class="d-flex align-center justify-space-between">
+                    <div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Current version</MudText>
+                        <MudText Typo="Typo.body2" Class="font-weight-bold">v@_currentVersion</MudText>
+                    </div>
+
+                    @if (UpdaterService.IsSupported)
                     {
-                        <span class="mr-2">Checking...</span>
-                        <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   OnClick="CheckForUpdatesAsync"
+                                   Disabled="@_isChecking"
+                                   StartIcon="@Icons.Material.Filled.SystemUpdate">
+                            @if (_isChecking)
+                            {
+                                <span class="mr-2">Checking...</span>
+                                <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
+                            }
+                            else
+                            {
+                                <span>Check for Updates</span>
+                            }
+                        </MudButton>
                     }
                     else
                     {
-                        <span>Check for Updates</span>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Managed by platform
+                        </MudText>
                     }
-                </MudButton>
-            }
-            else
-            {
-                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                    Updates are managed by the platform.
-                </MudText>
-            }
-        </div>
-    </MudStack>
-</MudPaper>
+                </div>
+            </MudStack>
+        </MudPaper>
 
-<AccountActionsSection/>
+        <AccountActionsSection ShowTitle="false"/>
+    }
+</div>
+</div>
 
 @code {
+    private int _settingsIndex;
     private string _currentVersion = "1.0.0";
     private bool _isChecking;
+
+    private static readonly string ButtonBase = "settings-section-switcher__btn";
+    private static readonly string ButtonActive = "settings-section-switcher__btn settings-section-switcher__btn--active";
+
+    private string GetSwitcherClass(int index) => _settingsIndex == index ? ButtonActive : ButtonBase;
 
     protected override void OnInitialized()
     {
@@ -117,9 +161,9 @@
                 { x => x.DownloadUrl, result.DownloadUrl }
             };
 
-            var options = new DialogOptions 
-            { 
-                CloseButton = false, 
+            var options = new DialogOptions
+            {
+                CloseButton = false,
                 MaxWidth = MaxWidth.Small,
                 FullWidth = true
             };
@@ -132,4 +176,3 @@
         }
     }
 }
-

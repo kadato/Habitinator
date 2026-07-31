@@ -382,6 +382,74 @@ h1:focus {
     max-width: 75ch;
 }
 
+@media (max-width: 959.98px) {
+    .app-page-title {
+        display: none;
+    }
+}
+
+/* Settings section switcher */
+.settings-section-switcher {
+    display: flex;
+    width: 100%;
+    gap: 0.25rem;
+    padding: 0.2rem;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 10px;
+    box-sizing: border-box;
+}
+
+.settings-section-switcher__btn {
+    flex: 1 1 33.333%;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.35rem;
+    min-height: 40px;
+    padding: 0.35rem 0.4rem;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: none;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.15s ease;
+}
+
+.settings-section-switcher__btn:active {
+    transform: scale(0.97);
+}
+
+.settings-section-switcher__btn--active {
+    color: #fff;
+    background-color: var(--mud-palette-primary);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--mud-palette-primary) 35%, transparent);
+}
+
+.settings-section-switcher__label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.settings-section-content {
+    width: 100%;
+    padding-top: 1rem;
+}
+
+@media (max-width: 959.98px) {
+    .settings-section-content {
+        padding-top: 0.75rem;
+    }
+}
+
 /* App bar: MudToolBar can shrink-wrap; force full width + flex spacer so user/logout stay on the right edge */
 .mud-appbar.app-top-bar {
     display: flex !important;
@@ -610,7 +678,7 @@ h1:focus {
 }
 
 .app-mobile-nav__label {
-    line-height: 1;
+    line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -690,6 +758,13 @@ h1:focus {
     max-width: 1200px;
     margin: 0 auto;
     width: 100%;
+}
+
+@media (max-width: 959.98px) {
+    .settings-page-wrapper,
+    .stats-page-wrapper {
+        padding-top: 0.35rem;
+    }
 }
 
 /* ── App toasts (bottom-left snackbar) ───────────────────────────────────── */

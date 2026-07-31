@@ -12,18 +12,55 @@
     </NotAuthorized>
     <Authorized>
         <div class="settings-page-wrapper">
-            <MudText Typo="Typo.h4" Class="app-page-title">Settings</MudText>
-            <MudTabs Elevation="0" Outlined="false" Color="Color.Primary" Rounded="true" Class="settings-tabs">
-                <MudTabPanel Text="Profile &amp; Preferences" Icon="@Icons.Material.Filled.Person">
+            <div class="settings-section-switcher" role="tablist" aria-label="Settings sections">
+                <button type="button"
+                        role="tab"
+                        aria-selected="@(_settingsIndex == 0 ? "true" : "false")"
+                        class="@GetSwitcherClass(0)"
+                        @onclick="() => _settingsIndex = 0">
+                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small"/>
+                    <span class="settings-section-switcher__label">Profile</span>
+                </button>
+                <button type="button"
+                        role="tab"
+                        aria-selected="@(_settingsIndex == 1 ? "true" : "false")"
+                        class="@GetSwitcherClass(1)"
+                        @onclick="() => _settingsIndex = 1">
+                    <MudIcon Icon="@Icons.Material.Filled.Notifications" Size="Size.Small"/>
+                    <span class="settings-section-switcher__label">Alerts</span>
+                </button>
+                <button type="button"
+                        role="tab"
+                        aria-selected="@(_settingsIndex == 2 ? "true" : "false")"
+                        class="@GetSwitcherClass(2)"
+                        @onclick="() => _settingsIndex = 2">
+                    <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small"/>
+                    <span class="settings-section-switcher__label">Account</span>
+                </button>
+            </div>
+
+            <div class="settings-section-content">
+                @if (_settingsIndex == 0)
+                {
                     <UserPreferencesSection ShowTitle="false"/>
-                </MudTabPanel>
-                <MudTabPanel Text="Notifications" Icon="@Icons.Material.Filled.Notifications">
+                }
+                else if (_settingsIndex == 1)
+                {
                     <NotificationSettingsSection ShowTitle="false"/>
-                </MudTabPanel>
-                <MudTabPanel Text="Security &amp; Account" Icon="@Icons.Material.Filled.Security">
+                }
+                else
+                {
                     <AccountActionsSection ShowTitle="false"/>
-                </MudTabPanel>
-            </MudTabs>
+                }
+            </div>
         </div>
     </Authorized>
 </AuthorizeView>
+
+@code {
+    private int _settingsIndex;
+    private static readonly string ButtonBase = "settings-section-switcher__btn";
+    private static readonly string ButtonActive = "settings-section-switcher__btn settings-section-switcher__btn--active";
+
+    private string GetSwitcherClass(int index) => _settingsIndex == index ? ButtonActive : ButtonBase;
+}

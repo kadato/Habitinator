@@ -972,7 +972,8 @@
         {
             CloseButton = true,
             CloseOnEscapeKey = true,
-            NoHeader = false
+            NoHeader = false,
+            Position = DialogPosition.TopCenter
         };
 
         var dialog = await DialogService.ShowAsync<ArchivedItemsDialog>(

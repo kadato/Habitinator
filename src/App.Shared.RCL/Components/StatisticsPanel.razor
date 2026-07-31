@@ -11,7 +11,6 @@
 @implements IDisposable
 
 <MudStack Spacing="2" Class="stats-panel">
-    <MudText Typo="Typo.h4" Class="app-page-title stats-panel__title">Statistics</MudText>
 
     @if (_error is not null)
     {
@@ -19,11 +18,9 @@
     }
     else if (_loading)
     {
-        <!-- Main Dashboard Layout Grid Skeleton -->
-        <MudGrid Spacing="3">
-            <!-- Left Main Column (Charts & Heatmaps) -->
-            <MudItem xs="12" lg="9" Class="order-2 order-lg-1">
-                <!-- Activity Heatmap Card Skeleton -->
+        <!-- Main Dashboard Layout Skeleton -->
+        <div class="stats-dashboard-layout">
+            <div class="stats-dashboard-main">
                 <MudPaper Class="pa-4 stats-dashboard-card" Elevation="0" Outlined="true">
                     <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-4">
                         <div>
@@ -35,14 +32,12 @@
                     <MudSkeleton Width="100%" Height="120px" SkeletonType="SkeletonType.Rectangle" />
                 </MudPaper>
 
-                <!-- Weekly Activity Card Skeleton -->
                 <MudPaper Class="pa-4 stats-dashboard-card mt-4" Elevation="0" Outlined="true">
                     <MudSkeleton Width="180px" Height="24px" Class="mb-1" />
                     <MudSkeleton Width="220px" Height="16px" Class="mb-4" />
                     <MudSkeleton Width="100%" Height="100px" SkeletonType="SkeletonType.Rectangle" />
                 </MudPaper>
 
-                <!-- Dailies performance Card Skeleton -->
                 <MudPaper Class="pa-4 stats-dashboard-card mt-4" Elevation="0" Outlined="true">
                     <MudSkeleton Width="150px" Height="24px" Class="mb-4" />
                     <MudGrid Spacing="3">
@@ -60,42 +55,17 @@
                         }
                     </MudGrid>
                 </MudPaper>
-            </MudItem>
+            </div>
 
-            <!-- Right Sidebar Column (Filters + KPIs) -->
-            <MudItem xs="12" lg="3" Class="order-1 order-lg-2">
+            <div class="stats-dashboard-sidebar">
                 <div class="stats-sidebar-column">
-                    <div class="stats-sidebar-block stats-sidebar-controls">
-                        <div class="stats-filters-mobile-header @(_filtersExpanded ? "stats-filters-mobile-header--expanded" : "")"
-                             @onclick="ToggleFiltersExpanded"
-                             @onkeydown="OnToggleFiltersKeyDown"
-                             role="button"
-                             tabindex="0"
-                             aria-expanded="@(_filtersExpanded ? "true" : "false")"
-                             aria-label="Toggle statistics filters">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="w-100 stats-filters-mobile-header-inner">
-                                <MudStack Spacing="0" Class="min-w-0 flex-grow-1">
-                                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
-                                        <MudIcon Icon="@Icons.Material.Filled.FilterList" Size="Size.Small" Color="Color.Primary" aria-hidden="true"/>
-                                        <MudText Typo="Typo.subtitle2" Class="stats-filters-mobile-header-text">Filters</MudText>
-                                    </MudStack>
-                                </MudStack>
-                                <MudIcon Icon="@(_filtersExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                                         Class="stats-filters-mobile-expand-icon"
-                                         Size="Size.Medium"
-                                         aria-hidden="true"/>
-                            </MudStack>
-                        </div>
-                        <div class="stats-filters-collapse-outer">
-                            <MudCollapse Expanded="@_filtersExpanded" Class="stats-filters-collapse-wrapper">
-                                <MudStack Spacing="2" Class="stats-sidebar-filters stats-sidebar-filters--body">
-                                    <MudSkeleton Width="100%" Height="36px" />
-                                    <MudSkeleton Width="100%" Height="36px" />
-                                    <MudSkeleton Width="100%" Height="14px" />
-                                </MudStack>
-                            </MudCollapse>
-                        </div>
-                    </div>
+                    <MudPaper Class="pa-4 stats-dashboard-card stats-filter-card" Elevation="0" Outlined="true">
+                        <MudStack Spacing="2">
+                            <MudSkeleton Width="80px" Height="20px" />
+                            <MudSkeleton Width="100%" Height="36px" />
+                            <MudSkeleton Width="100%" Height="36px" />
+                        </MudStack>
+                    </MudPaper>
                     <div class="stats-kpi-strip stats-kpi-strip--mobile">
                         <div class="stats-kpi-strip__grid">
                             @for (int i = 0; i < 3; i++)
@@ -118,8 +88,8 @@
                         }
                     </div>
                 </div>
-            </MudItem>
-        </MudGrid>
+            </div>
+        </div>
     }
     else if (_data is null)
     {
@@ -132,10 +102,9 @@
             <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-2">No activity logged yet. Use habits, dailies, to-dos, or the focus timer on the board.</MudAlert>
         }
 
-        <!-- Main Dashboard Layout Grid -->
-        <MudGrid Spacing="3">
-            <!-- Left Main Column (Charts & Heatmaps) -->
-            <MudItem xs="12" lg="9" Class="order-2 order-lg-1">
+        <!-- Main Dashboard Layout -->
+        <div class="stats-dashboard-layout">
+            <div class="stats-dashboard-main">
                 <!-- Activity Heatmap Card -->
                 <MudPaper Class="pa-4 stats-dashboard-card" Elevation="0" Outlined="true">
                     <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-2">
@@ -305,90 +274,66 @@
                         }
                     }
                 </MudPaper>
-            </MudItem>
+            </div>
 
-            <!-- Right Sidebar Column (Filters + KPIs) -->
-            <MudItem xs="12" lg="3" Class="order-1 order-lg-2">
+            <div class="stats-dashboard-sidebar">
                 <div class="stats-sidebar-column">
-                    <div class="stats-sidebar-block stats-sidebar-controls">
-                        <div class="stats-filters-mobile-header @(_filtersExpanded ? "stats-filters-mobile-header--expanded" : "")"
-                             @onclick="ToggleFiltersExpanded"
-                             @onkeydown="OnToggleFiltersKeyDown"
-                             role="button"
-                             tabindex="0"
-                             aria-expanded="@(_filtersExpanded ? "true" : "false")"
-                             aria-label="Toggle statistics filters">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="w-100 stats-filters-mobile-header-inner">
-                                <MudStack Spacing="0" Class="min-w-0 flex-grow-1">
-                                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
-                                        <MudIcon Icon="@Icons.Material.Filled.FilterList" Size="Size.Small" Color="Color.Primary" aria-hidden="true"/>
-                                        <MudText Typo="Typo.subtitle2" Class="stats-filters-mobile-header-text">Filters</MudText>
-                                    </MudStack>
-                                    @if (!_filtersExpanded)
-                                    {
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="stats-filters-mobile-header-summary text-truncate">
-                                            @GetFiltersHeaderSummary()
-                                        </MudText>
-                                    }
-                                </MudStack>
-                                <MudIcon Icon="@(_filtersExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                                         Class="stats-filters-mobile-expand-icon"
-                                         Size="Size.Medium"
-                                         aria-hidden="true"/>
-                            </MudStack>
-                        </div>
-                        <div class="stats-filters-collapse-outer">
-                            <MudCollapse Expanded="@_filtersExpanded" Class="stats-filters-collapse-wrapper">
-                                <MudStack Spacing="2" Class="stats-sidebar-filters stats-sidebar-filters--body">
-                                    @if ((_data.AvailableTags?.Count ?? 0) > 0)
-                                    {
-                                        <MudSelect T="string"
-                                                   Label="Tags"
-                                                   Variant="Variant.Outlined"
-                                                   Dense="true"
-                                                   Margin="Margin.Dense"
-                                                   MultiSelection="true"
-                                                   MultiSelectionTextFunc="@(new Func<IReadOnlyList<string>, string>(GetMultiSelectionText))"
-                                                   SelectedValues="_selectedTags"
-                                                   SelectedValuesChanged="OnSelectedTagsChanged"
-                                                   Clearable="true"
-                                                   Class="stats-tag-select-sidebar">
-                                            @foreach (var t in _data.AvailableTags ?? [])
-                                            {
-                                                <MudSelectItem T="string" Value="@t">@t</MudSelectItem>
-                                            }
-                                        </MudSelect>
-                                    }
-
+                    <MudPaper Class="pa-4 stats-dashboard-card stats-filter-card" Elevation="0" Outlined="true">
+                        <MudStack Spacing="2">
+                            <div class="stats-filter-card__header">
+                                <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Filters</MudText>
+                            </div>
+                            <div class="stats-filter-row">
+                                @if ((_data.AvailableTags?.Count ?? 0) > 0)
+                                {
                                     <MudSelect T="string"
-                                               Label="Period"
+                                               Label="Tags"
                                                Variant="Variant.Outlined"
                                                Dense="true"
                                                Margin="Margin.Dense"
-                                               Value="_selectedPeriodKey"
-                                               ValueChanged="OnStatsPeriodChanged"
-                                               Class="stats-year-select-sidebar">
-                                        @if (_periodOptions is not null)
+                                               MultiSelection="true"
+                                               MultiSelectionTextFunc="@(new Func<IReadOnlyList<string>, string>(GetMultiSelectionText))"
+                                               SelectedValues="_selectedTags"
+                                               SelectedValuesChanged="OnSelectedTagsChanged"
+                                               Clearable="true"
+                                               Style="width:100%"
+                                               Class="stats-tag-select-sidebar">
+                                        @foreach (var t in _data.AvailableTags ?? [])
                                         {
-                                            @foreach (var opt in _periodOptions)
-                                            {
-                                                <MudSelectItem T="string" Value="@opt.Key">@opt.Label</MudSelectItem>
-                                            }
+                                            <MudSelectItem T="string" Value="@t">@t</MudSelectItem>
                                         }
                                     </MudSelect>
+                                }
 
-                                    @if (_periodBusy)
+                                <MudSelect T="string"
+                                           Label="Period"
+                                           Variant="Variant.Outlined"
+                                           Dense="true"
+                                           Margin="Margin.Dense"
+                                           Value="_selectedPeriodKey"
+                                           ValueChanged="OnStatsPeriodChanged"
+                                           Style="width:100%"
+                                           Class="stats-year-select-sidebar">
+                                    @if (_periodOptions is not null)
                                     {
-                                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-0"/>
+                                        @foreach (var opt in _periodOptions)
+                                        {
+                                            <MudSelectItem T="string" Value="@opt.Key">@opt.Label</MudSelectItem>
+                                        }
                                     }
+                                </MudSelect>
+                            </div>
 
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="stats-sidebar-range">
-                                        @FormatRange(_data.RangeStart, _data.RangeEnd)
-                                    </MudText>
-                                </MudStack>
-                            </MudCollapse>
-                        </div>
-                    </div>
+                            @if (_periodBusy)
+                            {
+                                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-0"/>
+                            }
+
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="stats-sidebar-range">
+                                @FormatRange(_data.RangeStart, _data.RangeEnd)
+                            </MudText>
+                        </MudStack>
+                    </MudPaper>
 
                     <div class="stats-kpi-strip stats-kpi-strip--mobile">
                         <div class="stats-kpi-strip__grid">
@@ -451,8 +396,8 @@
                         </MudPaper>
                     </div>
                 </div>
-            </MudItem>
-        </MudGrid>
+            </div>
+        </div>
     }
 </MudStack>
 
@@ -473,7 +418,6 @@
     private bool _loadingDailies;
     private string? _dailyError;
     private bool _shouldScrollToEnd;
-    private bool _filtersExpanded;
     private DateOnly _heatmapToday;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -597,119 +541,39 @@
 
     private async Task OnStatsPeriodChanged(string? periodKey)
     {
-        if (_loading)
-        {
-            return;
-        }
-
+        if (_loading) return;
         var newPeriod = string.IsNullOrEmpty(periodKey) ? DailyGraphPeriods.Rolling370Days : periodKey;
-        if (newPeriod == _selectedPeriodKey)
-        {
-            return;
-        }
-
+        if (newPeriod == _selectedPeriodKey) return;
         _selectedPeriodKey = newPeriod;
         _periodBusy = true;
         _error = null;
         _dailyError = null;
-        try
-        {
-            await LoadStatisticsAsync(_selectedPeriodKey);
-        }
-        catch (Exception ex)
-        {
-            _error = ex.Message;
-        }
-        finally
-        {
-            _periodBusy = false;
-        }
+        try { await LoadStatisticsAsync(_selectedPeriodKey); }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _periodBusy = false; }
     }
 
-    private void ToggleFiltersExpanded()
-    {
-        _filtersExpanded = !_filtersExpanded;
-    }
-
-    private void OnToggleFiltersKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key is " " or "Enter")
-        {
-            ToggleFiltersExpanded();
-        }
-    }
-
-    private string GetFiltersHeaderSummary()
-    {
-        if (_data is null)
-        {
-            return "Filters";
-        }
-
-        var period = GetSelectedPeriodLabel();
-        var tags = _selectedTags.Count switch
-        {
-            0 => "All tags",
-            1 => _selectedTags.First(),
-            _ => $"{_selectedTags.Count} tags"
-        };
-        return $"{period} · {tags}";
-    }
-
-    private string GetSelectedPeriodLabel()
-    {
-        if (_periodOptions is null)
-        {
-            return "Period";
-        }
-
-        return _periodOptions.FirstOrDefault(o => o.Key == _selectedPeriodKey)?.Label ?? "Period";
-    }
-
-    private string FormatBusiestDayShort(DateOnly day)
-    {
-        return DateFormatService.Format(day);
-    }
+    private string FormatBusiestDayShort(DateOnly day) => DateFormatService.Format(day);
 
     private static string GetMultiSelectionText(IReadOnlyList<string> selectedValues)
     {
-        if (selectedValues is null || selectedValues.Count == 0)
-        {
-            return "All tags";
-        }
+        if (selectedValues is null || selectedValues.Count == 0) return "All tags";
         return string.Join(", ", selectedValues);
     }
 
     private async Task OnSelectedTagsChanged(IReadOnlyCollection<string> values)
     {
-        if (_loading)
-        {
-            return;
-        }
-
+        if (_loading) return;
         var newTags = values ?? Array.Empty<string>();
-        if (newTags.Count == _selectedTags.Count && newTags.All(_selectedTags.Contains))
-        {
-            return;
-        }
-
+        if (newTags.Count == _selectedTags.Count && newTags.All(_selectedTags.Contains)) return;
         _selectedTags = newTags;
         _tagFilter = string.Join(",", _selectedTags);
         _periodBusy = true;
         _error = null;
         _dailyError = null;
-        try
-        {
-            await LoadStatisticsAsync(_selectedPeriodKey);
-        }
-        catch (Exception ex)
-        {
-            _error = ex.Message;
-        }
-        finally
-        {
-            _periodBusy = false;
-        }
+        try { await LoadStatisticsAsync(_selectedPeriodKey); }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _periodBusy = false; }
     }
 
     private async Task OpenDayDetailAsync(DateOnly date)
@@ -726,10 +590,7 @@
             { x => x.Date, date },
             { x => x.TagFilter, filterTag }
         };
-        await DialogService.ShowAsync<ActivityDayDetailDialog>(
-            FormatDateWithWeekday(date),
-            parameters,
-            options);
+        await DialogService.ShowAsync<ActivityDayDetailDialog>(FormatDateWithWeekday(date), parameters, options);
     }
 
     private static string FormatBusiestDayDetail(DateOnly day, int eventCount)
@@ -741,23 +602,12 @@
 
     private static string FormatFocus(int totalMinutes)
     {
-        if (totalMinutes <= 0)
-        {
-            return "—";
-        }
-
-        if (totalMinutes < 60)
-        {
-            return $"{totalMinutes} min";
-        }
-
+        if (totalMinutes <= 0) return "—";
+        if (totalMinutes < 60) return $"{totalMinutes} min";
         return $"{totalMinutes / 60}h {totalMinutes % 60}m";
     }
 
-    private string FormatRange(DateOnly from, DateOnly to)
-    {
-        return $"{DateFormatService.Format(from)} → {DateFormatService.Format(to)}";
-    }
+    private string FormatRange(DateOnly from, DateOnly to) => $"{DateFormatService.Format(from)} → {DateFormatService.Format(to)}";
 
     private string FormatDateWithWeekday(DateOnly date)
     {
@@ -767,7 +617,6 @@
     }
 
     private bool IsHeatmapToday(DateOnly date) => date == _heatmapToday;
-
 
     private string HeatmapDayTitle(DateOnly date, int count)
     {
@@ -781,5 +630,4 @@
         var baseTitle = $"{DateFormatService.Format(date)}: {status}";
         return IsHeatmapToday(date) ? $"Today · {baseTitle}" : baseTitle;
     }
-
 }

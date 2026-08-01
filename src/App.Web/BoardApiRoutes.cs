@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 
 using App.Shared.RCL;
 using App.Shared.RCL.Models;
+using App.Shared.RCL.Services;
 using App.Web.Auth;
 using App.Web.Services;
 
@@ -119,70 +120,30 @@ internal static class BoardApiRoutes
             return Results.Unauthorized();
         }
 
-        string path = http.Request.Path.Value ?? "";
-        string bodyJson = JsonSerializer.Serialize(request, Json);
-        try
+        return await RunIdempotentAsync(http, idem, userId, "POST", JsonSerializer.Serialize(request, Json), async ct =>
         {
-            (int statusCode, string body, string? contentType) outcome = await idem.RunAsync(
-                userId,
-                http.Request.Headers[IdempotencyKeyHeader].FirstOrDefault(),
-                BoardIdempotencyService.ComputeFingerprintHex("POST", path, bodyJson),
-                async () =>
-                {
-                    BoardItem item = await board.CreateItemAsync(userId, section, ZalgoSanitizer.SanitizeAndTrim(request.Title), request.ItemId, cancellationToken);
-                    return (200, JsonSerializer.Serialize(item, Json), JsonContentType);
-                },
-                cancellationToken);
-            return ToHttpResult(outcome);
-        }
-        catch (BoardIdempotencyFingerprintMismatchException)
-        {
-            return Results.Text(
-                BoardIdempotencyService.IdempotencyMismatchJson(),
-                JsonContentType,
-                statusCode: StatusCodes.Status409Conflict);
-        }
+            BoardItem item = await board.CreateItemAsync(
+                userId, section, ZalgoSanitizer.SanitizeAndTrim(request.Title), request.ItemId, ct);
+            return (200, JsonSerializer.Serialize(item, Json), JsonContentType);
+        }, cancellationToken);
     }
 
     private static async Task<IResult> HandleRenameItemAsync(
-        HttpContext http, BoardPersistenceService board, BoardIdempotencyService idem,
+        HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
         BoardSection section, Guid itemId, ItemTitleRequest request, CancellationToken cancellationToken)
     {
-        if (AuthenticatedUserId.TryGet(http.User) is not Guid userId)
+        if (AuthenticatedUserId.TryGet(user) is not Guid userId)
         {
             return Results.Unauthorized();
         }
 
-        string path = http.Request.Path.Value ?? "";
-        string bodyJson = JsonSerializer.Serialize(request, Json);
         DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
-        try
+        return await RunIdempotentAsync(http, idem, userId, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
         {
-            (int statusCode, string body, string? contentType) outcome = await idem.RunAsync(
-                userId,
-                http.Request.Headers[IdempotencyKeyHeader].FirstOrDefault(),
-                BoardIdempotencyService.ComputeFingerprintHex("PUT", path, bodyJson),
-                async () =>
-                {
-                    BoardMutationResult r = await board.RenameItemForApiAsync(
-                        userId,
-                        section,
-                        itemId,
-                        ZalgoSanitizer.SanitizeAndTrim(request.Title),
-                        expected,
-                        cancellationToken);
-                    return MutationToOutcome(r);
-                },
-                cancellationToken);
-            return ToHttpResult(outcome);
-        }
-        catch (BoardIdempotencyFingerprintMismatchException)
-        {
-            return Results.Text(
-                BoardIdempotencyService.IdempotencyMismatchJson(),
-                JsonContentType,
-                statusCode: StatusCodes.Status409Conflict);
-        }
+            BoardMutationResult r = await board.RenameItemAsync(
+                userId, section, itemId, ZalgoSanitizer.SanitizeAndTrim(request.Title), expected, ct);
+            return MutationToOutcome(r);
+        }, cancellationToken);
     }
 
     private static async Task<IResult> HandleArchiveItemAsync(
@@ -194,29 +155,12 @@ internal static class BoardApiRoutes
             return Results.Unauthorized();
         }
 
-        string path = http.Request.Path.Value ?? "";
         DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
-        try
+        return await RunIdempotentAsync(http, idem, userId, "POST", "", async ct =>
         {
-            (int statusCode, string body, string? contentType) outcome = await idem.RunAsync(
-                userId,
-                http.Request.Headers[IdempotencyKeyHeader].FirstOrDefault(),
-                BoardIdempotencyService.ComputeFingerprintHex("POST", path, ""),
-                async () =>
-                {
-                    BoardMutationResult r = await board.ArchiveItemForApiAsync(userId, section, itemId, expected, cancellationToken);
-                    return MutationToOutcome(r);
-                },
-                cancellationToken);
-            return ToHttpResult(outcome);
-        }
-        catch (BoardIdempotencyFingerprintMismatchException)
-        {
-            return Results.Text(
-                BoardIdempotencyService.IdempotencyMismatchJson(),
-                JsonContentType,
-                statusCode: StatusCodes.Status409Conflict);
-        }
+            BoardMutationResult r = await board.ArchiveItemAsync(userId, section, itemId, expected, ct);
+            return MutationToOutcome(r);
+        }, cancellationToken);
     }
 
     private static async Task<IResult> HandleUnarchiveItemAsync(
@@ -228,29 +172,12 @@ internal static class BoardApiRoutes
             return Results.Unauthorized();
         }
 
-        string path = http.Request.Path.Value ?? "";
         DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
-        try
+        return await RunIdempotentAsync(http, idem, userId, "POST", "", async ct =>
         {
-            (int statusCode, string body, string? contentType) outcome = await idem.RunAsync(
-                userId,
-                http.Request.Headers[IdempotencyKeyHeader].FirstOrDefault(),
-                BoardIdempotencyService.ComputeFingerprintHex("POST", path, ""),
-                async () =>
-                {
-                    BoardMutationResult r = await board.UnarchiveItemForApiAsync(userId, section, itemId, expected, cancellationToken);
-                    return MutationToOutcome(r);
-                },
-                cancellationToken);
-            return ToHttpResult(outcome);
-        }
-        catch (BoardIdempotencyFingerprintMismatchException)
-        {
-            return Results.Text(
-                BoardIdempotencyService.IdempotencyMismatchJson(),
-                JsonContentType,
-                statusCode: StatusCodes.Status409Conflict);
-        }
+            BoardMutationResult r = await board.UnarchiveItemAsync(userId, section, itemId, expected, ct);
+            return MutationToOutcome(r);
+        }, cancellationToken);
     }
 
     private static async Task<IResult> HandleDeleteItemAsync(
@@ -262,38 +189,21 @@ internal static class BoardApiRoutes
             return Results.Unauthorized();
         }
 
-        string path = http.Request.Path.Value ?? "";
         DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
-        try
+        return await RunIdempotentAsync(http, idem, userId, "DELETE", "", async ct =>
         {
-            (int statusCode, string body, string? contentType) outcome = await idem.RunAsync(
-                userId,
-                http.Request.Headers[IdempotencyKeyHeader].FirstOrDefault(),
-                BoardIdempotencyService.ComputeFingerprintHex("DELETE", path, ""),
-                async () =>
-                {
-                    BoardMutationResult r = await board.DeleteItemForApiAsync(userId, section, itemId, expected, cancellationToken);
-                    return r.Status switch
-                    {
-                        BoardMutationStatus.Ok => (204, "", null),
-                        BoardMutationStatus.NotFound => (404, "", null),
-                        BoardMutationStatus.Conflict => (
-                            409,
-                            JsonSerializer.Serialize(new { problem = "version_conflict", item = r.Item }, Json),
-                            JsonContentType),
-                        _ => (500, "{}", JsonContentType)
-                    };
-                },
-                cancellationToken);
-            return ToHttpResult(outcome);
-        }
-        catch (BoardIdempotencyFingerprintMismatchException)
-        {
-            return Results.Text(
-                BoardIdempotencyService.IdempotencyMismatchJson(),
-                JsonContentType,
-                statusCode: StatusCodes.Status409Conflict);
-        }
+            BoardMutationResult r = await board.DeleteItemAsync(userId, section, itemId, expected, ct);
+            return r.Status switch
+            {
+                BoardMutationStatus.Ok => (204, "", null),
+                BoardMutationStatus.NotFound => (404, "", null),
+                BoardMutationStatus.Conflict => (
+                    409,
+                    JsonSerializer.Serialize(new { problem = "version_conflict", item = r.Item }, Json),
+                    JsonContentType),
+                _ => (500, "{}", JsonContentType)
+            };
+        }, cancellationToken);
     }
 
     private static async Task<IResult> HandleToggleItemAsync(
@@ -305,29 +215,12 @@ internal static class BoardApiRoutes
             return Results.Unauthorized();
         }
 
-        string path = http.Request.Path.Value ?? "";
         DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
-        try
+        return await RunIdempotentAsync(http, idem, userId, "POST", "", async ct =>
         {
-            (int statusCode, string body, string? contentType) outcome = await idem.RunAsync(
-                userId,
-                http.Request.Headers[IdempotencyKeyHeader].FirstOrDefault(),
-                BoardIdempotencyService.ComputeFingerprintHex("POST", path, ""),
-                async () =>
-                {
-                    BoardMutationResult r = await board.ToggleItemForApiAsync(userId, section, itemId, expected, cancellationToken);
-                    return MutationToOutcome(r);
-                },
-                cancellationToken);
-            return ToHttpResult(outcome);
-        }
-        catch (BoardIdempotencyFingerprintMismatchException)
-        {
-            return Results.Text(
-                BoardIdempotencyService.IdempotencyMismatchJson(),
-                JsonContentType,
-                statusCode: StatusCodes.Status409Conflict);
-        }
+            BoardMutationResult r = await board.ToggleItemAsync(userId, section, itemId, expected, ct);
+            return MutationToOutcome(r);
+        }, cancellationToken);
     }
 
     private static void MapHabitRoutes(RouteGroupBuilder boardApi)
@@ -341,29 +234,12 @@ internal static class BoardApiRoutes
                     return Results.Unauthorized();
                 }
 
-                string path = http.Request.Path.Value ?? "";
                 DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
-                try
+                return await RunIdempotentAsync(http, idem, userId, "POST", "", async ct =>
                 {
-                    (int statusCode, string body, string? contentType) outcome = await idem.RunAsync(
-                        userId,
-                        http.Request.Headers[IdempotencyKeyHeader].FirstOrDefault(),
-                        BoardIdempotencyService.ComputeFingerprintHex("POST", path, ""),
-                        async () =>
-                        {
-                            BoardMutationResult r = await board.IncrementHabitPlusForApiAsync(userId, itemId, expected, cancellationToken);
-                            return MutationToOutcome(r);
-                        },
-                        cancellationToken);
-                    return ToHttpResult(outcome);
-                }
-                catch (BoardIdempotencyFingerprintMismatchException)
-                {
-                    return Results.Text(
-                        BoardIdempotencyService.IdempotencyMismatchJson(),
-                        JsonContentType,
-                        statusCode: StatusCodes.Status409Conflict);
-                }
+                    BoardMutationResult r = await board.IncrementHabitPlusAsync(userId, itemId, expected, ct);
+                    return MutationToOutcome(r);
+                }, cancellationToken);
             });
 
         boardApi.MapPost("/habits/{itemId:guid}/decrement",
@@ -375,29 +251,12 @@ internal static class BoardApiRoutes
                     return Results.Unauthorized();
                 }
 
-                string path = http.Request.Path.Value ?? "";
                 DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
-                try
+                return await RunIdempotentAsync(http, idem, userId, "POST", "", async ct =>
                 {
-                    (int statusCode, string body, string? contentType) outcome = await idem.RunAsync(
-                        userId,
-                        http.Request.Headers[IdempotencyKeyHeader].FirstOrDefault(),
-                        BoardIdempotencyService.ComputeFingerprintHex("POST", path, ""),
-                        async () =>
-                        {
-                            BoardMutationResult r = await board.IncrementHabitMinusForApiAsync(userId, itemId, expected, cancellationToken);
-                            return MutationToOutcome(r);
-                        },
-                        cancellationToken);
-                    return ToHttpResult(outcome);
-                }
-                catch (BoardIdempotencyFingerprintMismatchException)
-                {
-                    return Results.Text(
-                        BoardIdempotencyService.IdempotencyMismatchJson(),
-                        JsonContentType,
-                        statusCode: StatusCodes.Status409Conflict);
-                }
+                    BoardMutationResult r = await board.IncrementHabitMinusAsync(userId, itemId, expected, ct);
+                    return MutationToOutcome(r);
+                }, cancellationToken);
             });
 
         boardApi.MapPut("/habits/{itemId:guid}",
@@ -409,45 +268,27 @@ internal static class BoardApiRoutes
                     return Results.Unauthorized();
                 }
 
-                string path = http.Request.Path.Value ?? "";
-                string bodyJson = JsonSerializer.Serialize(request, Json);
                 DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
-                try
+                return await RunIdempotentAsync(http, idem, userId, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
                 {
-                    (int statusCode, string body, string? contentType) outcome = await idem.RunAsync(
+                    BoardMutationResult r = await board.UpdateHabitAsync(
                         userId,
-                        http.Request.Headers[IdempotencyKeyHeader].FirstOrDefault(),
-                        BoardIdempotencyService.ComputeFingerprintHex("PUT", path, bodyJson),
-                        async () =>
-                        {
-                            BoardMutationResult r = await board.UpdateHabitForApiAsync(
-                                userId,
-                                itemId,
-                                new UpdateHabitArgs(
-                                    ZalgoSanitizer.SanitizeAndTrim(request.Title),
-                                    ZalgoSanitizer.Sanitize(request.Notes),
-                                    ZalgoSanitizer.Sanitize(request.Tags),
-                                    request.TrackPlus,
-                                    request.TrackMinus,
-                                    request.ResetPeriod,
-                                    request.Counter,
-                                    request.NegativeCounter,
-                                    DailyChecklistJson.Serialize(DailyChecklistJson.Parse(request.ChecklistJson)),
-                                    request.SortOrder,
-                                    expected),
-                                cancellationToken);
-                            return MutationToOutcome(r);
-                        },
-                        cancellationToken);
-                    return ToHttpResult(outcome);
-                }
-                catch (BoardIdempotencyFingerprintMismatchException)
-                {
-                    return Results.Text(
-                        BoardIdempotencyService.IdempotencyMismatchJson(),
-                        JsonContentType,
-                        statusCode: StatusCodes.Status409Conflict);
-                }
+                        itemId,
+                        new UpdateHabitArgs(
+                            ZalgoSanitizer.SanitizeAndTrim(request.Title),
+                            ZalgoSanitizer.Sanitize(request.Notes),
+                            ZalgoSanitizer.Sanitize(request.Tags),
+                            request.TrackPlus,
+                            request.TrackMinus,
+                            request.ResetPeriod,
+                            request.Counter,
+                            request.NegativeCounter,
+                            DailyChecklistJson.Serialize(DailyChecklistJson.Parse(request.ChecklistJson)),
+                            request.SortOrder,
+                            expected),
+                        ct);
+                    return MutationToOutcome(r);
+                }, cancellationToken);
             });
     }
 
@@ -462,41 +303,23 @@ internal static class BoardApiRoutes
                     return Results.Unauthorized();
                 }
 
-                string path = http.Request.Path.Value ?? "";
-                string bodyJson = JsonSerializer.Serialize(request, Json);
                 DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
-                try
+                return await RunIdempotentAsync(http, idem, userId, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
                 {
-                    (int statusCode, string body, string? contentType) outcome = await idem.RunAsync(
+                    BoardMutationResult r = await board.UpdateTodoAsync(
                         userId,
-                        http.Request.Headers[IdempotencyKeyHeader].FirstOrDefault(),
-                        BoardIdempotencyService.ComputeFingerprintHex("PUT", path, bodyJson),
-                        async () =>
-                        {
-                            BoardMutationResult r = await board.UpdateTodoForApiAsync(
-                                userId,
-                                itemId,
-                                new UpdateTodoArgs(
-                                    ZalgoSanitizer.SanitizeAndTrim(request.Title),
-                                    ZalgoSanitizer.Sanitize(request.Notes),
-                                    ZalgoSanitizer.Sanitize(request.Tags),
-                                    DailyChecklistJson.Serialize(DailyChecklistJson.Parse(request.ChecklistJson)),
-                                    request.DueDate,
-                                    request.SortOrder,
-                                    expected),
-                                cancellationToken);
-                            return MutationToOutcome(r);
-                        },
-                        cancellationToken);
-                    return ToHttpResult(outcome);
-                }
-                catch (BoardIdempotencyFingerprintMismatchException)
-                {
-                    return Results.Text(
-                        BoardIdempotencyService.IdempotencyMismatchJson(),
-                        JsonContentType,
-                        statusCode: StatusCodes.Status409Conflict);
-                }
+                        itemId,
+                        new UpdateTodoArgs(
+                            ZalgoSanitizer.SanitizeAndTrim(request.Title),
+                            ZalgoSanitizer.Sanitize(request.Notes),
+                            ZalgoSanitizer.Sanitize(request.Tags),
+                            DailyChecklistJson.Serialize(DailyChecklistJson.Parse(request.ChecklistJson)),
+                            request.DueDate,
+                            request.SortOrder,
+                            expected),
+                        ct);
+                    return MutationToOutcome(r);
+                }, cancellationToken);
             });
     }
 
@@ -511,44 +334,26 @@ internal static class BoardApiRoutes
                     return Results.Unauthorized();
                 }
 
-                string path = http.Request.Path.Value ?? "";
-                string bodyJson = JsonSerializer.Serialize(request, Json);
                 DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
-                try
+                return await RunIdempotentAsync(http, idem, userId, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
                 {
-                    (int statusCode, string body, string? contentType) outcome = await idem.RunAsync(
+                    BoardMutationResult r = await board.UpdateDailyAsync(
                         userId,
-                        http.Request.Headers[IdempotencyKeyHeader].FirstOrDefault(),
-                        BoardIdempotencyService.ComputeFingerprintHex("PUT", path, bodyJson),
-                        async () =>
-                        {
-                            BoardMutationResult r = await board.UpdateDailyForApiAsync(
-                                userId,
-                                itemId,
-                                new UpdateDailyArgs(
-                                    ZalgoSanitizer.SanitizeAndTrim(request.Title),
-                                    ZalgoSanitizer.Sanitize(request.Notes),
-                                    ZalgoSanitizer.Sanitize(request.Tags),
-                                    request.StartDate,
-                                    request.Repeat,
-                                    request.RepeatInterval,
-                                    DailyChecklistJson.Serialize(DailyChecklistJson.Parse(request.ChecklistJson)),
-                                    request.Streak,
-                                    request.SortOrder,
-                                    expected),
-                                cancellationToken);
-                            return MutationToOutcome(r);
-                        },
-                        cancellationToken);
-                    return ToHttpResult(outcome);
-                }
-                catch (BoardIdempotencyFingerprintMismatchException)
-                {
-                    return Results.Text(
-                        BoardIdempotencyService.IdempotencyMismatchJson(),
-                        JsonContentType,
-                        statusCode: StatusCodes.Status409Conflict);
-                }
+                        itemId,
+                        new UpdateDailyArgs(
+                            ZalgoSanitizer.SanitizeAndTrim(request.Title),
+                            ZalgoSanitizer.Sanitize(request.Notes),
+                            ZalgoSanitizer.Sanitize(request.Tags),
+                            request.StartDate,
+                            request.Repeat,
+                            request.RepeatInterval,
+                            DailyChecklistJson.Serialize(DailyChecklistJson.Parse(request.ChecklistJson)),
+                            request.Streak,
+                            request.SortOrder,
+                            expected),
+                        ct);
+                    return MutationToOutcome(r);
+                }, cancellationToken);
             });
 
         boardApi.MapPost("/dailies/{itemId:guid}/complete-for-date",
@@ -560,36 +365,44 @@ internal static class BoardApiRoutes
                     return Results.Unauthorized();
                 }
 
-                string path = http.Request.Path.Value ?? "";
-                string bodyJson = JsonSerializer.Serialize(request, Json);
                 DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
-                try
+                return await RunIdempotentAsync(http, idem, userId, "POST", JsonSerializer.Serialize(request, Json), async ct =>
                 {
-                    (int statusCode, string body, string? contentType) outcome = await idem.RunAsync(
-                        userId,
-                        http.Request.Headers[IdempotencyKeyHeader].FirstOrDefault(),
-                        BoardIdempotencyService.ComputeFingerprintHex("POST", path, bodyJson),
-                        async () =>
-                        {
-                            BoardMutationResult r = await board.CompleteDailyForDateForApiAsync(
-                                userId,
-                                itemId,
-                                request.CompletedOn,
-                                expected,
-                                cancellationToken);
-                            return MutationToOutcome(r);
-                        },
-                        cancellationToken);
-                    return ToHttpResult(outcome);
-                }
-                catch (BoardIdempotencyFingerprintMismatchException)
-                {
-                    return Results.Text(
-                        BoardIdempotencyService.IdempotencyMismatchJson(),
-                        JsonContentType,
-                        statusCode: StatusCodes.Status409Conflict);
-                }
+                    BoardMutationResult r = await board.CompleteDailyForDateAsync(
+                        userId, itemId, request.CompletedOn, expected, ct);
+                    return MutationToOutcome(r);
+                }, cancellationToken);
             });
+    }
+
+    /// <summary>Runs a board mutation with the shared idempotency + optimistic-concurrency envelope.</summary>
+    private static async Task<IResult> RunIdempotentAsync(
+        HttpContext http,
+        BoardIdempotencyService idem,
+        Guid userId,
+        string method,
+        string bodyJson,
+        Func<CancellationToken, Task<(int statusCode, string body, string? contentType)>> execute,
+        CancellationToken cancellationToken)
+    {
+        string path = http.Request.Path.Value ?? "";
+        try
+        {
+            (int statusCode, string body, string? contentType) outcome = await idem.RunAsync(
+                userId,
+                http.Request.Headers[IdempotencyKeyHeader].FirstOrDefault(),
+                BoardIdempotencyService.ComputeFingerprintHex(method, path, bodyJson),
+                () => execute(cancellationToken),
+                cancellationToken);
+            return ToHttpResult(outcome);
+        }
+        catch (BoardIdempotencyFingerprintMismatchException)
+        {
+            return Results.Text(
+                BoardIdempotencyService.IdempotencyMismatchJson(),
+                JsonContentType,
+                statusCode: StatusCodes.Status409Conflict);
+        }
     }
 
     private static DateTimeOffset? ReadExpectedUpdatedAtUtc(HttpRequest request)
@@ -656,4 +469,3 @@ internal static class BoardApiRoutes
         return Results.Text(o.body, o.contentType ?? JsonContentType, statusCode: o.statusCode);
     }
 }
-

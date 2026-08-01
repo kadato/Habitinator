@@ -1,4 +1,5 @@
 using App.Shared.RCL.Models;
+using App.Shared.RCL.Services;
 using App.Web.Data;
 
 using Bogus;
@@ -21,23 +22,275 @@ public static class DemoGuestSeeder
     /// <summary>Inserts demo board items when missing, then fills activity when the heatmap is sparse.</summary>
     public static async Task SeedIfMissingAsync(
         ApplicationDbContext db,
-        BoardPersistenceService board,
+        IBoardChangeNotifier notifier,
         Guid guestUserId,
         CancellationToken cancellationToken = default)
     {
-        await board.SeedBoardDataIfMissingAsync(guestUserId, cancellationToken);
+        await SeedBoardIfMissingAsync(db, notifier, guestUserId, cancellationToken);
         await SeedDemoActivityIfMissingAsync(db, guestUserId, cancellationToken);
     }
 
     /// <summary>Replaces the full demo board and activity log (caller must clear guest data first).</summary>
     public static async Task ReseedAllAsync(
         ApplicationDbContext db,
-        BoardPersistenceService board,
+        IBoardChangeNotifier notifier,
         Guid guestUserId,
         CancellationToken cancellationToken = default)
     {
-        await board.InsertDemoBoardDataAsync(guestUserId, cancellationToken);
+        await InsertDemoBoardAsync(db, notifier, guestUserId, cancellationToken);
         await ReseedActivityAsync(db, guestUserId, cancellationToken);
+    }
+
+    public static async Task SeedBoardIfMissingAsync(
+        ApplicationDbContext db,
+        IBoardChangeNotifier notifier,
+        Guid guestUserId,
+        CancellationToken cancellationToken = default)
+    {
+        if (await db.BoardItems.AnyAsync(
+                x => x.UserId == guestUserId && x.DeletedAtUtc == null && !x.IsArchived, cancellationToken))
+        {
+            return;
+        }
+
+        await InsertDemoBoardAsync(db, notifier, guestUserId, cancellationToken);
+    }
+
+    /// <summary>Inserts the full demo board (habits, dailies, to-dos with tags, checklists, due dates).
+    ///     Caller must ensure this user's board rows are cleared when replacing existing data.</summary>
+    public static async Task InsertDemoBoardAsync(
+        ApplicationDbContext db,
+        IBoardChangeNotifier notifier,
+        Guid guestUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var utcNow = DateTimeOffset.UtcNow;
+        var today = DailySchedule.LocalToday();
+        var dayStart = today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var firstOfMonth = new DateOnly(today.Year, today.Month, 1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+        static DateTime UtcDay(DateOnly d) => new(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc);
+
+        var dailyWorkoutId = Guid.NewGuid();
+        var dailyDeepId = Guid.NewGuid();
+
+        var workoutCheck = DailyChecklistJson.Serialize(
+        [
+            new DailyChecklistItem(Guid.NewGuid(), "5 min warm-up", false),
+            new DailyChecklistItem(Guid.NewGuid(), "20 min main block", false),
+            new DailyChecklistItem(Guid.NewGuid(), "Track progress in the journal", false)
+        ]);
+        var deepCheck = DailyChecklistJson.Serialize(
+        [
+            new DailyChecklistItem(Guid.NewGuid(), "Close email / chat", true),
+            new DailyChecklistItem(Guid.NewGuid(), "Single focus task (45+ min)", false),
+            new DailyChecklistItem(Guid.NewGuid(), "Short review of what got done", false)
+        ]);
+        var plantsCheck = DailyChecklistJson.Serialize(
+        [
+            new DailyChecklistItem(Guid.NewGuid(), "Kitchen plants", false),
+            new DailyChecklistItem(Guid.NewGuid(), "Windowsill succulents", true),
+            new DailyChecklistItem(Guid.NewGuid(), "Patio (if in season)", false)
+        ]);
+        var groceriesSub = DailyChecklistJson.Serialize(
+        [
+            new DailyChecklistItem(Guid.NewGuid(), "Vegetables", true),
+            new DailyChecklistItem(Guid.NewGuid(), "Dairy", false),
+            new DailyChecklistItem(Guid.NewGuid(), "Snacks for the week", false)
+        ]);
+        var tripSub = DailyChecklistJson.Serialize(
+        [
+            new DailyChecklistItem(Guid.NewGuid(), "Book transport", true),
+            new DailyChecklistItem(Guid.NewGuid(), "Packing list", false),
+            new DailyChecklistItem(Guid.NewGuid(), "Check weather", false)
+        ]);
+        var skincareSub = DailyChecklistJson.Serialize(
+        [
+            new DailyChecklistItem(Guid.NewGuid(), "AM routine", true),
+            new DailyChecklistItem(Guid.NewGuid(), "PM routine", false)
+        ]);
+
+        int order = 0;
+        void AddBoardRow(BoardItemEntity row)
+        {
+            var seq = order++;
+            row.SortOrder = seq + 1.0;
+            var t = utcNow.AddSeconds(seq);
+            row.CreatedAtUtc = t;
+            row.UpdatedAtUtc = t;
+            db.BoardItems.Add(row);
+        }
+
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = guestUserId,
+            Section = BoardSection.Habit,
+            Title = "Drink a glass of water",
+            Notes = "Log each glass with + so statistics show up on the board.",
+            Tags = "health, hydration",
+            Counter = 4,
+            NegativeCounter = 1
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = guestUserId,
+            Section = BoardSection.Habit,
+            Title = "Read 10 minutes",
+            Tags = "focus, learning",
+            Counter = 2,
+            NegativeCounter = 0
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = guestUserId,
+            Section = BoardSection.Habit,
+            Title = "Plan the week",
+            Notes = "Habit uses a weekly counter reset in the edit dialog to match a Sunday review.",
+            Tags = "planning, work",
+            ResetPeriod = (int)HabitResetPeriod.Weekly,
+            Counter = 0,
+            NegativeCounter = 0
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = dailyWorkoutId,
+            UserId = guestUserId,
+            Section = BoardSection.Daily,
+            Title = "Workout",
+            Tags = "health, body",
+            ChecklistJson = workoutCheck,
+            IsCompleted = false,
+            DailyStartDate = dayStart,
+            DailyRepeatType = (int)DailyRepeatType.Daily,
+            DailyRepeatInterval = 1,
+            DailyLastCompletedOn = null
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = dailyDeepId,
+            UserId = guestUserId,
+            Section = BoardSection.Daily,
+            Title = "Deep work block",
+            Tags = "focus, work",
+            ChecklistJson = deepCheck,
+            IsCompleted = true,
+            DailyStartDate = dayStart,
+            DailyRepeatType = (int)DailyRepeatType.Daily,
+            DailyRepeatInterval = 1,
+            DailyLastCompletedOn = dayStart
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = guestUserId,
+            Section = BoardSection.Daily,
+            Title = "Water the plants",
+            Tags = "home, health",
+            ChecklistJson = plantsCheck,
+            IsCompleted = false,
+            DailyStartDate = dayStart,
+            DailyRepeatType = (int)DailyRepeatType.Weekly,
+            DailyRepeatInterval = 1,
+            DailyLastCompletedOn = null
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = guestUserId,
+            Section = BoardSection.Daily,
+            Title = "Inbox review",
+            Notes = "Monthly schedule - due on the same calendar day each month when it lands on a scheduled date.",
+            Tags = "work",
+            IsCompleted = false,
+            DailyStartDate = firstOfMonth,
+            DailyRepeatType = (int)DailyRepeatType.Monthly,
+            DailyRepeatInterval = 1,
+            DailyLastCompletedOn = null
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = guestUserId,
+            Section = BoardSection.Todo,
+            Title = "Buy groceries",
+            Tags = "home, errands",
+            ChecklistJson = groceriesSub,
+            IsCompleted = false,
+            DailyStartDate = dayStart
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = guestUserId,
+            Section = BoardSection.Todo,
+            Title = "Submit project draft",
+            Notes = "Due in a few days — open the card to set another due date or subtasks.",
+            Tags = "school, focus",
+            IsCompleted = false,
+            DailyStartDate = UtcDay(today.AddDays(3))
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = guestUserId,
+            Section = BoardSection.Todo,
+            Title = "Skincare routine (evening)",
+            Tags = "health, personal",
+            ChecklistJson = skincareSub,
+            IsCompleted = false,
+            DailyStartDate = null
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = guestUserId,
+            Section = BoardSection.Todo,
+            Title = "Return library books",
+            Tags = "school, errands",
+            IsCompleted = false,
+            DailyStartDate = UtcDay(today.AddDays(-2))
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = guestUserId,
+            Section = BoardSection.Todo,
+            Title = "Weekend trip",
+            Tags = "personal, travel",
+            ChecklistJson = tripSub,
+            IsCompleted = false,
+            DailyStartDate = UtcDay(today.AddDays(5))
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = guestUserId,
+            Section = BoardSection.Todo,
+            Title = "File expense report",
+            Tags = "work",
+            IsCompleted = true,
+            DailyStartDate = UtcDay(today.AddDays(-1))
+        });
+
+        for (var i = 0; i < 3; i++)
+        {
+            var d = today.AddDays(-(2 - i));
+            db.UserActivityEvents.Add(new UserActivityEventEntity
+            {
+                Id = Guid.NewGuid(),
+                UserId = guestUserId,
+                OccurredAtUtc = DailyStreakCalculator.BackdatedDailyEventOccurredAt(d),
+                EventType = ActivityEventType.DailyComplete,
+                BoardItemId = dailyDeepId,
+                CustomLabel = "Deep work block"
+            });
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        await notifier.NotifyBoardChangedAsync(guestUserId, cancellationToken);
     }
 
     /// <summary>Removes all guest activity events and inserts a fresh year-long demo series.</summary>

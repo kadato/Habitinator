@@ -16,7 +16,7 @@ public static class DemoDataSeeder
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var options = scope.ServiceProvider.GetRequiredService<IOptions<DemoUserOptions>>();
-        var boardPersistence = scope.ServiceProvider.GetRequiredService<BoardPersistenceService>();
+        var notifier = scope.ServiceProvider.GetRequiredService<IBoardChangeNotifier>();
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DemoDataSeeder");
 
         var primaryCs = PostgresResilienceConnectionString.EnsureColdStartTimeouts(
@@ -79,7 +79,7 @@ public static class DemoDataSeeder
 
             try
             {
-                await DemoGuestSeeder.ReseedAllAsync(dbContext, boardPersistence, guest.Id, cancellationToken);
+                await DemoGuestSeeder.ReseedAllAsync(dbContext, notifier, guest.Id, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -96,7 +96,7 @@ public static class DemoDataSeeder
         {
             try
             {
-                await boardPersistence.SeedBoardDataIfMissingAsync(guest.Id, cancellationToken);
+                await DemoGuestSeeder.SeedBoardIfMissingAsync(dbContext, notifier, guest.Id, cancellationToken);
                 await DemoGuestSeeder.ReseedActivityAsync(dbContext, guest.Id, cancellationToken);
             }
             catch (Exception ex)
@@ -114,7 +114,7 @@ public static class DemoDataSeeder
 
         try
         {
-            await DemoGuestSeeder.SeedIfMissingAsync(dbContext, boardPersistence, guest.Id, cancellationToken);
+            await DemoGuestSeeder.SeedIfMissingAsync(dbContext, notifier, guest.Id, cancellationToken);
         }
         catch (Exception ex)
         {

@@ -12,7 +12,8 @@ public sealed record UpdateHabitArgs(
     int Counter,
     int NegativeCounter,
     string? ChecklistJson = null,
-    double? SortOrder = null);
+    double? SortOrder = null,
+    DateTimeOffset? ExpectedUpdatedAtUtc = null);
 
 public sealed record UpdateTodoArgs(
     string Title,
@@ -20,7 +21,8 @@ public sealed record UpdateTodoArgs(
     string? Tags,
     string? ChecklistJson,
     DateTime? DueDate,
-    double? SortOrder = null);
+    double? SortOrder = null,
+    DateTimeOffset? ExpectedUpdatedAtUtc = null);
 
 public sealed record UpdateDailyArgs(
     string Title,
@@ -31,11 +33,15 @@ public sealed record UpdateDailyArgs(
     int RepeatInterval,
     string? ChecklistJson,
     int Streak,
-    double? SortOrder = null);
+    double? SortOrder = null,
+    DateTimeOffset? ExpectedUpdatedAtUtc = null);
 
 public interface IBoardDataService
 {
     Task<BoardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Fetches a single active board item by id, or null when not found.</summary>
+    Task<BoardItem?> GetItemAsync(Guid itemId, CancellationToken cancellationToken = default);
 
     Task<BoardItem> CreateItemAsync(BoardSection section, string title, Guid? itemId = null, CancellationToken cancellationToken = default);
 

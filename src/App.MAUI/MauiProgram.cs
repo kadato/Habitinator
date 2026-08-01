@@ -103,7 +103,8 @@ public static class MauiProgram
         {
             LocalFirstBoardDataService inner = sp.GetRequiredService<LocalFirstBoardDataService>();
             IUserActivityLogService log = sp.GetRequiredService<IUserActivityLogService>();
-            ActivityLoggingBoardDataService loggingService = new(inner, log);
+            ActivityLoggingBoardDataService loggingService = new(inner, log,
+                sp.GetRequiredService<IUserTimeZoneService>());
             IUndoService undoService = sp.GetRequiredService<IUndoService>();
             return new UndoableBoardDataService(loggingService, undoService);
         });

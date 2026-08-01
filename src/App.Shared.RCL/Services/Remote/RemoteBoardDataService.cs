@@ -96,6 +96,14 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
         }
     }
 
+    public async Task<BoardItem?> GetItemAsync(Guid itemId, CancellationToken cancellationToken = default)
+    {
+        BoardSnapshot snap = await GetSnapshotAsync(cancellationToken);
+        return snap.Habits.FirstOrDefault(x => x.Id == itemId)
+            ?? snap.Dailies.FirstOrDefault(x => x.Id == itemId)
+            ?? snap.Todos.FirstOrDefault(x => x.Id == itemId);
+    }
+
     public async Task<Dictionary<Guid, int>> GetStreakMapAsync(CancellationToken cancellationToken = default)
     {
         using HttpResponseMessage res = await Client.GetAsync("api/board/streaks", cancellationToken);

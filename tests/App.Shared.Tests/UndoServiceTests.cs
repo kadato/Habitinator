@@ -217,10 +217,8 @@ public sealed class UndoableBoardDataServiceTests
     public async Task RenameItemAsync_should_register_undo_with_old_name()
     {
         BoardItem item = new(Guid.NewGuid(), "Old Task");
-        _inner.GetSnapshotAsync(Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(new BoardSnapshot(
-                [item], [], []
-            )));
+        _inner.GetItemAsync(item.Id, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<BoardItem?>(item));
         _inner.RenameItemAsync(BoardSection.Habit, item.Id, "New Task", Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<BoardItem?>(new BoardItem(item.Id, "New Task")));
         _undoService.IsUndoing.Returns(false);
@@ -252,10 +250,8 @@ public sealed class UndoableBoardDataServiceTests
     public async Task RenameItemAsync_with_zalgo_title_should_register_undo_with_sanitized_title()
     {
         BoardItem item = new(Guid.NewGuid(), "Old Task");
-        _inner.GetSnapshotAsync(Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(new BoardSnapshot(
-                [item], [], []
-            )));
+        _inner.GetItemAsync(item.Id, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<BoardItem?>(item));
         const string zalgoTitle = "k\u0300\u0301\u0302\u0303\u0304a\u0300\u0301\u0302\u0303\u0304r\u0300\u0301\u0302\u0303\u0304o\u0300\u0301\u0302\u0303\u0304l\u0300\u0301\u0302\u0303\u0304y\u0300\u0301\u0302\u0303\u0304";
         _inner.RenameItemAsync(BoardSection.Habit, item.Id, zalgoTitle, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<BoardItem?>(new BoardItem(item.Id, "karoly")));
@@ -272,10 +268,8 @@ public sealed class UndoableBoardDataServiceTests
     public async Task DeleteItemAsync_should_register_undo_with_recreate()
     {
         BoardItem item = new(Guid.NewGuid(), "Deleted Todo");
-        _inner.GetSnapshotAsync(Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(new BoardSnapshot(
-                [], [], [item]
-            )));
+        _inner.GetItemAsync(item.Id, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<BoardItem?>(item));
         _inner.DeleteItemAsync(BoardSection.Todo, item.Id, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(true));
         _undoService.IsUndoing.Returns(false);
@@ -306,8 +300,8 @@ public sealed class UndoableBoardDataServiceTests
     public async Task UpdateHabitAsync_sort_only_should_not_register_undo()
     {
         BoardItem item = new(Guid.NewGuid(), "Habit", SortOrder: 1.0);
-        _inner.GetSnapshotAsync(Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(new BoardSnapshot([item], [], [])));
+        _inner.GetItemAsync(item.Id, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<BoardItem?>(item));
         _inner.UpdateHabitAsync(
                 item.Id,
                 new UpdateHabitArgs(
@@ -332,8 +326,8 @@ public sealed class UndoableBoardDataServiceTests
     public async Task UpdateHabitAsync_with_title_change_should_register_undo()
     {
         BoardItem item = new(Guid.NewGuid(), "Habit", SortOrder: 1.0);
-        _inner.GetSnapshotAsync(Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(new BoardSnapshot([item], [], [])));
+        _inner.GetItemAsync(item.Id, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<BoardItem?>(item));
         _inner.UpdateHabitAsync(
                 Arg.Any<Guid>(), Arg.Any<UpdateHabitArgs>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<BoardItem?>(item with { Title = "Renamed" }));
@@ -359,11 +353,11 @@ public sealed class UndoableBoardDataServiceTests
         BoardItem originalItem = new(itemId, "Original Name");
         BoardItem editedItem = new(itemId, "Edited Name");
 
-        // Mock snapshot to return our items when requested
-        _inner.GetSnapshotAsync(Arg.Any<CancellationToken>())
+        // Mock item lookup to return our items when requested
+        _inner.GetItemAsync(itemId, Arg.Any<CancellationToken>())
             .Returns(
-                Task.FromResult(new BoardSnapshot([originalItem], [], [])), // For the rename call
-                Task.FromResult(new BoardSnapshot([editedItem], [], []))  // For the delete call
+                Task.FromResult<BoardItem?>(originalItem), // For the rename call
+                Task.FromResult<BoardItem?>(editedItem)    // For the delete call
             );
 
         // Track registered callbacks
@@ -434,13 +428,13 @@ public sealed class UndoableBoardDataServiceTests
         BoardItem itemAfterFirstIncrement = new(itemId, "Habit", Counter: 4);
         BoardItem itemAfterSecondIncrement = new(itemId, "Habit", Counter: 5);
 
-        // Snapshot and Increment setup
-        _inner.GetSnapshotAsync(Arg.Any<CancellationToken>())
+        // Item lookup and Increment setup
+        _inner.GetItemAsync(itemId, Arg.Any<CancellationToken>())
             .Returns(
-                Task.FromResult(new BoardSnapshot([initialItem], [], [])), // First find before increment
-                Task.FromResult(new BoardSnapshot([itemAfterFirstIncrement], [], [])), // Find during first undo registration or second increment
-                Task.FromResult(new BoardSnapshot([itemAfterSecondIncrement], [], [])), // Find during first undo execution
-                Task.FromResult(new BoardSnapshot([itemAfterFirstIncrement], [], [])) // Find during second undo execution (if counter is now 4)
+                Task.FromResult<BoardItem?>(initialItem),                 // First find before increment
+                Task.FromResult<BoardItem?>(itemAfterFirstIncrement),     // Find during second increment
+                Task.FromResult<BoardItem?>(itemAfterSecondIncrement),    // Find during first undo execution
+                Task.FromResult<BoardItem?>(itemAfterFirstIncrement)      // Find during second undo execution
             );
 
         _inner.IncrementHabitPlusAsync(itemId, Arg.Any<CancellationToken>())
@@ -521,11 +515,11 @@ public sealed class UndoableBoardDataServiceTests
         int counter = 3;
         string title = "Habit";
 
-        _inner.GetSnapshotAsync(Arg.Any<CancellationToken>())
+        _inner.GetItemAsync(itemId, Arg.Any<CancellationToken>())
             .Returns(x =>
             {
                 BoardItem item = new(itemId, title, Counter: counter);
-                return Task.FromResult(new BoardSnapshot([item], [], []));
+                return Task.FromResult<BoardItem?>(item);
             });
 
         _inner.IncrementHabitPlusAsync(itemId, Arg.Any<CancellationToken>())

@@ -12,6 +12,11 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         return _inner.GetSnapshotAsync(cancellationToken);
     }
 
+    public Task<BoardItem?> GetItemAsync(Guid itemId, CancellationToken cancellationToken = default)
+    {
+        return _inner.GetItemAsync(itemId, cancellationToken);
+    }
+
     public Task<Dictionary<Guid, int>> GetStreakMapAsync(CancellationToken cancellationToken = default)
     {
         return _inner.GetStreakMapAsync(cancellationToken);
@@ -416,9 +421,6 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
 
     private async Task<BoardItem?> FindItemAsync(Guid id, CancellationToken cancellationToken)
     {
-        BoardSnapshot snap = await _inner.GetSnapshotAsync(cancellationToken);
-        return snap.Habits.FirstOrDefault(x => x.Id == id)
-            ?? snap.Dailies.FirstOrDefault(x => x.Id == id)
-            ?? snap.Todos.FirstOrDefault(x => x.Id == id);
+        return await _inner.GetItemAsync(id, cancellationToken);
     }
 }

@@ -3,14 +3,23 @@ using App.Shared.RCL.Models;
 namespace App.Shared.RCL.Services;
 
 /// <summary>Wraps a board data service and records the same activity events as the web persistence layer.</summary>
-public sealed class ActivityLoggingBoardDataService(IBoardDataService inner, IUserActivityLogService activityLog) : IBoardDataService
+public sealed class ActivityLoggingBoardDataService(
+    IBoardDataService inner,
+    IUserActivityLogService activityLog,
+    IUserTimeZoneService timeZoneService) : IBoardDataService
 {
     private readonly IUserActivityLogService _activityLog = activityLog;
     private readonly IBoardDataService _inner = inner;
+    private readonly IUserTimeZoneService _timeZoneService = timeZoneService;
 
     public Task<BoardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
     {
         return _inner.GetSnapshotAsync(cancellationToken);
+    }
+
+    public Task<BoardItem?> GetItemAsync(Guid itemId, CancellationToken cancellationToken = default)
+    {
+        return _inner.GetItemAsync(itemId, cancellationToken);
     }
 
     public Task<BoardItem> CreateItemAsync(BoardSection section, string title, Guid? itemId = null,
@@ -85,7 +94,7 @@ public sealed class ActivityLoggingBoardDataService(IBoardDataService inner, IUs
             return await _inner.ToggleItemAsync(section, itemId, cancellationToken);
         }
 
-        DateOnly today = DateOnly.FromDateTime(DateTime.Now); // Use local timezone for consistency
+        DateOnly today = _timeZoneService.LocalToday;
         bool wasComplete = section == BoardSection.Daily
             ? before.DailyLastCompletedOn == today || (before.DailyLastCompletedOn is null && before.IsCompleted)
             : before.IsCompleted;

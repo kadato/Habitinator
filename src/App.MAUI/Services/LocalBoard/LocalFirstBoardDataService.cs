@@ -123,6 +123,38 @@ public sealed partial class LocalFirstBoardDataService(
         return snap;
     }
 
+    public async Task<BoardItem?> GetItemAsync(Guid itemId, CancellationToken cancellationToken = default)
+    {
+        await EnsureLocalStoreSchemaAsync(cancellationToken);
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!await HasAuthAsync(cancellationToken))
+            {
+                return null;
+            }
+
+            string? userKey = await ResolveUserKeyAsync(cancellationToken);
+            if (string.IsNullOrWhiteSpace(userKey))
+            {
+                return null;
+            }
+
+            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            await EnsureUserScopeAsync(db, userKey, cancellationToken);
+            LocalBoardItemRow? row = await db.BoardItems.AsNoTracking()
+                .FirstOrDefaultAsync(
+                    x => x.UserKey == userKey && x.Id == itemId && !x.IsArchived,
+                    cancellationToken);
+            return row?.ToModel();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async Task<Dictionary<Guid, int>> GetStreakMapAsync(CancellationToken cancellationToken = default)
     {
         await EnsureLocalStoreSchemaAsync(cancellationToken);

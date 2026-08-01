@@ -17,6 +17,12 @@ public sealed class WebBoardDataService(
         return await boardPersistenceService.GetSnapshotAsync(userId, cancellationToken);
     }
 
+    public async Task<BoardItem?> GetItemAsync(Guid itemId, CancellationToken cancellationToken = default)
+    {
+        Guid userId = await GetCurrentUserIdAsync(cancellationToken);
+        return await boardPersistenceService.GetItemAsync(userId, itemId, cancellationToken);
+    }
+
     public async Task<BoardItem> CreateItemAsync(BoardSection section, string title, Guid? itemId = null,
         CancellationToken cancellationToken = default)
     {
@@ -28,21 +34,26 @@ public sealed class WebBoardDataService(
         CancellationToken cancellationToken = default)
     {
         Guid userId = await GetCurrentUserIdAsync(cancellationToken);
-        return await boardPersistenceService.RenameItemAsync(userId, section, itemId, title, cancellationToken);
+        BoardMutationResult r = await boardPersistenceService.RenameItemAsync(
+            userId, section, itemId, title, null, cancellationToken);
+        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
     }
 
     public async Task<bool> DeleteItemAsync(BoardSection section, Guid itemId,
         CancellationToken cancellationToken = default)
     {
         Guid userId = await GetCurrentUserIdAsync(cancellationToken);
-        return await boardPersistenceService.DeleteItemAsync(userId, section, itemId, cancellationToken);
+        BoardMutationResult r = await boardPersistenceService.DeleteItemAsync(
+            userId, section, itemId, null, cancellationToken);
+        return r.Status == BoardMutationStatus.Ok;
     }
 
     public async Task<BoardItem?> ArchiveItemAsync(BoardSection section, Guid itemId,
         CancellationToken cancellationToken = default)
     {
         Guid userId = await GetCurrentUserIdAsync(cancellationToken);
-        BoardMutationResult r = await boardPersistenceService.ArchiveItemForApiAsync(userId, section, itemId, null, cancellationToken);
+        BoardMutationResult r = await boardPersistenceService.ArchiveItemAsync(
+            userId, section, itemId, null, cancellationToken);
         return r.Status == BoardMutationStatus.Ok ? r.Item : null;
     }
 
@@ -50,7 +61,8 @@ public sealed class WebBoardDataService(
         CancellationToken cancellationToken = default)
     {
         Guid userId = await GetCurrentUserIdAsync(cancellationToken);
-        BoardMutationResult r = await boardPersistenceService.UnarchiveItemForApiAsync(userId, section, itemId, null, cancellationToken);
+        BoardMutationResult r = await boardPersistenceService.UnarchiveItemAsync(
+            userId, section, itemId, null, cancellationToken);
         return r.Status == BoardMutationStatus.Ok ? r.Item : null;
     }
 
@@ -64,93 +76,64 @@ public sealed class WebBoardDataService(
         CancellationToken cancellationToken = default)
     {
         Guid userId = await GetCurrentUserIdAsync(cancellationToken);
-        return await boardPersistenceService.ToggleItemAsync(userId, section, itemId, cancellationToken);
+        BoardMutationResult r = await boardPersistenceService.ToggleItemAsync(
+            userId, section, itemId, null, cancellationToken);
+        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
     }
 
     public async Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn,
         CancellationToken cancellationToken = default)
     {
         Guid userId = await GetCurrentUserIdAsync(cancellationToken);
-        return await boardPersistenceService.CompleteDailyForDateAsync(userId, itemId, completedOn, cancellationToken);
+        BoardMutationResult r = await boardPersistenceService.CompleteDailyForDateAsync(
+            userId, itemId, completedOn, null, cancellationToken);
+        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
     }
 
     public async Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
         Guid userId = await GetCurrentUserIdAsync(cancellationToken);
-        return await boardPersistenceService.IncrementHabitPlusAsync(userId, itemId, cancellationToken);
+        BoardMutationResult r = await boardPersistenceService.IncrementHabitPlusAsync(
+            userId, itemId, null, cancellationToken);
+        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
     }
 
     public async Task<BoardItem?> IncrementHabitMinusAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
         Guid userId = await GetCurrentUserIdAsync(cancellationToken);
-        return await boardPersistenceService.IncrementHabitMinusAsync(userId, itemId, cancellationToken);
+        BoardMutationResult r = await boardPersistenceService.IncrementHabitMinusAsync(
+            userId, itemId, null, cancellationToken);
+        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
     }
 
     public async Task<BoardItem?> UpdateHabitAsync(
         Guid itemId,
-        App.Shared.RCL.Services.UpdateHabitArgs args,
+        UpdateHabitArgs args,
         CancellationToken cancellationToken = default)
     {
         Guid userId = await GetCurrentUserIdAsync(cancellationToken);
-        return await boardPersistenceService.UpdateHabitAsync(
-            userId,
-            itemId,
-            new App.Web.Services.UpdateHabitArgs(
-                args.Title,
-                args.Notes,
-                args.Tags,
-                args.TrackPlus,
-                args.TrackMinus,
-                args.ResetPeriod,
-                args.Counter,
-                args.NegativeCounter,
-                args.ChecklistJson,
-                args.SortOrder,
-                ExpectedUpdatedAtUtc: null),
-            cancellationToken);
+        BoardMutationResult r = await boardPersistenceService.UpdateHabitAsync(userId, itemId, args, cancellationToken);
+        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
     }
 
     public async Task<BoardItem?> UpdateTodoAsync(
         Guid itemId,
-        App.Shared.RCL.Services.UpdateTodoArgs args,
+        UpdateTodoArgs args,
         CancellationToken cancellationToken = default)
     {
         Guid userId = await GetCurrentUserIdAsync(cancellationToken);
-        return await boardPersistenceService.UpdateTodoAsync(
-            userId,
-            itemId,
-            new App.Web.Services.UpdateTodoArgs(
-                args.Title,
-                args.Notes,
-                args.Tags,
-                args.ChecklistJson,
-                args.DueDate,
-                args.SortOrder,
-                ExpectedUpdatedAtUtc: null),
-            cancellationToken);
+        BoardMutationResult r = await boardPersistenceService.UpdateTodoAsync(userId, itemId, args, cancellationToken);
+        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
     }
 
     public async Task<BoardItem?> UpdateDailyAsync(
         Guid itemId,
-        App.Shared.RCL.Services.UpdateDailyArgs args,
+        UpdateDailyArgs args,
         CancellationToken cancellationToken = default)
     {
         Guid userId = await GetCurrentUserIdAsync(cancellationToken);
-        return await boardPersistenceService.UpdateDailyAsync(
-            userId,
-            itemId,
-            new App.Web.Services.UpdateDailyArgs(
-                args.Title,
-                args.Notes,
-                args.Tags,
-                args.StartDate,
-                args.RepeatType,
-                args.RepeatInterval,
-                args.ChecklistJson,
-                args.Streak,
-                args.SortOrder,
-                ExpectedUpdatedAtUtc: null),
-            cancellationToken);
+        BoardMutationResult r = await boardPersistenceService.UpdateDailyAsync(userId, itemId, args, cancellationToken);
+        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
     }
 
     public async Task<Dictionary<Guid, int>> GetStreakMapAsync(CancellationToken cancellationToken = default)

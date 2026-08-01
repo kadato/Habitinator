@@ -555,7 +555,11 @@
             while (await _uiTick.WaitForNextTickAsync(cancellationToken))
             {
                 SyncTimerFieldsFromServiceIfNeeded();
-                await InvokeAsync(StateHasChanged);
+                if (TimerService.IsRunning)
+                {
+                    // Elapsed only changes while running skip re-renders while idle or paused.
+                    await InvokeAsync(StateHasChanged);
+                }
             }
         }
         catch (OperationCanceledException)

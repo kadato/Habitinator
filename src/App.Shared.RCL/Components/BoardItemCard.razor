@@ -232,11 +232,26 @@
     [Parameter] public EventCallback<(Guid ChecklistItemId, bool IsDone)> OnSetChecklistItemDone { get; set; }
 
     private bool _subtasksExpanded = true;
+    private BoardItem? _parsedForItem;
+    private IReadOnlyList<DailyChecklistItem> _checklist = [];
+    private List<string> _tagsList = [];
 
-    private IReadOnlyList<DailyChecklistItem> Checklist => DailyChecklistJson.Parse(Item.ChecklistJson);
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_parsedForItem, Item))
+        {
+            return;
+        }
+
+        _parsedForItem = Item;
+        _checklist = DailyChecklistJson.Parse(Item.ChecklistJson);
+        _tagsList = [.. BoardTagUtil.ParseTags(Item.Tags)];
+    }
+
+    private IReadOnlyList<DailyChecklistItem> Checklist => _checklist;
     private int SubDone => Checklist.Count(x => x.IsDone);
     private int SubTotal => Checklist.Count;
-    private List<string> TagsList => [.. BoardTagUtil.ParseTags(Item.Tags)];
+    private List<string> TagsList => _tagsList;
     private bool HasBodyExtra => !string.IsNullOrWhiteSpace(Item.Notes) || SubTotal > 0 || TagsList.Count > 0;
 
     private string CardClass => $"board-card {RowClass}";

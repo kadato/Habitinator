@@ -57,6 +57,7 @@
                 <div class="board-stat-filters">
                     <div class="board-search-wrapper flex-grow-1" style="position: relative; display: flex; align-items: center;">
                         <MudTextField @bind-Value="_searchText"
+                                      @bind-Value:after="OnSearchTextChanged"
                                       Placeholder="Search"
                                       Variant="Variant.Outlined"
                                       Margin="Margin.Dense"
@@ -272,6 +273,9 @@
     private List<BoardItem> Habits { get; set; } = [];
     private List<BoardItem> Dailies { get; set; } = [];
     private List<BoardItem> Todos { get; set; } = [];
+    private List<BoardItem> _filteredHabits = [];
+    private List<BoardItem> _filteredDailies = [];
+    private List<BoardItem> _filteredTodos = [];
     private bool _isLoading;
     private bool _initialLoadComplete;
     private string? _loadError;
@@ -286,15 +290,15 @@
     private DateTimeOffset _lastLocalMutationTime = DateTimeOffset.MinValue;
     private PersistingComponentStateSubscription _subscription;
 
-    private IReadOnlyList<BoardItem> FilteredHabits => FilterItems(Habits);
-    private IReadOnlyList<BoardItem> FilteredDailies => FilterItems(Dailies);
+    private IReadOnlyList<BoardItem> FilteredHabits => _filteredHabits;
+    private IReadOnlyList<BoardItem> FilteredDailies => _filteredDailies;
 
     private int DailiesDueOpenCount =>
-        FilterItems(Dailies).Count(d => DailySchedule.IsDueOnDate(d, DailySchedule.LocalToday(TimeZoneService)));
+        _filteredDailies.Count(d => DailySchedule.IsDueOnDate(d, DailySchedule.LocalToday(TimeZoneService)));
 
-    private IReadOnlyList<BoardItem> FilteredTodos => FilterItems(Todos);
+    private IReadOnlyList<BoardItem> FilteredTodos => _filteredTodos;
 
-    private int OpenTodoCount => FilteredTodos.Count(t => !t.IsCompleted);
+    private int OpenTodoCount => _filteredTodos.Count(t => !t.IsCompleted);
 
     private int _mobileSectionIndex;
 
@@ -594,9 +598,17 @@
             Todos = snapshot.Todos.ToList();
         }
         PruneStaleFilterTags();
+        RecomputeFilters();
     }
 
-    private IReadOnlyList<BoardItem> FilterItems(IReadOnlyList<BoardItem> source)
+    private void RecomputeFilters()
+    {
+        _filteredHabits = FilterItems(Habits);
+        _filteredDailies = FilterItems(Dailies);
+        _filteredTodos = FilterItems(Todos);
+    }
+
+    private List<BoardItem> FilterItems(IReadOnlyList<BoardItem> source)
     {
         return source.Where(MatchesGlobalFilters).ToList();
     }
@@ -613,13 +625,7 @@
             return true;
         }
 
-        var onItem = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var t in BoardTagUtil.ParseTags(item.Tags))
-        {
-            onItem.Add(t);
-        }
-
-        return _selectedFilterTags.Any(f => onItem.Contains(f));
+        return BoardTagUtil.ParseTags(item.Tags).Any(_selectedFilterTags.Contains);
     }
 
     private bool MatchesSearchQuery(BoardItem item)
@@ -663,6 +669,8 @@
         {
             _ = _selectedFilterTags.Remove(tag);
         }
+
+        RecomputeFilters();
     }
 
     private void PruneStaleFilterTags()
@@ -680,6 +688,12 @@
     {
         _searchText = string.Empty;
         _selectedFilterTags.Clear();
+        RecomputeFilters();
+    }
+
+    private void OnSearchTextChanged()
+    {
+        RecomputeFilters();
     }
 
     private async Task HandleTimerLogSavedAsync(TimeSpan duration)

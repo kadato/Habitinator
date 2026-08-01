@@ -62,11 +62,11 @@ public partial class BoardColumn : IAsyncDisposable
     {
         get
         {
-            IEnumerable<BoardItem> baseItems = Items
+            var baseItems = Items
                 .Where(x => !_optimisticDeletions.Contains(x.Id))
-                .Select(x => _optimisticOverrides.TryGetValue(x.Id, out BoardItem? o) ? o : x);
-            HashSet<Guid> serverIds = [.. Items.Select(x => x.Id)];
-            IEnumerable<BoardItem> creations = _optimisticCreations.Values.Where(x => !serverIds.Contains(x.Id));
+                .Select(x => _optimisticOverrides.TryGetValue(x.Id, out var o) ? o : x);
+            var serverIds = new HashSet<Guid>([.. Items.Select(x => x.Id)]);
+            var creations = _optimisticCreations.Values.Where(x => !serverIds.Contains(x.Id));
             return baseItems.Concat(creations);
         }
     }
@@ -74,15 +74,30 @@ public partial class BoardColumn : IAsyncDisposable
     private ElementReference _containerRef;
     private DotNetObjectReference<BoardColumn>? _selfRef;
     private bool _needRefresh;
+    private IReadOnlyList<BoardItem>? _lastItemsForRefresh;
+    private int _lastItemsCount = -1;
 
     protected override void OnParametersSet()
     {
+        var optimisticStateCount = CountOptimisticState();
         PruneSortOrderOverrides();
         PruneOptimisticOverrides();
         PruneOptimisticDeletions();
         PruneOptimisticCreations();
-        _needRefresh = true;
+
+        // Re-init the sortable only when the item list or the optimistic state actually changed.
+        var itemsChanged = !ReferenceEquals(_lastItemsForRefresh, Items) || Items.Count != _lastItemsCount;
+        var optimisticChanged = optimisticStateCount != CountOptimisticState();
+        if (itemsChanged || optimisticChanged)
+        {
+            _lastItemsForRefresh = Items;
+            _lastItemsCount = Items.Count;
+            _needRefresh = true;
+        }
     }
+
+    private int CountOptimisticState() =>
+        _sortOrderOverrides.Count + _optimisticOverrides.Count + _optimisticDeletions.Count + _optimisticCreations.Count;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -114,9 +129,9 @@ public partial class BoardColumn : IAsyncDisposable
 
     private void PruneSortOrderOverrides()
     {
-        foreach (Guid id in _sortOrderOverrides.Keys.ToList())
+        foreach (var id in _sortOrderOverrides.Keys.ToList())
         {
-            BoardItem? item = Items.FirstOrDefault(x => x.Id == id);
+            var item = Items.FirstOrDefault(x => x.Id == id);
             if (item is null)
             {
                 _sortOrderOverrides.Remove(id);
@@ -133,17 +148,17 @@ public partial class BoardColumn : IAsyncDisposable
 
     private void PruneOptimisticOverrides()
     {
-        foreach (Guid id in _optimisticOverrides.Keys.ToList())
+        foreach (var id in _optimisticOverrides.Keys.ToList())
         {
-            BoardItem? serverItem = Items.FirstOrDefault(x => x.Id == id);
+            var serverItem = Items.FirstOrDefault(x => x.Id == id);
             if (serverItem is null)
             {
                 _optimisticOverrides.Remove(id);
                 continue;
             }
 
-            BoardItem overrideItem = _optimisticOverrides[id];
-            bool match = serverItem.IsCompleted == overrideItem.IsCompleted
+            var overrideItem = _optimisticOverrides[id];
+            var match = serverItem.IsCompleted == overrideItem.IsCompleted
                 && serverItem.Title == overrideItem.Title
                 && serverItem.Notes == overrideItem.Notes
                 && serverItem.Tags == overrideItem.Tags
@@ -183,9 +198,9 @@ public partial class BoardColumn : IAsyncDisposable
 
     private void PruneOptimisticDeletions()
     {
-        foreach (Guid id in _optimisticDeletions.ToList())
+        foreach (var id in _optimisticDeletions.ToList())
         {
-            BoardItem? serverItem = Items.FirstOrDefault(x => x.Id == id);
+            var serverItem = Items.FirstOrDefault(x => x.Id == id);
             if (serverItem is null)
             {
                 _optimisticDeletions.Remove(id);
@@ -195,7 +210,7 @@ public partial class BoardColumn : IAsyncDisposable
 
     private void PruneOptimisticCreations()
     {
-        foreach (Guid id in _optimisticCreations.Keys.Where(id => Items.Any(x => x.Id == id)).ToList())
+        foreach (var id in _optimisticCreations.Keys.Where(id => Items.Any(x => x.Id == id)).ToList())
         {
             _optimisticCreations.Remove(id);
         }
@@ -203,12 +218,12 @@ public partial class BoardColumn : IAsyncDisposable
 
     private double GetInitialSortOrderForOptimisticCreation()
     {
-        IReadOnlyList<BoardItem> current = VisibleItems();
+        var current = VisibleItems();
         if (current.Count == 0)
         {
             return 1.0;
         }
-        double max = current.Max(x => GetEffectiveSortOrder(x) ?? 0.0);
+        var max = current.Max(x => GetEffectiveSortOrder(x) ?? 0.0);
         return max + 1.0;
     }
 
@@ -248,7 +263,7 @@ public partial class BoardColumn : IAsyncDisposable
     }
 
     private double? GetEffectiveSortOrder(BoardItem item) =>
-        _sortOrderOverrides.TryGetValue(item.Id, out double order) ? order : item.SortOrder;
+        _sortOrderOverrides.TryGetValue(item.Id, out var order) ? order : item.SortOrder;
 
     private List<BoardItem> OrderBySort(IEnumerable<BoardItem> items) =>
         [.. items.OrderBy(x => GetEffectiveSortOrder(x) ?? double.MaxValue).ThenBy(x => x.Id)];
@@ -265,7 +280,7 @@ public partial class BoardColumn : IAsyncDisposable
 
     private List<BoardItem> FilterDailies()
     {
-        DateOnly today = DailySchedule.LocalToday(TimeZoneService);
+        var today = DailySchedule.LocalToday(TimeZoneService);
         return _dailyFilter switch
         {
             DailyListFilter.Due => [.. EffectiveItems.Where(d => DailySchedule.IsDueOnDate(d, today))],
@@ -402,12 +417,12 @@ public partial class BoardColumn : IAsyncDisposable
             return;
         }
 
-        BoardItem sourceItem = visible[oldIndex];
+        var sourceItem = visible[oldIndex];
         List<BoardItem> reordered = [.. visible];
         reordered.RemoveAt(oldIndex);
         reordered.Insert(newIndex, sourceItem);
 
-        double? newSortOrder = Section == BoardSection.Todo && _todoFilter == TodoListFilter.Active
+        var newSortOrder = Section == BoardSection.Todo && _todoFilter == TodoListFilter.Active
             ? TodoOrdering.ComputeMidpointSortOrderForActiveTab(reordered, newIndex, GetEffectiveSortOrder)
             : BoardItemReorder.ComputeMidpointSortOrder(reordered, newIndex, GetEffectiveSortOrder);
 
@@ -418,18 +433,7 @@ public partial class BoardColumn : IAsyncDisposable
             return;
         }
 
-        _sortOrderOverrides[sourceItem.Id] = sortOrder;
-        _needRefresh = true;
-        StateHasChanged();
-
-        var ok = await TryMutateAsync(() => PersistReorderAsync(sourceItem, sortOrder));
-        if (!ok)
-        {
-            _sortOrderOverrides.Remove(sourceItem.Id);
-            _needRefresh = true;
-            StateHasChanged();
-            return;
-        }
+        await ApplySortOrderAsync(sourceItem.Id, sortOrder, () => PersistReorderAsync(sourceItem, sortOrder));
     }
 
     public async ValueTask DisposeAsync()
@@ -514,7 +518,7 @@ public partial class BoardColumn : IAsyncDisposable
 
     private async Task SetChecklistItemDoneAsync(BoardItem item, Guid lineId, bool done)
     {
-        IReadOnlyList<DailyChecklistItem> rows = DailyChecklistJson.Parse(item.ChecklistJson);
+        var rows = DailyChecklistJson.Parse(item.ChecklistJson);
         List<DailyChecklistItem> list = [.. rows];
         var i = list.FindIndex(x => x.Id == lineId);
         if (i < 0 || list[i].IsDone == done)
@@ -523,17 +527,13 @@ public partial class BoardColumn : IAsyncDisposable
         }
 
         list[i] = list[i] with { IsDone = done };
-        string? json = DailyChecklistJson.Serialize(list);
+        var json = DailyChecklistJson.Serialize(list);
         if (json is null)
         {
             return;
         }
 
-        BoardItem optimistic = item with { ChecklistJson = json };
-        _optimisticOverrides[item.Id] = optimistic;
-        _needRefresh = true;
-        StateHasChanged();
-
+        var optimistic = item with { ChecklistJson = json };
         Task mutation;
         if (Section == BoardSection.Daily)
         {
@@ -576,13 +576,7 @@ public partial class BoardColumn : IAsyncDisposable
                     json));
         }
 
-        var ok = await TryMutateAsync(() => mutation);
-        if (!ok)
-        {
-            _optimisticOverrides.Remove(item.Id);
-            _needRefresh = true;
-            StateHasChanged();
-        }
+        await ApplyOverrideAsync(item.Id, optimistic, () => mutation);
     }
 
     private async Task OnDraftKeyAsync(KeyboardEventArgs e)
@@ -610,68 +604,29 @@ public partial class BoardColumn : IAsyncDisposable
             CreatedAtUtc: DateTimeOffset.UtcNow,
             SortOrder: GetInitialSortOrderForOptimisticCreation()
         );
-        _optimisticCreations[newId] = tempItem;
         _draft = string.Empty;
-        _needRefresh = true;
-        StateHasChanged();
 
-        var ok = await TryMutateAsync(() => BoardData.CreateItemAsync(Section, title, newId));
-        if (!ok)
-        {
-            _optimisticCreations.Remove(newId);
-            _needRefresh = true;
-            StateHasChanged();
-        }
+        await ApplyCreationAsync(newId, tempItem, () => BoardData.CreateItemAsync(Section, title, newId));
     }
 
-    private async Task HabitUpAsync(BoardItem item)
+    private Task HabitUpAsync(BoardItem item)
     {
-        BoardItem optimistic = item with { Counter = item.Counter + 1 };
-        _optimisticOverrides[item.Id] = optimistic;
-        _needRefresh = true;
-        StateHasChanged();
-
-        var ok = await TryMutateAsync(() => BoardData.IncrementHabitPlusAsync(item.Id));
-        if (!ok)
-        {
-            _optimisticOverrides.Remove(item.Id);
-            _needRefresh = true;
-            StateHasChanged();
-        }
+        var optimistic = item with { Counter = item.Counter + 1 };
+        return ApplyOverrideAsync(item.Id, optimistic, () => BoardData.IncrementHabitPlusAsync(item.Id));
     }
 
-    private async Task HabitDownAsync(BoardItem item)
+    private Task HabitDownAsync(BoardItem item)
     {
-        BoardItem optimistic = item with { NegativeCounter = item.NegativeCounter + 1 };
-        _optimisticOverrides[item.Id] = optimistic;
-        _needRefresh = true;
-        StateHasChanged();
-
-        var ok = await TryMutateAsync(() => BoardData.IncrementHabitMinusAsync(item.Id));
-        if (!ok)
-        {
-            _optimisticOverrides.Remove(item.Id);
-            _needRefresh = true;
-            StateHasChanged();
-        }
+        var optimistic = item with { NegativeCounter = item.NegativeCounter + 1 };
+        return ApplyOverrideAsync(item.Id, optimistic, () => BoardData.IncrementHabitMinusAsync(item.Id));
     }
 
-    private async Task ToggleAsync(BoardItem item)
+    private Task ToggleAsync(BoardItem item)
     {
         var nextCompleted = !item.IsCompleted;
         DateOnly? lastCompleted = nextCompleted ? BoardToday() : null;
-        BoardItem optimistic = item with { IsCompleted = nextCompleted, DailyLastCompletedOn = lastCompleted };
-        _optimisticOverrides[item.Id] = optimistic;
-        _needRefresh = true;
-        StateHasChanged();
-
-        var ok = await TryMutateAsync(() => BoardData.ToggleItemAsync(Section, item.Id));
-        if (!ok)
-        {
-            _optimisticOverrides.Remove(item.Id);
-            _needRefresh = true;
-            StateHasChanged();
-        }
+        var optimistic = item with { IsCompleted = nextCompleted, DailyLastCompletedOn = lastCompleted };
+        return ApplyOverrideAsync(item.Id, optimistic, () => BoardData.ToggleItemAsync(Section, item.Id));
     }
 
     private async Task OpenEditHabitAsync(BoardItem item)
@@ -685,8 +640,8 @@ public partial class BoardColumn : IAsyncDisposable
             NoHeader = true
         };
         DialogParameters<EditHabitDialog> parameters = new() { { x => x.Item, item } };
-        IDialogReference dialog = await DialogService.ShowAsync<EditHabitDialog>(string.Empty, parameters, options);
-        DialogResult? result = await dialog.Result;
+        var dialog = await DialogService.ShowAsync<EditHabitDialog>(string.Empty, parameters, options);
+        var result = await dialog.Result;
         if (result is { Canceled: false, Data: EditHabitDialogResult r })
         {
             await HandleEditHabitResultAsync(item, r);
@@ -711,7 +666,7 @@ public partial class BoardColumn : IAsyncDisposable
 
     private Task SaveHabitAsync(BoardItem item, EditHabitDialogResult r)
     {
-        BoardItem optimistic = item with
+        var optimistic = item with
         {
             Title = r.Title,
             Notes = r.Notes,
@@ -723,72 +678,25 @@ public partial class BoardColumn : IAsyncDisposable
             NegativeCounter = r.NegativeCounter,
             ChecklistJson = r.ChecklistJson
         };
-        _optimisticOverrides[item.Id] = optimistic;
-        _needRefresh = true;
-        StateHasChanged();
-
-        _ = Task.Run(async () =>
-        {
-            var ok = await TryMutateAsync(() => BoardData.UpdateHabitAsync(
-                item.Id,
-                new UpdateHabitArgs(
-                    r.Title,
-                    r.Notes,
-                    r.Tags,
-                    r.TrackPlus,
-                    r.TrackMinus,
-                    r.ResetPeriod,
-                    r.Counter,
-                    r.NegativeCounter,
-                    r.ChecklistJson)
-            ));
-            if (!ok)
-            {
-                _optimisticOverrides.Remove(item.Id);
-                _needRefresh = true;
-                await InvokeAsync(StateHasChanged);
-            }
-        });
-        return Task.CompletedTask;
+        return ApplyOverrideAsync(item.Id, optimistic, () => BoardData.UpdateHabitAsync(
+            item.Id,
+            new UpdateHabitArgs(
+                r.Title,
+                r.Notes,
+                r.Tags,
+                r.TrackPlus,
+                r.TrackMinus,
+                r.ResetPeriod,
+                r.Counter,
+                r.NegativeCounter,
+                r.ChecklistJson)));
     }
 
-    private Task ArchiveHabitAsync(BoardItem item)
-    {
-        _optimisticDeletions.Add(item.Id);
-        _needRefresh = true;
-        StateHasChanged();
+    private Task ArchiveHabitAsync(BoardItem item) =>
+        ApplyDeletionAsync(item.Id, () => BoardData.ArchiveItemAsync(BoardSection.Habit, item.Id));
 
-        _ = Task.Run(async () =>
-        {
-            var ok = await TryMutateAsync(() => BoardData.ArchiveItemAsync(BoardSection.Habit, item.Id));
-            if (!ok)
-            {
-                _optimisticDeletions.Remove(item.Id);
-                _needRefresh = true;
-                await InvokeAsync(StateHasChanged);
-            }
-        });
-        return Task.CompletedTask;
-    }
-
-    private Task DeleteHabitAsync(BoardItem item)
-    {
-        _optimisticDeletions.Add(item.Id);
-        _needRefresh = true;
-        StateHasChanged();
-
-        _ = Task.Run(async () =>
-        {
-            var ok = await TryMutateAsync(() => BoardData.DeleteItemAsync(BoardSection.Habit, item.Id));
-            if (!ok)
-            {
-                _optimisticDeletions.Remove(item.Id);
-                _needRefresh = true;
-                await InvokeAsync(StateHasChanged);
-            }
-        });
-        return Task.CompletedTask;
-    }
+    private Task DeleteHabitAsync(BoardItem item) =>
+        ApplyDeletionAsync(item.Id, () => BoardData.DeleteItemAsync(BoardSection.Habit, item.Id));
 
     private async Task OpenEditDailyAsync(BoardItem item)
     {
@@ -801,8 +709,8 @@ public partial class BoardColumn : IAsyncDisposable
             NoHeader = true
         };
         DialogParameters<EditDailyDialog> parameters = new() { { x => x.Item, item } };
-        IDialogReference dialog = await DialogService.ShowAsync<EditDailyDialog>(string.Empty, parameters, options);
-        DialogResult? result = await dialog.Result;
+        var dialog = await DialogService.ShowAsync<EditDailyDialog>(string.Empty, parameters, options);
+        var result = await dialog.Result;
         if (result is { Canceled: false, Data: EditDailyDialogResult r })
         {
             await HandleEditDailyResultAsync(item, r);
@@ -827,7 +735,7 @@ public partial class BoardColumn : IAsyncDisposable
 
     private Task SaveDailyAsync(BoardItem item, EditDailyDialogResult r)
     {
-        BoardItem optimistic = item with
+        var optimistic = item with
         {
             Title = r.Title,
             Notes = r.Notes,
@@ -838,71 +746,24 @@ public partial class BoardColumn : IAsyncDisposable
             ChecklistJson = r.ChecklistJson,
             Counter = r.Streak
         };
-        _optimisticOverrides[item.Id] = optimistic;
-        _needRefresh = true;
-        StateHasChanged();
-
-        _ = Task.Run(async () =>
-        {
-            var ok = await TryMutateAsync(() => BoardData.UpdateDailyAsync(
-                item.Id,
-                new UpdateDailyArgs(
-                    r.Title,
-                    r.Notes,
-                    r.Tags,
-                    r.StartDate,
-                    r.Repeat,
-                    r.RepeatInterval,
-                    r.ChecklistJson,
-                    r.Streak)
-            ));
-            if (!ok)
-            {
-                _optimisticOverrides.Remove(item.Id);
-                _needRefresh = true;
-                await InvokeAsync(StateHasChanged);
-            }
-        });
-        return Task.CompletedTask;
+        return ApplyOverrideAsync(item.Id, optimistic, () => BoardData.UpdateDailyAsync(
+            item.Id,
+            new UpdateDailyArgs(
+                r.Title,
+                r.Notes,
+                r.Tags,
+                r.StartDate,
+                r.Repeat,
+                r.RepeatInterval,
+                r.ChecklistJson,
+                r.Streak)));
     }
 
-    private Task ArchiveDailyAsync(BoardItem item)
-    {
-        _optimisticDeletions.Add(item.Id);
-        _needRefresh = true;
-        StateHasChanged();
+    private Task ArchiveDailyAsync(BoardItem item) =>
+        ApplyDeletionAsync(item.Id, () => BoardData.ArchiveItemAsync(BoardSection.Daily, item.Id));
 
-        _ = Task.Run(async () =>
-        {
-            var ok = await TryMutateAsync(() => BoardData.ArchiveItemAsync(BoardSection.Daily, item.Id));
-            if (!ok)
-            {
-                _optimisticDeletions.Remove(item.Id);
-                _needRefresh = true;
-                await InvokeAsync(StateHasChanged);
-            }
-        });
-        return Task.CompletedTask;
-    }
-
-    private Task DeleteDailyAsync(BoardItem item)
-    {
-        _optimisticDeletions.Add(item.Id);
-        _needRefresh = true;
-        StateHasChanged();
-
-        _ = Task.Run(async () =>
-        {
-            var ok = await TryMutateAsync(() => BoardData.DeleteItemAsync(BoardSection.Daily, item.Id));
-            if (!ok)
-            {
-                _optimisticDeletions.Remove(item.Id);
-                _needRefresh = true;
-                await InvokeAsync(StateHasChanged);
-            }
-        });
-        return Task.CompletedTask;
-    }
+    private Task DeleteDailyAsync(BoardItem item) =>
+        ApplyDeletionAsync(item.Id, () => BoardData.DeleteItemAsync(BoardSection.Daily, item.Id));
 
     private async Task OpenEditTodoAsync(BoardItem item)
     {
@@ -915,8 +776,8 @@ public partial class BoardColumn : IAsyncDisposable
             NoHeader = true
         };
         DialogParameters<EditTodoDialog> parameters = new() { { x => x.Item, item } };
-        IDialogReference dialog = await DialogService.ShowAsync<EditTodoDialog>(string.Empty, parameters, options);
-        DialogResult? result = await dialog.Result;
+        var dialog = await DialogService.ShowAsync<EditTodoDialog>(string.Empty, parameters, options);
+        var result = await dialog.Result;
         if (result is { Canceled: false, Data: EditTodoDialogResult r })
         {
             await HandleEditTodoResultAsync(item, r);
@@ -941,7 +802,7 @@ public partial class BoardColumn : IAsyncDisposable
 
     private Task SaveTodoAsync(BoardItem item, EditTodoDialogResult r)
     {
-        BoardItem optimistic = item with
+        var optimistic = item with
         {
             Title = r.Title,
             Notes = r.Notes,
@@ -949,68 +810,21 @@ public partial class BoardColumn : IAsyncDisposable
             ChecklistJson = r.ChecklistJson,
             TodoDueDate = r.DueDate != null ? DateOnly.FromDateTime(r.DueDate.Value) : null
         };
-        _optimisticOverrides[item.Id] = optimistic;
-        _needRefresh = true;
-        StateHasChanged();
-
-        _ = Task.Run(async () =>
-        {
-            var ok = await TryMutateAsync(() => BoardData.UpdateTodoAsync(
-                item.Id,
-                new UpdateTodoArgs(
-                    r.Title,
-                    r.Notes,
-                    r.Tags,
-                    r.ChecklistJson,
-                    r.DueDate)
-            ));
-            if (!ok)
-            {
-                _optimisticOverrides.Remove(item.Id);
-                _needRefresh = true;
-                await InvokeAsync(StateHasChanged);
-            }
-        });
-        return Task.CompletedTask;
+        return ApplyOverrideAsync(item.Id, optimistic, () => BoardData.UpdateTodoAsync(
+            item.Id,
+            new UpdateTodoArgs(
+                r.Title,
+                r.Notes,
+                r.Tags,
+                r.ChecklistJson,
+                r.DueDate)));
     }
 
-    private Task ArchiveTodoAsync(BoardItem item)
-    {
-        _optimisticDeletions.Add(item.Id);
-        _needRefresh = true;
-        StateHasChanged();
+    private Task ArchiveTodoAsync(BoardItem item) =>
+        ApplyDeletionAsync(item.Id, () => BoardData.ArchiveItemAsync(BoardSection.Todo, item.Id));
 
-        _ = Task.Run(async () =>
-        {
-            var ok = await TryMutateAsync(() => BoardData.ArchiveItemAsync(BoardSection.Todo, item.Id));
-            if (!ok)
-            {
-                _optimisticDeletions.Remove(item.Id);
-                _needRefresh = true;
-                await InvokeAsync(StateHasChanged);
-            }
-        });
-        return Task.CompletedTask;
-    }
-
-    private Task DeleteTodoAsync(BoardItem item)
-    {
-        _optimisticDeletions.Add(item.Id);
-        _needRefresh = true;
-        StateHasChanged();
-
-        _ = Task.Run(async () =>
-        {
-            var ok = await TryMutateAsync(() => BoardData.DeleteItemAsync(BoardSection.Todo, item.Id));
-            if (!ok)
-            {
-                _optimisticDeletions.Remove(item.Id);
-                _needRefresh = true;
-                await InvokeAsync(StateHasChanged);
-            }
-        });
-        return Task.CompletedTask;
-    }
+    private Task DeleteTodoAsync(BoardItem item) =>
+        ApplyDeletionAsync(item.Id, () => BoardData.DeleteItemAsync(BoardSection.Todo, item.Id));
 
     private Task OpenItemEditorAsync(BoardItem item)
     {
@@ -1023,20 +837,8 @@ public partial class BoardColumn : IAsyncDisposable
         };
     }
 
-    private async Task DeleteAsync(Guid id)
-    {
-        _optimisticDeletions.Add(id);
-        _needRefresh = true;
-        StateHasChanged();
-
-        var ok = await TryMutateAsync(() => BoardData.DeleteItemAsync(Section, id));
-        if (!ok)
-        {
-            _optimisticDeletions.Remove(id);
-            _needRefresh = true;
-            StateHasChanged();
-        }
-    }
+    private Task DeleteAsync(Guid id) =>
+        ApplyDeletionAsync(id, () => BoardData.DeleteItemAsync(Section, id));
 
     private async Task MoveToTopAsync(BoardItem item)
     {
@@ -1051,7 +853,7 @@ public partial class BoardColumn : IAsyncDisposable
         reordered.RemoveAt(sourceIndex);
         reordered.Insert(0, item);
 
-        double? newSortOrder = Section == BoardSection.Todo && _todoFilter == TodoListFilter.Active
+        var newSortOrder = Section == BoardSection.Todo && _todoFilter == TodoListFilter.Active
             ? TodoOrdering.ComputeMidpointSortOrderForActiveTab(reordered, 0, GetEffectiveSortOrder)
             : BoardItemReorder.ComputeMidpointSortOrder(reordered, 0, GetEffectiveSortOrder);
 
@@ -1060,17 +862,7 @@ public partial class BoardColumn : IAsyncDisposable
             return;
         }
 
-        _sortOrderOverrides[item.Id] = sortOrder;
-        _needRefresh = true;
-        StateHasChanged();
-
-        var ok = await TryMutateAsync(() => PersistReorderAsync(item, sortOrder));
-        if (!ok)
-        {
-            _sortOrderOverrides.Remove(item.Id);
-            _needRefresh = true;
-            StateHasChanged();
-        }
+        await ApplySortOrderAsync(item.Id, sortOrder, () => PersistReorderAsync(item, sortOrder));
     }
 
     private async Task MoveToBottomAsync(BoardItem item)
@@ -1087,7 +879,7 @@ public partial class BoardColumn : IAsyncDisposable
         reordered.Add(item);
         var insertAt = reordered.Count - 1;
 
-        double? newSortOrder = Section == BoardSection.Todo && _todoFilter == TodoListFilter.Active
+        var newSortOrder = Section == BoardSection.Todo && _todoFilter == TodoListFilter.Active
             ? TodoOrdering.ComputeMidpointSortOrderForActiveTab(reordered, insertAt, GetEffectiveSortOrder)
             : BoardItemReorder.ComputeMidpointSortOrder(reordered, insertAt, GetEffectiveSortOrder);
 
@@ -1096,17 +888,7 @@ public partial class BoardColumn : IAsyncDisposable
             return;
         }
 
-        _sortOrderOverrides[item.Id] = sortOrder;
-        _needRefresh = true;
-        StateHasChanged();
-
-        var ok = await TryMutateAsync(() => PersistReorderAsync(item, sortOrder));
-        if (!ok)
-        {
-            _sortOrderOverrides.Remove(item.Id);
-            _needRefresh = true;
-            StateHasChanged();
-        }
+        await ApplySortOrderAsync(item.Id, sortOrder, () => PersistReorderAsync(item, sortOrder));
     }
 
     private async Task DeleteAllDoneTodosAsync()
@@ -1116,13 +898,13 @@ public partial class BoardColumn : IAsyncDisposable
             return;
         }
 
-        List<BoardItem> toDelete = FilterTodos();
+        var toDelete = FilterTodos();
         if (toDelete.Count == 0)
         {
             return;
         }
 
-        bool? confirmed = await DialogService.ShowMessageBoxAsync(
+        var confirmed = await DialogService.ShowMessageBoxAsync(
             "Delete all done to-dos?",
             $"This will permanently remove {toDelete.Count} done to-do(s) matching your current view. This cannot be undone.",
             "Delete all",
@@ -1139,7 +921,7 @@ public partial class BoardColumn : IAsyncDisposable
         {
             using (UndoService.BeginBatch($"Delete {toDelete.Count} done to-dos"))
             {
-                foreach (BoardItem item in toDelete)
+                foreach (var item in toDelete)
                 {
                     if (await BoardData.DeleteItemAsync(BoardSection.Todo, item.Id))
                     {
@@ -1180,6 +962,49 @@ public partial class BoardColumn : IAsyncDisposable
             return false;
         }
     }
+
+    /// <summary>
+    ///     Applies an optimistic UI change, awaits the server mutation, and rolls the optimistic change back
+    ///     on failure. All board mutations should go through this so optimistic state stays consistent.
+    /// </summary>
+    private async Task ApplyMutationAsync(Action apply, Action rollback, Func<Task> mutation)
+    {
+        apply();
+        _needRefresh = true;
+        StateHasChanged();
+
+        var ok = await TryMutateAsync(mutation);
+        if (!ok)
+        {
+            rollback();
+            _needRefresh = true;
+            StateHasChanged();
+        }
+    }
+
+    private Task ApplyOverrideAsync(Guid itemId, BoardItem optimistic, Func<Task> mutation) =>
+        ApplyMutationAsync(
+            () => _optimisticOverrides[itemId] = optimistic,
+            () => _optimisticOverrides.Remove(itemId),
+            mutation);
+
+    private Task ApplyDeletionAsync(Guid itemId, Func<Task> mutation) =>
+        ApplyMutationAsync(
+            () => _optimisticDeletions.Add(itemId),
+            () => _optimisticDeletions.Remove(itemId),
+            mutation);
+
+    private Task ApplyCreationAsync(Guid itemId, BoardItem optimistic, Func<Task> mutation) =>
+        ApplyMutationAsync(
+            () => _optimisticCreations[itemId] = optimistic,
+            () => _optimisticCreations.Remove(itemId),
+            mutation);
+
+    private Task ApplySortOrderAsync(Guid itemId, double sortOrder, Func<Task> mutation) =>
+        ApplyMutationAsync(
+            () => _sortOrderOverrides[itemId] = sortOrder,
+            () => _sortOrderOverrides.Remove(itemId),
+            mutation);
 
     private MudTextField<string>? _draftField;
 

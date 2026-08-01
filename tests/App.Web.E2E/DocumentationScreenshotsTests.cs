@@ -1,8 +1,6 @@
 using System.Text.RegularExpressions;
-using System.Net.Http;
+
 using Microsoft.Playwright;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
 
 namespace App.Web.E2E;
 
@@ -304,15 +302,15 @@ public sealed class DocumentationScreenshotsTests
             await page.Locator(".timer-btn--pause").ClickAsync();
             await page.WaitForTimeoutAsync(300);
 
-        try
-        {
-            await page.Locator(".timer-btn--reset:not([disabled])").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 15_000 });
-            await page.Locator(".timer-btn--reset").ClickAsync();
-        }
-        catch (TimeoutException)
-        {
-            // Screenshot already captured; reset is best-effort cleanup.
-        }
+            try
+            {
+                await page.Locator(".timer-btn--reset:not([disabled])").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+                await page.Locator(".timer-btn--reset").ClickAsync();
+            }
+            catch (TimeoutException)
+            {
+                // Screenshot already captured; reset is best-effort cleanup.
+            }
         }
     }
 

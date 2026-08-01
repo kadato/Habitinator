@@ -1,7 +1,6 @@
-using Microsoft.Playwright;
-using System.Net.Http;
-
 using FluentAssertions;
+
+using Microsoft.Playwright;
 
 namespace App.Web.E2E;
 
@@ -57,7 +56,7 @@ public sealed class WebSmokeTests
         var res = await page.GotoAsync($"{BaseUrl}/", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
         res.Should().NotBeNull();
         res!.Ok.Should().BeTrue(
-            $"Home returned HTTP {(int)res.Status} for {BaseUrl}/ — start App.Web (see README / CI job).");
+            $"Home returned HTTP {res.Status} for {BaseUrl}/ - start App.Web (see README / CI job).");
         (await page.ContentAsync()).Should().NotBeNullOrWhiteSpace();
     }
 

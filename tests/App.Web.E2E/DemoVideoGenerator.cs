@@ -1,5 +1,5 @@
 using System.Text.RegularExpressions;
-using System.Net.Http;
+
 using Microsoft.Playwright;
 
 namespace App.Web.E2E;
@@ -60,6 +60,24 @@ public sealed class DemoVideoGenerator
             $"E2E_BASE_URL '{BaseUrl}' is not reachable. Start App.Web before running Playwright tests.");
     }
 
+    private static async Task CreateAuthStateAsync(IBrowser browser, string statePath)
+    {
+        var loginContext = await browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1280, Height = 720 }
+        });
+        var loginPage = await loginContext.NewPageAsync();
+        await loginPage.GotoAsync($"{BaseUrl}/", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        await loginPage.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("demo guest", RegexOptions.IgnoreCase) })
+            .ClickAsync();
+        await loginPage.WaitForURLAsync(u => u.StartsWith($"{BaseUrl}/", StringComparison.OrdinalIgnoreCase) &&
+                                        !u.Contains("/auth/login", StringComparison.OrdinalIgnoreCase),
+            new() { Timeout = 30_000 });
+        await loginPage.Locator(".board-shell").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
+        await loginContext.StorageStateAsync(new() { Path = statePath });
+        await loginContext.CloseAsync();
+    }
+
     [Fact]
     public async Task Generate_Demo_Video()
     {
@@ -67,30 +85,14 @@ public sealed class DemoVideoGenerator
         Directory.CreateDirectory(VideoDir);
 
         using var pw = await Playwright.CreateAsync();
-        await using var browser = await pw.Chromium.LaunchAsync(new BrowserTypeLaunchOptions 
-        { 
+        await using var browser = await pw.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+        {
             Headless = true
         });
 
         // Step A: Perform login in a temporary, unrecorded context to bypass login in the video
         var statePath = Path.Combine(Path.GetTempPath(), "habitinator-auth-state.json");
-        {
-            var loginContext = await browser.NewContextAsync(new BrowserNewContextOptions
-            {
-                ViewportSize = new ViewportSize { Width = 1280, Height = 720 }
-            });
-            var loginPage = await loginContext.NewPageAsync();
-            await loginPage.GotoAsync($"{BaseUrl}/", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
-            await loginPage.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("demo guest", RegexOptions.IgnoreCase) })
-                .ClickAsync();
-            await loginPage.WaitForURLAsync(u => u.StartsWith($"{BaseUrl}/", StringComparison.OrdinalIgnoreCase) &&
-                                            !u.Contains("/auth/login", StringComparison.OrdinalIgnoreCase),
-                new() { Timeout = 30_000 });
-            await loginPage.Locator(".board-shell").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
-            await loginContext.StorageStateAsync(new() { Path = statePath });
-            await loginContext.CloseAsync();
-        }
-
+        await CreateAuthStateAsync(browser, statePath);
         // Loop over both Light and Dark themes
         foreach (var (suffix, scheme) in ThemeVideoSchemes)
         {
@@ -161,14 +163,14 @@ public sealed class DemoVideoGenerator
             // Click Start
             var startBtn = page.Locator(".timer-btn--start:not([disabled])");
             await startBtn.ClickAsync();
-            
+
             // Wait for it to tick and show Time's Up
             await page.WaitForTimeoutAsync(4500);
 
             // Dismiss Time's up modal
             var timesUpDialog = page.Locator(".mud-message-box");
             await timesUpDialog.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
-            await page.WaitForTimeoutAsync(1000); 
+            await page.WaitForTimeoutAsync(1000);
             await page.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("not done", RegexOptions.IgnoreCase) }).ClickAsync();
             await timesUpDialog.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 10_000 });
             await page.WaitForTimeoutAsync(800);
@@ -176,7 +178,7 @@ public sealed class DemoVideoGenerator
             // 5. Navigate to Statistics page (1s delay + scroll down fully + scroll up fully)
             await page.GotoAsync($"{BaseUrl}/stats?theme={suffix}", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
             await page.WaitForTimeoutAsync(1000);
-            
+
             // Smooth scroll down fully to showcase all charts/summaries
             await SmoothScrollAsync(page, down: true);
             await page.WaitForTimeoutAsync(800);
@@ -234,7 +236,7 @@ public sealed class DemoVideoGenerator
                 var targetDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../../../../docs/automation");
                 var finalDestDir = Environment.GetEnvironmentVariable("E2E_VIDEO_OUT_DIR") ?? targetDir;
                 Directory.CreateDirectory(finalDestDir);
-                
+
                 var finalPath = Path.Combine(finalDestDir, $"demo-video-{suffix}.webm");
                 File.Copy(sourcePath, finalPath, overwrite: true);
                 Console.WriteLine($"== Demo video saved to: {finalPath}");
@@ -267,7 +269,7 @@ public sealed class DemoVideoGenerator
                 const steps = 45;
                 const delay = 16; // ~720ms total scroll duration
                 const start = isWindow ? window.scrollY : container.scrollTop;
-                const target = {{ (down ? "scrollable" : "0") }};
+                const target = {{(down ? "scrollable" : "0")}};
                 const diff = target - start;
 
                 for (let i = 1; i <= steps; i++) {

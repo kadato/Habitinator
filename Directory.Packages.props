@@ -7,7 +7,6 @@
   <ItemGroup>
     <!-- Global / Shared tooling -->
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.28.0.143324" />
-    <PackageVersion Include="Microsoft.OpenApi" Version="3.8.0" />
 
     <!-- MAUI dependencies -->
     <PackageVersion Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
@@ -17,7 +16,7 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="$(DotNetVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(DotNetVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="$(DotNetVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.8.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="$(DotNetVersion)" />
     <PackageVersion Include="MudBlazor" Version="9.7.0" />
     <PackageVersion Include="Plugin.LocalNotification" Version="14.1.1" />
@@ -35,6 +34,8 @@
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="$(DotNetVersion)" />
     <PackageVersion Include="NSwag.AspNetCore" Version="14.7.1" />
     <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="$(DotNetVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="$(DotNetVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Identity.Stores" Version="$(DotNetVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(DotNetVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="$(DotNetVersion)" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="11.0.0-preview.5" />
@@ -44,7 +45,6 @@
     <!-- Aspire AppHost dependencies -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.4.6" />
-    <PackageVersion Include="Aspire.Hosting.Maui" Version="13.4.6-preview.1.26319.6" />
     <PackageVersion Include="MessagePack" Version="3.1.8" />
 
     <!-- Testing dependencies -->

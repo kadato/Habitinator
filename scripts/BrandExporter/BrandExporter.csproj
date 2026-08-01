@@ -7,10 +7,10 @@
     <RootNamespace>BrandExporter</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="SkiaSharp" Version="3.116.1" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.116.1" Condition="$([MSBuild]::IsOSPlatform('windows'))" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.116.1" Condition="$([MSBuild]::IsOSPlatform('linux'))" />
-    <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.116.1" Condition="$([MSBuild]::IsOSPlatform('osx'))" />
-    <PackageReference Include="Svg.Skia" Version="3.0.6" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Condition="$([MSBuild]::IsOSPlatform('windows'))" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Condition="$([MSBuild]::IsOSPlatform('linux'))" />
+    <PackageReference Include="SkiaSharp.NativeAssets.macOS" Condition="$([MSBuild]::IsOSPlatform('osx'))" />
+    <PackageReference Include="Svg.Skia" />
   </ItemGroup>
 </Project>

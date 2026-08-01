@@ -17,6 +17,5 @@
 
   <ItemGroup>
     <PackageReference Include="SonarAnalyzer.CSharp" PrivateAssets="all" Condition="'$(MSBuildProjectExtension)' == '.csproj'" />
-    <PackageReference Include="Microsoft.OpenApi" Condition="'$(MSBuildProjectExtension)' == '.csproj'" />
   </ItemGroup>
 </Project>

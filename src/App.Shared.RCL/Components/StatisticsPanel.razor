@@ -71,7 +71,9 @@
                             @for (int i = 0; i < 3; i++)
                             {
                                 <div class="stats-kpi-strip__item">
-                                    <MudSkeleton Width="40px" Height="10px" />
+                                    <div class="stats-kpi-strip__head">
+                                        <MudSkeleton Width="40px" Height="10px" />
+                                    </div>
                                     <MudSkeleton Width="32px" Height="16px" Class="mt-1" />
                                 </div>
                             }
@@ -338,15 +340,24 @@
                     <div class="stats-kpi-strip stats-kpi-strip--mobile">
                         <div class="stats-kpi-strip__grid">
                             <div class="stats-kpi-strip__item stats-kpi-strip__item--events">
-                                <span class="stats-kpi-strip__label">Events</span>
+                                <div class="stats-kpi-strip__head">
+                                    <span class="stats-kpi-strip__label">Events</span>
+                                    <MudIcon Icon="@Icons.Material.Filled.ViewTimeline" Class="stats-kpi-strip__icon" Size="Size.Small" aria-hidden="true"/>
+                                </div>
                                 <span class="stats-kpi-strip__value">@_data.TotalEvents</span>
                             </div>
                             <div class="stats-kpi-strip__item stats-kpi-strip__item--focus">
-                                <span class="stats-kpi-strip__label">Focus</span>
+                                <div class="stats-kpi-strip__head">
+                                    <span class="stats-kpi-strip__label">Focus</span>
+                                    <MudIcon Icon="@Icons.Material.Filled.Timer" Class="stats-kpi-strip__icon" Size="Size.Small" aria-hidden="true"/>
+                                </div>
                                 <span class="stats-kpi-strip__value">@FormatFocus(_data.TotalFocusMinutes)</span>
                             </div>
                             <div class="stats-kpi-strip__item stats-kpi-strip__item--peak">
-                                <span class="stats-kpi-strip__label">Busiest</span>
+                                <div class="stats-kpi-strip__head">
+                                    <span class="stats-kpi-strip__label">Busiest</span>
+                                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Class="stats-kpi-strip__icon" Size="Size.Small" aria-hidden="true"/>
+                                </div>
                                 @if (_data.BusiestDay is null || _data.MaxDayCount == 0)
                                 {
                                     <span class="stats-kpi-strip__value">—</span>

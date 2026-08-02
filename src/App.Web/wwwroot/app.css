@@ -1,1 +1,0 @@
-/* Web-specific styling overrides. All dialog, visibility, and layout rules now live in App.Shared.RCL/wwwroot/css/app.css (loaded before this file). Add web-only overrides here only when the shared rules need a different value on web. */

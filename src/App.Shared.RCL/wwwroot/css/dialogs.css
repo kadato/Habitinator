@@ -75,7 +75,7 @@
 
 .edit-daily-header__save {
     background: var(--mud-palette-primary) !important;
-    color: var(--mud-palette-primary-contrast-text) !important;
+    color: #ffffff !important;
     text-transform: none !important;
     font-size: 0.875rem !important;
     font-weight: 600 !important;
@@ -86,14 +86,11 @@
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-.edit-daily-header__save:hover:not([disabled]) {
-    background: var(--mud-palette-primary-darken) !important;
-    box-shadow: 0 6px 16px color-mix(in srgb, var(--mud-palette-primary) 40%, transparent) !important;
-    transform: translateY(-1px);
-}
-
+.edit-daily-header__save:hover:not([disabled]),
 .edit-daily-header__save:active:not([disabled]) {
-    transform: translateY(0);
+    background: var(--mud-palette-primary) !important;
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--mud-palette-primary) 30%, transparent) !important;
+    transform: none !important;
 }
 
 /* ── Labels & Fields (macOS-like styling) ── */
@@ -726,7 +723,7 @@
 
 .edit-habit-header__save {
     background: var(--mud-palette-primary) !important;
-    color: var(--mud-palette-primary-contrast-text) !important;
+    color: #ffffff !important;
     text-transform: none !important;
     font-size: 0.875rem !important;
     font-weight: 600 !important;
@@ -737,14 +734,11 @@
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-.edit-habit-header__save:hover:not([disabled]) {
-    background: var(--mud-palette-primary-darken) !important;
-    box-shadow: 0 6px 16px color-mix(in srgb, var(--mud-palette-primary) 40%, transparent) !important;
-    transform: translateY(-1px);
-}
-
+.edit-habit-header__save:hover:not([disabled]),
 .edit-habit-header__save:active:not([disabled]) {
-    transform: translateY(0);
+    background: var(--mud-palette-primary) !important;
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--mud-palette-primary) 30%, transparent) !important;
+    transform: none !important;
 }
 
 /* ── Labels & Fields ── */

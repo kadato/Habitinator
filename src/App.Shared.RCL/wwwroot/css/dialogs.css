@@ -1,3 +1,5 @@
+/* ── Shared styles for the edit dialogs (Habit / Daily / To Do) ──
+   Single source of truth for all three edit dialogs. Class names are dialog-unique. ──*/
 /* ── Pop-in animation for modern entry ── */
 @keyframes modal-pop {
     from {
@@ -10,7 +12,7 @@
     }
 }
 
-.edit-daily-dialog ::deep .edit-daily-dialog__content {
+.edit-daily-dialog .edit-daily-dialog__content {
     padding: 0 !important;
     overflow: visible;
 }
@@ -106,53 +108,53 @@
 }
 
 /* Base input wrapper */
-.edit-daily-field-header ::deep .mud-input-root-outlined,
-.edit-daily-field-body ::deep .mud-input-root-outlined {
+.edit-daily-field-header .mud-input-root-outlined,
+.edit-daily-field-body .mud-input-root-outlined {
     background-color: color-mix(in srgb, var(--mud-palette-background-gray) 35%, var(--mud-palette-surface)) !important;
     border-radius: 10px !important;
     transition: background-color 0.2s ease, box-shadow 0.2s ease !important;
     border: none !important;
 }
 
-.edit-daily-field-header ::deep .mud-input-root-outlined:focus-within,
-.edit-daily-field-body ::deep .mud-input-root-outlined:focus-within {
+.edit-daily-field-header .mud-input-root-outlined:focus-within,
+.edit-daily-field-body .mud-input-root-outlined:focus-within {
     background-color: var(--mud-palette-surface) !important;
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--mud-palette-primary) 15%, transparent) !important;
 }
 
 /* Border styling for outlined inputs */
-.edit-daily-field-header ::deep .mud-input-outlined-border,
-.edit-daily-field-body ::deep .mud-input-outlined-border {
+.edit-daily-field-header .mud-input-outlined-border,
+.edit-daily-field-body .mud-input-outlined-border {
     border-color: transparent !important;
     border-width: 1px !important;
     transition: border-color 0.2s ease !important;
 }
 
-.edit-daily-field-header ::deep .mud-input-root-outlined:hover .mud-input-outlined-border,
-.edit-daily-field-body ::deep .mud-input-root-outlined:hover .mud-input-outlined-border {
+.edit-daily-field-header .mud-input-root-outlined:hover .mud-input-outlined-border,
+.edit-daily-field-body .mud-input-root-outlined:hover .mud-input-outlined-border {
     border-color: var(--mud-palette-divider) !important;
 }
 
-.edit-daily-field-header ::deep .mud-input-root-outlined.mud-input-focused .mud-input-outlined-border,
-.edit-daily-field-body ::deep .mud-input-root-outlined.mud-input-focused .mud-input-outlined-border {
+.edit-daily-field-header .mud-input-root-outlined.mud-input-focused .mud-input-outlined-border,
+.edit-daily-field-body .mud-input-root-outlined.mud-input-focused .mud-input-outlined-border {
     border-color: var(--mud-palette-primary) !important;
     border-width: 1.5px !important;
 }
 
-.edit-daily-field-header ::deep .mud-input-slot,
-.edit-daily-field-body ::deep .mud-input-slot {
+.edit-daily-field-header .mud-input-slot,
+.edit-daily-field-body .mud-input-slot {
     color: var(--mud-palette-text-primary);
     font-size: 0.9rem;
     line-height: 1.45;
 }
 
-.edit-daily-field-header ::deep input,
-.edit-daily-field-header ::deep textarea,
-.edit-daily-field-body ::deep input {
+.edit-daily-field-header input,
+.edit-daily-field-header textarea,
+.edit-daily-field-body input {
     color: var(--mud-palette-text-primary) !important;
 }
 
-.edit-daily-field-header ::deep textarea.mud-input-slot {
+.edit-daily-field-header textarea.mud-input-slot {
     field-sizing: content;
     height: auto;
     min-height: 3lh;
@@ -186,23 +188,23 @@
     margin-bottom: 0.25rem;
 }
 
-.edit-daily-checklist-panels ::deep .mud-expand-panel {
+.edit-daily-checklist-panels .mud-expand-panel {
     background: color-mix(in srgb, var(--mud-palette-background-gray) 30%, var(--mud-palette-surface)) !important;
     border: 1px solid var(--mud-palette-divider);
     border-radius: 10px !important;
     transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
-.edit-daily-checklist-panels ::deep .mud-expand-panel:hover {
+.edit-daily-checklist-panels .mud-expand-panel:hover {
     border-color: color-mix(in srgb, var(--mud-palette-divider) 80%, var(--mud-palette-text-primary));
 }
 
-.edit-daily-checklist-panels ::deep .mud-expand-panel-header {
+.edit-daily-checklist-panels .mud-expand-panel-header {
     padding: 0.6rem 0.85rem;
     min-height: unset;
 }
 
-.edit-daily-checklist-panels ::deep .mud-expand-panel-content {
+.edit-daily-checklist-panels .mud-expand-panel-content {
     border-top: 1px solid var(--mud-palette-divider);
     padding: 0.5rem 0.85rem 0.85rem;
 }
@@ -226,20 +228,20 @@
 }
 
 /* checkbox scale on hover */
-.edit-daily-checklist__row ::deep .mud-checkbox:hover {
+.edit-daily-checklist__row .mud-checkbox:hover {
     transform: scale(1.05);
 }
 
-.edit-daily-checklist__input ::deep .mud-input-outlined-border {
+.edit-daily-checklist__input .mud-input-outlined-border {
     border: none !important;
 }
 
-.edit-daily-checklist__input ::deep .mud-input-root {
+.edit-daily-checklist__input .mud-input-root {
     color: var(--mud-palette-text-primary);
 }
 
 /* Modern :has sibling check to strike through checked items */
-.edit-daily-checklist__row:has(.mud-checkbox-checked) .edit-daily-checklist__input ::deep input {
+.edit-daily-checklist__row:has(.mud-checkbox-checked) .edit-daily-checklist__input input {
     text-decoration: line-through;
     color: var(--mud-palette-text-disabled) !important;
     opacity: 0.65;
@@ -288,7 +290,7 @@
     color: var(--mud-palette-primary);
 }
 
-.edit-daily-date ::deep .mud-input-outlined-border {
+.edit-daily-date .mud-input-outlined-border {
     border-color: var(--mud-palette-divider) !important;
 }
 
@@ -315,18 +317,18 @@
 }
 
 /* ── Advanced section ── */
-.edit-daily-advanced ::deep .mud-expand-panel {
+.edit-daily-advanced .mud-expand-panel {
     background: color-mix(in srgb, var(--mud-palette-background-gray) 30%, var(--mud-palette-surface)) !important;
     border: 1px solid var(--mud-palette-divider);
     border-radius: 10px !important;
 }
 
-.edit-daily-advanced ::deep .mud-expand-panel-header {
+.edit-daily-advanced .mud-expand-panel-header {
     padding: 0.6rem 0.85rem;
     min-height: unset;
 }
 
-.edit-daily-advanced ::deep .mud-expand-panel-content {
+.edit-daily-advanced .mud-expand-panel-content {
     border-top: 1px solid var(--mud-palette-divider);
     padding: 0.75rem 0.85rem 0.85rem;
 }
@@ -363,21 +365,21 @@
     min-width: 0;
 }
 
-.edit-daily-streak-input__field ::deep .mud-input-root {
+.edit-daily-streak-input__field .mud-input-root {
     background: transparent;
 }
 
-.edit-daily-streak-input__field ::deep .mud-input-outlined-border {
+.edit-daily-streak-input__field .mud-input-outlined-border {
     border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
 }
 
-.edit-daily-streak-input__field ::deep .mud-input-focused .mud-input-outlined-border {
+.edit-daily-streak-input__field .mud-input-focused .mud-input-outlined-border {
     box-shadow: none !important;
 }
 
-.edit-daily-streak-input__field ::deep .mud-input-slot {
+.edit-daily-streak-input__field .mud-input-slot {
     color: var(--mud-palette-text-primary);
     font-size: 0.9rem;
 }
@@ -390,7 +392,7 @@
     border-top: 1px solid var(--mud-palette-divider);
 }
 
-.edit-daily-delete-wrap ::deep .mud-button-label {
+.edit-daily-delete-wrap .mud-button-label {
     text-transform: none;
     font-weight: 600;
     font-size: 0.8rem;
@@ -659,4 +661,330 @@
 .habit-tag-picker__option--add:hover {
     color: var(--mud-palette-primary-darken);
     background: transparent;
+}
+
+.edit-habit-dialog .edit-habit-dialog__content {
+    padding: 0 !important;
+    overflow: visible;
+}
+
+.edit-habit-shell {
+    width: 100%;
+    max-width: min(24rem, 100%);
+    max-height: min(90dvh, calc(100dvh - 3rem));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--mud-palette-surface);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
+    border-radius: 1rem;
+    box-shadow: 
+        0 24px 38px 3px rgba(0, 0, 0, 0.08), 
+        0 9px 46px 8px rgba(0, 0, 0, 0.06), 
+        0 11px 15px -7px rgba(0, 0, 0, 0.1);
+    animation: modal-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ── Header Toolbar ── */
+.edit-habit-header {
+    background: var(--mud-palette-surface);
+    padding: 1.25rem 1.25rem 1rem;
+    color: var(--mud-palette-text-primary);
+    border-bottom: 1px solid var(--mud-palette-divider);
+}
+
+.edit-habit-header__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.85rem;
+}
+
+.edit-habit-header__title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: -0.015em;
+    color: var(--mud-palette-text-primary) !important;
+}
+
+.edit-habit-header__cancel {
+    color: var(--mud-palette-text-secondary) !important;
+    text-transform: none !important;
+    min-width: auto;
+    padding: 0.45rem 0.85rem !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    font-size: 0.875rem !important;
+    transition: all 0.2s ease !important;
+}
+
+.edit-habit-header__cancel:hover {
+    color: var(--mud-palette-text-primary) !important;
+    background-color: var(--mud-palette-action-hover) !important;
+}
+
+.edit-habit-header__save {
+    background: var(--mud-palette-primary) !important;
+    color: var(--mud-palette-primary-contrast-text) !important;
+    text-transform: none !important;
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    min-width: 5rem !important;
+    padding: 0.45rem 1.15rem !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--mud-palette-primary) 30%, transparent) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.edit-habit-header__save:hover:not([disabled]) {
+    background: var(--mud-palette-primary-darken) !important;
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--mud-palette-primary) 40%, transparent) !important;
+    transform: translateY(-1px);
+}
+
+.edit-habit-header__save:active:not([disabled]) {
+    transform: translateY(0);
+}
+
+/* ── Labels & Fields ── */
+.edit-habit-label-header {
+    color: var(--mud-palette-text-secondary) !important;
+    font-weight: 600;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 0.35rem;
+    margin-left: 0.15rem;
+}
+
+.edit-habit-field-header .mud-input-root-outlined,
+.edit-habit-field-body .mud-input-root-outlined {
+    background-color: color-mix(in srgb, var(--mud-palette-background-gray) 35%, var(--mud-palette-surface)) !important;
+    border-radius: 10px !important;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease !important;
+    border: none !important;
+}
+
+.edit-habit-field-header .mud-input-root-outlined:focus-within,
+.edit-habit-field-body .mud-input-root-outlined:focus-within {
+    background-color: var(--mud-palette-surface) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--mud-palette-primary) 15%, transparent) !important;
+}
+
+.edit-habit-field-header .mud-input-outlined-border,
+.edit-habit-field-body .mud-input-outlined-border {
+    border-color: transparent !important;
+    border-width: 1px !important;
+    transition: border-color 0.2s ease !important;
+}
+
+.edit-habit-field-header .mud-input-root-outlined:hover .mud-input-outlined-border,
+.edit-habit-field-body .mud-input-root-outlined:hover .mud-input-outlined-border {
+    border-color: var(--mud-palette-divider) !important;
+}
+
+.edit-habit-field-header .mud-input-root-outlined.mud-input-focused .mud-input-outlined-border,
+.edit-habit-field-body .mud-input-root-outlined.mud-input-focused .mud-input-outlined-border {
+    border-color: var(--mud-palette-primary) !important;
+    border-width: 1.5px !important;
+}
+
+.edit-habit-field-header .mud-input-slot,
+.edit-habit-field-body .mud-input-slot {
+    color: var(--mud-palette-text-primary);
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.edit-habit-field-header input,
+.edit-habit-field-header textarea,
+.edit-habit-field-body input {
+    color: var(--mud-palette-text-primary) !important;
+}
+
+.edit-habit-field-header textarea.mud-input-slot {
+    field-sizing: content;
+    height: auto;
+    min-height: 3lh;
+    max-height: 10lh;
+}
+
+/* ── Body Layout ── */
+.edit-habit-body {
+    background: var(--mud-palette-surface);
+    padding: 1rem 1.25rem 1.5rem;
+    color: var(--mud-palette-text-primary);
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.edit-habit-label-body {
+    color: var(--mud-palette-text-secondary) !important;
+    font-weight: 600;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 0.35rem;
+    margin-left: 0.15rem;
+}
+
+.edit-habit-select {
+    width: 100%;
+}
+
+/* ── Habit Track Option Buttons (+ / -) ── */
+.habit-track {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+    padding-top: 0.15rem;
+    width: 100%;
+}
+
+.habit-track__option {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    background-color: color-mix(in srgb, var(--mud-palette-background-gray) 30%, var(--mud-palette-surface));
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 10px;
+    padding: 0.65rem 0.85rem;
+    cursor: pointer;
+    color: var(--mud-palette-text-secondary);
+    transition: all 0.2s ease;
+}
+
+.habit-track__option:hover {
+    background-color: color-mix(in srgb, var(--mud-palette-background-gray) 45%, var(--mud-palette-surface));
+    border-color: var(--mud-palette-text-secondary);
+}
+
+.habit-track__circle {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.habit-track__circle--good {
+    background-color: color-mix(in srgb, #22c55e 12%, transparent);
+    color: #16a34a;
+}
+
+.habit-track__circle--bad {
+    background-color: color-mix(in srgb, #dc2626 12%, transparent);
+    color: #dc2626;
+}
+
+.habit-track__label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+    transition: all 0.2s ease;
+}
+
+/* Option selected states */
+.habit-track__option--on-good {
+    background-color: color-mix(in srgb, #22c55e 6%, var(--mud-palette-surface)) !important;
+    border-color: #22c55e !important;
+    box-shadow: 0 4px 12px color-mix(in srgb, #22c55e 12%, transparent) !important;
+}
+
+.habit-track__option--on-good:hover {
+    background-color: color-mix(in srgb, #22c55e 10%, var(--mud-palette-surface)) !important;
+    box-shadow: 0 6px 16px color-mix(in srgb, #22c55e 20%, transparent) !important;
+}
+
+.habit-track__option--on-good .habit-track__circle--good {
+    background-color: #15803d !important;
+    color: #ffffff !important;
+}
+
+.habit-track__option--on-good .habit-track__label {
+    color: var(--mud-palette-text-primary) !important;
+    font-weight: 750 !important;
+}
+
+.habit-track__option--on-bad {
+    background-color: color-mix(in srgb, #dc2626 6%, var(--mud-palette-surface)) !important;
+    border-color: #dc2626 !important;
+    box-shadow: 0 4px 12px color-mix(in srgb, #dc2626 12%, transparent) !important;
+}
+
+.habit-track__option--on-bad:hover {
+    background-color: color-mix(in srgb, #dc2626 10%, var(--mud-palette-surface)) !important;
+    box-shadow: 0 6px 16px color-mix(in srgb, #dc2626 20%, transparent) !important;
+}
+
+.habit-track__option--on-bad .habit-track__circle--bad {
+    background-color: #dc2626 !important;
+    color: #ffffff !important;
+}
+
+.habit-track__option--on-bad .habit-track__label {
+    color: var(--mud-palette-text-primary) !important;
+    font-weight: 750 !important;
+}
+
+/* ── Advanced section ── */
+.edit-habit-advanced .mud-expand-panel {
+    background: color-mix(in srgb, var(--mud-palette-background-gray) 30%, var(--mud-palette-surface)) !important;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 10px !important;
+}
+
+.edit-habit-advanced .mud-expand-panel-header {
+    padding: 0.6rem 0.85rem;
+    min-height: unset;
+}
+
+.edit-habit-advanced .mud-expand-panel-content {
+    border-top: 1px solid var(--mud-palette-divider);
+    padding: 0.75rem 0.85rem 0.85rem;
+}
+
+.counter-adjust {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+}
+
+.counter-adjust__btn {
+    color: var(--mud-palette-text-secondary) !important;
+}
+
+.counter-adjust__field {
+    width: 5rem;
+    flex-shrink: 0;
+}
+
+.counter-adjust__field .mud-input-outlined-border {
+    border-color: var(--mud-palette-divider) !important;
+}
+
+.edit-habit-delete-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid var(--mud-palette-divider);
+}
+
+.edit-habit-delete-wrap .mud-button-label {
+    text-transform: none;
+    font-weight: 600;
+    font-size: 0.8rem;
 }

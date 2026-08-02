@@ -265,29 +265,11 @@
     line-height: 1.15 !important;
 }
 
-.app-top-bar__section {
-    color: var(--mud-palette-text-secondary) !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.02em;
-    line-height: 1.2 !important;
-    margin-top: 0.05rem;
-}
-
 .app-header-profile-btn.mud-icon-button {
     width: 2.5rem;
     height: 2.5rem;
     border-radius: 12px !important;
     background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent) !important;
-}
-
-/* Micro-animations */
-@keyframes branding-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.85; transform: scale(1.04); }
-}
-
-.animate-pulse {
-    animation: branding-pulse 3s infinite ease-in-out;
 }
 
 /* Account rail */
@@ -317,13 +299,6 @@
 
 .app-profile-menu-popover .dropdown-header {
     background-color: color-mix(in srgb, var(--mud-palette-text-primary) 4%, transparent);
-}
-
-@media (max-width: 767.98px) {
-    .board-main-container.mud-container {
-        padding-left: 0.75rem !important;
-        padding-right: 0.75rem !important;
-    }
 }
 
 .status-bar-safe-area {

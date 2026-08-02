@@ -348,12 +348,6 @@
     background: #dc2626;
 }
 
-.board-sq-spacer {
-    width: 1.65rem;
-    height: 1.65rem;
-    flex-shrink: 0;
-}
-
 .board-check {
     display: inline-flex;
     align-items: center;
@@ -402,8 +396,7 @@
         min-height: 2.25rem;
     }
 
-    .board-sq,
-    .board-sq-spacer {
+    .board-sq {
         width: 2.25rem;
         height: 2.25rem;
     }

@@ -59,7 +59,7 @@ body {
 }
 
 /* Orphan prevention and wrapping optimization */
-h1, h2, h3, h4, h5, h6, .app-page-title, .edit-daily-header__title {
+h1, h2, h3, h4, h5, h6, .edit-daily-header__title {
     text-wrap: balance;
 }
 

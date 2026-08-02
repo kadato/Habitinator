@@ -227,24 +227,6 @@ button.stats-heatmap-day-btn.stats-heatmap-day--today:hover {
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary) 30%);
 }
 
-.stats-contrib-legend {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin-top: 0.3rem;
-    flex-wrap: wrap;
-}
-
-.stats-contrib-legend--binary {
-    gap: 0.35rem 0.6rem;
-}
-
-.stats-legend-cells {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-}
-
 .stats-legend-swatch {
     width: 14px;
     height: 14px;
@@ -290,12 +272,6 @@ button.stats-heatmap-day-btn.stats-heatmap-day--today:hover {
     .stats-dashboard-sidebar {
         flex: 0 0 320px;
         max-width: 320px;
-    }
-}
-
-@media (max-width: 959.98px) {
-    .stats-dashboard-sidebar {
-        order: -1;
     }
 }
 

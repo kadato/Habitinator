@@ -190,45 +190,9 @@ a:hover, .btn-link:hover {
     color: var(--mud-palette-primary-darken);
 }
 
-.btn-primary {
-    color: #fff;
-    background-color: #2563eb;
-    border-color: #1d4ed8;
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+/* Focus ring for auth-page checkboxes (form/button styling lives in auth-pages.css) */
+.form-check-input:focus {
   box-shadow: 0 0 0 0.1rem var(--mud-palette-surface), 0 0 0 0.25rem var(--mud-palette-primary);
-}
-
-.form-control {
-    background-color: var(--mud-palette-surface);
-    color: var(--mud-palette-text-primary);
-    border-color: var(--mud-palette-divider);
-}
-
-.form-control::placeholder {
-    color: var(--mud-palette-text-disabled);
-}
-
-.form-control:focus {
-    background-color: var(--mud-palette-background);
-    color: var(--mud-palette-text-primary);
-    border-color: var(--mud-palette-primary);
-}
-
-.form-control:disabled,
-.form-control[readonly] {
-    background-color: var(--mud-palette-background-gray);
-    opacity: 0.7;
-}
-
-.content label,
-.form-label {
-    color: var(--mud-palette-text-secondary);
-}
-
-.form-check-label {
-    color: var(--mud-palette-text-secondary);
 }
 
 /* Cap content line lengths for readability */
@@ -236,75 +200,11 @@ a:hover, .btn-link:hover {
     max-width: 55ch;
 }
 
-.form-check-input {
-    background-color: var(--mud-palette-surface);
-    border-color: var(--mud-palette-divider);
-}
-
-.form-check-input:checked {
-    background-color: var(--mud-palette-primary);
-    border-color: var(--mud-palette-primary);
-}
-
-.btn-outline-secondary {
-    color: var(--mud-palette-text-secondary);
-    border-color: var(--mud-palette-divider);
-}
-
-.btn-outline-secondary:hover {
-    color: var(--mud-palette-text-primary);
-    background-color: var(--mud-palette-action-hover);
-    border-color: var(--mud-palette-text-secondary);
-}
-
-.demo-account-card {
-    background: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: 0.375rem;
-    padding: 1rem;
-}
-
-.demo-account-title {
-    color: var(--mud-palette-text-secondary);
-    font-size: 0.8125rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    margin-bottom: 0.75rem;
-}
-
-.content {
-    padding-top: 1.1rem;
-}
-
 .auth-form-hint {
     color: var(--mud-palette-text-secondary);
     font-size: 0.875rem;
     line-height: 1.45;
     margin: 0 0 0.75rem 0;
-}
-
-.app-top-row {
-    background: var(--mud-palette-surface);
-    border-bottom: 1px solid var(--mud-palette-divider);
-    color: var(--mud-palette-text-secondary);
-    justify-content: flex-start;
-}
-
-h1:focus {
-    outline: none;
-}
-
-.valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
-}
-
-.invalid {
-    outline: 1px solid #e50000;
-}
-
-.validation-message {
-    color: #e50000;
 }
 
 .blazor-error-boundary {
@@ -369,23 +269,6 @@ h1:focus {
 .mud-dialog:has(.daily-yesterday-shell) .mud-dialog-content {
     padding: 0 !important;
     overflow: visible !important;
-}
-
-/* Consistent top-of-page titles (Settings, Statistics, etc.) */
-.app-page-title {
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: var(--mud-palette-text-primary);
-    border-bottom: 1px solid var(--mud-palette-divider);
-    padding-bottom: 0.5rem;
-    margin-bottom: 1rem;
-    max-width: 75ch;
-}
-
-@media (max-width: 959.98px) {
-    .app-page-title {
-        display: none;
-    }
 }
 
 /* Settings section switcher */
@@ -727,28 +610,7 @@ h1:focus {
     width: 100%;
 }
 
-.settings-tabs ::deep .mud-tabs-toolbar {
-    min-height: 48px;
-}
-
-.settings-tabs ::deep .mud-tab {
-    min-height: 48px;
-    text-transform: none;
-    font-weight: 600;
-}
-
 @media (max-width: 479.98px) {
-    .settings-tabs ::deep .mud-tab {
-        min-height: 40px;
-        padding-left: 0.65rem;
-        padding-right: 0.65rem;
-        font-size: 0.8rem;
-    }
-
-    .settings-tabs ::deep .mud-tabs-toolbar {
-        min-height: 40px;
-    }
-
     .settings-page-wrapper .mud-paper.settings-section-paper {
         padding: 0.85rem !important;
     }
@@ -927,12 +789,6 @@ h1:focus {
     font-size: 0.95rem !important;
     letter-spacing: -0.01em;
     color: var(--mud-palette-text-primary) !important;
-}
-
-.activity-day-detail-tag {
-    font-style: normal;
-    color: var(--mud-palette-text-secondary);
-    font-size: 0.85rem;
 }
 
 /* Modern Timeline/List Table Layout */

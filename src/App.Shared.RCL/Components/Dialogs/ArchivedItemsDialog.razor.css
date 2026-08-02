@@ -10,24 +10,6 @@
     }
 }
 
-/* Theme variables for different card types */
-:host {
-    --type-habit-color: #8b5cf6; /* Violet */
-    --type-habit-bg: rgba(139, 92, 246, 0.06);
-    --type-habit-border: rgba(139, 92, 246, 0.15);
-    --type-habit-hover: rgba(139, 92, 246, 0.12);
-    
-    --type-daily-color: #0d9488; /* Teal */
-    --type-daily-bg: rgba(13, 148, 136, 0.06);
-    --type-daily-border: rgba(13, 148, 136, 0.15);
-    --type-daily-hover: rgba(13, 148, 136, 0.12);
-    
-    --type-todo-color: #f59e0b; /* Amber */
-    --type-todo-bg: rgba(245, 158, 11, 0.06);
-    --type-todo-border: rgba(245, 158, 11, 0.15);
-    --type-todo-hover: rgba(245, 158, 11, 0.12);
-}
-
 /* deep targets the dialog wrapper since it is dynamically appended by MudBlazor */
 ::deep .archived-dialog {
     background: var(--mud-palette-surface) !important;

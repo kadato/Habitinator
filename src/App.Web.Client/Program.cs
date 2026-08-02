@@ -9,7 +9,7 @@ using Microsoft.JSInterop;
 using MudBlazor;
 using MudBlazor.Services;
 
-WebAssemblyHostBuilder builder = WebAssemblyHostBuilder.CreateDefault(args);
+var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 // Suppress verbose HttpClient logs (only show warnings/errors)
 builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
@@ -30,7 +30,7 @@ builder.Services.AddHttpClient("api", client => client.BaseAddress = baseUri);
 
 // Register platform abstractions
 builder.Services.AddSingleton<ILocalSettingsStore, WasmLocalSettingsStore>();
-builder.Services.AddScoped<IClientSessionProvider, WasmClientSessionProvider>();
+builder.Services.AddScoped<IClientSessionProvider, ClientSessionProvider>();
 
 // Register authentication state providers
 builder.Services.AddAuthorizationCore();
@@ -54,8 +54,8 @@ builder.Services.AddScoped<IUndoService, UndoService>();
 builder.Services.AddScoped<RemoteBoardDataService>();
 builder.Services.AddScoped<IBoardDataService>(sp =>
 {
-    RemoteBoardDataService inner = sp.GetRequiredService<RemoteBoardDataService>();
-    IUndoService undoService = sp.GetRequiredService<IUndoService>();
+    var inner = sp.GetRequiredService<RemoteBoardDataService>();
+    var undoService = sp.GetRequiredService<IUndoService>();
     return new UndoableBoardDataService(inner, undoService);
 });
 
@@ -71,10 +71,10 @@ builder.Services.AddScoped<INotificationSettingsRules, NotificationSettingsRules
 builder.Services.AddScoped<IUserDateFormatService, UserDateFormatService>();
 builder.Services.AddScoped<IAccountActionsService, RemoteAccountActionsService>();
 
-WebAssemblyHost host = builder.Build();
+var host = builder.Build();
 try
 {
-    IJSRuntime js = host.Services.GetRequiredService<IJSRuntime>();
+    var js = host.Services.GetRequiredService<IJSRuntime>();
     await js.InvokeVoidAsync("habUpdateProgress", "Starting application\u2026", 90);
     await js.InvokeVoidAsync("habitinatorSetWasmLoaded");
 }

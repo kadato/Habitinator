@@ -1,16 +1,14 @@
 using System.Security.Claims;
 
-using App.Shared.RCL.Services;
-
 using Microsoft.AspNetCore.Components.Authorization;
 
-namespace App.Web.Services;
+namespace App.Shared.RCL.Services;
 
-public sealed class WebClientSessionProvider : IClientSessionProvider, IDisposable
+public sealed class ClientSessionProvider : IClientSessionProvider, IDisposable
 {
     private readonly AuthenticationStateProvider _auth;
 
-    public WebClientSessionProvider(AuthenticationStateProvider auth)
+    public ClientSessionProvider(AuthenticationStateProvider auth)
     {
         _auth = auth;
         _auth.AuthenticationStateChanged += OnAuthenticationStateChanged;

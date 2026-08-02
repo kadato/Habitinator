@@ -881,7 +881,7 @@ h1:focus {
     gap: 0.75rem !important;
 }
 
-.mud-dialog .mud-dialog-actions ::deep .mud-button {
+.mud-dialog .mud-dialog-actions .mud-button {
     text-transform: none !important;
     font-weight: 600 !important;
     border-radius: 8px !important;

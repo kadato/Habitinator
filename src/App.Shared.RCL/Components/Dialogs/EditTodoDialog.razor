@@ -20,8 +20,7 @@
                                    Color="Color.Primary"
                                    Size="Size.Medium"
                                    Class="edit-daily-header__save"
-                                   OnClick="SaveAsync"
-                                   Disabled="@_saving">
+                                   OnClick="SaveAsync">
                             Save
                         </MudButton>
                     </MudStack>
@@ -194,16 +193,14 @@
                                    Color="Color.Warning"
                                    Size="Size.Small"
                                    StartIcon="@Icons.Material.Outlined.Archive"
-                                   OnClick="ArchiveAsync"
-                                   Disabled="@_saving">
+                                   OnClick="ArchiveAsync">
                             Archive
                         </MudButton>
                         <MudButton Variant="Variant.Text"
                                    Color="Color.Error"
                                    Size="Size.Small"
                                    StartIcon="@Icons.Material.Outlined.DeleteOutline"
-                                   OnClick="DeleteAsync"
-                                   Disabled="@_saving">
+                                   OnClick="DeleteAsync">
                             Delete
                         </MudButton>
                     </MudStack>
@@ -236,7 +233,6 @@
     private List<ChecklistRow> _checklistRows = [];
     private bool _checklistOpen = true;
     private DateTime? _dueDate;
-    private static bool _saving => false;
 
     protected override async Task OnInitializedAsync()
     {

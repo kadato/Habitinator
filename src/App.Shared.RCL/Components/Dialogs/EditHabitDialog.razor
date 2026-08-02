@@ -19,8 +19,7 @@
                        Color="Color.Primary"
                        Size="Size.Medium"
                        Class="edit-habit-header__save"
-                       OnClick="SaveAsync"
-                       Disabled="@_saving">
+                       OnClick="SaveAsync">
                 Save
             </MudButton>
         </MudStack>
@@ -236,7 +235,7 @@
                                    aria-label="Decrease + count"
                                    Class="counter-adjust__btn"
                                    OnClick="DecrementPlusLocal"
-                                   Disabled="@(_counter < 1 || _saving)"/>
+                                   Disabled="@(_counter < 1)"/>
                     <MudNumericField @bind-Value="_counter"
                                      Variant="Variant.Outlined"
                                      Class="counter-adjust__field"
@@ -246,8 +245,7 @@
                     <MudIconButton Icon="@Icons.Material.Filled.Add"
                                    aria-label="Increase + count"
                                    Class="counter-adjust__btn"
-                                   OnClick="IncrementPlusLocal"
-                                   Disabled="@_saving"/>
+                                   OnClick="IncrementPlusLocal"/>
                 </div>
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">Adjust − count</MudText>
                 <div class="counter-adjust">
@@ -255,7 +253,7 @@
                                    aria-label="Decrease − count"
                                    Class="counter-adjust__btn"
                                    OnClick="DecrementMinusLocal"
-                                   Disabled="@(_negativeCounter < 1 || _saving)"/>
+                                   Disabled="@(_negativeCounter < 1)"/>
                     <MudNumericField @bind-Value="_negativeCounter"
                                      Variant="Variant.Outlined"
                                      Class="counter-adjust__field"
@@ -265,8 +263,7 @@
                     <MudIconButton Icon="@Icons.Material.Filled.Add"
                                    aria-label="Increase − count"
                                    Class="counter-adjust__btn"
-                                   OnClick="IncrementMinusLocal"
-                                   Disabled="@_saving"/>
+                                   OnClick="IncrementMinusLocal"/>
                 </div>
             </ChildContent>
         </MudExpansionPanel>
@@ -278,16 +275,14 @@
                        Color="Color.Warning"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Outlined.Archive"
-                       OnClick="ArchiveAsync"
-                       Disabled="@_saving">
+                       OnClick="ArchiveAsync">
                 Archive
             </MudButton>
             <MudButton Variant="Variant.Text"
                        Color="Color.Error"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Outlined.DeleteOutline"
-                       OnClick="DeleteAsync"
-                       Disabled="@_saving">
+                       OnClick="DeleteAsync">
                 Delete
             </MudButton>
         </MudStack>
@@ -315,7 +310,6 @@
     private int _counter;
     private int _negativeCounter;
     private bool _advancedOpen;
-    private static bool _saving => false;
 
     private sealed class ChecklistRow
     {

@@ -33,10 +33,10 @@ public sealed partial class LocalFirstBoardDataService(
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
             await db.BoardItems.ExecuteDeleteAsync(cancellationToken);
             await db.Outbox.ExecuteDeleteAsync(cancellationToken);
-            LocalBoardStoreMetaRow? meta = await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken);
+            var meta = await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken);
             if (meta is null)
             {
                 db.Meta.Add(new LocalBoardStoreMetaRow { Id = 1, BoundUserKey = null });
@@ -61,7 +61,7 @@ public sealed partial class LocalFirstBoardDataService(
 
         string? userKey = null;
         BoardSnapshot snap;
-        bool shouldFetchRemote = false;
+        var shouldFetchRemote = false;
 
         await _gate.WaitAsync(cancellationToken);
         try
@@ -77,7 +77,7 @@ public sealed partial class LocalFirstBoardDataService(
                 return EmptySnapshot();
             }
 
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
             await EnsureUserScopeAsync(db, userKey, cancellationToken);
             snap = ReadSnapshot(db, userKey);
 
@@ -109,7 +109,7 @@ public sealed partial class LocalFirstBoardDataService(
                 await _gate.WaitAsync(cancellationToken);
                 try
                 {
-                    await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
+                    await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
                     await ReplaceMirrorAsync(db, userKey, fresh, cancellationToken);
                     snap = ReadSnapshot(db, userKey);
                 }
@@ -135,15 +135,15 @@ public sealed partial class LocalFirstBoardDataService(
                 return null;
             }
 
-            string? userKey = await ResolveUserKeyAsync(cancellationToken);
+            var userKey = await ResolveUserKeyAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(userKey))
             {
                 return null;
             }
 
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
             await EnsureUserScopeAsync(db, userKey, cancellationToken);
-            LocalBoardItemRow? row = await db.BoardItems.AsNoTracking()
+            var row = await db.BoardItems.AsNoTracking()
                 .FirstOrDefaultAsync(
                     x => x.UserKey == userKey && x.Id == itemId && !x.IsArchived,
                     cancellationToken);
@@ -158,7 +158,7 @@ public sealed partial class LocalFirstBoardDataService(
     public async Task<Dictionary<Guid, int>> GetStreakMapAsync(CancellationToken cancellationToken = default)
     {
         await EnsureLocalStoreSchemaAsync(cancellationToken);
-        string? userKey = await ResolveUserKeyAsync(cancellationToken);
+        var userKey = await ResolveUserKeyAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(userKey))
         {
             return [];
@@ -167,7 +167,7 @@ public sealed partial class LocalFirstBoardDataService(
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
             var dailies = await db.BoardItems
                 .Where(x => x.UserKey == userKey && !x.IsArchived && x.Section == BoardSection.Daily)
                 .Select(x => new { x.Id, x.Counter })
@@ -195,7 +195,7 @@ public sealed partial class LocalFirstBoardDataService(
                 return;
             }
 
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
             await db.Database.EnsureCreatedAsync(cancellationToken);
             try
             {
@@ -224,9 +224,9 @@ public sealed partial class LocalFirstBoardDataService(
         MutateWithSyncAsync(
             async (db, userKey) =>
             {
-                Guid id = itemId ?? Guid.NewGuid();
-                DateTimeOffset now = DateTimeOffset.UtcNow;
-                double sortOrder = await GetInitialLocalSortOrderAsync(db, userKey, section, cancellationToken);
+                var id = itemId ?? Guid.NewGuid();
+                var now = DateTimeOffset.UtcNow;
+                var sortOrder = await GetInitialLocalSortOrderAsync(db, userKey, section, cancellationToken);
                 BoardItem item = new(id, ZalgoSanitizer.SanitizeAndTrim(title), CreatedAtUtc: now, SortOrder: sortOrder);
                 db.BoardItems.Add(LocalBoardItemRow.FromModel(section, userKey, item, true));
                 CreateOutboxPayload payload = new(section, item.Title, id);
@@ -241,7 +241,7 @@ public sealed partial class LocalFirstBoardDataService(
         MutateWithSyncAsync(
             async (db, userKey) =>
             {
-                LocalBoardItemRow? row = await db.BoardItems.FirstOrDefaultAsync(
+                var row = await db.BoardItems.FirstOrDefaultAsync(
                     x => x.UserKey == userKey && x.Id == itemId,
                     cancellationToken);
                 if (row is null)
@@ -249,7 +249,7 @@ public sealed partial class LocalFirstBoardDataService(
                     return null;
                 }
 
-                DateTimeOffset? expected = row.ServerUpdatedAtUtc;
+                var expected = row.ServerUpdatedAtUtc;
                 row.Title = ZalgoSanitizer.SanitizeAndTrim(title);
                 Enqueue(
                     db,
@@ -271,7 +271,7 @@ public sealed partial class LocalFirstBoardDataService(
                     return true;
                 }
 
-                LocalBoardItemRow? row = await db.BoardItems.FirstOrDefaultAsync(
+                var row = await db.BoardItems.FirstOrDefaultAsync(
                     x => x.UserKey == userKey && x.Id == itemId,
                     cancellationToken);
                 if (row is null)
@@ -279,7 +279,7 @@ public sealed partial class LocalFirstBoardDataService(
                     return false;
                 }
 
-                DateTimeOffset? expected = row.ServerUpdatedAtUtc;
+                var expected = row.ServerUpdatedAtUtc;
                 db.BoardItems.Remove(row);
                 Enqueue(
                     db,
@@ -296,7 +296,7 @@ public sealed partial class LocalFirstBoardDataService(
         MutateWithSyncAsync(
             async (db, userKey) =>
             {
-                LocalBoardItemRow? row = await db.BoardItems.FirstOrDefaultAsync(
+                var row = await db.BoardItems.FirstOrDefaultAsync(
                     x => x.UserKey == userKey && x.Id == itemId,
                     cancellationToken);
                 if (row is null)
@@ -304,7 +304,7 @@ public sealed partial class LocalFirstBoardDataService(
                     return null;
                 }
 
-                DateTimeOffset? expected = row.ServerUpdatedAtUtc;
+                var expected = row.ServerUpdatedAtUtc;
                 row.IsArchived = true;
                 row.ServerUpdatedAtUtc = DateTimeOffset.UtcNow;
 
@@ -323,7 +323,7 @@ public sealed partial class LocalFirstBoardDataService(
         MutateWithSyncAsync(
             async (db, userKey) =>
             {
-                LocalBoardItemRow? row = await db.BoardItems.FirstOrDefaultAsync(
+                var row = await db.BoardItems.FirstOrDefaultAsync(
                     x => x.UserKey == userKey && x.Id == itemId,
                     cancellationToken);
                 if (row is null)
@@ -331,7 +331,7 @@ public sealed partial class LocalFirstBoardDataService(
                     return null;
                 }
 
-                DateTimeOffset? expected = row.ServerUpdatedAtUtc;
+                var expected = row.ServerUpdatedAtUtc;
                 row.IsArchived = false;
                 row.ServerUpdatedAtUtc = DateTimeOffset.UtcNow;
 
@@ -348,16 +348,16 @@ public sealed partial class LocalFirstBoardDataService(
     public async Task<BoardSnapshot> GetArchivedSnapshotAsync(CancellationToken cancellationToken = default)
     {
         await EnsureLocalStoreSchemaAsync(cancellationToken);
-        await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
-        string? userKey = await ResolveUserKeyAsync(cancellationToken);
+        var userKey = await ResolveUserKeyAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(userKey))
         {
             return EmptySnapshot();
         }
 
-        DateOnly today = DailySchedule.LocalToday(timeZone);
-        List<LocalBoardItemRow> items = await db.BoardItems.AsNoTracking().Where(x => x.UserKey == userKey && x.IsArchived).ToListAsync(cancellationToken);
+        var today = DailySchedule.LocalToday(timeZone);
+        var items = await db.BoardItems.AsNoTracking().Where(x => x.UserKey == userKey && x.IsArchived).ToListAsync(cancellationToken);
 
         List<BoardItem> habits = [.. items.Where(x => x.Section == BoardSection.Habit)
             .OrderBy(x => x.SortOrder ?? double.MaxValue)
@@ -384,7 +384,7 @@ public sealed partial class LocalFirstBoardDataService(
         MutateWithSyncAsync(
             async (db, userKey) =>
             {
-                LocalBoardItemRow? row = await db.BoardItems.FirstOrDefaultAsync(
+                var row = await db.BoardItems.FirstOrDefaultAsync(
                     x => x.UserKey == userKey && x.Id == itemId,
                     cancellationToken);
                 if (row is null)
@@ -392,7 +392,7 @@ public sealed partial class LocalFirstBoardDataService(
                     return null;
                 }
 
-                DateTimeOffset? expected = row.ServerUpdatedAtUtc;
+                var expected = row.ServerUpdatedAtUtc;
                 ApplyLocalToggle(section, row);
                 Enqueue(
                     db,
@@ -409,7 +409,7 @@ public sealed partial class LocalFirstBoardDataService(
         MutateWithSyncAsync(
             async (db, userKey) =>
             {
-                LocalBoardItemRow? row = await db.BoardItems.FirstOrDefaultAsync(
+                var row = await db.BoardItems.FirstOrDefaultAsync(
                     x => x.UserKey == userKey && x.Id == itemId && x.Section == BoardSection.Daily,
                     cancellationToken);
                 if (row is null)
@@ -417,7 +417,7 @@ public sealed partial class LocalFirstBoardDataService(
                     return null;
                 }
 
-                DateTimeOffset? expected = row.ServerUpdatedAtUtc;
+                var expected = row.ServerUpdatedAtUtc;
                 row.DailyLastCompletedOn = completedOn;
                 row.IsCompleted = true;
                 Enqueue(
@@ -434,7 +434,7 @@ public sealed partial class LocalFirstBoardDataService(
         MutateWithSyncAsync(
             async (db, userKey) =>
             {
-                LocalBoardItemRow? row = await db.BoardItems.FirstOrDefaultAsync(
+                var row = await db.BoardItems.FirstOrDefaultAsync(
                     x => x.UserKey == userKey && x.Id == itemId && x.Section == BoardSection.Habit,
                     cancellationToken);
                 if (row is null)
@@ -442,7 +442,7 @@ public sealed partial class LocalFirstBoardDataService(
                     return null;
                 }
 
-                DateTimeOffset? expectedInc = row.ServerUpdatedAtUtc;
+                var expectedInc = row.ServerUpdatedAtUtc;
                 if (row.TrackPlus)
                 {
                     row.Counter++;
@@ -462,7 +462,7 @@ public sealed partial class LocalFirstBoardDataService(
         MutateWithSyncAsync(
             async (db, userKey) =>
             {
-                LocalBoardItemRow? row = await db.BoardItems.FirstOrDefaultAsync(
+                var row = await db.BoardItems.FirstOrDefaultAsync(
                     x => x.UserKey == userKey && x.Id == itemId && x.Section == BoardSection.Habit,
                     cancellationToken);
                 if (row is null)
@@ -470,7 +470,7 @@ public sealed partial class LocalFirstBoardDataService(
                     return null;
                 }
 
-                DateTimeOffset? expectedDec = row.ServerUpdatedAtUtc;
+                var expectedDec = row.ServerUpdatedAtUtc;
                 if (row.TrackMinus)
                 {
                     row.NegativeCounter++;
@@ -502,7 +502,7 @@ public sealed partial class LocalFirstBoardDataService(
 
         row.SortOrder = sortOrder.Value;
 
-        bool needsRebalance = await db.BoardItems
+        var needsRebalance = await db.BoardItems
             .AnyAsync(x => x.UserKey == userKey
                         && x.Section == section
                         && x.Id != itemId
@@ -521,7 +521,7 @@ public sealed partial class LocalFirstBoardDataService(
         MutateWithSyncAsync(
             async (db, userKey) =>
             {
-                LocalBoardItemRow? row = await db.BoardItems.FirstOrDefaultAsync(
+                var row = await db.BoardItems.FirstOrDefaultAsync(
                     x => x.UserKey == userKey && x.Id == itemId && x.Section == BoardSection.Habit,
                     cancellationToken);
                 if (row is null)
@@ -529,7 +529,7 @@ public sealed partial class LocalFirstBoardDataService(
                     return null;
                 }
 
-                DateTimeOffset? expected = row.ServerUpdatedAtUtc;
+                var expected = row.ServerUpdatedAtUtc;
                 row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
                 row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
                 row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
@@ -573,7 +573,7 @@ public sealed partial class LocalFirstBoardDataService(
         MutateWithSyncAsync(
             async (db, userKey) =>
             {
-                LocalBoardItemRow? row = await db.BoardItems.FirstOrDefaultAsync(
+                var row = await db.BoardItems.FirstOrDefaultAsync(
                     x => x.UserKey == userKey && x.Id == itemId && x.Section == BoardSection.Todo,
                     cancellationToken);
                 if (row is null)
@@ -581,7 +581,7 @@ public sealed partial class LocalFirstBoardDataService(
                     return null;
                 }
 
-                DateTimeOffset? expectedTodo = row.ServerUpdatedAtUtc;
+                var expectedTodo = row.ServerUpdatedAtUtc;
                 row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
                 row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
                 row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
@@ -617,7 +617,7 @@ public sealed partial class LocalFirstBoardDataService(
         MutateWithSyncAsync(
             async (db, userKey) =>
             {
-                LocalBoardItemRow? row = await db.BoardItems.FirstOrDefaultAsync(
+                var row = await db.BoardItems.FirstOrDefaultAsync(
                     x => x.UserKey == userKey && x.Id == itemId && x.Section == BoardSection.Daily,
                     cancellationToken);
                 if (row is null)
@@ -625,7 +625,7 @@ public sealed partial class LocalFirstBoardDataService(
                     return null;
                 }
 
-                DateTimeOffset? expectedDaily = row.ServerUpdatedAtUtc;
+                var expectedDaily = row.ServerUpdatedAtUtc;
                 row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
                 row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
                 row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
@@ -670,13 +670,13 @@ public sealed partial class LocalFirstBoardDataService(
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
             if (!await HasAuthAsync(cancellationToken))
             {
                 return false;
             }
 
-            string? userKey = await ResolveUserKeyAsync(cancellationToken);
+            var userKey = await ResolveUserKeyAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(userKey))
             {
                 return false;
@@ -684,7 +684,7 @@ public sealed partial class LocalFirstBoardDataService(
 
             await EnsureUserScopeAsync(db, userKey, cancellationToken);
 
-            BoardOutboxRow? head = await db.Outbox
+            var head = await db.Outbox
                 .Where(o => o.UserKey == userKey)
                 .OrderBy(o => o.CreatedAtUtc)
                 .ThenBy(o => o.OperationId)
@@ -697,7 +697,7 @@ public sealed partial class LocalFirstBoardDataService(
 
             if (head.AttemptCount > 0 && head.LastAttemptUtc is { } last)
             {
-                TimeSpan wait = Backoff(head.AttemptCount);
+                var wait = Backoff(head.AttemptCount);
                 if (DateTime.UtcNow < last + wait)
                 {
                     return false;
@@ -718,8 +718,8 @@ public sealed partial class LocalFirstBoardDataService(
             await _gate.WaitAsync(cancellationToken);
             try
             {
-                await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
-                BoardOutboxRow? still = await db.Outbox.FindAsync([operationId], cancellationToken);
+                await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+                var still = await db.Outbox.FindAsync([operationId], cancellationToken);
                 if (still is not null)
                 {
                     db.Outbox.Remove(still);
@@ -744,8 +744,8 @@ public sealed partial class LocalFirstBoardDataService(
             await _gate.WaitAsync(cancellationToken);
             try
             {
-                await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
-                BoardOutboxRow? still = await db.Outbox.FindAsync([operationId], cancellationToken);
+                await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+                var still = await db.Outbox.FindAsync([operationId], cancellationToken);
                 if (still is not null)
                 {
                     still.AttemptCount++;
@@ -804,7 +804,7 @@ public sealed partial class LocalFirstBoardDataService(
     {
         logger.LogWarning(ex, "Outbox operation {OperationId} returned 409 Conflict.", operationId);
 
-        BoardItem? serverItem = ex.ServerItem;
+        var serverItem = ex.ServerItem;
         if (serverItem is null)
         {
             logger.LogWarning("Conflict exception has no server item; dropping op.");
@@ -814,21 +814,21 @@ public sealed partial class LocalFirstBoardDataService(
         }
 
         BoardItem? localItem = null;
-        BoardSection section = BoardSection.Todo;
-        DateTimeOffset localTime = DateTimeOffset.MinValue;
+        var section = BoardSection.Todo;
+        var localTime = DateTimeOffset.MinValue;
 
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            LocalBoardItemRow? row = await db.BoardItems.FindAsync([serverItem.Id], cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            var row = await db.BoardItems.FindAsync([serverItem.Id], cancellationToken);
             if (row is not null)
             {
                 localItem = row.ToModel();
                 section = row.Section;
             }
 
-            BoardOutboxRow? opRow = await db.Outbox.FindAsync([operationId], cancellationToken);
+            var opRow = await db.Outbox.FindAsync([operationId], cancellationToken);
             if (opRow is not null)
             {
                 localTime = new DateTimeOffset(opRow.CreatedAtUtc, TimeSpan.Zero);
@@ -856,7 +856,7 @@ public sealed partial class LocalFirstBoardDataService(
         }
 
         // 2. Last-Write-Wins (LWW) check: compare local update enqueued time against server updated timestamp.
-        DateTimeOffset serverTime = serverItem.ServerUpdatedAtUtc ?? DateTimeOffset.MinValue;
+        var serverTime = serverItem.ServerUpdatedAtUtc ?? DateTimeOffset.MinValue;
         if (localTime >= serverTime)
         {
             logger.LogInformation("Conflict auto-resolved via Last-Write-Wins: Keeping Device version (Local: {LocalTime} >= Server: {ServerTime}).", localTime, serverTime);
@@ -877,11 +877,11 @@ public sealed partial class LocalFirstBoardDataService(
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            BoardOutboxRow? opRow = await db.Outbox.FindAsync([operationId], cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            var opRow = await db.Outbox.FindAsync([operationId], cancellationToken);
             if (opRow is not null)
             {
-                string updatedPayload = BoardOutboxPayloadMapper.RemapExpectedVersion(
+                var updatedPayload = BoardOutboxPayloadMapper.RemapExpectedVersion(
                     opRow.Kind,
                     opRow.PayloadJson,
                     serverItem.ServerUpdatedAtUtc ?? DateTimeOffset.UtcNow);
@@ -907,18 +907,18 @@ public sealed partial class LocalFirstBoardDataService(
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            BoardOutboxRow? opRow = await db.Outbox.FindAsync([operationId], cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            var opRow = await db.Outbox.FindAsync([operationId], cancellationToken);
             if (opRow is not null)
             {
                 db.Outbox.Remove(opRow);
             }
 
-            LocalBoardItemRow? localRow = await db.BoardItems.FindAsync([serverItem.Id], cancellationToken);
+            var localRow = await db.BoardItems.FindAsync([serverItem.Id], cancellationToken);
             if (localRow is not null)
             {
-                string userKey = localRow.UserKey;
-                LocalBoardItemRow updated = LocalBoardItemRow.FromModel(section, userKey, serverItem, false);
+                var userKey = localRow.UserKey;
+                var updated = LocalBoardItemRow.FromModel(section, userKey, serverItem, false);
                 localRow.Title = updated.Title;
                 localRow.IsCompleted = updated.IsCompleted;
                 localRow.Counter = updated.Counter;
@@ -957,19 +957,19 @@ public sealed partial class LocalFirstBoardDataService(
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
             if (!await HasAuthAsync(cancellationToken))
             {
                 return null;
             }
 
-            string? userKey = await ResolveUserKeyAsync(cancellationToken);
+            var userKey = await ResolveUserKeyAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(userKey))
             {
                 return null;
             }
 
-            BoardOutboxRow? row = await db.Outbox
+            var row = await db.Outbox
                 .Where(o => o.UserKey == userKey && o.AttemptCount >= minAttempts)
                 .OrderByDescending(o => o.AttemptCount)
                 .FirstOrDefaultAsync(cancellationToken);
@@ -991,7 +991,7 @@ public sealed partial class LocalFirstBoardDataService(
 
     public async Task<bool> TryPullRemoteMirrorAsync(CancellationToken cancellationToken = default)
     {
-        string? userKey = await ResolveUserKeyAsync(cancellationToken);
+        var userKey = await ResolveUserKeyAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(userKey) || !await HasAuthAsync(cancellationToken))
         {
             return false;
@@ -1003,10 +1003,10 @@ public sealed partial class LocalFirstBoardDataService(
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
             await EnsureUserScopeAsync(db, userKey, cancellationToken);
 
-            LocalBoardStoreMetaRow? metaRow = await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken);
+            var metaRow = await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken);
             cursor = metaRow?.LastSyncCursorUtc;
         }
         finally
@@ -1016,7 +1016,7 @@ public sealed partial class LocalFirstBoardDataService(
 
         if (!string.IsNullOrWhiteSpace(cursor))
         {
-            (bool hasResult, bool success) = await TryPullDeltaMirrorAsync(userKey, cursor, cancellationToken);
+            (var hasResult, var success) = await TryPullDeltaMirrorAsync(userKey, cursor, cancellationToken);
             if (hasResult)
             {
                 return success;
@@ -1043,7 +1043,7 @@ public sealed partial class LocalFirstBoardDataService(
             await _gate.WaitAsync(cancellationToken);
             try
             {
-                await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
+                await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
                 if (await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken) is { } metaRow)
                 {
                     metaRow.LastSyncCursorUtc = null;
@@ -1061,11 +1061,11 @@ public sealed partial class LocalFirstBoardDataService(
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            List<BoardOutboxRow> pending = await db.Outbox
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            var pending = await db.Outbox
                 .Where(o => o.UserKey == userKey)
                 .ToListAsync(cancellationToken);
-            HashSet<Guid> skipIds = BoardOutboxReferencedIds.CollectFromPayloads(
+            var skipIds = BoardOutboxReferencedIds.CollectFromPayloads(
                 pending.Select(p => (p.Kind, p.PayloadJson)));
 
             await ApplySyncDeltaAsync(db, userKey, delta, skipIds, cancellationToken);
@@ -1099,7 +1099,7 @@ public sealed partial class LocalFirstBoardDataService(
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
             if (await db.Outbox.AnyAsync(o => o.UserKey == userKey, cancellationToken))
             {
                 return false;
@@ -1121,7 +1121,7 @@ public sealed partial class LocalFirstBoardDataService(
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
             head = await db.Outbox.FindAsync([operationId], cancellationToken)
                    ?? throw new InvalidOperationException("Outbox entry disappeared.");
         }
@@ -1140,17 +1140,17 @@ public sealed partial class LocalFirstBoardDataService(
         {
             case BoardOutboxOperationKind.Create:
                 {
-                    CreateOutboxPayload p = System.Text.Json.JsonSerializer.Deserialize<CreateOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
+                    var p = System.Text.Json.JsonSerializer.Deserialize<CreateOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
                             ?? throw new InvalidOperationException("Invalid create payload.");
-                    BoardItem serverItem = await api.CreateItemAsync(p.Section, p.Title, p.ClientItemId, head.OperationId, cancellationToken);
+                    var serverItem = await api.CreateItemAsync(p.Section, p.Title, p.ClientItemId, head.OperationId, cancellationToken);
                     await CommitCreateSuccessAsync(p.ClientItemId, p.Section, serverItem, head.UserKey, cancellationToken);
                     return;
                 }
             case BoardOutboxOperationKind.Rename:
                 {
-                    RenameOutboxPayload p = System.Text.Json.JsonSerializer.Deserialize<RenameOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
+                    var p = System.Text.Json.JsonSerializer.Deserialize<RenameOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
                             ?? throw new InvalidOperationException("Invalid rename payload.");
-                    BoardItem? updated = await api.RenameItemAsync(
+                    var updated = await api.RenameItemAsync(
                         p.Section,
                         p.ItemId,
                         p.Title,
@@ -1162,7 +1162,7 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.Delete:
                 {
-                    SectionItemOutboxPayload p = System.Text.Json.JsonSerializer.Deserialize<SectionItemOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
+                    var p = System.Text.Json.JsonSerializer.Deserialize<SectionItemOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
                             ?? throw new InvalidOperationException("Invalid delete payload.");
                     _ = await api.DeleteItemAsync(
                         p.Section,
@@ -1174,9 +1174,9 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.Toggle:
                 {
-                    SectionItemOutboxPayload p = System.Text.Json.JsonSerializer.Deserialize<SectionItemOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
+                    var p = System.Text.Json.JsonSerializer.Deserialize<SectionItemOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
                             ?? throw new InvalidOperationException("Invalid toggle payload.");
-                    BoardItem? updated = await api.ToggleItemAsync(
+                    var updated = await api.ToggleItemAsync(
                         p.Section,
                         p.ItemId,
                         head.OperationId,
@@ -1187,9 +1187,9 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.CompleteDailyForDate:
                 {
-                    CompleteDailyOutboxPayload p = System.Text.Json.JsonSerializer.Deserialize<CompleteDailyOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
+                    var p = System.Text.Json.JsonSerializer.Deserialize<CompleteDailyOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
                             ?? throw new InvalidOperationException("Invalid complete-daily payload.");
-                    BoardItem? updated = await api.CompleteDailyForDateAsync(
+                    var updated = await api.CompleteDailyForDateAsync(
                         p.ItemId,
                         p.CompletedOn,
                         head.OperationId,
@@ -1200,9 +1200,9 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.HabitIncrement:
                 {
-                    ItemIdOutboxPayload p = System.Text.Json.JsonSerializer.Deserialize<ItemIdOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
+                    var p = System.Text.Json.JsonSerializer.Deserialize<ItemIdOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
                             ?? throw new InvalidOperationException("Invalid habit+ payload.");
-                    BoardItem? updated = await api.IncrementHabitPlusAsync(
+                    var updated = await api.IncrementHabitPlusAsync(
                         p.ItemId,
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
@@ -1212,9 +1212,9 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.HabitDecrement:
                 {
-                    ItemIdOutboxPayload p = System.Text.Json.JsonSerializer.Deserialize<ItemIdOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
+                    var p = System.Text.Json.JsonSerializer.Deserialize<ItemIdOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
                             ?? throw new InvalidOperationException("Invalid habit− payload.");
-                    BoardItem? updated = await api.IncrementHabitMinusAsync(
+                    var updated = await api.IncrementHabitMinusAsync(
                         p.ItemId,
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
@@ -1224,9 +1224,9 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.UpdateHabit:
                 {
-                    UpdateHabitOutboxPayload p = System.Text.Json.JsonSerializer.Deserialize<UpdateHabitOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
+                    var p = System.Text.Json.JsonSerializer.Deserialize<UpdateHabitOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
                             ?? throw new InvalidOperationException("Invalid habit update payload.");
-                    BoardItem? updated = await api.UpdateHabitAsync(
+                    var updated = await api.UpdateHabitAsync(
                         p.ItemId,
                         new UpdateHabitArgs(
                             p.Title,
@@ -1247,9 +1247,9 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.UpdateTodo:
                 {
-                    UpdateTodoOutboxPayload p = System.Text.Json.JsonSerializer.Deserialize<UpdateTodoOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
+                    var p = System.Text.Json.JsonSerializer.Deserialize<UpdateTodoOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
                             ?? throw new InvalidOperationException("Invalid todo update payload.");
-                    BoardItem? updated = await api.UpdateTodoAsync(
+                    var updated = await api.UpdateTodoAsync(
                         p.ItemId,
                         new UpdateTodoArgs(
                             p.Title,
@@ -1266,9 +1266,9 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.UpdateDaily:
                 {
-                    UpdateDailyOutboxPayload p = System.Text.Json.JsonSerializer.Deserialize<UpdateDailyOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
+                    var p = System.Text.Json.JsonSerializer.Deserialize<UpdateDailyOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
                             ?? throw new InvalidOperationException("Invalid daily update payload.");
-                    BoardItem? updated = await api.UpdateDailyAsync(
+                    var updated = await api.UpdateDailyAsync(
                         p.ItemId,
                         new UpdateDailyArgs(
                             p.Title,
@@ -1288,9 +1288,9 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.Archive:
                 {
-                    SectionItemOutboxPayload p = System.Text.Json.JsonSerializer.Deserialize<SectionItemOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
+                    var p = System.Text.Json.JsonSerializer.Deserialize<SectionItemOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
                             ?? throw new InvalidOperationException("Invalid archive payload.");
-                    BoardItem? updated = await api.ArchiveItemAsync(
+                    var updated = await api.ArchiveItemAsync(
                         p.Section,
                         p.ItemId,
                         head.OperationId,
@@ -1301,9 +1301,9 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.Unarchive:
                 {
-                    SectionItemOutboxPayload p = System.Text.Json.JsonSerializer.Deserialize<SectionItemOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
+                    var p = System.Text.Json.JsonSerializer.Deserialize<SectionItemOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
                             ?? throw new InvalidOperationException("Invalid unarchive payload.");
-                    BoardItem? updated = await api.UnarchiveItemAsync(
+                    var updated = await api.UnarchiveItemAsync(
                         p.Section,
                         p.ItemId,
                         head.OperationId,
@@ -1322,8 +1322,8 @@ public sealed partial class LocalFirstBoardDataService(
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            BoardOutboxRow? still = await db.Outbox.FindAsync([operationId], cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            var still = await db.Outbox.FindAsync([operationId], cancellationToken);
             if (still is not null)
             {
                 db.Outbox.Remove(still);
@@ -1342,8 +1342,8 @@ public sealed partial class LocalFirstBoardDataService(
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            LocalBoardItemRow? old = await db.BoardItems.FindAsync([clientId], cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            var old = await db.BoardItems.FindAsync([clientId], cancellationToken);
             if (old is not null)
             {
                 db.BoardItems.Remove(old);
@@ -1351,7 +1351,7 @@ public sealed partial class LocalFirstBoardDataService(
 
             db.BoardItems.Add(LocalBoardItemRow.FromModel(section, userKey, serverItem, false));
 
-            foreach (BoardOutboxRow row in await db.Outbox.Where(o => o.UserKey == userKey).ToListAsync(cancellationToken))
+            foreach (var row in await db.Outbox.Where(o => o.UserKey == userKey).ToListAsync(cancellationToken))
             {
                 row.PayloadJson = BoardOutboxPayloadMapper.RemapClientToServerId(row.Kind, row.PayloadJson, clientId, serverItem.Id);
             }
@@ -1375,8 +1375,8 @@ public sealed partial class LocalFirstBoardDataService(
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            LocalBoardItemRow? row = await db.BoardItems.FirstOrDefaultAsync(
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            var row = await db.BoardItems.FirstOrDefaultAsync(
                 x => x.UserKey == userKey && x.Id == itemId,
                 cancellationToken);
             if (row is null)
@@ -1384,9 +1384,9 @@ public sealed partial class LocalFirstBoardDataService(
                 return;
             }
 
-            BoardSection section = row.Section;
-            bool awaiting = row.AwaitingServerCreate;
-            LocalBoardItemRow updated = LocalBoardItemRow.FromModel(section, userKey, serverItem, awaiting);
+            var section = row.Section;
+            var awaiting = row.AwaitingServerCreate;
+            var updated = LocalBoardItemRow.FromModel(section, userKey, serverItem, awaiting);
             row.Title = updated.Title;
             row.IsCompleted = updated.IsCompleted;
             row.Counter = updated.Counter;
@@ -1422,8 +1422,8 @@ public sealed partial class LocalFirstBoardDataService(
                 break;
             case BoardSection.Daily:
                 {
-                    DateOnly today = DailySchedule.LocalToday(timeZone);
-                    bool done = row.DailyLastCompletedOn == today || (row.DailyLastCompletedOn is null && row.IsCompleted);
+                    var today = DailySchedule.LocalToday(timeZone);
+                    var done = row.DailyLastCompletedOn == today || (row.DailyLastCompletedOn is null && row.IsCompleted);
                     if (done)
                     {
                         row.DailyLastCompletedOn = null;
@@ -1450,14 +1450,14 @@ public sealed partial class LocalFirstBoardDataService(
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await using LocalBoardDbContext db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
             if (!await HasAuthAsync(cancellationToken))
             {
                 throw new InvalidOperationException("Sign in to change your board.");
             }
 
-            string? userKey = await ResolveUserKeyAsync(cancellationToken);
+            var userKey = await ResolveUserKeyAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(userKey))
             {
                 throw new InvalidOperationException("Sign in to change your board.");
@@ -1512,20 +1512,20 @@ public sealed partial class LocalFirstBoardDataService(
     private static async Task<bool> TryCoalesceDeletePendingCreateAsync(LocalBoardDbContext db, string userKey, Guid itemId,
         CancellationToken cancellationToken)
     {
-        List<BoardOutboxRow> pending = await db.Outbox
+        var pending = await db.Outbox
             .Where(o => o.UserKey == userKey && o.Kind == BoardOutboxOperationKind.Create)
             .ToListAsync(cancellationToken);
 
-        foreach (BoardOutboxRow row in pending)
+        foreach (var row in pending)
         {
-            CreateOutboxPayload? p = System.Text.Json.JsonSerializer.Deserialize<CreateOutboxPayload>(row.PayloadJson, BoardOutboxJson.Options);
+            var p = System.Text.Json.JsonSerializer.Deserialize<CreateOutboxPayload>(row.PayloadJson, BoardOutboxJson.Options);
             if (p?.ClientItemId != itemId)
             {
                 continue;
             }
 
             db.Outbox.Remove(row);
-            LocalBoardItemRow? entity = await db.BoardItems.FindAsync([itemId], cancellationToken);
+            var entity = await db.BoardItems.FindAsync([itemId], cancellationToken);
             if (entity is not null)
             {
                 db.BoardItems.Remove(entity);
@@ -1540,7 +1540,7 @@ public sealed partial class LocalFirstBoardDataService(
 
     private static async Task EnsureUserScopeAsync(LocalBoardDbContext db, string userKey, CancellationToken cancellationToken)
     {
-        LocalBoardStoreMetaRow? meta = await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken);
+        var meta = await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken);
         if (meta is null)
         {
             db.Meta.Add(new LocalBoardStoreMetaRow { Id = 1, BoundUserKey = userKey });
@@ -1562,19 +1562,19 @@ public sealed partial class LocalFirstBoardDataService(
 
     private async Task<string?> ResolveUserKeyAsync(CancellationToken cancellationToken)
     {
-        string? email = await tokens.GetEmailAsync(cancellationToken);
+        var email = await tokens.GetEmailAsync(cancellationToken);
         if (!string.IsNullOrWhiteSpace(email))
         {
             return email.Trim().ToUpperInvariant();
         }
 
-        string? jwt = await tokens.GetAccessTokenAsync(cancellationToken);
+        var jwt = await tokens.GetAccessTokenAsync(cancellationToken);
         if (string.IsNullOrEmpty(jwt))
         {
             return null;
         }
 
-        string? fromJwt = JwtAccessTokenDisplayClaims.TryGetEmail(jwt);
+        var fromJwt = JwtAccessTokenDisplayClaims.TryGetEmail(jwt);
         return string.IsNullOrWhiteSpace(fromJwt) ? null : fromJwt.Trim().ToUpperInvariant();
     }
 
@@ -1583,7 +1583,7 @@ public sealed partial class LocalFirstBoardDataService(
 
     private BoardSnapshot ReadSnapshot(LocalBoardDbContext db, string userKey)
     {
-        DateOnly today = DailySchedule.LocalToday(timeZone);
+        var today = DailySchedule.LocalToday(timeZone);
         List<LocalBoardItemRow> items = [.. db.BoardItems.AsNoTracking().Where(x => x.UserKey == userKey && !x.IsArchived)];
         // Match BoardPersistenceService.GetSnapshotAsync ordering (web app).
         List<BoardItem> habits = [.. items.Where(x => x.Section == BoardSection.Habit)
@@ -1624,17 +1624,17 @@ public sealed partial class LocalFirstBoardDataService(
         try
         {
             await db.BoardItems.Where(x => x.UserKey == userKey).ExecuteDeleteAsync(cancellationToken);
-            foreach (BoardItem h in snap.Habits)
+            foreach (var h in snap.Habits)
             {
                 db.BoardItems.Add(LocalBoardItemRow.FromModel(BoardSection.Habit, userKey, h, false));
             }
 
-            foreach (BoardItem d in snap.Dailies)
+            foreach (var d in snap.Dailies)
             {
                 db.BoardItems.Add(LocalBoardItemRow.FromModel(BoardSection.Daily, userKey, d, false));
             }
 
-            foreach (BoardItem t in snap.Todos)
+            foreach (var t in snap.Todos)
             {
                 db.BoardItems.Add(LocalBoardItemRow.FromModel(BoardSection.Todo, userKey, t, false));
             }
@@ -1667,7 +1667,7 @@ public sealed partial class LocalFirstBoardDataService(
     private static string ComputeMirrorCursor(BoardSnapshot snap)
     {
         DateTimeOffset? m = null;
-        foreach (BoardItem x in snap.Habits.Concat(snap.Dailies).Concat(snap.Todos))
+        foreach (var x in snap.Habits.Concat(snap.Dailies).Concat(snap.Todos))
         {
             if (x.ServerUpdatedAtUtc is { } u)
             {
@@ -1757,13 +1757,13 @@ public sealed partial class LocalFirstBoardDataService(
         List<Guid> syncIds = [.. delta.Items
             .Select(x => x.Item.Id)
             .Where(id => !skipIds.Contains(id))];
-        Dictionary<Guid, LocalBoardItemRow> existingRows = syncIds.Count == 0
+        var existingRows = syncIds.Count == 0
             ? []
             : await db.BoardItems
                 .Where(x => x.UserKey == userKey && syncIds.Contains(x.Id))
                 .ToDictionaryAsync(x => x.Id, cancellationToken);
 
-        foreach (Guid id in delta.DeletedItemIds)
+        foreach (var id in delta.DeletedItemIds)
         {
             if (skipIds.Contains(id))
             {
@@ -1772,21 +1772,21 @@ public sealed partial class LocalFirstBoardDataService(
             await db.BoardItems.Where(x => x.UserKey == userKey && x.Id == id).ExecuteDeleteAsync(cancellationToken);
         }
 
-        foreach (BoardSyncItem entry in delta.Items)
+        foreach (var entry in delta.Items)
         {
             if (skipIds.Contains(entry.Item.Id))
             {
                 continue;
             }
-            existingRows.TryGetValue(entry.Item.Id, out LocalBoardItemRow? row);
+            existingRows.TryGetValue(entry.Item.Id, out var row);
             if (row is null)
             {
                 db.BoardItems.Add(LocalBoardItemRow.FromModel(entry.Section, userKey, entry.Item, false));
                 continue;
             }
 
-            bool awaiting = row.AwaitingServerCreate;
-            LocalBoardItemRow upd = LocalBoardItemRow.FromModel(entry.Section, userKey, entry.Item, awaiting);
+            var awaiting = row.AwaitingServerCreate;
+            var upd = LocalBoardItemRow.FromModel(entry.Section, userKey, entry.Item, awaiting);
             row.Section = upd.Section;
             row.Title = upd.Title;
             row.IsCompleted = upd.IsCompleted;
@@ -1815,7 +1815,7 @@ public sealed partial class LocalFirstBoardDataService(
         BoardSection section,
         CancellationToken cancellationToken)
     {
-        double? min = await db.BoardItems
+        var min = await db.BoardItems
             .Where(x => x.UserKey == userKey && x.Section == section)
             .Select(x => x.SortOrder)
             .MinAsync(cancellationToken);
@@ -1828,17 +1828,18 @@ public sealed partial class LocalFirstBoardDataService(
         BoardSection section,
         CancellationToken cancellationToken)
     {
-        List<LocalBoardItemRow> items = await db.BoardItems
+        var items = await db.BoardItems
             .Where(x => x.UserKey == userKey && x.Section == section)
             .OrderBy(x => x.SortOrder ?? double.MaxValue)
             .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
             .ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);
 
-        double seq = 1.0;
-        foreach (LocalBoardItemRow item in items)
+        var seq = 1.0;
+        foreach (var item in items)
         {
             item.SortOrder = seq;
+            seq += 1.0;
         }
     }
 

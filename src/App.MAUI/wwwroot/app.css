@@ -265,6 +265,19 @@
     line-height: 1.15 !important;
 }
 
+/* On small screens the app bar is a single row, the desktop-only row wrapper
+   must not claim flex space, and the mobile nav must span the full remaining width with equal tabs. */
+@media (max-width: 959.98px) {
+    .mud-appbar.app-top-bar .app-top-bar__row {
+        display: none !important;
+    }
+
+    .mud-appbar.app-top-bar .app-top-bar__stack .app-mobile-nav {
+        flex: 1 1 0% !important;
+        min-width: 0 !important;
+    }
+}
+
 .app-header-profile-btn.mud-icon-button {
     width: 2.5rem;
     height: 2.5rem;

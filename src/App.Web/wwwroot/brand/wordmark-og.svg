@@ -29,13 +29,7 @@
 
   <g transform="translate(80 80)">
     <rect width="88" height="88" rx="20" fill="#3b82f6"/>
-    <g fill="#ffffff" transform="translate(14 14) scale(0.6)">
-      <rect x="24" y="54" width="14" height="26" rx="3"/>
-      <rect x="43" y="38" width="14" height="42" rx="3"/>
-      <rect x="62" y="50" width="14" height="30" rx="3"/>
-      <circle cx="31" cy="46" r="4" fill="#3b82f6"/>
-      <path d="M66 44.5 69 47.5 74 42" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    </g>
+    <g fill="#ffffff" transform="translate(14 14) scale(0.6)"><rect x="24" y="54" width="14" height="26" rx="3"/><rect x="43" y="38" width="14" height="42" rx="3"/><rect x="62" y="50" width="14" height="30" rx="3"/></g>
   </g>
 
   <text class="title" x="200" y="280" fill="#ffffff" font-size="88" letter-spacing="-1">Habitinator</text>

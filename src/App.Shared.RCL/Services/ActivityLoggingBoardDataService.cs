@@ -57,7 +57,7 @@ public sealed class ActivityLoggingBoardDataService(
     public async Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn,
         CancellationToken cancellationToken = default)
     {
-        BoardItem? updated = await _inner.CompleteDailyForDateAsync(itemId, completedOn, cancellationToken);
+        var updated = await _inner.CompleteDailyForDateAsync(itemId, completedOn, cancellationToken);
         if (updated is not null)
         {
             try
@@ -85,8 +85,8 @@ public sealed class ActivityLoggingBoardDataService(
             return await _inner.ToggleItemAsync(section, itemId, cancellationToken);
         }
 
-        BoardSnapshot snap = await _inner.GetSnapshotAsync(cancellationToken);
-        BoardItem? before = section == BoardSection.Daily
+        var snap = await _inner.GetSnapshotAsync(cancellationToken);
+        var before = section == BoardSection.Daily
             ? snap.Dailies.FirstOrDefault(x => x.Id == itemId)
             : snap.Todos.FirstOrDefault(x => x.Id == itemId);
         if (before is null)
@@ -94,15 +94,15 @@ public sealed class ActivityLoggingBoardDataService(
             return await _inner.ToggleItemAsync(section, itemId, cancellationToken);
         }
 
-        DateOnly today = _timeZoneService.LocalToday;
-        bool wasComplete = section == BoardSection.Daily
+        var today = _timeZoneService.LocalToday;
+        var wasComplete = section == BoardSection.Daily
             ? before.DailyLastCompletedOn == today || (before.DailyLastCompletedOn is null && before.IsCompleted)
             : before.IsCompleted;
 
-        BoardItem? updated = await _inner.ToggleItemAsync(section, itemId, cancellationToken);
+        var updated = await _inner.ToggleItemAsync(section, itemId, cancellationToken);
         if (updated is not null)
         {
-            ActivityEventType type = (section, wasComplete) switch
+            var type = (section, wasComplete) switch
             {
                 (BoardSection.Daily, true) => ActivityEventType.DailyUncomplete,
                 (BoardSection.Daily, false) => ActivityEventType.DailyComplete,
@@ -124,7 +124,7 @@ public sealed class ActivityLoggingBoardDataService(
 
     public async Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
-        BoardItem? updated = await _inner.IncrementHabitPlusAsync(itemId, cancellationToken);
+        var updated = await _inner.IncrementHabitPlusAsync(itemId, cancellationToken);
         if (updated is not null)
         {
             try
@@ -146,7 +146,7 @@ public sealed class ActivityLoggingBoardDataService(
 
     public async Task<BoardItem?> IncrementHabitMinusAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
-        BoardItem? updated = await _inner.IncrementHabitMinusAsync(itemId, cancellationToken);
+        var updated = await _inner.IncrementHabitMinusAsync(itemId, cancellationToken);
         if (updated is not null)
         {
             try

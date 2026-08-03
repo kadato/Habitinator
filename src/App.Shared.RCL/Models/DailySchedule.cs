@@ -27,11 +27,11 @@ public static class DailySchedule
 
     private static DateOnly GetLocalDate(IUserTimeZoneService? tz, DateTimeOffset utcNow, TimeSpan? dayStartLocalTime)
     {
-        DateTimeOffset local = tz is { IsDetected: true }
+        var local = tz is { IsDetected: true }
             ? tz.ConvertToLocal(utcNow)
             : utcNow;
 
-        DateTime localDateTime = local.DateTime;
+        var localDateTime = local.DateTime;
         if (dayStartLocalTime is { } start && start > TimeSpan.Zero && start < TimeSpan.FromDays(1) && localDateTime.TimeOfDay < start)
         {
             localDateTime = localDateTime.AddDays(-1);
@@ -83,9 +83,9 @@ public static class DailySchedule
         int rawInterval,
         int streakWindow)
     {
-        int interval = Math.Max(1, Math.Min(999, rawInterval < 1 ? 1 : rawInterval));
-        int s = Math.Min(9999, Math.Max(1, streakWindow));
-        int padDays = repeat switch
+        var interval = Math.Max(1, Math.Min(999, rawInterval < 1 ? 1 : rawInterval));
+        var s = Math.Min(9999, Math.Max(1, streakWindow));
+        var padDays = repeat switch
         {
             DailyRepeatType.Daily => s * interval + 31,
             DailyRepeatType.Weekly => s * 7 * interval + 31,
@@ -94,13 +94,13 @@ public static class DailySchedule
             _ => s * interval + 31
         };
 
-        DateOnly candidate = notAfter.AddDays(-padDays);
+        var candidate = notAfter.AddDays(-padDays);
         if (repeat != DailyRepeatType.Weekly)
         {
             return candidate;
         }
 
-        int dowDelta = ((int)notAfter.DayOfWeek - (int)candidate.DayOfWeek + 7) % 7;
+        var dowDelta = ((int)notAfter.DayOfWeek - (int)candidate.DayOfWeek + 7) % 7;
         candidate = candidate.AddDays(dowDelta);
         if (candidate > notAfter)
         {
@@ -116,8 +116,8 @@ public static class DailySchedule
         int rawInterval,
         DateOnly on)
     {
-        int interval = Math.Max(1, Math.Min(999, rawInterval < 1 ? 1 : rawInterval));
-        DateOnly start = ResolveStartDateOrToday(dailyStart, on);
+        var interval = Math.Max(1, Math.Min(999, rawInterval < 1 ? 1 : rawInterval));
+        var start = ResolveStartDateOrToday(dailyStart, on);
         if (on < start)
         {
             return false;
@@ -165,7 +165,7 @@ public static class DailySchedule
         IReadOnlyList<BoardItem> dailies,
         DateOnly today)
     {
-        DateOnly yesterday = today.AddDays(-1);
+        var yesterday = today.AddDays(-1);
         return [.. dailies
             .Where(d => d.DailyLastCompletedOn != today
                         && IsDueOnDate(d, yesterday))];
@@ -173,7 +173,7 @@ public static class DailySchedule
 
     private static bool IsEveryNDaysFrom(DateOnly start, DateOnly on, int n)
     {
-        int d = (on.ToDateTime(TimeOnly.MinValue) - start.ToDateTime(TimeOnly.MinValue)).Days;
+        var d = (on.ToDateTime(TimeOnly.MinValue) - start.ToDateTime(TimeOnly.MinValue)).Days;
         if (d < 0)
         {
             return false;
@@ -184,7 +184,7 @@ public static class DailySchedule
 
     private static bool IsEveryNWeeksOnSameDowFrom(DateOnly start, DateOnly on, int n)
     {
-        int d = (on.ToDateTime(TimeOnly.MinValue) - start.ToDateTime(TimeOnly.MinValue)).Days;
+        var d = (on.ToDateTime(TimeOnly.MinValue) - start.ToDateTime(TimeOnly.MinValue)).Days;
         if (d < 0)
         {
             return false;
@@ -200,7 +200,7 @@ public static class DailySchedule
             return false;
         }
 
-        int weekIndex = d / 7;
+        var weekIndex = d / 7;
         return weekIndex % n == 0;
     }
 
@@ -211,15 +211,15 @@ public static class DailySchedule
             return false;
         }
 
-        int dueDay = Math.Min(start.Day, DateTime.DaysInMonth(on.Year, on.Month));
+        var dueDay = Math.Min(start.Day, DateTime.DaysInMonth(on.Year, on.Month));
         if (on.Day != dueDay)
         {
             return false;
         }
 
-        int m0 = start.Year * 12 + (start.Month - 1);
-        int m1 = on.Year * 12 + (on.Month - 1);
-        int monthDiff = m1 - m0;
+        var m0 = start.Year * 12 + (start.Month - 1);
+        var m1 = on.Year * 12 + (on.Month - 1);
+        var monthDiff = m1 - m0;
         if (monthDiff < 0)
         {
             return false;
@@ -235,13 +235,13 @@ public static class DailySchedule
             return false;
         }
 
-        int dueDay = Math.Min(start.Day, DateTime.DaysInMonth(on.Year, on.Month));
+        var dueDay = Math.Min(start.Day, DateTime.DaysInMonth(on.Year, on.Month));
         if (on.Month != start.Month || on.Day != dueDay)
         {
             return false;
         }
 
-        int yDiff = on.Year - start.Year;
+        var yDiff = on.Year - start.Year;
         return yDiff >= 0 && yDiff % n == 0;
     }
 }

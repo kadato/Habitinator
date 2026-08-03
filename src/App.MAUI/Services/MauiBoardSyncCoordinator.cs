@@ -74,7 +74,7 @@ public sealed partial class MauiBoardSyncCoordinator : IDisposable
         _status.IsSyncing = true;
         try
         {
-            bool progressed = false;
+            var progressed = false;
             while (await _board.TryDrainOneOutboxOperationAsync(cancellationToken))
             {
                 progressed = true;
@@ -91,7 +91,7 @@ public sealed partial class MauiBoardSyncCoordinator : IDisposable
                 _ = _refresh.NotifyFromRemoteAsync(cancellationToken);
             }
 
-            string? stuck = await _board.TryGetStuckOutboxHintAsync(StuckAfterAttempts, cancellationToken);
+            var stuck = await _board.TryGetStuckOutboxHintAsync(StuckAfterAttempts, cancellationToken);
             _status.SyncProblemMessage = stuck;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

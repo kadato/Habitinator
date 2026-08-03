@@ -56,14 +56,14 @@ public static class TodoOrdering
     {
         ArgumentNullException.ThrowIfNull(reordered);
         ArgumentNullException.ThrowIfNull(getSortOrder);
-        BoardItem item = reordered[insertAt];
-        bool hasPrev = insertAt > 0;
-        bool hasNext = insertAt < reordered.Count - 1;
-        BoardItem? prev = hasPrev ? reordered[insertAt - 1] : null;
-        BoardItem? next = hasNext ? reordered[insertAt + 1] : null;
-        bool itemDated = item.TodoDueDate.HasValue;
-        bool prevDated = prev?.TodoDueDate.HasValue ?? false;
-        bool nextDated = next?.TodoDueDate.HasValue ?? false;
+        var item = reordered[insertAt];
+        var hasPrev = insertAt > 0;
+        var hasNext = insertAt < reordered.Count - 1;
+        var prev = hasPrev ? reordered[insertAt - 1] : null;
+        var next = hasNext ? reordered[insertAt + 1] : null;
+        var itemDated = item.TodoDueDate.HasValue;
+        var prevDated = prev?.TodoDueDate.HasValue ?? false;
+        var nextDated = next?.TodoDueDate.HasValue ?? false;
 
         // Undated item placed just above the dated block: step above previous undated neighbour.
         if (IsPlacedJustAboveDatedBlock(itemDated, hasPrev, prevDated, hasNext, nextDated))
@@ -76,8 +76,8 @@ public static class TodoOrdering
         {
             if (hasNext && nextDated)
             {
-                double nextDisplay = GetActiveDisplayOrder(next!, getSortOrder);
-                double midDisplay = (DatedSortOrderOffset + nextDisplay) / 2.0;
+                var nextDisplay = GetActiveDisplayOrder(next!, getSortOrder);
+                var midDisplay = (DatedSortOrderOffset + nextDisplay) / 2.0;
                 return ToStoredSortOrder(item, midDisplay);
             }
 
@@ -96,7 +96,7 @@ public static class TodoOrdering
                 reordered.Where(x => !x.TodoDueDate.HasValue).Min(getSortOrder));
         }
 
-        double? displayMid = BoardItemReorder.ComputeMidpointSortOrder(
+        var displayMid = BoardItemReorder.ComputeMidpointSortOrder(
             reordered,
             insertAt,
             i => GetActiveDisplayOrder(i, getSortOrder));

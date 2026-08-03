@@ -39,13 +39,13 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
             return;
         }
 
-        string body = await res.Content.ReadAsStringAsync(cancellationToken);
+        var body = await res.Content.ReadAsStringAsync(cancellationToken);
         throw new BoardRemoteConflictException(body);
     }
 
     public async Task<BoardSyncDelta?> TryGetSyncDeltaAsync(string cursor, CancellationToken cancellationToken = default)
     {
-        using HttpResponseMessage res = await Client.GetAsync(
+        using var res = await Client.GetAsync(
             $"api/board/sync?cursor={Uri.EscapeDataString(cursor)}",
             cancellationToken);
         if (res.StatusCode == HttpStatusCode.BadRequest)
@@ -66,10 +66,10 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
     {
         try
         {
-            using HttpResponseMessage res = await Client.GetAsync("api/board", cancellationToken);
+            using var res = await Client.GetAsync("api/board", cancellationToken);
             if (!res.IsSuccessStatusCode)
             {
-                string hint = res.StatusCode == HttpStatusCode.Unauthorized
+                var hint = res.StatusCode == HttpStatusCode.Unauthorized
                     ? " Sign in again if you were logged out."
                     : " Is App.Web running? On Android emulator use 10.0.2.2 instead of 127.0.0.1 (set Api:BaseUrl or HABITINATOR_API_BASE_URL).";
                 throw new InvalidOperationException($"Board request failed ({(int)res.StatusCode}).{hint}");
@@ -98,7 +98,7 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
 
     public async Task<BoardItem?> GetItemAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
-        BoardSnapshot snap = await GetSnapshotAsync(cancellationToken);
+        var snap = await GetSnapshotAsync(cancellationToken);
         return snap.Habits.FirstOrDefault(x => x.Id == itemId)
             ?? snap.Dailies.FirstOrDefault(x => x.Id == itemId)
             ?? snap.Todos.FirstOrDefault(x => x.Id == itemId);
@@ -106,7 +106,7 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
 
     public async Task<Dictionary<Guid, int>> GetStreakMapAsync(CancellationToken cancellationToken = default)
     {
-        using HttpResponseMessage res = await Client.GetAsync("api/board/streaks", cancellationToken);
+        using var res = await Client.GetAsync("api/board/streaks", cancellationToken);
         res.EnsureSuccessStatusCode();
         return (await res.Content.ReadFromJsonAsync<Dictionary<Guid, int>>(Serializer, cancellationToken))
                ?? [];
@@ -128,7 +128,7 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
             Content = JsonContent.Create(new ItemTitleRequest(title, itemId), options: Serializer)
         };
         AddMutationHeaders(req, operationId, null);
-        using HttpResponseMessage res = await Client.SendAsync(req, cancellationToken);
+        using var res = await Client.SendAsync(req, cancellationToken);
         await ThrowIfConflictAsync(res, cancellationToken);
         res.EnsureSuccessStatusCode();
         return (await res.Content.ReadFromJsonAsync<BoardItem>(Serializer, cancellationToken))!;
@@ -151,7 +151,7 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
             Content = JsonContent.Create(new ItemTitleRequest(title), options: Serializer)
         };
         AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
-        using HttpResponseMessage res = await Client.SendAsync(req, cancellationToken);
+        using var res = await Client.SendAsync(req, cancellationToken);
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
 
@@ -168,7 +168,7 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
     {
         using HttpRequestMessage req = new(HttpMethod.Delete, $"api/board/{section}/{itemId}");
         AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
-        using HttpResponseMessage res = await Client.SendAsync(req, cancellationToken);
+        using var res = await Client.SendAsync(req, cancellationToken);
         if (res.StatusCode == HttpStatusCode.NotFound)
         {
             return false;
@@ -191,7 +191,7 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
     {
         using HttpRequestMessage req = new(HttpMethod.Post, $"api/board/{section}/{itemId}/archive");
         AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
-        using HttpResponseMessage res = await Client.SendAsync(req, cancellationToken);
+        using var res = await Client.SendAsync(req, cancellationToken);
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
 
@@ -207,13 +207,13 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
     {
         using HttpRequestMessage req = new(HttpMethod.Post, $"api/board/{section}/{itemId}/unarchive");
         AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
-        using HttpResponseMessage res = await Client.SendAsync(req, cancellationToken);
+        using var res = await Client.SendAsync(req, cancellationToken);
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
 
     public async Task<BoardSnapshot> GetArchivedSnapshotAsync(CancellationToken cancellationToken = default)
     {
-        using HttpResponseMessage res = await Client.GetAsync("api/board/archived", cancellationToken);
+        using var res = await Client.GetAsync("api/board/archived", cancellationToken);
         res.EnsureSuccessStatusCode();
         return (await res.Content.ReadFromJsonAsync<BoardSnapshot>(Serializer, cancellationToken))!;
     }
@@ -231,7 +231,7 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
     {
         using HttpRequestMessage req = new(HttpMethod.Post, $"api/board/{section}/{itemId}/toggle");
         AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
-        using HttpResponseMessage res = await Client.SendAsync(req, cancellationToken);
+        using var res = await Client.SendAsync(req, cancellationToken);
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
 
@@ -251,7 +251,7 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
             Content = JsonContent.Create(new DailyCompleteForDateRequest(completedOn), options: Serializer)
         };
         AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
-        using HttpResponseMessage res = await Client.SendAsync(req, cancellationToken);
+        using var res = await Client.SendAsync(req, cancellationToken);
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
 
@@ -266,7 +266,7 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
     {
         using HttpRequestMessage req = new(HttpMethod.Post, $"api/board/habits/{itemId}/increment");
         AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
-        using HttpResponseMessage res = await Client.SendAsync(req, cancellationToken);
+        using var res = await Client.SendAsync(req, cancellationToken);
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
 
@@ -281,7 +281,7 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
     {
         using HttpRequestMessage req = new(HttpMethod.Post, $"api/board/habits/{itemId}/decrement");
         AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
-        using HttpResponseMessage res = await Client.SendAsync(req, cancellationToken);
+        using var res = await Client.SendAsync(req, cancellationToken);
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
 
@@ -319,7 +319,7 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
             Content = JsonContent.Create(body, options: Serializer)
         };
         AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
-        using HttpResponseMessage res = await Client.SendAsync(req, cancellationToken);
+        using var res = await Client.SendAsync(req, cancellationToken);
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
 
@@ -353,7 +353,7 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
             Content = JsonContent.Create(body, options: Serializer)
         };
         AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
-        using HttpResponseMessage res = await Client.SendAsync(req, cancellationToken);
+        using var res = await Client.SendAsync(req, cancellationToken);
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
 
@@ -390,7 +390,7 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
             Content = JsonContent.Create(body, options: Serializer)
         };
         AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
-        using HttpResponseMessage res = await Client.SendAsync(req, cancellationToken);
+        using var res = await Client.SendAsync(req, cancellationToken);
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
 

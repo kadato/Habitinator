@@ -110,7 +110,7 @@ public static class DemoGuestSeeder
             new DailyChecklistItem(Guid.NewGuid(), "PM routine", false)
         ]);
 
-        int order = 0;
+        var order = 0;
         void AddBoardRow(BoardItemEntity row)
         {
             var seq = order++;
@@ -406,7 +406,7 @@ public static class DemoGuestSeeder
         IReadOnlyList<Guid> anyBoardItemIds,
         Faker faker)
     {
-        IReadOnlyList<Guid> pool = eventType switch
+        var pool = eventType switch
         {
             ActivityEventType.HabitPlus or ActivityEventType.HabitMinus => habitIds,
             ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete => dailyIds,

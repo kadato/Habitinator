@@ -48,7 +48,7 @@ public sealed class AuthTokenStore : IAuthTokenStore
         return RunSerializedAsync(
             async () =>
             {
-                string? t = await SecureStorage.GetAsync(key);
+                var t = await SecureStorage.GetAsync(key);
                 return string.IsNullOrWhiteSpace(t) ? null : t;
             },
             cancellationToken);
@@ -77,7 +77,7 @@ public sealed class AuthTokenStore : IAuthTokenStore
         await StorageLock.WaitAsync(cancellationToken);
         try
         {
-            int attempt = 0;
+            var attempt = 0;
             while (true)
             {
                 try
@@ -102,7 +102,7 @@ public sealed class AuthTokenStore : IAuthTokenStore
         await StorageLock.WaitAsync(cancellationToken);
         try
         {
-            int attempt = 0;
+            var attempt = 0;
             while (true)
             {
                 try

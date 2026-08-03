@@ -14,7 +14,7 @@ public static class MauiAppSettings
     public static string ResolveApiBaseUrl(IConfiguration configuration)
     {
         string url;
-        string? env = Environment.GetEnvironmentVariable(EnvApiBaseUrl);
+        var env = Environment.GetEnvironmentVariable(EnvApiBaseUrl);
         if (!string.IsNullOrWhiteSpace(env))
         {
             url = env.Trim().TrimEnd('/');
@@ -22,7 +22,7 @@ public static class MauiAppSettings
         else
         {
             // Optional override; omit in appsettings so Android uses 10.0.2.2 and Windows uses 127.0.0.1.
-            string? fromConfig = configuration["Api:BaseUrl"];
+            var fromConfig = configuration["Api:BaseUrl"];
             if (!string.IsNullOrWhiteSpace(fromConfig))
             {
                 url = fromConfig.Trim().TrimEnd('/');
@@ -34,7 +34,7 @@ public static class MauiAppSettings
         }
 
 #if ANDROID
-        string androidHost = "10.0" + ".2.2";
+        var androidHost = "10.0" + ".2.2";
         if (url.Contains("0.0.0.0") || url.Contains("127.0.0.1") || url.Contains("localhost"))
         {
             url = url.Replace("0.0.0.0", androidHost).Replace("127.0.0.1", androidHost).Replace("localhost", androidHost);

@@ -25,7 +25,7 @@ internal static class BoardApiRoutes
 
     internal static void MapBoardApi(this WebApplication app)
     {
-        RouteGroupBuilder boardApi = app.MapGroup("/api/board")
+        var boardApi = app.MapGroup("/api/board")
             .DisableAntiforgery()
             .RequireAuthorization("BoardOrJwt")
             .RequireRateLimiting("api");
@@ -47,7 +47,7 @@ internal static class BoardApiRoutes
                     return Results.Unauthorized();
                 }
 
-                BoardSnapshot snapshot = await boardPersistenceService.GetSnapshotAsync(userId);
+                var snapshot = await boardPersistenceService.GetSnapshotAsync(userId);
                 return Results.Json(snapshot, Json);
             });
 
@@ -60,18 +60,18 @@ internal static class BoardApiRoutes
                     return Results.Unauthorized();
                 }
 
-                string? cursorRaw = request.Query["cursor"].FirstOrDefault();
+                var cursorRaw = request.Query["cursor"].FirstOrDefault();
                 if (string.IsNullOrWhiteSpace(cursorRaw))
                 {
                     return Results.BadRequest(new { detail = "Query parameter 'cursor' is required (ISO 8601 watermark)." });
                 }
 
-                if (!DateTimeOffset.TryParse(cursorRaw, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTimeOffset cursor))
+                if (!DateTimeOffset.TryParse(cursorRaw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var cursor))
                 {
                     return Results.BadRequest(new { detail = "Invalid cursor; expected ISO-8601 DateTimeOffset." });
                 }
 
-                BoardSyncDelta delta = await boardPersistenceService.GetSyncDeltaAsync(userId, cursor, cancellationToken);
+                var delta = await boardPersistenceService.GetSyncDeltaAsync(userId, cursor, cancellationToken);
                 return Results.Json(delta, Json);
             });
 
@@ -83,7 +83,7 @@ internal static class BoardApiRoutes
                     return Results.Unauthorized();
                 }
 
-                BoardSnapshot snapshot = await boardPersistenceService.GetArchivedSnapshotAsync(userId);
+                var snapshot = await boardPersistenceService.GetArchivedSnapshotAsync(userId);
                 return Results.Json(snapshot, Json);
             });
 
@@ -122,7 +122,7 @@ internal static class BoardApiRoutes
 
         return await RunIdempotentAsync(http, idem, userId, "POST", JsonSerializer.Serialize(request, Json), async ct =>
         {
-            BoardItem item = await board.CreateItemAsync(
+            var item = await board.CreateItemAsync(
                 userId, section, ZalgoSanitizer.SanitizeAndTrim(request.Title), request.ItemId, ct);
             return (200, JsonSerializer.Serialize(item, Json), JsonContentType);
         }, cancellationToken);
@@ -137,10 +137,10 @@ internal static class BoardApiRoutes
             return Results.Unauthorized();
         }
 
-        DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
+        var expected = ReadExpectedUpdatedAtUtc(http.Request);
         return await RunIdempotentAsync(http, idem, userId, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
         {
-            BoardMutationResult r = await board.RenameItemAsync(
+            var r = await board.RenameItemAsync(
                 userId, section, itemId, ZalgoSanitizer.SanitizeAndTrim(request.Title), expected, ct);
             return MutationToOutcome(r);
         }, cancellationToken);
@@ -155,10 +155,10 @@ internal static class BoardApiRoutes
             return Results.Unauthorized();
         }
 
-        DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
+        var expected = ReadExpectedUpdatedAtUtc(http.Request);
         return await RunIdempotentAsync(http, idem, userId, "POST", "", async ct =>
         {
-            BoardMutationResult r = await board.ArchiveItemAsync(userId, section, itemId, expected, ct);
+            var r = await board.ArchiveItemAsync(userId, section, itemId, expected, ct);
             return MutationToOutcome(r);
         }, cancellationToken);
     }
@@ -172,10 +172,10 @@ internal static class BoardApiRoutes
             return Results.Unauthorized();
         }
 
-        DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
+        var expected = ReadExpectedUpdatedAtUtc(http.Request);
         return await RunIdempotentAsync(http, idem, userId, "POST", "", async ct =>
         {
-            BoardMutationResult r = await board.UnarchiveItemAsync(userId, section, itemId, expected, ct);
+            var r = await board.UnarchiveItemAsync(userId, section, itemId, expected, ct);
             return MutationToOutcome(r);
         }, cancellationToken);
     }
@@ -189,10 +189,10 @@ internal static class BoardApiRoutes
             return Results.Unauthorized();
         }
 
-        DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
+        var expected = ReadExpectedUpdatedAtUtc(http.Request);
         return await RunIdempotentAsync(http, idem, userId, "DELETE", "", async ct =>
         {
-            BoardMutationResult r = await board.DeleteItemAsync(userId, section, itemId, expected, ct);
+            var r = await board.DeleteItemAsync(userId, section, itemId, expected, ct);
             return r.Status switch
             {
                 BoardMutationStatus.Ok => (204, "", null),
@@ -215,10 +215,10 @@ internal static class BoardApiRoutes
             return Results.Unauthorized();
         }
 
-        DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
+        var expected = ReadExpectedUpdatedAtUtc(http.Request);
         return await RunIdempotentAsync(http, idem, userId, "POST", "", async ct =>
         {
-            BoardMutationResult r = await board.ToggleItemAsync(userId, section, itemId, expected, ct);
+            var r = await board.ToggleItemAsync(userId, section, itemId, expected, ct);
             return MutationToOutcome(r);
         }, cancellationToken);
     }
@@ -234,10 +234,10 @@ internal static class BoardApiRoutes
                     return Results.Unauthorized();
                 }
 
-                DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
+                var expected = ReadExpectedUpdatedAtUtc(http.Request);
                 return await RunIdempotentAsync(http, idem, userId, "POST", "", async ct =>
                 {
-                    BoardMutationResult r = await board.IncrementHabitPlusAsync(userId, itemId, expected, ct);
+                    var r = await board.IncrementHabitPlusAsync(userId, itemId, expected, ct);
                     return MutationToOutcome(r);
                 }, cancellationToken);
             });
@@ -251,10 +251,10 @@ internal static class BoardApiRoutes
                     return Results.Unauthorized();
                 }
 
-                DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
+                var expected = ReadExpectedUpdatedAtUtc(http.Request);
                 return await RunIdempotentAsync(http, idem, userId, "POST", "", async ct =>
                 {
-                    BoardMutationResult r = await board.IncrementHabitMinusAsync(userId, itemId, expected, ct);
+                    var r = await board.IncrementHabitMinusAsync(userId, itemId, expected, ct);
                     return MutationToOutcome(r);
                 }, cancellationToken);
             });
@@ -268,10 +268,10 @@ internal static class BoardApiRoutes
                     return Results.Unauthorized();
                 }
 
-                DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
+                var expected = ReadExpectedUpdatedAtUtc(http.Request);
                 return await RunIdempotentAsync(http, idem, userId, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
                 {
-                    BoardMutationResult r = await board.UpdateHabitAsync(
+                    var r = await board.UpdateHabitAsync(
                         userId,
                         itemId,
                         new UpdateHabitArgs(
@@ -303,10 +303,10 @@ internal static class BoardApiRoutes
                     return Results.Unauthorized();
                 }
 
-                DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
+                var expected = ReadExpectedUpdatedAtUtc(http.Request);
                 return await RunIdempotentAsync(http, idem, userId, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
                 {
-                    BoardMutationResult r = await board.UpdateTodoAsync(
+                    var r = await board.UpdateTodoAsync(
                         userId,
                         itemId,
                         new UpdateTodoArgs(
@@ -334,10 +334,10 @@ internal static class BoardApiRoutes
                     return Results.Unauthorized();
                 }
 
-                DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
+                var expected = ReadExpectedUpdatedAtUtc(http.Request);
                 return await RunIdempotentAsync(http, idem, userId, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
                 {
-                    BoardMutationResult r = await board.UpdateDailyAsync(
+                    var r = await board.UpdateDailyAsync(
                         userId,
                         itemId,
                         new UpdateDailyArgs(
@@ -365,10 +365,10 @@ internal static class BoardApiRoutes
                     return Results.Unauthorized();
                 }
 
-                DateTimeOffset? expected = ReadExpectedUpdatedAtUtc(http.Request);
+                var expected = ReadExpectedUpdatedAtUtc(http.Request);
                 return await RunIdempotentAsync(http, idem, userId, "POST", JsonSerializer.Serialize(request, Json), async ct =>
                 {
-                    BoardMutationResult r = await board.CompleteDailyForDateAsync(
+                    var r = await board.CompleteDailyForDateAsync(
                         userId, itemId, request.CompletedOn, expected, ct);
                     return MutationToOutcome(r);
                 }, cancellationToken);
@@ -385,10 +385,10 @@ internal static class BoardApiRoutes
         Func<CancellationToken, Task<(int statusCode, string body, string? contentType)>> execute,
         CancellationToken cancellationToken)
     {
-        string path = http.Request.Path.Value ?? "";
+        var path = http.Request.Path.Value ?? "";
         try
         {
-            (int statusCode, string body, string? contentType) outcome = await idem.RunAsync(
+            var outcome = await idem.RunAsync(
                 userId,
                 http.Request.Headers[IdempotencyKeyHeader].FirstOrDefault(),
                 BoardIdempotencyService.ComputeFingerprintHex(method, path, bodyJson),
@@ -407,24 +407,24 @@ internal static class BoardApiRoutes
 
     private static DateTimeOffset? ReadExpectedUpdatedAtUtc(HttpRequest request)
     {
-        if (request.Headers.TryGetValue("X-Board-Expected-Updated-At-Utc", out Microsoft.Extensions.Primitives.StringValues custom))
+        if (request.Headers.TryGetValue("X-Board-Expected-Updated-At-Utc", out var custom))
         {
-            string s = custom.ToString();
-            if (DateTimeOffset.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTimeOffset d))
+            var s = custom.ToString();
+            if (DateTimeOffset.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
             {
                 return d;
             }
         }
 
-        if (request.Headers.TryGetValue("If-Match", out Microsoft.Extensions.Primitives.StringValues etag))
+        if (request.Headers.TryGetValue("If-Match", out var etag))
         {
-            string raw = etag.ToString().Trim();
+            var raw = etag.ToString().Trim();
             if (raw.StartsWith('"') && raw.EndsWith('"') && raw.Length > 1)
             {
                 raw = raw[1..^1];
             }
 
-            if (DateTimeOffset.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTimeOffset d2))
+            if (DateTimeOffset.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d2))
             {
                 return d2;
             }

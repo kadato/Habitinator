@@ -15,7 +15,7 @@ internal static class SettingsApiRoutes
 {
     internal static void MapSettingsApi(this IEndpointRouteBuilder endpoints)
     {
-        RouteGroupBuilder settingsApi = endpoints.MapGroup("/api/settings")
+        var settingsApi = endpoints.MapGroup("/api/settings")
             .DisableAntiforgery()
             .RequireAuthorization("BoardOrJwt")
             .RequireRateLimiting("api");
@@ -35,13 +35,13 @@ internal static class SettingsApiRoutes
                     return TypedResults.Unauthorized();
                 }
 
-                ApplicationUser? row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+                var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
                 if (row is null)
                 {
                     return TypedResults.NotFound();
                 }
 
-                NotificationSettings settings = row.NotificationSettings ?? NotificationSettings.CreateDefault();
+                var settings = row.NotificationSettings ?? NotificationSettings.CreateDefault();
                 return TypedResults.Ok(settings);
             });
 
@@ -55,7 +55,7 @@ internal static class SettingsApiRoutes
                     return TypedResults.Unauthorized();
                 }
 
-                ApplicationUser? row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+                var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
                 if (row is null)
                 {
                     return TypedResults.NotFound();
@@ -79,13 +79,13 @@ internal static class SettingsApiRoutes
                     return TypedResults.Unauthorized();
                 }
 
-                ApplicationUser? row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+                var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
                 if (row is null)
                 {
                     return TypedResults.NotFound();
                 }
 
-                UserPreferences settings = row.UserPreferences ?? UserPreferences.CreateDefault();
+                var settings = row.UserPreferences ?? UserPreferences.CreateDefault();
                 return TypedResults.Ok(settings);
             });
 
@@ -99,7 +99,7 @@ internal static class SettingsApiRoutes
                     return TypedResults.Unauthorized();
                 }
 
-                ApplicationUser? row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+                var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
                 if (row is null)
                 {
                     return TypedResults.NotFound();

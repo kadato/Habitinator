@@ -86,7 +86,7 @@ public class WindowsAppWindowProgressService : MauiAppWindowProgressService
             return;
         }
 
-        IntPtr hwnd = GetWindowHandle();
+        var hwnd = GetWindowHandle();
         if (hwnd == IntPtr.Zero)
         {
             return;
@@ -105,8 +105,8 @@ public class WindowsAppWindowProgressService : MauiAppWindowProgressService
         }
 
         // Draw concrete remaining minutes text
-        string text = minutesRemaining > 99 ? "99+" : minutesRemaining.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        float fontSize = text.Length > 1 ? 6.5f : 8f;
+        var text = minutesRemaining > 99 ? "99+" : minutesRemaining.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var fontSize = text.Length > 1 ? 6.5f : 8f;
         using (var font = new System.Drawing.Font("Arial", fontSize, System.Drawing.FontStyle.Bold))
         using (var textBrush = new SolidBrush(System.Drawing.Color.White))
         {
@@ -118,7 +118,7 @@ public class WindowsAppWindowProgressService : MauiAppWindowProgressService
             graphics.DrawString(text, font, textBrush, new RectangleF(0, 0.5f, 16, 16), stringFormat);
         }
 
-        IntPtr hIcon = bitmap.GetHicon();
+        var hIcon = bitmap.GetHicon();
         try
         {
             _taskbarList.SetOverlayIcon(hwnd, hIcon, $"{minutesRemaining.ToString(System.Globalization.CultureInfo.InvariantCulture)} minutes remaining");
@@ -137,7 +137,7 @@ public class WindowsAppWindowProgressService : MauiAppWindowProgressService
             return;
         }
 
-        IntPtr hwnd = GetWindowHandle();
+        var hwnd = GetWindowHandle();
         if (hwnd == IntPtr.Zero)
         {
             return;

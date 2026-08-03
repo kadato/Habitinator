@@ -54,13 +54,13 @@ internal static class AuthApiRoutes
             return Results.BadRequest<IEnumerable<string>>(["Enter a valid email address."]);
         }
 
-        ApplicationUser user = new ApplicationUser
+        var user = new ApplicationUser
         {
             UserName = request.Email,
             Email = request.Email
         };
 
-        IdentityResult result = await userManager.CreateAsync(user, request.Password);
+        var result = await userManager.CreateAsync(user, request.Password);
         if (!result.Succeeded)
         {
             return Results.BadRequest(MapRegistrationErrorsToUserFacing(result.Errors));
@@ -73,9 +73,9 @@ internal static class AuthApiRoutes
         HttpContext httpContext,
         UserManager<ApplicationUser> userManager)
     {
-        IFormCollection form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
-        string email = form["Email"].ToString();
-        string password = form["Password"].ToString();
+        var form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
+        var email = form["Email"].ToString();
+        var password = form["Password"].ToString();
 
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         {
@@ -87,16 +87,16 @@ internal static class AuthApiRoutes
             return Results.LocalRedirect("/auth/register?error=1");
         }
 
-        ApplicationUser user = new ApplicationUser
+        var user = new ApplicationUser
         {
             UserName = email,
             Email = email
         };
 
-        IdentityResult result = await userManager.CreateAsync(user, password);
+        var result = await userManager.CreateAsync(user, password);
         if (!result.Succeeded)
         {
-            string retry = $"?error=1&email={Uri.EscapeDataString(email)}";
+            var retry = $"?error=1&email={Uri.EscapeDataString(email)}";
             return Results.LocalRedirect("/auth/register" + retry);
         }
 
@@ -109,13 +109,13 @@ internal static class AuthApiRoutes
         UserManager<ApplicationUser> userManager,
         JwtTokenService jwtTokenService)
     {
-        ApplicationUser? user = await userManager.FindByEmailAsync(request.Email);
+        var user = await userManager.FindByEmailAsync(request.Email);
         if (user is null)
         {
             return Results.Unauthorized();
         }
 
-        SignInResult loginResult = await signInManager.PasswordSignInAsync(
+        var loginResult = await signInManager.PasswordSignInAsync(
             user,
             request.Password,
             request.RememberMe,
@@ -126,7 +126,7 @@ internal static class AuthApiRoutes
             return Results.Unauthorized();
         }
 
-        string token = jwtTokenService.CreateToken(user);
+        var token = jwtTokenService.CreateToken(user);
         return Results.Ok(new LoginResponse(token, user.Email ?? string.Empty));
     }
 
@@ -138,9 +138,9 @@ internal static class AuthApiRoutes
         IOptions<DemoUserOptions> demoOptions,
         ILoggerFactory loggerFactory)
     {
-        ILogger logger = loggerFactory.CreateLogger("AuthApiRoutes");
-        string email = demoOptions.Value.Email;
-        ApplicationUser? user = await userManager.FindByEmailAsync(email);
+        var logger = loggerFactory.CreateLogger("AuthApiRoutes");
+        var email = demoOptions.Value.Email;
+        var user = await userManager.FindByEmailAsync(email);
         if (user is null)
         {
             await TryRecoverDemoGuestAsync(httpContext.RequestServices, logger, httpContext.RequestAborted);
@@ -152,7 +152,7 @@ internal static class AuthApiRoutes
             return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
         }
 
-        SignInResult loginResult = await signInManager.PasswordSignInAsync(
+        var loginResult = await signInManager.PasswordSignInAsync(
             user,
             demoOptions.Value.Password,
             false,
@@ -163,7 +163,7 @@ internal static class AuthApiRoutes
             return Results.Unauthorized();
         }
 
-        string token = jwtTokenService.CreateToken(user);
+        var token = jwtTokenService.CreateToken(user);
         return Results.Ok(new LoginResponse(token, user.Email ?? string.Empty));
     }
 
@@ -180,9 +180,9 @@ internal static class AuthApiRoutes
         IOptions<DemoUserOptions> demoOptions,
         ILoggerFactory loggerFactory)
     {
-        ILogger logger = loggerFactory.CreateLogger("AuthApiRoutes");
-        string email = demoOptions.Value.Email;
-        ApplicationUser? guestUser = await userManager.FindByEmailAsync(email);
+        var logger = loggerFactory.CreateLogger("AuthApiRoutes");
+        var email = demoOptions.Value.Email;
+        var guestUser = await userManager.FindByEmailAsync(email);
         if (guestUser is null)
         {
             await TryRecoverDemoGuestAsync(httpContext.RequestServices, logger, httpContext.RequestAborted);
@@ -203,23 +203,23 @@ internal static class AuthApiRoutes
         SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager)
     {
-        IFormCollection form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
-        string email = form["Email"].ToString();
-        string password = form["Password"].ToString();
-        bool rememberMe = form["RememberMe"] == "true";
+        var form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
+        var email = form["Email"].ToString();
+        var password = form["Password"].ToString();
+        var rememberMe = form["RememberMe"] == "true";
 
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         {
             return Results.LocalRedirect("/auth/login?error=1");
         }
 
-        ApplicationUser? user = await userManager.FindByEmailAsync(email);
+        var user = await userManager.FindByEmailAsync(email);
         if (user is null)
         {
             return Results.LocalRedirect("/auth/login?error=1");
         }
 
-        SignInResult loginResult = await signInManager.PasswordSignInAsync(
+        var loginResult = await signInManager.PasswordSignInAsync(
             user,
             password,
             rememberMe,
@@ -244,8 +244,8 @@ internal static class AuthApiRoutes
 
     private static IResult GetStatus(ClaimsPrincipal user)
     {
-        bool isAuthenticated = user.Identity?.IsAuthenticated == true;
-        string? email = user.FindFirst(ClaimTypes.Email)?.Value ?? user.Identity?.Name;
+        var isAuthenticated = user.Identity?.IsAuthenticated == true;
+        var email = user.FindFirst(ClaimTypes.Email)?.Value ?? user.Identity?.Name;
         return Results.Ok(new { isAuthenticated, email });
     }
 
@@ -260,13 +260,13 @@ internal static class AuthApiRoutes
             return Results.Unauthorized();
         }
 
-        ApplicationUser? appUser = await userManager.FindByIdAsync(userId.ToString());
+        var appUser = await userManager.FindByIdAsync(userId.ToString());
         if (appUser is null)
         {
             return Results.NotFound();
         }
 
-        IdentityResult result = await userManager.ChangePasswordAsync(appUser, body.CurrentPassword, body.NewPassword);
+        var result = await userManager.ChangePasswordAsync(appUser, body.CurrentPassword, body.NewPassword);
         if (!result.Succeeded)
         {
             return Results.BadRequest();
@@ -286,13 +286,13 @@ internal static class AuthApiRoutes
             return Results.Unauthorized();
         }
 
-        ApplicationUser? appUser = await userManager.FindByIdAsync(userId.ToString());
+        var appUser = await userManager.FindByIdAsync(userId.ToString());
         if (appUser is null)
         {
             return Results.NotFound();
         }
 
-        IdentityResult result = await userManager.DeleteAsync(appUser);
+        var result = await userManager.DeleteAsync(appUser);
         if (!result.Succeeded)
         {
             return Results.BadRequest();

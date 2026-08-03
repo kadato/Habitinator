@@ -22,7 +22,7 @@ public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
     {
-        MauiAppBuilder builder = MauiApp.CreateBuilder();
+        var builder = MauiApp.CreateBuilder();
         AddEmbeddedAppSettings(builder);
         builder
             .UseMauiApp<App>()
@@ -50,12 +50,12 @@ public static class MauiProgram
             config.SnackbarConfiguration.HideTransitionDuration = 200;
             config.SnackbarConfiguration.NewestOnTop = true;
         });
-        string apiBase = MauiAppSettings.ResolveApiBaseUrl(builder.Configuration).TrimEnd('/') + "/";
+        var apiBase = MauiAppSettings.ResolveApiBaseUrl(builder.Configuration).TrimEnd('/') + "/";
         builder.Services.AddSingleton(_ => new MauiApiEndpointOptions(apiBase));
         builder.Services.AddSingleton<IAuthTokenStore, AuthTokenStore>();
         builder.Services.AddSingleton<ILocalSettingsStore, MauiLocalSettingsStore>();
         builder.Services.AddSingleton<IClientSessionProvider, MauiClientSessionProvider>();
-        string localBoardDbPath = Path.Combine(FileSystem.AppDataDirectory, "habitinator-board-local.db");
+        var localBoardDbPath = Path.Combine(FileSystem.AppDataDirectory, "habitinator-board-local.db");
         builder.Services.AddDbContextFactory<LocalBoardDbContext>(o =>
             o.UseSqlite($"Data Source={localBoardDbPath}"));
         builder.Services.AddSingleton<RemoteBoardRefreshService>();
@@ -101,11 +101,11 @@ public static class MauiProgram
         builder.Services.AddScoped<IUndoService, UndoService>();
         builder.Services.AddScoped<IBoardDataService>(sp =>
         {
-            LocalFirstBoardDataService inner = sp.GetRequiredService<LocalFirstBoardDataService>();
-            IUserActivityLogService log = sp.GetRequiredService<IUserActivityLogService>();
+            var inner = sp.GetRequiredService<LocalFirstBoardDataService>();
+            var log = sp.GetRequiredService<IUserActivityLogService>();
             ActivityLoggingBoardDataService loggingService = new(inner, log,
                 sp.GetRequiredService<IUserTimeZoneService>());
-            IUndoService undoService = sp.GetRequiredService<IUndoService>();
+            var undoService = sp.GetRequiredService<IUndoService>();
             return new UndoableBoardDataService(loggingService, undoService);
         });
         builder.Services.AddSingleton<IActivityStatisticsReader, RemoteActivityStatisticsReader>();
@@ -133,7 +133,7 @@ public static class MauiProgram
 
     private static void AddEmbeddedAppSettings(MauiAppBuilder builder)
     {
-        System.Reflection.Assembly assembly = typeof(MauiProgram).Assembly;
+        var assembly = typeof(MauiProgram).Assembly;
         AddEmbeddedJsonIfPresent(assembly, builder, "appsettings.json");
         AddEmbeddedJsonIfPresent(assembly, builder, "appsettings.Release.json");
     }
@@ -141,7 +141,7 @@ public static class MauiProgram
     private static void AddEmbeddedJsonIfPresent(System.Reflection.Assembly assembly, MauiAppBuilder builder,
         string suffix)
     {
-        string? resourceName = assembly
+        var resourceName = assembly
             .GetManifestResourceNames()
             .FirstOrDefault(n => n.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));
         if (resourceName is null)
@@ -149,7 +149,7 @@ public static class MauiProgram
             return;
         }
 
-        using System.IO.Stream? stream = assembly.GetManifestResourceStream(resourceName);
+        using var stream = assembly.GetManifestResourceStream(resourceName);
         if (stream is not null)
         {
             builder.Configuration.AddJsonStream(stream);

@@ -20,7 +20,7 @@ public static class BoardOutboxReferencedIds
 
     private static void CollectOne(BoardOutboxOperationKind kind, string json, HashSet<Guid> set)
     {
-        Guid? itemId = ExtractItemId(kind, json);
+        var itemId = ExtractItemId(kind, json);
         if (itemId.HasValue)
         {
             set.Add(itemId.Value);

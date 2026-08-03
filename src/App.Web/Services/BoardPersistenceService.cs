@@ -116,8 +116,8 @@ public sealed class BoardPersistenceService(
 
     public async Task<BoardItem?> GetItemAsync(Guid userId, Guid itemId, CancellationToken cancellationToken = default)
     {
-        BoardSnapshot cached = await GetSnapshotAsync(userId, cancellationToken);
-        BoardItem? item = cached.Habits.FirstOrDefault(x => x.Id == itemId)
+        var cached = await GetSnapshotAsync(userId, cancellationToken);
+        var item = cached.Habits.FirstOrDefault(x => x.Id == itemId)
             ?? cached.Dailies.FirstOrDefault(x => x.Id == itemId)
             ?? cached.Todos.FirstOrDefault(x => x.Id == itemId);
         if (item is not null)
@@ -126,7 +126,7 @@ public sealed class BoardPersistenceService(
         }
 
         await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        BoardItemEntity? entity = await readDb.BoardItems.AsNoTracking()
+        var entity = await readDb.BoardItems.AsNoTracking()
             .FirstOrDefaultAsync(
                 x => x.UserId == userId && x.Id == itemId && x.DeletedAtUtc == null && !x.IsArchived,
                 cancellationToken);
@@ -1072,10 +1072,10 @@ public sealed class BoardPersistenceService(
             return (DailyRepeatType.Daily, 1);
         }
 
-        DailyRepeatType repeat = Enum.IsDefined((DailyRepeatType)entity.DailyRepeatType)
+        var repeat = Enum.IsDefined((DailyRepeatType)entity.DailyRepeatType)
             ? (DailyRepeatType)entity.DailyRepeatType
             : DailyRepeatType.Daily;
-        int interval = entity.DailyRepeatInterval < 1 ? 1 : Math.Min(999, entity.DailyRepeatInterval);
+        var interval = entity.DailyRepeatInterval < 1 ? 1 : Math.Min(999, entity.DailyRepeatInterval);
         return (repeat, interval);
     }
 
@@ -1096,14 +1096,14 @@ public sealed class BoardPersistenceService(
         DateOnly? lastCompleted = entity.DailyLastCompletedOn is { } lc
             ? DateOnly.FromDateTime(lc)
             : null;
-        bool isCompleted = entity.Section == BoardSection.Daily
+        var isCompleted = entity.Section == BoardSection.Daily
             ? IsDailyEntityCompleteForToday(entity, today)
             : entity.IsCompleted;
 
         int displayCounter;
         if (entity.Section == BoardSection.Daily)
         {
-            displayCounter = dailyStreakById.TryGetValue(entity.Id, out int computedStreak)
+            displayCounter = dailyStreakById.TryGetValue(entity.Id, out var computedStreak)
                 ? computedStreak
                 : entity.Counter;
         }
@@ -1219,7 +1219,7 @@ public sealed class BoardPersistenceService(
             .ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);
 
-        double seq = 1.0;
+        var seq = 1.0;
         var utcNow = DateTimeOffset.UtcNow;
         foreach (var item in items)
         {

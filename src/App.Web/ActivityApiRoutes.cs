@@ -11,7 +11,7 @@ internal static class ActivityApiRoutes
 {
     internal static void MapActivityApi(this IEndpointRouteBuilder endpoints)
     {
-        RouteGroupBuilder activityApi = endpoints.MapGroup("/api/activity")
+        var activityApi = endpoints.MapGroup("/api/activity")
             .DisableAntiforgery()
             .RequireAuthorization("BoardOrJwt")
             .RequireRateLimiting("api");
@@ -84,7 +84,7 @@ internal static class ActivityApiRoutes
             return Results.BadRequest(new { detail = "Duration must be between 0 and 86,400 seconds (24 hours)." });
         }
 
-        Guid resolvedUserId = await demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
+        var resolvedUserId = await demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
 
         if (body.EventType == ActivityEventType.TimerSession && body.DurationSeconds.HasValue)
         {

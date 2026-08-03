@@ -25,9 +25,9 @@ public static class PostgresTransientErrors
 
     public static bool IsTransient(Exception? exception)
     {
-        for (Exception? ex = exception; ex is not null; ex = ex.InnerException)
+        for (var ex = exception; ex is not null; ex = ex.InnerException)
         {
-            if (IsSingleExceptionTransient(ex, out bool stopCheckingChain))
+            if (IsSingleExceptionTransient(ex, out var stopCheckingChain))
             {
                 return true;
             }

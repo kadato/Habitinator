@@ -59,7 +59,7 @@ public static class DailyReminderText
             AppendDeadlineTodos(sb, deadlineTodos, todayUtc, dateFormat);
         }
 
-        string body = sb.ToString();
+        var body = sb.ToString();
         if (body.Length > maxBodyLength)
         {
             body = body[..(maxBodyLength - 1)] + "…";
@@ -75,16 +75,16 @@ public static class DailyReminderText
         string? dateFormat)
     {
         sb.Append("To-dos (deadline): ");
-        for (int i = 0; i < deadlineTodos.Count; i++)
+        for (var i = 0; i < deadlineTodos.Count; i++)
         {
             if (i > 0)
             {
                 sb.Append(", ");
             }
 
-            BoardItem t = deadlineTodos[i];
-            DateOnly due = t.TodoDueDate!.Value;
-            string suffix = due < todayUtc
+            var t = deadlineTodos[i];
+            var due = t.TodoDueDate!.Value;
+            var suffix = due < todayUtc
                 ? " (overdue)"
                 : string.Empty;
             sb.Append(t.Title);
@@ -100,7 +100,7 @@ public static class DailyReminderText
 
     private static string FormatDate(DateOnly date, string? dateFormat)
     {
-        string format = string.IsNullOrWhiteSpace(dateFormat) ? "yyyy/MM/dd" : dateFormat;
+        var format = string.IsNullOrWhiteSpace(dateFormat) ? "yyyy/MM/dd" : dateFormat;
         return date.ToString(format, CultureInfo.InvariantCulture);
     }
 }

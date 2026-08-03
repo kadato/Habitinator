@@ -53,19 +53,19 @@ public static class DailyStreakCalculator
         IReadOnlyDictionary<DateOnly, List<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)>> eventsByDay,
         DateOnly? dailyLastCompletedOn)
     {
-        bool todayOnSchedule = DailySchedule.IsScheduledOn(dailyStart, repeat, repeatInterval, today);
-        bool todayDone = todayOnSchedule &&
+        var todayOnSchedule = DailySchedule.IsScheduledOn(dailyStart, repeat, repeatInterval, today);
+        var todayDone = todayOnSchedule &&
             IsCalendarDayNetCompleted(today, GetDayListOrNull(eventsByDay, today), dailyLastCompletedOn);
 
         // Do not count today until it is done; count only through prior days when it is not.
-        DateOnly end = todayDone ? today : today.AddDays(-1);
+        var end = todayDone ? today : today.AddDays(-1);
 
-        DateOnly historyStart =
+        var historyStart =
             DailySchedule.StreakHistoryScheduleStart(dailyStart, end, repeat, repeatInterval, MaxStreak);
 
-        int n = 0;
-        DateOnly d = end;
-        int maxSteps = 20_000;
+        var n = 0;
+        var d = end;
+        var maxSteps = 20_000;
         while (maxSteps-- > 0)
         {
             if (d < historyStart)
@@ -94,5 +94,5 @@ public static class DailyStreakCalculator
     private static List<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)>? GetDayListOrNull(
         IReadOnlyDictionary<DateOnly, List<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)>> eventsByDay,
         DateOnly day) =>
-        eventsByDay.TryGetValue(day, out List<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)>? list) ? list : null;
+        eventsByDay.TryGetValue(day, out var list) ? list : null;
 }

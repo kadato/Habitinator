@@ -1,0 +1,55 @@
+/* Habitinator design tokens
+ *
+ * Single source of truth for the cross-cutting design values used across
+ * global and component stylesheets. Load this file first, before any other
+ * app stylesheet.
+ *
+ * ── Breakpoint scale ─────────────────────────────────────────────────────
+ * Media query conditions cannot use var() so always write these literals:
+ *
+ *   narrow   max-width: 359.98px   phone portrait
+ *   tight    max-width: 399.98px   small dialogs and compact panels
+ *   compact  max-width: 479.98px   compact cards
+ *   mobile   max-width: 599.98px   phones
+ *   nav      max-width: 767.98px   legacy bottom nav and compact top bar
+ *   tablet   max-width: 959.98px   MudBlazor md and below
+ *   desktop  min-width: 960px      MudBlazor md and up
+ *   wide     min-width: 1280px     MudBlazor lg and up
+ *
+ * The scale mirrors MudBlazor breakpoints so CSS and MudGrid align.
+ */
+
+:root {
+    /* Spacing scale (rem) */
+    --space-1: 0.25rem;
+    --space-2: 0.35rem;
+    --space-3: 0.4rem;
+    --space-4: 0.5rem;
+    --space-5: 0.75rem;
+    --space-6: 1rem;
+    --space-7: 1.5rem;
+    --space-8: 2rem;
+
+    /* Corner radii */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 10px;
+    --radius-xl: 12px;
+    --radius-2xl: 14px;
+    --radius-pill: 999px;
+
+    /* Motion durations */
+    --dur-fast: 0.15s;
+    --dur-normal: 0.2s;
+    --dur-slow: 0.25s;
+
+    /* App shell sizing */
+    --topbar-height: 56px;
+    --mobile-nav-height: 44px;
+    --control-height: 40px;
+
+    /* Elevation layers (app-defined, above MudBlazor's own scale) */
+    --z-nav: 1200;
+    --z-error: 1000;
+    --z-max: 99999;
+}

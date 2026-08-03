@@ -4,9 +4,9 @@
     row-gap: 0.15rem;
     padding-top: 0.15rem;
     padding-bottom: 0.15rem;
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-    column-gap: 0.75rem;
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+    column-gap: var(--space-5);
     backdrop-filter: blur(12px) !important;
     -webkit-backdrop-filter: blur(12px) !important;
     background-color: color-mix(in srgb, var(--mud-palette-surface) 82%, transparent) !important;
@@ -41,26 +41,26 @@
     box-sizing: border-box;
     flex-wrap: nowrap;
     row-gap: 0.15rem;
-    column-gap: 0.75rem;
+    column-gap: var(--space-5);
     align-items: center;
     justify-content: space-between;
 }
 
 ::deep .app-top-bar__flex-spacer {
     flex: 1 1 auto !important;
-    min-width: 0.5rem;
+    min-width: var(--space-4);
     align-self: stretch;
 }
 
 ::deep .app-top-bar__left {
-    gap: 0.75rem 0;
+    gap: var(--space-5) 0;
     align-items: center;
     min-width: 0;
     flex: 0 1 auto;
 }
 
 ::deep .app-top-bar__right {
-    gap: 0.5rem;
+    gap: var(--space-4);
     align-items: center;
     min-width: 0;
     flex: 0 0 auto;
@@ -90,9 +90,9 @@
 }
 
 ::deep .app-header-profile-btn.mud-icon-button {
-    width: 2rem;
-    height: 2rem;
-    border-radius: 10px !important;
+    width: var(--space-8);
+    height: var(--space-8);
+    border-radius: var(--radius-lg) !important;
     background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent) !important;
 }
 
@@ -122,7 +122,7 @@
 /* Profile Menu Dropdown Popover */
 ::deep .app-profile-menu-popover {
     margin-top: 8px;
-    border-radius: 12px !important;
+    border-radius: var(--radius-xl) !important;
     border: 1px solid var(--mud-palette-divider) !important;
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
     background-color: var(--mud-palette-surface) !important;
@@ -154,7 +154,7 @@
 
     ::deep .app-top-bar.mud-appbar,
     ::deep .app-top-bar {
-        padding: 0 0.5rem !important;
+        padding: 0 var(--space-4) !important;
         height: auto !important;
         min-height: 54px !important;
     }
@@ -176,7 +176,7 @@
         flex-direction: row !important;
         align-items: center !important;
         width: 100% !important;
-        gap: 0.5rem !important;
+        gap: var(--space-4) !important;
         position: static !important;
         padding-left: 0 !important;
     }
@@ -193,7 +193,7 @@
     }
 
     ::deep .app-top-bar__right {
-        gap: 0.25rem !important;
+        gap: var(--space-1) !important;
         margin: 0 !important;
         padding: 0 !important;
         display: flex !important;
@@ -203,21 +203,21 @@
     ::deep .app-header-user-rail {
         display: flex !important;
         flex-direction: row !important;
-        gap: 0.25rem !important;
+        gap: var(--space-1) !important;
         align-items: center !important;
     }
 
     ::deep .app-header-profile-btn.mud-icon-button {
         width: 2.25rem !important;
         height: 2.25rem !important;
-        border-radius: 10px !important;
+        border-radius: var(--radius-lg) !important;
     }
 
     ::deep .app-mobile-nav {
         display: flex !important;
         flex: 1 1 auto !important;
         width: auto !important;
-        gap: 0.35rem !important;
+        gap: var(--space-2) !important;
         align-items: center !important;
         order: 2 !important;
     }
@@ -230,9 +230,9 @@
     }
 
     ::deep .board-main-container.mud-container {
-        padding-left: 0.75rem !important;
-        padding-right: 0.75rem !important;
-        padding-top: 0.35rem !important;
+        padding-left: var(--space-5) !important;
+        padding-right: var(--space-5) !important;
+        padding-top: var(--space-2) !important;
     }
 
     /* Web app bar measures ~3.5rem; override the shared fallback so gap is tight */
@@ -246,8 +246,8 @@
 @media (min-width: 1280px) {
     ::deep .board-main-container.mud-container--fluid,
     ::deep .board-main-container.mud-container {
-        padding-left: 2rem !important;
-        padding-right: 2rem !important;
+        padding-left: var(--space-8) !important;
+        padding-right: var(--space-8) !important;
     }
 }
 
@@ -262,14 +262,14 @@
     padding: 0.6rem 1.25rem 0.7rem 1.25rem;
     position: fixed;
     width: 100%;
-    z-index: 1000;
+    z-index: var(--z-error);
 }
 
 #blazor-error-ui .dismiss {
     cursor: pointer;
     position: absolute;
-    right: 0.75rem;
-    top: 0.5rem;
+    right: var(--space-5);
+    top: var(--space-4);
 }
 
 .skip-link {
@@ -280,17 +280,17 @@
     height: 1px;
     overflow: hidden;
     z-index: 2000;
-    padding: 0.75rem 1rem;
+    padding: var(--space-5) var(--space-6);
     background: var(--mud-palette-primary);
     color: #fff;
     font-weight: 600;
     text-decoration: none;
-    border-radius: 0.25rem;
+    border-radius: var(--space-1);
 }
 
 .skip-link:focus {
-    left: 0.5rem;
-    top: 0.5rem;
+    left: var(--space-4);
+    top: var(--space-4);
     width: auto;
     height: auto;
     overflow: visible;

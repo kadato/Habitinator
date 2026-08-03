@@ -24,7 +24,7 @@
     overflow: hidden;
     background: var(--mud-palette-surface);
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
-    border-radius: 1rem;
+    border-radius: var(--space-6);
     box-shadow: 
         0 24px 38px 3px rgba(0, 0, 0, 0.08), 
         0 9px 46px 8px rgba(0, 0, 0, 0.06), 
@@ -35,7 +35,7 @@
 /* ── Header ── */
 .daily-yesterday-header {
     background: var(--mud-palette-surface);
-    padding: 1.25rem 1.25rem 1rem;
+    padding: 1.25rem 1.25rem var(--space-6);
     color: var(--mud-palette-text-primary);
     border-bottom: 1px solid var(--mud-palette-divider);
 }
@@ -44,7 +44,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: var(--space-4);
 }
 
 .daily-yesterday-header__title-wrap {
@@ -70,8 +70,8 @@
 .daily-yesterday-header__close-btn {
     color: var(--mud-palette-text-secondary) !important;
     padding: 6px !important;
-    border-radius: 8px !important;
-    transition: all 0.2s ease !important;
+    border-radius: var(--radius-md) !important;
+    transition: all var(--dur-normal) ease !important;
 }
 
 .daily-yesterday-header__close-btn:hover {
@@ -93,7 +93,7 @@
 /* ── Body ── */
 .daily-yesterday-body {
     background: var(--mud-palette-surface);
-    padding: 0.75rem 1.25rem;
+    padding: var(--space-5) 1.25rem;
     color: var(--mud-palette-text-primary);
     flex: 1;
     overflow-y: auto;
@@ -109,12 +109,12 @@
 .daily-yesterday-row {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
+    gap: var(--space-5);
+    padding: var(--space-5) var(--space-6);
     background: color-mix(in srgb, var(--mud-palette-background-gray) 35%, var(--mud-palette-surface));
     border: 1px solid transparent;
-    border-radius: 10px;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: var(--radius-lg);
+    transition: all var(--dur-normal) cubic-bezier(0.4, 0, 0.2, 1);
     outline: none;
 }
 
@@ -155,7 +155,7 @@
     padding: 0;
     background-clip: padding-box;
     color: var(--mud-palette-success-contrast-text);
-    transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: border-color var(--dur-normal) ease, background-color var(--dur-normal) ease, transform var(--dur-normal) cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .daily-yesterday-row:hover:not(.daily-yesterday-row--completed) .daily-yesterday-check {
@@ -181,7 +181,7 @@
     display: block;
     flex-shrink: 0;
     pointer-events: none;
-    animation: checkmark-pop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    animation: checkmark-pop var(--dur-slow) cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 .daily-yesterday-row__title {
@@ -197,7 +197,7 @@
     font-weight: 600;
     color: var(--mud-palette-text-primary);
     overflow-wrap: break-word;
-    transition: color 0.2s ease;
+    transition: color var(--dur-normal) ease;
 }
 
 .daily-yesterday-row__notes {
@@ -229,17 +229,17 @@
 .daily-yesterday-footer {
     border-top: 1px solid var(--mud-palette-divider);
     background: var(--mud-palette-surface);
-    padding: 1rem 1.25rem !important;
+    padding: var(--space-6) 1.25rem !important;
 }
 
 .daily-yesterday-footer__close-btn {
     text-transform: none !important;
     font-weight: 600 !important;
-    border-radius: 10px !important;
+    border-radius: var(--radius-lg) !important;
     padding: 0.6rem 0 !important;
     font-size: 0.875rem !important;
     box-shadow: 0 4px 12px color-mix(in srgb, var(--mud-palette-primary) 20%, transparent) !important;
-    transition: all 0.2s ease !important;
+    transition: all var(--dur-normal) ease !important;
 }
 
 .daily-yesterday-footer__close-btn:hover {

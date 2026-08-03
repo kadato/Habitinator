@@ -25,6 +25,22 @@
     {
         <MudAppBar Elevation="0" Class="app-top-bar" ToolBarClass="app-top-bar-toolbar">
             <div class="app-top-bar__stack w-100">
+                <div class="app-top-bar__row d-flex">
+                    <div class="app-top-bar__left d-flex align-center">
+                        <div class="app-branding app-branding--header d-flex flex-column justify-center">
+                            <MudText Typo="Typo.h6" Class="app-top-bar__title mb-0">Habitinator</MudText>
+                        </div>
+                        <div class="app-show-desktop-only align-center">
+                            <NavMenu />
+                        </div>
+                    </div>
+                    <div class="app-top-bar__flex-spacer" aria-hidden="true"></div>
+                    <div class="app-top-bar__right d-flex align-center">
+                        <div class="app-header-user-rail d-flex align-center">
+                            <SyncStatusIndicator IconOnly="true" />
+                        </div>
+                    </div>
+                </div>
                 <NavMenu MobileTopBar="true" />
             </div>
         </MudAppBar>

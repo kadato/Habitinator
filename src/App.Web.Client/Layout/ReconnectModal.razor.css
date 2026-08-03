@@ -24,9 +24,9 @@
     background-color: white;
     width: 20rem;
     margin: 20vh auto;
-    padding: 2rem;
+    padding: var(--space-8);
     border: 0;
-    border-radius: 0.5rem;
+    border-radius: var(--space-4);
     box-shadow: 0 3px 6px 2px rgba(0, 0, 0, 0.3);
     opacity: 0;
     transition: display 0.5s allow-discrete, overlay 0.5s allow-discrete;
@@ -80,7 +80,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
+    gap: var(--space-6);
 }
 
 #components-reconnect-modal p {

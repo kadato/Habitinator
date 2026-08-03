@@ -3,7 +3,7 @@
     color: var(--mud-palette-text-primary);
     display: flex;
     flex-direction: column;
-    gap: 0.35rem !important; /* more compact gap between elements */
+    gap: var(--space-2) !important; /* more compact gap between elements */
     /* App bar + MudMainContent padding */
     min-height: calc(100vh - 7rem);
     min-height: calc(100dvh - 7rem);
@@ -21,7 +21,7 @@
     flex-direction: column;
     justify-content: flex-start;
     min-height: 0;
-    padding: 0 0.25rem 0.75rem;
+    padding: 0 var(--space-1) var(--space-5);
     margin-top: 0 !important;
 }
 
@@ -37,18 +37,18 @@
 /* Panel content spacing */
 .board-section-tab-content {
     width: 100%;
-    padding-top: 0.5rem;
+    padding-top: var(--space-4);
     position: relative;
     overflow: hidden;
 }
 .board-section-switcher {
     display: none;
     width: 100%;
-    gap: 0.25rem;
+    gap: var(--space-1);
     padding: 0.2rem;
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-divider);
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     box-sizing: border-box;
     justify-content: center;
 }
@@ -61,11 +61,11 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    gap: 0.35rem;
-    min-height: 40px;
-    padding: 0.35rem 0.4rem;
+    gap: var(--space-2);
+    min-height: var(--control-height);
+    padding: var(--space-2) var(--space-3);
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     background: transparent;
     color: var(--mud-palette-text-secondary);
     font-size: 0.85rem;
@@ -74,7 +74,7 @@
     cursor: pointer;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    transition: all 0.15s ease;
+    transition: all var(--dur-fast) ease;
 }
 
 .board-section-switcher__btn:active {
@@ -93,8 +93,8 @@
     justify-content: center;
     min-width: 1.4rem;
     height: 1.4rem;
-    padding: 0 0.35rem;
-    border-radius: 999px;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-pill);
     font-size: 0.7rem;
     font-weight: 700;
     line-height: 1;
@@ -156,9 +156,9 @@
     border: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 8%, transparent);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18), inset 0 1px 0 color-mix(in srgb, var(--mud-palette-text-primary) 5%, transparent);
     backdrop-filter: blur(8px);
-    margin-bottom: 0.5rem !important;
-    padding-top: 0.4rem !important;
-    padding-bottom: 0.4rem !important;
+    margin-bottom: var(--space-4) !important;
+    padding-top: var(--space-3) !important;
+    padding-bottom: var(--space-3) !important;
 }
 
 .board-tags-menu-body {
@@ -172,14 +172,14 @@
 
 
 .board-tags-menu-panel {
-    min-width: min(17rem, 100vw - 2rem);
-    max-width: min(24rem, 100vw - 2rem);
+    min-width: min(17rem, 100vw - var(--space-8));
+    max-width: min(24rem, 100vw - var(--space-8));
 }
 
 .board-tag-filter-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.25rem 1rem;
+    gap: var(--space-1) var(--space-6);
     align-items: start;
 }
 
@@ -196,7 +196,7 @@
     flex-wrap: nowrap !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 0.65rem 1rem !important;
+    gap: 0.65rem var(--space-6) !important;
     width: 100% !important;
 }
 
@@ -206,7 +206,7 @@
     flex-wrap: nowrap !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 0.25rem !important;
+    gap: var(--space-1) !important;
     min-width: 0 !important;
     width: auto !important;
     max-width: none !important;
@@ -257,7 +257,7 @@
 }
 
 .board-search-pill ::deep .mud-input-outlined {
-    border-radius: 8px !important;
+    border-radius: var(--radius-md) !important;
     height: 36px !important;
     min-height: 36px !important;
     max-height: 36px !important;
@@ -304,7 +304,7 @@
     height: 36px !important;
     min-height: 36px !important;
     max-height: 36px !important;
-    padding: 0 0.5rem !important;
+    padding: 0 var(--space-4) !important;
     font-size: 0.85rem !important;
     font-weight: 600;
     font-family: inherit;
@@ -312,18 +312,18 @@
     color: var(--mud-palette-text-secondary);
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-divider);
-    border-radius: 8px !important;
+    border-radius: var(--radius-md) !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 0.35rem;
+    gap: var(--space-2);
     box-sizing: border-box !important;
     cursor: pointer;
     flex-shrink: 0;
     white-space: nowrap;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+    transition: border-color var(--dur-fast) ease, background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
 .board-trigger-btn:hover {
@@ -370,7 +370,7 @@
         justify-content: space-between !important;
         width: 100% !important;
         max-width: none !important;
-        gap: 0.35rem !important;
+        gap: var(--space-2) !important;
     }
 
     .board-archive-trigger {
@@ -405,8 +405,8 @@
         height: 36px !important;
         min-height: 36px !important;
         max-height: 36px !important;
-        padding-left: 0.5rem !important;
-        padding-right: 0.5rem !important;
+        padding-left: var(--space-4) !important;
+        padding-right: var(--space-4) !important;
     }
 
     .board-search-wrapper {
@@ -473,10 +473,10 @@
         width: 100% !important;
         padding-left: 0 !important;
         padding-right: 0 !important;
-        padding-top: 0.25rem !important;
+        padding-top: var(--space-1) !important;
         margin-left: 0 !important;
         margin-right: 0 !important;
-        margin-top: 0.25rem !important;
+        margin-top: var(--space-1) !important;
         box-sizing: border-box !important;
     }
 
@@ -522,7 +522,7 @@
 
 @media (max-width: 479.98px) {
     .board-stat-filters {
-        gap: 0.4rem !important;
+        gap: var(--space-3) !important;
     }
 
     .board-trigger-btn,
@@ -544,7 +544,7 @@
     white-space: nowrap;
     opacity: 0.8;
     font-size: 0.75rem;
-    margin-left: 0.25rem;
+    margin-left: var(--space-1);
 }
 
 @media (max-width: 959.98px) {

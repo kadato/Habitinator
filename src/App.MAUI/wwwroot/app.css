@@ -5,7 +5,7 @@
 .maui-splash {
     position: fixed;
     inset: 0;
-    z-index: 99999;
+    z-index: var(--z-max);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -53,7 +53,7 @@
     width: 180px;
     height: 3px;
     background: rgba(255, 255, 255, 0.12);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     overflow: hidden;
 }
 
@@ -67,7 +67,7 @@
     height: 100%;
     width: 35%;
     background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     animation: maui-loader-slide 1.5s ease-in-out infinite;
 }
 
@@ -142,14 +142,14 @@
     padding: 0.6rem 1.25rem 0.7rem 1.25rem;
     position: fixed;
     width: 100%;
-    z-index: 1000;
+    z-index: var(--z-error);
 }
 
     #blazor-error-ui .dismiss {
         cursor: pointer;
         position: absolute;
-        right: 0.75rem;
-        top: 0.5rem;
+        right: var(--space-5);
+        top: var(--space-4);
     }
 
 /* MAUI Blazor Hybrid specific top bar layout rules */
@@ -157,13 +157,13 @@
 .app-top-bar.mud-appbar-dense,
 .app-top-bar {
     flex-wrap: wrap;
-    row-gap: 0.25rem;
+    row-gap: var(--space-1);
     padding-top: 0.2rem !important;
     padding-bottom: 0.2rem !important;
-    padding-left: 0.5rem !important;
-    padding-right: 0.5rem !important;
-    column-gap: 1rem;
-    min-height: 56px !important;
+    padding-left: var(--space-4) !important;
+    padding-right: var(--space-4) !important;
+    column-gap: var(--space-6);
+    min-height: var(--topbar-height) !important;
     height: auto !important;
     backdrop-filter: blur(12px) !important;
     -webkit-backdrop-filter: blur(12px) !important;
@@ -185,7 +185,7 @@
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
-    min-height: 56px !important;
+    min-height: var(--topbar-height) !important;
     height: auto !important;
     box-sizing: border-box;
     align-items: center !important;
@@ -207,9 +207,9 @@
 /* ── Horizontal padding on very narrow MAUI screens ── */
 @media (max-width: 767.98px) {
     .board-main-container.mud-container {
-        padding-left: 0.75rem !important;
-        padding-right: 0.75rem !important;
-        padding-top: 0.35rem !important;
+        padding-left: var(--space-5) !important;
+        padding-right: var(--space-5) !important;
+        padding-top: var(--space-2) !important;
     }
 }
 
@@ -221,7 +221,7 @@
     min-width: 0 !important;
     box-sizing: border-box !important;
     flex-wrap: wrap !important;
-    row-gap: 0.25rem;
+    row-gap: var(--space-1);
     column-gap: 1.25rem;
     align-items: center !important;
     justify-content: flex-start !important;
@@ -229,12 +229,12 @@
 
 .app-top-bar__flex-spacer {
     flex: 1 1 auto;
-    min-width: 0.5rem !important;
+    min-width: var(--space-4) !important;
     align-self: stretch !important;
 }
 
 .app-top-bar__left {
-    gap: 0.75rem 0;
+    gap: var(--space-5) 0;
     align-items: center;
     min-width: 0;
     flex: 0 1 auto;
@@ -268,7 +268,7 @@
 .app-header-profile-btn.mud-icon-button {
     width: 2.5rem;
     height: 2.5rem;
-    border-radius: 12px !important;
+    border-radius: var(--radius-xl) !important;
     background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent) !important;
 }
 
@@ -290,7 +290,7 @@
 /* Profile Menu Dropdown Popover */
 .app-profile-menu-popover {
     margin-top: 8px;
-    border-radius: 12px !important;
+    border-radius: var(--radius-xl) !important;
     border: 1px solid var(--mud-palette-divider) !important;
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
     background-color: var(--mud-palette-surface) !important;

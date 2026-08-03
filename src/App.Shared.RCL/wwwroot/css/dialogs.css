@@ -26,7 +26,7 @@
     overflow: hidden;
     background: var(--mud-palette-surface);
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
-    border-radius: 1rem;
+    border-radius: var(--space-6);
     box-shadow: 
         0 24px 38px 3px rgba(0, 0, 0, 0.08), 
         0 9px 46px 8px rgba(0, 0, 0, 0.06), 
@@ -37,7 +37,7 @@
 /* ── Header Toolbar ── */
 .edit-daily-header {
     background: var(--mud-palette-surface);
-    padding: 1.25rem 1.25rem 1rem;
+    padding: 1.25rem 1.25rem var(--space-6);
     color: var(--mud-palette-text-primary);
     border-bottom: 1px solid var(--mud-palette-divider);
 }
@@ -46,7 +46,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: var(--space-4);
     margin-bottom: 0.85rem;
 }
 
@@ -63,9 +63,9 @@
     min-width: auto;
     padding: 0.45rem 0.85rem !important;
     font-weight: 600 !important;
-    border-radius: 8px !important;
+    border-radius: var(--radius-md) !important;
     font-size: 0.875rem !important;
-    transition: all 0.2s ease !important;
+    transition: all var(--dur-normal) ease !important;
 }
 
 .edit-daily-header__cancel:hover {
@@ -81,9 +81,9 @@
     font-weight: 600 !important;
     min-width: 5rem !important;
     padding: 0.45rem 1.15rem !important;
-    border-radius: 10px !important;
+    border-radius: var(--radius-lg) !important;
     box-shadow: 0 4px 12px color-mix(in srgb, var(--mud-palette-primary) 30%, transparent) !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: all var(--dur-normal) cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .edit-daily-header__save:hover:not([disabled]),
@@ -100,7 +100,7 @@
     font-size: 0.72rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    margin-bottom: 0.35rem;
+    margin-bottom: var(--space-2);
     margin-left: 0.15rem;
 }
 
@@ -108,8 +108,8 @@
 .edit-daily-field-header .mud-input-root-outlined,
 .edit-daily-field-body .mud-input-root-outlined {
     background-color: color-mix(in srgb, var(--mud-palette-background-gray) 35%, var(--mud-palette-surface)) !important;
-    border-radius: 10px !important;
-    transition: background-color 0.2s ease, box-shadow 0.2s ease !important;
+    border-radius: var(--radius-lg) !important;
+    transition: background-color var(--dur-normal) ease, box-shadow var(--dur-normal) ease !important;
     border: none !important;
 }
 
@@ -124,7 +124,7 @@
 .edit-daily-field-body .mud-input-outlined-border {
     border-color: transparent !important;
     border-width: 1px !important;
-    transition: border-color 0.2s ease !important;
+    transition: border-color var(--dur-normal) ease !important;
 }
 
 .edit-daily-field-header .mud-input-root-outlined:hover .mud-input-outlined-border,
@@ -161,13 +161,13 @@
 /* ── Body Layout ── */
 .edit-daily-body {
     background: var(--mud-palette-surface);
-    padding: 1rem 1.25rem 1.5rem;
+    padding: var(--space-6) 1.25rem var(--space-7);
     color: var(--mud-palette-text-primary);
     flex: 1;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: var(--space-5);
 }
 
 .edit-daily-label-body {
@@ -176,20 +176,20 @@
     font-size: 0.72rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    margin-bottom: 0.35rem;
+    margin-bottom: var(--space-2);
     margin-left: 0.15rem;
 }
 
 /* ── Checklist Section ── */
 .edit-daily-checklist-panels {
-    margin-bottom: 0.25rem;
+    margin-bottom: var(--space-1);
 }
 
 .edit-daily-checklist-panels .mud-expand-panel {
     background: color-mix(in srgb, var(--mud-palette-background-gray) 30%, var(--mud-palette-surface)) !important;
     border: 1px solid var(--mud-palette-divider);
-    border-radius: 10px !important;
-    transition: border-color 0.2s ease, background-color 0.2s ease;
+    border-radius: var(--radius-lg) !important;
+    transition: border-color var(--dur-normal) ease, background-color var(--dur-normal) ease;
 }
 
 .edit-daily-checklist-panels .mud-expand-panel:hover {
@@ -203,7 +203,7 @@
 
 .edit-daily-checklist-panels .mud-expand-panel-content {
     border-top: 1px solid var(--mud-palette-divider);
-    padding: 0.5rem 0.85rem 0.85rem;
+    padding: var(--space-4) 0.85rem 0.85rem;
 }
 
 .edit-daily-checklist {
@@ -214,10 +214,10 @@
 .edit-daily-checklist__row {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-4);
     padding: 0.2rem 0;
     border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 50%, transparent);
-    transition: all 0.2s ease;
+    transition: all var(--dur-normal) ease;
 }
 
 .edit-daily-checklist__row:last-of-type {
@@ -247,7 +247,7 @@
 .edit-daily-checklist__remove {
     flex-shrink: 0;
     color: var(--mud-palette-text-disabled) !important;
-    transition: color 0.15s ease, transform 0.15s ease !important;
+    transition: color var(--dur-fast) ease, transform var(--dur-fast) ease !important;
 }
 
 .edit-daily-checklist__remove:hover {
@@ -258,19 +258,19 @@
 .edit-daily-checklist__add {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: var(--space-3);
     align-self: flex-start;
     margin-top: 0.65rem;
-    padding: 0.4rem 0.85rem;
+    padding: var(--space-3) 0.85rem;
     background: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
     border: 1px dashed color-mix(in srgb, var(--mud-palette-primary) 30%, transparent);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     color: var(--mud-palette-primary);
     font-size: 0.8rem;
     font-weight: 600;
     text-align: left;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--dur-normal) ease;
 }
 
 .edit-daily-checklist__add:hover {
@@ -317,7 +317,7 @@
 .edit-daily-advanced .mud-expand-panel {
     background: color-mix(in srgb, var(--mud-palette-background-gray) 30%, var(--mud-palette-surface)) !important;
     border: 1px solid var(--mud-palette-divider);
-    border-radius: 10px !important;
+    border-radius: var(--radius-lg) !important;
 }
 
 .edit-daily-advanced .mud-expand-panel-header {
@@ -327,7 +327,7 @@
 
 .edit-daily-advanced .mud-expand-panel-content {
     border-top: 1px solid var(--mud-palette-divider);
-    padding: 0.75rem 0.85rem 0.85rem;
+    padding: var(--space-5) 0.85rem 0.85rem;
 }
 
 .edit-daily-streak-input {
@@ -335,10 +335,10 @@
     align-items: stretch;
     max-width: 100%;
     border: 1px solid var(--mud-palette-divider);
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     overflow: hidden;
     background: var(--mud-palette-surface);
-    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    transition: box-shadow var(--dur-normal) ease, border-color var(--dur-normal) ease;
 }
 
 .edit-daily-streak-input:focus-within {
@@ -384,7 +384,7 @@
 .edit-daily-delete-wrap {
     display: flex;
     justify-content: center;
-    margin-top: 1rem;
+    margin-top: var(--space-6);
     padding-top: 0.65rem;
     border-top: 1px solid var(--mud-palette-divider);
 }
@@ -409,18 +409,18 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: var(--space-4);
     width: 100%;
     min-height: 2.4rem;
-    padding: 0.35rem 0.65rem;
+    padding: var(--space-2) 0.65rem;
     background-color: color-mix(in srgb, var(--mud-palette-background-gray) 35%, var(--mud-palette-surface));
     border: 1px solid transparent;
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     cursor: pointer;
     text-align: left;
     color: var(--mud-palette-text-primary);
     outline: none;
-    transition: all 0.2s ease;
+    transition: all var(--dur-normal) ease;
 }
 
 .habit-tag-picker__control:hover {
@@ -442,7 +442,7 @@
     flex: 1;
     flex-wrap: nowrap;
     align-items: center;
-    gap: 0.35rem;
+    gap: var(--space-2);
     min-width: 0;
     overflow-x: auto;
     overflow-y: hidden;
@@ -460,7 +460,7 @@
 
     .habit-tag-picker__chips::-webkit-scrollbar-thumb {
         background: var(--scrollbar-thumb);
-        border-radius: 999px;
+        border-radius: var(--radius-pill);
     }
 }
 
@@ -487,12 +487,12 @@
     padding: 0.15rem 0.15rem 0.15rem 0.65rem;
     background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 15%, var(--mud-palette-divider));
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     font-size: 0.8rem;
     line-height: 1.2;
     color: var(--mud-palette-primary);
     user-select: none;
-    transition: all 0.15s ease;
+    transition: all var(--dur-fast) ease;
 }
 
 .habit-tag-chip:hover {
@@ -526,8 +526,8 @@
     color: var(--mud-palette-primary) !important;
     cursor: pointer !important;
     padding: 0 !important;
-    transition: all 0.15s ease !important;
-    margin-left: 0.35rem !important;
+    transition: all var(--dur-fast) ease !important;
+    margin-left: var(--space-2) !important;
 }
 
 .habit-tag-chip__remove:hover {
@@ -544,7 +544,7 @@
     padding: 0.65rem 0.65rem 0.55rem;
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-divider);
-    border-radius: 12px;
+    border-radius: var(--radius-xl);
     box-shadow: 
         0 -12px 32px -4px rgba(0, 0, 0, 0.12),
         0 -4px 12px -2px rgba(0, 0, 0, 0.08);
@@ -555,9 +555,9 @@
     pointer-events: none;
     visibility: hidden;
     transition: 
-        opacity 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-        transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-        visibility 0.2s;
+        opacity var(--dur-normal) cubic-bezier(0.34, 1.56, 0.64, 1),
+        transform var(--dur-normal) cubic-bezier(0.34, 1.56, 0.64, 1),
+        visibility var(--dur-normal);
 }
 
 .habit-tag-picker__dropdown--open {
@@ -571,15 +571,15 @@
     display: block;
     width: 100%;
     box-sizing: border-box;
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--space-4);
     padding: 0.55rem 0.65rem;
     background: color-mix(in srgb, var(--mud-palette-background-gray) 40%, var(--mud-palette-surface));
     border: 1px solid transparent;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     color: var(--mud-palette-text-primary);
     font-size: 0.9rem;
     outline: none;
-    transition: border-color 0.2s ease, background-color 0.2s ease;
+    transition: border-color var(--dur-normal) ease, background-color var(--dur-normal) ease;
 }
 
 .habit-tag-picker__search::placeholder {
@@ -612,12 +612,12 @@
 
     .habit-tag-picker__list::-webkit-scrollbar-thumb {
         background: var(--scrollbar-thumb);
-        border-radius: 999px;
+        border-radius: var(--radius-pill);
     }
 }
 
 .habit-tag-picker__empty {
-    padding: 0.4rem 0.35rem;
+    padding: var(--space-3) var(--space-2);
     font-size: 0.82rem;
     color: var(--mud-palette-text-secondary);
 }
@@ -632,11 +632,11 @@
     font-size: 0.9rem;
     padding: 0.55rem 0.65rem;
     margin: 0 0 0.15rem 0;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
     white-space: nowrap;
     min-width: 0;
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
 .habit-tag-picker__option:hover,
@@ -674,7 +674,7 @@
     overflow: hidden;
     background: var(--mud-palette-surface);
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
-    border-radius: 1rem;
+    border-radius: var(--space-6);
     box-shadow: 
         0 24px 38px 3px rgba(0, 0, 0, 0.08), 
         0 9px 46px 8px rgba(0, 0, 0, 0.06), 
@@ -685,7 +685,7 @@
 /* ── Header Toolbar ── */
 .edit-habit-header {
     background: var(--mud-palette-surface);
-    padding: 1.25rem 1.25rem 1rem;
+    padding: 1.25rem 1.25rem var(--space-6);
     color: var(--mud-palette-text-primary);
     border-bottom: 1px solid var(--mud-palette-divider);
 }
@@ -694,7 +694,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: var(--space-4);
     margin-bottom: 0.85rem;
 }
 
@@ -711,9 +711,9 @@
     min-width: auto;
     padding: 0.45rem 0.85rem !important;
     font-weight: 600 !important;
-    border-radius: 8px !important;
+    border-radius: var(--radius-md) !important;
     font-size: 0.875rem !important;
-    transition: all 0.2s ease !important;
+    transition: all var(--dur-normal) ease !important;
 }
 
 .edit-habit-header__cancel:hover {
@@ -729,9 +729,9 @@
     font-weight: 600 !important;
     min-width: 5rem !important;
     padding: 0.45rem 1.15rem !important;
-    border-radius: 10px !important;
+    border-radius: var(--radius-lg) !important;
     box-shadow: 0 4px 12px color-mix(in srgb, var(--mud-palette-primary) 30%, transparent) !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: all var(--dur-normal) cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .edit-habit-header__save:hover:not([disabled]),
@@ -748,15 +748,15 @@
     font-size: 0.72rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    margin-bottom: 0.35rem;
+    margin-bottom: var(--space-2);
     margin-left: 0.15rem;
 }
 
 .edit-habit-field-header .mud-input-root-outlined,
 .edit-habit-field-body .mud-input-root-outlined {
     background-color: color-mix(in srgb, var(--mud-palette-background-gray) 35%, var(--mud-palette-surface)) !important;
-    border-radius: 10px !important;
-    transition: background-color 0.2s ease, box-shadow 0.2s ease !important;
+    border-radius: var(--radius-lg) !important;
+    transition: background-color var(--dur-normal) ease, box-shadow var(--dur-normal) ease !important;
     border: none !important;
 }
 
@@ -770,7 +770,7 @@
 .edit-habit-field-body .mud-input-outlined-border {
     border-color: transparent !important;
     border-width: 1px !important;
-    transition: border-color 0.2s ease !important;
+    transition: border-color var(--dur-normal) ease !important;
 }
 
 .edit-habit-field-header .mud-input-root-outlined:hover .mud-input-outlined-border,
@@ -807,13 +807,13 @@
 /* ── Body Layout ── */
 .edit-habit-body {
     background: var(--mud-palette-surface);
-    padding: 1rem 1.25rem 1.5rem;
+    padding: var(--space-6) 1.25rem var(--space-7);
     color: var(--mud-palette-text-primary);
     flex: 1;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: var(--space-5);
 }
 
 .edit-habit-label-body {
@@ -822,7 +822,7 @@
     font-size: 0.72rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    margin-bottom: 0.35rem;
+    margin-bottom: var(--space-2);
     margin-left: 0.15rem;
 }
 
@@ -834,8 +834,8 @@
 .habit-track {
     display: flex;
     justify-content: center;
-    gap: 0.75rem;
-    margin-bottom: 0.5rem;
+    gap: var(--space-5);
+    margin-bottom: var(--space-4);
     padding-top: 0.15rem;
     width: 100%;
 }
@@ -849,11 +849,11 @@
     gap: 0.65rem;
     background-color: color-mix(in srgb, var(--mud-palette-background-gray) 30%, var(--mud-palette-surface));
     border: 1px solid var(--mud-palette-divider);
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     padding: 0.65rem 0.85rem;
     cursor: pointer;
     color: var(--mud-palette-text-secondary);
-    transition: all 0.2s ease;
+    transition: all var(--dur-normal) ease;
 }
 
 .habit-track__option:hover {
@@ -869,7 +869,7 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    transition: all 0.2s ease;
+    transition: all var(--dur-normal) ease;
 }
 
 .habit-track__circle--good {
@@ -886,7 +886,7 @@
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--mud-palette-text-secondary);
-    transition: all 0.2s ease;
+    transition: all var(--dur-normal) ease;
 }
 
 /* Option selected states */
@@ -936,7 +936,7 @@
 .edit-habit-advanced .mud-expand-panel {
     background: color-mix(in srgb, var(--mud-palette-background-gray) 30%, var(--mud-palette-surface)) !important;
     border: 1px solid var(--mud-palette-divider);
-    border-radius: 10px !important;
+    border-radius: var(--radius-lg) !important;
 }
 
 .edit-habit-advanced .mud-expand-panel-header {
@@ -946,14 +946,14 @@
 
 .edit-habit-advanced .mud-expand-panel-content {
     border-top: 1px solid var(--mud-palette-divider);
-    padding: 0.75rem 0.85rem 0.85rem;
+    padding: var(--space-5) 0.85rem 0.85rem;
 }
 
 .counter-adjust {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.35rem;
+    gap: var(--space-2);
 }
 
 .counter-adjust__btn {
@@ -972,7 +972,7 @@
 .edit-habit-delete-wrap {
     display: flex;
     justify-content: center;
-    margin-top: 1rem;
+    margin-top: var(--space-6);
     padding-top: 0.65rem;
     border-top: 1px solid var(--mud-palette-divider);
 }

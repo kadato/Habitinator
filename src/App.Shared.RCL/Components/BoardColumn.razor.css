@@ -1,7 +1,7 @@
 .board-column {
     min-height: 18rem;
     height: 100%;
-    border-radius: 1rem;
+    border-radius: var(--space-6);
     overflow: hidden;
     background: linear-gradient(
         165deg,
@@ -12,7 +12,7 @@
     box-shadow:
         0 12px 40px color-mix(in srgb, var(--mud-palette-black) 15%, transparent),
         0 0 0 1px color-mix(in srgb, var(--mud-palette-text-primary) 4%, transparent) inset;
-    transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+    transition: box-shadow var(--dur-slow) ease, border-color var(--dur-slow) ease, transform var(--dur-slow) ease;
 }
 
 .board-column:hover {
@@ -29,7 +29,7 @@
 }
 
 .board-column ::deep .mud-card-header {
-    padding: 0.35rem 0.85rem 0.2rem !important;
+    padding: var(--space-2) 0.85rem 0.2rem !important;
 }
 
 .board-column ::deep .mud-card-content {
@@ -63,10 +63,10 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 1.5rem;
-    height: 1.5rem;
+    min-width: var(--space-7);
+    height: var(--space-7);
     padding: 0 0.45rem;
-    border-radius: 0.5rem;
+    border-radius: var(--space-4);
     font-size: 0.75rem;
     font-weight: 700;
     line-height: 1;
@@ -95,7 +95,7 @@
     flex-direction: row !important;
     flex-wrap: nowrap !important;
     align-items: center !important;
-    gap: 0.35rem !important;
+    gap: var(--space-2) !important;
 }
 
 .board-filter-btn {
@@ -104,8 +104,8 @@
     min-width: 0 !important;
     height: 36px !important;
     min-height: 36px !important;
-    padding: 0.25rem 0.4rem !important;
-    border-radius: 8px !important;
+    padding: var(--space-1) var(--space-3) !important;
+    border-radius: var(--radius-md) !important;
     border: 1px solid var(--mud-palette-primary, #2563eb) !important;
     background-color: transparent !important;
     color: var(--mud-palette-primary, #2563eb) !important;
@@ -123,7 +123,7 @@
     text-overflow: ellipsis !important;
     touch-action: manipulation !important;
     -webkit-tap-highlight-color: transparent !important;
-    transition: all 0.15s ease !important;
+    transition: all var(--dur-fast) ease !important;
 }
 
 .board-filter-btn:hover,
@@ -212,14 +212,14 @@
 .board-sortable-fallback-drag {
     opacity: 0.92;
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2) !important;
-    z-index: 99999 !important;
+    z-index: var(--z-max) !important;
     pointer-events: none !important;
 }
 
 .board-col-foot {
     border-top: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
-    margin-top: 0.25rem;
-    padding-top: 0.4rem !important;
+    margin-top: var(--space-1);
+    padding-top: var(--space-3) !important;
 }
 
 @media (max-width: 959.98px) {
@@ -228,9 +228,9 @@
     }
 
     .board-column ::deep .board-filter-btn.mud-button-root {
-        min-height: 40px !important;
-        padding-left: 0.25rem !important;
-        padding-right: 0.25rem !important;
+        min-height: var(--control-height) !important;
+        padding-left: var(--space-1) !important;
+        padding-right: var(--space-1) !important;
         font-size: 0.78rem !important;
     }
 }
@@ -257,7 +257,7 @@
 /* Column header glossary popover */
 :global(.board-column-info-popover) {
     max-width: 260px !important;
-    border-radius: 8px !important;
+    border-radius: var(--radius-md) !important;
     border: 1px solid var(--mud-palette-divider) !important;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
 }
@@ -271,7 +271,7 @@
 .board-column ::deep .board-column-info-btn {
     opacity: 0.5;
     margin-left: -6px !important;
-    transition: opacity 0.2s ease, transform 0.15s ease;
+    transition: opacity var(--dur-normal) ease, transform var(--dur-fast) ease;
 }
 
 .board-column ::deep .board-column-info-btn .mud-icon-button {
@@ -296,11 +296,11 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 2rem 1rem;
+    padding: var(--space-8) var(--space-6);
     border: 1.5px dashed color-mix(in srgb, var(--mud-palette-text-primary) 12%, transparent);
-    border-radius: 0.75rem;
+    border-radius: var(--space-5);
     background-color: color-mix(in srgb, var(--mud-palette-background-grey) 25%, transparent);
-    margin: 0.5rem 0;
+    margin: var(--space-4) 0;
 }
 
 .empty-state-icon-container {
@@ -310,7 +310,7 @@
     width: 2.75rem;
     height: 2.75rem;
     border-radius: 50%;
-    margin-bottom: 0.75rem;
+    margin-bottom: var(--space-5);
 }
 
 .board-column--habit .empty-state-icon-container {
@@ -339,7 +339,7 @@
 
 .empty-state-title {
     font-weight: 600;
-    margin-bottom: 0.25rem;
+    margin-bottom: var(--space-1);
     color: var(--mud-palette-text-primary);
 }
 

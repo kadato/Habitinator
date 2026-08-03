@@ -1,5 +1,5 @@
 ::deep .settings-section-paper {
-    border-radius: 12px;
+    border-radius: var(--radius-xl);
     background: color-mix(in srgb, var(--mud-palette-surface) 90%, var(--mud-palette-primary) 4%);
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 10%, var(--mud-palette-table-lines) 75%);
     box-shadow: 0 1px 3px color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);

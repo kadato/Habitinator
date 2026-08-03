@@ -9,7 +9,7 @@
 #habitinator-wasm-splash {
     position: fixed;
     inset: 0;
-    z-index: 99999;
+    z-index: var(--z-max);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -71,7 +71,7 @@ html.light-theme .wasm-splash__title {
     width: 180px;
     height: 3px;
     background: rgba(255, 255, 255, 0.12);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     overflow: hidden;
 }
 
@@ -90,7 +90,7 @@ html.light-theme .wasm-splash__progress {
     min-width: 4%;
     max-width: 100%;
     background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -132,7 +132,7 @@ html.light-theme .wasm-splash__hint {
     animation: habLoading 1.5s infinite linear, habFadeIn 0.3s forwards;
     animation-delay: 0s, 0.8s;
     z-index: 20000;
-    transition: opacity 0.25s ease, visibility 0.25s ease;
+    transition: opacity var(--dur-slow) ease, visibility var(--dur-slow) ease;
 }
 @keyframes habLoading {
     0% { background-position: 200% 0; }
@@ -157,7 +157,7 @@ html {
     }
     html::-webkit-scrollbar-thumb {
         background: var(--scrollbar-thumb);
-        border-radius: 999px;
+        border-radius: var(--radius-pill);
     }
     html::-webkit-scrollbar-track {
         background: var(--scrollbar-track);
@@ -192,7 +192,7 @@ a:hover, .btn-link:hover {
 
 /* Focus ring for auth-page checkboxes (form/button styling lives in auth-pages.css) */
 .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem var(--mud-palette-surface), 0 0 0 0.25rem var(--mud-palette-primary);
+  box-shadow: 0 0 0 0.1rem var(--mud-palette-surface), 0 0 0 var(--space-1) var(--mud-palette-primary);
 }
 
 /* Cap content line lengths for readability */
@@ -204,12 +204,12 @@ a:hover, .btn-link:hover {
     color: var(--mud-palette-text-secondary);
     font-size: 0.875rem;
     line-height: 1.45;
-    margin: 0 0 0.75rem 0;
+    margin: 0 0 var(--space-5) 0;
 }
 
 .blazor-error-boundary {
-    background: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNDkiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9IjIzNSIgeT0iNTEiIHdpZHRoPSI1NiIgaGVpZ2h0PSI0OSIvPjwvY2xpcFBhdGg+PC9kZWZzPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMCkiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMzUgLTUxKSI+PHBhdGggZD0iTTI2My41MDYgNTFDMjY0LjcxNyA1MSAyNjUuODEzIDUxLjQ4MzcgMjY2LjYwNiA1Mi4yNjU4TDI2Ny4wNTIgNTIuNzk4NyAyNjcuNTM5IDUzLjYyODMgMjkwLjE4NSA5Mi4xODMxIDI5MC41NDUgOTIuNzk1IDI5MC42NTYgOTIuOTk2QzI5MC44NzcgOTMuNTEzIDI5MSA5NC4wODE1IDI5MSA5NC42NzgyIDI5MSA5Ny4wNjUxIDI4OS4wMzggOTkgMjg2LjYxNyA5OUwyNDAuMzgzIDk5QzIzNy45NjMgOTkgMjM2IDk3LjA2NTEgMjM2IDk0LjY3ODIgMjM2IDk0LjM3OTkgMjM2LjAzMSA5NC4wODg2IDIzNi4wODkgOTMuODA3MkwyMzYuMzM4IDkzLjAxNjIgMjM2Ljg1OCA5Mi4xMzE0IDI1OS40NzMgNTMuNjI5NCAyNTkuOTYxIDUyLjc5ODUgMjYwLjQwNyA1Mi4yNjU4QzI2MS4yIDUxLjQ4MzcgMjYyLjI5NiA1MSAyNjMuNTA2IDUxWk0yNjMuNTg2IDY2LjAxODNDMjYwLjczNyA2Ni4wMTgzIDI1OS4zMTMgNjcuMTI0NSAyNTkuMzEzIDY5LjMzNyAyNTkuMzEzIDY5LjYxMDIgMjU5LjMzMiA2OS44NjA4IDI1OS4zNzEgNzAuMDg4N0wyNjEuNzk1IDg0LjAxNjEgMjY1LjM4IDg0LjAxNjEgMjY3LjgyMSA2OS43NDc1QzI2Ny44NiA2OS43MzA5IDI2Ny44NzkgNjkuNTg3NyAyNjcuODc5IDY5LjMxNzkgMjY3Ljg3OSA2Ny4xMTgyIDI2Ni40NDggNjYuMDE4MyAyNjMuNTg2IDY2LjAxODNaTTI2My41NzYgODYuMDU0N0MyNjEuMDQ5IDg2LjA1NDcgMjU5Ljc4NiA4Ny4zMDA1IDI1OS43ODYgODkuNzkyMSAyNTkuNzg2IDkyLjI4MzcgMjYxLjA0OSA5My41Mjk1IDI2My41NzYgOTMuNTI5NSAyNjYuMTE2IDkzLjUyOTUgMjY3LjM4NyA5Mi4yODM3IDI2Ny4zODcgODkuNzkyMSAyNjcuMzg3IDg3LjMwMDUgMjY2LjExNiA4Ni4wNTQ3IDI2My41NzYgODYuMDU0N1oiIGZpbGw9IiNGRkU1MDAiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvZz48L3N2Zz4=) no-repeat 1rem/1.8rem, #b32121;
-    padding: 1rem 1rem 1rem 3.7rem;
+    background: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNDkiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9IjIzNSIgeT0iNTEiIHdpZHRoPSI1NiIgaGVpZ2h0PSI0OSIvPjwvY2xpcFBhdGg+PC9kZWZzPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMCkiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMzUgLTUxKSI+PHBhdGggZD0iTTI2My41MDYgNTFDMjY0LjcxNyA1MSAyNjUuODEzIDUxLjQ4MzcgMjY2LjYwNiA1Mi4yNjU4TDI2Ny4wNTIgNTIuNzk4NyAyNjcuNTM5IDUzLjYyODMgMjkwLjE4NSA5Mi4xODMxIDI5MC41NDUgOTIuNzk1IDI5MC42NTYgOTIuOTk2QzI5MC44NzcgOTMuNTEzIDI5MSA5NC4wODE1IDI5MSA5NC42NzgyIDI5MSA5Ny4wNjUxIDI4OS4wMzggOTkgMjg2LjYxNyA5OUwyNDAuMzgzIDk5QzIzNy45NjMgOTkgMjM2IDk3LjA2NTEgMjM2IDk0LjY3ODIgMjM2IDk0LjM3OTkgMjM2LjAzMSA5NC4wODg2IDIzNi4wODkgOTMuODA3MkwyMzYuMzM4IDkzLjAxNjIgMjM2Ljg1OCA5Mi4xMzE0IDI1OS40NzMgNTMuNjI5NCAyNTkuOTYxIDUyLjc5ODUgMjYwLjQwNyA1Mi4yNjU4QzI2MS4yIDUxLjQ4MzcgMjYyLjI5NiA1MSAyNjMuNTA2IDUxWk0yNjMuNTg2IDY2LjAxODNDMjYwLjczNyA2Ni4wMTgzIDI1OS4zMTMgNjcuMTI0NSAyNTkuMzEzIDY5LjMzNyAyNTkuMzEzIDY5LjYxMDIgMjU5LjMzMiA2OS44NjA4IDI1OS4zNzEgNzAuMDg4N0wyNjEuNzk1IDg0LjAxNjEgMjY1LjM4IDg0LjAxNjEgMjY3LjgyMSA2OS43NDc1QzI2Ny44NiA2OS43MzA5IDI2Ny44NzkgNjkuNTg3NyAyNjcuODc5IDY5LjMxNzkgMjY3Ljg3OSA2Ny4xMTgyIDI2Ni40NDggNjYuMDE4MyAyNjMuNTg2IDY2LjAxODNaTTI2My41NzYgODYuMDU0N0MyNjEuMDQ5IDg2LjA1NDcgMjU5Ljc4NiA4Ny4zMDA1IDI1OS43ODYgODkuNzkyMSAyNTkuNzg2IDkyLjI4MzcgMjYxLjA0OSA5My41Mjk1IDI2My41NzYgOTMuNTI5NSAyNjYuMTE2IDkzLjUyOTUgMjY3LjM4NyA5Mi4yODM3IDI2Ny4zODcgODkuNzkyMSAyNjcuMzg3IDg3LjMwMDUgMjY2LjExNiA4Ni4wNTQ3IDI2My41NzYgODYuMDU0N1oiIGZpbGw9IiNGRkU1MDAiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvZz48L3N2Zz4=) no-repeat var(--space-6)/1.8rem, #b32121;
+    padding: var(--space-6) var(--space-6) var(--space-6) 3.7rem;
     color: white;
 }
 
@@ -241,7 +241,7 @@ a:hover, .btn-link:hover {
     overflow: visible !important;
     overflow-y: visible !important;
     max-height: none !important;
-    width: min(24rem, calc(100vw - 2rem)) !important;
+    width: min(24rem, calc(100vw - var(--space-8))) !important;
 }
 
 .mud-dialog.edit-habit-dialog .mud-dialog-content,
@@ -262,7 +262,7 @@ a:hover, .btn-link:hover {
     overflow: visible !important;
     overflow-y: visible !important;
     max-height: none !important;
-    width: min(28rem, calc(100vw - 2rem)) !important;
+    width: min(28rem, calc(100vw - var(--space-8))) !important;
 }
 
 .mud-dialog.daily-yesterday-dialog .mud-dialog-content,
@@ -275,11 +275,11 @@ a:hover, .btn-link:hover {
 .settings-section-switcher {
     display: flex;
     width: 100%;
-    gap: 0.25rem;
+    gap: var(--space-1);
     padding: 0.2rem;
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-divider);
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     box-sizing: border-box;
 }
 
@@ -290,11 +290,11 @@ a:hover, .btn-link:hover {
     align-items: center;
     justify-content: center;
     text-align: center;
-    gap: 0.35rem;
-    min-height: 40px;
-    padding: 0.35rem 0.4rem;
+    gap: var(--space-2);
+    min-height: var(--control-height);
+    padding: var(--space-2) var(--space-3);
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     background: transparent;
     color: var(--mud-palette-text-secondary);
     font-size: 0.85rem;
@@ -303,7 +303,7 @@ a:hover, .btn-link:hover {
     cursor: pointer;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    transition: all 0.15s ease;
+    transition: all var(--dur-fast) ease;
 }
 
 .settings-section-switcher__btn:active {
@@ -324,12 +324,12 @@ a:hover, .btn-link:hover {
 
 .settings-section-content {
     width: 100%;
-    padding-top: 1rem;
+    padding-top: var(--space-6);
 }
 
 @media (max-width: 959.98px) {
     .settings-section-content {
-        padding-top: 0.75rem;
+        padding-top: var(--space-5);
     }
 }
 
@@ -363,7 +363,7 @@ a:hover, .btn-link:hover {
 
 .mud-appbar.app-top-bar .app-top-bar__flex-spacer {
     flex: 1 1 auto !important;
-    min-width: 0.5rem !important;
+    min-width: var(--space-4) !important;
     align-self: stretch !important;
 }
 
@@ -393,21 +393,21 @@ a:hover, .btn-link:hover {
     .app-top-bar__stack {
         flex-direction: row !important;
         align-items: center !important;
-        gap: 0.5rem !important;
+        gap: var(--space-4) !important;
         width: 100% !important;
     }
 
     .app-top-bar__row {
         flex: 0 0 auto !important;
         width: auto !important;
-        column-gap: 0.25rem !important;
+        column-gap: var(--space-1) !important;
         min-width: 0;
         margin: 0 !important;
         order: 1 !important;
     }
 
     .app-top-bar__right {
-        gap: 0.25rem;
+        gap: var(--space-1);
     }
 
     .app-mobile-nav {
@@ -420,13 +420,13 @@ a:hover, .btn-link:hover {
     /* Compact sync/profile icons on mobile */
     .app-header-user-rail {
         flex-direction: row !important;
-        gap: 0.25rem;
+        gap: var(--space-1);
         justify-content: flex-start;
         align-items: center;
     }
 
     .app-header-user-rail .sync-status-indicator {
-        margin-right: 0.25rem !important;
+        margin-right: var(--space-1) !important;
     }
 
     .app-header-user-rail .sync-status-indicator .mud-icon {
@@ -436,7 +436,7 @@ a:hover, .btn-link:hover {
     .app-header-profile-btn.mud-icon-button {
         width: 2.25rem !important;
         height: 2.25rem !important;
-        border-radius: 10px !important;
+        border-radius: var(--radius-lg) !important;
     }
 }
 
@@ -468,13 +468,13 @@ a:hover, .btn-link:hover {
     }
 
     .app-shell-layout .app-shell-main.mud-main-content {
-        padding-top: calc(var(--app-top-bar-offset) + 0.25rem) !important;
+        padding-top: calc(var(--app-top-bar-offset) + var(--space-1)) !important;
     }
 }
 
 /* Desktop header nav — global styles (MudButton root is outside component CSS isolation) */
 .app-header-nav {
-    gap: 0.35rem 0.5rem;
+    gap: var(--space-2) var(--space-4);
     margin-left: 0;
     align-items: center;
 }
@@ -482,18 +482,18 @@ a:hover, .btn-link:hover {
 .app-header-nav-slot {
     display: inline-flex;
     align-items: center;
-    height: 2rem;
+    height: var(--space-8);
     box-sizing: border-box;
 }
 
 .app-header-nav .app-header-nav-slot .app-header-nav-btn.mud-button-root {
     box-sizing: border-box;
-    height: 2rem !important;
-    min-height: 2rem !important;
+    height: var(--space-8) !important;
+    min-height: var(--space-8) !important;
     margin: 0 !important;
-    padding: 0.35rem 0.85rem !important;
+    padding: var(--space-2) 0.85rem !important;
     border: none !important;
-    border-radius: 8px !important;
+    border-radius: var(--radius-md) !important;
     box-shadow: none !important;
     font-weight: 600;
     font-size: 0.85rem;
@@ -521,26 +521,26 @@ a:hover, .btn-link:hover {
     display: flex;
     flex-direction: column;
     width: 100%;
-    gap: 0.35rem;
+    gap: var(--space-2);
 }
 
 .app-mobile-nav {
     display: none;
     width: 100%;
-    gap: 0.35rem;
+    gap: var(--space-2);
     padding: 0 0 0.15rem;
 }
 
 .app-mobile-nav__item {
     flex: 1 1 0;
     min-width: 0;
-    min-height: 44px;
+    min-height: var(--mobile-nav-height);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.35rem;
-    padding: 0.45rem 0.5rem;
-    border-radius: 10px;
+    gap: var(--space-2);
+    padding: 0.45rem var(--space-4);
+    border-radius: var(--radius-lg);
     border: 1px solid transparent;
     background: transparent;
     color: var(--mud-palette-text-secondary);
@@ -549,7 +549,7 @@ a:hover, .btn-link:hover {
     font-size: 0.82rem;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+    transition: color var(--dur-normal) ease, background-color var(--dur-normal) ease, border-color var(--dur-normal) ease;
 }
 
 .app-mobile-nav__item:active {
@@ -591,15 +591,15 @@ a:hover, .btn-link:hover {
 
     .app-top-bar.mud-appbar {
         height: auto !important;
-        min-height: 56px !important;
+        min-height: var(--topbar-height) !important;
     }
 
     .app-top-bar .mud-toolbar-appbar {
         height: auto !important;
-        min-height: 56px !important;
+        min-height: var(--topbar-height) !important;
         align-items: center !important;
-        padding-top: 0.4rem !important;
-        padding-bottom: 0.4rem !important;
+        padding-top: var(--space-3) !important;
+        padding-bottom: var(--space-3) !important;
     }
 }
 
@@ -625,7 +625,7 @@ a:hover, .btn-link:hover {
 @media (max-width: 959.98px) {
     .settings-page-wrapper,
     .stats-page-wrapper {
-        padding-top: 0.35rem;
+        padding-top: var(--space-2);
     }
 }
 
@@ -634,20 +634,20 @@ a:hover, .btn-link:hover {
     padding: 0 !important;
     background: var(--mud-palette-surface) !important;
     color: var(--mud-palette-text-primary) !important;
-    border-radius: 0.75rem !important;
+    border-radius: var(--space-5) !important;
     border: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 8%, transparent) !important;
     box-shadow:
         0 12px 40px color-mix(in srgb, var(--mud-palette-text-primary) 10%, transparent),
         0 2px 10px color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent) !important;
     cursor: pointer;
-    animation: toast-slide-in 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    animation: toast-slide-in var(--dur-slow) cubic-bezier(0.22, 1, 0.36, 1);
     align-self: flex-start !important;
     width: fit-content !important;
     min-width: auto !important;
 }
 
 @keyframes toast-slide-in {
-    from { opacity: 0; transform: translateY(0.75rem); }
+    from { opacity: 0; transform: translateY(var(--space-5)); }
     to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -666,9 +666,9 @@ a:hover, .btn-link:hover {
 .undo-toast-body {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--space-5);
     width: 100%;
-    padding: 0.5rem 0.875rem;
+    padding: var(--space-4) 0.875rem;
 }
 
 .undo-toast-message {
@@ -685,13 +685,13 @@ a:hover, .btn-link:hover {
     color: var(--mud-palette-error-contrast-text, #fff);
     border: none;
     border-radius: var(--mud-default-borderradius, 0.375rem);
-    padding: 0.35rem 1rem;
+    padding: var(--space-2) var(--space-6);
     font-size: 0.8rem;
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     cursor: pointer;
-    transition: opacity 0.15s ease, background-color 0.15s ease;
+    transition: opacity var(--dur-fast) ease, background-color var(--dur-fast) ease;
 }
 
 .undo-toast-btn:hover {
@@ -706,12 +706,12 @@ a:hover, .btn-link:hover {
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     background-color: rgba(10, 15, 30, 0.45) !important;
-    transition: background-color 0.25s ease, backdrop-filter 0.25s ease;
+    transition: background-color var(--dur-slow) ease, backdrop-filter var(--dur-slow) ease;
 }
 
 /* Base dialog style (all dialogs except those with custom outer shells) */
 .mud-dialog:not(.edit-daily-dialog):not(.edit-habit-dialog):not(.daily-yesterday-dialog) {
-    border-radius: 1rem !important;
+    border-radius: var(--space-6) !important;
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent) !important;
     background: var(--mud-palette-surface) !important;
     box-shadow: 
@@ -725,7 +725,7 @@ a:hover, .btn-link:hover {
 .mud-dialog .mud-dialog-title {
     background: var(--mud-palette-surface) !important;
     border-bottom: 1px solid var(--mud-palette-divider) !important;
-    padding: 1.25rem 1.25rem 1rem !important;
+    padding: 1.25rem 1.25rem var(--space-6) !important;
 }
 
 .mud-dialog .mud-dialog-title .mud-typography {
@@ -738,15 +738,15 @@ a:hover, .btn-link:hover {
 /* Consistent Dialog Actions (Footer) */
 .mud-dialog .mud-dialog-actions {
     border-top: 1px solid var(--mud-palette-divider) !important;
-    padding: 1rem 1.25rem !important;
+    padding: var(--space-6) 1.25rem !important;
     background: var(--mud-palette-surface) !important;
-    gap: 0.75rem !important;
+    gap: var(--space-5) !important;
 }
 
 .mud-dialog .mud-dialog-actions .mud-button {
     text-transform: none !important;
     font-weight: 600 !important;
-    border-radius: 8px !important;
+    border-radius: var(--radius-md) !important;
 }
 
 /* Consistent Close Button style on base dialogs */
@@ -754,8 +754,8 @@ a:hover, .btn-link:hover {
     color: var(--mud-palette-text-secondary) !important;
     margin-top: -0.15rem;
     margin-right: -0.15rem;
-    border-radius: 8px !important;
-    transition: all 0.2s ease !important;
+    border-radius: var(--radius-md) !important;
+    transition: all var(--dur-normal) ease !important;
 }
 
 .mud-dialog-title .mud-button-close:hover {
@@ -774,13 +774,13 @@ a:hover, .btn-link:hover {
 .activity-day-detail-summary {
     background: color-mix(in srgb, var(--mud-palette-primary) 6%, var(--mud-palette-surface));
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 12%, var(--mud-palette-divider));
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     padding: 0.85rem 1.15rem;
     margin-bottom: 1.25rem;
     color: var(--mud-palette-text-primary);
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: var(--space-2);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
@@ -799,7 +799,7 @@ a:hover, .btn-link:hover {
 .activity-day-detail-table .mud-table-root {
     background: transparent !important;
     border: 1px solid var(--mud-palette-divider) !important;
-    border-radius: 10px !important;
+    border-radius: var(--radius-lg) !important;
     overflow: hidden !important;
     border-collapse: separate !important;
     width: 100% !important;
@@ -812,7 +812,7 @@ a:hover, .btn-link:hover {
 
 .activity-day-detail-table .mud-table-body .mud-table-row {
     background: var(--mud-palette-surface) !important;
-    transition: background-color 0.15s ease;
+    transition: background-color var(--dur-fast) ease;
     display: table-row !important;
 }
 
@@ -826,7 +826,7 @@ a:hover, .btn-link:hover {
     vertical-align: middle !important;
     color: var(--mud-palette-text-primary) !important;
     border-bottom: 1px solid var(--mud-palette-divider) !important;
-    padding: 0.75rem 1rem !important;
+    padding: var(--space-5) var(--space-6) !important;
     font-size: 0.9rem !important;
     text-align: left !important;
 }
@@ -842,7 +842,7 @@ a:hover, .btn-link:hover {
     font-weight: 600 !important;
     color: var(--mud-palette-text-secondary) !important;
     white-space: nowrap;
-    padding: 0.5rem 0.5rem 0.5rem 0.75rem !important;
+    padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5) !important;
 }
 
 .activity-time-text {
@@ -850,19 +850,19 @@ a:hover, .btn-link:hover {
     font-size: 0.8rem;
     letter-spacing: 0.02em;
     background: color-mix(in srgb, var(--mud-palette-text-secondary) 10%, transparent);
-    padding: 0.15rem 0.4rem;
-    border-radius: 6px;
+    padding: 0.15rem var(--space-3);
+    border-radius: var(--radius-sm);
 }
 
 /* ── Small-screen optimizations ── */
 @media (max-width: 480px) {
     .activity-day-detail-dialog .activity-day-detail-dialog__content {
-        padding: 0.75rem !important;
+        padding: var(--space-5) !important;
     }
 
     .activity-day-detail-summary {
         padding: 0.6rem 0.8rem;
-        margin-bottom: 0.75rem;
+        margin-bottom: var(--space-5);
     }
 
     .activity-day-detail-summary .mud-typography-body2 {
@@ -871,7 +871,7 @@ a:hover, .btn-link:hover {
 
     .activity-day-detail-table .mud-table-body .mud-table-row {
         display: block !important;
-        padding: 0.4rem 0.5rem;
+        padding: var(--space-3) var(--space-4);
         border-bottom: 1px solid var(--mud-palette-divider);
     }
 
@@ -921,7 +921,7 @@ a:hover, .btn-link:hover {
 .activity-desc-wrap {
     display: inline-flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--space-5);
     min-width: 0;
     flex-wrap: nowrap;
     vertical-align: middle;
@@ -935,7 +935,7 @@ a:hover, .btn-link:hover {
 }
 
 .activity-day-detail-dialog .mud-progress-linear {
-    border-radius: 0.25rem;
+    border-radius: var(--space-1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -951,17 +951,17 @@ a:hover, .btn-link:hover {
 
 .privacy-page {
     max-width: 42rem;
-    margin: 0 auto 2rem;
+    margin: 0 auto var(--space-8);
     line-height: 1.6;
 }
 
 .privacy-page h1 {
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--space-4);
 }
 
 .privacy-page h2 {
     margin-top: 1.75rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--space-4);
     font-size: 1.125rem;
 }
 
@@ -970,5 +970,5 @@ a:hover, .btn-link:hover {
 }
 
 .privacy-page__back {
-    margin-top: 2rem;
+    margin-top: var(--space-8);
 }

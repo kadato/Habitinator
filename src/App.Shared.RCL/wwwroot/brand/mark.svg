@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Canonical Habitinator mark: three board columns (habits, dailies, todos).
+     Single source of truth for the mark. All derived brand assets are
+     generated from this file by scripts/BrandGenerator. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <g fill="#ffffff">
+    <rect x="24" y="54" width="14" height="26" rx="3"/>
+    <rect x="43" y="38" width="14" height="42" rx="3"/>
+    <rect x="62" y="50" width="14" height="30" rx="3"/>
+  </g>
+</svg>

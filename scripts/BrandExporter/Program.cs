@@ -1,4 +1,5 @@
 using SkiaSharp;
+
 using Svg.Skia;
 
 if (args.Length < 3)

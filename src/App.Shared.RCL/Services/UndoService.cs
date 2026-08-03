@@ -14,6 +14,7 @@ public sealed class UndoService : IUndoService, IDisposable
     private readonly INotificationSettingsRules _notificationRules;
 
     private List<Func<Task>>? _currentBatch;
+    private List<string>? _currentBatchKeys;
     private string? _currentBatchDescription;
     private int _undoingCount;
     private readonly SemaphoreSlim _undoLock = new(1, 1);
@@ -37,6 +38,11 @@ public sealed class UndoService : IUndoService, IDisposable
 
     public Guid RegisterUndo(string description, Func<Task> undoFunc)
     {
+        return RegisterUndo(description, undoFunc, []);
+    }
+
+    public Guid RegisterUndo(string description, Func<Task> undoFunc, IReadOnlyCollection<string> conflictKeys)
+    {
         if (IsUndoing)
         {
             return Guid.Empty;
@@ -45,10 +51,14 @@ public sealed class UndoService : IUndoService, IDisposable
         if (_currentBatch is not null)
         {
             _currentBatch.Add(undoFunc);
+            foreach (var key in conflictKeys)
+            {
+                _currentBatchKeys!.Add(key);
+            }
             return Guid.Empty;
         }
 
-        var action = new UndoAction(description, undoFunc);
+        var action = new UndoAction(description, undoFunc, conflictKeys);
         _undoStack.Add(action);
         OnStateChanged?.Invoke(this, EventArgs.Empty);
         _ = ShowUndoSnackbarAsync(action);
@@ -63,6 +73,7 @@ public sealed class UndoService : IUndoService, IDisposable
     private void StartBatch(string description)
     {
         _currentBatch = [];
+        _currentBatchKeys = [];
         _currentBatchDescription = description;
     }
 
@@ -74,8 +85,10 @@ public sealed class UndoService : IUndoService, IDisposable
         }
 
         var batch = _currentBatch;
+        var keys = _currentBatchKeys ?? [];
         var desc = _currentBatchDescription ?? "Multiple actions";
         _currentBatch = null;
+        _currentBatchKeys = null;
         _currentBatchDescription = null;
 
         if (batch.Count > 0)
@@ -87,7 +100,7 @@ public sealed class UndoService : IUndoService, IDisposable
                 {
                     await batchAction().ConfigureAwait(false);
                 }
-            });
+            }, keys);
         }
     }
 
@@ -111,14 +124,39 @@ public sealed class UndoService : IUndoService, IDisposable
             return;
         }
 
-        var action = _undoStack[index];
-        _undoStack.RemoveAt(index);
+        var target = _undoStack[index];
+
+        // Undoing an older action out of order: any newer action that may touch the same state must
+        // be undone first (newest first) so the target's inverse applies to a consistent snapshot.
+        // Newer actions with disjoint keys are left pending; their undos only revert their own change.
+        var toUndo = new List<UndoAction>();
+        if (actionId is not null)
+        {
+            for (var i = _undoStack.Count - 1; i > index; i--)
+            {
+                var newer = _undoStack[i];
+                if (MayConflict(target, newer))
+                {
+                    toUndo.Add(newer);
+                }
+            }
+        }
+
+        toUndo.Add(target);
+
+        foreach (var action in toUndo)
+        {
+            _undoStack.Remove(action);
+        }
 
         Interlocked.Increment(ref _undoingCount);
         await _undoLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            await action.UndoFunc().ConfigureAwait(false);
+            foreach (var action in toUndo)
+            {
+                await action.UndoFunc().ConfigureAwait(false);
+            }
             OnUndoPerformed?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception)
@@ -129,9 +167,26 @@ public sealed class UndoService : IUndoService, IDisposable
         {
             _undoLock.Release();
             Interlocked.Decrement(ref _undoingCount);
-            DismissSnackbar(action);
+            foreach (var action in toUndo)
+            {
+                DismissSnackbar(action);
+            }
             OnStateChanged?.Invoke(this, EventArgs.Empty);
         }
+    }
+
+    private static bool MayConflict(UndoAction a, UndoAction b)
+    {
+        if (a.ConflictKeys.Count == 0 || b.ConflictKeys.Count == 0)
+        {
+            // Unknown scope: assume it may touch anything so we never undo out of order against it.
+            return true;
+        }
+
+        return a.ConflictKeys.Any(ka => b.ConflictKeys.Any(kb =>
+            ka == kb
+            || ka.StartsWith(kb + ":", StringComparison.Ordinal)
+            || kb.StartsWith(ka + ":", StringComparison.Ordinal)));
     }
 
     public void Clear()
@@ -201,12 +256,14 @@ public sealed class UndoService : IUndoService, IDisposable
         public Guid Id { get; } = Guid.NewGuid();
         public string Description { get; }
         public Func<Task> UndoFunc { get; }
+        public IReadOnlyCollection<string> ConflictKeys { get; }
         public string? SnackbarKey { get; set; }
 
-        public UndoAction(string description, Func<Task> undoFunc)
+        public UndoAction(string description, Func<Task> undoFunc, IReadOnlyCollection<string> conflictKeys)
         {
             Description = description;
             UndoFunc = undoFunc;
+            ConflictKeys = conflictKeys;
         }
     }
 

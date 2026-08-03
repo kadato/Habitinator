@@ -24,32 +24,32 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
 
     public async Task<BoardItem?> ArchiveItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
     {
-        BoardItem? item = await FindItemAsync(itemId, cancellationToken);
+        var item = await FindItemAsync(itemId, cancellationToken);
         if (item is null)
         {
             return await _inner.ArchiveItemAsync(section, itemId, cancellationToken);
         }
 
-        BoardItem? result = await _inner.ArchiveItemAsync(section, itemId, cancellationToken);
+        var result = await _inner.ArchiveItemAsync(section, itemId, cancellationToken);
         if (result is not null && !_undoService.IsUndoing)
         {
             _undoService.RegisterUndo($"Archive \"{item.Title}\"", async () =>
             {
                 await _inner.UnarchiveItemAsync(section, itemId, CancellationToken.None);
-            });
+            }, [ItemKey(itemId)]);
         }
         return result;
     }
 
     public async Task<BoardItem?> UnarchiveItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
     {
-        BoardItem? result = await _inner.UnarchiveItemAsync(section, itemId, cancellationToken);
+        var result = await _inner.UnarchiveItemAsync(section, itemId, cancellationToken);
         if (result is not null && !_undoService.IsUndoing)
         {
             _undoService.RegisterUndo($"Unarchive \"{result.Title}\"", async () =>
             {
                 await _inner.ArchiveItemAsync(section, itemId, CancellationToken.None);
-            });
+            }, [ItemKey(itemId)]);
         }
         return result;
     }
@@ -61,59 +61,59 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
 
     public async Task<BoardItem> CreateItemAsync(BoardSection section, string title, Guid? itemId = null, CancellationToken cancellationToken = default)
     {
-        BoardItem item = await _inner.CreateItemAsync(section, title, itemId, cancellationToken);
+        var item = await _inner.CreateItemAsync(section, title, itemId, cancellationToken);
         if (!_undoService.IsUndoing)
         {
             _undoService.RegisterUndo($"Add \"{item.Title}\"", async () =>
             {
                 await _inner.DeleteItemAsync(section, item.Id, CancellationToken.None);
-            });
+            }, [ItemKey(item.Id)]);
         }
         return item;
     }
 
     public async Task<BoardItem?> RenameItemAsync(BoardSection section, Guid itemId, string title, CancellationToken cancellationToken = default)
     {
-        BoardItem? item = await FindItemAsync(itemId, cancellationToken);
+        var item = await FindItemAsync(itemId, cancellationToken);
         if (item is null)
         {
             return await _inner.RenameItemAsync(section, itemId, title, cancellationToken);
         }
 
-        string oldTitle = item.Title;
-        BoardItem? result = await _inner.RenameItemAsync(section, itemId, title, cancellationToken);
+        var oldTitle = item.Title;
+        var result = await _inner.RenameItemAsync(section, itemId, title, cancellationToken);
         if (result is not null && !_undoService.IsUndoing)
         {
             _undoService.RegisterUndo($"Rename \"{oldTitle}\" to \"{result.Title}\"", async () =>
             {
                 await _inner.RenameItemAsync(section, itemId, oldTitle, CancellationToken.None);
-            });
+            }, [$"item:{itemId:N}:title"]);
         }
         return result;
     }
 
     public async Task<bool> DeleteItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
     {
-        BoardItem? item = await FindItemAsync(itemId, cancellationToken);
+        var item = await FindItemAsync(itemId, cancellationToken);
         if (item is null)
         {
             return await _inner.DeleteItemAsync(section, itemId, cancellationToken);
         }
 
-        bool success = await _inner.DeleteItemAsync(section, itemId, cancellationToken);
+        var success = await _inner.DeleteItemAsync(section, itemId, cancellationToken);
         if (success && !_undoService.IsUndoing)
         {
             _undoService.RegisterUndo($"Delete \"{item.Title}\"", async () =>
             {
                 await RestoreDeletedItemAsync(section, item).ConfigureAwait(false);
-            });
+            }, [ItemKey(item.Id)]);
         }
         return success;
     }
 
     private async Task RestoreDeletedItemAsync(BoardSection section, BoardItem item)
     {
-        BoardItem recreated = await _inner.CreateItemAsync(section, item.Title, item.Id, CancellationToken.None).ConfigureAwait(false);
+        var recreated = await _inner.CreateItemAsync(section, item.Title, item.Id, CancellationToken.None).ConfigureAwait(false);
         if (section == BoardSection.Habit)
         {
             await _inner.UpdateHabitAsync(
@@ -172,14 +172,14 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
 
     public async Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default)
     {
-        BoardItem? result = await _inner.ToggleItemAsync(section, itemId, cancellationToken);
+        var result = await _inner.ToggleItemAsync(section, itemId, cancellationToken);
         if (result is not null && !_undoService.IsUndoing)
         {
-            string actionVerb = result.IsCompleted ? "Complete" : "Uncomplete";
+            var actionVerb = result.IsCompleted ? "Complete" : "Uncomplete";
             _undoService.RegisterUndo($"{actionVerb} \"{result.Title}\"", async () =>
             {
                 await _inner.ToggleItemAsync(section, itemId, CancellationToken.None);
-            });
+            }, [$"item:{itemId:N}:completed"]);
         }
         return result;
     }
@@ -191,18 +191,18 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
 
     public async Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
-        BoardItem? item = await FindItemAsync(itemId, cancellationToken);
+        var item = await FindItemAsync(itemId, cancellationToken);
         if (item is null)
         {
             return await _inner.IncrementHabitPlusAsync(itemId, cancellationToken);
         }
 
-        BoardItem? result = await _inner.IncrementHabitPlusAsync(itemId, cancellationToken);
+        var result = await _inner.IncrementHabitPlusAsync(itemId, cancellationToken);
         if (result is not null && !_undoService.IsUndoing)
         {
             _undoService.RegisterUndo($"Increment + for \"{item.Title}\"", async () =>
             {
-                BoardItem? current = await FindItemAsync(itemId, CancellationToken.None);
+                var current = await FindItemAsync(itemId, CancellationToken.None);
                 if (current is not null)
                 {
                     await _inner.UpdateHabitAsync(
@@ -220,25 +220,25 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
                             current.SortOrder),
                         CancellationToken.None);
                 }
-            });
+            }, [$"item:{itemId:N}:counter"]);
         }
         return result;
     }
 
     public async Task<BoardItem?> IncrementHabitMinusAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
-        BoardItem? item = await FindItemAsync(itemId, cancellationToken);
+        var item = await FindItemAsync(itemId, cancellationToken);
         if (item is null)
         {
             return await _inner.IncrementHabitMinusAsync(itemId, cancellationToken);
         }
 
-        BoardItem? result = await _inner.IncrementHabitMinusAsync(itemId, cancellationToken);
+        var result = await _inner.IncrementHabitMinusAsync(itemId, cancellationToken);
         if (result is not null && !_undoService.IsUndoing)
         {
             _undoService.RegisterUndo($"Increment − for \"{item.Title}\"", async () =>
             {
-                BoardItem? current = await FindItemAsync(itemId, CancellationToken.None);
+                var current = await FindItemAsync(itemId, CancellationToken.None);
                 if (current is not null)
                 {
                     await _inner.UpdateHabitAsync(
@@ -256,7 +256,7 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
                             current.SortOrder),
                         CancellationToken.None);
                 }
-            });
+            }, [$"item:{itemId:N}:counter"]);
         }
         return result;
     }
@@ -266,34 +266,21 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         UpdateHabitArgs args,
         CancellationToken cancellationToken = default)
     {
-        BoardItem? item = await FindItemAsync(itemId, cancellationToken);
+        var item = await FindItemAsync(itemId, cancellationToken);
         if (item is null)
         {
             return await _inner.UpdateHabitAsync(itemId, args, cancellationToken);
         }
 
-        BoardItem? result = await _inner.UpdateHabitAsync(itemId, args, cancellationToken);
+        var result = await _inner.UpdateHabitAsync(itemId, args, cancellationToken);
 
-        if (result is not null && !_undoService.IsUndoing
-            && !IsHabitReorderOnly(item, args))
+        var diff = DiffHabit(item, args);
+        if (result is not null && !_undoService.IsUndoing && diff.Count > 0)
         {
-            _undoService.RegisterUndo($"Edit \"{item.Title}\"", async () =>
-            {
-                await _inner.UpdateHabitAsync(
-                    itemId,
-                    new UpdateHabitArgs(
-                        item.Title,
-                        item.Notes,
-                        item.Tags,
-                        item.TrackPlus,
-                        item.TrackMinus,
-                        item.ResetPeriod,
-                        item.Counter,
-                        item.NegativeCounter,
-                        item.ChecklistJson,
-                        item.SortOrder),
-                    CancellationToken.None);
-            });
+            _undoService.RegisterUndo(
+                $"Edit \"{item.Title}\"",
+                () => UndoHabitEditAsync(itemId, diff),
+                KeysFor(itemId, diff));
         }
         return result;
     }
@@ -303,30 +290,21 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         UpdateTodoArgs args,
         CancellationToken cancellationToken = default)
     {
-        BoardItem? item = await FindItemAsync(itemId, cancellationToken);
+        var item = await FindItemAsync(itemId, cancellationToken);
         if (item is null)
         {
             return await _inner.UpdateTodoAsync(itemId, args, cancellationToken);
         }
 
-        BoardItem? result = await _inner.UpdateTodoAsync(itemId, args, cancellationToken);
+        var result = await _inner.UpdateTodoAsync(itemId, args, cancellationToken);
 
-        if (result is not null && !_undoService.IsUndoing
-            && !IsTodoReorderOnly(item, args))
+        var diff = DiffTodo(item, args);
+        if (result is not null && !_undoService.IsUndoing && diff.Count > 0)
         {
-            _undoService.RegisterUndo($"Edit \"{item.Title}\"", async () =>
-            {
-                await _inner.UpdateTodoAsync(
-                    itemId,
-                    new UpdateTodoArgs(
-                        item.Title,
-                        item.Notes,
-                        item.Tags,
-                        item.ChecklistJson,
-                        item.TodoDueDate?.ToDateTime(TimeOnly.MinValue),
-                        item.SortOrder),
-                    CancellationToken.None);
-            });
+            _undoService.RegisterUndo(
+                $"Edit \"{item.Title}\"",
+                () => UndoTodoEditAsync(itemId, diff),
+                KeysFor(itemId, diff));
         }
         return result;
     }
@@ -336,73 +314,261 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         UpdateDailyArgs args,
         CancellationToken cancellationToken = default)
     {
-        BoardItem? item = await FindItemAsync(itemId, cancellationToken);
+        var item = await FindItemAsync(itemId, cancellationToken);
         if (item is null)
         {
             return await _inner.UpdateDailyAsync(itemId, args, cancellationToken);
         }
 
-        BoardItem? result = await _inner.UpdateDailyAsync(itemId, args, cancellationToken);
+        var result = await _inner.UpdateDailyAsync(itemId, args, cancellationToken);
 
-        if (result is not null && !_undoService.IsUndoing
-            && !IsDailyReorderOnly(item, args))
+        var diff = DiffDaily(item, args);
+        if (result is not null && !_undoService.IsUndoing && diff.Count > 0)
         {
-            _undoService.RegisterUndo($"Edit \"{item.Title}\"", async () =>
-            {
-                await _inner.UpdateDailyAsync(
-                    itemId,
-                    new UpdateDailyArgs(
-                        item.Title,
-                        item.Notes,
-                        item.Tags,
-                        item.DailyStartDate?.ToDateTime(TimeOnly.MinValue),
-                        item.DailyRepeat,
-                        item.DailyRepeatInterval,
-                        item.ChecklistJson,
-                        item.Counter,
-                        item.SortOrder),
-                    CancellationToken.None);
-            });
+            _undoService.RegisterUndo(
+                $"Edit \"{item.Title}\"",
+                () => UndoDailyEditAsync(itemId, diff),
+                KeysFor(itemId, diff));
         }
         return result;
     }
 
-    private static bool IsHabitReorderOnly(
-        BoardItem item,
-        UpdateHabitArgs args) =>
-        args.SortOrder.HasValue
-        && item.Title == args.Title
-        && item.Notes == args.Notes
-        && item.Tags == args.Tags
-        && item.TrackPlus == args.TrackPlus
-        && item.TrackMinus == args.TrackMinus
-        && item.ResetPeriod == args.ResetPeriod
-        && item.Counter == args.Counter
-        && item.NegativeCounter == args.NegativeCounter
-        && item.ChecklistJson == args.ChecklistJson;
+    private const string FieldTitle = "title";
+    private const string FieldNotes = "notes";
+    private const string FieldTags = "tags";
+    private const string ChecklistFieldPrefix = "checklist:";
 
-    private static bool IsTodoReorderOnly(
-        BoardItem item,
-        UpdateTodoArgs args) =>
-        args.SortOrder.HasValue
-        && item.Title == args.Title
-        && item.Notes == args.Notes
-        && item.Tags == args.Tags
-        && item.ChecklistJson == args.ChecklistJson
-        && DatesEqual(item.TodoDueDate, args.DueDate);
+    private static string ItemKey(Guid itemId) => $"item:{itemId:N}";
 
-    private static bool IsDailyReorderOnly(
-        BoardItem item,
-        UpdateDailyArgs args) =>
-        args.SortOrder.HasValue
-        && item.Title == args.Title
-        && item.Notes == args.Notes
-        && item.Tags == args.Tags
-        && DatesEqual(item.DailyStartDate, args.StartDate)
-        && item.DailyRepeat == args.RepeatType
-        && item.DailyRepeatInterval == args.RepeatInterval
-        && item.ChecklistJson == args.ChecklistJson
-        && item.Counter == args.Streak;
+    private static List<string> KeysFor(Guid itemId, Dictionary<string, object?> diff)
+    {
+        var keys = new List<string>(diff.Count);
+        foreach (var field in diff.Keys)
+        {
+            keys.Add($"{ItemKey(itemId)}:{field}");
+        }
+        return keys;
+    }
+
+    private static Dictionary<string, object?> DiffHabit(BoardItem item, UpdateHabitArgs args)
+    {
+        var diff = new Dictionary<string, object?>();
+        if (!string.Equals(item.Title, args.Title, StringComparison.Ordinal))
+        {
+            diff[FieldTitle] = item.Title;
+        }
+        if (!string.Equals(item.Notes, args.Notes, StringComparison.Ordinal))
+        {
+            diff[FieldNotes] = item.Notes;
+        }
+        if (!string.Equals(item.Tags, args.Tags, StringComparison.Ordinal))
+        {
+            diff[FieldTags] = item.Tags;
+        }
+        if (item.TrackPlus != args.TrackPlus)
+        {
+            diff["trackplus"] = item.TrackPlus;
+        }
+        if (item.TrackMinus != args.TrackMinus)
+        {
+            diff["trackminus"] = item.TrackMinus;
+        }
+        if (item.ResetPeriod != args.ResetPeriod)
+        {
+            diff["resetperiod"] = item.ResetPeriod;
+        }
+        if (item.Counter != args.Counter)
+        {
+            diff["counter"] = item.Counter;
+        }
+        if (item.NegativeCounter != args.NegativeCounter)
+        {
+            diff["negcounter"] = item.NegativeCounter;
+        }
+        DiffChecklist(diff, item.ChecklistJson, args.ChecklistJson);
+        return diff;
+    }
+
+    private static Dictionary<string, object?> DiffTodo(BoardItem item, UpdateTodoArgs args)
+    {
+        var diff = new Dictionary<string, object?>();
+        if (!string.Equals(item.Title, args.Title, StringComparison.Ordinal))
+        {
+            diff[FieldTitle] = item.Title;
+        }
+        if (!string.Equals(item.Notes, args.Notes, StringComparison.Ordinal))
+        {
+            diff[FieldNotes] = item.Notes;
+        }
+        if (!string.Equals(item.Tags, args.Tags, StringComparison.Ordinal))
+        {
+            diff[FieldTags] = item.Tags;
+        }
+        if (!DatesEqual(item.TodoDueDate, args.DueDate))
+        {
+            diff["duedate"] = item.TodoDueDate?.ToDateTime(TimeOnly.MinValue);
+        }
+        DiffChecklist(diff, item.ChecklistJson, args.ChecklistJson);
+        return diff;
+    }
+
+    private static Dictionary<string, object?> DiffDaily(BoardItem item, UpdateDailyArgs args)
+    {
+        var diff = new Dictionary<string, object?>();
+        if (!string.Equals(item.Title, args.Title, StringComparison.Ordinal))
+        {
+            diff[FieldTitle] = item.Title;
+        }
+        if (!string.Equals(item.Notes, args.Notes, StringComparison.Ordinal))
+        {
+            diff[FieldNotes] = item.Notes;
+        }
+        if (!string.Equals(item.Tags, args.Tags, StringComparison.Ordinal))
+        {
+            diff[FieldTags] = item.Tags;
+        }
+        if (!DatesEqual(item.DailyStartDate, args.StartDate))
+        {
+            diff["startdate"] = item.DailyStartDate?.ToDateTime(TimeOnly.MinValue);
+        }
+        if (item.DailyRepeat != args.RepeatType)
+        {
+            diff["repeat"] = item.DailyRepeat;
+        }
+        if (item.DailyRepeatInterval != args.RepeatInterval)
+        {
+            diff["interval"] = item.DailyRepeatInterval;
+        }
+        if (item.Counter != args.Streak)
+        {
+            diff["streak"] = item.Counter;
+        }
+        DiffChecklist(diff, item.ChecklistJson, args.ChecklistJson);
+        return diff;
+    }
+
+    /// <summary>
+    ///     Records only the checklist lines whose done state changed. When the line ids differ
+    ///     (lines added or removed) the whole field is treated as one change.
+    /// </summary>
+    private static void DiffChecklist(Dictionary<string, object?> diff, string? beforeJson, string? afterJson)
+    {
+        if (string.Equals(beforeJson ?? string.Empty, afterJson ?? string.Empty, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var before = DailyChecklistJson.Parse(beforeJson);
+        var after = DailyChecklistJson.Parse(afterJson);
+
+        if (before.Count != after.Count || before.Any(b => !after.Any(a => a.Id == b.Id)))
+        {
+            diff["checklist"] = beforeJson;
+            return;
+        }
+
+        foreach (var beforeLine in before)
+        {
+            var afterLine = after.First(a => a.Id == beforeLine.Id);
+            if (afterLine.IsDone != beforeLine.IsDone)
+            {
+                diff[$"{ChecklistFieldPrefix}{beforeLine.Id:N}"] = beforeLine.IsDone;
+            }
+        }
+    }
+
+    private static string? ApplyChecklistDiff(string? currentJson, Dictionary<string, object?> diff)
+    {
+        if (diff.TryGetValue("checklist", out var whole))
+        {
+            return (string?)whole;
+        }
+
+        var lineKeys = diff.Keys.Where(k => k.StartsWith(ChecklistFieldPrefix, StringComparison.Ordinal)).ToList();
+        if (lineKeys.Count == 0)
+        {
+            return currentJson;
+        }
+
+        var rows = DailyChecklistJson.Parse(currentJson).ToList();
+        foreach (var key in lineKeys)
+        {
+            var lineId = Guid.Parse(key.AsSpan(ChecklistFieldPrefix.Length));
+            var i = rows.FindIndex(x => x.Id == lineId);
+            if (i < 0)
+            {
+                return currentJson;
+            }
+
+            rows[i] = rows[i] with { IsDone = (bool)diff[key]! };
+        }
+
+        return DailyChecklistJson.Serialize(rows);
+    }
+
+    private async Task UndoHabitEditAsync(Guid itemId, Dictionary<string, object?> diff)
+    {
+        var current = await FindItemAsync(itemId, CancellationToken.None);
+        if (current is null)
+        {
+            return;
+        }
+
+        await _inner.UpdateHabitAsync(
+            itemId,
+            new UpdateHabitArgs(
+                diff.TryGetValue(FieldTitle, out var title) ? (string)title! : current.Title,
+                diff.TryGetValue(FieldNotes, out var notes) ? (string?)notes : current.Notes,
+                diff.TryGetValue(FieldTags, out var tags) ? (string?)tags : current.Tags,
+                diff.TryGetValue("trackplus", out var trackPlus) ? (bool)trackPlus! : current.TrackPlus,
+                diff.TryGetValue("trackminus", out var trackMinus) ? (bool)trackMinus! : current.TrackMinus,
+                diff.TryGetValue("resetperiod", out var resetPeriod) ? (HabitResetPeriod)resetPeriod! : current.ResetPeriod,
+                diff.TryGetValue("counter", out var counter) ? (int)counter! : current.Counter,
+                diff.TryGetValue("negcounter", out var negativeCounter) ? (int)negativeCounter! : current.NegativeCounter,
+                ApplyChecklistDiff(current.ChecklistJson, diff)),
+            CancellationToken.None);
+    }
+
+    private async Task UndoTodoEditAsync(Guid itemId, Dictionary<string, object?> diff)
+    {
+        var current = await FindItemAsync(itemId, CancellationToken.None);
+        if (current is null)
+        {
+            return;
+        }
+
+        await _inner.UpdateTodoAsync(
+            itemId,
+            new UpdateTodoArgs(
+                diff.TryGetValue(FieldTitle, out var title) ? (string)title! : current.Title,
+                diff.TryGetValue(FieldNotes, out var notes) ? (string?)notes : current.Notes,
+                diff.TryGetValue(FieldTags, out var tags) ? (string?)tags : current.Tags,
+                ApplyChecklistDiff(current.ChecklistJson, diff),
+                diff.TryGetValue("duedate", out var dueDate) ? (DateTime?)dueDate : current.TodoDueDate?.ToDateTime(TimeOnly.MinValue)),
+            CancellationToken.None);
+    }
+
+    private async Task UndoDailyEditAsync(Guid itemId, Dictionary<string, object?> diff)
+    {
+        var current = await FindItemAsync(itemId, CancellationToken.None);
+        if (current is null)
+        {
+            return;
+        }
+
+        await _inner.UpdateDailyAsync(
+            itemId,
+            new UpdateDailyArgs(
+                diff.TryGetValue(FieldTitle, out var title) ? (string)title! : current.Title,
+                diff.TryGetValue(FieldNotes, out var notes) ? (string?)notes : current.Notes,
+                diff.TryGetValue(FieldTags, out var tags) ? (string?)tags : current.Tags,
+                diff.TryGetValue("startdate", out var startDate) ? (DateTime?)startDate : current.DailyStartDate?.ToDateTime(TimeOnly.MinValue),
+                diff.TryGetValue("repeat", out var repeat) ? (DailyRepeatType)repeat! : current.DailyRepeat,
+                diff.TryGetValue("interval", out var interval) ? (int)interval! : current.DailyRepeatInterval,
+                ApplyChecklistDiff(current.ChecklistJson, diff),
+                diff.TryGetValue("streak", out var streak) ? (int)streak! : current.Counter),
+            CancellationToken.None);
+    }
 
     private static bool DatesEqual(DateOnly? itemDate, DateTime? dateTime)
     {

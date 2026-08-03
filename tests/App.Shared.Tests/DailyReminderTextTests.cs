@@ -29,7 +29,7 @@ public class DailyReminderTextTests
             null,
             null);
         var snapshot = new BoardSnapshot([], [d], []);
-        (string t, string body) = DailyReminderText.Build(snapshot, today, maxBodyLength: 4000);
+        (var t, var body) = DailyReminderText.Build(snapshot, today, maxBodyLength: 4000);
         t.Should().Be(DailyReminderText.DefaultTitle);
         body.Should().Contain("Dailies due:");
         body.Should().Contain("Morning run");
@@ -41,7 +41,7 @@ public class DailyReminderTextTests
         var today = new DateOnly(2026, 4, 10);
         var todoDueToday = new BoardItem(Guid.NewGuid(), "Hand in form", false, 0, null, null, true, true, 0, HabitResetPeriod.Daily, null, DailyRepeatType.Daily, 1, null, null, today);
         var snapshot = new BoardSnapshot([], [], [todoDueToday]);
-        (string _, string body) = DailyReminderText.Build(snapshot, today);
+        (var _, var body) = DailyReminderText.Build(snapshot, today);
         body.Should().Contain("To-dos (deadline):");
         body.Should().Contain("Hand in form");
     }
@@ -53,7 +53,7 @@ public class DailyReminderTextTests
         var oldDue = new DateOnly(2026, 4, 1);
         var t = new BoardItem(Guid.NewGuid(), "Late", false, 0, null, null, true, true, 0, HabitResetPeriod.Daily, null, DailyRepeatType.Daily, 1, null, null, oldDue);
         var snapshot = new BoardSnapshot([], [], [t]);
-        (string _, string body) = DailyReminderText.Build(snapshot, today, "dd/MM/yyyy");
+        (var _, var body) = DailyReminderText.Build(snapshot, today, "dd/MM/yyyy");
         body.Should().Contain("overdue");
         body.Should().Contain("01/04/2026");
     }
@@ -80,7 +80,7 @@ public class DailyReminderTextTests
             today,
             null);
         var snapshot = new BoardSnapshot([], [done], [new BoardItem(Guid.NewGuid(), "No date", false)]);
-        (string t, string body) = DailyReminderText.Build(snapshot, today);
+        (var t, var body) = DailyReminderText.Build(snapshot, today);
         t.Should().Be(DailyReminderText.DefaultTitle);
         body.Should().ContainEquivalentOf("no dailies due");
     }

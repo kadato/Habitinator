@@ -195,7 +195,7 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
         sortedTodos.Count.Should().BeGreaterThanOrEqualTo(3);
 
         // Check that the gap between all consecutive elements in the list is exactly 1.0 (indicating sequential rebalancing)
-        for (int i = 0; i < sortedTodos.Count - 1; i++)
+        for (var i = 0; i < sortedTodos.Count - 1; i++)
         {
             (sortedTodos[i + 1].SortOrder - sortedTodos[i].SortOrder).Should().BeApproximately(1.0, 0.0001);
         }

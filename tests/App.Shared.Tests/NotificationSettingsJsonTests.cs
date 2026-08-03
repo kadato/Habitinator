@@ -20,8 +20,8 @@ public sealed class NotificationSettingsJsonTests
             QuietHoursEndUtc = TimeSpan.FromHours(6),
         };
 
-        string json = NotificationSettingsJson.Serialize(original);
-        NotificationSettings back = NotificationSettingsJson.DeserializeOrDefault(json);
+        var json = NotificationSettingsJson.Serialize(original);
+        var back = NotificationSettingsJson.DeserializeOrDefault(json);
 
         Assert.False(back.ShowSuccessToasts);
         Assert.Equal(NotificationToastDuration.Long, back.ToastDuration);
@@ -33,10 +33,10 @@ public sealed class NotificationSettingsJsonTests
     [Fact]
     public void Null_or_invalid_json_yields_defaults()
     {
-        NotificationSettings a = NotificationSettingsJson.DeserializeOrDefault(null);
+        var a = NotificationSettingsJson.DeserializeOrDefault(null);
         Assert.True(a.InAppMessagesEnabled);
 
-        NotificationSettings b = NotificationSettingsJson.DeserializeOrDefault("{ not json");
+        var b = NotificationSettingsJson.DeserializeOrDefault("{ not json");
         Assert.True(b.InAppMessagesEnabled);
     }
 }

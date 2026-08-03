@@ -55,7 +55,7 @@ public sealed class BoardItemInputFuzzTests
         var expectedCount = items.Count(x => !string.IsNullOrWhiteSpace(x.Text));
         Assert.Equal(expectedCount, parsed.Count);
 
-        for (int i = 0; i < parsed.Count; i++)
+        for (var i = 0; i < parsed.Count; i++)
         {
             var parsedItem = parsed[i];
 

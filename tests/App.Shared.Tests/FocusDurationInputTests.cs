@@ -42,7 +42,7 @@ public sealed class FocusDurationInputTests
     [InlineData("1 H", 3600)]
     public void TryParse_ValidFormats_ProducesExpectedTimeSpan(string raw, int expectedSeconds)
     {
-        FocusDurationInput.TryParse(raw, out TimeSpan? d).Should().BeTrue();
+        FocusDurationInput.TryParse(raw, out var d).Should().BeTrue();
         d.Should().Be(TimeSpan.FromSeconds(expectedSeconds));
     }
 
@@ -52,7 +52,7 @@ public sealed class FocusDurationInputTests
     [InlineData(null)]
     public void TryParse_WhitespaceOrNull_YieldsNullAndValid(string? raw)
     {
-        FocusDurationInput.TryParse(raw, out TimeSpan? d).Should().BeTrue();
+        FocusDurationInput.TryParse(raw, out var d).Should().BeTrue();
         d.Should().BeNull();
     }
 

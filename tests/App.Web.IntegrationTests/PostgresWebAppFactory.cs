@@ -23,7 +23,7 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
 
     public async Task InitializeAsync()
     {
-        string? connectionString = _externalConnectionString;
+        var connectionString = _externalConnectionString;
         if (!string.IsNullOrWhiteSpace(connectionString))
         {
             await WaitUntilDatabaseAcceptsConnectionsAsync(
@@ -66,7 +66,7 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
 
     private Dictionary<string, string?> GetIntegrationConfiguration()
     {
-        string connectionString = PostgresResilienceConnectionString.EnsureColdStartTimeouts(
+        var connectionString = PostgresResilienceConnectionString.EnsureColdStartTimeouts(
             string.IsNullOrWhiteSpace(_externalConnectionString)
                 ? _postgres.GetConnectionString()
                 : _externalConnectionString);
@@ -92,7 +92,7 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
         Exception? lastError = null;
         const int maxAttempts = 60;
 
-        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
             try
             {

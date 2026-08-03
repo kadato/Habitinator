@@ -72,7 +72,7 @@ public sealed class ZalgoSanitizerFuzzTests
         foreach (var c in baseText)
         {
             sb.Append(c);
-            for (int i = 0; i < count; i++)
+            for (var i = 0; i < count; i++)
             {
                 // Unicode Combining Diacritical Marks range U+0300 - U+036F
                 var mark = (char)(0x0300 + ((Math.Abs(c) + i) % 112));

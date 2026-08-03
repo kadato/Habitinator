@@ -66,7 +66,7 @@ public sealed class GlobalTimerServiceTests
 
         timer.Start();
         clock.Advance(TimeSpan.FromSeconds(20));
-        TimeSpan captured = timer.Stop();
+        var captured = timer.Stop();
 
         Assert.Equal(TimeSpan.FromSeconds(20), captured);
         Assert.Equal(TimeSpan.Zero, timer.Elapsed);

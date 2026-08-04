@@ -16,7 +16,11 @@ if (repoRoot is null)
     return 1;
 }
 
-var markPath = Path.Combine(repoRoot, "src", "App.Shared.RCL", "wwwroot", "brand", "mark.svg");
+const string Wwwroot = "wwwroot";
+const string Brand = "brand";
+const string AppWeb = "App.Web";
+
+var markPath = Path.Combine(repoRoot, "src", "App.Shared.RCL", Wwwroot, Brand, "mark.svg");
 if (!File.Exists(markPath))
 {
     await Console.Error.WriteLineAsync($"Canonical mark not found: {markPath}");
@@ -52,21 +56,21 @@ string MarkSvgFile(string tile, string inner) =>
 
 var outputs = new (string Path, string Content)[]
 {
-    (Path.Combine(repoRoot, "src", "App.Shared.RCL", "wwwroot", "brand", "mark-tile.svg"),
+    (Path.Combine(repoRoot, "src", "App.Shared.RCL", Wwwroot, Brand, "mark-tile.svg"),
         MarkSvgFile(Tile(gradient: true), "<g fill=\"#ffffff\">" + Rects() + "</g>")
             .Replace("<svg", "<svg width=\"100\" height=\"100\"")
             .Replace("</svg>", "<defs>\n    <linearGradient id=\"tile-grad\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#3b82f6\"/>\n      <stop offset=\"100%\" stop-color=\"#8b5cf6\"/>\n    </linearGradient>\n  </defs>\n</svg>")),
 
-    (Path.Combine(repoRoot, "src", "App.Web", "wwwroot", "favicon.svg"),
+    (Path.Combine(repoRoot, "src", AppWeb, Wwwroot, "favicon.svg"),
         MarkSvgFile(Tile(gradient: false), "<g fill=\"#ffffff\">" + Rects() + "</g>")),
 
-    (Path.Combine(repoRoot, "src", "App.Web", "wwwroot", "brand", "icon-app.svg"),
+    (Path.Combine(repoRoot, "src", AppWeb, Wwwroot, Brand, "icon-app.svg"),
         MarkSvgFile(Tile(gradient: false), "<g fill=\"#ffffff\">" + Rects() + "</g>")),
 
-    (Path.Combine(repoRoot, "src", "App.Web", "wwwroot", "brand", "icon-mark.svg"),
+    (Path.Combine(repoRoot, "src", AppWeb, Wwwroot, Brand, "icon-mark.svg"),
         $"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" role=\"img\" aria-label=\"Habitinator mark\">\n  <g fill=\"#ffffff\">{Rects()}</g>\n</svg>\n"),
 
-    (Path.Combine(repoRoot, "src", "App.Web", "wwwroot", "brand", "icon-maskable.svg"),
+    (Path.Combine(repoRoot, "src", AppWeb, Wwwroot, Brand, "icon-maskable.svg"),
         $"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" role=\"img\" aria-label=\"Habitinator\">\n  <rect width=\"100\" height=\"100\" fill=\"#3b82f6\"/>\n  {MarkGroup(0.72, 14, 14)}\n</svg>\n"),
 
     (Path.Combine(repoRoot, "src", "App.MAUI", "Resources", "AppIcon", "appicon.svg"),
@@ -78,7 +82,7 @@ var outputs = new (string Path, string Content)[]
     (Path.Combine(repoRoot, "src", "App.MAUI", "Resources", "Splash", "splash.svg"),
         $"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"456\" height=\"456\" viewBox=\"0 0 456 456\">\n  <rect width=\"456\" height=\"456\" fill=\"#3b82f6\"/>\n  {MarkGroup(2, 456 / 2d - centerX * 2, 456 / 2d - centerY * 2)}\n</svg>\n"),
 
-    (Path.Combine(repoRoot, "src", "App.Web", "wwwroot", "brand", "wordmark-og.svg"),
+    (Path.Combine(repoRoot, "src", AppWeb, Wwwroot, Brand, "wordmark-og.svg"),
         BuildWordmark(MarkGroup(0.6, 14, 14))),
 };
 
@@ -126,7 +130,7 @@ static string BuildWordmark(string mark) =>
 
 foreach (var (OutputPath, Content) in outputs)
 {
-    Directory.CreateDirectory(Path.GetDirectoryName(OutputPath)!);
+    Directory.CreateDirectory(Path.GetDirectoryName(OutputPath) ?? ".");
     await File.WriteAllTextAsync(OutputPath, Content);
     await Console.Out.WriteLineAsync($"Wrote {Path.GetRelativePath(repoRoot, OutputPath)}");
 }
@@ -134,14 +138,14 @@ foreach (var (OutputPath, Content) in outputs)
 // Raster exports via BrandExporter (SVG -> PNG).
 var pngExports = new (string Svg, string Png, int Width, int Height)[]
 {
-    (Path.Combine(repoRoot, "src", "App.Web", "wwwroot", "favicon.svg"),
-        Path.Combine(repoRoot, "src", "App.Web", "wwwroot", "favicon.png"), 192, 192),
-    (Path.Combine(repoRoot, "src", "App.Web", "wwwroot", "brand", "icon-app.svg"),
-        Path.Combine(repoRoot, "src", "App.Web", "wwwroot", "apple-touch-icon.png"), 180, 180),
-    (Path.Combine(repoRoot, "src", "App.Web", "wwwroot", "brand", "icon-maskable.svg"),
-        Path.Combine(repoRoot, "src", "App.Web", "wwwroot", "icons", "icon-maskable-512.png"), 512, 512),
-    (Path.Combine(repoRoot, "src", "App.Web", "wwwroot", "brand", "wordmark-og.svg"),
-        Path.Combine(repoRoot, "src", "App.Web", "wwwroot", "og-image.png"), 1200, 630),
+    (Path.Combine(repoRoot, "src", AppWeb, Wwwroot, "favicon.svg"),
+        Path.Combine(repoRoot, "src", AppWeb, Wwwroot, "favicon.png"), 192, 192),
+    (Path.Combine(repoRoot, "src", AppWeb, Wwwroot, Brand, "icon-app.svg"),
+        Path.Combine(repoRoot, "src", AppWeb, Wwwroot, "apple-touch-icon.png"), 180, 180),
+    (Path.Combine(repoRoot, "src", AppWeb, Wwwroot, Brand, "icon-maskable.svg"),
+        Path.Combine(repoRoot, "src", AppWeb, Wwwroot, "icons", "icon-maskable-512.png"), 512, 512),
+    (Path.Combine(repoRoot, "src", AppWeb, Wwwroot, Brand, "wordmark-og.svg"),
+        Path.Combine(repoRoot, "src", AppWeb, Wwwroot, "og-image.png"), 1200, 630),
 };
 
 var exporterProject = Path.Combine(repoRoot, "scripts", "BrandExporter", "BrandExporter.csproj");
@@ -167,7 +171,8 @@ await Console.Out.WriteLineAsync("Brand assets regenerated.");
 return 0;
 
 static List<Bar> ParseBars(string svg) =>
-    Regex.Matches(svg, "<rect x=\"([\\d.]+)\" y=\"([\\d.]+)\" width=\"([\\d.]+)\" height=\"([\\d.]+)\" rx=\"([\\d.]+)\"/>")
+    Regex.Matches(svg, "<rect x=\"([\\d.]+)\" y=\"([\\d.]+)\" width=\"([\\d.]+)\" height=\"([\\d.]+)\" rx=\"([\\d.]+)\"/>",
+            RegexOptions.None, TimeSpan.FromSeconds(1))
         .Select(m => new Bar(
             double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture),
             double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture),

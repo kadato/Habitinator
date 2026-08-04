@@ -18,7 +18,7 @@ if (!int.TryParse(args[2], out var width) || width <= 0)
 
 var height = args.Length > 3 && int.TryParse(args[3], out var h) ? h : width;
 
-Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? ".");
 
 using var svg = new SKSvg();
 if (svg.Load(inputPath) is null)

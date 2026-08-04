@@ -6,7 +6,7 @@
 
   <ItemGroup>
     <!-- Global / Shared tooling -->
-    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.28.0.143324" />
+    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.31.0.145097" />
 
     <!-- MAUI dependencies -->
     <PackageVersion Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />

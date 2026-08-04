@@ -26,7 +26,7 @@ public sealed class BoardOutboxRemapTests
 
         var parsed = JsonSerializer.Deserialize<RenameOutboxPayload>(remapped, BoardOutboxJson.Options);
         parsed.Should().NotBeNull();
-        parsed!.ItemId.Should().Be(server);
+        parsed.ItemId.Should().Be(server);
         parsed.Title.Should().Be("x");
     }
 
@@ -48,7 +48,7 @@ public sealed class BoardOutboxRemapTests
 
         var parsed = JsonSerializer.Deserialize<RenameOutboxPayload>(remapped, BoardOutboxJson.Options);
         parsed.Should().NotBeNull();
-        parsed!.ItemId.Should().Be(other);
+        parsed.ItemId.Should().Be(other);
     }
 
     [Fact]
@@ -70,6 +70,6 @@ public sealed class BoardOutboxRemapTests
 
         var parsed = JsonSerializer.Deserialize<RenameOutboxPayload>(remapped, BoardOutboxJson.Options);
         parsed.Should().NotBeNull();
-        parsed!.ExpectedServerUpdatedAtUtc.Should().Be(newTime);
+        parsed.ExpectedServerUpdatedAtUtc.Should().Be(newTime);
     }
 }

@@ -63,9 +63,9 @@ public sealed class BoardApiIsolationTests(PostgresWebAppFactory factory)
         listB.EnsureSuccessStatusCode();
         var snapshotB = await listB.Content.ReadFromJsonAsync<BoardSnapshot>(s_json);
         snapshotB.Should().NotBeNull();
-        snapshotB!.Todos.Should().NotContain(t => t.Id == created!.Id);
+        snapshotB.Todos.Should().NotContain(t => t.Id == created.Id);
 
-        using var requestToggle = new HttpRequestMessage(HttpMethod.Post, $"/api/board/Todo/{created!.Id}/toggle");
+        using var requestToggle = new HttpRequestMessage(HttpMethod.Post, $"/api/board/Todo/{created.Id}/toggle");
         requestToggle.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenB);
         var toggleRes = await client.SendAsync(requestToggle);
         toggleRes.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -99,7 +99,7 @@ public sealed class BoardApiIsolationTests(PostgresWebAppFactory factory)
         var created = await createRes.Content.ReadFromJsonAsync<BoardItem>(s_json);
 
         created.Should().NotBeNull();
-        created!.Title.Should().Be("karoly");
+        created.Title.Should().Be("karoly");
     }
 
     [Theory]

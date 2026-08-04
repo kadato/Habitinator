@@ -244,7 +244,7 @@ public sealed class NotificationSettingsSectionTests : IAsyncDisposable
         _settingsService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(refreshedSettings));
 
         // Trigger refresh
-        await cut.InvokeAsync(async () => await refreshCallback!());
+        await cut.InvokeAsync(async () => await refreshCallback());
 
         // Assert - check UI/model updated
         var switches = cut.FindComponents<MudSwitch<bool>>();

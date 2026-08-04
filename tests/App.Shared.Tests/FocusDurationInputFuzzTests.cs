@@ -39,7 +39,7 @@ public sealed class FocusDurationInputFuzzTests
 
         Assert.True(parsedSuccess);
         Assert.NotNull(parsed);
-        Assert.Equal(ts, parsed!.Value);
+        Assert.Equal(ts, parsed.Value);
     }
 
     [Property]
@@ -62,7 +62,7 @@ public sealed class FocusDurationInputFuzzTests
             // The resulting parsed time must be clamped to MaxFocusDuration
             var expected = ts > FocusDurationInput.MaxFocusDuration ? FocusDurationInput.MaxFocusDuration : ts;
             // Since FormatForField/TryParse deals with whole seconds:
-            Assert.Equal(TimeSpan.FromSeconds((int)expected.TotalSeconds), parsed!.Value);
+            Assert.Equal(TimeSpan.FromSeconds((int)expected.TotalSeconds), parsed.Value);
         }
     }
 }

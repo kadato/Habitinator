@@ -478,7 +478,7 @@ public sealed class UndoableBoardDataServiceTests
         deleteUndoCallback.Should().NotBeNull();
 
         // 3. Simulate undoing delete first, which should recreate the item using its original Guid
-        await deleteUndoCallback!();
+        await deleteUndoCallback();
 
         // Verify that CreateItemAsync was called with the original itemId
         await _inner.Received(1).CreateItemAsync(
@@ -488,7 +488,7 @@ public sealed class UndoableBoardDataServiceTests
             Arg.Any<CancellationToken>());
 
         // 4. Simulate undoing the edit (rename) second, which should rename the restored item using the original Guid
-        await renameUndoCallback!();
+        await renameUndoCallback();
 
         // Verify that RenameItemAsync was called on the original itemId to restore the original name
         await _inner.Received(1).RenameItemAsync(
@@ -551,7 +551,7 @@ public sealed class UndoableBoardDataServiceTests
 
         // 3. Simulate undoing the first increment first (out of order).
         // The current state is Counter = 5. Undoing first increment should decrement Counter to 4.
-        await firstUndoCallback!();
+        await firstUndoCallback();
 
         await _inner.Received(1).UpdateHabitAsync(
             itemId,
@@ -569,7 +569,7 @@ public sealed class UndoableBoardDataServiceTests
 
         // 4. Simulate undoing the second increment.
         // The current state in this scenario is Counter = 4. Undoing second increment should decrement Counter to 3.
-        await secondUndoCallback!();
+        await secondUndoCallback();
 
         await _inner.Received(1).UpdateHabitAsync(
             itemId,

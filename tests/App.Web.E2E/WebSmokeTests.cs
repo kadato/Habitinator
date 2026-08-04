@@ -55,7 +55,7 @@ public sealed class WebSmokeTests
         var page = await browser.NewPageAsync();
         var res = await page.GotoAsync($"{BaseUrl}/", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
         res.Should().NotBeNull();
-        res!.Ok.Should().BeTrue(
+        res.Ok.Should().BeTrue(
             $"Home returned HTTP {res.Status} for {BaseUrl}/ - start App.Web (see README / CI job).");
         (await page.ContentAsync()).Should().NotBeNullOrWhiteSpace();
     }
@@ -70,7 +70,7 @@ public sealed class WebSmokeTests
         var res = await page.GotoAsync($"{BaseUrl}/auth/login",
             new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
         res.Should().NotBeNull();
-        res!.Ok.Should().BeTrue($"Login page status {res.Status}. Base: {BaseUrl}");
+        res.Ok.Should().BeTrue($"Login page status {res.Status}. Base: {BaseUrl}");
         await Assertions.Expect(page.Locator("body")).ToContainTextAsync("login", new() { IgnoreCase = true });
     }
 
@@ -84,7 +84,7 @@ public sealed class WebSmokeTests
         var res = await page.GotoAsync($"{BaseUrl}/auth/register",
             new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
         res.Should().NotBeNull();
-        res!.Ok.Should().BeTrue($"Register page status {res.Status}. Base: {BaseUrl}");
+        res.Ok.Should().BeTrue($"Register page status {res.Status}. Base: {BaseUrl}");
         await Assertions.Expect(page.Locator("body")).ToContainTextAsync("register", new() { IgnoreCase = true });
     }
 }

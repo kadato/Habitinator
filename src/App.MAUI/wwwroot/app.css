@@ -35,6 +35,7 @@
 }
 
 .maui-splash__title {
+    display: block;
     font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
     font-size: 1.5rem;
     font-weight: 800;
@@ -50,6 +51,7 @@
 }
 
 .maui-splash__loader {
+    display: block;
     width: 180px;
     height: 3px;
     background: rgba(255, 255, 255, 0.12);
@@ -77,6 +79,7 @@
 }
 
 .maui-splash__hint {
+    display: block;
     font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
     font-size: 0.875rem;
     font-weight: 500;

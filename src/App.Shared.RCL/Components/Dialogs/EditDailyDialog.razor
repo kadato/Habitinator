@@ -263,9 +263,9 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
 
-    [Parameter] [EditorRequired] public BoardItem Item { get; set; } = default!;
+    [Parameter] [EditorRequired] public required BoardItem Item { get; set; }
 
     private sealed class ChecklistRow
     {

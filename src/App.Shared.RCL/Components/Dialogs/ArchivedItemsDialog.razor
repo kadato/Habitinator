@@ -38,16 +38,16 @@
                     </div>
 
                     <div class="filter-chips">
-                        <button type="button" class="filter-chip @(_selectedSection == null ? "active" : "")" @onclick="() => SetFilter(null)">
+                        <button type="button" class="@FilterChipClass(null)" @onclick="() => SetFilter(null)">
                             All <span class="chip-count">@TotalCount</span>
                         </button>
-                        <button type="button" class="filter-chip @(_selectedSection == BoardSection.Habit ? "active" : "")" @onclick="() => SetFilter(BoardSection.Habit)">
+                        <button type="button" class="@FilterChipClass(BoardSection.Habit)" @onclick="() => SetFilter(BoardSection.Habit)">
                             <span class="chip-dot dot-habit"></span> Habits <span class="chip-count">@HabitsCount</span>
                         </button>
-                        <button type="button" class="filter-chip @(_selectedSection == BoardSection.Daily ? "active" : "")" @onclick="() => SetFilter(BoardSection.Daily)">
+                        <button type="button" class="@FilterChipClass(BoardSection.Daily)" @onclick="() => SetFilter(BoardSection.Daily)">
                             <span class="chip-dot dot-daily"></span> Dailies <span class="chip-count">@DailiesCount</span>
                         </button>
-                        <button type="button" class="filter-chip @(_selectedSection == BoardSection.Todo ? "active" : "")" @onclick="() => SetFilter(BoardSection.Todo)">
+                        <button type="button" class="@FilterChipClass(BoardSection.Todo)" @onclick="() => SetFilter(BoardSection.Todo)">
                             <span class="chip-dot dot-todo"></span> To-Dos <span class="chip-count">@TodosCount</span>
                         </button>
                     </div>
@@ -162,7 +162,7 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
 
     private BoardSnapshot _snapshot = new([], [], []);
     private bool _loading = true;
@@ -266,6 +266,9 @@
     {
         _selectedSection = section;
     }
+
+    private string FilterChipClass(BoardSection? section) =>
+        _selectedSection == section ? "filter-chip active" : "filter-chip";
 
     private async Task UnarchiveAsync(BoardSection section, BoardItem item)
     {

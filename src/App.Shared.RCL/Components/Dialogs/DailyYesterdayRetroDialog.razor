@@ -87,7 +87,7 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
 
     [Parameter] [EditorRequired] public DateOnly DueOn { get; set; }
 

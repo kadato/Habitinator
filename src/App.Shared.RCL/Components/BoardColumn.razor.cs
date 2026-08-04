@@ -12,14 +12,14 @@ namespace App.Shared.RCL.Components;
 
 public partial class BoardColumn : IAsyncDisposable
 {
-    [Inject] public GlobalTimerService TimerService { get; set; } = null!;
-    [Inject] public IBoardDataService BoardData { get; set; } = null!;
-    [Inject] public IDialogService DialogService { get; set; } = null!;
-    [Inject] public IUserNotifier Notifier { get; set; } = null!;
-    [Inject] public IUserTimeZoneService TimeZoneService { get; set; } = null!;
-    [Inject] public IUserDateFormatService DateFormatService { get; set; } = null!;
-    [Inject] public IUndoService UndoService { get; set; } = null!;
-    [Inject] public IJSRuntime JS { get; set; } = null!;
+    [Inject] public required GlobalTimerService TimerService { get; set; }
+    [Inject] public required IBoardDataService BoardData { get; set; }
+    [Inject] public required IDialogService DialogService { get; set; }
+    [Inject] public required IUserNotifier Notifier { get; set; }
+    [Inject] public required IUserTimeZoneService TimeZoneService { get; set; }
+    [Inject] public required IUserDateFormatService DateFormatService { get; set; }
+    [Inject] public required IUndoService UndoService { get; set; }
+    [Inject] public required IJSRuntime JS { get; set; }
 
     [Parameter][EditorRequired] public BoardSection Section { get; set; }
 

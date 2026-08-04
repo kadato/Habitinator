@@ -114,7 +114,7 @@
         else
         {
             var label = string.IsNullOrEmpty(TimerService.TargetId) ? "Open session" : TimerService.TargetId;
-            var dur = FocusDurationInput.FormatForAlertLabel(TimerService.FocusAlertAfter!.Value);
+            var dur = FocusDurationInput.FormatForAlertLabel(TimerService.FocusAlertAfter ?? TimeSpan.Zero);
             var message = $"Time's up ({dur}) — {label}";
             TimerService.PauseForFocusTimeUp();
             _ = InvokeAsync(async () =>

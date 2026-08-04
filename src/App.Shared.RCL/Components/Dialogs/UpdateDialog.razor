@@ -132,7 +132,7 @@
 
 @code {
     [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; } = default!;
+    public required IMudDialogInstance MudDialog { get; set; }
 
     [Parameter]
     public string LatestVersion { get; set; } = string.Empty;

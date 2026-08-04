@@ -162,7 +162,7 @@
                             {
                                 <div class="field-item">
                                     <span class="field-label">Counters</span>
-                                    <span class="@GetFieldClass($"{LocalItem.Counter}/{LocalItem.NegativeCounter}", $"{ServerItem.Counter}/{ServerItem.NegativeCounter}")">
+                                    <span class="@GetFieldClass(CounterLabel(LocalItem.Counter, LocalItem.NegativeCounter), CounterLabel(ServerItem.Counter, ServerItem.NegativeCounter))">
                                         +@LocalItem.Counter / -@LocalItem.NegativeCounter
                                     </span>
                                 </div>
@@ -243,7 +243,7 @@
                             {
                                 <div class="field-item">
                                     <span class="field-label">Counters</span>
-                                    <span class="@GetFieldClass($"{ServerItem.Counter}/{ServerItem.NegativeCounter}", $"{LocalItem.Counter}/{LocalItem.NegativeCounter}")">
+                                    <span class="@GetFieldClass(CounterLabel(ServerItem.Counter, ServerItem.NegativeCounter), CounterLabel(LocalItem.Counter, LocalItem.NegativeCounter))">
                                         +@ServerItem.Counter / -@ServerItem.NegativeCounter
                                     </span>
                                 </div>
@@ -299,9 +299,9 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
 
-    [Parameter] [EditorRequired] public ConflictInfo Conflict { get; set; } = default!;
+    [Parameter] [EditorRequired] public required ConflictInfo Conflict { get; set; }
 
     private BoardItem LocalItem => Conflict.LocalItem;
     private BoardItem ServerItem => Conflict.ServerItem;
@@ -312,6 +312,9 @@
             ? "field-value"
             : "field-value field-value--different";
     }
+
+    private static string CounterLabel(int counter, int negativeCounter) =>
+        $"{counter}/{negativeCounter}";
 
     private static bool HasChecklist(BoardItem item)
     {

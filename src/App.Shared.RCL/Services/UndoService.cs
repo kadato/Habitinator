@@ -48,12 +48,12 @@ public sealed class UndoService : IUndoService, IDisposable
             return Guid.Empty;
         }
 
-        if (_currentBatch is not null)
+        if (_currentBatch is { } batch && _currentBatchKeys is { } keys)
         {
-            _currentBatch.Add(undoFunc);
+            batch.Add(undoFunc);
             foreach (var key in conflictKeys)
             {
-                _currentBatchKeys!.Add(key);
+                keys.Add(key);
             }
             return Guid.Empty;
         }

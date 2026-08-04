@@ -131,7 +131,8 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
         using var res = await Client.SendAsync(req, cancellationToken);
         await ThrowIfConflictAsync(res, cancellationToken);
         res.EnsureSuccessStatusCode();
-        return (await res.Content.ReadFromJsonAsync<BoardItem>(Serializer, cancellationToken))!;
+        return await res.Content.ReadFromJsonAsync<BoardItem>(Serializer, cancellationToken)
+               ?? throw new InvalidOperationException("Server returned an empty create response.");
     }
 
     public Task<BoardItem?> RenameItemAsync(BoardSection section, Guid itemId, string title,
@@ -215,7 +216,8 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
     {
         using var res = await Client.GetAsync("api/board/archived", cancellationToken);
         res.EnsureSuccessStatusCode();
-        return (await res.Content.ReadFromJsonAsync<BoardSnapshot>(Serializer, cancellationToken))!;
+        return await res.Content.ReadFromJsonAsync<BoardSnapshot>(Serializer, cancellationToken)
+               ?? throw new InvalidOperationException("Server returned an empty snapshot response.");
     }
 
     public Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId,

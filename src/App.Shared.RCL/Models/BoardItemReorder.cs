@@ -49,22 +49,17 @@ public static class BoardItemReorder
             ? ResolveSortOrder(getSortOrder(reordered[insertAt + 1]), insertAt + 1)
             : null;
 
-        if (prevOrder is null && nextOrder is not null)
+        if (prevOrder is not null)
         {
-            return nextOrder.Value - 1.0;
-        }
+            if (nextOrder is not null)
+            {
+                return (prevOrder.Value + nextOrder.Value) / 2.0;
+            }
 
-        if (nextOrder is null && prevOrder is not null)
-        {
             return prevOrder.Value + 1.0;
         }
 
-        if (prevOrder is not null)
-        {
-            return (prevOrder.Value + nextOrder!.Value) / 2.0;
-        }
-
-        return insertAt;
+        return nextOrder is not null ? nextOrder.Value - 1.0 : insertAt;
     }
 
     /// <summary>

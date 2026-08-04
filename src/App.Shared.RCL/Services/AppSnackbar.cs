@@ -41,6 +41,6 @@ public static class AppSnackbar
             config => Configure(config, visibleStateDurationMs),
             key);
 
-        return toast!;
+        return toast ?? throw new InvalidOperationException("Failed to show snackbar.");
     }
 }

@@ -197,12 +197,12 @@ public sealed class GlobalTimerService(IClock clock)
 
     public void Pause()
     {
-        if (!IsRunning)
+        if (_runningSince is not { } runningSince)
         {
             return;
         }
 
-        _accumulated += _clock.UtcNow - _runningSince!.Value;
+        _accumulated += _clock.UtcNow - runningSince;
         _runningSince = null;
     }
 

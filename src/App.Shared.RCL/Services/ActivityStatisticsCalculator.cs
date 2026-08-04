@@ -298,7 +298,7 @@ public static class ActivityStatisticsCalculator
         var byItem = new Dictionary<Guid, Dictionary<DateOnly, int>>();
         var netByItemDay = new Dictionary<(Guid id, DateOnly d), bool>();
         foreach (var g in inRange.GroupBy(e =>
-                 (e.BoardItemId!.Value, DateOnly.FromDateTime(e.OccurredAtUtc.UtcDateTime))))
+                 (e.BoardItemId ?? Guid.Empty, DateOnly.FromDateTime(e.OccurredAtUtc.UtcDateTime))))
         {
             var last = g.OrderBy(e => e.OccurredAtUtc).Last();
             netByItemDay[g.Key] = last.EventType == ActivityEventType.DailyComplete;

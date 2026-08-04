@@ -83,7 +83,7 @@ public static class DailyReminderText
             }
 
             var t = deadlineTodos[i];
-            var due = t.TodoDueDate!.Value;
+            var due = t.TodoDueDate ?? todayUtc;
             var suffix = due < todayUtc
                 ? " (overdue)"
                 : string.Empty;

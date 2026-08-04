@@ -340,6 +340,8 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
 
     private static string ItemKey(Guid itemId) => $"item:{itemId:N}";
 
+    private static T DiffCast<T>(object? value, T fallback) => value is T typed ? typed : fallback;
+
     private static List<string> KeysFor(Guid itemId, Dictionary<string, object?> diff)
     {
         var keys = new List<string>(diff.Count);
@@ -500,7 +502,7 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
                 return currentJson;
             }
 
-            rows[i] = rows[i] with { IsDone = (bool)diff[key]! };
+            rows[i] = rows[i] with { IsDone = DiffCast(diff[key], rows[i].IsDone) };
         }
 
         return DailyChecklistJson.Serialize(rows);
@@ -517,14 +519,14 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         await _inner.UpdateHabitAsync(
             itemId,
             new UpdateHabitArgs(
-                diff.TryGetValue(FieldTitle, out var title) ? (string)title! : current.Title,
+                diff.TryGetValue(FieldTitle, out var title) ? DiffCast(title, current.Title) : current.Title,
                 diff.TryGetValue(FieldNotes, out var notes) ? (string?)notes : current.Notes,
                 diff.TryGetValue(FieldTags, out var tags) ? (string?)tags : current.Tags,
-                diff.TryGetValue("trackplus", out var trackPlus) ? (bool)trackPlus! : current.TrackPlus,
-                diff.TryGetValue("trackminus", out var trackMinus) ? (bool)trackMinus! : current.TrackMinus,
-                diff.TryGetValue("resetperiod", out var resetPeriod) ? (HabitResetPeriod)resetPeriod! : current.ResetPeriod,
-                diff.TryGetValue("counter", out var counter) ? (int)counter! : current.Counter,
-                diff.TryGetValue("negcounter", out var negativeCounter) ? (int)negativeCounter! : current.NegativeCounter,
+                diff.TryGetValue("trackplus", out var trackPlus) ? DiffCast(trackPlus, current.TrackPlus) : current.TrackPlus,
+                diff.TryGetValue("trackminus", out var trackMinus) ? DiffCast(trackMinus, current.TrackMinus) : current.TrackMinus,
+                diff.TryGetValue("resetperiod", out var resetPeriod) ? DiffCast(resetPeriod, current.ResetPeriod) : current.ResetPeriod,
+                diff.TryGetValue("counter", out var counter) ? DiffCast(counter, current.Counter) : current.Counter,
+                diff.TryGetValue("negcounter", out var negativeCounter) ? DiffCast(negativeCounter, current.NegativeCounter) : current.NegativeCounter,
                 ApplyChecklistDiff(current.ChecklistJson, diff)),
             CancellationToken.None);
     }
@@ -540,7 +542,7 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         await _inner.UpdateTodoAsync(
             itemId,
             new UpdateTodoArgs(
-                diff.TryGetValue(FieldTitle, out var title) ? (string)title! : current.Title,
+                diff.TryGetValue(FieldTitle, out var title) ? DiffCast(title, current.Title) : current.Title,
                 diff.TryGetValue(FieldNotes, out var notes) ? (string?)notes : current.Notes,
                 diff.TryGetValue(FieldTags, out var tags) ? (string?)tags : current.Tags,
                 ApplyChecklistDiff(current.ChecklistJson, diff),
@@ -559,14 +561,14 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         await _inner.UpdateDailyAsync(
             itemId,
             new UpdateDailyArgs(
-                diff.TryGetValue(FieldTitle, out var title) ? (string)title! : current.Title,
+                diff.TryGetValue(FieldTitle, out var title) ? DiffCast(title, current.Title) : current.Title,
                 diff.TryGetValue(FieldNotes, out var notes) ? (string?)notes : current.Notes,
                 diff.TryGetValue(FieldTags, out var tags) ? (string?)tags : current.Tags,
                 diff.TryGetValue("startdate", out var startDate) ? (DateTime?)startDate : current.DailyStartDate?.ToDateTime(TimeOnly.MinValue),
-                diff.TryGetValue("repeat", out var repeat) ? (DailyRepeatType)repeat! : current.DailyRepeat,
-                diff.TryGetValue("interval", out var interval) ? (int)interval! : current.DailyRepeatInterval,
+                diff.TryGetValue("repeat", out var repeat) ? DiffCast(repeat, current.DailyRepeat) : current.DailyRepeat,
+                diff.TryGetValue("interval", out var interval) ? DiffCast(interval, current.DailyRepeatInterval) : current.DailyRepeatInterval,
                 ApplyChecklistDiff(current.ChecklistJson, diff),
-                diff.TryGetValue("streak", out var streak) ? (int)streak! : current.Counter),
+                diff.TryGetValue("streak", out var streak) ? DiffCast(streak, current.Counter) : current.Counter),
             CancellationToken.None);
     }
 

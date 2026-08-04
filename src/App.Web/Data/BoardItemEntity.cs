@@ -8,7 +8,7 @@ public sealed class BoardItemEntity
 
     public Guid UserId { get; set; }
 
-    public ApplicationUser User { get; set; } = default!;
+    public ApplicationUser? User { get; set; }
 
     public BoardSection Section { get; set; }
 

@@ -6,8 +6,17 @@ public sealed class DailyStreakMapCache(IMemoryCache cache)
 {
     private static readonly TimeSpan Ttl = TimeSpan.FromSeconds(30);
 
-    public bool TryGet(Guid userId, out Dictionary<Guid, int> streaks) =>
-        cache.TryGetValue(StreakKey(userId), out streaks!);
+    public bool TryGet(Guid userId, out Dictionary<Guid, int> streaks)
+    {
+        if (cache.TryGetValue(StreakKey(userId), out var value) && value is Dictionary<Guid, int> found)
+        {
+            streaks = found;
+            return true;
+        }
+
+        streaks = [];
+        return false;
+    }
 
     public void Set(Guid userId, Dictionary<Guid, int> streaks) =>
         cache.Set(StreakKey(userId), streaks, Ttl);

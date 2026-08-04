@@ -49,8 +49,7 @@ public sealed class ActivityStatisticsService(
 
         List<Guid> boardIds = [.. rows
             .Select(x => x.BoardItemId)
-            .Where(x => x.HasValue)
-            .Select(x => x!.Value)
+            .OfType<Guid>()
             .Distinct()];
 
         IReadOnlyDictionary<Guid, string> titles = boardIds.Count == 0

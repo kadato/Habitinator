@@ -8,7 +8,7 @@ public sealed class UserActivityEventEntity
 
     public Guid UserId { get; set; }
 
-    public ApplicationUser User { get; set; } = default!;
+    public ApplicationUser? User { get; set; }
 
     public DateTimeOffset OccurredAtUtc { get; set; }
 

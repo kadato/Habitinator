@@ -7,7 +7,7 @@ public sealed class BoardRequestIdempotencyEntity
 
     public Guid UserId { get; set; }
 
-    public ApplicationUser User { get; set; } = default!;
+    public ApplicationUser? User { get; set; }
 
     /// <summary>Client-supplied key (MAUI uses outbox OperationId).</summary>
     public string IdempotencyKey { get; set; } = "";

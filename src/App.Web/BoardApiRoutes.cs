@@ -111,88 +111,105 @@ internal static class BoardApiRoutes
         boardApi.MapPost("/{section}/{itemId:guid}/toggle", HandleToggleItemAsync);
     }
 
+    private sealed record BoardMutationContext(
+        HttpContext Http,
+        BoardPersistenceService Board,
+        BoardIdempotencyService Idem,
+        CancellationToken CancellationToken);
+
     private static async Task<IResult> HandleCreateItemAsync(
-        HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
-        BoardSection section, ItemTitleRequest request, CancellationToken cancellationToken)
+        [AsParameters] BoardMutationContext ctx,
+        ClaimsPrincipal user,
+        BoardSection section,
+        ItemTitleRequest request)
     {
         if (AuthenticatedUserId.TryGet(user) is not Guid userId)
         {
             return Results.Unauthorized();
         }
 
-        return await RunIdempotentAsync(http, idem, userId, "POST", JsonSerializer.Serialize(request, Json), async ct =>
+        return await RunIdempotentAsync(ctx.Http, ctx.Idem, userId, "POST", JsonSerializer.Serialize(request, Json), async ct =>
         {
-            var item = await board.CreateItemAsync(
+            var item = await ctx.Board.CreateItemAsync(
                 userId, section, ZalgoSanitizer.SanitizeAndTrim(request.Title), request.ItemId, ct);
             return (200, JsonSerializer.Serialize(item, Json), JsonContentType);
-        }, cancellationToken);
+        }, ctx.CancellationToken);
     }
 
     private static async Task<IResult> HandleRenameItemAsync(
-        HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
-        BoardSection section, Guid itemId, ItemTitleRequest request, CancellationToken cancellationToken)
+        [AsParameters] BoardMutationContext ctx,
+        ClaimsPrincipal user,
+        BoardSection section,
+        Guid itemId,
+        ItemTitleRequest request)
     {
         if (AuthenticatedUserId.TryGet(user) is not Guid userId)
         {
             return Results.Unauthorized();
         }
 
-        var expected = ReadExpectedUpdatedAtUtc(http.Request);
-        return await RunIdempotentAsync(http, idem, userId, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
+        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
+        return await RunIdempotentAsync(ctx.Http, ctx.Idem, userId, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
         {
-            var r = await board.RenameItemAsync(
+            var r = await ctx.Board.RenameItemAsync(
                 userId, section, itemId, ZalgoSanitizer.SanitizeAndTrim(request.Title), expected, ct);
             return MutationToOutcome(r);
-        }, cancellationToken);
+        }, ctx.CancellationToken);
     }
 
     private static async Task<IResult> HandleArchiveItemAsync(
-        HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
-        BoardSection section, Guid itemId, CancellationToken cancellationToken)
+        [AsParameters] BoardMutationContext ctx,
+        ClaimsPrincipal user,
+        BoardSection section,
+        Guid itemId)
     {
         if (AuthenticatedUserId.TryGet(user) is not Guid userId)
         {
             return Results.Unauthorized();
         }
 
-        var expected = ReadExpectedUpdatedAtUtc(http.Request);
-        return await RunIdempotentAsync(http, idem, userId, "POST", "", async ct =>
+        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
+        return await RunIdempotentAsync(ctx.Http, ctx.Idem, userId, "POST", "", async ct =>
         {
-            var r = await board.ArchiveItemAsync(userId, section, itemId, expected, ct);
+            var r = await ctx.Board.ArchiveItemAsync(userId, section, itemId, expected, ct);
             return MutationToOutcome(r);
-        }, cancellationToken);
+        }, ctx.CancellationToken);
     }
 
     private static async Task<IResult> HandleUnarchiveItemAsync(
-        HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
-        BoardSection section, Guid itemId, CancellationToken cancellationToken)
+        [AsParameters] BoardMutationContext ctx,
+        ClaimsPrincipal user,
+        BoardSection section,
+        Guid itemId)
     {
         if (AuthenticatedUserId.TryGet(user) is not Guid userId)
         {
             return Results.Unauthorized();
         }
 
-        var expected = ReadExpectedUpdatedAtUtc(http.Request);
-        return await RunIdempotentAsync(http, idem, userId, "POST", "", async ct =>
+        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
+        return await RunIdempotentAsync(ctx.Http, ctx.Idem, userId, "POST", "", async ct =>
         {
-            var r = await board.UnarchiveItemAsync(userId, section, itemId, expected, ct);
+            var r = await ctx.Board.UnarchiveItemAsync(userId, section, itemId, expected, ct);
             return MutationToOutcome(r);
-        }, cancellationToken);
+        }, ctx.CancellationToken);
     }
 
     private static async Task<IResult> HandleDeleteItemAsync(
-        HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
-        BoardSection section, Guid itemId, CancellationToken cancellationToken)
+        [AsParameters] BoardMutationContext ctx,
+        ClaimsPrincipal user,
+        BoardSection section,
+        Guid itemId)
     {
         if (AuthenticatedUserId.TryGet(user) is not Guid userId)
         {
             return Results.Unauthorized();
         }
 
-        var expected = ReadExpectedUpdatedAtUtc(http.Request);
-        return await RunIdempotentAsync(http, idem, userId, "DELETE", "", async ct =>
+        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
+        return await RunIdempotentAsync(ctx.Http, ctx.Idem, userId, "DELETE", "", async ct =>
         {
-            var r = await board.DeleteItemAsync(userId, section, itemId, expected, ct);
+            var r = await ctx.Board.DeleteItemAsync(userId, section, itemId, expected, ct);
             return r.Status switch
             {
                 BoardMutationStatus.Ok => (204, "", null),
@@ -203,24 +220,26 @@ internal static class BoardApiRoutes
                     JsonContentType),
                 _ => (500, "{}", JsonContentType)
             };
-        }, cancellationToken);
+        }, ctx.CancellationToken);
     }
 
     private static async Task<IResult> HandleToggleItemAsync(
-        HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
-        BoardSection section, Guid itemId, CancellationToken cancellationToken)
+        [AsParameters] BoardMutationContext ctx,
+        ClaimsPrincipal user,
+        BoardSection section,
+        Guid itemId)
     {
         if (AuthenticatedUserId.TryGet(user) is not Guid userId)
         {
             return Results.Unauthorized();
         }
 
-        var expected = ReadExpectedUpdatedAtUtc(http.Request);
-        return await RunIdempotentAsync(http, idem, userId, "POST", "", async ct =>
+        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
+        return await RunIdempotentAsync(ctx.Http, ctx.Idem, userId, "POST", "", async ct =>
         {
-            var r = await board.ToggleItemAsync(userId, section, itemId, expected, ct);
+            var r = await ctx.Board.ToggleItemAsync(userId, section, itemId, expected, ct);
             return MutationToOutcome(r);
-        }, cancellationToken);
+        }, ctx.CancellationToken);
     }
 
     private static void MapHabitRoutes(RouteGroupBuilder boardApi)

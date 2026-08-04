@@ -1130,11 +1130,11 @@ public sealed partial class LocalFirstBoardDataService(
             _gate.Release();
         }
 
-        await ExecuteOutboxRemoteAsync(head, api, cancellationToken);
+        await ExecuteOutboxRemoteAsync(_gate, dbFactory, head, api, cancellationToken);
     }
 
-    private async Task ExecuteOutboxRemoteAsync(BoardOutboxRow head, RemoteBoardDataService api,
-        CancellationToken cancellationToken)
+    private static async Task ExecuteOutboxRemoteAsync(SemaphoreSlim gate, IDbContextFactory<LocalBoardDbContext> dbFactory,
+        BoardOutboxRow head, RemoteBoardDataService api, CancellationToken cancellationToken)
     {
         switch (head.Kind)
         {
@@ -1143,7 +1143,7 @@ public sealed partial class LocalFirstBoardDataService(
                     var p = System.Text.Json.JsonSerializer.Deserialize<CreateOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
                             ?? throw new InvalidOperationException("Invalid create payload.");
                     var serverItem = await api.CreateItemAsync(p.Section, p.Title, p.ClientItemId, head.OperationId, cancellationToken);
-                    await CommitCreateSuccessAsync(p.ClientItemId, p.Section, serverItem, head.UserKey, cancellationToken);
+                    await CommitCreateSuccessAsync(gate, dbFactory, p.ClientItemId, p.Section, serverItem, head.UserKey, cancellationToken);
                     return;
                 }
             case BoardOutboxOperationKind.Rename:
@@ -1157,7 +1157,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(p.ItemId, head.UserKey, updated, cancellationToken);
+                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
                     return;
                 }
             case BoardOutboxOperationKind.Delete:
@@ -1182,7 +1182,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(p.ItemId, head.UserKey, updated, cancellationToken);
+                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
                     return;
                 }
             case BoardOutboxOperationKind.CompleteDailyForDate:
@@ -1195,7 +1195,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(p.ItemId, head.UserKey, updated, cancellationToken);
+                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
                     return;
                 }
             case BoardOutboxOperationKind.HabitIncrement:
@@ -1207,7 +1207,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(p.ItemId, head.UserKey, updated, cancellationToken);
+                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
                     return;
                 }
             case BoardOutboxOperationKind.HabitDecrement:
@@ -1219,7 +1219,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(p.ItemId, head.UserKey, updated, cancellationToken);
+                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
                     return;
                 }
             case BoardOutboxOperationKind.UpdateHabit:
@@ -1242,7 +1242,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(p.ItemId, head.UserKey, updated, cancellationToken);
+                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
                     return;
                 }
             case BoardOutboxOperationKind.UpdateTodo:
@@ -1261,7 +1261,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(p.ItemId, head.UserKey, updated, cancellationToken);
+                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
                     return;
                 }
             case BoardOutboxOperationKind.UpdateDaily:
@@ -1283,7 +1283,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(p.ItemId, head.UserKey, updated, cancellationToken);
+                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
                     return;
                 }
             case BoardOutboxOperationKind.Archive:
@@ -1296,7 +1296,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(p.ItemId, head.UserKey, updated, cancellationToken);
+                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
                     return;
                 }
             case BoardOutboxOperationKind.Unarchive:
@@ -1309,7 +1309,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(p.ItemId, head.UserKey, updated, cancellationToken);
+                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
                     return;
                 }
             default:
@@ -1336,10 +1336,10 @@ public sealed partial class LocalFirstBoardDataService(
         }
     }
 
-    private async Task CommitCreateSuccessAsync(Guid clientId, BoardSection section, BoardItem serverItem, string userKey,
-        CancellationToken cancellationToken)
+    private static async Task CommitCreateSuccessAsync(SemaphoreSlim gate, IDbContextFactory<LocalBoardDbContext> dbFactory,
+        Guid clientId, BoardSection section, BoardItem serverItem, string userKey, CancellationToken cancellationToken)
     {
-        await _gate.WaitAsync(cancellationToken);
+        await gate.WaitAsync(cancellationToken);
         try
         {
             await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
@@ -1360,19 +1360,19 @@ public sealed partial class LocalFirstBoardDataService(
         }
         finally
         {
-            _gate.Release();
+            gate.Release();
         }
     }
 
-    private async Task PatchLocalAsync(Guid itemId, string userKey, BoardItem? serverItem,
-        CancellationToken cancellationToken)
+    private static async Task PatchLocalAsync(SemaphoreSlim gate, IDbContextFactory<LocalBoardDbContext> dbFactory,
+        Guid itemId, string userKey, BoardItem? serverItem, CancellationToken cancellationToken)
     {
         if (serverItem is null)
         {
             return;
         }
 
-        await _gate.WaitAsync(cancellationToken);
+        await gate.WaitAsync(cancellationToken);
         try
         {
             await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
@@ -1409,7 +1409,7 @@ public sealed partial class LocalFirstBoardDataService(
         }
         finally
         {
-            _gate.Release();
+            gate.Release();
         }
     }
 

@@ -64,7 +64,7 @@ public class MainActivity : MauiAppCompatActivity
             return;
         }
 
-        var isDarkMode = ResolveIsDarkMode();
+        var isDarkMode = ResolveIsDarkMode(Resources);
 
         // On dark backgrounds we need light (white) status bar icons → AppearanceLightStatusBars = false
         // On light backgrounds we need dark status bar icons       → AppearanceLightStatusBars = true
@@ -72,7 +72,7 @@ public class MainActivity : MauiAppCompatActivity
         insetsController.AppearanceLightNavigationBars = !isDarkMode;
     }
 
-    private bool ResolveIsDarkMode()
+    private static bool ResolveIsDarkMode(Resources? resources)
     {
         // Respect the app's explicit theme choice when set
         var userAppTheme = Microsoft.Maui.Controls.Application.Current?.UserAppTheme;
@@ -89,10 +89,10 @@ public class MainActivity : MauiAppCompatActivity
         // Fall back to the system dark mode setting
         if (OperatingSystem.IsAndroidVersionAtLeast(30))
         {
-            return Resources?.Configuration?.IsNightModeActive ?? false;
+            return resources?.Configuration?.IsNightModeActive ?? false;
         }
 
-        var uiMode = Resources?.Configuration?.UiMode;
+        var uiMode = resources?.Configuration?.UiMode;
         return uiMode.HasValue && ((int)uiMode.Value & (int)UiMode.NightMask) == (int)UiMode.NightYes;
     }
 }

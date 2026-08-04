@@ -207,6 +207,18 @@
     }
 }
 
+/* Desktop MAUI room under the auto-height app bar before the content */
+@media (min-width: 960px) {
+    .app-shell-layout {
+        --app-top-bar-offset: 4rem;
+        --board-sticky-top: 4rem;
+    }
+
+    .app-shell-layout .app-shell-main.mud-main-content {
+        padding-top: calc(var(--app-top-bar-offset) + var(--space-5)) !important;
+    }
+}
+
 /* ── Horizontal padding on very narrow MAUI screens ── */
 @media (max-width: 767.98px) {
     .board-main-container.mud-container {

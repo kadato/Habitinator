@@ -2,17 +2,21 @@ using System.Globalization;
 
 using App.Shared.RCL.Models;
 
+using Microsoft.Extensions.Logging;
+
 namespace App.Shared.RCL.Services;
 
-public sealed class UserDateFormatService : IUserDateFormatService
+public sealed class UserDateFormatService : IUserDateFormatService, IDisposable
 {
     private readonly IUserPreferencesService _preferencesService;
+    private readonly ILogger<UserDateFormatService> _logger;
     private string _dateFormat = UserPreferences.CreateDefault().DateFormat;
     private bool _initialized;
 
-    public UserDateFormatService(IUserPreferencesService preferencesService)
+    public UserDateFormatService(IUserPreferencesService preferencesService, ILogger<UserDateFormatService> logger)
     {
         _preferencesService = preferencesService;
+        _logger = logger;
         _preferencesService.Changed += OnPreferencesChanged;
     }
 
@@ -38,32 +42,36 @@ public sealed class UserDateFormatService : IUserDateFormatService
 
     public string Format(DateOnly dateValue)
     {
-        var format = _initialized ? _dateFormat : UserPreferences.CreateDefault().DateFormat;
-        return dateValue.ToString(format, CultureInfo.InvariantCulture);
+        return dateValue.ToString(EffectiveFormat, CultureInfo.InvariantCulture);
     }
 
     public string Format(DateTime dateTime)
     {
-        var format = _initialized ? _dateFormat : UserPreferences.CreateDefault().DateFormat;
-        return dateTime.ToString($"{format} HH:mm", CultureInfo.InvariantCulture);
+        return dateTime.ToString($"{EffectiveFormat} HH:mm", CultureInfo.InvariantCulture);
     }
 
     public string Format(DateTimeOffset dateTimeOffset)
     {
-        var format = _initialized ? _dateFormat : UserPreferences.CreateDefault().DateFormat;
-        return dateTimeOffset.ToString($"{format} HH:mm", CultureInfo.InvariantCulture);
+        return dateTimeOffset.ToString($"{EffectiveFormat} HH:mm", CultureInfo.InvariantCulture);
     }
 
-    private async void OnPreferencesChanged(object? sender, EventArgs e)
+    private string EffectiveFormat => _initialized ? _dateFormat : UserPreferences.CreateDefault().DateFormat;
+
+    private void OnPreferencesChanged(object? sender, EventArgs e)
+    {
+        _ = RefreshFormatAsync();
+    }
+
+    private async Task RefreshFormatAsync()
     {
         try
         {
             var prefs = await _preferencesService.GetAsync().ConfigureAwait(false);
             _dateFormat = NormalizeFormat(prefs.DateFormat);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Fall back to default format on preference retrieval error
+            _logger.LogDebug(ex, "Failed to refresh date format from preferences; using default.");
             _dateFormat = UserPreferences.CreateDefault().DateFormat;
         }
     }
@@ -78,12 +86,17 @@ public sealed class UserDateFormatService : IUserDateFormatService
         try
         {
             // Validate format string
-            _ = DateTime.Now.ToString(format, CultureInfo.InvariantCulture);
+            _ = DateTime.UnixEpoch.ToString(format, CultureInfo.InvariantCulture);
             return format;
         }
         catch (FormatException)
         {
             return UserPreferences.CreateDefault().DateFormat;
         }
+    }
+
+    public void Dispose()
+    {
+        _preferencesService.Changed -= OnPreferencesChanged;
     }
 }

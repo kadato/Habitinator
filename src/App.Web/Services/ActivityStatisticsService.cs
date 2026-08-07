@@ -59,7 +59,7 @@ public sealed class ActivityStatisticsService(
                 .ToDictionaryAsync(b => b.Id, b => b.Title, cancellationToken);
 
         var result = ActivityStatisticsCalculator.BuildDayDetail(day, rows, titles);
-        userCache.DayDetail[cacheKey] = result;
+        userCache.DayDetail.Set(cacheKey, result);
         return result;
     }
 
@@ -100,7 +100,7 @@ public sealed class ActivityStatisticsService(
 
         var built = ActivityStatisticsCalculator.BuildDashboard(rows, key, start, end, utcToday);
         var result = built with { AvailableTags = availableTags };
-        userCache.Dashboard[cacheKey] = result;
+        userCache.Dashboard.Set(cacheKey, result);
         return result;
     }
 
@@ -170,7 +170,7 @@ public sealed class ActivityStatisticsService(
             rangeEnd,
             utcToday);
 
-        userCache.DailyContributions[cacheKey] = result;
+        userCache.DailyContributions.Set(cacheKey, result);
         return result;
     }
 

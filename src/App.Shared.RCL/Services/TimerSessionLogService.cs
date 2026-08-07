@@ -7,10 +7,12 @@ public sealed class TimerSessionLogService(
     IBoardDataService boardData,
     IUserActivityLogService userActivityLog,
     IUserTimeZoneService timeZoneService,
-    IRemoteBoardRefreshService remoteBoardRefresh) : ITimerSessionLogService
+    IRemoteBoardRefreshService remoteBoardRefresh,
+    IClock clock) : ITimerSessionLogService
 {
     private readonly IBoardDataService _boardData = boardData;
     private readonly IRemoteBoardRefreshService _remoteBoardRefresh = remoteBoardRefresh;
+    private readonly IClock _clock = clock;
     private readonly GlobalTimerService _timer = timer;
     private readonly IUserActivityLogService _userActivityLog = userActivityLog;
     private readonly IUserTimeZoneService _timeZoneService = timeZoneService;
@@ -79,7 +81,7 @@ public sealed class TimerSessionLogService(
         if (targetType == "Daily")
         {
             var daily = snapshot.Dailies.FirstOrDefault(d => d.Id == id);
-            var today = DailySchedule.LocalToday(_timeZoneService);
+            var today = DailySchedule.LocalToday(_clock, _timeZoneService);
             if (daily is not null && !DailySchedule.IsCompleteForDate(daily, today))
             {
                 var updated = await _boardData.ToggleItemAsync(BoardSection.Daily, id, cancellationToken)

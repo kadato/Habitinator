@@ -15,7 +15,7 @@ public static class DailyStreakBackfill
     ///     The most recent <paramref name="streakCount" /> scheduled days on or before <paramref name="notAfter" />,
     ///     in iteration order (newest first). Fewer than <paramref name="streakCount" /> if the schedule
     ///     or start date does not allow more days. For manual streak from the daily edit dialog, use
-    ///     <c>notAfter = <see cref="DailySchedule.UtcToday" />.AddDays(-1)</c> so the count is previous days only
+    ///     <c>notAfter = <see cref="DailySchedule.LocalToday" />.AddDays(-1)</c> so the count is previous days only
     ///     and does not mark today.
     /// </summary>
     public static IReadOnlyList<DateOnly> GetLastNScheduledCompletionDays(

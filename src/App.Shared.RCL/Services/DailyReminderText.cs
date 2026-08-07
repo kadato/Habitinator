@@ -13,13 +13,13 @@ public static class DailyReminderText
 {
     public const string DefaultTitle = "Habitinator";
 
-    /// <param name="todayUtc">Calendar day in UTC, e.g. <see cref="DailySchedule.UtcToday" />.</param>
+    /// <param name="todayUtc">Calendar day to evaluate, e.g. <see cref="DailySchedule.LocalToday" />.</param>
     public static (string Title, string Body) Build(BoardSnapshot snapshot, DateOnly todayUtc, int maxBodyLength = 1800)
     {
         return Build(snapshot, todayUtc, null, maxBodyLength);
     }
 
-    /// <param name="todayUtc">Calendar day in UTC, e.g. <see cref="DailySchedule.UtcToday" />.</param>
+    /// <param name="todayUtc">Calendar day to evaluate, e.g. <see cref="DailySchedule.LocalToday" />.</param>
     public static (string Title, string Body) Build(
         BoardSnapshot snapshot,
         DateOnly todayUtc,

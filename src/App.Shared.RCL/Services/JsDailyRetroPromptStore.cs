@@ -11,12 +11,18 @@ public sealed class JsDailyRetroPromptStore : IDailyRetroPromptStore
     private readonly IJSRuntime _js;
     private readonly IUserTimeZoneService _timeZoneService;
     private readonly IClientSessionProvider _sessionProvider;
+    private readonly IClock _clock;
 
-    public JsDailyRetroPromptStore(IJSRuntime js, IUserTimeZoneService timeZoneService, IClientSessionProvider sessionProvider)
+    public JsDailyRetroPromptStore(
+        IJSRuntime js,
+        IUserTimeZoneService timeZoneService,
+        IClientSessionProvider sessionProvider,
+        IClock clock)
     {
         _js = js;
         _timeZoneService = timeZoneService;
         _sessionProvider = sessionProvider;
+        _clock = clock;
     }
 
     private string GetKey()
@@ -51,7 +57,7 @@ public sealed class JsDailyRetroPromptStore : IDailyRetroPromptStore
 
     public async Task SetPromptResolvedForTodayAsync(CancellationToken cancellationToken = default)
     {
-        var ymd = DailySchedule.LocalToday(_timeZoneService).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var ymd = DailySchedule.LocalToday(_clock, _timeZoneService).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         try
         {
             await _js.InvokeVoidAsync("habitinatorSetDailyRetroResolved", GetKey(), ymd).ConfigureAwait(false);

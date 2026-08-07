@@ -14,7 +14,17 @@ public static class DailySchedule
     /// </summary>
     public static DateOnly LocalToday(IUserTimeZoneService? tz = null, TimeSpan? dayStartLocalTime = null)
     {
-        return GetLocalDate(tz, DateTimeOffset.UtcNow, dayStartLocalTime);
+        return LocalToday(SystemClock.Instance, tz, dayStartLocalTime);
+    }
+
+    /// <summary>
+    ///     Gets today's date in the user's local timezone from the given clock, or UTC if no
+    ///     timezone service is available. This is the primary "today" for daily scheduling.
+    /// </summary>
+    public static DateOnly LocalToday(IClock clock, IUserTimeZoneService? tz = null, TimeSpan? dayStartLocalTime = null)
+    {
+        ArgumentNullException.ThrowIfNull(clock);
+        return GetLocalDate(tz, clock.UtcNow, dayStartLocalTime);
     }
 
     /// <summary>
@@ -22,7 +32,16 @@ public static class DailySchedule
     /// </summary>
     public static DateOnly LocalYesterday(IUserTimeZoneService? tz = null, TimeSpan? dayStartLocalTime = null)
     {
-        return LocalToday(tz, dayStartLocalTime).AddDays(-1);
+        return LocalYesterday(SystemClock.Instance, tz, dayStartLocalTime);
+    }
+
+    /// <summary>
+    ///     Gets yesterday's date in the user's local timezone from the given clock, or UTC if no
+    ///     timezone service is available.
+    /// </summary>
+    public static DateOnly LocalYesterday(IClock clock, IUserTimeZoneService? tz = null, TimeSpan? dayStartLocalTime = null)
+    {
+        return LocalToday(clock, tz, dayStartLocalTime).AddDays(-1);
     }
 
     private static DateOnly GetLocalDate(IUserTimeZoneService? tz, DateTimeOffset utcNow, TimeSpan? dayStartLocalTime)

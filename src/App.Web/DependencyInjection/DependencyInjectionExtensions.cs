@@ -110,7 +110,7 @@ public static class DependencyInjectionExtensions
 
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IWebHostEnvironment environment)
     {
-        services.AddScoped<JwtTokenService>();
+        services.AddSingleton<JwtTokenService>();
         services.AddSingleton<IClock, SystemClock>();
         services.AddScoped<GlobalTimerService>();
         services.AddSingleton<IAppWindowProgressService, FallbackAppWindowProgressService>();

@@ -112,6 +112,7 @@ internal static class AuthApiRoutes
         var user = await userManager.FindByEmailAsync(request.Email);
         if (user is null)
         {
+            RunDummyPasswordCheck(request.Password);
             return Results.Unauthorized();
         }
 
@@ -216,6 +217,7 @@ internal static class AuthApiRoutes
         var user = await userManager.FindByEmailAsync(email);
         if (user is null)
         {
+            RunDummyPasswordCheck(password);
             return Results.LocalRedirect("/auth/login?error=1");
         }
 
@@ -303,6 +305,22 @@ internal static class AuthApiRoutes
     }
 
     // --- Helpers ---
+
+    private static readonly PasswordHasher<ApplicationUser> DummyHasher = new();
+
+    private static readonly string DummyPasswordHash = DummyHasher.HashPassword(
+        new ApplicationUser(),
+        "timing-equalizer-dummy-password");
+
+    /// <summary>
+    ///     Runs a password hash verification against a fixed dummy hash so the unknown user
+    ///     branch takes the same time as a real password check, preventing account enumeration
+    ///     by response timing.
+    /// </summary>
+    private static void RunDummyPasswordCheck(string password)
+    {
+        DummyHasher.VerifyHashedPassword(new ApplicationUser(), DummyPasswordHash, password);
+    }
 
     private static List<string> MapRegistrationErrorsToUserFacing(IEnumerable<IdentityError> errors) =>
         [.. errors.Select(static e => e.Code switch

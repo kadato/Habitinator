@@ -348,35 +348,44 @@ public sealed partial class LocalFirstBoardDataService(
     public async Task<BoardSnapshot> GetArchivedSnapshotAsync(CancellationToken cancellationToken = default)
     {
         await EnsureLocalStoreSchemaAsync(cancellationToken);
-        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
-        var userKey = await ResolveUserKeyAsync(cancellationToken);
-        if (string.IsNullOrWhiteSpace(userKey))
+        await _gate.WaitAsync(cancellationToken);
+        try
         {
-            return EmptySnapshot();
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+
+            var userKey = await ResolveUserKeyAsync(cancellationToken);
+            if (string.IsNullOrWhiteSpace(userKey))
+            {
+                return EmptySnapshot();
+            }
+
+            var today = DailySchedule.LocalToday(timeZone);
+            var items = await db.BoardItems.AsNoTracking().Where(x => x.UserKey == userKey && x.IsArchived).ToListAsync(cancellationToken);
+
+            List<BoardItem> habits = [.. items.Where(x => x.Section == BoardSection.Habit)
+                .OrderBy(x => x.SortOrder ?? double.MaxValue)
+                .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
+                .Select(x => x.ToModel())];
+            List<BoardItem> dailies = [.. items.Where(x => x.Section == BoardSection.Daily)
+                .OrderBy(x => IsDailyRowCompleteForToday(x, today) ? 1 : 0)
+                .ThenBy(x => x.SortOrder ?? double.MaxValue)
+                .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
+                .Select(x => x.ToModel())];
+            List<BoardItem> todos = [.. items.Where(x => x.Section == BoardSection.Todo)
+                .OrderBy(x => x.IsCompleted ? 1 : 0)
+                .ThenBy(x => x.TodoDueDate.HasValue ? 1 : 0)
+                .ThenBy(x => x.TodoDueDate ?? DateOnly.MaxValue)
+                .ThenBy(x => x.SortOrder ?? double.MaxValue)
+                .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
+                .Select(x => x.ToModel())];
+
+            return new(habits, dailies, todos);
         }
-
-        var today = DailySchedule.LocalToday(timeZone);
-        var items = await db.BoardItems.AsNoTracking().Where(x => x.UserKey == userKey && x.IsArchived).ToListAsync(cancellationToken);
-
-        List<BoardItem> habits = [.. items.Where(x => x.Section == BoardSection.Habit)
-            .OrderBy(x => x.SortOrder ?? double.MaxValue)
-            .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
-            .Select(x => x.ToModel())];
-        List<BoardItem> dailies = [.. items.Where(x => x.Section == BoardSection.Daily)
-            .OrderBy(x => IsDailyRowCompleteForToday(x, today) ? 1 : 0)
-            .ThenBy(x => x.SortOrder ?? double.MaxValue)
-            .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
-            .Select(x => x.ToModel())];
-        List<BoardItem> todos = [.. items.Where(x => x.Section == BoardSection.Todo)
-            .OrderBy(x => x.IsCompleted ? 1 : 0)
-            .ThenBy(x => x.TodoDueDate.HasValue ? 1 : 0)
-            .ThenBy(x => x.TodoDueDate ?? DateOnly.MaxValue)
-            .ThenBy(x => x.SortOrder ?? double.MaxValue)
-            .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
-            .Select(x => x.ToModel())];
-
-        return new(habits, dailies, todos);
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     public Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId,
@@ -1014,8 +1023,13 @@ public sealed partial class LocalFirstBoardDataService(
         {
             delta = await remote.TryGetSyncDeltaAsync(cursor, cancellationToken);
         }
-        catch
+        catch (OperationCanceledException)
         {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Sync delta pull failed; falling back to a full snapshot.");
             return (true, false);
         }
 
@@ -1072,8 +1086,13 @@ public sealed partial class LocalFirstBoardDataService(
         {
             snap = await remote.GetSnapshotAsync(cancellationToken);
         }
-        catch
+        catch (OperationCanceledException)
         {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Sync snapshot pull failed (offline or error).");
             return false;
         }
 
@@ -1637,71 +1656,75 @@ public sealed partial class LocalFirstBoardDataService(
 
     private static async Task EnsureSqliteBoardColumnsAsync(LocalBoardDbContext db, CancellationToken cancellationToken)
     {
-        try
+        var boardColumns = await GetTableColumnsAsync(db, "BoardItems", cancellationToken);
+        var metaColumns = await GetTableColumnsAsync(db, "Meta", cancellationToken);
+
+        if (!boardColumns.Contains("ServerUpdatedAtUtc"))
         {
             await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE BoardItems ADD COLUMN ServerUpdatedAtUtc TEXT NULL;",
                 cancellationToken);
         }
-        catch
-        {
-            // column already present
-        }
 
-        try
+        if (!boardColumns.Contains("CreatedAtUtc"))
         {
             await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE BoardItems ADD COLUMN CreatedAtUtc TEXT NULL;",
                 cancellationToken);
         }
-        catch
-        {
-            // column might already exist, safe to ignore.
-        }
 
-        try
+        var addedSortOrder = !boardColumns.Contains("SortOrder");
+        if (addedSortOrder)
         {
             await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE BoardItems ADD COLUMN SortOrder REAL NULL;",
                 cancellationToken);
-        }
-        catch
-        {
-            // column might already exist, safe to ignore.
-        }
-
-        try
-        {
             await db.Database.ExecuteSqlRawAsync(
                 "UPDATE BoardItems SET SortOrder = rowid WHERE SortOrder IS NULL;",
                 cancellationToken);
         }
-        catch
-        {
-            // column or data update might fail if already present, safe to ignore.
-        }
 
-        try
-        {
-            await db.Database.ExecuteSqlRawAsync(
-                "ALTER TABLE Meta ADD COLUMN LastSyncCursorUtc TEXT NULL;",
-                cancellationToken);
-        }
-        catch
-        {
-            // column might already exist, safe to ignore.
-        }
-
-        try
+        if (!boardColumns.Contains("IsArchived"))
         {
             await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE BoardItems ADD COLUMN IsArchived INTEGER NOT NULL DEFAULT 0;",
                 cancellationToken);
         }
-        catch
+
+        if (!metaColumns.Contains("LastSyncCursorUtc"))
         {
-            // column might already exist, safe to ignore.
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE Meta ADD COLUMN LastSyncCursorUtc TEXT NULL;",
+                cancellationToken);
         }
+    }
+
+    private static async Task<HashSet<string>> GetTableColumnsAsync(
+        LocalBoardDbContext db,
+        string table,
+        CancellationToken cancellationToken)
+    {
+        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var connection = db.Database.GetDbConnection();
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = table switch
+        {
+            "BoardItems" => "PRAGMA table_info(BoardItems);",
+            "Meta" => "PRAGMA table_info(Meta);",
+            _ => throw new ArgumentOutOfRangeException(nameof(table), table, "Only internal tables can be inspected.")
+        };
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            columns.Add(reader.GetString(1));
+        }
+
+        return columns;
     }
 
     private static async Task ApplySyncDeltaAsync(

@@ -11,8 +11,6 @@ using Microsoft.EntityFrameworkCore;
 using MudBlazor;
 using MudBlazor.Services;
 
-const string TestingEnvironment = "Testing";
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -78,7 +76,7 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy("auth", context =>
     {
         var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown-ip";
-        var isDevOrTest = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment(TestingEnvironment);
+        var isDevOrTest = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment(AppEnvironment.Testing);
         var limit = isDevOrTest ? 100 : 20;
         return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
         {
@@ -94,7 +92,7 @@ builder.Services.AddRateLimiter(options =>
                   ?? context.Connection.RemoteIpAddress?.ToString()
                   ?? "unknown";
 
-        var isDevOrTest = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment(TestingEnvironment);
+        var isDevOrTest = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment(AppEnvironment.Testing);
         var limit = isDevOrTest ? 1000 : 300;
         var queueLimit = isDevOrTest ? 50 : 10;
 
@@ -109,7 +107,7 @@ builder.Services.AddRateLimiter(options =>
 });
 var app = builder.Build();
 
-if (app.Environment.IsEnvironment(TestingEnvironment))
+if (app.Environment.IsEnvironment(AppEnvironment.Testing))
 {
     await DemoDataSeeder.SeedAsync(app.Services);
 }

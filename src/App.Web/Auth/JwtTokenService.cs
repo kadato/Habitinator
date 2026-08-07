@@ -9,9 +9,20 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace App.Web.Auth;
 
-public sealed class JwtTokenService(IOptions<JwtOptions> options)
+public sealed class JwtTokenService
 {
-    private readonly JwtOptions _options = options.Value;
+    private static readonly JwtSecurityTokenHandler Handler = new();
+
+    private readonly JwtOptions _options;
+    private readonly SigningCredentials _credentials;
+
+    public JwtTokenService(IOptions<JwtOptions> options)
+    {
+        _options = options.Value;
+        _credentials = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey)),
+            SecurityAlgorithms.HmacSha256);
+    }
 
     public string CreateToken(ApplicationUser user)
     {
@@ -23,16 +34,13 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options)
             new(ClaimTypes.Name, user.UserName ?? string.Empty)
         ];
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
         var token = new JwtSecurityToken(
             _options.Issuer,
             _options.Audience,
             claims,
             expires: DateTime.UtcNow.AddMinutes(_options.ExpirationMinutes),
-            signingCredentials: credentials);
+            signingCredentials: _credentials);
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return Handler.WriteToken(token);
     }
 }

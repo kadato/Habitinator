@@ -5,19 +5,20 @@ namespace App.Web;
 
 internal static class PipelineExtensions
 {
-    private const string TestingEnvironment = "Testing";
-
     internal static void ConfigurePipeline(this WebApplication app)
     {
         // Configure the HTTP request pipeline.
-        if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment(TestingEnvironment))
+        if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment(AppEnvironment.Testing))
         {
             app.UseExceptionHandler("/Error", true);
             // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
             app.UseHsts();
         }
 
-        if (!app.Environment.IsEnvironment(TestingEnvironment))
+        // Compression must run early so OpenAPI documents and middleware error bodies are also compressed.
+        app.UseResponseCompression();
+
+        if (!app.Environment.IsEnvironment(AppEnvironment.Testing))
         {
             app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
             app.UseHttpsRedirection();
@@ -30,7 +31,7 @@ internal static class PipelineExtensions
         app.UseAuthorization();
         app.UseAntiforgery();
 
-        if (!app.Environment.IsEnvironment(TestingEnvironment))
+        if (!app.Environment.IsEnvironment(AppEnvironment.Testing))
         {
             app.UseRateLimiter();
         }
@@ -43,7 +44,6 @@ internal static class PipelineExtensions
         {
             options.Path = "/openapi/v1.json";
         });
-        app.UseResponseCompression();
         app.MapStaticAssets();
         app.MapRazorComponents<App.Web.Components.App>()
             .AddInteractiveWebAssemblyRenderMode()

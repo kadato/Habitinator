@@ -18,8 +18,6 @@ namespace App.Web.DependencyInjection;
 
 public static class DependencyInjectionExtensions
 {
-    private const string TestingEnvironment = "Testing";
-
     public static IServiceCollection AddWebOptions(this IServiceCollection services, IConfiguration _, IWebHostEnvironment environment)
     {
         services.AddOptions<JwtOptions>()
@@ -132,7 +130,7 @@ public static class DependencyInjectionExtensions
         services.AddScoped<IInitialBoardLoadGate, InitialBoardLoadGate>();
         services.AddScoped<BoardIdempotencyService>();
 
-        if (!environment.IsEnvironment(TestingEnvironment))
+        if (!environment.IsEnvironment(AppEnvironment.Testing))
         {
             services.AddHostedService<DemoDataInitializationHostedService>();
         }

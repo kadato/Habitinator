@@ -35,7 +35,7 @@ public sealed class DailyHeatmapDialogTests : IAsyncDisposable
 
         _timeZoneService.LocalToday.Returns(new DateOnly(2026, 8, 12));
         _dateFormatService.DateFormat.Returns("yyyy-MM-dd");
-        _dateFormatService.Format(Arg.Any<DateOnly>()).Returns(x => ((DateOnly)x[0]).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        _dateFormatService.Format(Arg.Any<DateOnly>()).Returns(x => ((DateOnly)x[0]!).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
 
         _ctx.Render<MudPopoverProvider>();
     }

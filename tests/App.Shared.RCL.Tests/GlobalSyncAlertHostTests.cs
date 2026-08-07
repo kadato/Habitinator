@@ -122,7 +122,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
             "Working offline. Changes will save locally and sync when you reconnect.",
             Severity.Warning);
         await _notifier.DidNotReceive().NotifyAsync(
-            Arg.Is<string>(s => s.Contains("Offline")),
+            Arg.Is<string>(s => s != null && s.Contains("Offline")),
             Severity.Error);
     }
 

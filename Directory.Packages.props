@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <DotNetVersion>11.0.0-preview.5.26302.115</DotNetVersion>
+    <DotNetVersion>11.0.0-preview.6.26359.118</DotNetVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -38,7 +38,7 @@
     <PackageVersion Include="Microsoft.Extensions.Identity.Stores" Version="$(DotNetVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(DotNetVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="$(DotNetVersion)" />
-    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="11.0.0-preview.5" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="11.0.0-preview.6" />
     <PackageVersion Include="Npgsql.DependencyInjection" Version="10.0.3" />
     <PackageVersion Include="Polly" Version="8.7.0" />
 
@@ -48,20 +48,20 @@
     <PackageVersion Include="MessagePack" Version="3.1.8" />
 
     <!-- Testing dependencies -->
-    <PackageVersion Include="Appium.WebDriver" Version="8.3.1" />
+    <PackageVersion Include="Appium.WebDriver" Version="8.3.2" />
     <PackageVersion Include="FluentAssertions" Version="8.10.0" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
-    <PackageVersion Include="NSubstitute" Version="5.3.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <PackageVersion Include="NSubstitute" Version="6.0.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="Xunit.SkippableFact" Version="1.5.61" />
-    <PackageVersion Include="AngleSharp" Version="1.5.0" />
-    <PackageVersion Include="bunit" Version="2.7.2" />
+    <PackageVersion Include="AngleSharp" Version="1.7.1" />
+    <PackageVersion Include="bunit" Version="2.9.0" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
-    <PackageVersion Include="FsCheck.Xunit" Version="3.3.3" />
+    <PackageVersion Include="FsCheck.Xunit" Version="3.3.4" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(DotNetVersion)" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.13.0" />
-    <PackageVersion Include="Microsoft.Playwright" Version="1.49.0" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.61.0" />
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
 
     <!-- BrandExporter script dependencies -->

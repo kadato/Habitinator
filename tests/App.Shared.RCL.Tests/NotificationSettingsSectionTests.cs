@@ -151,7 +151,7 @@ public sealed class NotificationSettingsSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => switches[0].Instance.ValueChanged.InvokeAsync(false));
 
         // Assert
-        await _settingsService.Received().SaveAsync(Arg.Is<NotificationSettings>(s => !s.InAppMessagesEnabled));
+        await _settingsService.Received().SaveAsync(Arg.Is<NotificationSettings>(s => s != null && !s.InAppMessagesEnabled));
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public sealed class NotificationSettingsSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => timePickers[0].Instance.TimeChanged.InvokeAsync(TimeSpan.FromHours(9)));
 
         // Assert
-        await _settingsService.Received().SaveAsync(Arg.Is<NotificationSettings>(s => s.DailyReminderTime == TimeSpan.FromHours(9)));
+        await _settingsService.Received().SaveAsync(Arg.Is<NotificationSettings>(s => s != null && s.DailyReminderTime == TimeSpan.FromHours(9)));
 
         // Act - Disable Daily Reminder
         _settingsService.ClearReceivedCalls();
@@ -180,7 +180,7 @@ public sealed class NotificationSettingsSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => switches[4].Instance.ValueChanged.InvokeAsync(false));
 
         // Assert - Save should be called with null DailyReminderTime when disabled
-        await _settingsService.Received().SaveAsync(Arg.Is<NotificationSettings>(s => !s.DailyReminderEnabled && s.DailyReminderTime == null));
+        await _settingsService.Received().SaveAsync(Arg.Is<NotificationSettings>(s => s != null && !s.DailyReminderEnabled && s.DailyReminderTime == null));
     }
 
     [Fact]
@@ -206,7 +206,7 @@ public sealed class NotificationSettingsSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => timePickers[1].Instance.TimeChanged.InvokeAsync(TimeSpan.FromHours(18)));
 
         // Assert - Model's UTC start time is saved converted
-        await _settingsService.Received().SaveAsync(Arg.Is<NotificationSettings>(s => s.QuietHoursStartUtc == TimeSpan.FromHours(22)));
+        await _settingsService.Received().SaveAsync(Arg.Is<NotificationSettings>(s => s != null && s.QuietHoursStartUtc == TimeSpan.FromHours(22)));
     }
 
     [Fact]

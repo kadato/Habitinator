@@ -448,8 +448,8 @@ public sealed class UndoableBoardDataServiceTests
         _undoService.RegisterUndo(Arg.Any<string>(), Arg.Any<Func<Task>>(), Arg.Any<IReadOnlyCollection<string>>())
             .Returns(x =>
             {
-                var desc = (string)x[0];
-                var callback = (Func<Task>)x[1];
+                var desc = (string)x[0]!;
+                var callback = (Func<Task>)x[1]!;
                 if (desc.StartsWith("Rename", StringComparison.Ordinal))
                 {
                     renameUndoCallback = callback;
@@ -530,7 +530,7 @@ public sealed class UndoableBoardDataServiceTests
         _undoService.RegisterUndo(Arg.Any<string>(), Arg.Any<Func<Task>>(), Arg.Any<IReadOnlyCollection<string>>())
             .Returns(x =>
             {
-                var callback = (Func<Task>)x[1];
+                var callback = (Func<Task>)x[1]!;
                 if (firstUndoCallback is null)
                 {
                     firstUndoCallback = callback;
@@ -558,7 +558,8 @@ public sealed class UndoableBoardDataServiceTests
         await _inner.Received(1).UpdateHabitAsync(
             itemId,
             Arg.Is<UpdateHabitArgs>(args =>
-                args.Title == "Habit"
+                args != null
+                && args.Title == "Habit"
                 && args.Notes == null
                 && args.Tags == null
                 && args.TrackPlus
@@ -576,7 +577,8 @@ public sealed class UndoableBoardDataServiceTests
         await _inner.Received(1).UpdateHabitAsync(
             itemId,
             Arg.Is<UpdateHabitArgs>(args =>
-                args.Title == "Habit"
+                args != null
+                && args.Title == "Habit"
                 && args.Notes == null
                 && args.Tags == null
                 && args.TrackPlus
@@ -617,7 +619,7 @@ public sealed class UndoableBoardDataServiceTests
         _inner.UpdateTodoAsync(itemId, Arg.Any<UpdateTodoArgs>(), Arg.Any<CancellationToken>())
             .Returns(x =>
             {
-                currentJson = ((UpdateTodoArgs)x[1]).ChecklistJson;
+                currentJson = ((UpdateTodoArgs)x[1]!).ChecklistJson;
                 return Task.FromResult<BoardItem?>(new BoardItem(itemId, "Task", ChecklistJson: currentJson));
             });
         _undoService.IsUndoing.Returns(false);
@@ -627,7 +629,7 @@ public sealed class UndoableBoardDataServiceTests
         _undoService.RegisterUndo(Arg.Any<string>(), Arg.Any<Func<Task>>(), Arg.Any<IReadOnlyCollection<string>>())
             .Returns(x =>
             {
-                var keys = (IReadOnlyCollection<string>)x[2];
+                var keys = (IReadOnlyCollection<string>)x[2]!;
                 if (firstKeys is null)
                 {
                     firstKeys = keys;
@@ -675,7 +677,7 @@ public sealed class UndoableBoardDataServiceTests
         _inner.UpdateTodoAsync(itemId, Arg.Any<UpdateTodoArgs>(), Arg.Any<CancellationToken>())
             .Returns(x =>
             {
-                currentJson = ((UpdateTodoArgs)x[1]).ChecklistJson;
+                currentJson = ((UpdateTodoArgs)x[1]!).ChecklistJson;
                 return Task.FromResult<BoardItem?>(new BoardItem(itemId, "Task", ChecklistJson: currentJson));
             });
 
@@ -774,7 +776,7 @@ public sealed class UndoableBoardDataServiceTests
             itemId, Arg.Any<UpdateHabitArgs>(), Arg.Any<CancellationToken>())
             .Returns(x =>
             {
-                var args = (UpdateHabitArgs)x[1];
+                var args = (UpdateHabitArgs)x[1]!;
                 counter = args.Counter;
                 var item = new BoardItem(itemId, title, Counter: counter);
                 return Task.FromResult<BoardItem?>(item);

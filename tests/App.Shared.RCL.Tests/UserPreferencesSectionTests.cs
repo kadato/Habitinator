@@ -119,7 +119,7 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => displayNameField.Instance.OnBlur.InvokeAsync(new Microsoft.AspNetCore.Components.Web.FocusEventArgs()));
 
         // Assert
-        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p.DisplayName == "Jane Smith"));
+        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p != null && p.DisplayName == "Jane Smith"));
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => dateFormatField.Instance.OnBlur.InvokeAsync(new Microsoft.AspNetCore.Components.Web.FocusEventArgs()));
 
         // Assert
-        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p.DateFormat == "dd/MM/yyyy"));
+        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p != null && p.DateFormat == "dd/MM/yyyy"));
     }
 
     [Fact]
@@ -161,7 +161,7 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => timePicker.Instance.TimeChanged.InvokeAsync(TimeSpan.FromHours(7)));
 
         // Assert
-        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p.DayStartLocalTime == TimeSpan.FromHours(7)));
+        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p != null && p.DayStartLocalTime == TimeSpan.FromHours(7)));
     }
 
     [Fact]
@@ -181,7 +181,7 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => tzSelect.Instance.ValueChanged.InvokeAsync("Europe/London"));
 
         // Assert
-        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p.TimeZoneOverrideId == "Europe/London"));
+        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p != null && p.TimeZoneOverrideId == "Europe/London"));
         _timeZoneService.Received().SetOverride("Europe/London");
     }
 
@@ -207,7 +207,7 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => themeSwitch.Instance.ValueChanged.InvokeAsync(false));
 
         // Assert - default pinned theme is Dark when unpinning
-        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p.Theme == AppTheme.Dark));
+        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p != null && p.Theme == AppTheme.Dark));
     }
 
     [Fact]
@@ -233,7 +233,7 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => themeBtn.Click());
 
         // Assert
-        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p.Theme == AppTheme.Light));
+        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p != null && p.Theme == AppTheme.Light));
     }
 
     [Fact]
@@ -363,7 +363,7 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
 
         // Assert
         dateFormatField.Instance.Error.Should().BeFalse();
-        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p.DateFormat == validFormat));
+        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p != null && p.DateFormat == validFormat));
     }
 
     [Theory]
@@ -419,7 +419,7 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
 
         dateFormatField.Instance.Error.Should().BeFalse();
         dateFormatField.Instance.ErrorText.Should().BeNull();
-        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p.DateFormat == "dd/MM/yyyy"));
+        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p != null && p.DateFormat == "dd/MM/yyyy"));
     }
 
     [Fact]
@@ -458,6 +458,6 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => kbSwitch.Instance.ValueChanged.InvokeAsync(false));
 
         // Assert
-        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => !p.EnableKeyboardShortcuts));
+        await _preferencesService.Received().SaveAsync(Arg.Is<UserPreferences>(p => p != null && !p.EnableKeyboardShortcuts));
     }
 }

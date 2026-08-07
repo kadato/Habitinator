@@ -1,18 +1,12 @@
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace App.Shared.RCL.Services.Remote;
 
 public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
 {
-    private static readonly JsonSerializerOptions Serializer = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
+    private static readonly JsonSerializerOptions Serializer = JsonDefaults.Api;
 
     private readonly IHttpClientFactory _http;
 

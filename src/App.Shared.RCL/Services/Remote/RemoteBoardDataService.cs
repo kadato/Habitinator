@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using App.Shared.RCL.Models;
 
@@ -8,12 +7,7 @@ namespace App.Shared.RCL.Services.Remote;
 
 public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardDataService
 {
-    private static readonly JsonSerializerOptions Serializer = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
+    private static readonly JsonSerializerOptions Serializer = JsonDefaults.Api;
 
     private readonly IHttpClientFactory _http = http;
 

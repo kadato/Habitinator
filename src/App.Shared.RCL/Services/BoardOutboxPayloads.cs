@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using App.Shared.RCL.Models;
 
@@ -7,12 +6,8 @@ namespace App.Shared.RCL.Services;
 
 public static class BoardOutboxJson
 {
-    public static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
+    /// <summary>Shared API JSON options used to serialize outbox payloads.</summary>
+    public static JsonSerializerOptions Options => JsonDefaults.Api;
 }
 
 public sealed record CreateOutboxPayload(BoardSection Section, string Title, Guid ClientItemId);

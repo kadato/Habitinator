@@ -6,15 +6,9 @@ namespace App.Shared.RCL.Services;
 
 public static class NotificationSettingsJson
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false
-    };
-
     public static string Serialize(NotificationSettings settings)
     {
-        return JsonSerializer.Serialize(settings, Options);
+        return JsonSerializer.Serialize(settings, JsonDefaults.Storage);
     }
 
     public static NotificationSettings DeserializeOrDefault(string? json)
@@ -26,7 +20,7 @@ public static class NotificationSettingsJson
 
         try
         {
-            return JsonSerializer.Deserialize<NotificationSettings>(json, Options)
+            return JsonSerializer.Deserialize<NotificationSettings>(json, JsonDefaults.Storage)
                    ?? NotificationSettings.CreateDefault();
         }
         catch (JsonException)

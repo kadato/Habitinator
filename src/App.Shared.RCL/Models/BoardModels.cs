@@ -1,5 +1,7 @@
 using System.Text.Json;
 
+using App.Shared.RCL.Services;
+
 namespace App.Shared.RCL.Models;
 
 public enum BoardSection
@@ -88,11 +90,6 @@ public static class BoardTagUtil
 
 public static class DailyChecklistJson
 {
-    private static readonly JsonSerializerOptions s_options = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
     public static IReadOnlyList<DailyChecklistItem> Parse(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))
@@ -102,7 +99,7 @@ public static class DailyChecklistJson
 
         try
         {
-            var rows = JsonSerializer.Deserialize<DailyChecklistItem[]>(json, s_options);
+            var rows = JsonSerializer.Deserialize<DailyChecklistItem[]>(json, JsonDefaults.Storage);
             return rows?.Where(x => !string.IsNullOrWhiteSpace(x.Text)).ToList() ?? [];
         }
         catch (JsonException)
@@ -125,6 +122,6 @@ public static class DailyChecklistJson
             return null;
         }
 
-        return JsonSerializer.Serialize(cleaned, s_options);
+        return JsonSerializer.Serialize(cleaned, JsonDefaults.Storage);
     }
 }

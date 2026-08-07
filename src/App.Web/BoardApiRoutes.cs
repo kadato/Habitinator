@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using App.Shared.RCL;
 using App.Shared.RCL.Models;
@@ -16,12 +15,7 @@ internal static class BoardApiRoutes
     private const string IdempotencyKeyHeader = "Idempotency-Key";
     private const string JsonContentType = "application/json";
 
-    internal static readonly JsonSerializerOptions Json = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
+    internal static JsonSerializerOptions Json => JsonDefaults.Api;
 
     internal static void MapBoardApi(this WebApplication app)
     {

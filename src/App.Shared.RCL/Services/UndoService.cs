@@ -1,5 +1,7 @@
 using App.Shared.RCL.Components;
 
+using Microsoft.Extensions.Logging;
+
 using MudBlazor;
 
 namespace App.Shared.RCL.Services;
@@ -12,6 +14,7 @@ public sealed class UndoService : IUndoService, IDisposable
     private readonly ISnackbar _snackbar;
     private readonly INotificationSettingsService _settingsService;
     private readonly INotificationSettingsRules _notificationRules;
+    private readonly ILogger<UndoService> _logger;
 
     private List<Func<Task>>? _currentBatch;
     private List<string>? _currentBatchKeys;
@@ -29,11 +32,13 @@ public sealed class UndoService : IUndoService, IDisposable
     public UndoService(
         ISnackbar snackbar,
         INotificationSettingsService settingsService,
-        INotificationSettingsRules notificationRules)
+        INotificationSettingsRules notificationRules,
+        ILogger<UndoService> logger)
     {
         _snackbar = snackbar;
         _settingsService = settingsService;
         _notificationRules = notificationRules;
+        _logger = logger;
     }
 
     public Guid RegisterUndo(string description, Func<Task> undoFunc)
@@ -59,6 +64,8 @@ public sealed class UndoService : IUndoService, IDisposable
         }
 
         var action = new UndoAction(description, undoFunc, conflictKeys);
+        action.SnackbarKey = $"{UndoSnackbarKeyPrefix}-{action.Id:N}";
+
         _undoStack.Add(action);
         OnStateChanged?.Invoke(this, EventArgs.Empty);
         _ = ShowUndoSnackbarAsync(action);
@@ -115,62 +122,77 @@ public sealed class UndoService : IUndoService, IDisposable
             return;
         }
 
-        var index = actionId is null
-            ? _undoStack.Count - 1
-            : _undoStack.FindIndex(a => a.Id == actionId);
-
-        if (index < 0)
-        {
-            return;
-        }
-
-        var target = _undoStack[index];
-
-        // Undoing an older action out of order: any newer action that may touch the same state must
-        // be undone first (newest first) so the target's inverse applies to a consistent snapshot.
-        // Newer actions with disjoint keys are left pending; their undos only revert their own change.
-        var toUndo = new List<UndoAction>();
-        if (actionId is not null)
-        {
-            for (var i = _undoStack.Count - 1; i > index; i--)
-            {
-                var newer = _undoStack[i];
-                if (MayConflict(target, newer))
-                {
-                    toUndo.Add(newer);
-                }
-            }
-        }
-
-        toUndo.Add(target);
-
-        foreach (var action in toUndo)
-        {
-            _undoStack.Remove(action);
-        }
-
-        Interlocked.Increment(ref _undoingCount);
         await _undoLock.WaitAsync().ConfigureAwait(false);
+        List<UndoAction>? undone = null;
         try
         {
-            foreach (var action in toUndo)
+            var index = actionId is null
+                ? _undoStack.Count - 1
+                : _undoStack.FindIndex(a => a.Id == actionId);
+
+            if (index < 0)
             {
-                await action.UndoFunc().ConfigureAwait(false);
+                return;
             }
-            OnUndoPerformed?.Invoke(this, EventArgs.Empty);
+
+            var target = _undoStack[index];
+
+            // Undoing an older action out of order: any newer action that may touch the same state must
+            // be undone first (newest first) so the target's inverse applies to a consistent snapshot.
+            // Newer actions with disjoint keys are left pending; their undos only revert their own change.
+            var toUndo = new List<UndoAction>();
+            if (actionId is not null)
+            {
+                for (var i = _undoStack.Count - 1; i > index; i--)
+                {
+                    var newer = _undoStack[i];
+                    if (MayConflict(target, newer))
+                    {
+                        toUndo.Add(newer);
+                    }
+                }
+            }
+
+            toUndo.Add(target);
+
+            Interlocked.Increment(ref _undoingCount);
+            try
+            {
+                foreach (var action in toUndo)
+                {
+                    await action.UndoFunc().ConfigureAwait(false);
+                }
+
+                // Only drop actions from the stack once their undo succeeded, so a failed
+                // undo can be retried instead of being lost.
+                foreach (var action in toUndo)
+                {
+                    _undoStack.Remove(action);
+                }
+
+                undone = toUndo;
+                OnUndoPerformed?.Invoke(this, EventArgs.Empty);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _undoingCount);
+            }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // best-effort
+            _logger.LogWarning(ex, "Undo failed; the action remains on the undo stack.");
         }
         finally
         {
             _undoLock.Release();
-            Interlocked.Decrement(ref _undoingCount);
-            foreach (var action in toUndo)
+            if (undone is not null)
             {
-                DismissSnackbar(action);
+                foreach (var action in undone)
+                {
+                    DismissSnackbar(action);
+                }
             }
+
             OnStateChanged?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -201,8 +223,6 @@ public sealed class UndoService : IUndoService, IDisposable
         {
             var settings = await _settingsService.GetAsync(CancellationToken.None).ConfigureAwait(false);
             var ms = _notificationRules.UndoVisibleStateDurationMs(settings.ToastDuration);
-            var key = $"{UndoSnackbarKeyPrefix}-{action.Id:N}";
-            action.SnackbarKey = key;
 
             Snackbar? toast = null;
             toast = _snackbar.Add<UndoToastContent>(
@@ -226,11 +246,12 @@ public sealed class UndoService : IUndoService, IDisposable
                     AppSnackbar.Configure(config, ms);
                     config.DuplicatesBehavior = SnackbarDuplicatesBehavior.Allow;
                 },
-                key);
+                action.SnackbarKey);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // best-effort
+            // Best-effort snackbar; the action is still on the undo stack
+            _logger.LogDebug(ex, "Failed to show the undo snackbar.");
         }
     }
 
@@ -245,9 +266,10 @@ public sealed class UndoService : IUndoService, IDisposable
         {
             _snackbar.RemoveByKey(action.SnackbarKey);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // best-effort
+            // Best-effort dismissal
+            _logger.LogDebug(ex, "Failed to dismiss the undo snackbar.");
         }
     }
 

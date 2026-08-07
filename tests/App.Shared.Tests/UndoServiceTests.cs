@@ -3,6 +3,8 @@ using App.Shared.RCL.Services;
 
 using FluentAssertions;
 
+using Microsoft.Extensions.Logging.Abstractions;
+
 using MudBlazor;
 
 using NSubstitute;
@@ -23,7 +25,7 @@ public sealed class UndoServiceTests : IDisposable
         _notificationRules.UndoVisibleStateDurationMs(Arg.Any<NotificationToastDuration>())
             .Returns(12_000);
 
-        _undoService = new UndoService(_snackbar, _settingsService, _notificationRules);
+        _undoService = new UndoService(_snackbar, _settingsService, _notificationRules, NullLogger<UndoService>.Instance);
     }
 
     public void Dispose()
@@ -685,7 +687,7 @@ public sealed class UndoableBoardDataServiceTests
         notificationRules.UndoVisibleStateDurationMs(Arg.Any<NotificationToastDuration>())
             .Returns(12_000);
 
-        var recording = new RecordingUndoService(new UndoService(snackbar, settingsService, notificationRules));
+        var recording = new RecordingUndoService(new UndoService(snackbar, settingsService, notificationRules, NullLogger<UndoService>.Instance));
         var undoableService = new UndoableBoardDataService(_inner, recording);
 
         await undoableService.UpdateTodoAsync(itemId, new UpdateTodoArgs("Task", null, null, jsonAChecked, null));
@@ -787,7 +789,7 @@ public sealed class UndoableBoardDataServiceTests
         notificationRules.UndoVisibleStateDurationMs(Arg.Any<NotificationToastDuration>())
             .Returns(12_000);
 
-        var realUndoService = new UndoService(snackbar, settingsService, notificationRules);
+        var realUndoService = new UndoService(snackbar, settingsService, notificationRules, NullLogger<UndoService>.Instance);
         var undoableService = new UndoableBoardDataService(_inner, realUndoService);
 
         // Act

@@ -1,8 +1,9 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+
+using Microsoft.Extensions.Logging;
 
 namespace App.MAUI.Services;
 
@@ -10,26 +11,31 @@ namespace App.MAUI.Services;
 ///     When logged in, loads and saves user preferences on the server.
 ///     Falls back to <see cref="Preferences" /> when offline or not authenticated.
 /// </summary>
-public sealed class MauiApiUserPreferencesService : IUserPreferencesService
+public sealed class MauiApiUserPreferencesService : IUserPreferencesService, IDisposable
 {
     private const string PreferencesKey = "user_preferences_v1";
 
-    private static readonly JsonSerializerOptions Serializer = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
+    private static readonly JsonSerializerOptions Serializer = JsonDefaults.Api;
 
     private readonly IApiSession _apiSession;
-
     private readonly IHttpClientFactory _http;
+    private readonly ILogger<MauiApiUserPreferencesService> _logger;
+    private readonly LocalFirstRemoteStore<UserPreferences> _store;
 
-    public MauiApiUserPreferencesService(IHttpClientFactory http, IApiSession apiSession)
+    public MauiApiUserPreferencesService(
+        IHttpClientFactory http,
+        IApiSession apiSession,
+        ILogger<MauiApiUserPreferencesService> logger)
     {
-        _http = http;
         _apiSession = apiSession;
-        _apiSession.Changed += (_, _) => Changed?.Invoke(this, EventArgs.Empty);
+        _http = http;
+        _logger = logger;
+        _store = new LocalFirstRemoteStore<UserPreferences>(
+            ReadLocal,
+            WriteLocal,
+            UserPreferencesJson.Serialize,
+            logger);
+        _apiSession.Changed += OnSessionChanged;
     }
 
     private HttpClient Client => _http.CreateClient("api");
@@ -46,39 +52,17 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
     {
         await EnsureSessionReadyAsync(cancellationToken).ConfigureAwait(false);
         var key = GetKey();
-        var localPrefs = ReadLocal(key);
+        var localPrefs = _store.GetLocal(key);
 
-        // Fetch remote preferences in the background
-        _ = Task.Run(async () =>
+        if (_apiSession.IsLoggedIn)
         {
-            try
-            {
-                if (!_apiSession.IsLoggedIn)
-                {
-                    return;
-                }
-
-                using var res = await Client.GetAsync("api/settings/preferences", CancellationToken.None).ConfigureAwait(false);
-                if (res.IsSuccessStatusCode)
-                {
-                    var remote = await res.Content.ReadFromJsonAsync<UserPreferences>(Serializer, CancellationToken.None).ConfigureAwait(false);
-                    if (remote is not null)
-                    {
-                        var remoteJson = UserPreferencesJson.Serialize(remote);
-                        var localJson = UserPreferencesJson.Serialize(localPrefs);
-                        if (remoteJson != localJson)
-                        {
-                            WriteLocal(key, remote);
-                            Changed?.Invoke(this, EventArgs.Empty);
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                // Best-effort remote sync, ignore errors in background task
-            }
-        }, CancellationToken.None);
+            _store.RefreshInBackground(
+                key,
+                localPrefs,
+                FetchRemoteAsync,
+                () => Changed?.Invoke(this, EventArgs.Empty),
+                cancellationToken);
+        }
 
         return localPrefs;
     }
@@ -87,7 +71,7 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
     {
         await EnsureSessionReadyAsync(cancellationToken).ConfigureAwait(false);
         var key = GetKey();
-        WriteLocal(key, preferences);
+        await _store.WriteLocalAsync(key, preferences, cancellationToken).ConfigureAwait(false);
 
         if (!_apiSession.IsLoggedIn)
         {
@@ -95,11 +79,36 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
             return;
         }
 
-        using var res = await Client
-            .PutAsJsonAsync("api/settings/preferences", preferences, Serializer, cancellationToken)
-            .ConfigureAwait(false);
-        res.EnsureSuccessStatusCode();
+        try
+        {
+            using var res = await Client
+                .PutAsJsonAsync("api/settings/preferences", preferences, Serializer, cancellationToken)
+                .ConfigureAwait(false);
+            res.EnsureSuccessStatusCode();
+        }
+        catch (Exception ex)
+        {
+            // Best-effort save; the local copy is already updated
+            _logger.LogDebug(ex, "Failed to save user preferences to the server.");
+        }
+
         Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    private async Task<UserPreferences?> FetchRemoteAsync(CancellationToken cancellationToken)
+    {
+        if (!_apiSession.IsLoggedIn)
+        {
+            return null;
+        }
+
+        using var res = await Client.GetAsync("api/settings/preferences", cancellationToken).ConfigureAwait(false);
+        if (!res.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        return await res.Content.ReadFromJsonAsync<UserPreferences>(Serializer, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task EnsureSessionReadyAsync(CancellationToken cancellationToken)
@@ -119,5 +128,16 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
     private static void WriteLocal(string key, UserPreferences preferences)
     {
         Preferences.Set(key, UserPreferencesJson.Serialize(preferences));
+    }
+
+    public void Dispose()
+    {
+        _apiSession.Changed -= OnSessionChanged;
+        _store.Dispose();
+    }
+
+    private void OnSessionChanged(object? sender, EventArgs e)
+    {
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 }

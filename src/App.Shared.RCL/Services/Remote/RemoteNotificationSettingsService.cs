@@ -1,34 +1,37 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using App.Shared.RCL.Models;
 
+using Microsoft.Extensions.Logging;
+
 namespace App.Shared.RCL.Services.Remote;
 
-public sealed class RemoteNotificationSettingsService : INotificationSettingsService
+public sealed class RemoteNotificationSettingsService : INotificationSettingsService, IDisposable
 {
     private const string PreferencesKey = "notification_settings_v1";
 
-    private static readonly JsonSerializerOptions Serializer = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
+    private static readonly JsonSerializerOptions Serializer = JsonDefaults.Api;
 
     private readonly IClientSessionProvider _sessionProvider;
     private readonly IHttpClientFactory _http;
-    private readonly ILocalSettingsStore _localStore;
+    private readonly ILogger<RemoteNotificationSettingsService> _logger;
+    private readonly LocalFirstRemoteStore<NotificationSettings> _store;
 
     public RemoteNotificationSettingsService(
         IHttpClientFactory http,
         IClientSessionProvider sessionProvider,
-        ILocalSettingsStore localStore)
+        ILocalSettingsStore localStore,
+        ILogger<RemoteNotificationSettingsService> logger)
     {
         _http = http;
         _sessionProvider = sessionProvider;
-        _localStore = localStore;
-        _sessionProvider.Changed += (_, _) => Changed?.Invoke(this, EventArgs.Empty);
+        _logger = logger;
+        _store = new LocalFirstRemoteStore<NotificationSettings>(
+            key => NotificationSettingsJson.DeserializeOrDefault(localStore.Read(key)),
+            (key, settings) => localStore.Write(key, NotificationSettingsJson.Serialize(settings)),
+            NotificationSettingsJson.Serialize,
+            logger);
+        _sessionProvider.Changed += OnSessionChanged;
     }
 
     private HttpClient Client => _http.CreateClient("api");
@@ -41,50 +44,28 @@ public sealed class RemoteNotificationSettingsService : INotificationSettingsSer
         return string.IsNullOrEmpty(email) ? PreferencesKey : $"{PreferencesKey}_{email}";
     }
 
-    public async Task<NotificationSettings> GetAsync(CancellationToken cancellationToken = default)
+    public Task<NotificationSettings> GetAsync(CancellationToken cancellationToken = default)
     {
         var key = GetKey();
-        var localSettings = ReadLocal(key);
+        var localSettings = _store.GetLocal(key);
 
-        if (!_sessionProvider.IsLoggedIn)
+        if (_sessionProvider.IsLoggedIn)
         {
-            return localSettings;
+            _store.RefreshInBackground(
+                key,
+                localSettings,
+                FetchRemoteAsync,
+                () => Changed?.Invoke(this, EventArgs.Empty),
+                cancellationToken);
         }
 
-        // Fetch remote settings in the background
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                using var res = await Client.GetAsync("api/settings/notifications", CancellationToken.None).ConfigureAwait(false);
-                if (res.IsSuccessStatusCode)
-                {
-                    var remote = await res.Content.ReadFromJsonAsync<NotificationSettings>(Serializer, CancellationToken.None).ConfigureAwait(false);
-                    if (remote is not null)
-                    {
-                        var remoteJson = NotificationSettingsJson.Serialize(remote);
-                        var localJson = NotificationSettingsJson.Serialize(localSettings);
-                        if (remoteJson != localJson)
-                        {
-                            WriteLocal(key, remote);
-                            Changed?.Invoke(this, EventArgs.Empty);
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                // Best-effort remote sync, ignore errors in background task
-            }
-        }, CancellationToken.None);
-
-        return localSettings;
+        return Task.FromResult(localSettings);
     }
 
     public async Task SaveAsync(NotificationSettings settings, CancellationToken cancellationToken = default)
     {
         var key = GetKey();
-        WriteLocal(key, settings);
+        await _store.WriteLocalAsync(key, settings, cancellationToken).ConfigureAwait(false);
 
         if (!_sessionProvider.IsLoggedIn)
         {
@@ -99,21 +80,34 @@ public sealed class RemoteNotificationSettingsService : INotificationSettingsSer
                 .ConfigureAwait(false);
             res.EnsureSuccessStatusCode();
         }
-        catch
+        catch (Exception ex)
         {
-            // Best effort save
+            // Best-effort save; the local copy is already updated
+            _logger.LogDebug(ex, "Failed to save notification settings to the server.");
         }
+
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    private NotificationSettings ReadLocal(string key)
+    private async Task<NotificationSettings?> FetchRemoteAsync(CancellationToken cancellationToken)
     {
-        var json = _localStore.Read(key);
-        return NotificationSettingsJson.DeserializeOrDefault(json);
+        using var res = await Client.GetAsync("api/settings/notifications", cancellationToken).ConfigureAwait(false);
+        if (!res.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        return await res.Content.ReadFromJsonAsync<NotificationSettings>(Serializer, cancellationToken).ConfigureAwait(false);
     }
 
-    private void WriteLocal(string key, NotificationSettings settings)
+    public void Dispose()
     {
-        _localStore.Write(key, NotificationSettingsJson.Serialize(settings));
+        _sessionProvider.Changed -= OnSessionChanged;
+        _store.Dispose();
+    }
+
+    private void OnSessionChanged(object? sender, EventArgs e)
+    {
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 }

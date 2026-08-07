@@ -918,26 +918,7 @@ public sealed partial class LocalFirstBoardDataService(
             if (localRow is not null)
             {
                 var userKey = localRow.UserKey;
-                var updated = LocalBoardItemRow.FromModel(section, userKey, serverItem, false);
-                localRow.Title = updated.Title;
-                localRow.IsCompleted = updated.IsCompleted;
-                localRow.Counter = updated.Counter;
-                localRow.Notes = updated.Notes;
-                localRow.Tags = updated.Tags;
-                localRow.TrackPlus = updated.TrackPlus;
-                localRow.TrackMinus = updated.TrackMinus;
-                localRow.NegativeCounter = updated.NegativeCounter;
-                localRow.ResetPeriod = updated.ResetPeriod;
-                localRow.DailyStartDate = updated.DailyStartDate;
-                localRow.DailyRepeat = updated.DailyRepeat;
-                localRow.DailyRepeatInterval = updated.DailyRepeatInterval;
-                localRow.ChecklistJson = updated.ChecklistJson;
-                localRow.DailyLastCompletedOn = updated.DailyLastCompletedOn;
-                localRow.TodoDueDate = updated.TodoDueDate;
-                localRow.ServerUpdatedAtUtc = updated.ServerUpdatedAtUtc;
-                localRow.CreatedAtUtc = updated.CreatedAtUtc;
-                localRow.SortOrder = updated.SortOrder;
-                localRow.IsArchived = updated.IsArchived;
+                localRow.CopyFrom(LocalBoardItemRow.FromModel(section, userKey, serverItem, false));
             }
 
             await db.SaveChangesAsync(cancellationToken);
@@ -1133,6 +1114,12 @@ public sealed partial class LocalFirstBoardDataService(
         await ExecuteOutboxRemoteAsync(_gate, dbFactory, head, api, cancellationToken);
     }
 
+    private static T DeserializePayload<T>(BoardOutboxRow head, string failureMessage)
+    {
+        return System.Text.Json.JsonSerializer.Deserialize<T>(head.PayloadJson, BoardOutboxJson.Options)
+               ?? throw new InvalidOperationException(failureMessage);
+    }
+
     private static async Task ExecuteOutboxRemoteAsync(SemaphoreSlim gate, IDbContextFactory<LocalBoardDbContext> dbFactory,
         BoardOutboxRow head, RemoteBoardDataService api, CancellationToken cancellationToken)
     {
@@ -1140,16 +1127,14 @@ public sealed partial class LocalFirstBoardDataService(
         {
             case BoardOutboxOperationKind.Create:
                 {
-                    var p = System.Text.Json.JsonSerializer.Deserialize<CreateOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
-                            ?? throw new InvalidOperationException("Invalid create payload.");
+                    var p = DeserializePayload<CreateOutboxPayload>(head, "Invalid create payload.");
                     var serverItem = await api.CreateItemAsync(p.Section, p.Title, p.ClientItemId, head.OperationId, cancellationToken);
                     await CommitCreateSuccessAsync(gate, dbFactory, p.ClientItemId, p.Section, serverItem, head.UserKey, cancellationToken);
                     return;
                 }
             case BoardOutboxOperationKind.Rename:
                 {
-                    var p = System.Text.Json.JsonSerializer.Deserialize<RenameOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
-                            ?? throw new InvalidOperationException("Invalid rename payload.");
+                    var p = DeserializePayload<RenameOutboxPayload>(head, "Invalid rename payload.");
                     var updated = await api.RenameItemAsync(
                         p.Section,
                         p.ItemId,
@@ -1162,8 +1147,7 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.Delete:
                 {
-                    var p = System.Text.Json.JsonSerializer.Deserialize<SectionItemOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
-                            ?? throw new InvalidOperationException("Invalid delete payload.");
+                    var p = DeserializePayload<SectionItemOutboxPayload>(head, "Invalid delete payload.");
                     _ = await api.DeleteItemAsync(
                         p.Section,
                         p.ItemId,
@@ -1174,8 +1158,7 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.Toggle:
                 {
-                    var p = System.Text.Json.JsonSerializer.Deserialize<SectionItemOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
-                            ?? throw new InvalidOperationException("Invalid toggle payload.");
+                    var p = DeserializePayload<SectionItemOutboxPayload>(head, "Invalid toggle payload.");
                     var updated = await api.ToggleItemAsync(
                         p.Section,
                         p.ItemId,
@@ -1187,8 +1170,7 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.CompleteDailyForDate:
                 {
-                    var p = System.Text.Json.JsonSerializer.Deserialize<CompleteDailyOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
-                            ?? throw new InvalidOperationException("Invalid complete-daily payload.");
+                    var p = DeserializePayload<CompleteDailyOutboxPayload>(head, "Invalid complete-daily payload.");
                     var updated = await api.CompleteDailyForDateAsync(
                         p.ItemId,
                         p.CompletedOn,
@@ -1200,8 +1182,7 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.HabitIncrement:
                 {
-                    var p = System.Text.Json.JsonSerializer.Deserialize<ItemIdOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
-                            ?? throw new InvalidOperationException("Invalid habit+ payload.");
+                    var p = DeserializePayload<ItemIdOutboxPayload>(head, "Invalid habit+ payload.");
                     var updated = await api.IncrementHabitPlusAsync(
                         p.ItemId,
                         head.OperationId,
@@ -1212,8 +1193,7 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.HabitDecrement:
                 {
-                    var p = System.Text.Json.JsonSerializer.Deserialize<ItemIdOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
-                            ?? throw new InvalidOperationException("Invalid habit− payload.");
+                    var p = DeserializePayload<ItemIdOutboxPayload>(head, "Invalid habit− payload.");
                     var updated = await api.IncrementHabitMinusAsync(
                         p.ItemId,
                         head.OperationId,
@@ -1224,8 +1204,7 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.UpdateHabit:
                 {
-                    var p = System.Text.Json.JsonSerializer.Deserialize<UpdateHabitOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
-                            ?? throw new InvalidOperationException("Invalid habit update payload.");
+                    var p = DeserializePayload<UpdateHabitOutboxPayload>(head, "Invalid habit update payload.");
                     var updated = await api.UpdateHabitAsync(
                         p.ItemId,
                         new UpdateHabitArgs(
@@ -1247,8 +1226,7 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.UpdateTodo:
                 {
-                    var p = System.Text.Json.JsonSerializer.Deserialize<UpdateTodoOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
-                            ?? throw new InvalidOperationException("Invalid todo update payload.");
+                    var p = DeserializePayload<UpdateTodoOutboxPayload>(head, "Invalid todo update payload.");
                     var updated = await api.UpdateTodoAsync(
                         p.ItemId,
                         new UpdateTodoArgs(
@@ -1266,8 +1244,7 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.UpdateDaily:
                 {
-                    var p = System.Text.Json.JsonSerializer.Deserialize<UpdateDailyOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
-                            ?? throw new InvalidOperationException("Invalid daily update payload.");
+                    var p = DeserializePayload<UpdateDailyOutboxPayload>(head, "Invalid daily update payload.");
                     var updated = await api.UpdateDailyAsync(
                         p.ItemId,
                         new UpdateDailyArgs(
@@ -1288,8 +1265,7 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.Archive:
                 {
-                    var p = System.Text.Json.JsonSerializer.Deserialize<SectionItemOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
-                            ?? throw new InvalidOperationException("Invalid archive payload.");
+                    var p = DeserializePayload<SectionItemOutboxPayload>(head, "Invalid archive payload.");
                     var updated = await api.ArchiveItemAsync(
                         p.Section,
                         p.ItemId,
@@ -1301,8 +1277,7 @@ public sealed partial class LocalFirstBoardDataService(
                 }
             case BoardOutboxOperationKind.Unarchive:
                 {
-                    var p = System.Text.Json.JsonSerializer.Deserialize<SectionItemOutboxPayload>(head.PayloadJson, BoardOutboxJson.Options)
-                            ?? throw new InvalidOperationException("Invalid unarchive payload.");
+                    var p = DeserializePayload<SectionItemOutboxPayload>(head, "Invalid unarchive payload.");
                     var updated = await api.UnarchiveItemAsync(
                         p.Section,
                         p.ItemId,
@@ -1386,25 +1361,7 @@ public sealed partial class LocalFirstBoardDataService(
 
             var section = row.Section;
             var awaiting = row.AwaitingServerCreate;
-            var updated = LocalBoardItemRow.FromModel(section, userKey, serverItem, awaiting);
-            row.Title = updated.Title;
-            row.IsCompleted = updated.IsCompleted;
-            row.Counter = updated.Counter;
-            row.Notes = updated.Notes;
-            row.Tags = updated.Tags;
-            row.TrackPlus = updated.TrackPlus;
-            row.TrackMinus = updated.TrackMinus;
-            row.NegativeCounter = updated.NegativeCounter;
-            row.ResetPeriod = updated.ResetPeriod;
-            row.DailyStartDate = updated.DailyStartDate;
-            row.DailyRepeat = updated.DailyRepeat;
-            row.DailyRepeatInterval = updated.DailyRepeatInterval;
-            row.ChecklistJson = updated.ChecklistJson;
-            row.DailyLastCompletedOn = updated.DailyLastCompletedOn;
-            row.TodoDueDate = updated.TodoDueDate;
-            row.ServerUpdatedAtUtc = updated.ServerUpdatedAtUtc;
-            row.CreatedAtUtc = updated.CreatedAtUtc;
-            row.SortOrder = updated.SortOrder;
+            row.CopyFrom(LocalBoardItemRow.FromModel(section, userKey, serverItem, awaiting));
             await db.SaveChangesAsync(cancellationToken);
         }
         finally
@@ -1788,24 +1745,7 @@ public sealed partial class LocalFirstBoardDataService(
             var awaiting = row.AwaitingServerCreate;
             var upd = LocalBoardItemRow.FromModel(entry.Section, userKey, entry.Item, awaiting);
             row.Section = upd.Section;
-            row.Title = upd.Title;
-            row.IsCompleted = upd.IsCompleted;
-            row.Counter = upd.Counter;
-            row.Notes = upd.Notes;
-            row.Tags = upd.Tags;
-            row.TrackPlus = upd.TrackPlus;
-            row.TrackMinus = upd.TrackMinus;
-            row.NegativeCounter = upd.NegativeCounter;
-            row.ResetPeriod = upd.ResetPeriod;
-            row.DailyStartDate = upd.DailyStartDate;
-            row.DailyRepeat = upd.DailyRepeat;
-            row.DailyRepeatInterval = upd.DailyRepeatInterval;
-            row.ChecklistJson = upd.ChecklistJson;
-            row.DailyLastCompletedOn = upd.DailyLastCompletedOn;
-            row.TodoDueDate = upd.TodoDueDate;
-            row.ServerUpdatedAtUtc = upd.ServerUpdatedAtUtc;
-            row.CreatedAtUtc = upd.CreatedAtUtc;
-            row.SortOrder = upd.SortOrder;
+            row.CopyFrom(upd);
         }
     }
 

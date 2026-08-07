@@ -108,4 +108,28 @@ public sealed class LocalBoardItemRow
             IsArchived = item.IsArchived
         };
     }
+
+    /// <summary>Copies every server-tracked field from <paramref name="source" /> onto this row, leaving identity and scope fields untouched.</summary>
+    public void CopyFrom(LocalBoardItemRow source)
+    {
+        Title = source.Title;
+        IsCompleted = source.IsCompleted;
+        Counter = source.Counter;
+        Notes = source.Notes;
+        Tags = source.Tags;
+        TrackPlus = source.TrackPlus;
+        TrackMinus = source.TrackMinus;
+        NegativeCounter = source.NegativeCounter;
+        ResetPeriod = source.ResetPeriod;
+        DailyStartDate = source.DailyStartDate;
+        DailyRepeat = source.DailyRepeat;
+        DailyRepeatInterval = source.DailyRepeatInterval;
+        ChecklistJson = source.ChecklistJson;
+        DailyLastCompletedOn = source.DailyLastCompletedOn;
+        TodoDueDate = source.TodoDueDate;
+        ServerUpdatedAtUtc = source.ServerUpdatedAtUtc;
+        CreatedAtUtc = source.CreatedAtUtc;
+        SortOrder = source.SortOrder;
+        IsArchived = source.IsArchived;
+    }
 }

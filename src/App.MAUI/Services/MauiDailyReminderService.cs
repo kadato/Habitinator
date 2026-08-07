@@ -44,7 +44,19 @@ public sealed partial class MauiDailyReminderService : IDisposable
 
     private void OnSettingsChanged(object? sender, EventArgs e)
     {
-        MainThread.BeginInvokeOnMainThread(() => { _ = SynchronizeAsync(); });
+        _ = RescheduleAfterSettingsChangeAsync();
+    }
+
+    private async Task RescheduleAfterSettingsChangeAsync()
+    {
+        try
+        {
+            await MainThread.InvokeOnMainThreadAsync(() => SynchronizeAsync()).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to reschedule daily reminder after settings change.");
+        }
     }
 
     public async Task SynchronizeAsync(CancellationToken cancellationToken = default)

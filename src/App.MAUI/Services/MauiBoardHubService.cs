@@ -10,10 +10,12 @@ public sealed partial class MauiBoardHubService(
     IAuthTokenStore tokens,
     IRemoteBoardRefreshService refresh,
     MauiApiEndpointOptions api,
-    ILogger<MauiBoardHubService> logger) : IDisposable, IAsyncDisposable
+    ILogger<MauiBoardHubService> logger) : IAsyncDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly CancellationTokenSource _lifetimeCts = new();
     private HubConnection? _connection;
+    private bool _disposed;
 
     public async Task EnsureConnectedAsync(CancellationToken cancellationToken = default)
     {
@@ -31,19 +33,7 @@ public sealed partial class MauiBoardHubService(
                 return;
             }
 
-            if (_connection is not null)
-            {
-                try
-                {
-                    await _connection.DisposeAsync();
-                }
-                catch
-                {
-                    // ignore
-                }
-
-                _connection = null;
-            }
+            await DisposeConnectionAsync();
 
             var baseAddress = new Uri(api.BaseUrlWithTrailingSlash, UriKind.Absolute);
             var hubUri = new Uri(baseAddress, "hubs/board");
@@ -54,9 +44,7 @@ public sealed partial class MauiBoardHubService(
                 .WithAutomaticReconnect()
                 .Build();
 
-            hub.On(
-                BoardHubClient.BoardChanged,
-                () => refresh.NotifyFromRemoteAsync(CancellationToken.None));
+            hub.On(BoardHubClient.BoardChanged, OnBoardChangedAsync);
             _connection = hub;
             try
             {
@@ -72,16 +60,7 @@ public sealed partial class MauiBoardHubService(
                     ex,
                     "SignalR board hub could not connect to {HubUrl}. Live sync is off until the API is running and reachable.",
                     hubUri);
-                try
-                {
-                    await hub.DisposeAsync();
-                }
-                catch
-                {
-                    // ignore
-                }
-
-                _connection = null;
+                await DisposeConnectionAsync();
             }
         }
         finally
@@ -95,19 +74,7 @@ public sealed partial class MauiBoardHubService(
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            if (_connection is not null)
-            {
-                try
-                {
-                    await _connection.DisposeAsync();
-                }
-                catch
-                {
-                    // ignore
-                }
-
-                _connection = null;
-            }
+            await DisposeConnectionAsync();
         }
         finally
         {
@@ -115,23 +82,52 @@ public sealed partial class MauiBoardHubService(
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        await _lifetimeCts.CancelAsync().ConfigureAwait(false);
+        await DisconnectAsync(CancellationToken.None).ConfigureAwait(false);
+        _gate.Dispose();
+        _lifetimeCts.Dispose();
+    }
+
+    private async Task OnBoardChangedAsync()
     {
         try
         {
-            _connection?.DisposeAsync().AsTask().GetAwaiter().GetResult();
-            _connection = null;
+            await refresh.NotifyFromRemoteAsync(_lifetimeCts.Token);
         }
-        catch
+        catch (OperationCanceledException)
         {
-            // ignore
+            // Shutting down
         }
-        _gate.Dispose();
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "SignalR board-changed notification failed.");
+        }
     }
 
-    public async ValueTask DisposeAsync()
+    private async Task DisposeConnectionAsync()
     {
-        await DisconnectAsync();
-        _gate.Dispose();
+        if (_connection is null)
+        {
+            return;
+        }
+
+        var connection = _connection;
+        _connection = null;
+        try
+        {
+            await connection.DisposeAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Failed to dispose the board hub connection.");
+        }
     }
 }

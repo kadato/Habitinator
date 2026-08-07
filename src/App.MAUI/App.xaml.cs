@@ -3,6 +3,8 @@
 using App.MAUI.Services;
 using App.MAUI.Services.LocalBoard;
 
+using Microsoft.Extensions.Logging;
+
 namespace App.MAUI;
 
 public partial class App : Application
@@ -33,7 +35,7 @@ public partial class App : Application
 
         if (sp.GetService(typeof(IMauiBoardLocalStoreLifecycle)) is IMauiBoardLocalStoreLifecycle store)
         {
-            _ = store.EnsureStoreReadyAsync();
+            _ = RunStartupTaskAsync(sp, "SQLite store init", store.EnsureStoreReadyAsync);
         }
     }
 
@@ -66,7 +68,21 @@ public partial class App : Application
 
         if (sp.GetService(typeof(MauiDailyReminderService)) is MauiDailyReminderService scheduler)
         {
-            _ = scheduler.SynchronizeAsync();
+            _ = RunStartupTaskAsync(sp, "daily reminder reschedule", scheduler.SynchronizeAsync);
+        }
+    }
+
+    private static async Task RunStartupTaskAsync(IServiceProvider services, string name, Func<CancellationToken, Task> task)
+    {
+        var logger = services.GetService<ILoggerFactory>()?.CreateLogger("App");
+        try
+        {
+            await task(CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // Startup tasks are best-effort, board operations retry lazily.
+            logger?.LogWarning(ex, "Startup task {TaskName} failed.", name);
         }
     }
 }

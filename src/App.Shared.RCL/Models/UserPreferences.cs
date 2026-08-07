@@ -29,4 +29,20 @@ public sealed class UserPreferences
     {
         return new UserPreferences();
     }
+
+    /// <summary>Clamps pomodoro and day-start values to valid ranges so bad persisted values cannot silently break scheduling or timers.</summary>
+    public UserPreferences Normalize()
+    {
+        PomodoroWorkDurationMinutes = Math.Clamp(PomodoroWorkDurationMinutes, 1, 180);
+        PomodoroShortBreakMinutes = Math.Clamp(PomodoroShortBreakMinutes, 1, 60);
+        PomodoroLongBreakMinutes = Math.Clamp(PomodoroLongBreakMinutes, 1, 120);
+        PomodoroCyclesBeforeLongBreak = Math.Clamp(PomodoroCyclesBeforeLongBreak, 1, 12);
+
+        if (DayStartLocalTime < TimeSpan.Zero || DayStartLocalTime >= TimeSpan.FromDays(1))
+        {
+            DayStartLocalTime = TimeSpan.Zero;
+        }
+
+        return this;
+    }
 }

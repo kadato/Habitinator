@@ -6,15 +6,9 @@ namespace App.Shared.RCL.Services;
 
 public static class UserPreferencesJson
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false
-    };
-
     public static string Serialize(UserPreferences settings)
     {
-        return JsonSerializer.Serialize(settings, Options);
+        return JsonSerializer.Serialize(settings, JsonDefaults.Storage);
     }
 
     public static UserPreferences DeserializeOrDefault(string? json)
@@ -26,8 +20,8 @@ public static class UserPreferencesJson
 
         try
         {
-            return JsonSerializer.Deserialize<UserPreferences>(json, Options)
-                   ?? UserPreferences.CreateDefault();
+            var parsed = JsonSerializer.Deserialize<UserPreferences>(json, JsonDefaults.Storage);
+            return parsed?.Normalize() ?? UserPreferences.CreateDefault();
         }
         catch (JsonException)
         {

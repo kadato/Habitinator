@@ -723,7 +723,7 @@
                 return;
             }
 
-            var missed = DailySchedule.GetYesterdayUncompletedDailies(Dailies, today);
+            var missed = DailySchedule.GetYesterdayUncompletedDailies(Dailies, today, TimeZoneService);
             if (missed.Count == 0)
             {
                 return;

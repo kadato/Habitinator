@@ -67,19 +67,19 @@ public static class DailySchedule
 
     /// <summary>
     ///     First calendar day used as the schedule anchor when walking streak history. When
-    ///     <paramref name="dailyStart" /> is set, it is the real start. When it is <c>null</c>, the board treats
-    ///     the daily as "due from today", but streak backfill and <see cref="Services.DailyStreakCalculator" />
-    ///     must still count prior scheduled days — so we synthesize a start far enough before
-    ///     <paramref name="notAfter" /> (aligned for weekly repeats). See
-    ///     <see cref="App.Shared.RCL.Services.DailyStreakCalculator" />.
+    ///     <paramref name="dailyStart" /> is set and before <paramref name="notAfter" />, it is the real
+    ///     start. When it is <c>null</c>, the board treats the daily as "due from today" every day is
+    ///     scheduled, but streak backfill and <see cref="Services.DailyStreakCalculator" /> must still
+    ///     count prior scheduled days, so we create the start far enough before
+    ///     <paramref name="notAfter" />. When <paramref name="dailyStart" /> is on or after
+    ///     <paramref name="notAfter" /> (item created today but streak history targets yesterday),
+    ///     we extend the real schedule backward with the same phase instead of treating the history as
+    ///     empty, so backfilled days line up with the days the board actually schedules.
     /// </summary>
     /// <remarks>
     ///     All dates use the user's local timezone for scheduling. The board resets at local midnight.
-    ///     If <paramref name="dailyStart" /> is after <paramref name="notAfter" /> (e.g. item created today but
-    ///     streak backfill targets yesterday), we treat it like a missing start so history is not empty.
-    ///     If <paramref name="dailyStart" /> <strong>equals</strong> <paramref name="notAfter" />, using it as
-    ///     the floor would allow at most one backfill day; use a synthetic anchor so several prior days can
-    ///     be scheduled the same as <see cref="Services.DailyStreakCalculator" /> and manual streak 3+.
+    ///     A phase mismatch here shows as streaks stuck at 0 or counting the wrong days for interval
+    ///     dailies, so the created anchor must keep the schedule pattern of the real start.
     /// </remarks>
     public static DateOnly StreakHistoryScheduleStart(
         DateOnly? dailyStart,
@@ -93,10 +93,24 @@ public static class DailySchedule
             return d0;
         }
 
-        return StreakHistorySyntheticAnchor(notAfter, repeat, rawInterval, streakWindow);
+        return dailyStart is { } real
+            ? StreakHistoryPhaseMatchedAnchor(real, notAfter, repeat, rawInterval, streakWindow)
+            : StreakHistoryEveryDayAnchor(notAfter, streakWindow);
     }
 
-    private static DateOnly StreakHistorySyntheticAnchor(
+    private static DateOnly StreakHistoryEveryDayAnchor(DateOnly notAfter, int streakWindow)
+    {
+        var s = Math.Min(9999, Math.Max(1, streakWindow));
+        return notAfter.AddDays(-(s + 31));
+    }
+
+    /// <summary>
+    ///     The latest date ≤ <paramref name="notAfter" /> from which the schedule pattern matches
+    ///     <paramref name="dailyStart" />'s phase and that is at least <paramref name="streakWindow" />
+    ///     periods behind the walk end, so streak walks and backfill never run out of history.
+    /// </summary>
+    private static DateOnly StreakHistoryPhaseMatchedAnchor(
+        DateOnly dailyStart,
         DateOnly notAfter,
         DailyRepeatType repeat,
         int rawInterval,
@@ -104,29 +118,100 @@ public static class DailySchedule
     {
         var interval = Math.Max(1, Math.Min(999, rawInterval < 1 ? 1 : rawInterval));
         var s = Math.Min(9999, Math.Max(1, streakWindow));
-        var padDays = repeat switch
+        return repeat switch
         {
-            DailyRepeatType.Daily => s * interval + 31,
-            DailyRepeatType.Weekly => s * 7 * interval + 31,
-            DailyRepeatType.Monthly => Math.Min(200_000, s * 31 * interval + 120),
-            DailyRepeatType.Yearly => Math.Min(400_000, s * 366 * interval + 800),
-            _ => s * interval + 31
+            DailyRepeatType.Weekly => PhaseMatchedPeriodAnchor(dailyStart, notAfter, s, 7 * interval, 31),
+            DailyRepeatType.Monthly => PhaseMatchedMonthAnchor(dailyStart, notAfter, interval, s),
+            DailyRepeatType.Yearly => PhaseMatchedYearAnchor(dailyStart, notAfter, interval, s),
+            _ => PhaseMatchedPeriodAnchor(dailyStart, notAfter, s, interval, 31)
         };
+    }
 
-        var candidate = notAfter.AddDays(-padDays);
-        if (repeat != DailyRepeatType.Weekly)
+    private static DateOnly PhaseMatchedPeriodAnchor(
+        DateOnly dailyStart,
+        DateOnly notAfter,
+        int window,
+        int periodDays,
+        int slackDays)
+    {
+        var diff = (dailyStart.ToDateTime(TimeOnly.MinValue) - notAfter.ToDateTime(TimeOnly.MinValue)).Days;
+        var pad = window * periodDays + slackDays;
+        var k = (int)Math.Ceiling((diff + pad) / (double)periodDays);
+        var maxK = (dailyStart.ToDateTime(TimeOnly.MinValue) - DateTime.MinValue).Days / periodDays;
+        if (k > maxK)
         {
-            return candidate;
+            return DateOnly.MinValue;
         }
 
-        var dowDelta = ((int)notAfter.DayOfWeek - (int)candidate.DayOfWeek + 7) % 7;
-        candidate = candidate.AddDays(dowDelta);
-        if (candidate > notAfter)
+        return dailyStart.AddDays(-k * periodDays);
+    }
+
+    private static DateOnly PhaseMatchedMonthAnchor(
+        DateOnly dailyStart,
+        DateOnly notAfter,
+        int interval,
+        int window)
+    {
+        var m = MonthIndex(dailyStart) - MonthIndex(notAfter);
+        var padMonths = window * interval + 4;
+        var k = (int)Math.Ceiling((m + padMonths) / (double)interval);
+        var maxK = MonthIndex(dailyStart) / interval;
+        if (k > maxK)
         {
-            candidate = candidate.AddDays(-7 * interval);
+            return DateOnly.MinValue;
         }
 
-        return candidate;
+        for (var bump = 0; bump <= interval; bump++)
+        {
+            var candidate = AddMonths(dailyStart, -(k + bump) * interval);
+            var day = Math.Min(dailyStart.Day, DateTime.DaysInMonth(candidate.Year, candidate.Month));
+            if (day == dailyStart.Day)
+            {
+                return candidate;
+            }
+        }
+
+        return AddMonths(dailyStart, -k * interval);
+    }
+
+    private static DateOnly PhaseMatchedYearAnchor(
+        DateOnly dailyStart,
+        DateOnly notAfter,
+        int interval,
+        int window)
+    {
+        var yDiff = dailyStart.Year - notAfter.Year;
+        var padYears = window * interval + 2;
+        var k = (int)Math.Ceiling((yDiff + padYears) / (double)interval);
+        var maxK = (dailyStart.Year - 1) / interval;
+        if (k > maxK)
+        {
+            return DateOnly.MinValue;
+        }
+
+        for (var bump = 0; bump <= 4 * interval; bump++)
+        {
+            var year = dailyStart.Year - (k + bump) * interval;
+            var day = Math.Min(dailyStart.Day, DateTime.DaysInMonth(year, dailyStart.Month));
+            if (day == dailyStart.Day)
+            {
+                return new DateOnly(year, dailyStart.Month, day);
+            }
+        }
+
+        var fallbackYear = dailyStart.Year - k * interval;
+        return new DateOnly(
+            fallbackYear,
+            dailyStart.Month,
+            Math.Min(dailyStart.Day, DateTime.DaysInMonth(fallbackYear, dailyStart.Month)));
+    }
+
+    private static int MonthIndex(DateOnly d) => d.Year * 12 + d.Month - 1;
+
+    private static DateOnly AddMonths(DateOnly d, int months)
+    {
+        var result = d.ToDateTime(TimeOnly.MinValue).AddMonths(months);
+        return DateOnly.FromDateTime(result);
     }
 
     public static bool IsScheduledOn(
@@ -179,15 +264,30 @@ public static class DailySchedule
     /// <summary>
     ///     Dailies that were due on the previous calendar day (local timezone) and not completed for that day, excluding
     ///     items already checked for <paramref name="today" /> to avoid clobbering a same-day check when backfilling.
+    ///     Null-start dailies are "due from today" on the board, so one created on the local
+    ///     <paramref name="today" /> did not exist yesterday and is not offered in the catch-up dialog.
     /// </summary>
     public static IReadOnlyList<BoardItem> GetYesterdayUncompletedDailies(
         IReadOnlyList<BoardItem> dailies,
-        DateOnly today)
+        DateOnly today,
+        IUserTimeZoneService? tz = null)
     {
         var yesterday = today.AddDays(-1);
         return [.. dailies
             .Where(d => d.DailyLastCompletedOn != today
+                        && !IsNewNullStartDaily(d, today, tz)
                         && IsDueOnDate(d, yesterday))];
+    }
+
+    private static bool IsNewNullStartDaily(BoardItem item, DateOnly today, IUserTimeZoneService? tz)
+    {
+        if (item.DailyStartDate is not null || item.CreatedAtUtc is not { } createdUtc)
+        {
+            return false;
+        }
+
+        var local = tz is { IsDetected: true } ? tz.ConvertToLocal(createdUtc) : createdUtc;
+        return DateOnly.FromDateTime(local.DateTime) >= today;
     }
 
     private static bool IsEveryNDaysFrom(DateOnly start, DateOnly on, int n)

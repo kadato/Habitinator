@@ -64,4 +64,59 @@ public class DailyScheduleTests
         var done = d with { DailyLastCompletedOn = t };
         DailySchedule.IsDueOnDate(done, t).Should().BeFalse();
     }
+
+    [Fact]
+    public void GetYesterdayUncompletedDailies_NewDailyCreatedToday_IsNotListed()
+    {
+        var today = new DateOnly(2026, 4, 27);
+        var item = NewDaily("Created today", Utc(today));
+        DailySchedule.GetYesterdayUncompletedDailies([item], today).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void GetYesterdayUncompletedDailies_ExistingNullStartDaily_IsListed()
+    {
+        var today = new DateOnly(2026, 4, 27);
+        var item = NewDaily("Existing", Utc(today.AddDays(-7)));
+        DailySchedule.GetYesterdayUncompletedDailies([item], today)
+            .Select(x => x.Id).Should().Equal(item.Id);
+    }
+
+    [Fact]
+    public void GetYesterdayUncompletedDailies_CompletedToday_IsNotListed()
+    {
+        var today = new DateOnly(2026, 4, 27);
+        var item = NewDaily("Done today", Utc(today.AddDays(-7))) with { DailyLastCompletedOn = today };
+        DailySchedule.GetYesterdayUncompletedDailies([item], today).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void GetYesterdayUncompletedDailies_CompletedYesterday_IsNotListed()
+    {
+        var today = new DateOnly(2026, 4, 27);
+        var item = NewDaily("Done yesterday", Utc(today.AddDays(-7))) with { DailyLastCompletedOn = today.AddDays(-1) };
+        DailySchedule.GetYesterdayUncompletedDailies([item], today).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void GetYesterdayUncompletedDailies_StartBeforeYesterday_Listed_EvenWhenCreatedToday()
+    {
+        var today = new DateOnly(2026, 4, 27);
+        var item = NewDaily("Backdated start", Utc(today), start: new DateOnly(2026, 4, 1));
+        DailySchedule.GetYesterdayUncompletedDailies([item], today)
+            .Select(x => x.Id).Should().Equal(item.Id);
+    }
+
+    private static DateTimeOffset Utc(DateOnly day) =>
+        new(day.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+
+    private static BoardItem NewDaily(string title, DateTimeOffset createdUtc, DateOnly? start = null) => new(
+        Guid.NewGuid(),
+        title,
+        IsCompleted: false,
+        Counter: 0,
+        DailyStartDate: start,
+        DailyRepeat: DailyRepeatType.Daily,
+        DailyRepeatInterval: 1,
+        CreatedAtUtc: createdUtc);
 }

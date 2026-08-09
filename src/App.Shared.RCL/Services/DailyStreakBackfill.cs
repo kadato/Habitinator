@@ -18,6 +18,10 @@ public static class DailyStreakBackfill
     ///     <c>notAfter = <see cref="DailySchedule.LocalToday" />.AddDays(-1)</c> so the count is previous days only
     ///     and does not mark today.
     /// </summary>
+    /// <remarks>
+    ///     A <c>null</c> <paramref name="dailyStart" /> means the board treats the daily as due from today
+    ///     (every day scheduled), so the backfill covers consecutive days regardless of the repeat pattern.
+    /// </remarks>
     public static IReadOnlyList<DateOnly> GetLastNScheduledCompletionDays(
         DateOnly? dailyStart,
         DailyRepeatType repeat,
@@ -30,9 +34,12 @@ public static class DailyStreakBackfill
             return [];
         }
 
+        var effectiveRepeat = dailyStart is null ? DailyRepeatType.Daily : repeat;
+        var effectiveInterval = dailyStart is null ? 1 : repeatInterval;
+
         var n = Math.Min(9999, streakCount);
         var scheduleStart = DailySchedule.StreakHistoryScheduleStart(
-            dailyStart, notAfter, repeat, repeatInterval, n);
+            dailyStart, notAfter, effectiveRepeat, effectiveInterval, n);
         var list = new List<DateOnly>(n);
         var d = notAfter;
         var maxSteps = 20_000;
@@ -43,7 +50,7 @@ public static class DailyStreakBackfill
                 break;
             }
 
-            if (DailySchedule.IsScheduledOn(scheduleStart, repeat, repeatInterval, d))
+            if (DailySchedule.IsScheduledOn(scheduleStart, effectiveRepeat, effectiveInterval, d))
             {
                 list.Add(d);
             }

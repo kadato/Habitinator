@@ -45,6 +45,11 @@ public static class DailyStreakCalculator
     ///     otherwise the chain ends at the previous calendar day, so a not-yet-checked-off today does not
     ///     add to the streak.
     /// </summary>
+    /// <remarks>
+    ///     A <c>null</c> <paramref name="dailyStart" /> means the board treats the daily as due from today,
+    ///     every calendar day is scheduled, so the walk must not apply the repeat pattern which would
+    ///     otherwise count only every N-th day and show streaks stuck near zero for interval dailies.
+    /// </remarks>
     public static int ComputeStreak(
         DateOnly? dailyStart,
         DailyRepeatType repeat,
@@ -53,7 +58,10 @@ public static class DailyStreakCalculator
         IReadOnlyDictionary<DateOnly, List<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)>> eventsByDay,
         DateOnly? dailyLastCompletedOn)
     {
-        var todayOnSchedule = DailySchedule.IsScheduledOn(dailyStart, repeat, repeatInterval, today);
+        var effectiveRepeat = dailyStart is null ? DailyRepeatType.Daily : repeat;
+        var effectiveInterval = dailyStart is null ? 1 : repeatInterval;
+
+        var todayOnSchedule = DailySchedule.IsScheduledOn(dailyStart, effectiveRepeat, effectiveInterval, today);
         var todayDone = todayOnSchedule &&
             IsCalendarDayNetCompleted(today, GetDayListOrNull(eventsByDay, today), dailyLastCompletedOn);
 
@@ -61,7 +69,7 @@ public static class DailyStreakCalculator
         var end = todayDone ? today : today.AddDays(-1);
 
         var historyStart =
-            DailySchedule.StreakHistoryScheduleStart(dailyStart, end, repeat, repeatInterval, MaxStreak);
+            DailySchedule.StreakHistoryScheduleStart(dailyStart, end, effectiveRepeat, effectiveInterval, MaxStreak);
 
         var n = 0;
         var d = end;
@@ -73,7 +81,7 @@ public static class DailyStreakCalculator
                 break;
             }
 
-            if (!DailySchedule.IsScheduledOn(historyStart, repeat, repeatInterval, d))
+            if (!DailySchedule.IsScheduledOn(historyStart, effectiveRepeat, effectiveInterval, d))
             {
                 d = d.AddDays(-1);
                 continue;

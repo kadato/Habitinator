@@ -23,7 +23,7 @@ public sealed class DailyStreakBackfillTests
     [Fact]
     public void GetLastN_ManualStreak_UsesNotAfterYesterday_SoTodayIsNotIncluded()
     {
-        // Ending the walk at "yesterday" (common when N counts previous scheduled days, not today).
+        // Ending the walk at "yesterday" common when N counts previous scheduled days, not today
         var notAfter = new DateOnly(2026, 4, 26);
         var start = new DateOnly(2026, 4, 1);
         var days = DailyStreakBackfill.GetLastNScheduledCompletionDays(
@@ -37,7 +37,7 @@ public sealed class DailyStreakBackfillTests
     [Fact]
     public void GetLastN_When_DailyStart_Equals_NotAfter_Still_Returns_N_Prior_Scheduled_Days()
     {
-        // When start date equals "yesterday" (notAfter), the streak-history floor must not be only that day, or
+        // When start date equals "yesterday" notAfter, the streak-history floor must not be only that day, or
         // a manual streak of 3+ gets at most one backfill day and the board shows 1 after a same-day check.
         var notAfter = new DateOnly(2026, 4, 26);
         var startSameAsNotAfter = notAfter;
@@ -90,5 +90,37 @@ public sealed class DailyStreakBackfillTests
         DailyStreakBackfill.IsStreakBackfillTimestamp(ts).Should().BeTrue();
         DailyStreakBackfill.IsStreakBackfillTimestamp(ts.AddSeconds(1)).Should().BeFalse();
         DailyStreakBackfill.IsStreakBackfillTimestamp(ts.AddHours(1)).Should().BeFalse();
+    }
+
+    [Fact]
+    public void GetLastN_NullStart_Interval2_Returns_Consecutive_Days()
+    {
+        // Null start means the board schedules every day, so manual streak backfill must cover
+        // consecutive days even when the repeat interval is > 1 (previously it shifted a day).
+        var notAfter = new DateOnly(2026, 4, 26);
+        var days = DailyStreakBackfill.GetLastNScheduledCompletionDays(
+            null, DailyRepeatType.Daily, 2, 3, notAfter);
+        days.Should().Equal(
+            notAfter, notAfter.AddDays(-1), notAfter.AddDays(-2));
+    }
+
+    [Fact]
+    public void GetLastN_StartEqualsNotAfter_Interval3_Keeps_Real_Start_Phase()
+    {
+        // Created today with interval 3: the backfilled days must line up with the real schedule
+        // every 3rd day from the start, instead of a shifted created phase.
+        var start = new DateOnly(2026, 4, 27);
+        var days = DailyStreakBackfill.GetLastNScheduledCompletionDays(
+            start, DailyRepeatType.Daily, 3, 3, start);
+        days.Should().Equal(start, start.AddDays(-3), start.AddDays(-6));
+    }
+
+    [Fact]
+    public void GetLastN_StartEqualsNotAfter_Weekly_Keeps_Start_Dow()
+    {
+        var start = new DateOnly(2026, 4, 27); // Monday
+        var days = DailyStreakBackfill.GetLastNScheduledCompletionDays(
+            start, DailyRepeatType.Weekly, 1, 3, start);
+        days.Should().Equal(start, start.AddDays(-7), start.AddDays(-14));
     }
 }

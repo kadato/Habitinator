@@ -52,8 +52,6 @@ body {
 .mud-table,
 .mud-select,
 .mud-list,
-.mud-nav-menu,
-.mud-tabs,
 .mud-chip {
     font-family: var(--hab-font-sans);
 }

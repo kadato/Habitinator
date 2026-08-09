@@ -71,11 +71,6 @@
 .search-container ::deep .mud-input-outlined-border {
     border-color: transparent !important;
     border-width: 1px !important;
-    transition: border-color var(--dur-normal) ease !important;
-}
-
-.search-container ::deep .mud-input-root-outlined:hover .mud-input-outlined-border {
-    border-color: var(--mud-palette-divider) !important;
 }
 
 .search-container ::deep .mud-input-root-outlined.mud-input-focused .mud-input-outlined-border {
@@ -104,15 +99,8 @@
     border: 1px solid transparent;
     color: var(--mud-palette-text-secondary);
     cursor: pointer;
-    transition: all var(--dur-normal) cubic-bezier(0.4, 0, 0.2, 1);
     outline: none;
     user-select: none;
-}
-
-.filter-chip:hover {
-    background: color-mix(in srgb, var(--mud-palette-background-gray) 60%, var(--mud-palette-surface));
-    color: var(--mud-palette-text-primary);
-    border-color: var(--mud-palette-divider);
 }
 
 .filter-chip.active {
@@ -143,9 +131,9 @@
     border-radius: 50%;
 }
 
-.dot-habit { background: #8b5cf6; }
-.dot-daily { background: #0d9488; }
-.dot-todo { background: #f59e0b; }
+.dot-habit { background: var(--hab-type-habit); }
+.dot-daily { background: var(--hab-type-daily); }
+.dot-todo { background: var(--hab-type-todo); }
 
 .filter-chip.active .chip-dot {
     background: currentColor !important;
@@ -171,9 +159,6 @@
 .archived-list::-webkit-scrollbar-thumb {
     background: var(--mud-palette-divider);
     border-radius: var(--radius-pill);
-}
-.archived-list::-webkit-scrollbar-thumb:hover {
-    background: var(--mud-palette-text-disabled);
 }
 
 /* ── Empty State ── */
@@ -216,40 +201,24 @@
     padding: 0.85rem 1.1rem;
     border-radius: var(--radius-xl);
     border: 1px solid var(--mud-palette-divider);
-    transition: all var(--dur-slow) cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
 }
 
-/* Accent background and hover states per item type */
+/* Accent background per item type */
 .archived-item-card.card-habit {
-    background: rgba(139, 92, 246, 0.04);
-    border-color: rgba(139, 92, 246, 0.12);
-}
-.archived-item-card.card-habit:hover {
-    background: rgba(139, 92, 246, 0.08);
-    border-color: rgba(139, 92, 246, 0.25);
-    transform: translateY(-1px);
+    background: color-mix(in srgb, var(--hab-type-habit) 4%, transparent);
+    border-color: color-mix(in srgb, var(--hab-type-habit) 12%, transparent);
 }
 
 .archived-item-card.card-daily {
-    background: rgba(13, 148, 136, 0.04);
-    border-color: rgba(13, 148, 136, 0.12);
-}
-.archived-item-card.card-daily:hover {
-    background: rgba(13, 148, 136, 0.08);
-    border-color: rgba(13, 148, 136, 0.25);
-    transform: translateY(-1px);
+    background: color-mix(in srgb, var(--hab-type-daily) 4%, transparent);
+    border-color: color-mix(in srgb, var(--hab-type-daily) 12%, transparent);
 }
 
 .archived-item-card.card-todo {
-    background: rgba(245, 158, 11, 0.04);
-    border-color: rgba(245, 158, 11, 0.12);
-}
-.archived-item-card.card-todo:hover {
-    background: rgba(245, 158, 11, 0.08);
-    border-color: rgba(245, 158, 11, 0.25);
-    transform: translateY(-1px);
+    background: color-mix(in srgb, var(--hab-type-todo) 4%, transparent);
+    border-color: color-mix(in srgb, var(--hab-type-todo) 12%, transparent);
 }
 
 .archived-item-info {
@@ -272,9 +241,9 @@
     flex-shrink: 0;
 }
 
-.card-habit .item-icon { color: #8b5cf6; }
-.card-daily .item-icon { color: #0d9488; }
-.card-todo .item-icon { color: #f59e0b; }
+.card-habit .item-icon { color: var(--hab-type-habit); }
+.card-daily .item-icon { color: var(--hab-type-daily); }
+.card-todo .item-icon { color: var(--hab-type-todo); }
 
 .archived-item-title {
     font-weight: 600;
@@ -313,17 +282,17 @@
 }
 
 .badge-habit {
-    background-color: color-mix(in srgb, #8b5cf6 8%, transparent);
-    color: #6d28d9;
-}
-
-.badge-daily {
-    background-color: color-mix(in srgb, #0d9488 8%, transparent);
+    background-color: color-mix(in srgb, var(--hab-type-habit) 8%, transparent);
     color: #0f766e;
 }
 
+.badge-daily {
+    background-color: color-mix(in srgb, var(--hab-type-daily) 8%, transparent);
+    color: var(--mud-palette-primary);
+}
+
 .badge-todo {
-    background-color: color-mix(in srgb, #f59e0b 8%, transparent);
+    background-color: color-mix(in srgb, var(--hab-type-todo) 8%, transparent);
     color: #b45309; /* readable dark amber */
 }
 

@@ -323,12 +323,6 @@
     white-space: nowrap;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    transition: border-color var(--dur-fast) ease, background-color var(--dur-fast) ease, color var(--dur-fast) ease;
-}
-
-.board-trigger-btn:hover {
-    border-color: var(--mud-palette-primary);
-    color: var(--mud-palette-text-primary);
 }
 
 .board-trigger-btn:active {

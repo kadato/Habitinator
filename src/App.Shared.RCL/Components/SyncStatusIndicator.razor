@@ -6,13 +6,11 @@
 {
     @if (IconOnly)
     {
-        <div class="sync-status-indicator d-flex align-center justify-center me-2">
-            <MudTooltip Text="@GetSyncStatusTooltip()">
-                <MudIcon Icon="@GetSyncIcon()"
-                         Color="@GetSyncIconColor()"
-                         Size="Size.Medium"
-                         Class="@GetSyncIconClass()" />
-            </MudTooltip>
+        <div class="sync-status-indicator d-flex align-center justify-center me-2" title="@GetSyncStatusTooltip()">
+            <MudIcon Icon="@GetSyncIcon()"
+                     Color="@GetSyncIconColor()"
+                     Size="Size.Medium"
+                     Class="@GetSyncIconClass()" />
         </div>
     }
     else

@@ -102,11 +102,6 @@
     border-color: var(--mud-palette-primary);
 }
 
-.auth-card .btn-primary:hover {
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 88%, var(--mud-palette-black));
-    border-color: color-mix(in srgb, var(--mud-palette-primary) 88%, var(--mud-palette-black));
-}
-
 .auth-form-actions {
     display: flex;
     flex-direction: column;
@@ -149,10 +144,6 @@
 .auth-page__footer a {
     font-weight: 600;
     text-decoration: none;
-}
-
-.auth-page__footer a:hover {
-    text-decoration: underline;
 }
 
 .auth-card .alert {
@@ -302,21 +293,10 @@
     border-color: var(--mud-palette-primary);
 }
 
-.btn-primary:hover {
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 88%, var(--mud-palette-black));
-    border-color: color-mix(in srgb, var(--mud-palette-primary) 88%, var(--mud-palette-black));
-}
-
 .btn-outline-secondary {
     color: var(--mud-palette-text-secondary);
     border-color: var(--mud-palette-divider);
     background-color: transparent;
-}
-
-.btn-outline-secondary:hover {
-    color: var(--mud-palette-text-primary);
-    background-color: var(--mud-palette-action-hover);
-    border-color: var(--mud-palette-text-secondary);
 }
 
 .mb-3 {
@@ -362,9 +342,4 @@
 .dark-theme .mud-button-outlined-primary {
     color: #38bdf8 !important; /* sky-400 has 8.6:1 contrast ratio against #111827 surface */
     border-color: rgba(56, 189, 248, 0.4) !important;
-}
-
-.dark-theme .mud-button-outlined-primary:hover {
-    background-color: rgba(56, 189, 248, 0.08) !important;
-    border-color: #38bdf8 !important;
 }

@@ -65,12 +65,6 @@
     font-weight: 600 !important;
     border-radius: var(--radius-md) !important;
     font-size: 0.875rem !important;
-    transition: all var(--dur-normal) ease !important;
-}
-
-.edit-daily-header__cancel:hover {
-    color: var(--mud-palette-text-primary) !important;
-    background-color: var(--mud-palette-action-hover) !important;
 }
 
 .edit-daily-header__save {
@@ -83,14 +77,6 @@
     padding: 0.45rem 1.15rem !important;
     border-radius: var(--radius-lg) !important;
     box-shadow: 0 4px 12px color-mix(in srgb, var(--mud-palette-primary) 30%, transparent) !important;
-    transition: all var(--dur-normal) cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-.edit-daily-header__save:hover:not([disabled]),
-.edit-daily-header__save:active:not([disabled]) {
-    background: var(--mud-palette-primary) !important;
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--mud-palette-primary) 30%, transparent) !important;
-    transform: none !important;
 }
 
 /* ── Labels & Fields (macOS-like styling) ── */
@@ -124,12 +110,6 @@
 .edit-daily-field-body .mud-input-outlined-border {
     border-color: transparent !important;
     border-width: 1px !important;
-    transition: border-color var(--dur-normal) ease !important;
-}
-
-.edit-daily-field-header .mud-input-root-outlined:hover .mud-input-outlined-border,
-.edit-daily-field-body .mud-input-root-outlined:hover .mud-input-outlined-border {
-    border-color: var(--mud-palette-divider) !important;
 }
 
 .edit-daily-field-header .mud-input-root-outlined.mud-input-focused .mud-input-outlined-border,
@@ -189,11 +169,6 @@
     background: color-mix(in srgb, var(--mud-palette-background-gray) 30%, var(--mud-palette-surface)) !important;
     border: 1px solid var(--mud-palette-divider);
     border-radius: var(--radius-lg) !important;
-    transition: border-color var(--dur-normal) ease, background-color var(--dur-normal) ease;
-}
-
-.edit-daily-checklist-panels .mud-expand-panel:hover {
-    border-color: color-mix(in srgb, var(--mud-palette-divider) 80%, var(--mud-palette-text-primary));
 }
 
 .edit-daily-checklist-panels .mud-expand-panel-header {
@@ -217,16 +192,10 @@
     gap: var(--space-4);
     padding: 0.2rem 0;
     border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 50%, transparent);
-    transition: all var(--dur-normal) ease;
 }
 
 .edit-daily-checklist__row:last-of-type {
     border-bottom: none;
-}
-
-/* checkbox scale on hover */
-.edit-daily-checklist__row .mud-checkbox:hover {
-    transform: scale(1.05);
 }
 
 .edit-daily-checklist__input .mud-input-outlined-border {
@@ -247,12 +216,6 @@
 .edit-daily-checklist__remove {
     flex-shrink: 0;
     color: var(--mud-palette-text-disabled) !important;
-    transition: color var(--dur-fast) ease, transform var(--dur-fast) ease !important;
-}
-
-.edit-daily-checklist__remove:hover {
-    color: var(--mud-palette-error) !important;
-    transform: scale(1.05);
 }
 
 .edit-daily-checklist__add {
@@ -270,13 +233,6 @@
     font-weight: 600;
     text-align: left;
     cursor: pointer;
-    transition: all var(--dur-normal) ease;
-}
-
-.edit-daily-checklist__add:hover {
-    background: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
-    border-color: var(--mud-palette-primary);
-    transform: translateY(-0.5px);
 }
 
 .edit-daily-checklist__add-icon {
@@ -420,11 +376,6 @@
     text-align: left;
     color: var(--mud-palette-text-primary);
     outline: none;
-    transition: all var(--dur-normal) ease;
-}
-
-.habit-tag-picker__control:hover {
-    border-color: var(--mud-palette-divider);
 }
 
 .habit-tag-picker__control:focus-visible {
@@ -492,16 +443,6 @@
     line-height: 1.2;
     color: var(--mud-palette-primary);
     user-select: none;
-    transition: all var(--dur-fast) ease;
-}
-
-.habit-tag-chip:hover {
-    background: color-mix(in srgb, var(--mud-palette-primary) 12%, var(--mud-palette-surface));
-    border-color: var(--mud-palette-primary);
-}
-
-.habit-tag-chip:hover .habit-tag-chip__remove {
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, transparent) !important;
 }
 
 .habit-tag-chip__text {
@@ -526,13 +467,7 @@
     color: var(--mud-palette-primary) !important;
     cursor: pointer !important;
     padding: 0 !important;
-    transition: all var(--dur-fast) ease !important;
     margin-left: var(--space-2) !important;
-}
-
-.habit-tag-chip__remove:hover {
-    color: var(--mud-palette-primary-contrast-text, #ffffff) !important;
-    background-color: var(--mud-palette-primary) !important;
 }
 
 .habit-tag-picker__dropdown {
@@ -636,10 +571,8 @@
     cursor: pointer;
     white-space: nowrap;
     min-width: 0;
-    transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
-.habit-tag-picker__option:hover,
 .habit-tag-picker__option:focus-visible {
     background: var(--mud-palette-action-hover);
     color: var(--mud-palette-text-primary);
@@ -653,11 +586,6 @@
     margin-top: 0.2rem;
     padding-top: 0.55rem;
     border-radius: 0;
-}
-
-.habit-tag-picker__option--add:hover {
-    color: var(--mud-palette-primary-darken);
-    background: transparent;
 }
 
 .edit-habit-dialog .edit-habit-dialog__content {
@@ -713,12 +641,6 @@
     font-weight: 600 !important;
     border-radius: var(--radius-md) !important;
     font-size: 0.875rem !important;
-    transition: all var(--dur-normal) ease !important;
-}
-
-.edit-habit-header__cancel:hover {
-    color: var(--mud-palette-text-primary) !important;
-    background-color: var(--mud-palette-action-hover) !important;
 }
 
 .edit-habit-header__save {
@@ -731,14 +653,6 @@
     padding: 0.45rem 1.15rem !important;
     border-radius: var(--radius-lg) !important;
     box-shadow: 0 4px 12px color-mix(in srgb, var(--mud-palette-primary) 30%, transparent) !important;
-    transition: all var(--dur-normal) cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-.edit-habit-header__save:hover:not([disabled]),
-.edit-habit-header__save:active:not([disabled]) {
-    background: var(--mud-palette-primary) !important;
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--mud-palette-primary) 30%, transparent) !important;
-    transform: none !important;
 }
 
 /* ── Labels & Fields ── */
@@ -770,12 +684,6 @@
 .edit-habit-field-body .mud-input-outlined-border {
     border-color: transparent !important;
     border-width: 1px !important;
-    transition: border-color var(--dur-normal) ease !important;
-}
-
-.edit-habit-field-header .mud-input-root-outlined:hover .mud-input-outlined-border,
-.edit-habit-field-body .mud-input-root-outlined:hover .mud-input-outlined-border {
-    border-color: var(--mud-palette-divider) !important;
 }
 
 .edit-habit-field-header .mud-input-root-outlined.mud-input-focused .mud-input-outlined-border,
@@ -853,12 +761,6 @@
     padding: 0.65rem 0.85rem;
     cursor: pointer;
     color: var(--mud-palette-text-secondary);
-    transition: all var(--dur-normal) ease;
-}
-
-.habit-track__option:hover {
-    background-color: color-mix(in srgb, var(--mud-palette-background-gray) 45%, var(--mud-palette-surface));
-    border-color: var(--mud-palette-text-secondary);
 }
 
 .habit-track__circle {
@@ -896,11 +798,6 @@
     box-shadow: 0 4px 12px color-mix(in srgb, #22c55e 12%, transparent) !important;
 }
 
-.habit-track__option--on-good:hover {
-    background-color: color-mix(in srgb, #22c55e 10%, var(--mud-palette-surface)) !important;
-    box-shadow: 0 6px 16px color-mix(in srgb, #22c55e 20%, transparent) !important;
-}
-
 .habit-track__option--on-good .habit-track__circle--good {
     background-color: #15803d !important;
     color: #ffffff !important;
@@ -915,11 +812,6 @@
     background-color: color-mix(in srgb, #dc2626 6%, var(--mud-palette-surface)) !important;
     border-color: #dc2626 !important;
     box-shadow: 0 4px 12px color-mix(in srgb, #dc2626 12%, transparent) !important;
-}
-
-.habit-track__option--on-bad:hover {
-    background-color: color-mix(in srgb, #dc2626 10%, var(--mud-palette-surface)) !important;
-    box-shadow: 0 6px 16px color-mix(in srgb, #dc2626 20%, transparent) !important;
 }
 
 .habit-track__option--on-bad .habit-track__circle--bad {

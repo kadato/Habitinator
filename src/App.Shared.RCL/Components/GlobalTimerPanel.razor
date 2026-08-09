@@ -101,64 +101,52 @@
                 <div class="timer-running-strip__actions">
                     @if (TimerService.PomodoroModeEnabled && (TimerService.CurrentPomodoroState == PomodoroState.ShortBreak || TimerService.CurrentPomodoroState == PomodoroState.LongBreak))
                     {
-                        <MudTooltip Text="Skip break">
-                            <MudIconButton Variant="Variant.Outlined"
-                                           Color="Color.Default"
-                                           Icon="@Icons.Material.Filled.SkipNext"
-                                           Class="timer-icon-btn"
-                                           OnClick="SkipBreak"
-                                           aria-label="Skip break" />
-                        </MudTooltip>
+                        <MudIconButton Variant="Variant.Outlined"
+                                       Color="Color.Default"
+                                       Icon="@Icons.Material.Filled.SkipNext"
+                                       Class="timer-icon-btn"
+                                       OnClick="SkipBreak"
+                                       aria-label="Skip break" />
                     }
                     @if (TimerService.IsRunning)
                     {
-                        <MudTooltip Text="Pause timer">
-                            <MudIconButton Variant="Variant.Filled"
-                                           Color="Color.Warning"
-                                           Icon="@Icons.Material.Filled.Pause"
-                                           Class="timer-icon-btn timer-icon-btn--pause"
-                                           OnClick="Pause"
-                                           aria-label="Pause timer" />
-                        </MudTooltip>
+                        <MudIconButton Variant="Variant.Filled"
+                                       Color="Color.Warning"
+                                       Icon="@Icons.Material.Filled.Pause"
+                                       Class="timer-icon-btn timer-icon-btn--pause"
+                                       OnClick="Pause"
+                                       aria-label="Pause timer" />
                     }
                     else
                     {
-                        <MudTooltip Text="Resume timer">
-                            <MudIconButton Variant="Variant.Filled"
-                                           Color="Color.Success"
-                                           Icon="@Icons.Material.Filled.PlayArrow"
-                                           Class="timer-icon-btn timer-icon-btn--start"
-                                           OnClick="Start"
-                                           Disabled="@(!CanStart)"
-                                           aria-label="Resume timer" />
-                        </MudTooltip>
-                    }
-                    <MudTooltip Text="Stop &amp; log session">
                         <MudIconButton Variant="Variant.Filled"
-                                       Color="Color.Primary"
-                                       Icon="@Icons.Material.Filled.Stop"
-                                       Class="timer-icon-btn timer-icon-btn--stop"
-                                       OnClick="StopAndLog"
-                                       Disabled="@(!IsSessionActive)"
-                                       aria-label="Stop and log session" />
-                    </MudTooltip>
-                    <MudTooltip Text="Reset timer">
-                        <MudIconButton Variant="Variant.Outlined"
-                                       Color="Color.Error"
-                                       Icon="@Icons.Material.Filled.Refresh"
-                                       Class="timer-icon-btn timer-icon-btn--reset"
-                                       OnClick="Reset"
-                                       Disabled="@(!CanReset)"
-                                       aria-label="Reset timer" />
-                    </MudTooltip>
-                    <MudTooltip Text="@(_settingsExpanded ? "Hide settings" : "Show settings")">
-                        <MudIconButton Variant="Variant.Outlined"
-                                       Color="Color.Default"
-                                       Icon="@(_settingsExpanded ? Icons.Material.Filled.KeyboardArrowUp : Icons.Material.Filled.KeyboardArrowDown)"
-                                       Class="timer-icon-btn timer-icon-btn--settings-toggle"
-                                       OnClick="ToggleSettings"
-                                       aria-label="Toggle settings" />
-                    </MudTooltip>
+                                       Color="Color.Success"
+                                       Icon="@Icons.Material.Filled.PlayArrow"
+                                       Class="timer-icon-btn timer-icon-btn--start"
+                                       OnClick="Start"
+                                       Disabled="@(!CanStart)"
+                                       aria-label="Resume timer" />
+                    }
+                    <MudIconButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Icon="@Icons.Material.Filled.Stop"
+                                   Class="timer-icon-btn timer-icon-btn--stop"
+                                   OnClick="StopAndLog"
+                                   Disabled="@(!IsSessionActive)"
+                                   aria-label="Stop and log session" />
+                    <MudIconButton Variant="Variant.Outlined"
+                                   Color="Color.Error"
+                                   Icon="@Icons.Material.Filled.Refresh"
+                                   Class="timer-icon-btn"
+                                   OnClick="Reset"
+                                   Disabled="@(!CanReset)"
+                                   aria-label="Reset timer" />
+                    <MudIconButton Variant="Variant.Outlined"
+                                   Color="Color.Default"
+                                   Icon="@(_settingsExpanded ? Icons.Material.Filled.KeyboardArrowUp : Icons.Material.Filled.KeyboardArrowDown)"
+                                   Class="timer-icon-btn"
+                                   OnClick="ToggleSettings"
+                                   aria-label="Toggle settings" />
                 </div>
             </div>
             <MudCollapse Expanded="@_settingsExpanded">
@@ -197,42 +185,34 @@
                 </div>
 
                 <div class="timer-compact__actions">
-                    <MudTooltip Text="Start focus session">
-                        <MudIconButton Variant="Variant.Filled"
-                                       Color="Color.Success"
-                                       Icon="@Icons.Material.Filled.PlayArrow"
-                                       Class="timer-icon-btn timer-icon-btn--start"
-                                       OnClick="Start"
-                                       Disabled="@(!CanStart)"
-                                       aria-label="Start focus session" />
-                    </MudTooltip>
-                    <MudTooltip Text="Pause timer">
-                        <MudIconButton Variant="Variant.Filled"
-                                       Color="Color.Warning"
-                                       Icon="@Icons.Material.Filled.Pause"
-                                       Class="timer-icon-btn timer-icon-btn--pause"
-                                       OnClick="Pause"
-                                       Disabled="@(!TimerService.IsRunning)"
-                                       aria-label="Pause timer" />
-                    </MudTooltip>
-                    <MudTooltip Text="Stop &amp; log session">
-                        <MudIconButton Variant="Variant.Filled"
-                                       Color="Color.Primary"
-                                       Icon="@Icons.Material.Filled.Stop"
-                                       Class="timer-icon-btn timer-icon-btn--stop"
-                                       OnClick="StopAndLog"
-                                       Disabled="@(!IsSessionActive)"
-                                       aria-label="Stop and log session" />
-                    </MudTooltip>
-                    <MudTooltip Text="Reset timer">
-                        <MudIconButton Variant="Variant.Outlined"
-                                       Color="Color.Error"
-                                       Icon="@Icons.Material.Filled.Refresh"
-                                       Class="timer-icon-btn timer-icon-btn--reset"
-                                       OnClick="Reset"
-                                       Disabled="@(!CanReset)"
-                                       aria-label="Reset timer" />
-                    </MudTooltip>
+                    <MudIconButton Variant="Variant.Filled"
+                                   Color="Color.Success"
+                                   Icon="@Icons.Material.Filled.PlayArrow"
+                                   Class="timer-icon-btn timer-icon-btn--start"
+                                   OnClick="Start"
+                                   Disabled="@(!CanStart)"
+                                   aria-label="Start focus session" />
+                    <MudIconButton Variant="Variant.Filled"
+                                   Color="Color.Warning"
+                                   Icon="@Icons.Material.Filled.Pause"
+                                   Class="timer-icon-btn timer-icon-btn--pause"
+                                   OnClick="Pause"
+                                   Disabled="@(!TimerService.IsRunning)"
+                                   aria-label="Pause timer" />
+                    <MudIconButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Icon="@Icons.Material.Filled.Stop"
+                                   Class="timer-icon-btn timer-icon-btn--stop"
+                                   OnClick="StopAndLog"
+                                   Disabled="@(!IsSessionActive)"
+                                   aria-label="Stop and log session" />
+                    <MudIconButton Variant="Variant.Outlined"
+                                   Color="Color.Error"
+                                   Icon="@Icons.Material.Filled.Refresh"
+                                   Class="timer-icon-btn"
+                                   OnClick="Reset"
+                                   Disabled="@(!CanReset)"
+                                   aria-label="Reset timer" />
                 </div>
             </div>
         }
@@ -385,10 +365,9 @@
                                        Immediate="true"
                                        Error="@_focusDurationParseError"
                                        ErrorText="@_focusDurationErrorText"/>
-                         <MudTooltip ShowOnHover="true"
+                         <MudTooltip ShowOnHover="false"
                                      ShowOnClick="true"
                                      ShowOnFocus="true"
-                                     Delay="100"
                                      Arrow="true"
                                      Placement="Placement.Top">
                              <ChildContent>

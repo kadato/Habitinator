@@ -186,10 +186,6 @@ a {
     color: var(--mud-palette-primary);
 }
 
-a:hover, .btn-link:hover {
-    color: var(--mud-palette-primary-darken);
-}
-
 /* Focus ring for auth-page checkboxes (form/button styling lives in auth-pages.css) */
 .form-check-input:focus {
   box-shadow: 0 0 0 0.1rem var(--mud-palette-surface), 0 0 0 var(--space-1) var(--mud-palette-primary);
@@ -482,11 +478,6 @@ a:hover, .btn-link:hover {
     background-color: transparent !important;
 }
 
-.app-header-nav .app-header-nav-slot:not(.app-header-nav-slot--active) .app-header-nav-btn.mud-button-root:hover {
-    color: var(--mud-palette-primary) !important;
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent) !important;
-}
-
 .app-header-nav .app-header-nav-slot--active .app-header-nav-btn.mud-button-filled.mud-button-filled-primary {
     background-color: var(--mud-palette-primary) !important;
     border-color: transparent !important;
@@ -668,12 +659,6 @@ a:hover, .btn-link:hover {
     letter-spacing: 0.04em;
     text-transform: uppercase;
     cursor: pointer;
-    transition: opacity var(--dur-fast) ease, background-color var(--dur-fast) ease;
-}
-
-.undo-toast-btn:hover {
-    opacity: 0.9;
-    background: color-mix(in srgb, var(--mud-palette-error) 88%, var(--mud-palette-black));
 }
 
 /* ── Premium Dialog Styling Overrides ────────────────────────────────────── */
@@ -732,12 +717,6 @@ a:hover, .btn-link:hover {
     margin-top: -0.15rem;
     margin-right: -0.15rem;
     border-radius: var(--radius-md) !important;
-    transition: all var(--dur-normal) ease !important;
-}
-
-.mud-dialog-title .mud-button-close:hover {
-    color: var(--mud-palette-text-primary) !important;
-    background-color: var(--mud-palette-action-hover) !important;
 }
 
 /* ── Activity Day Detail Dialog (Heatmap Details) Redesign ──────────────── */

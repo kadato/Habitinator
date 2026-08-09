@@ -96,10 +96,6 @@
     border-radius: 4px;
 }
 
-    #components-reconnect-modal button:hover {
-        background-color: #1d4ed8;
-    }
-
     #components-reconnect-modal button:active {
         background-color: #2563eb;
     }

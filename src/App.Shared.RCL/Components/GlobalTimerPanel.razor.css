@@ -225,32 +225,6 @@
     }
 }
 
-.timer-clock-icon {
-    flex-shrink: 0;
-    opacity: 0.92;
-    width: 2.15rem;
-    height: 2.15rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.timer-clock-icon--strip {
-    width: 1.85rem;
-    height: 1.85rem;
-}
-
-.timer-clock-icon ::deep svg {
-    width: 2.15rem;
-    height: 2.15rem;
-    display: block;
-}
-
-.timer-clock-icon--strip ::deep svg {
-    width: 1.85rem;
-    height: 1.85rem;
-}
-
 ::deep .timer-value {
     font-family: var(--hab-font-mono) !important;
     font-size: 4rem !important;
@@ -318,26 +292,6 @@
     ::deep .timer-value--strip {
         font-size: 3.0rem !important;
     }
-
-    .timer-clock-icon {
-        width: 2.25rem !important;
-        height: 2.25rem !important;
-    }
-
-    .timer-clock-icon--strip {
-        width: 2.35rem !important;
-        height: 2.35rem !important;
-    }
-
-    .timer-clock-icon ::deep svg {
-        width: 2.25rem !important;
-        height: 2.25rem !important;
-    }
-
-    .timer-clock-icon--strip ::deep svg {
-        width: 2.35rem !important;
-        height: 2.35rem !important;
-    }
 }
 
 /* Collapsible Timer Panel Styles */
@@ -347,17 +301,12 @@
     user-select: none;
     background: color-mix(in srgb, var(--mud-palette-surface) 60%, transparent);
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
-    transition: background-color var(--dur-normal) ease;
     border-radius: var(--radius-xl);
 }
 
 @media (max-width: 959.98px) {
     .timer-mobile-header {
         display: block;
-    }
-
-    .timer-mobile-header:hover {
-        background-color: color-mix(in srgb, var(--mud-palette-action-default) 8%, transparent);
     }
 
     .timer-mobile-header:active {
@@ -406,10 +355,6 @@
 }
 
 @media (max-width: 399.98px) {
-    .timer-clock-icon:not(.timer-clock-icon--strip) {
-        display: none;
-    }
-
     ::deep .timer-value {
         font-size: 2.75rem !important;
     }
@@ -582,10 +527,6 @@
     letter-spacing: 0.01em;
 }
 
-.custom-timer-toggle .toggle-btn:hover {
-    color: var(--mud-palette-text-primary);
-}
-
 .custom-timer-toggle .toggle-btn:active {
     transform: scale(0.97);
 }
@@ -652,12 +593,6 @@
     align-items: center !important;
     justify-content: center !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
-    transition: all var(--dur-normal) cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-::deep .timer-icon-btn:hover:not(:disabled) {
-    transform: translateY(-1.5px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
 ::deep .timer-icon-btn:active:not(:disabled) {

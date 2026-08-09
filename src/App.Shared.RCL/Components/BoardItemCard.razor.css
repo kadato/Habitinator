@@ -25,14 +25,6 @@
         0 1px 0 color-mix(in srgb, var(--mud-palette-surface) 15%, transparent) inset,
         0 4px 16px color-mix(in srgb, var(--mud-palette-black) 16%, transparent),
         0 1px 3px color-mix(in srgb, var(--mud-palette-black) 10%, transparent);
-    transition: border-color 0.12s cubic-bezier(0.16, 1, 0.3, 1),
-                box-shadow 0.12s cubic-bezier(0.16, 1, 0.3, 1),
-                transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
-                opacity 0.12s ease;
-}
-
-.board-card:hover {
-    border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, transparent);
 }
 
 .board-card__head-actions {
@@ -48,12 +40,6 @@
     background: color-mix(in srgb, var(--mud-palette-surface) 40%, var(--mud-palette-background));
     border-color: color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
     box-shadow: none;
-}
-
-.board-card.board-row--done:hover {
-    transform: none;
-    box-shadow: none;
-    border-color: color-mix(in srgb, var(--mud-palette-text-primary) 10%, transparent);
 }
 
 /* Row 1: check/habit and title on the same row so they share one vertical center. */
@@ -145,17 +131,11 @@
     text-align: left;
     outline: none;
     border-radius: 4px;
-    transition: outline 0.1s ease;
 }
 
 .board-card__title:focus-visible {
     outline: 2px solid var(--mud-palette-primary);
     outline-offset: 2px;
-}
-
-.board-card__title:hover {
-    text-decoration: underline;
-    text-underline-offset: 2px;
 }
 
 .board-card__title-text {
@@ -172,10 +152,6 @@
     color: var(--mud-palette-text-secondary) !important;
     margin: 0;
     align-self: center;
-}
-
-.board-card__delete:hover {
-    color: var(--mud-palette-error) !important;
 }
 
 .board-card__notes {
@@ -333,19 +309,11 @@
 }
 
 .board-sq--good {
-    background: #0d9488;
-}
-
-.board-sq--good:hover:not(:disabled) {
-    background: #14b8a6;
+    background: var(--hab-type-habit);
 }
 
 .board-sq--bad {
     background: #b91c1c;
-}
-
-.board-sq--bad:hover:not(:disabled) {
-    background: #dc2626;
 }
 
 .board-check {
@@ -455,9 +423,9 @@
 }
 
 .board-habit-badge--plus {
-    background-color: color-mix(in srgb, #0d9488 12%, transparent);
-    color: #0d9488;
-    border: 1px solid color-mix(in srgb, #0d9488 20%, transparent);
+    background-color: color-mix(in srgb, var(--hab-type-habit) 12%, transparent);
+    color: var(--hab-type-habit);
+    border: 1px solid color-mix(in srgb, var(--hab-type-habit) 20%, transparent);
 }
 
 .board-habit-badge--minus {
@@ -520,11 +488,11 @@
 }
 
 .board-row--habit .board-sq--good {
-    background: linear-gradient(135deg, #0d9488, #0f766e);
+    background: linear-gradient(135deg, var(--hab-type-habit), #0f766e);
 }
 
 .board-row--habit .board-sq--bad {
-    background: linear-gradient(135deg, #e11d48, #be123c);
+    background: linear-gradient(135deg, #b91c1c, #991b1b);
 }
 
 .board-row--habit .board-sq:active:not(:disabled) {

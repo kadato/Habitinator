@@ -1,7 +1,8 @@
 :root {
     color-scheme: light dark;
-    --hab-bg-light: #f8fafc;
-    --hab-bg-dark: #0b0f19;
+    /* Canvas backgrounds follow the MudBlazor theme, fallbacks cover pre-theme rendering (splash screens) */
+    --hab-bg-light: var(--mud-palette-background, #f8fafc);
+    --hab-bg-dark: var(--mud-palette-background, #0b0f19);
 }
 
 /* ── WASM Loading Splash Screen ─────────────────────────────────────────── */
@@ -89,7 +90,7 @@ html.light-theme .wasm-splash__progress {
     width: 5%;
     min-width: 4%;
     max-width: 100%;
-    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    background: var(--hab-brand-gradient);
     border-radius: var(--radius-pill);
     transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -166,7 +167,6 @@ html {
 
 html, body {
     font-family: var(--hab-font-sans);
-    background: var(--mud-palette-background);
     background-color: var(--hab-bg-light);
     color: var(--mud-palette-text-primary);
     -webkit-tap-highlight-color: transparent;

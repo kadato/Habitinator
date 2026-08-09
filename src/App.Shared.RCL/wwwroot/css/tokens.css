@@ -52,4 +52,12 @@
     --z-nav: 1200;
     --z-error: 1000;
     --z-max: 99999;
+
+    /* Item-type accent colors (single source for board, cards, and dialogs) */
+    --hab-type-habit: #0d9488; /* teal-600 */
+    --hab-type-daily: var(--mud-palette-primary);
+    --hab-type-todo: #f59e0b; /* amber-500 */
+
+    /* Brand gradient (splash bars and loaders) */
+    --hab-brand-gradient: linear-gradient(90deg, #3b82f6, #8b5cf6);
 }

@@ -3,6 +3,11 @@
     border-color: var(--mud-palette-divider);
 }
 
+.auth-landing__actions ::deep .mud-button-filled:hover {
+    box-shadow: none !important;
+    background-color: var(--mud-palette-primary) !important;
+}
+
 .guest-login-paper {
     background: transparent;
     border: none;

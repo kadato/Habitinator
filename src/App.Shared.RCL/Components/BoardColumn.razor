@@ -116,8 +116,7 @@
             </MudButton>
         }
         <div @onkeydown="OnDraftKeyAsync" class="board-add-wrap">
-            <MudTextField @ref="_draftField"
-                          @bind-Value="_draft"
+            <MudTextField @bind-Value="_draft"
                           Class="board-add-field"
                           Placeholder="@GetAddPlaceholder()"
                           aria-label="@GetAddPlaceholder()"

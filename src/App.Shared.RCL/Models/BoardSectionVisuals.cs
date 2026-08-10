@@ -4,17 +4,6 @@ namespace App.Shared.RCL.Models;
 
 public static class BoardSectionVisuals
 {
-    public static string GetMudIcon(BoardSection section)
-    {
-        return section switch
-        {
-            BoardSection.Habit => Icons.Material.Filled.FitnessCenter,
-            BoardSection.Daily => Icons.Material.Filled.Today,
-            BoardSection.Todo => Icons.Material.Filled.Checklist,
-            _ => Icons.Material.Filled.Label
-        };
-    }
-
     /// <summary>Matches target type string representation.</summary>
     public static string GetMudIconForTargetType(string? targetType)
     {

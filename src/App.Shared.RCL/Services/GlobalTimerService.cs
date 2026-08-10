@@ -280,11 +280,6 @@ public sealed class GlobalTimerService(IClock clock)
         FocusAlertAfter = null;
     }
 
-    public void RestoreFromPersistedStart(DateTimeOffset persistedStartUtc)
-    {
-        _runningSince = persistedStartUtc;
-    }
-
     private void RearmFocusMilestone()
     {
         if (!FocusAlertAfter.HasValue || FocusAlertAfter <= TimeSpan.Zero)

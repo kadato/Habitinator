@@ -1124,14 +1124,4 @@ public partial class BoardColumn : IAsyncDisposable
             () => _sortOrderOverrides[itemId] = sortOrder,
             () => _sortOrderOverrides.Remove(itemId),
             mutation);
-
-    private MudTextField<string>? _draftField;
-
-    public async Task FocusDraftAsync()
-    {
-        if (_draftField is not null)
-        {
-            await _draftField.FocusAsync();
-        }
-    }
 }

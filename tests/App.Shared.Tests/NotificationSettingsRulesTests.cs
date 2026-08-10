@@ -11,13 +11,11 @@ namespace App.Shared.Tests;
 public sealed class TestTimeZoneService : IUserTimeZoneService
 {
     public string? TimeZoneId => "UTC";
-    public int UtcOffsetMinutes => 0;
     public bool IsDetected => true;
     public void SetOverride(string? timeZoneId)
     {
     }
     public DateOnly LocalToday => DateOnly.FromDateTime(DateTime.UtcNow);
-    public DateOnly LocalYesterday => LocalToday.AddDays(-1);
 
     public Task InitializeAsync() => Task.CompletedTask;
     public DateTimeOffset ConvertToLocal(DateTimeOffset utcTime) => utcTime;

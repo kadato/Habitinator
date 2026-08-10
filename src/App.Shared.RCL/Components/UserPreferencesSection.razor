@@ -3,7 +3,6 @@
 @inject IUserPreferencesService PreferencesService
 @inject IUserNotifier Notifier
 @inject IUserTimeZoneService TimeZoneService
-@implements IDisposable
 
 <MudStack Spacing="3">
     @if (ShowTitle)
@@ -236,10 +235,6 @@
         {
             _loading = false;
         }
-    }
-
-    public void Dispose()
-    {
     }
 
     private void ApplyModel(UserPreferences preferences)

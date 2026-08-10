@@ -19,7 +19,6 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
     }
 
     public string? TimeZoneId => _timeZoneId;
-    public int UtcOffsetMinutes => _utcOffsetMinutes;
     public bool IsDetected => _initialized && _timeZoneInfo is not null;
 
     public void SetOverride(string? timeZoneId)
@@ -34,7 +33,6 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
     }
 
     public DateOnly LocalToday => GetLocalDate(_clock.UtcNow);
-    public DateOnly LocalYesterday => GetLocalDate(_clock.UtcNow.AddDays(-1));
 
     public DateTimeOffset ConvertToLocal(DateTimeOffset utcTime)
     {

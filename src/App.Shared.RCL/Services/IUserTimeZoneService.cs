@@ -6,9 +6,6 @@ public interface IUserTimeZoneService
     /// <summary>The detected timezone ID (e.g., "America/New_York"), or null if not detected.</summary>
     string? TimeZoneId { get; }
 
-    /// <summary>The UTC offset in minutes (negative for timezones east of UTC, positive for west).</summary>
-    int UtcOffsetMinutes { get; }
-
     /// <summary>Whether the timezone has been successfully detected.</summary>
     bool IsDetected { get; }
 
@@ -38,11 +35,6 @@ public interface IUserTimeZoneService
     ///     This is used for daily scheduling (when do dailies reset).
     /// </summary>
     DateOnly LocalToday { get; }
-
-    /// <summary>
-    ///     Gets yesterday's date in the user's local timezone.
-    /// </summary>
-    DateOnly LocalYesterday { get; }
 
     /// <summary>
     ///     Converts a local TimeSpan (time-of-day) to UTC time-of-day.

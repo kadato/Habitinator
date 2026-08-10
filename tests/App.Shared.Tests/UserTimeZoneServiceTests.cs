@@ -33,7 +33,6 @@ public sealed class UserTimeZoneServiceTests
         await service.InitializeAsync();
 
         service.TimeZoneId.Should().Be("UTC");
-        service.UtcOffsetMinutes.Should().Be(0);
         service.IsDetected.Should().BeTrue();
     }
 

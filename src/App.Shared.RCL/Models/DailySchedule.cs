@@ -27,23 +27,6 @@ public static class DailySchedule
         return GetLocalDate(tz, clock.UtcNow, dayStartLocalTime);
     }
 
-    /// <summary>
-    ///     Gets yesterday's date in the user's local timezone, or UTC if no timezone service is available.
-    /// </summary>
-    public static DateOnly LocalYesterday(IUserTimeZoneService? tz = null, TimeSpan? dayStartLocalTime = null)
-    {
-        return LocalYesterday(SystemClock.Instance, tz, dayStartLocalTime);
-    }
-
-    /// <summary>
-    ///     Gets yesterday's date in the user's local timezone from the given clock, or UTC if no
-    ///     timezone service is available.
-    /// </summary>
-    public static DateOnly LocalYesterday(IClock clock, IUserTimeZoneService? tz = null, TimeSpan? dayStartLocalTime = null)
-    {
-        return LocalToday(clock, tz, dayStartLocalTime).AddDays(-1);
-    }
-
     private static DateOnly GetLocalDate(IUserTimeZoneService? tz, DateTimeOffset utcNow, TimeSpan? dayStartLocalTime)
     {
         var local = tz is { IsDetected: true }
@@ -60,7 +43,7 @@ public static class DailySchedule
     }
 
     /// <summary>When no start is stored, treat the fallback date as the anchor so a new item is due immediately.</summary>
-    public static DateOnly ResolveStartDateOrToday(DateOnly? dailyStart, DateOnly fallback)
+    private static DateOnly ResolveStartDateOrToday(DateOnly? dailyStart, DateOnly fallback)
     {
         return dailyStart ?? fallback;
     }
@@ -254,11 +237,6 @@ public static class DailySchedule
     public static bool IsDueOnDate(BoardItem daily, DateOnly on)
     {
         return IsScheduledOn(daily, on) && !IsCompleteForDate(daily, on);
-    }
-
-    public static int CountDuesOpen(IReadOnlyList<BoardItem> dailies, DateOnly on)
-    {
-        return dailies.Count(d => IsDueOnDate(d, on));
     }
 
     /// <summary>

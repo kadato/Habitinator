@@ -874,3 +874,15 @@
     font-weight: 600;
     font-size: 0.8rem;
 }
+
+/* To-do repeat interval field */
+.edit-todo-repeat-field {
+    flex: 0 0 6.5rem;
+    max-width: 6.5rem;
+}
+
+.edit-todo-repeat-hint {
+    flex: 1 1 auto;
+    min-width: 0;
+    line-height: 1.4;
+}

@@ -343,7 +343,8 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
             args.Tags,
             args.ChecklistJson,
             args.DueDate,
-            args.SortOrder);
+            args.SortOrder,
+            args.TodoRepeatIntervalDays);
         using HttpRequestMessage req = new(HttpMethod.Put, $"api/board/todos/{itemId}")
         {
             Content = JsonContent.Create(body, options: Serializer)

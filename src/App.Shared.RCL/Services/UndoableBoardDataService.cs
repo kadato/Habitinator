@@ -161,7 +161,8 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
                     item.Tags,
                     item.ChecklistJson,
                     item.TodoDueDate?.ToDateTime(TimeOnly.MinValue),
-                    item.SortOrder),
+                    item.SortOrder,
+                    item.TodoRepeatIntervalDays),
                 CancellationToken.None).ConfigureAwait(false);
             if (item.IsCompleted)
             {
@@ -410,6 +411,10 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         {
             diff["duedate"] = item.TodoDueDate?.ToDateTime(TimeOnly.MinValue);
         }
+        if (item.TodoRepeatIntervalDays != args.TodoRepeatIntervalDays)
+        {
+            diff["repeatdays"] = item.TodoRepeatIntervalDays;
+        }
         DiffChecklist(diff, item.ChecklistJson, args.ChecklistJson);
         return diff;
     }
@@ -546,7 +551,9 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
                 diff.TryGetValue(FieldNotes, out var notes) ? (string?)notes : current.Notes,
                 diff.TryGetValue(FieldTags, out var tags) ? (string?)tags : current.Tags,
                 ApplyChecklistDiff(current.ChecklistJson, diff),
-                diff.TryGetValue("duedate", out var dueDate) ? (DateTime?)dueDate : current.TodoDueDate?.ToDateTime(TimeOnly.MinValue)),
+                diff.TryGetValue("duedate", out var dueDate) ? (DateTime?)dueDate : current.TodoDueDate?.ToDateTime(TimeOnly.MinValue),
+                current.SortOrder,
+                diff.TryGetValue("repeatdays", out var repeatDays) ? (int?)repeatDays : current.TodoRepeatIntervalDays),
             CancellationToken.None);
     }
 

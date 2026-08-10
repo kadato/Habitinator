@@ -33,6 +33,9 @@ public sealed class BoardItemEntity
     /// <summary>UTC date (time ignored) for daily scheduling.</summary>
     public DateTime? DailyStartDate { get; set; }
 
+    /// <summary>When set, completing the to-do advances its due date by this many days (recurring to-do).</summary>
+    public int? TodoRepeatIntervalDays { get; set; }
+
     public int DailyRepeatType { get; set; }
 
     public int DailyRepeatInterval { get; set; } = 1;

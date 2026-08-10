@@ -38,5 +38,6 @@ public record EditTodoDialogResult(
     string? Notes,
     string? Tags,
     string? ChecklistJson,
-    DateTime? DueDate
+    DateTime? DueDate,
+    int? RepeatIntervalDays = null
 );

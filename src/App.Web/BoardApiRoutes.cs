@@ -329,6 +329,7 @@ internal static class BoardApiRoutes
                             DailyChecklistJson.Serialize(DailyChecklistJson.Parse(request.ChecklistJson)),
                             request.DueDate,
                             request.SortOrder,
+                            request.TodoRepeatIntervalDays,
                             expected),
                         ct);
                     return MutationToOutcome(r);

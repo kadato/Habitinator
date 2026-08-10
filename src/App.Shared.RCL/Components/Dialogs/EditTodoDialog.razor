@@ -100,6 +100,21 @@
                                Clearable="true"
                                Margin="Margin.Dense"/>
 
+                <MudText Typo="Typo.caption" Class="edit-daily-label-body d-block mb-1 mt-2">Repeat every (optional)</MudText>
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                    <MudNumericField T="int"
+                                     @bind-Value="_repeatIntervalDays"
+                                     Variant="Variant.Outlined"
+                                     Class="edit-todo-repeat-field"
+                                     Min="0"
+                                     Max="365"
+                                     Margin="Margin.Dense"
+                                     Immediate="true"/>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="edit-todo-repeat-hint">
+                        days. Completing the to-do moves its due date forward and it comes back when due again. 0 = once.
+                    </MudText>
+                </MudStack>
+
                 <fieldset class="mb-3" style="border: none; padding: 0; margin: 0;">
                 <legend class="edit-daily-label-body d-block mb-1 mt-2" style="font-size: 0.75rem;">Tags</legend>
                 <div class="habit-tag-picker @(_tagPickerOpen ? "habit-tag-picker--open" : null)"
@@ -233,6 +248,7 @@
     private List<ChecklistRow> _checklistRows = [];
     private bool _checklistOpen = true;
     private DateTime? _dueDate;
+    private int _repeatIntervalDays;
 
     protected override async Task OnInitializedAsync()
     {
@@ -241,6 +257,7 @@
         _notes = Item.Notes;
         _selectedTags = BoardTagUtil.ParseTags(Item.Tags).ToList();
         _dueDate = Item.TodoDueDate?.ToDateTime(TimeOnly.MinValue);
+        _repeatIntervalDays = Math.Clamp(Item.TodoRepeatIntervalDays ?? 0, 0, 365);
         _checklistRows = DailyChecklistJson.Parse(Item.ChecklistJson)
             .Select(x => new ChecklistRow { Id = x.Id, Text = x.Text, IsDone = x.IsDone })
             .ToList();
@@ -460,7 +477,8 @@
             string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim(),
             tagsPayload,
             checklistPayload,
-            due
+            due,
+            _repeatIntervalDays > 0 ? _repeatIntervalDays : null
         );
         MudDialog.Close(DialogResult.Ok(result));
     }
@@ -469,7 +487,7 @@
     {
         var result = new EditTodoDialogResult(
             EditDialogAction.Archive,
-            "", null, null, "", null
+            "", null, null, "", null, null
         );
         MudDialog.Close(DialogResult.Ok(result));
     }
@@ -478,7 +496,7 @@
     {
         var result = new EditTodoDialogResult(
             EditDialogAction.Delete,
-            "", null, null, "", null
+            "", null, null, "", null, null
         );
         MudDialog.Close(DialogResult.Ok(result));
     }

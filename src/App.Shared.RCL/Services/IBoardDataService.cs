@@ -22,6 +22,7 @@ public sealed record UpdateTodoArgs(
     string? ChecklistJson,
     DateTime? DueDate,
     double? SortOrder = null,
+    int? TodoRepeatIntervalDays = null,
     DateTimeOffset? ExpectedUpdatedAtUtc = null);
 
 public sealed record UpdateDailyArgs(

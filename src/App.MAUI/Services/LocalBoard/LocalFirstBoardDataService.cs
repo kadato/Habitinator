@@ -1691,6 +1691,13 @@ public sealed partial class LocalFirstBoardDataService(
                 cancellationToken);
         }
 
+        if (!boardColumns.Contains("TodoRepeatIntervalDays"))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE BoardItems ADD COLUMN TodoRepeatIntervalDays INTEGER NULL;",
+                cancellationToken);
+        }
+
         if (!metaColumns.Contains("LastSyncCursorUtc"))
         {
             await db.Database.ExecuteSqlRawAsync(

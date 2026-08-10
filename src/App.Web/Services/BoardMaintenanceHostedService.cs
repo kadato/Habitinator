@@ -67,12 +67,27 @@ public sealed class BoardMaintenanceHostedService(
             .Where(x => x.DeletedAtUtc != null && x.DeletedAtUtc < tombCutoff)
             .ExecuteDeleteAsync(ct);
 
-        if (idemRemoved > 0 || tombRemoved > 0)
+        // Recurring to-dos: when their (advanced) due date has begun, bring them back to the active
+        // board. Due dates are stored as UTC midnight of the user's local date, so `due <= now`
+        // means the local date has started in every time zone.
+        var recurringRolledBack = await db.BoardItems
+            .Where(x => x.TodoRepeatIntervalDays != null
+                        && x.TodoRepeatIntervalDays > 0
+                        && x.Section == App.Shared.RCL.Models.BoardSection.Todo
+                        && x.IsCompleted
+                        && x.DailyStartDate != null
+                        && x.DailyStartDate <= DateTimeOffset.UtcNow)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(x => x.IsCompleted, false),
+                ct);
+
+        if (idemRemoved > 0 || tombRemoved > 0 || recurringRolledBack > 0)
         {
             logger.LogInformation(
-                "Board maintenance: removed {Idem} idempotency rows, {Tomb} tombstoned items.",
+                "Board maintenance: removed {Idem} idempotency rows, {Tomb} tombstoned items, rolled {Recurring} recurring to-dos back to active.",
                 idemRemoved,
-                tombRemoved);
+                tombRemoved,
+                recurringRolledBack);
         }
     }
 }

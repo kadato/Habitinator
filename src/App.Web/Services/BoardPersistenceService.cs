@@ -663,6 +663,9 @@ public sealed class BoardPersistenceService(
                         ? null
                         : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(args.ChecklistJson));
                     entity.DailyStartDate = dueUtc;
+                    entity.TodoRepeatIntervalDays = args.TodoRepeatIntervalDays is > 0
+                        ? Math.Min(365, args.TodoRepeatIntervalDays.Value)
+                        : null;
 
                     await UpdateSortOrderIfNeededAsync(userId, BoardSection.Todo, entity, args.SortOrder, cancellationToken);
                     return true;
@@ -1086,6 +1089,7 @@ public sealed class BoardPersistenceService(
             entity.ChecklistJson,
             lastCompleted,
             todoDue,
+            entity.TodoRepeatIntervalDays,
             entity.UpdatedAtUtc,
             entity.CreatedAtUtc,
             entity.SortOrder,

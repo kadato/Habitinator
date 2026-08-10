@@ -35,7 +35,8 @@ public sealed record TodoUpdateRequest(
     [StringLength(500)] string? Tags,
     [StringLength(8000)] string? ChecklistJson,
     DateTime? DueDate,
-    double? SortOrder = null);
+    double? SortOrder = null,
+    int? TodoRepeatIntervalDays = null);
 
 public sealed record BoardSectionRequest(BoardSection Section);
 

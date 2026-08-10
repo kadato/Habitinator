@@ -3,7 +3,6 @@ using System.Security.Claims;
 using App.Shared.RCL.Models;
 using App.Web.Auth;
 using App.Web.Data;
-using App.Web.Models;
 using App.Web.Services;
 
 using Microsoft.AspNetCore.Identity;
@@ -30,7 +29,6 @@ internal static class AuthApiRoutes
     {
         endpoints.MapPost("/api/auth/login", LoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapPost("/api/auth/guest-jwt", GuestJwtLoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
-        endpoints.MapPost("/api/auth/logout", LogoutAsync).RequireAuthorization().DisableAntiforgery();
         endpoints.MapPost("/api/auth/guest-login", GuestLoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapPost("/api/auth/cookie-login", CookieLoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapPost("/api/auth/cookie-logout", CookieLogoutAsync).RequireAuthorization().DisableAntiforgery();
@@ -169,12 +167,6 @@ internal static class AuthApiRoutes
         return Results.Ok(new LoginResponse(token, user.Email ?? string.Empty));
     }
 
-    private static async Task<IResult> LogoutAsync(SignInManager<ApplicationUser> signInManager)
-    {
-        await signInManager.SignOutAsync();
-        return Results.Ok(new { message = "Logged out." });
-    }
-
     private static async Task<IResult> GuestLoginAsync(
         HttpContext httpContext,
         SignInManager<ApplicationUser> signInManager,
@@ -241,7 +233,7 @@ internal static class AuthApiRoutes
         SignInManager<ApplicationUser> signInManager)
     {
         await signInManager.SignOutAsync();
-        context.Response.Cookies.Delete("habitinator_theme");
+        context.Response.Cookies.Delete(ThemeCookie.Name);
         return Results.LocalRedirect("/");
     }
 
@@ -272,7 +264,7 @@ internal static class AuthApiRoutes
         var result = await userManager.ChangePasswordAsync(appUser, body.CurrentPassword, body.NewPassword);
         if (!result.Succeeded)
         {
-            return Results.BadRequest();
+            return Results.BadRequest(new { detail = "Password change failed. Check your current password." });
         }
 
         await signInManager.RefreshSignInAsync(appUser);
@@ -313,7 +305,7 @@ internal static class AuthApiRoutes
         var result = await userManager.DeleteAsync(appUser);
         if (!result.Succeeded)
         {
-            return Results.BadRequest();
+            return Results.BadRequest(new { detail = "Account could not be deleted. Try again." });
         }
 
         await signInManager.SignOutAsync();

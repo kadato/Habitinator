@@ -68,7 +68,7 @@ public sealed class WebUserPreferencesService(
         try
         {
             var httpContext = httpContextAccessor.HttpContext;
-            if (httpContext is not null && httpContext.Request.Cookies.TryGetValue("habitinator_theme", out var themeCookie))
+            if (httpContext is not null && httpContext.Request.Cookies.TryGetValue(ThemeCookie.Name, out var themeCookie))
             {
                 if (themeCookie == "light")
                 {

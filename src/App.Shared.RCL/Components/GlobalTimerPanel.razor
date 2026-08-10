@@ -8,7 +8,7 @@
          @onkeydown="OnMobileHeaderKeyDown"
          role="button"
          tabindex="0"
-         aria-expanded="@AriaExpanded"
+         @attributes="MobileHeaderAria"
          aria-label="Toggle timer panel">
         <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="w-100 px-3 py-2">
             <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="min-w-0 flex-grow-1">
@@ -157,12 +157,13 @@
         }
         else
         {
-            <div class="timer-compact timer-compact--idle">                <div class="timer-compact__left-col">
+            <div class="timer-compact timer-compact--idle">
+                <div class="timer-compact__left-col">
                     <div class="custom-timer-toggle" role="group" aria-label="Timer mode selection">
                         <button type="button" 
                                 class="@StopwatchToggleClass" 
                                 @onclick="() => OnPomodoroModeToggleChanged(false)"
-                                aria-pressed="@(!TimerService.PomodoroModeEnabled ? "true" : "false")"
+                                @attributes="StopwatchToggleAria"
                                 aria-label="Stopwatch mode">
                             <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Medium" aria-hidden="true"/>
                             <span class="toggle-btn-label">Stopwatch</span>
@@ -170,7 +171,7 @@
                         <button type="button" 
                                 class="@PomodoroToggleClass" 
                                 @onclick="() => OnPomodoroModeToggleChanged(true)"
-                                aria-pressed="@(TimerService.PomodoroModeEnabled ? "true" : "false")"
+                                @attributes="PomodoroToggleAria"
                                 aria-label="Pomodoro mode">
                             <MudIcon Icon="@Icons.Material.Filled.Alarm" Size="Size.Medium" aria-hidden="true"/>
                             <span class="toggle-btn-label">Pomodoro</span>
@@ -192,13 +193,6 @@
                                    OnClick="Start"
                                    Disabled="@(!CanStart)"
                                    aria-label="Start focus session" />
-                    <MudIconButton Variant="Variant.Filled"
-                                   Color="Color.Warning"
-                                   Icon="@Icons.Material.Filled.Pause"
-                                   Class="timer-icon-btn timer-icon-btn--pause"
-                                   OnClick="Pause"
-                                   Disabled="@(!TimerService.IsRunning)"
-                                   aria-label="Pause timer" />
                     <MudIconButton Variant="Variant.Filled"
                                    Color="Color.Primary"
                                    Icon="@Icons.Material.Filled.Stop"
@@ -246,7 +240,18 @@
         TimerService.IsRunning || TimerService.Elapsed > TimeSpan.Zero;
 
     private string MobileHeaderClass => _expanded ? "timer-mobile-header timer-mobile-header--expanded" : "timer-mobile-header timer-mobile-header--collapsed";
-    private string AriaExpanded => _expanded ? "true" : "false";
+    private Dictionary<string, object> MobileHeaderAria => new()
+    {
+        { "aria-expanded", _expanded ? "true" : "false" }
+    };
+    private Dictionary<string, object> StopwatchToggleAria => new()
+    {
+        { "aria-pressed", TimerService.PomodoroModeEnabled ? "false" : "true" }
+    };
+    private Dictionary<string, object> PomodoroToggleAria => new()
+    {
+        { "aria-pressed", TimerService.PomodoroModeEnabled ? "true" : "false" }
+    };
     private static string GetProgressSegmentClass(bool completed) => completed ? "progress-segment completed" : "progress-segment";
     private string StopwatchToggleClass => !TimerService.PomodoroModeEnabled ? "toggle-btn active" : "toggle-btn";
     private string PomodoroToggleClass => TimerService.PomodoroModeEnabled ? "toggle-btn active" : "toggle-btn";

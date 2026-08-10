@@ -30,7 +30,7 @@
         <nav class="@navClass" role="navigation" aria-label="Main navigation">
             @MobileNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
             @MobileNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Stats")
-            @MobileNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Notifications, "Settings")
+            @MobileNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Settings, "Settings")
         </nav>
     }
 }
@@ -41,7 +41,7 @@ else if (BottomBar)
         <nav class="@navClass" role="navigation" aria-label="Main navigation">
             @BottomNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
             @BottomNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Statistics")
-            @BottomNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Notifications, "Settings")
+            @BottomNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Settings, "Settings")
         </nav>
     }
 }
@@ -54,7 +54,7 @@ else
             <AuthorizeView>
                 <Authorized>
                     @HeaderNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Statistics")
-                    @HeaderNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Notifications, "Settings")
+                    @HeaderNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Settings, "Settings")
                 </Authorized>
             </AuthorizeView>
         }

@@ -15,7 +15,7 @@
             <div class="settings-section-switcher" role="tablist" aria-label="Settings sections">
                 <button type="button"
                         role="tab"
-                        aria-selected="@(_settingsIndex == 0 ? "true" : "false")"
+                        @attributes="GetTabAria(0)"
                         class="@GetSwitcherClass(0)"
                         @onclick="() => _settingsIndex = 0">
                     <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small"/>
@@ -23,7 +23,7 @@
                 </button>
                 <button type="button"
                         role="tab"
-                        aria-selected="@(_settingsIndex == 1 ? "true" : "false")"
+                        @attributes="GetTabAria(1)"
                         class="@GetSwitcherClass(1)"
                         @onclick="() => _settingsIndex = 1">
                     <MudIcon Icon="@Icons.Material.Filled.Notifications" Size="Size.Small"/>
@@ -31,7 +31,7 @@
                 </button>
                 <button type="button"
                         role="tab"
-                        aria-selected="@(_settingsIndex == 2 ? "true" : "false")"
+                        @attributes="GetTabAria(2)"
                         class="@GetSwitcherClass(2)"
                         @onclick="() => _settingsIndex = 2">
                     <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small"/>
@@ -63,4 +63,8 @@
     private static readonly string ButtonActive = "settings-section-switcher__btn settings-section-switcher__btn--active";
 
     private string GetSwitcherClass(int index) => _settingsIndex == index ? ButtonActive : ButtonBase;
+    private Dictionary<string, object> GetTabAria(int index) => new()
+    {
+        { "aria-selected", _settingsIndex == index ? "true" : "false" }
+    };
 }

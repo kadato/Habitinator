@@ -3,7 +3,9 @@ namespace App.Shared.RCL.Models;
 /// <summary>User profile preferences that affect display and scheduling.</summary>
 public sealed class UserPreferences
 {
-    public string DateFormat { get; set; } = "yyyy/MM/dd";
+    public const string DefaultDateFormat = "yyyy/MM/dd";
+
+    public string DateFormat { get; set; } = DefaultDateFormat;
 
     /// <summary>Local time-of-day when the user considers a new day to start.</summary>
     public TimeSpan DayStartLocalTime { get; set; } = TimeSpan.Zero;

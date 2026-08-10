@@ -437,23 +437,13 @@
     protected override void OnParametersSet()
     {
         RebuildSessionTargetOptions();
-        var key = (TimerService.TargetId, TimerService.TargetType, TimerService.BoardItemId);
-        if (!_sessionTargetFieldInitialized || key != _lastSyncedSessionTarget)
-        {
-            _lastSyncedSessionTarget = key;
-            _sessionTargetFieldInitialized = true;
-            _sessionTargetText = FormatTargetForField(TimerService);
-        }
+        var wasRunning = _wasRunning;
+        SyncTimerFieldsFromServiceIfNeeded();
 
-        SyncFocusDurationFromServiceIfChanged();
-
-        if (TimerService.IsRunning && !_wasRunning)
+        if (TimerService.IsRunning && !wasRunning)
         {
-            _settingsExpanded = false;
             _expanded = true; // Auto-expand when timer starts
         }
-
-        _wasRunning = TimerService.IsRunning;
     }
 
     private void SyncFocusDurationFromServiceIfChanged()
@@ -472,7 +462,7 @@
     private void SyncTimerFieldsFromServiceIfNeeded()
     {
         var key = (TimerService.TargetId, TimerService.TargetType, TimerService.BoardItemId);
-        if (key != _lastSyncedSessionTarget)
+        if (!_sessionTargetFieldInitialized || key != _lastSyncedSessionTarget)
         {
             _lastSyncedSessionTarget = key;
             _sessionTargetFieldInitialized = true;

@@ -100,7 +100,7 @@ public static class DailyReminderText
 
     private static string FormatDate(DateOnly date, string? dateFormat)
     {
-        var format = string.IsNullOrWhiteSpace(dateFormat) ? "yyyy/MM/dd" : dateFormat;
+        var format = string.IsNullOrWhiteSpace(dateFormat) ? UserPreferences.DefaultDateFormat : dateFormat;
         return date.ToString(format, CultureInfo.InvariantCulture);
     }
 }

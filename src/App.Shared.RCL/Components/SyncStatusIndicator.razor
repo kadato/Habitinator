@@ -104,7 +104,7 @@
         if (BoardSync.IsSyncing)
             return "Syncing...";
         if (BoardSync.LastSyncedUtc is { } syncedAt)
-            return $"Synced at {syncedAt.LocalDateTime.ToString("t")}";
+            return $"Synced at {DateFormatService.Format(syncedAt.LocalDateTime)}";
         return "Not synced";
     }
 }

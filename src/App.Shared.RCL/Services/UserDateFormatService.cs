@@ -10,7 +10,7 @@ public sealed class UserDateFormatService : IUserDateFormatService, IDisposable
 {
     private readonly IUserPreferencesService _preferencesService;
     private readonly ILogger<UserDateFormatService> _logger;
-    private string _dateFormat = UserPreferences.CreateDefault().DateFormat;
+    private string _dateFormat = UserPreferences.DefaultDateFormat;
     private bool _initialized;
 
     public UserDateFormatService(IUserPreferencesService preferencesService, ILogger<UserDateFormatService> logger)
@@ -55,7 +55,7 @@ public sealed class UserDateFormatService : IUserDateFormatService, IDisposable
         return dateTimeOffset.ToString($"{EffectiveFormat} HH:mm", CultureInfo.InvariantCulture);
     }
 
-    private string EffectiveFormat => _initialized ? _dateFormat : UserPreferences.CreateDefault().DateFormat;
+    private string EffectiveFormat => _initialized ? _dateFormat : UserPreferences.DefaultDateFormat;
 
     private void OnPreferencesChanged(object? sender, EventArgs e)
     {
@@ -72,7 +72,7 @@ public sealed class UserDateFormatService : IUserDateFormatService, IDisposable
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Failed to refresh date format from preferences; using default.");
-            _dateFormat = UserPreferences.CreateDefault().DateFormat;
+            _dateFormat = UserPreferences.DefaultDateFormat;
         }
     }
 
@@ -80,7 +80,7 @@ public sealed class UserDateFormatService : IUserDateFormatService, IDisposable
     {
         if (string.IsNullOrWhiteSpace(format))
         {
-            return UserPreferences.CreateDefault().DateFormat;
+            return UserPreferences.DefaultDateFormat;
         }
 
         try
@@ -91,7 +91,7 @@ public sealed class UserDateFormatService : IUserDateFormatService, IDisposable
         }
         catch (FormatException)
         {
-            return UserPreferences.CreateDefault().DateFormat;
+            return UserPreferences.DefaultDateFormat;
         }
     }
 

@@ -1,0 +1,113 @@
+@inject IUserNotifier Notifier
+@inject IOnboardingStore OnboardingStore
+
+<MudDialog Class="onboarding-dialog"
+           ContentClass="onboarding-dialog__content"
+           Style="width: min(26rem, calc(100vw - 2rem));">
+    <DialogContent>
+        <div class="onboarding-shell">
+            <div class="onboarding-header">
+                <div class="onboarding-logo" aria-hidden="true">
+                    <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Medium"/>
+                </div>
+                <MudText Typo="Typo.h6" Class="font-weight-bold mb-1">Welcome to Habitinator</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Track habits, dailies and to-dos on one board, and stay focused with the timer.
+                </MudText>
+            </div>
+
+            <div class="onboarding-steps">
+                <div class="onboarding-step">
+                    <div class="onboarding-step__icon onboarding-step__icon--board" aria-hidden="true">
+                        <MudIcon Icon="@Icons.Material.Filled.SpaceDashboard" Size="Size.Small"/>
+                    </div>
+                    <div class="onboarding-step__body">
+                        <MudText Typo="Typo.subtitle2" Class="font-weight-bold">Build your board</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Habits count reps, dailies run on schedules with streaks, to-dos carry due dates and checklists.
+                        </MudText>
+                    </div>
+                </div>
+                <div class="onboarding-step">
+                    <div class="onboarding-step__icon onboarding-step__icon--timer" aria-hidden="true">
+                        <MudIcon Icon="@Icons.Material.Filled.Alarm" Size="Size.Small"/>
+                    </div>
+                    <div class="onboarding-step__body">
+                        <MudText Typo="Typo.subtitle2" Class="font-weight-bold">Focus with the timer</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Run a stopwatch or a full pomodoro cycle on any board item and log the session.
+                        </MudText>
+                    </div>
+                </div>
+                <div class="onboarding-step">
+                    <div class="onboarding-step__icon onboarding-step__icon--stats" aria-hidden="true">
+                        <MudIcon Icon="@Icons.Material.Filled.BarChart" Size="Size.Small"/>
+                    </div>
+                    <div class="onboarding-step__body">
+                        <MudText Typo="Typo.subtitle2" Class="font-weight-bold">Watch your consistency</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Heatmaps, streaks and focus-time graphs show how your routines are building.
+                        </MudText>
+                    </div>
+                </div>
+            </div>
+
+            <div class="onboarding-actions">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           FullWidth="true"
+                           Size="Size.Medium"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="CreateFirstHabitAsync">
+                    Create your first habit
+                </MudButton>
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Default"
+                           FullWidth="true"
+                           Size="Size.Medium"
+                           OnClick="DismissAsync">
+                    Explore the board first
+                </MudButton>
+            </div>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public EventCallback OnCreateFirstHabit { get; set; }
+
+    private async Task CreateFirstHabitAsync()
+    {
+        try
+        {
+            await OnboardingStore.MarkCompletedAsync();
+        }
+        catch (Exception)
+        {
+            // Ignored; onboarding may show again on the next visit
+        }
+
+        if (OnCreateFirstHabit.HasDelegate)
+        {
+            await OnCreateFirstHabit.InvokeAsync();
+        }
+
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private async Task DismissAsync()
+    {
+        try
+        {
+            await OnboardingStore.MarkCompletedAsync();
+        }
+        catch (Exception)
+        {
+            // Ignored; onboarding may show again on the next visit
+        }
+
+        MudDialog.Close(DialogResult.Ok(false));
+    }
+}

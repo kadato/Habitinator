@@ -15,6 +15,7 @@
 @inject IInitialBoardLoadGate InitialBoardLoad
 @inject ConflictResolutionService ConflictResolution
 @inject IUserNotifier Notifier
+@inject IOnboardingStore OnboardingStore
 @inject PersistentComponentState ApplicationState
 
 
@@ -65,7 +66,8 @@
                                       AdornmentIcon="@Icons.Material.Filled.Search"
                                       Class="board-search-field board-search-pill w-100"
                                       InputType="InputType.Text"
-                                      Immediate="true"/>
+                                      Immediate="true"
+                                      Clearable="true"/>
 
                     </div>
                     <div class="board-tags-menu-activator">
@@ -156,31 +158,40 @@
                 <div class="board-section-switcher" role="tablist" aria-label="Board sections">
                     <button type="button"
                             role="tab"
-                            aria-selected="@GetAriaSelected(0)"
+                            id="board-tab-0"
+                            @attributes="GetTabAria(0)"
+                            aria-controls="board-tab-panel-0"
                             class="@GetSectionSwitcherClass(0)"
-                            @onclick="() => _mobileSectionIndex = 0">
+                            @onclick="() => _mobileSectionIndex = 0"
+                            @onkeydown="OnMobileSectionKeyDown">
                         <span class="board-section-switcher__label">Habits</span>
                         <span class="board-section-switcher__count">@FilteredHabits.Count</span>
                     </button>
                     <button type="button"
                             role="tab"
-                            aria-selected="@GetAriaSelected(1)"
+                            id="board-tab-1"
+                            @attributes="GetTabAria(1)"
+                            aria-controls="board-tab-panel-1"
                             class="@GetSectionSwitcherClass(1)"
-                            @onclick="() => _mobileSectionIndex = 1">
+                            @onclick="() => _mobileSectionIndex = 1"
+                            @onkeydown="OnMobileSectionKeyDown">
                         <span class="board-section-switcher__label">Dailies</span>
                         <span class="board-section-switcher__count">@DailiesDueOpenCount</span>
                     </button>
                     <button type="button"
                             role="tab"
-                            aria-selected="@GetAriaSelected(2)"
+                            id="board-tab-2"
+                            @attributes="GetTabAria(2)"
+                            aria-controls="board-tab-panel-2"
                             class="@GetSectionSwitcherClass(2)"
-                            @onclick="() => _mobileSectionIndex = 2">
+                            @onclick="() => _mobileSectionIndex = 2"
+                            @onkeydown="OnMobileSectionKeyDown">
                         <span class="board-section-switcher__label">To-dos</span>
                         <span class="board-section-switcher__count">@OpenTodoCount</span>
                     </button>
                 </div>
 
-                <div class="board-section-tab-content">
+                <div class="board-section-tab-content" id="board-tab-panel-@_mobileSectionIndex" role="tabpanel" aria-labelledby="board-tab-@_mobileSectionIndex">
                     @if (_mobileSectionIndex == 0)
                     {
                         <BoardColumn Section="BoardSection.Habit"
@@ -283,6 +294,7 @@
     private readonly HashSet<string> _selectedFilterTags = new(StringComparer.OrdinalIgnoreCase);
     private bool _dailyRetroSessionOffered;
     private bool _dailyRetroClientReady;
+    private bool _onboardingOffered;
     private bool _boardClientScriptsStarted;
     private bool _shortcutsEnabled = true;
     private DotNetObjectReference<BoardRemoteNotifyBridge>? _visibilityRef;
@@ -312,8 +324,29 @@
             ? "board-trigger-btn board-trigger-btn--active"
             : "board-trigger-btn";
 
-    private string GetAriaSelected(int index) =>
-        index == _mobileSectionIndex ? "true" : "false";
+    private Dictionary<string, object> GetTabAria(int index) => new()
+    {
+        { "aria-selected", index == _mobileSectionIndex ? "true" : "false" },
+        { "tabindex", index == _mobileSectionIndex ? 0 : -1 }
+    };
+
+    private void OnMobileSectionKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is not ("ArrowLeft" or "ArrowRight" or "Home" or "End"))
+        {
+            return;
+        }
+
+        var next = e.Key switch
+        {
+            "ArrowLeft" => (_mobileSectionIndex + 2) % 3,
+            "ArrowRight" => (_mobileSectionIndex + 1) % 3,
+            "Home" => 0,
+            _ => 2
+        };
+        _mobileSectionIndex = next;
+        StateHasChanged();
+    }
 
     private IReadOnlyList<string> GetAllTagNamesForMenu()
     {
@@ -510,6 +543,7 @@
             _dailyRetroClientReady = true;
             _ = RefreshStreaksAsync();
             await TryOpenDailyYesterdayRetroIfNeededAsync();
+            await TryOpenOnboardingIfNeededAsync();
         }
         catch (JSDisconnectedException)
         {
@@ -651,6 +685,11 @@
             return true;
         }
 
+        if (BoardTagUtil.ParseTags(item.Tags).Any(tag => tag.Contains(q, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
         return false;
     }
 
@@ -765,6 +804,51 @@
         catch (Exception)
         {
             _dailyRetroSessionOffered = false;
+        }
+    }
+
+    private async Task TryOpenOnboardingIfNeededAsync()
+    {
+        if (_onboardingOffered)
+        {
+            return;
+        }
+
+        if (Habits.Count > 0 || Dailies.Count > 0 || Todos.Count > 0)
+        {
+            _onboardingOffered = true;
+            return;
+        }
+
+        _onboardingOffered = true;
+        try
+        {
+            if (await OnboardingStore.IsCompletedAsync())
+            {
+                return;
+            }
+
+            var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Small,
+                FullWidth = false,
+                CloseButton = false,
+                CloseOnEscapeKey = true,
+                NoHeader = true
+            };
+            var parameters = new DialogParameters<OnboardingDialog>
+            {
+                {
+                    x => x.OnCreateFirstHabit,
+                    EventCallback.Factory.Create(this, () => CreateItemPublicAsync(BoardSection.Habit))
+                }
+            };
+
+            await DialogService.ShowAsync<OnboardingDialog>(string.Empty, parameters, options);
+        }
+        catch (Exception)
+        {
+            _onboardingOffered = false;
         }
     }
 
@@ -933,15 +1017,96 @@
             if (item is not null)
             {
                 await OnBoardChanged();
-                if (section == BoardSection.Habit) await OpenEditHabitPublicAsync(item);
-                else if (section == BoardSection.Daily) await OpenEditDailyPublicAsync(item);
-                else if (section == BoardSection.Todo) await OpenEditTodoPublicAsync(item);
+                var result = await OpenItemEditorForCreatedAsync(section, item);
+                if (result is { Canceled: false, Data: not null })
+                {
+                    await ApplyCreatedItemEditAsync(section, item.Id, result.Data);
+                }
+                else if (result is { Canceled: true })
+                {
+                    var current = await BoardDataService.GetItemAsync(item.Id);
+                    if (current is not null && current.Title == item.Title)
+                    {
+                        await BoardDataService.DeleteItemAsync(section, item.Id);
+                    }
+                }
+
+                await OnBoardChanged();
             }
         }
         catch (Exception)
         {
             await Notifier.NotifyAsync("Could not create item.", Severity.Error);
         }
+    }
+
+    private async Task ApplyCreatedItemEditAsync(BoardSection section, Guid itemId, object data)
+    {
+        if (section == BoardSection.Habit && data is EditHabitDialogResult h)
+        {
+            await BoardDataService.UpdateHabitAsync(
+                itemId,
+                new UpdateHabitArgs(
+                    h.Title,
+                    h.Notes,
+                    h.Tags,
+                    h.TrackPlus,
+                    h.TrackMinus,
+                    h.ResetPeriod,
+                    h.Counter,
+                    h.NegativeCounter,
+                    h.ChecklistJson));
+        }
+        else if (section == BoardSection.Daily && data is EditDailyDialogResult d)
+        {
+            await BoardDataService.UpdateDailyAsync(
+                itemId,
+                new UpdateDailyArgs(
+                    d.Title,
+                    d.Notes,
+                    d.Tags,
+                    d.StartDate,
+                    d.Repeat,
+                    d.RepeatInterval,
+                    d.ChecklistJson,
+                    d.Streak));
+        }
+        else if (section == BoardSection.Todo && data is EditTodoDialogResult t)
+        {
+            await BoardDataService.UpdateTodoAsync(
+                itemId,
+                new UpdateTodoArgs(
+                    t.Title,
+                    t.Notes,
+                    t.Tags,
+                    t.ChecklistJson,
+                    t.DueDate,
+                    TodoRepeatIntervalDays: t.RepeatIntervalDays));
+        }
+    }
+
+    private async Task<DialogResult?> OpenItemEditorForCreatedAsync(BoardSection section, BoardItem item)
+    {
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = false,
+            CloseButton = false,
+            CloseOnEscapeKey = true,
+            NoHeader = true
+        };
+
+        IDialogReference dialog = section switch
+        {
+            BoardSection.Habit => await DialogService.ShowAsync<EditHabitDialog>(
+                string.Empty, new DialogParameters<EditHabitDialog> { { x => x.Item, item } }, options),
+            BoardSection.Daily => await DialogService.ShowAsync<EditDailyDialog>(
+                string.Empty, new DialogParameters<EditDailyDialog> { { x => x.Item, item } }, options),
+            _ => await DialogService.ShowAsync<EditTodoDialog>(
+                string.Empty, new DialogParameters<EditTodoDialog> { { x => x.Item, item } }, options)
+        };
+
+        return await dialog.Result;
     }
 
 

@@ -1,0 +1,81 @@
+.onboarding-dialog__content {
+    padding: 0 !important;
+}
+
+.onboarding-shell {
+    padding: var(--space-5);
+}
+
+.onboarding-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+    margin-bottom: var(--space-4);
+}
+
+.onboarding-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--radius-pill);
+    background: var(--hab-brand-gradient);
+    color: #fff;
+    margin-bottom: var(--space-2);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--mud-palette-primary) 35%, transparent);
+}
+
+.onboarding-steps {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+
+.onboarding-step {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: var(--space-3);
+}
+
+.onboarding-step__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+
+.onboarding-step__icon--board {
+    background: color-mix(in srgb, var(--hab-type-habit) 14%, transparent);
+    color: var(--hab-type-habit);
+}
+
+.onboarding-step__icon--timer {
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
+    color: var(--mud-palette-primary);
+}
+
+.onboarding-step__icon--stats {
+    background: color-mix(in srgb, var(--hab-type-todo) 14%, transparent);
+    color: var(--hab-type-todo);
+}
+
+.onboarding-step__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+}
+
+.onboarding-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}

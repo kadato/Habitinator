@@ -225,7 +225,7 @@
                             <span class="edit-daily-streak-input__icon" aria-hidden="true">
                                 <MudIcon Icon="@Icons.Material.Filled.KeyboardDoubleArrowRight" Size="Size.Small"/>
                             </span>
-                            <MudNumericField @bind-Value="_streak"
+                            <MudNumericField @bind-Value="_counter"
                                              Variant="Variant.Outlined"
                                              Class="edit-daily-streak-input__field"
                                              Min="0"
@@ -285,7 +285,7 @@
     private int _repeatInterval = 1;
     private List<ChecklistRow> _checklistRows = [];
     private bool _checklistOpen = true;
-    private int _streak;
+    private int _counter;
     private bool _advancedOpen;
 
     protected override async Task OnInitializedAsync()
@@ -294,7 +294,7 @@
         _title = Item.Title;
         _notes = Item.Notes;
         _selectedTags = BoardTagUtil.ParseTags(Item.Tags).ToList();
-        _streak = Item.Counter;
+        _counter = Item.Counter;
         _startDate = Item.DailyStartDate?.ToDateTime(TimeOnly.MinValue) ?? DateTime.Today;
         _repeat = Item.DailyRepeat;
         _repeatInterval = Item.DailyRepeatInterval < 1 ? 1 : Item.DailyRepeatInterval;
@@ -532,7 +532,7 @@
             return;
         }
 
-        if (_streak is < 0 or > 9999)
+        if (_counter is < 0 or > 9999)
         {
             await Notifier.NotifyAsync("Streak must be between 0 and 9999.", Severity.Warning);
             return;
@@ -540,7 +540,7 @@
 
         var tagsPayload = string.IsNullOrWhiteSpace(SerializeTags()) ? null : SerializeTags();
         var checklistPayload = DailyChecklistJson.Serialize(ToChecklistModel());
-        var start = _startDate.Value.Date;
+        var start = DateOnly.FromDateTime(_startDate.Value);
         var result = new EditDailyDialogResult(
             EditDialogAction.Save,
             _title.Trim(),
@@ -550,7 +550,7 @@
             _repeat,
             _repeatInterval,
             checklistPayload,
-            _streak
+            _counter
         );
         MudDialog.Close(DialogResult.Ok(result));
     }

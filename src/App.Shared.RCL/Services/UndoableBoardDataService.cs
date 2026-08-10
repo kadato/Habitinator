@@ -139,7 +139,7 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
                     item.Title,
                     item.Notes,
                     item.Tags,
-                    item.DailyStartDate?.ToDateTime(TimeOnly.MinValue),
+                    item.DailyStartDate,
                     item.DailyRepeat,
                     item.DailyRepeatInterval,
                     item.ChecklistJson,
@@ -160,7 +160,7 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
                     item.Notes,
                     item.Tags,
                     item.ChecklistJson,
-                    item.TodoDueDate?.ToDateTime(TimeOnly.MinValue),
+                    item.TodoDueDate,
                     item.SortOrder,
                     item.TodoRepeatIntervalDays),
                 CancellationToken.None).ConfigureAwait(false);
@@ -409,7 +409,7 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         }
         if (!DatesEqual(item.TodoDueDate, args.DueDate))
         {
-            diff["duedate"] = item.TodoDueDate?.ToDateTime(TimeOnly.MinValue);
+            diff["duedate"] = item.TodoDueDate;
         }
         if (item.TodoRepeatIntervalDays != args.TodoRepeatIntervalDays)
         {
@@ -436,9 +436,9 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         }
         if (!DatesEqual(item.DailyStartDate, args.StartDate))
         {
-            diff["startdate"] = item.DailyStartDate?.ToDateTime(TimeOnly.MinValue);
+            diff["startdate"] = item.DailyStartDate;
         }
-        if (item.DailyRepeat != args.RepeatType)
+        if (item.DailyRepeat != args.Repeat)
         {
             diff["repeat"] = item.DailyRepeat;
         }
@@ -446,9 +446,9 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         {
             diff["interval"] = item.DailyRepeatInterval;
         }
-        if (item.Counter != args.Streak)
+        if (item.Counter != args.Counter)
         {
-            diff["streak"] = item.Counter;
+            diff["counter"] = item.Counter;
         }
         DiffChecklist(diff, item.ChecklistJson, args.ChecklistJson);
         return diff;
@@ -551,7 +551,7 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
                 diff.TryGetValue(FieldNotes, out var notes) ? (string?)notes : current.Notes,
                 diff.TryGetValue(FieldTags, out var tags) ? (string?)tags : current.Tags,
                 ApplyChecklistDiff(current.ChecklistJson, diff),
-                diff.TryGetValue("duedate", out var dueDate) ? (DateTime?)dueDate : current.TodoDueDate?.ToDateTime(TimeOnly.MinValue),
+                diff.TryGetValue("duedate", out var dueDate) ? (DateOnly?)dueDate : current.TodoDueDate,
                 current.SortOrder,
                 diff.TryGetValue("repeatdays", out var repeatDays) ? (int?)repeatDays : current.TodoRepeatIntervalDays),
             CancellationToken.None);
@@ -571,28 +571,16 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
                 diff.TryGetValue(FieldTitle, out var title) ? DiffCast(title, current.Title) : current.Title,
                 diff.TryGetValue(FieldNotes, out var notes) ? (string?)notes : current.Notes,
                 diff.TryGetValue(FieldTags, out var tags) ? (string?)tags : current.Tags,
-                diff.TryGetValue("startdate", out var startDate) ? (DateTime?)startDate : current.DailyStartDate?.ToDateTime(TimeOnly.MinValue),
+                diff.TryGetValue("startdate", out var startDate) ? (DateOnly?)startDate : current.DailyStartDate,
                 diff.TryGetValue("repeat", out var repeat) ? DiffCast(repeat, current.DailyRepeat) : current.DailyRepeat,
                 diff.TryGetValue("interval", out var interval) ? DiffCast(interval, current.DailyRepeatInterval) : current.DailyRepeatInterval,
                 ApplyChecklistDiff(current.ChecklistJson, diff),
-                diff.TryGetValue("streak", out var streak) ? DiffCast(streak, current.Counter) : current.Counter),
+                diff.TryGetValue("counter", out var counter) ? DiffCast(counter, current.Counter) : current.Counter),
             CancellationToken.None);
     }
 
-    private static bool DatesEqual(DateOnly? itemDate, DateTime? dateTime)
-    {
-        if (itemDate is null && dateTime is null)
-        {
-            return true;
-        }
-
-        if (itemDate is null || dateTime is null)
-        {
-            return false;
-        }
-
-        return itemDate == DateOnly.FromDateTime(dateTime.Value);
-    }
+    private static bool DatesEqual(DateOnly? itemDate, DateOnly? otherDate) =>
+        itemDate == otherDate;
 
     private async Task<BoardItem?> FindItemAsync(Guid id, CancellationToken cancellationToken)
     {

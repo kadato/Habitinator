@@ -574,7 +574,7 @@ public partial class BoardColumn : IAsyncDisposable
                     item.Title,
                     item.Notes,
                     item.Tags,
-                    item.DailyStartDate?.ToDateTime(TimeOnly.MinValue),
+                    item.DailyStartDate,
                     item.DailyRepeat,
                     item.DailyRepeatInterval,
                     item.ChecklistJson,
@@ -588,7 +588,7 @@ public partial class BoardColumn : IAsyncDisposable
                     item.Notes,
                     item.Tags,
                     item.ChecklistJson,
-                    item.TodoDueDate?.ToDateTime(TimeOnly.MinValue),
+                    item.TodoDueDate,
                     SortOrder: newSortOrder,
                     TodoRepeatIntervalDays: item.TodoRepeatIntervalDays)),
 
@@ -625,7 +625,7 @@ public partial class BoardColumn : IAsyncDisposable
                     item.Title,
                     item.Notes,
                     item.Tags,
-                    item.DailyStartDate?.ToDateTime(TimeOnly.MinValue),
+                    item.DailyStartDate,
                     item.DailyRepeat,
                     item.DailyRepeatInterval,
                     json,
@@ -640,7 +640,7 @@ public partial class BoardColumn : IAsyncDisposable
                     item.Notes,
                     item.Tags,
                     json,
-                    item.TodoDueDate?.ToDateTime(TimeOnly.MinValue),
+                    item.TodoDueDate,
                     TodoRepeatIntervalDays: item.TodoRepeatIntervalDays));
         }
         else
@@ -736,7 +736,7 @@ public partial class BoardColumn : IAsyncDisposable
                     item.Notes,
                     item.Tags,
                     item.ChecklistJson,
-                    nextDue.ToDateTime(TimeOnly.MinValue),
+                    nextDue,
                     SortOrder: item.SortOrder,
                     TodoRepeatIntervalDays: item.TodoRepeatIntervalDays));
             await BoardData.ToggleItemAsync(BoardSection.Todo, item.Id);
@@ -857,11 +857,11 @@ public partial class BoardColumn : IAsyncDisposable
             Title = r.Title,
             Notes = r.Notes,
             Tags = r.Tags,
-            DailyStartDate = DateOnly.FromDateTime(r.StartDate),
+            DailyStartDate = r.StartDate,
             DailyRepeat = r.Repeat,
             DailyRepeatInterval = r.RepeatInterval,
             ChecklistJson = r.ChecklistJson,
-            Counter = r.Streak
+            Counter = r.Counter
         };
         return ApplyOverrideAsync(item.Id, optimistic, () => BoardData.UpdateDailyAsync(
             item.Id,
@@ -873,7 +873,7 @@ public partial class BoardColumn : IAsyncDisposable
                 r.Repeat,
                 r.RepeatInterval,
                 r.ChecklistJson,
-                r.Streak)));
+                r.Counter)));
     }
 
     private Task ArchiveDailyAsync(BoardItem item) =>
@@ -925,7 +925,7 @@ public partial class BoardColumn : IAsyncDisposable
             Notes = r.Notes,
             Tags = r.Tags,
             ChecklistJson = r.ChecklistJson,
-            TodoDueDate = r.DueDate != null ? DateOnly.FromDateTime(r.DueDate.Value) : null,
+            TodoDueDate = r.DueDate,
             TodoRepeatIntervalDays = r.RepeatIntervalDays
         };
         return ApplyOverrideAsync(item.Id, optimistic, () => BoardData.UpdateTodoAsync(

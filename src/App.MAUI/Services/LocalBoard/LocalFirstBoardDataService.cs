@@ -597,7 +597,8 @@ public sealed partial class LocalFirstBoardDataService(
                 row.ChecklistJson = string.IsNullOrWhiteSpace(args.ChecklistJson)
                     ? null
                     : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(args.ChecklistJson));
-                row.TodoDueDate = args.DueDate.HasValue ? DateOnly.FromDateTime(args.DueDate.Value.Date) : null;
+                row.TodoDueDate = args.DueDate;
+                row.TodoRepeatIntervalDays = args.TodoRepeatIntervalDays;
 
                 await HandleSortOrderUpdateAsync(db, userKey, BoardSection.Todo, itemId, args.SortOrder, row, cancellationToken);
 
@@ -638,13 +639,13 @@ public sealed partial class LocalFirstBoardDataService(
                 row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
                 row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
                 row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
-                row.DailyStartDate = args.StartDate.HasValue ? DateOnly.FromDateTime(args.StartDate.Value.Date) : null;
-                row.DailyRepeat = args.RepeatType;
+                row.DailyStartDate = args.StartDate;
+                row.DailyRepeat = args.Repeat;
                 row.DailyRepeatInterval = args.RepeatInterval;
                 row.ChecklistJson = string.IsNullOrWhiteSpace(args.ChecklistJson)
                     ? null
                     : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(args.ChecklistJson));
-                row.Counter = args.Streak;
+                row.Counter = args.Counter;
 
                 await HandleSortOrderUpdateAsync(db, userKey, BoardSection.Daily, itemId, args.SortOrder, row, cancellationToken);
 
@@ -658,10 +659,10 @@ public sealed partial class LocalFirstBoardDataService(
                         row.Notes,
                         row.Tags,
                         args.StartDate,
-                        args.RepeatType,
+                        args.Repeat,
                         args.RepeatInterval,
                         row.ChecklistJson,
-                        args.Streak,
+                        args.Counter,
                         expectedDaily,
                         row.SortOrder));
                 await db.SaveChangesAsync(cancellationToken);
@@ -1271,10 +1272,10 @@ public sealed partial class LocalFirstBoardDataService(
                             p.Notes,
                             p.Tags,
                             p.StartDate,
-                            p.RepeatType,
+                            p.Repeat,
                             p.RepeatInterval,
                             p.ChecklistJson,
-                            p.Streak,
+                            p.Counter,
                             p.SortOrder),
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,

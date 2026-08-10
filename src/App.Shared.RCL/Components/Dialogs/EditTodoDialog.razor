@@ -470,7 +470,7 @@
 
         var tagsPayload = string.IsNullOrWhiteSpace(SerializeTags()) ? null : SerializeTags();
         var checklistPayload = DailyChecklistJson.Serialize(ToChecklistModel());
-        DateTime? due = _dueDate is { } d ? d.Date : null;
+        DateOnly? due = _dueDate is { } d ? DateOnly.FromDateTime(d.Date) : null;
         var result = new EditTodoDialogResult(
             EditDialogAction.Save,
             _title.Trim(),

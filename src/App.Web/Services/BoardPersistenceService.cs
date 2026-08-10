@@ -652,9 +652,7 @@ public sealed class BoardPersistenceService(
                 args.ExpectedUpdatedAtUtc,
                 async entity =>
                 {
-                    DateTime? dueUtc = args.DueDate is { } d
-                        ? new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc)
-                        : null;
+                    DateTime? dueUtc = args.DueDate?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
                     entity.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
                     entity.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
@@ -691,10 +689,8 @@ public sealed class BoardPersistenceService(
                     var wasCompleteForToday = IsDailyEntityCompleteForToday(entity, today);
 
                     var n = Math.Max(1, Math.Min(999, args.RepeatInterval));
-                    DateTime? startUtc = args.StartDate is { } s
-                        ? new DateTime(s.Year, s.Month, s.Day, 0, 0, 0, DateTimeKind.Utc)
-                        : null;
-                    var streakClamped = Math.Max(0, Math.Min(9999, args.Streak));
+                    DateTime? startUtc = args.StartDate?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+                    var streakClamped = Math.Max(0, Math.Min(9999, args.Counter));
 
                     DateOnly? newStartD = startUtc is { } su ? DateOnly.FromDateTime(su) : null;
 
@@ -702,7 +698,7 @@ public sealed class BoardPersistenceService(
                     entity.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
                     entity.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
                     entity.DailyStartDate = startUtc;
-                    entity.DailyRepeatType = (int)args.RepeatType;
+                    entity.DailyRepeatType = (int)args.Repeat;
                     entity.DailyRepeatInterval = n;
                     entity.ChecklistJson = string.IsNullOrWhiteSpace(args.ChecklistJson)
                         ? null
@@ -716,9 +712,9 @@ public sealed class BoardPersistenceService(
                     // rows, so statistics/heatmap never match the daily streak.
                     var streakNotAfter = today.AddDays(-1);
                     await ReconcileDailyStreakBackfillAsync(userId, itemId,
-                        new DailyBackfillArgs(newStartD, args.RepeatType, n, streakClamped),
+                        new DailyBackfillArgs(newStartD, args.Repeat, n, streakClamped),
                         streakNotAfter, cancellationToken);
-                    ApplyManualStreakToEntity(entity, newStartD, args.RepeatType, n, streakClamped, today, wasCompleteForToday);
+                    ApplyManualStreakToEntity(entity, newStartD, args.Repeat, n, streakClamped, today, wasCompleteForToday);
                     return true;
                 },
                 entity => ToModelWithDailyStreaksAsync(userId, entity, cancellationToken),

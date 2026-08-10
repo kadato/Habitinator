@@ -50,20 +50,21 @@ public sealed record UpdateTodoOutboxPayload(
     string? Notes,
     string? Tags,
     string? ChecklistJson,
-    DateTime? DueDate,
+    DateOnly? DueDate,
     DateTimeOffset? ExpectedServerUpdatedAtUtc = null,
-    double? SortOrder = null);
+    double? SortOrder = null,
+    int? TodoRepeatIntervalDays = null);
 
 public sealed record UpdateDailyOutboxPayload(
     Guid ItemId,
     string Title,
     string? Notes,
     string? Tags,
-    DateTime? StartDate,
-    DailyRepeatType RepeatType,
+    DateOnly? StartDate,
+    DailyRepeatType Repeat,
     int RepeatInterval,
     string? ChecklistJson,
-    int Streak,
+    int Counter,
     DateTimeOffset? ExpectedServerUpdatedAtUtc = null,
     double? SortOrder = null);
 
@@ -85,7 +86,7 @@ public static class BoardOutboxPayloadMapper
         {
             BoardOutboxOperationKind.Create => payloadJson,
             BoardOutboxOperationKind.Rename => RemapRenameClientId(payloadJson, clientId, serverId),
-            BoardOutboxOperationKind.Delete or BoardOutboxOperationKind.Toggle => RemapSectionItemClientId(payloadJson, clientId, serverId),
+            BoardOutboxOperationKind.Delete or BoardOutboxOperationKind.Toggle or BoardOutboxOperationKind.Archive or BoardOutboxOperationKind.Unarchive => RemapSectionItemClientId(payloadJson, clientId, serverId),
             BoardOutboxOperationKind.CompleteDailyForDate => RemapCompleteDailyClientId(payloadJson, clientId, serverId),
             BoardOutboxOperationKind.HabitIncrement or BoardOutboxOperationKind.HabitDecrement => RemapItemIdClientId(payloadJson, clientId, serverId),
             BoardOutboxOperationKind.UpdateHabit => RemapUpdateHabitClientId(payloadJson, clientId, serverId),
@@ -104,7 +105,7 @@ public static class BoardOutboxPayloadMapper
         return kind switch
         {
             BoardOutboxOperationKind.Rename => RemapRenameVersion(payloadJson, newVersion),
-            BoardOutboxOperationKind.Delete or BoardOutboxOperationKind.Toggle => RemapSectionItemVersion(payloadJson, newVersion),
+            BoardOutboxOperationKind.Delete or BoardOutboxOperationKind.Toggle or BoardOutboxOperationKind.Archive or BoardOutboxOperationKind.Unarchive => RemapSectionItemVersion(payloadJson, newVersion),
             BoardOutboxOperationKind.CompleteDailyForDate => RemapCompleteDailyVersion(payloadJson, newVersion),
             BoardOutboxOperationKind.HabitIncrement or BoardOutboxOperationKind.HabitDecrement => RemapItemIdVersion(payloadJson, newVersion),
             BoardOutboxOperationKind.UpdateHabit => RemapUpdateHabitVersion(payloadJson, newVersion),

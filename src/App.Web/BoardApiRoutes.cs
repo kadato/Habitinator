@@ -212,7 +212,10 @@ internal static class BoardApiRoutes
                     409,
                     JsonSerializer.Serialize(new { problem = "version_conflict", item = r.Item }, Json),
                     JsonContentType),
-                _ => (500, "{}", JsonContentType)
+                _ => (
+                    500,
+                    JsonSerializer.Serialize(new { detail = "Unexpected board mutation status." }, Json),
+                    JsonContentType)
             };
         }, ctx.CancellationToken);
     }
@@ -288,9 +291,9 @@ internal static class BoardApiRoutes
                         userId,
                         itemId,
                         new UpdateHabitArgs(
-                            ZalgoSanitizer.SanitizeAndTrim(request.Title),
-                            ZalgoSanitizer.Sanitize(request.Notes),
-                            ZalgoSanitizer.Sanitize(request.Tags),
+                            request.Title,
+                            request.Notes,
+                            request.Tags,
                             request.TrackPlus,
                             request.TrackMinus,
                             request.ResetPeriod,
@@ -323,9 +326,9 @@ internal static class BoardApiRoutes
                         userId,
                         itemId,
                         new UpdateTodoArgs(
-                            ZalgoSanitizer.SanitizeAndTrim(request.Title),
-                            ZalgoSanitizer.Sanitize(request.Notes),
-                            ZalgoSanitizer.Sanitize(request.Tags),
+                            request.Title,
+                            request.Notes,
+                            request.Tags,
                             DailyChecklistJson.Serialize(DailyChecklistJson.Parse(request.ChecklistJson)),
                             request.DueDate,
                             request.SortOrder,
@@ -355,14 +358,14 @@ internal static class BoardApiRoutes
                         userId,
                         itemId,
                         new UpdateDailyArgs(
-                            ZalgoSanitizer.SanitizeAndTrim(request.Title),
-                            ZalgoSanitizer.Sanitize(request.Notes),
-                            ZalgoSanitizer.Sanitize(request.Tags),
+                            request.Title,
+                            request.Notes,
+                            request.Tags,
                             request.StartDate,
                             request.Repeat,
                             request.RepeatInterval,
                             DailyChecklistJson.Serialize(DailyChecklistJson.Parse(request.ChecklistJson)),
-                            request.Streak,
+                            request.Counter,
                             request.SortOrder,
                             expected),
                         ct);
@@ -460,7 +463,10 @@ internal static class BoardApiRoutes
                 409,
                 JsonSerializer.Serialize(new { problem = "version_conflict", item = r.Item }, Json),
                 JsonContentType),
-            _ => (500, "{}", JsonContentType)
+            _ => (
+                500,
+                JsonSerializer.Serialize(new { detail = "Unexpected board mutation status." }, Json),
+                JsonContentType)
         };
 
     private static IResult ToHttpResult((int statusCode, string body, string? contentType) o)

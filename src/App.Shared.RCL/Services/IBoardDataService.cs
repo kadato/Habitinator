@@ -20,7 +20,7 @@ public sealed record UpdateTodoArgs(
     string? Notes,
     string? Tags,
     string? ChecklistJson,
-    DateTime? DueDate,
+    DateOnly? DueDate,
     double? SortOrder = null,
     int? TodoRepeatIntervalDays = null,
     DateTimeOffset? ExpectedUpdatedAtUtc = null);
@@ -29,11 +29,11 @@ public sealed record UpdateDailyArgs(
     string Title,
     string? Notes,
     string? Tags,
-    DateTime? StartDate,
-    DailyRepeatType RepeatType,
+    DateOnly? StartDate,
+    DailyRepeatType Repeat,
     int RepeatInterval,
     string? ChecklistJson,
-    int Streak,
+    int Counter,
     double? SortOrder = null,
     DateTimeOffset? ExpectedUpdatedAtUtc = null);
 

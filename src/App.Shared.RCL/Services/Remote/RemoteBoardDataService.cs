@@ -377,10 +377,10 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
             args.Notes,
             args.Tags,
             args.StartDate,
-            args.RepeatType,
+            args.Repeat,
             args.RepeatInterval,
             args.ChecklistJson,
-            args.Streak,
+            args.Counter,
             args.SortOrder);
         using HttpRequestMessage req = new(HttpMethod.Put, $"api/board/dailies/{itemId}")
         {

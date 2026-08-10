@@ -22,11 +22,11 @@ public sealed record DailyUpdateRequest(
     [Required, StringLength(200)] string Title,
     [StringLength(4000)] string? Notes,
     [StringLength(500)] string? Tags,
-    DateTime? StartDate,
+    DateOnly? StartDate,
     DailyRepeatType Repeat,
     int RepeatInterval,
     [StringLength(8000)] string? ChecklistJson,
-    int Streak = 0,
+    int Counter = 0,
     double? SortOrder = null);
 
 public sealed record TodoUpdateRequest(
@@ -34,11 +34,9 @@ public sealed record TodoUpdateRequest(
     [StringLength(4000)] string? Notes,
     [StringLength(500)] string? Tags,
     [StringLength(8000)] string? ChecklistJson,
-    DateTime? DueDate,
+    DateOnly? DueDate,
     double? SortOrder = null,
     int? TodoRepeatIntervalDays = null);
-
-public sealed record BoardSectionRequest(BoardSection Section);
 
 public sealed record DailyCompleteForDateRequest(DateOnly CompletedOn);
 

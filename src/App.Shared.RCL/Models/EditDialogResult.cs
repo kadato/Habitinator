@@ -12,11 +12,11 @@ public record EditDailyDialogResult(
     string Title,
     string? Notes,
     string? Tags,
-    DateTime StartDate,
+    DateOnly StartDate,
     DailyRepeatType Repeat,
     int RepeatInterval,
     string? ChecklistJson,
-    int Streak
+    int Counter
 );
 
 public record EditHabitDialogResult(
@@ -38,6 +38,6 @@ public record EditTodoDialogResult(
     string? Notes,
     string? Tags,
     string? ChecklistJson,
-    DateTime? DueDate,
+    DateOnly? DueDate,
     int? RepeatIntervalDays = null
 );

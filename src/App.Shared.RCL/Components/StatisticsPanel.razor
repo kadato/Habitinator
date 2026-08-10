@@ -3,6 +3,7 @@
 @using App.Shared.RCL.Components.Dialogs
 @using App.Shared.RCL.Models
 @inject IActivityStatisticsReader Stats
+@inject IBoardDataService BoardData
 @inject IDialogService DialogService
 @inject IUserDateFormatService DateFormatService
 @inject IUserTimeZoneService TimeZoneService
@@ -107,6 +108,38 @@
         <!-- Main Dashboard Layout -->
         <div class="stats-dashboard-layout">
             <div class="stats-dashboard-main">
+                @if (_weeklyReview is { } week)
+                {
+                    <!-- Weekly review card -->
+                    <MudPaper Class="pa-4 stats-dashboard-card stats-weekly-card mb-4" Elevation="0" Outlined="true">
+                        <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-2">
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">This week</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @FormatRange(week.WeekStart, week.WeekEnd)
+                            </MudText>
+                        </div>
+                        <div class="stats-weekly-grid">
+                            <div class="stats-weekly-tile">
+                                <span class="stats-weekly-tile__label">Events</span>
+                                <span class="stats-weekly-tile__value">@week.Events</span>
+                                <span class="stats-weekly-tile__delta @(week.PercentChange >= 0 ? "stats-weekly-tile__delta--up" : "stats-weekly-tile__delta--down")">
+                                    @(week.PercentChange >= 0 ? "▲" : "▼") @Math.Abs(week.PercentChange)% vs last week
+                                </span>
+                            </div>
+                            <div class="stats-weekly-tile">
+                                <span class="stats-weekly-tile__label">Focus</span>
+                                <span class="stats-weekly-tile__value">@FormatFocus(week.FocusMinutes)</span>
+                                <span class="stats-weekly-tile__delta stats-weekly-tile__delta--flat">timer sessions</span>
+                            </div>
+                            <div class="stats-weekly-tile">
+                                <span class="stats-weekly-tile__label">Dailies completed</span>
+                                <span class="stats-weekly-tile__value">@week.DailiesCompleted</span>
+                                <span class="stats-weekly-tile__delta stats-weekly-tile__delta--flat">check-ins logged</span>
+                            </div>
+                        </div>
+                    </MudPaper>
+                }
+
                 <!-- Activity Heatmap Card -->
                 <MudPaper Class="pa-4 stats-dashboard-card" Elevation="0" Outlined="true">
                     <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-2">
@@ -246,14 +279,116 @@
                                                         {
                                                             @for (var c = 0; c < daily.GridWeekColumns; c++)
                                                             {
+                                                if (cellIx.TryGetValue((r, c), out var cell))
+                                                {
+                                                    if (cell.InDataRange)
+                                                    {
+                                                        <button type="button"
+                                                                class="@($"stats-cell {(cell.Count > 0 ? "stats-daily-done" : "stats-daily-missed")}{(IsHeatmapToday(cell.Date) ? " stats-heatmap-day--today" : "")}")"
+                                                                title="@DailyHeatmapDayTitle(cell.Date, cell.Count)"
+                                                                aria-label="@DailyHeatmapDayTitle(cell.Date, cell.Count)"
+                                                                aria-current="@(IsHeatmapToday(cell.Date) ? "date" : null)"
+                                                                @onclick="() => OpenDayDetailAsync(cell.Date)">
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="stats-cell stats-lvl-na" title=""></div>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <div class="stats-cell stats-lvl-na" title=""></div>
+                                                }
+                                                            }
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </MudItem>
+                                }
+                            </MudGrid>
+                        }
+                    }
+                </MudPaper>
+
+                <!-- Habits performance Card -->
+                <MudPaper Class="pa-4 stats-dashboard-card mt-4" Elevation="0" Outlined="true">
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold mb-3">Habits graphs</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-3">
+                        Days with at least one +/− log, with the share of days you were active.
+                    </MudText>
+
+                    @if (_loadingHabits)
+                    {
+                        <MudGrid Spacing="3" Class="stats-habits-grid">
+                            @for (int i = 0; i < 2; i++)
+                            {
+                                <MudItem xs="12" md="6">
+                                    <div class="pa-3 border rounded mud-border-lines-default" style="background: var(--mud-palette-background-gray);">
+                                        <div class="d-flex align-center justify-space-between mb-3">
+                                            <MudSkeleton Width="120px" Height="20px" />
+                                            <MudSkeleton Width="100px" Height="16px" />
+                                        </div>
+                                        <MudSkeleton Width="100%" Height="60px" SkeletonType="SkeletonType.Rectangle" />
+                                    </div>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    }
+                    else if (_habitError is not null)
+                    {
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-2">@_habitError</MudAlert>
+                    }
+                    else if (_habitView is not null)
+                    {
+                        @if (_habitView.Graphs.Count == 0)
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">No habits on your board yet.</MudText>
+                        }
+                        else
+                        {
+                            <MudGrid Spacing="3" Class="stats-habits-grid">
+                                @foreach (var habit in _habitView.Graphs)
+                                {
+                                    var cellIx = habit.Heatmap.ToDictionary(x => (x.DayRow, x.WeekCol));
+                                    <MudItem xs="12" md="6">
+                                        <div class="stats-habit-block pa-3 border rounded mud-border-lines-default" style="background: var(--mud-palette-background-gray);">
+                                            <div class="d-flex align-center justify-space-between gap-2 mb-2">
+                                                <MudText Typo="Typo.subtitle2" Class="font-weight-bold stats-habit-title ma-0">@habit.Title</MudText>
+                                                <span class="stats-habit-ratio" title="@habit.ActiveDayCount active day(s) of @habit.PeriodDayCount in this period">
+                                                    @HabitActiveRatioLabel(habit.ActiveDayCount, habit.PeriodDayCount)
+                                                </span>
+                                            </div>
+
+                                            <div class="stats-heatmap-container">
+                                                <div class="stats-heatmap-rowlabels" aria-hidden="true">
+                                                    <span>M</span>
+                                                    <span></span>
+                                                    <span>W</span>
+                                                    <span></span>
+                                                    <span>F</span>
+                                                    <span></span>
+                                                    <span>S</span>
+                                                </div>
+                                                <div class="stats-heatmap-wrap">
+                                                    <div class="stats-heatmap-grid" style="--stats-cols: @habit.GridWeekColumns;">
+                                                        @for (var r = 0; r < 7; r++)
+                                                        {
+                                                            @for (var c = 0; c < habit.GridWeekColumns; c++)
+                                                            {
                                                                 if (cellIx.TryGetValue((r, c), out var cell))
                                                                 {
                                                                     if (cell.InDataRange)
                                                                     {
-                                                                        <div class="@($"stats-cell {(cell.Count > 0 ? "stats-daily-done" : "stats-daily-missed")}{(IsHeatmapToday(cell.Date) ? " stats-heatmap-day--today" : "")}")"
-                                                                             title="@DailyHeatmapDayTitle(cell.Date, cell.Count)"
-                                                                             aria-current="@(IsHeatmapToday(cell.Date) ? "date" : null)">
-                                                                        </div>
+                                                                        <button type="button"
+                                                                                class="@($"stats-cell stats-lvl-{cell.Intensity}{(IsHeatmapToday(cell.Date) ? " stats-heatmap-day--today" : "")}")"
+                                                                                title="@HabitHeatmapDayTitle(cell.Date, cell.Count)"
+                                                                                aria-label="@HabitHeatmapDayTitle(cell.Date, cell.Count)"
+                                                                                aria-current="@(IsHeatmapToday(cell.Date) ? "date" : null)"
+                                                                                @onclick="() => OpenDayDetailAsync(cell.Date)">
+                                                                        </button>
                                                                     }
                                                                     else
                                                                     {
@@ -367,6 +502,20 @@
                                     <span class="stats-kpi-strip__value stats-kpi-strip__value--date" title="@FormatBusiestDayDetail(_data.BusiestDay.Value, _data.MaxDayCount)">@FormatBusiestDayShort(_data.BusiestDay.Value)</span>
                                 }
                             </div>
+                            <div class="stats-kpi-strip__item stats-kpi-strip__item--streak">
+                                <div class="stats-kpi-strip__head">
+                                    <span class="stats-kpi-strip__label">Streak</span>
+                                    <MudIcon Icon="@Icons.Material.Filled.Whatshot" Class="stats-kpi-strip__icon" Size="Size.Small" aria-hidden="true"/>
+                                </div>
+                                @if (_bestStreakDays > 0)
+                                {
+                                    <span class="stats-kpi-strip__value" title="@_bestStreakTitle">@_bestStreakDays d</span>
+                                }
+                                else
+                                {
+                                    <span class="stats-kpi-strip__value">—</span>
+                                }
+                            </div>
                         </div>
                     </div>
 
@@ -405,6 +554,22 @@
                                 </MudText>
                             }
                         </MudPaper>
+                        <MudPaper Class="stats-kpi-card stats-kpi-card--sidebar stats-kpi-card--plain stats-kpi-card--streak" Elevation="0" Outlined="false">
+                            <div class="stats-kpi-card__head">
+                                <MudText Typo="Typo.caption" Class="stats-kpi-card__label">Longest streak</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.Whatshot" Class="stats-kpi-card__icon" Size="Size.Small" aria-hidden="true"/>
+                            </div>
+                            @if (_bestStreakDays > 0)
+                            {
+                                <MudText Typo="Typo.h6" Class="stats-kpi-card__value">@_bestStreakDays days</MudText>
+                                <MudText Typo="Typo.caption" Class="stats-kpi-card__detail">@_bestStreakTitle</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.h6" Class="stats-kpi-card__value">—</MudText>
+                                <MudText Typo="Typo.caption" Class="stats-kpi-card__detail">No active streaks yet</MudText>
+                            }
+                        </MudPaper>
                     </div>
                 </div>
             </div>
@@ -423,13 +588,27 @@
     private string? _error;
 
     private DailyContributionsViewDto? _dailyView;
+    private HabitContributionsViewDto? _habitView;
     private string _selectedPeriodKey = DailyGraphPeriods.Rolling370Days;
     private string _tagFilter = "";
     private IReadOnlyCollection<string> _selectedTags = Array.Empty<string>();
     private bool _loadingDailies;
     private string? _dailyError;
+    private bool _loadingHabits;
+    private string? _habitError;
+    private int _bestStreakDays;
+    private string? _bestStreakTitle;
+    private WeeklyReview? _weeklyReview;
     private bool _shouldScrollToEnd;
     private DateOnly _heatmapToday;
+
+    private sealed record WeeklyReview(
+        DateOnly WeekStart,
+        DateOnly WeekEnd,
+        int Events,
+        int FocusMinutes,
+        int DailiesCompleted,
+        int PercentChange);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -478,6 +657,10 @@
         {
             ApplicationState.PersistAsJson("stats_daily_view_data", _dailyView);
         }
+        if (_habitView is not null)
+        {
+            ApplicationState.PersistAsJson("stats_habit_view_data", _habitView);
+        }
         return Task.CompletedTask;
     }
 
@@ -491,6 +674,8 @@
         _heatmapToday = DailySchedule.LocalToday(TimeZoneService);
         _loadingDailies = true;
         _dailyError = null;
+        _loadingHabits = true;
+        _habitError = null;
         try
         {
             var tag = string.IsNullOrEmpty(_tagFilter) ? null : _tagFilter;
@@ -510,6 +695,15 @@
             else
             {
                 _dailyView = await Stats.GetDailyContributionsAsync(periodKey, tag);
+            }
+
+            if (ApplicationState.TryTakeFromJson<HabitContributionsViewDto>("stats_habit_view_data", out var restoredHabitView) && restoredHabitView is not null)
+            {
+                _habitView = restoredHabitView;
+            }
+            else
+            {
+                _habitView = await Stats.GetHabitContributionsAsync(periodKey, tag);
             }
 
             _selectedPeriodKey = _data.PeriodKey;
@@ -534,20 +728,127 @@
                 ? 0
                 : _data.WeekBars.Max(x => x.EventCount);
             _shouldScrollToEnd = true;
+            ComputeWeeklyReview();
+            await LoadBestStreakAsync();
         }
         catch (Exception dex)
         {
             _error = dex.Message;
             _dailyError = dex.Message;
+            _habitError = dex.Message;
             _data = null;
             _dailyView = null;
+            _habitView = null;
             _periodOptions = null;
             _cellIndex = [];
         }
         finally
         {
             _loadingDailies = false;
+            _loadingHabits = false;
         }
+    }
+
+    private void ComputeWeeklyReview()
+    {
+        if (_data is null)
+        {
+            _weeklyReview = null;
+            return;
+        }
+
+        var weekStart = _heatmapToday.AddDays(-(((int)_heatmapToday.DayOfWeek + 6) % 7));
+        var weekEnd = _heatmapToday;
+
+        var events = 0;
+        var prevEvents = 0;
+        foreach (var cell in _data.Heatmap)
+        {
+            if (!cell.InDataRange)
+            {
+                continue;
+            }
+
+            if (cell.Date >= weekStart && cell.Date <= weekEnd)
+            {
+                events += cell.Count;
+            }
+            else if (cell.Date >= weekStart.AddDays(-7) && cell.Date < weekStart)
+            {
+                prevEvents += cell.Count;
+            }
+        }
+
+        var focusMinutes = _data.WeekBars
+            .Where(w => w.WeekStart == weekStart)
+            .Select(w => w.FocusMinutes)
+            .DefaultIfEmpty(0)
+            .Sum();
+
+        var dailiesCompleted = 0;
+        if (_dailyView is not null)
+        {
+            foreach (var graph in _dailyView.Graphs)
+            {
+                foreach (var cell in graph.Heatmap)
+                {
+                    if (cell.InDataRange && cell.Count > 0 && cell.Date >= weekStart && cell.Date <= weekEnd)
+                    {
+                        dailiesCompleted++;
+                    }
+                }
+            }
+        }
+
+        int percentChange;
+        if (prevEvents > 0)
+        {
+            percentChange = (int)Math.Round(100.0 * (events - prevEvents) / prevEvents);
+        }
+        else
+        {
+            percentChange = events > 0 ? 100 : 0;
+        }
+
+        _weeklyReview = new WeeklyReview(weekStart, weekEnd, events, focusMinutes, dailiesCompleted, percentChange);
+    }
+
+    private async Task LoadBestStreakAsync()
+    {
+        try
+        {
+            var streaks = await BoardData.GetStreakMapAsync();
+            _bestStreakDays = 0;
+            _bestStreakTitle = null;
+            if (_dailyView is not null)
+            {
+                foreach (var graph in _dailyView.Graphs)
+                {
+                    if (streaks.TryGetValue(graph.BoardItemId, out var streak) && streak > _bestStreakDays)
+                    {
+                        _bestStreakDays = streak;
+                        _bestStreakTitle = graph.Title;
+                    }
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Ignored; the KPI simply stays empty
+        }
+    }
+
+    private static string HabitActiveRatioLabel(int activeDays, int periodDays)
+    {
+        var percent = periodDays <= 0 ? 0 : (int)Math.Round(100.0 * activeDays / periodDays);
+        return $"{activeDays} of {periodDays} days · {percent}%";
+    }
+
+    private string HabitHeatmapDayTitle(DateOnly date, int count)
+    {
+        var logs = count == 1 ? "1 log" : $"{count} logs";
+        var baseTitle = $"{DateFormatService.Format(date)}: {logs} — view details";
+        return IsHeatmapToday(date) ? $"Today · {baseTitle}" : baseTitle;
     }
 
     private async Task OnStatsPeriodChanged(string? periodKey)

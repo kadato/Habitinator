@@ -33,6 +33,14 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         return await GetJsonOrThrowAsync<DailyContributionsViewDto>(path, cancellationToken);
     }
 
+    public async Task<HabitContributionsViewDto> GetHabitContributionsAsync(string? periodKey, string? tag = null,
+        CancellationToken cancellationToken = default)
+    {
+        var path = "api/activity/habit-contributions" + BuildActivityQuery(periodKey, tag);
+
+        return await GetJsonOrThrowAsync<HabitContributionsViewDto>(path, cancellationToken);
+    }
+
     public async Task<ActivityDayDetailDto> GetActivityDayDetailAsync(DateOnly day, string? tag = null,
         CancellationToken cancellationToken = default)
     {

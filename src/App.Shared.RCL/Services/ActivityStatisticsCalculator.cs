@@ -400,6 +400,133 @@ public static class ActivityStatisticsCalculator
         return graphs;
     }
 
+    public static HabitContributionsViewDto BuildHabitContributions(
+        IReadOnlyList<UserActivityEventRecord> eventRowsInRange,
+        IReadOnlyList<HabitItemStatsDto> habitItemRows,
+        string periodKey,
+        IReadOnlyList<DailyGraphPeriodOption> options,
+        DateOnly rangeStart,
+        DateOnly rangeEnd,
+        DateOnly todayCutoff)
+    {
+        if (habitItemRows.Count == 0)
+        {
+            return new HabitContributionsViewDto(periodKey, options, [], rangeStart, rangeEnd);
+        }
+
+        var habitIds = habitItemRows.Select(x => x.Id).ToHashSet();
+        var byItem = BuildHabitEventDayMap(eventRowsInRange, habitIds);
+
+        var commonEnd = rangeEnd > todayCutoff ? todayCutoff : rangeEnd;
+        var earliestCreated = habitItemRows.Min(x => x.CreatedAt);
+        var commonStart = earliestCreated < rangeStart ? rangeStart : earliestCreated;
+        if (commonStart > commonEnd)
+        {
+            commonStart = commonEnd;
+        }
+
+        var graphs = BuildHabitContributionGraphs(habitItemRows, byItem, commonStart, commonEnd);
+
+        return new HabitContributionsViewDto(
+            periodKey,
+            options,
+            graphs,
+            commonStart,
+            commonEnd);
+    }
+
+    private static Dictionary<Guid, Dictionary<DateOnly, int>> BuildHabitEventDayMap(
+        IReadOnlyList<UserActivityEventRecord> eventRowsInRange,
+        HashSet<Guid> habitIds)
+    {
+        var byItem = new Dictionary<Guid, Dictionary<DateOnly, int>>();
+        foreach (var e in eventRowsInRange)
+        {
+            if (e.BoardItemId is not { } id || !habitIds.Contains(id))
+            {
+                continue;
+            }
+
+            if (e.EventType is not (ActivityEventType.HabitPlus or ActivityEventType.HabitMinus))
+            {
+                continue;
+            }
+
+            var d = DateOnly.FromDateTime(e.OccurredAtUtc.UtcDateTime);
+            if (!byItem.TryGetValue(id, out var map))
+            {
+                map = [];
+                byItem[id] = map;
+            }
+
+            map[d] = map.TryGetValue(d, out var c) ? c + 1 : 1;
+        }
+
+        return byItem;
+    }
+
+    private static List<HabitContributionGraphDto> BuildHabitContributionGraphs(
+        IReadOnlyList<HabitItemStatsDto> habitItemRows,
+        Dictionary<Guid, Dictionary<DateOnly, int>> byItem,
+        DateOnly commonStart,
+        DateOnly commonEnd)
+    {
+        List<HabitContributionGraphDto> graphs = [with(capacity: habitItemRows.Count)];
+        foreach (var hi in habitItemRows)
+        {
+            _ = byItem.TryGetValue(hi.Id, out var countByDay);
+            countByDay ??= [];
+
+            var activeDays = 0;
+            var maxInRange = 0;
+            for (var d = commonStart; d <= commonEnd; d = d.AddDays(1))
+            {
+                if (!countByDay.TryGetValue(d, out var c))
+                {
+                    continue;
+                }
+
+                activeDays++;
+                if (c > maxInRange)
+                {
+                    maxInRange = c;
+                }
+            }
+
+            IReadOnlyList<ActivityHeatmapCellDto> graphHeat = BuildRangeContributionHeatmap(
+                commonStart,
+                commonEnd,
+                commonEnd,
+                countByDay,
+                maxInRange);
+
+            var gStartW = StartOfIsoWeek(commonStart);
+            var gEndW = StartOfIsoWeek(commonEnd);
+            var columns = ((gEndW.DayNumber - gStartW.DayNumber) / 7) + 1;
+            if (columns < 1)
+            {
+                columns = 1;
+            }
+
+            var periodDays = commonEnd.DayNumber - commonStart.DayNumber + 1;
+            if (periodDays < 1)
+            {
+                periodDays = 1;
+            }
+
+            graphs.Add(new HabitContributionGraphDto(
+                hi.Id,
+                hi.Title,
+                graphHeat,
+                columns,
+                activeDays,
+                periodDays,
+                maxInRange));
+        }
+
+        return graphs;
+    }
+
     public static ActivityDayDetailDto BuildDayDetail(
         DateOnly day,
         IReadOnlyList<UserActivityEventRecord> rows,

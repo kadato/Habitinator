@@ -174,6 +174,72 @@ public sealed class ActivityStatisticsService(
         return result;
     }
 
+    public async Task<HabitContributionsViewDto> GetHabitContributionsAsync(
+        Guid userId,
+        string? periodKey,
+        string? tag,
+        CancellationToken cancellationToken = default)
+    {
+        var utcToday = Today();
+        var userCache = cache.GetOrCreate(userId);
+        (string?, string?, DateOnly) cacheKey = (periodKey, tag, utcToday);
+        if (userCache.HabitContributions.TryGetValue(cacheKey, out var cached))
+        {
+            return cached;
+        }
+
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var options = await BuildDailyPeriodOptionsAsync(db, userId, utcToday, cancellationToken);
+        (var key, var rangeStart, var rangeEnd) =
+            ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, utcToday, options);
+
+        var fromUtc = rangeStart.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var toUtc = rangeEnd.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+        var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, tag, cancellationToken);
+
+        var habitQ = db.BoardItems.AsNoTracking()
+            .Where(b => b.UserId == userId && b.DeletedAtUtc == null && b.Section == BoardSection.Habit);
+        if (allowedIds is not null)
+        {
+            habitQ = habitQ.Where(b => allowedIds.Contains(b.Id));
+        }
+
+        var habitItemRows = await habitQ
+            .OrderBy(b => b.Title)
+            .Select(b => new { b.Id, b.Title, b.CreatedAtUtc })
+            .ToListAsync(cancellationToken);
+
+        var evQ = db.UserActivityEvents.AsNoTracking()
+            .Where(e =>
+                e.UserId == userId &&
+                e.OccurredAtUtc >= fromUtc &&
+                e.OccurredAtUtc < toUtc);
+        if (allowedIds is not null)
+        {
+            evQ = evQ.Where(e => e.BoardItemId != null && allowedIds.Contains(e.BoardItemId.Value));
+        }
+
+        var eventRows = await evQ
+            .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
+            .ToListAsync(cancellationToken);
+
+        var result = ActivityStatisticsCalculator.BuildHabitContributions(
+            eventRows,
+            [.. habitItemRows.Select(b => new HabitItemStatsDto(
+                b.Id,
+                b.Title,
+                DateOnly.FromDateTime(timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime)))],
+            key,
+            options,
+            rangeStart,
+            rangeEnd,
+            utcToday);
+
+        userCache.HabitContributions.Set(cacheKey, result);
+        return result;
+    }
+
     private static async Task<IReadOnlyList<string>> GetDistinctTagsForUserAsync(
         ApplicationDbContext db,
         Guid userId,

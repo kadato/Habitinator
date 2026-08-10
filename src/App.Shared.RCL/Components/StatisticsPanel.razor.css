@@ -120,7 +120,7 @@
     box-sizing: border-box;
 }
 
-button.stats-heatmap-day-btn {
+button.stats-cell {
     display: block;
     padding: 0;
     border: 0;
@@ -129,8 +129,8 @@ button.stats-heatmap-day-btn {
     cursor: pointer;
 }
 
-button.stats-heatmap-day-btn:focus-visible,
-button.stats-heatmap-day-btn:focus {
+button.stats-cell:focus-visible,
+button.stats-cell:focus {
     outline: 2px solid var(--mud-palette-primary) !important;
     outline-offset: 1px !important;
     position: relative !important;
@@ -372,7 +372,7 @@ button.stats-heatmap-day-btn:focus {
 
 .stats-kpi-strip__grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--space-4);
     align-items: stretch;
 }
@@ -401,6 +401,10 @@ button.stats-heatmap-day-btn:focus {
 
 .stats-kpi-strip__item--peak {
     --kpi-accent: color-mix(in srgb, var(--mud-palette-success) 70%, var(--mud-palette-primary) 30%);
+}
+
+.stats-kpi-strip__item--streak {
+    --kpi-accent: #f97316;
 }
 
 .stats-kpi-strip__head {
@@ -617,4 +621,97 @@ button.stats-heatmap-day-btn:focus {
     padding: 4px 8px;
     border-radius: var(--radius-sm);
     background: var(--mud-palette-background-gray);
+}
+
+/* Streak KPI accent */
+::deep .stats-kpi-card--streak {
+    --kpi-accent: #f97316;
+}
+
+/* Weekly review card */
+.stats-weekly-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
+}
+
+.stats-weekly-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.65rem 0.7rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 16%, var(--mud-palette-table-lines) 70%);
+    background: color-mix(in srgb, var(--mud-palette-surface) 88%, var(--mud-palette-primary) 5%);
+    min-width: 0;
+}
+
+.stats-weekly-tile__label {
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stats-weekly-tile__value {
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    color: var(--mud-palette-text-primary);
+}
+
+.stats-weekly-tile__delta {
+    font-size: 0.66rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stats-weekly-tile__delta--up {
+    color: var(--mud-palette-success);
+}
+
+.stats-weekly-tile__delta--down {
+    color: var(--mud-palette-error);
+}
+
+.stats-weekly-tile__delta--flat {
+    color: var(--mud-palette-text-secondary);
+}
+
+@media (max-width: 599.98px) {
+    .stats-weekly-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--space-3);
+    }
+}
+
+/* Habits graphs blocks */
+.stats-habit-block {
+    border-radius: var(--radius-lg);
+    border: 1px solid color-mix(in srgb, var(--hab-type-habit) 22%, var(--mud-palette-table-lines) 72%);
+}
+
+.stats-habit-title {
+    color: var(--hab-type-habit);
+}
+
+.stats-habit-ratio {
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--hab-type-habit) 12%, transparent);
+    color: var(--hab-type-habit);
+    border: 1px solid color-mix(in srgb, var(--hab-type-habit) 24%, transparent);
+    white-space: nowrap;
 }

@@ -26,6 +26,8 @@ public sealed class ActivityStatisticsCache
 
         public BoundedCache<(string? Period, string? Tag, DateOnly Today), DailyContributionsViewDto> DailyContributions { get; } = new(MaxEntriesPerUser);
 
+        public BoundedCache<(string? Period, string? Tag, DateOnly Today), HabitContributionsViewDto> HabitContributions { get; } = new(MaxEntriesPerUser);
+
         public BoundedCache<(DateOnly Day, string? Tag), ActivityDayDetailDto> DayDetail { get; } = new(MaxEntriesPerUser);
     }
 

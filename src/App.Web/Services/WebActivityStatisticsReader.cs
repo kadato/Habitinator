@@ -34,6 +34,13 @@ public sealed class WebActivityStatisticsReader : IActivityStatisticsReader
         return await _statisticsService.GetDailyContributionsAsync(userId, periodKey, tag, cancellationToken);
     }
 
+    public async Task<HabitContributionsViewDto> GetHabitContributionsAsync(string? periodKey, string? tag = null,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = await RequireUserIdAsync(cancellationToken);
+        return await _statisticsService.GetHabitContributionsAsync(userId, periodKey, tag, cancellationToken);
+    }
+
     public async Task<ActivityDayDetailDto> GetActivityDayDetailAsync(DateOnly day, string? tag = null,
         CancellationToken cancellationToken = default)
     {

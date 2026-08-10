@@ -35,11 +35,29 @@ public sealed record DailyGraphPeriodOption(string Key, string Label);
 
 public sealed record DailyItemStatsDto(Guid Id, string Title, DateOnly? DailyStartDate, DateOnly CreatedAt);
 
+public sealed record HabitItemStatsDto(Guid Id, string Title, DateOnly CreatedAt);
 
 public sealed record DailyContributionsViewDto(
     string PeriodKey,
     IReadOnlyList<DailyGraphPeriodOption> PeriodOptions,
     IReadOnlyList<DailyContributionGraphDto> Graphs,
+    DateOnly RangeStart,
+    DateOnly RangeEnd);
+
+/// <summary>Heatmap plus active-day ratio for one habit in the selected period.</summary>
+public sealed record HabitContributionGraphDto(
+    Guid BoardItemId,
+    string Title,
+    IReadOnlyList<ActivityHeatmapCellDto> Heatmap,
+    int GridWeekColumns,
+    int ActiveDayCount,
+    int PeriodDayCount,
+    int MaxDayCountInRange);
+
+public sealed record HabitContributionsViewDto(
+    string PeriodKey,
+    IReadOnlyList<DailyGraphPeriodOption> PeriodOptions,
+    IReadOnlyList<HabitContributionGraphDto> Graphs,
     DateOnly RangeStart,
     DateOnly RangeEnd);
 

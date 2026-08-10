@@ -18,8 +18,24 @@ internal static class ActivityApiRoutes
 
         activityApi.MapGet("dashboard", GetDashboardAsync);
         activityApi.MapGet("daily-contributions", GetDailyContributionsAsync);
+        activityApi.MapGet("habit-contributions", GetHabitContributionsAsync);
         activityApi.MapGet("day", GetActivityDayDetailAsync);
         activityApi.MapPost("log", LogActivityAsync);
+    }
+
+    private static async Task<IResult> GetHabitContributionsAsync(
+        ClaimsPrincipal user,
+        ActivityStatisticsService stats,
+        string? period,
+        string? tag,
+        CancellationToken cancellationToken)
+    {
+        if (AuthenticatedUserId.TryGet(user) is not { } userId)
+        {
+            return Results.Unauthorized();
+        }
+
+        return Results.Ok(await stats.GetHabitContributionsAsync(userId, period, tag, cancellationToken));
     }
 
     private static async Task<IResult> GetDashboardAsync(

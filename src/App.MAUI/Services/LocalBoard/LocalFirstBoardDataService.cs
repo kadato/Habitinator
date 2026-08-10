@@ -10,19 +10,27 @@ using Microsoft.Extensions.Logging;
 namespace App.MAUI.Services.LocalBoard;
 
 /// <summary>SQLite-backed board with outbound outbox; network I/O is driven by <see cref="MauiBoardSyncCoordinator" />.</summary>
+#pragma warning disable CA1001 // DI singleton: owns a long-lived SemaphoreSlim and is never disposed by the container.
 public sealed partial class LocalFirstBoardDataService(
     IDbContextFactory<LocalBoardDbContext> dbFactory,
     IAuthTokenStore tokens,
     RemoteBoardDataService remote,
     IServiceProvider services,
     IUserTimeZoneService timeZone,
+    IUserPreferencesService preferences,
     MauiBoardSyncStatus syncStatus,
     ILogger<LocalFirstBoardDataService> logger)
-    : IBoardDataService, IMauiBoardLocalStoreLifecycle, IDisposable
+    : IBoardDataService, IMauiBoardLocalStoreLifecycle
 {
     private static volatile bool _schemaReady;
     private static readonly SemaphoreSlim SchemaLock = new(1, 1);
     private readonly SemaphoreSlim _gate = new(1, 1);
+
+    private async Task<DateOnly> TodayAsync(CancellationToken cancellationToken)
+    {
+        var prefs = await preferences.GetAsync(cancellationToken);
+        return DailySchedule.LocalToday(timeZone, prefs.DayStartLocalTime);
+    }
 
     public Task EnsureStoreReadyAsync(CancellationToken cancellationToken = default) =>
         EnsureLocalStoreSchemaAsync(cancellationToken);
@@ -79,7 +87,8 @@ public sealed partial class LocalFirstBoardDataService(
 
             await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
             await EnsureUserScopeAsync(db, userKey, cancellationToken);
-            snap = ReadSnapshot(db, userKey);
+            var today = await TodayAsync(cancellationToken);
+            snap = ReadSnapshot(db, userKey, today);
 
             if (IsEmpty(snap) && !syncStatus.IsSyncing)
             {
@@ -111,7 +120,8 @@ public sealed partial class LocalFirstBoardDataService(
                 {
                     await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
                     await ReplaceMirrorAsync(db, userKey, fresh, cancellationToken);
-                    snap = ReadSnapshot(db, userKey);
+                    var today = await TodayAsync(cancellationToken);
+                    snap = ReadSnapshot(db, userKey, today);
                 }
                 finally
                 {
@@ -360,7 +370,7 @@ public sealed partial class LocalFirstBoardDataService(
                 return EmptySnapshot();
             }
 
-            var today = DailySchedule.LocalToday(timeZone);
+            var today = await TodayAsync(cancellationToken);
             var items = await db.BoardItems.AsNoTracking().Where(x => x.UserKey == userKey && x.IsArchived).ToListAsync(cancellationToken);
 
             List<BoardItem> habits = [.. items.Where(x => x.Section == BoardSection.Habit)
@@ -402,7 +412,7 @@ public sealed partial class LocalFirstBoardDataService(
                 }
 
                 var expected = row.ServerUpdatedAtUtc;
-                ApplyLocalToggle(section, row);
+                ApplyLocalToggle(section, row, await TodayAsync(cancellationToken));
                 Enqueue(
                     db,
                     userKey,
@@ -614,7 +624,8 @@ public sealed partial class LocalFirstBoardDataService(
                         row.ChecklistJson,
                         args.DueDate,
                         expectedTodo,
-                        row.SortOrder));
+                        row.SortOrder,
+                        args.TodoRepeatIntervalDays));
                 await db.SaveChangesAsync(cancellationToken);
                 return row.ToModel();
             },
@@ -1255,7 +1266,8 @@ public sealed partial class LocalFirstBoardDataService(
                             p.Tags,
                             p.ChecklistJson,
                             p.DueDate,
-                            p.SortOrder),
+                            p.SortOrder,
+                            p.TodoRepeatIntervalDays),
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
@@ -1390,7 +1402,7 @@ public sealed partial class LocalFirstBoardDataService(
         }
     }
 
-    private void ApplyLocalToggle(BoardSection section, LocalBoardItemRow row)
+    private static void ApplyLocalToggle(BoardSection section, LocalBoardItemRow row, DateOnly today)
     {
         switch (section)
         {
@@ -1399,7 +1411,6 @@ public sealed partial class LocalFirstBoardDataService(
                 break;
             case BoardSection.Daily:
                 {
-                    var today = DailySchedule.LocalToday(timeZone);
                     var done = row.DailyLastCompletedOn == today || (row.DailyLastCompletedOn is null && row.IsCompleted);
                     if (done)
                     {
@@ -1558,9 +1569,8 @@ public sealed partial class LocalFirstBoardDataService(
     private async Task<bool> HasAuthAsync(CancellationToken cancellationToken) =>
         !string.IsNullOrEmpty(await tokens.GetAccessTokenAsync(cancellationToken));
 
-    private BoardSnapshot ReadSnapshot(LocalBoardDbContext db, string userKey)
+    private static BoardSnapshot ReadSnapshot(LocalBoardDbContext db, string userKey, DateOnly today)
     {
-        var today = DailySchedule.LocalToday(timeZone);
         List<LocalBoardItemRow> items = [.. db.BoardItems.AsNoTracking().Where(x => x.UserKey == userKey && !x.IsArchived)];
         // Match BoardPersistenceService.GetSnapshotAsync ordering (web app).
         List<BoardItem> habits = [.. items.Where(x => x.Section == BoardSection.Habit)
@@ -1813,9 +1823,5 @@ public sealed partial class LocalFirstBoardDataService(
             seq += 1.0;
         }
     }
-
-    public void Dispose()
-    {
-        _gate.Dispose();
-    }
 }
+#pragma warning restore CA1001

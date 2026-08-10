@@ -51,7 +51,14 @@ public sealed class BoardPersistenceService(
         }
     }
 
-    private DateOnly Today() => DailySchedule.LocalToday(timeZone);
+    private async Task<DateOnly> TodayAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var prefs = await dbContext.Users.AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => u.UserPreferences)
+            .FirstOrDefaultAsync(cancellationToken);
+        return DailySchedule.LocalToday(timeZone, prefs?.DayStartLocalTime);
+    }
 
     private static IQueryable<BoardItemEntity> LiveBoardItems(ApplicationDbContext db, Guid userId) =>
         db.BoardItems.Where(x => x.UserId == userId && x.DeletedAtUtc == null && !x.IsArchived);
@@ -142,7 +149,7 @@ public sealed class BoardPersistenceService(
         var deletedIds = new List<Guid>();
         DateTimeOffset? next = null;
 
-        var today = Today();
+        var today = await TodayAsync(userId, cancellationToken);
         var dailyRows = changed.Where(x => x.DeletedAtUtc is null && x.Section == BoardSection.Daily).ToList();
         var dailyStreaks = dailyRows.Count == 0
             ? EmptyDailyStreaks
@@ -201,7 +208,7 @@ public sealed class BoardPersistenceService(
             .ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);
 
-        var today = Today();
+        var today = await TodayAsync(userId, cancellationToken);
         var dailies = items.Where(x => x.Section == BoardSection.Daily).ToList();
         Dictionary<Guid, int> dailyStreaks = [];
         var snapshot = new BoardSnapshot(
@@ -239,7 +246,7 @@ public sealed class BoardPersistenceService(
         var dailies = await LiveBoardItems(readDb, userId).AsNoTracking()
             .Where(x => x.Section == BoardSection.Daily)
             .ToListAsync(cancellationToken);
-        var today = Today();
+        var today = await TodayAsync(userId, cancellationToken);
         var map = await BuildDailyStreakMapAsync(userId, dailies, today, readDb, cancellationToken);
         var result = new Dictionary<Guid, int>(map);
         streakCache.Set(userId, result);
@@ -396,7 +403,7 @@ public sealed class BoardPersistenceService(
             .ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);
 
-        var today = Today();
+        var today = await TodayAsync(userId, cancellationToken);
         Dictionary<Guid, int> dailyStreaks = [];
         return new BoardSnapshot(
             [.. items.Where(x => x.Section == BoardSection.Habit)
@@ -424,7 +431,7 @@ public sealed class BoardPersistenceService(
         CancellationToken cancellationToken = default) =>
         LockAsync(async () =>
         {
-            var today = Today();
+            var today = await TodayAsync(userId, cancellationToken);
             if (completedOn >= today)
             {
                 return new BoardMutationResult(BoardMutationStatus.NotFound, null);
@@ -462,7 +469,7 @@ public sealed class BoardPersistenceService(
                 DailyStreakCalculator.BackdatedDailyEventOccurredAt(completedOn));
             var streakMap = await ComputeDailyStreakMapAsync(userId, entity, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
-            var completed = ToModelWithDailyStreaksAsync(entity, streakMap);
+            var completed = ToModelWithDailyStreaksAsync(entity, streakMap, today);
             await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
             return new BoardMutationResult(BoardMutationStatus.Ok, completed);
         }, cancellationToken);
@@ -481,6 +488,7 @@ public sealed class BoardPersistenceService(
             }
 
             IReadOnlyDictionary<Guid, int>? streakMap = null;
+            DateOnly today = default;
             return await MutateItemAsync(
                 userId,
                 section,
@@ -490,7 +498,8 @@ public sealed class BoardPersistenceService(
                 {
                     if (section == BoardSection.Daily)
                     {
-                        ToggleDaily(entity, Today(), userId, itemId);
+                        today = await TodayAsync(userId, cancellationToken);
+                        ToggleDaily(entity, today, userId, itemId);
                         streakMap = await ComputeDailyStreakMapAsync(userId, entity, cancellationToken);
                     }
                     else
@@ -501,7 +510,7 @@ public sealed class BoardPersistenceService(
                     return true;
                 },
                 entity => streakMap is not null
-                    ? Task.FromResult(ToModelWithDailyStreaksAsync(entity, streakMap))
+                    ? Task.FromResult(ToModelWithDailyStreaksAsync(entity, streakMap, today))
                     : ToModelWithDailyStreaksAsync(userId, entity, cancellationToken),
                 cancellationToken);
         }, cancellationToken);
@@ -517,7 +526,7 @@ public sealed class BoardPersistenceService(
         BoardItemEntity dailyEntity,
         CancellationToken cancellationToken)
     {
-        var today = Today();
+        var today = await TodayAsync(userId, cancellationToken);
         var singleDailyList = new List<BoardItemEntity> { dailyEntity };
         var map = await BuildDailyStreakMapAsync(userId, singleDailyList, today, dbContext, cancellationToken);
         if (map.TryGetValue(dailyEntity.Id, out var streak))
@@ -685,7 +694,7 @@ public sealed class BoardPersistenceService(
                 args.ExpectedUpdatedAtUtc,
                 async entity =>
                 {
-                    var today = Today();
+                    var today = await TodayAsync(userId, cancellationToken);
                     var wasCompleteForToday = IsDailyEntityCompleteForToday(entity, today);
 
                     var n = Math.Max(1, Math.Min(999, args.RepeatInterval));
@@ -852,7 +861,7 @@ public sealed class BoardPersistenceService(
         BoardItemEntity entity,
         CancellationToken cancellationToken = default)
     {
-        var today = Today();
+        var today = await TodayAsync(userId, cancellationToken);
         if (entity.Section != BoardSection.Daily)
         {
             return ToModelWithToday(entity, today, EmptyDailyStreaks);
@@ -864,11 +873,11 @@ public sealed class BoardPersistenceService(
         return ToModelWithToday(entity, today, streaks);
     }
 
-    private BoardItem ToModelWithDailyStreaksAsync(
+    private static BoardItem ToModelWithDailyStreaksAsync(
         BoardItemEntity entity,
-        IReadOnlyDictionary<Guid, int> streaks)
+        IReadOnlyDictionary<Guid, int> streaks,
+        DateOnly today)
     {
-        var today = Today();
         return ToModelWithToday(entity, today, streaks);
     }
 

@@ -1,5 +1,5 @@
-# https://habitinator.app — public marketing and auth pages only; app data requires sign-in.
-# AI preferences (emerging Content-Signal convention): allow search indexing; no model training on content.
+# https://habitinator.app - public marketing and auth pages only. App data requires sign-in.
+# AI preferences, an emerging Content-Signal convention. Allow search indexing, no model training on content.
 Content-Signal: search=yes, ai-train=no
 User-agent: *
 Allow: /
@@ -10,7 +10,7 @@ Disallow: /settings
 Disallow: /Error
 Disallow: /not-found
 
-# AI crawlers — same policy as default; adjust if you publish a training opt-out via Content-Signal.
+# AI crawlers - same policy as default. Adjust if you publish a training opt-out via Content-Signal.
 User-agent: GPTBot
 Allow: /
 Disallow: /api/

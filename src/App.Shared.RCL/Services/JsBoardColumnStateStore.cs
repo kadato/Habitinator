@@ -36,10 +36,12 @@ public sealed class JsBoardColumnStateStore : IBoardColumnStateStore
         }
         catch (JSDisconnectedException)
         {
+            // Safe default: no persisted state, fail open. Never throw on JS failure.
             return null;
         }
         catch (JSException)
         {
+            // Safe default: no persisted state, fail open. Never throw on JS failure.
             return null;
         }
     }

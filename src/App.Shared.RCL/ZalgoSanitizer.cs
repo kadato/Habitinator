@@ -9,7 +9,7 @@ namespace App.Shared.RCL;
 /// </summary>
 /// <remarks>
 /// Zalgo text works by stacking hundreds of combining diacritics on a single base character.
-/// Normal accented characters use at most 1–2 combining marks; Zalgo typically uses 10–200.
+/// Normal accented characters use at most 1-2 combining marks. Zalgo typically uses 10-200.
 /// This sanitizer limits combining marks to <see cref="MaxCombiningPerBase"/> per grapheme
 /// cluster, which neutralises Zalgo while keeping intentional typography intact.
 /// </remarks>
@@ -60,7 +60,7 @@ public static class ZalgoSanitizer
 
         if (!IsZalgo(input))
         {
-            return input; // fast path – avoid allocation for clean strings
+            return input; // fast path - avoid allocation for clean strings
         }
 
         var sb = new StringBuilder(input.Length);

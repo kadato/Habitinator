@@ -32,10 +32,12 @@ public sealed class JsOnboardingStore : IOnboardingStore
         }
         catch (JSDisconnectedException)
         {
+            // Safe default: treat onboarding as completed, fail closed. Never throw on JS failure.
             return true;
         }
         catch (JSException)
         {
+            // Safe default: treat onboarding as completed, fail closed. Never throw on JS failure.
             return true;
         }
     }

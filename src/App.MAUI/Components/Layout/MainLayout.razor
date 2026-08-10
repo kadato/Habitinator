@@ -110,18 +110,6 @@
         }
     }
 
-    [JSInvokable]
-    public void NavigateTo(string path)
-    {
-        Nav.NavigateTo(path);
-    }
-
-    [JSInvokable]
-    public Task OnCtrlZPressed()
-    {
-        return Task.CompletedTask;
-    }
-
     public void Dispose()
     {
         Session.Changed -= OnSessionChanged;

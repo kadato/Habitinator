@@ -41,7 +41,7 @@
                                 <MudText Typo="Typo.h6" Class="app-top-bar__title mb-0">Habitinator</MudText>
                             </div>
                             <div class="app-show-desktop-only align-center">
-                                <NavMenu Mode="AppNavMode.Full"/>
+                                <NavMenu/>
                             </div>
                         </div>
                         <div class="app-top-bar__flex-spacer" aria-hidden="true"></div>
@@ -84,7 +84,7 @@
                             </div>
                         </div>
                     </div>
-                    <NavMenu Mode="AppNavMode.Full" MobileTopBar="true" />
+                    <NavMenu MobileTopBar="true" />
                 </div>
             </MudAppBar>
         </Authorized>
@@ -211,18 +211,6 @@
                 // Ignore early JS interop failures
             }
         }
-    }
-
-    [JSInvokable]
-    public void NavigateTo(string path)
-    {
-        Nav.NavigateTo(path);
-    }
-
-    [JSInvokable]
-    public Task OnCtrlZPressed()
-    {
-        return Task.CompletedTask;
     }
 
     public void Dispose()

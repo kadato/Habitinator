@@ -1,5 +1,4 @@
 @page "/"
-@using System.Security.Claims
 
 <AuthorizeView>
     <Authorized>
@@ -7,7 +6,7 @@
                   Description="Your habits, dailies, and to-dos board. Sign-in required."
                   CanonicalPath="/"
                   Robots="@SeoDefaults.NoIndexRobots"/>
-        <MainBoard SignedInEmail="@GetEmail(context.User)"/>
+        <MainBoard/>
     </Authorized>
     <NotAuthorized>
         <PageMeta Title="@SeoDefaults.DefaultTitle"
@@ -35,11 +34,5 @@
           "description": "Track habits, dailies, and to-dos with a focus timer and activity statistics."
         }
         """;
-
-    private static string? GetEmail(ClaimsPrincipal user)
-    {
-        return user.FindFirst(ClaimTypes.Email)?.Value
-               ?? user.Identity?.Name;
-    }
 
 }

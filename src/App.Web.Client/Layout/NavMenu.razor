@@ -2,92 +2,32 @@
 @inject NavigationManager Nav
 
 @{
-    var navClass = "";
-    if (MobileTopBar)
-    {
-        navClass = "app-mobile-nav";
-    }
-    else if (BottomBar)
-    {
-        navClass = "app-bottom-nav";
-    }
-    else
-    {
-        var suffix = Vertical ? "flex-column align-stretch w-100" : "d-flex flex-wrap align-center";
-        navClass = $"app-header-nav {suffix}";
-    }
-
-    if (!MobileTopBar && !BottomBar && Mode == AppNavMode.AuthLinks)
-    {
-        navClass += " app-header-nav--auth";
-    }
+    var navClass = MobileTopBar ? "app-mobile-nav" : "app-header-nav d-flex flex-wrap align-center";
 }
 
 @if (MobileTopBar)
 {
-    @if (Mode is AppNavMode.Full or AppNavMode.BoardOnly)
-    {
-        <nav class="@navClass" role="navigation" aria-label="Main navigation">
-            @MobileNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
-            @MobileNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Stats")
-            @MobileNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Settings, "Settings")
-        </nav>
-    }
-}
-else if (BottomBar)
-{
-    @if (Mode is AppNavMode.Full or AppNavMode.BoardOnly)
-    {
-        <nav class="@navClass" role="navigation" aria-label="Main navigation">
-            @BottomNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
-            @BottomNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Statistics")
-            @BottomNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Settings, "Settings")
-        </nav>
-    }
+    <nav class="@navClass" role="navigation" aria-label="Main navigation">
+        @MobileNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
+        @MobileNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Stats")
+        @MobileNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Settings, "Settings")
+    </nav>
 }
 else
 {
     <div class="@navClass">
-        @if (Mode is AppNavMode.Full or AppNavMode.BoardOnly)
-        {
-            @HeaderNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
-            <AuthorizeView>
-                <Authorized>
-                    @HeaderNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Statistics")
-                    @HeaderNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Settings, "Settings")
-                </Authorized>
-            </AuthorizeView>
-        }
-        @if (Mode is AppNavMode.Full)
-        {
-            <AuthorizeView>
-                <NotAuthorized>
-                    @AuthLinkButtons
-                </NotAuthorized>
-            </AuthorizeView>
-        }
-        @if (Mode is AppNavMode.AuthLinks)
-        {
-            <AuthorizeView>
-                <NotAuthorized>
-                    @AuthLinkButtons
-                </NotAuthorized>
-            </AuthorizeView>
-        }
+        @HeaderNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
+        <AuthorizeView>
+            <Authorized>
+                @HeaderNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Statistics")
+                @HeaderNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Settings, "Settings")
+            </Authorized>
+        </AuthorizeView>
     </div>
 }
 
 @code {
-    [Parameter] public AppNavMode Mode { get; set; } = AppNavMode.Full;
-    [Parameter] public bool Vertical { get; set; }
-    [Parameter] public bool BottomBar { get; set; }
     [Parameter] public bool MobileTopBar { get; set; }
-
-    private RenderFragment AuthLinkButtons => __builder =>
-    {
-        @HeaderNavItem("/auth/login", "auth/login", NavLinkMatch.Prefix, Icons.Material.Filled.Login, "Login", target: "_self")
-        @HeaderNavItem("/auth/register", "auth/register", NavLinkMatch.Prefix, Icons.Material.Filled.PersonAdd, "Register", target: "_self")
-    };
 
     protected override void OnInitialized()
     {
@@ -134,18 +74,6 @@ else
         <a href="@href" class="@itemClass" aria-current="@(active ? "page" : null)" data-enhance-nav="false">
             <MudIcon Icon="@icon" Class="app-mobile-nav__icon" />
             <span class="app-mobile-nav__label">@label</span>
-        </a>
-    };
-
-    private RenderFragment BottomNavItem(string href, string path, NavLinkMatch match, string icon, string label) => __builder =>
-    {
-        var active = IsActivePath(path, match);
-        var itemClass = active ? "app-bottom-nav__item app-bottom-nav__item--active" : "app-bottom-nav__item";
-        <a href="@href" class="@itemClass" aria-current="@(active ? "page" : null)" aria-label="@label" data-enhance-nav="false">
-            <span class="app-bottom-nav__icon-wrap" aria-hidden="true">
-                <MudIcon Icon="@icon" Class="app-bottom-nav__icon" />
-            </span>
-            <span class="app-bottom-nav__label">@label</span>
         </a>
     };
 

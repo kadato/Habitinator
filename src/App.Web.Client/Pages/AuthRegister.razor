@@ -20,7 +20,13 @@
         <form method="post" action="/api/auth/register-form">
             <RegisterFormFields IsInteractive="false" FormEmail="@_email"/>
             <div class="auth-form-actions">
-                <button class="btn btn-primary" type="submit">Create account</button>
+                <MudButton ButtonType="ButtonType.Submit"
+                           Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           FullWidth="true"
+                           Size="Size.Large">
+                    Create account
+                </MudButton>
             </div>
         </form>
     </ChildContent>

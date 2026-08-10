@@ -1,10 +1,15 @@
 @* Shared wrapper for login and register pages (web + MAUI). *@
 
-<div class="auth-page">
+<div class="auth-page @Class">
     <div class="auth-page__shell" style="--auth-shell-max: @MaxWidth">
         @if (!string.IsNullOrWhiteSpace(Title) || !string.IsNullOrWhiteSpace(Subtitle))
         {
             <header class="auth-page__header">
+                <img class="auth-page__logo"
+                     src="_content/App.Shared.RCL/brand/mark-tile.svg"
+                     width="52"
+                     height="52"
+                     alt="Habitinator"/>
                 @if (!string.IsNullOrWhiteSpace(Title))
                 {
                     <h1 class="auth-page__title">@Title</h1>
@@ -35,6 +40,9 @@
     [Parameter] public string? Title { get; set; }
 
     [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>Extra CSS classes for the outer wrapper.</summary>
+    [Parameter] public string? Class { get; set; }
 
     /// <summary>CSS max-width for the shell, e.g. <c>28rem</c>.</summary>
     [Parameter] public string MaxWidth { get; set; } = "28rem";

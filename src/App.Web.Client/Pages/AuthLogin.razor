@@ -20,14 +20,26 @@
         <form method="post" action="/api/auth/cookie-login">
             <LoginFormFields IsInteractive="false"/>
             <div class="auth-form-actions">
-                <button class="btn btn-primary" type="submit">Sign in</button>
+                <MudButton ButtonType="ButtonType.Submit"
+                           Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           FullWidth="true"
+                           Size="Size.Large">
+                    Sign in
+                </MudButton>
             </div>
         </form>
 
         <div class="auth-form-divider" role="presentation">or</div>
 
         <form method="post" action="/api/auth/guest-login">
-            <button class="btn btn-outline-secondary" type="submit">Continue as demo guest</button>
+            <MudButton ButtonType="ButtonType.Submit"
+                       Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       FullWidth="true"
+                       Size="Size.Large">
+                Continue as demo guest
+            </MudButton>
         </form>
     </ChildContent>
     <Footer>

@@ -1,59 +1,62 @@
-<div class="auth-page auth-landing">
-    <div class="auth-page__shell" style="--auth-shell-max: 28rem">
-        <header class="auth-page__header">
-            <h1 class="auth-page__title">Welcome to Habitinator</h1>
-            <p class="auth-page__subtitle">Track habits, dailies, and todos on one board.</p>
-        </header>
-
-        <div class="auth-card home-landing-card">
-            <p class="auth-card__section-title">Get started</p>
-            <div class="auth-landing__actions">
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           FullWidth="true"
-                           Size="Size.Large"
-                           Href="/auth/login"
-                           Target="_self"
-                           data-enhance-nav="false">
-                    Sign in
-                </MudButton>
-            </div>
-
-            <div class="auth-landing__guest-block">
-                <div class="auth-form-divider" role="presentation">or</div>
-                <p class="auth-landing__guest-hint">
-                    Prefer to look around first? The demo guest account loads sample board data.
-                </p>
-                <div class="auth-landing__guest-paper guest-login-paper">
-                    @if (UseCookieGuestLogin)
-                    {
-                        <form method="post" action="/api/auth/guest-login" class="d-flex flex-column">
-                            <MudButton ButtonType="ButtonType.Submit"
-                                       Variant="Variant.Text"
-                                       Color="Color.Secondary"
-                                       FullWidth="true"
-                                       Size="Size.Medium">
-                                Continue as demo guest
-                            </MudButton>
-                        </form>
-                    }
-                    else
-                    {
-                        <MudButton Variant="Variant.Text"
-                                   Color="Color.Secondary"
-                                   FullWidth="true"
-                                   Size="Size.Medium"
-                                   Disabled="@_guestBusy"
-                                   OnClick="ContinueAsGuestAsync">
-                            Continue as demo guest
-                        </MudButton>
-                    }
-                </div>
-            </div>
+<AuthPageShell Title="Welcome to Habitinator"
+               Subtitle="Track habits, dailies, and todos on one board."
+               Class="auth-landing">
+    <ChildContent>
+        <p class="auth-card__section-title">Get started</p>
+        <div class="auth-landing__actions">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       Size="Size.Large"
+                       Href="/auth/login"
+                       Target="_self"
+                       data-enhance-nav="false">
+                Sign in
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       Size="Size.Large"
+                       Href="/auth/register"
+                       Target="_self"
+                       data-enhance-nav="false">
+                Register
+            </MudButton>
         </div>
 
-    </div>
-</div>
+        <div class="auth-landing__guest-block">
+            <div class="auth-form-divider" role="presentation">or</div>
+            <p class="auth-landing__guest-hint">
+                Prefer to look around first? The demo guest account loads sample board data.
+            </p>
+            <div class="auth-landing__guest-paper guest-login-paper">
+                @if (UseCookieGuestLogin)
+                {
+                    <form method="post" action="/api/auth/guest-login" class="d-flex flex-column">
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Variant="Variant.Outlined"
+                                   Color="Color.Secondary"
+                                   FullWidth="true"
+                                   Size="Size.Large">
+                            Continue as demo guest
+                        </MudButton>
+                    </form>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Secondary"
+                               FullWidth="true"
+                               Size="Size.Large"
+                               Disabled="@_guestBusy"
+                               OnClick="ContinueAsGuestAsync">
+                        Continue as demo guest
+                    </MudButton>
+                }
+            </div>
+        </div>
+    </ChildContent>
+</AuthPageShell>
 
 @code {
     /// <summary>When true, posts to the web cookie guest-login endpoint. When false, uses <see cref="OnContinueAsDemoGuest"/> (MAUI / JWT flow).</summary>

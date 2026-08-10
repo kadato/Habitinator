@@ -35,7 +35,14 @@
         </div>
         <p class="auth-form-hint">Use at least 8 characters. Avoid obvious passwords for your own account security.</p>
         <div class="auth-form-actions">
-            <button class="btn btn-primary" type="button" disabled="@_busy" @onclick="RegisterAsync">Create account</button>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       Size="Size.Large"
+                       Disabled="_busy"
+                       OnClick="RegisterAsync">
+                Create account
+            </MudButton>
         </div>
     </ChildContent>
     <Footer>

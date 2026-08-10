@@ -34,14 +34,26 @@
             <label class="form-check-label" for="remember">Remember me</label>
         </div>
         <div class="auth-form-actions">
-            <button class="btn btn-primary" type="button" disabled="@_busy" @onclick="LoginAsync">Sign in</button>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       Size="Size.Large"
+                       Disabled="_busy"
+                       OnClick="LoginAsync">
+                Sign in
+            </MudButton>
         </div>
 
         <div class="auth-form-divider" role="presentation">or</div>
 
-        <button class="btn btn-outline-secondary" type="button" disabled="@_busy" @onclick="GuestAsync">
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Secondary"
+                   FullWidth="true"
+                   Size="Size.Large"
+                   Disabled="_busy"
+                   OnClick="GuestAsync">
             Continue as demo guest
-        </button>
+        </MudButton>
     </ChildContent>
     <Footer>
         <span>New here?</span>

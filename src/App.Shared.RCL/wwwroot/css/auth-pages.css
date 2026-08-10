@@ -21,6 +21,15 @@
     margin-bottom: 1.25rem;
 }
 
+.auth-page__logo {
+    display: block;
+    width: 3.25rem;
+    height: 3.25rem;
+    margin: 0 auto var(--space-4);
+    border-radius: 22%;
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--mud-palette-primary) 30%, transparent);
+}
+
 .auth-page__title {
     margin: 0;
     font-size: clamp(1.65rem, 4vw, 2rem);

@@ -20,6 +20,16 @@
                             <MudText Typo="Typo.body2" Class="board-column-info-text">
                                 @GetGlossaryText()
                             </MudText>
+                            @if (Section == BoardSection.Todo)
+                            {
+                                <MudDivider Class="my-2"/>
+                                <MudMenuItem OnClick="DeleteAllDoneTodosAsync" Disabled="@(!AnyDoneTodos)">
+                                    <div class="d-flex align-center gap-2">
+                                        <MudIcon Icon="@Icons.Material.Filled.DeleteSweep" Size="Size.Small" Color="Color.Error"/>
+                                        <MudText Typo="Typo.body2" Color="Color.Error">Delete all done to-dos</MudText>
+                                    </div>
+                                </MudMenuItem>
+                            }
                         </ChildContent>
                     </MudMenu>
                 </MudStack>
@@ -81,6 +91,13 @@
                         class="@GetFilterBtnClass(_todoFilter == TodoListFilter.Done)"
                         @onclick="@(() => SetTodoFilter(TodoListFilter.Done))">
                     Done
+                </button>
+                <button type="button"
+                        class="@GetFilterBtnClass(_sortDueSoon)"
+                        title="Sort open to-dos by due date, soonest first"
+                        @attributes="SortDueSoonAria"
+                        @onclick="ToggleTodoSortDueSoon">
+                    Due soon
                 </button>
             }
         </div>

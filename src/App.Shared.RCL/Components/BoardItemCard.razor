@@ -69,6 +69,12 @@
                     </span>
                 </ActivatorContent>
                 <ChildContent>
+                    <MudMenuItem OnClick="OnOpenEditor">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Outlined.Edit" Size="Size.Small"/>
+                            <MudText Typo="Typo.body2">Edit</MudText>
+                        </div>
+                    </MudMenuItem>
                     <MudMenuItem OnClick="OnMoveToTop" Disabled="@(!CanReorder)">
                         <div class="d-flex align-center gap-2">
                             <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"/>
@@ -178,6 +184,10 @@
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="me-1"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                 @Item.NegativeCounter
                             </span>
+                        }
+                        @if (Item.ResetPeriod != HabitResetPeriod.Daily)
+                        {
+                            <span class="board-habit-badge board-habit-badge--period" title="Counter reset period">@ResetPeriodLabel</span>
                         }
                     </div>
                 }

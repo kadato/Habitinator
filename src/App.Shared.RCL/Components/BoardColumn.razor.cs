@@ -20,6 +20,7 @@ public partial class BoardColumn : IAsyncDisposable
     [Inject] public required IUserDateFormatService DateFormatService { get; set; }
     [Inject] public required IUndoService UndoService { get; set; }
     [Inject] public required IJSRuntime JS { get; set; }
+    [Inject] public required IBoardColumnStateStore ColumnState { get; set; }
 
     [Parameter][EditorRequired] public BoardSection Section { get; set; }
 
@@ -34,23 +35,95 @@ public partial class BoardColumn : IAsyncDisposable
     private HabitListFilter _habitFilter;
     private DailyListFilter _dailyFilter = DailyListFilter.Due;
     private TodoListFilter _todoFilter = TodoListFilter.Active;
+    private bool _sortDueSoon;
+
+    private Dictionary<string, object> SortDueSoonAria => new()
+    {
+        { "aria-pressed", _sortDueSoon ? "true" : "false" }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPersistedStateAsync();
+    }
+
+    private async Task LoadPersistedStateAsync()
+    {
+        BoardColumnFilterState? state;
+        try
+        {
+            state = await ColumnState.GetAsync();
+        }
+        catch (Exception)
+        {
+            return;
+        }
+
+        if (state is null)
+        {
+            return;
+        }
+
+        if (Enum.TryParse<HabitListFilter>(state.HabitFilter, ignoreCase: true, out var habit))
+        {
+            _habitFilter = habit;
+        }
+
+        if (Enum.TryParse<DailyListFilter>(state.DailyFilter, ignoreCase: true, out var daily))
+        {
+            _dailyFilter = daily;
+        }
+
+        if (Enum.TryParse<TodoListFilter>(state.TodoFilter, ignoreCase: true, out var todo))
+        {
+            _todoFilter = todo;
+        }
+
+        _sortDueSoon = state.TodoSortDueSoon ?? false;
+    }
+
+    private async Task PersistStateAsync()
+    {
+        try
+        {
+            await ColumnState.SetAsync(new BoardColumnFilterState(
+                _habitFilter.ToString(),
+                _dailyFilter.ToString(),
+                _todoFilter.ToString(),
+                _sortDueSoon));
+        }
+        catch (Exception)
+        {
+            // Ignored, filters simply won't persist
+        }
+    }
 
     private void SetHabitFilter(HabitListFilter filter)
     {
         _habitFilter = filter;
         _needRefresh = true;
+        _ = PersistStateAsync();
     }
 
     private void SetDailyFilter(DailyListFilter filter)
     {
         _dailyFilter = filter;
         _needRefresh = true;
+        _ = PersistStateAsync();
     }
 
     private void SetTodoFilter(TodoListFilter filter)
     {
         _todoFilter = filter;
         _needRefresh = true;
+        _ = PersistStateAsync();
+    }
+
+    private void ToggleTodoSortDueSoon()
+    {
+        _sortDueSoon = !_sortDueSoon;
+        _needRefresh = true;
+        _ = PersistStateAsync();
     }
 
     private readonly Dictionary<Guid, double> _sortOrderOverrides = [];
@@ -186,7 +259,8 @@ public partial class BoardColumn : IAsyncDisposable
             else if (Section == BoardSection.Todo)
             {
                 match = match
-                    && serverItem.TodoDueDate == overrideItem.TodoDueDate;
+                    && serverItem.TodoDueDate == overrideItem.TodoDueDate
+                    && serverItem.TodoRepeatIntervalDays == overrideItem.TodoRepeatIntervalDays;
             }
 
             if (match)
@@ -303,10 +377,17 @@ public partial class BoardColumn : IAsyncDisposable
     private IReadOnlyList<BoardItem> OrderTodos(IReadOnlyList<BoardItem> items) =>
         _todoFilter switch
         {
+            TodoListFilter.Active when _sortDueSoon => [.. items
+                .OrderBy(x => x.TodoDueDate.HasValue ? 0 : 1)
+                .ThenBy(x => x.TodoDueDate)
+                .ThenBy(x => GetEffectiveSortOrder(x) ?? double.MaxValue)
+                .ThenBy(x => x.Id)],
             TodoListFilter.Active => TodoOrdering.OrderForActiveTab(items, GetEffectiveSortOrder),
             TodoListFilter.Scheduled => TodoOrdering.OrderForScheduledTab(items),
             _ => OrderBySort(items)
         };
+
+    private bool AnyDoneTodos => EffectiveItems.Any(x => x.IsCompleted);
 
     private bool IsItemDraggable() =>
         Section != BoardSection.Todo || _todoFilter == TodoListFilter.Active;
@@ -508,7 +589,8 @@ public partial class BoardColumn : IAsyncDisposable
                     item.Tags,
                     item.ChecklistJson,
                     item.TodoDueDate?.ToDateTime(TimeOnly.MinValue),
-                    SortOrder: newSortOrder)),
+                    SortOrder: newSortOrder,
+                    TodoRepeatIntervalDays: item.TodoRepeatIntervalDays)),
 
             _ => Task.CompletedTask
         };
@@ -558,7 +640,8 @@ public partial class BoardColumn : IAsyncDisposable
                     item.Notes,
                     item.Tags,
                     json,
-                    item.TodoDueDate?.ToDateTime(TimeOnly.MinValue)));
+                    item.TodoDueDate?.ToDateTime(TimeOnly.MinValue),
+                    TodoRepeatIntervalDays: item.TodoRepeatIntervalDays));
         }
         else
         {
@@ -623,10 +706,44 @@ public partial class BoardColumn : IAsyncDisposable
 
     private Task ToggleAsync(BoardItem item)
     {
+        if (Section == BoardSection.Todo && !item.IsCompleted && item.TodoRepeatIntervalDays is > 0)
+        {
+            return ToggleRecurringTodoAsync(item);
+        }
+
         var nextCompleted = !item.IsCompleted;
         DateOnly? lastCompleted = nextCompleted ? BoardToday() : null;
         var optimistic = item with { IsCompleted = nextCompleted, DailyLastCompletedOn = lastCompleted };
         return ApplyOverrideAsync(item.Id, optimistic, () => BoardData.ToggleItemAsync(Section, item.Id));
+    }
+
+    private Task ToggleRecurringTodoAsync(BoardItem item)
+    {
+        var interval = item.TodoRepeatIntervalDays!.Value;
+        var nextDue = (item.TodoDueDate ?? BoardToday()).AddDays(interval);
+        while (nextDue <= BoardToday())
+        {
+            nextDue = nextDue.AddDays(interval);
+        }
+
+        var optimistic = item with { IsCompleted = true, TodoDueDate = nextDue, DailyLastCompletedOn = BoardToday() };
+        return ApplyOverrideAsync(item.Id, optimistic, async () =>
+        {
+            await BoardData.UpdateTodoAsync(
+                item.Id,
+                new UpdateTodoArgs(
+                    item.Title,
+                    item.Notes,
+                    item.Tags,
+                    item.ChecklistJson,
+                    nextDue.ToDateTime(TimeOnly.MinValue),
+                    SortOrder: item.SortOrder,
+                    TodoRepeatIntervalDays: item.TodoRepeatIntervalDays));
+            await BoardData.ToggleItemAsync(BoardSection.Todo, item.Id);
+            await Notifier.NotifyAsync(
+                $"Repeating to-do — next occurrence {DateFormatService.Format(nextDue)}.",
+                Severity.Info);
+        });
     }
 
     private async Task OpenEditHabitAsync(BoardItem item)
@@ -808,7 +925,8 @@ public partial class BoardColumn : IAsyncDisposable
             Notes = r.Notes,
             Tags = r.Tags,
             ChecklistJson = r.ChecklistJson,
-            TodoDueDate = r.DueDate != null ? DateOnly.FromDateTime(r.DueDate.Value) : null
+            TodoDueDate = r.DueDate != null ? DateOnly.FromDateTime(r.DueDate.Value) : null,
+            TodoRepeatIntervalDays = r.RepeatIntervalDays
         };
         return ApplyOverrideAsync(item.Id, optimistic, () => BoardData.UpdateTodoAsync(
             item.Id,
@@ -817,7 +935,8 @@ public partial class BoardColumn : IAsyncDisposable
                 r.Notes,
                 r.Tags,
                 r.ChecklistJson,
-                r.DueDate)));
+                r.DueDate,
+                TodoRepeatIntervalDays: r.RepeatIntervalDays)));
     }
 
     private Task ArchiveTodoAsync(BoardItem item) =>
@@ -893,12 +1012,12 @@ public partial class BoardColumn : IAsyncDisposable
 
     private async Task DeleteAllDoneTodosAsync()
     {
-        if (Section != BoardSection.Todo || _todoFilter != TodoListFilter.Done)
+        if (Section != BoardSection.Todo)
         {
             return;
         }
 
-        var toDelete = FilterTodos();
+        List<BoardItem> toDelete = [.. EffectiveItems.Where(x => x.IsCompleted)];
         if (toDelete.Count == 0)
         {
             return;
@@ -906,7 +1025,7 @@ public partial class BoardColumn : IAsyncDisposable
 
         var confirmed = await DialogService.ShowMessageBoxAsync(
             "Delete all done to-dos?",
-            $"This will permanently remove {toDelete.Count} done to-do(s) matching your current view. This cannot be undone.",
+            $"This will permanently remove {toDelete.Count} done to-do(s). This cannot be undone.",
             "Delete all",
             null,
             "Cancel");

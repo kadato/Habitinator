@@ -434,6 +434,14 @@
     border: 1px solid color-mix(in srgb, #b91c1c 20%, transparent);
 }
 
+.board-habit-badge--period {
+    background-color: color-mix(in srgb, var(--mud-palette-secondary) 12%, transparent);
+    color: var(--mud-palette-text-secondary);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-secondary) 24%, transparent);
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
 @keyframes streak-pulse {
     0% {
         transform: scale(1);

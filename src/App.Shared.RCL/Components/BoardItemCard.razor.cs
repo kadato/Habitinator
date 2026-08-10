@@ -93,6 +93,13 @@ public partial class BoardItemCard
 
     private DateOnly BoardToday() => DailySchedule.LocalToday(TimeZoneService);
 
+    private string ResetPeriodLabel => Item.ResetPeriod switch
+    {
+        HabitResetPeriod.Weekly => "Weekly",
+        HabitResetPeriod.Monthly => "Monthly",
+        _ => string.Empty
+    };
+
     private string HabitCounterTitle()
     {
         return (Item.TrackPlus, Item.TrackMinus) switch

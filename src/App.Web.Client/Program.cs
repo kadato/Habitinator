@@ -70,6 +70,9 @@ builder.Services.AddScoped<IUserTimeZoneService, UserTimeZoneService>();
 builder.Services.AddScoped<INotificationSettingsRules, NotificationSettingsRules>();
 builder.Services.AddScoped<IUserDateFormatService, UserDateFormatService>();
 builder.Services.AddScoped<IAccountActionsService, RemoteAccountActionsService>();
+builder.Services.AddScoped<IUserDataExportService, RemoteUserDataExportService>();
+builder.Services.AddScoped<IBoardColumnStateStore, JsBoardColumnStateStore>();
+builder.Services.AddScoped<IOnboardingStore, JsOnboardingStore>();
 
 var host = builder.Build();
 try

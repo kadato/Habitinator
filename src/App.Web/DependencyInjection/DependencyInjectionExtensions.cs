@@ -158,6 +158,10 @@ public static class DependencyInjectionExtensions
         services.AddScoped<INotificationSettingsRules, NotificationSettingsRules>();
         services.AddScoped<IUserDateFormatService, UserDateFormatService>();
         services.AddScoped<IAccountActionsService, WebAccountActionsService>();
+        services.AddScoped<UserDataExportService>();
+        services.AddScoped<IUserDataExportService, WebUserDataExportService>();
+        services.AddScoped<IBoardColumnStateStore, JsBoardColumnStateStore>();
+        services.AddScoped<IOnboardingStore, JsOnboardingStore>();
         services.AddHttpClient();
         services.AddValidation();
 

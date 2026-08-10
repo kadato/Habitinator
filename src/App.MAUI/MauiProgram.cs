@@ -122,6 +122,9 @@ public static class MauiProgram
         builder.Services.AddScoped<INotificationSettingsRules, NotificationSettingsRules>();
         builder.Services.AddSingleton<IUserDateFormatService, UserDateFormatService>();
         builder.Services.AddSingleton<IAccountActionsService, RemoteAccountActionsService>();
+        builder.Services.AddSingleton<IUserDataExportService, RemoteUserDataExportService>();
+        builder.Services.AddScoped<IBoardColumnStateStore, JsBoardColumnStateStore>();
+        builder.Services.AddScoped<IOnboardingStore, JsOnboardingStore>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

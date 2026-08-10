@@ -78,18 +78,6 @@
         }
       }
     },
-    "/api/auth/logout": {
-      "post": {
-        "tags": [
-          "App.Web"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/api/auth/guest-login": {
       "post": {
         "tags": [
@@ -728,7 +716,7 @@
               "null",
               "string"
             ],
-            "format": "date-time"
+            "format": "date"
           },
           "repeat": {
             "$ref": "#/components/schemas/DailyRepeatType"
@@ -747,7 +735,7 @@
               "string"
             ]
           },
-          "streak": {
+          "counter": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -987,7 +975,7 @@
               "null",
               "string"
             ],
-            "format": "date-time"
+            "format": "date"
           },
           "sortOrder": {
             "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",

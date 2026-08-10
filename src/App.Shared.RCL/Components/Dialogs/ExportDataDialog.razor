@@ -1,0 +1,66 @@
+@using Microsoft.JSInterop
+@inject IUserNotifier Notifier
+@inject IJSRuntime JS
+
+<MudDialog Class="export-dialog"
+           ContentClass="export-dialog__content"
+           Style="width: min(34rem, calc(100vw - 2rem));">
+    <DialogContent>
+        <div class="export-shell">
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3 d-block">
+                Your browser does not support file downloads here. Copy the JSON below to save it, or use a desktop browser.
+            </MudText>
+            <MudTextField T="string"
+                          @bind-Value="JsonText"
+                          Variant="Variant.Outlined"
+                          Lines="16"
+                          ReadOnly="true"
+                          Class="export-textarea mb-3"/>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.ContentCopy"
+                       Disabled="_copying"
+                       OnClick="CopyAsync">
+                Copy to clipboard
+            </MudButton>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter] [EditorRequired] public required string JsonText { get; set; }
+
+    private bool _copying;
+
+    private async Task CopyAsync()
+    {
+        if (_copying) return;
+        _copying = true;
+        try
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardUiState.js");
+            }
+            catch (Exception)
+            {
+                // Ignored; the copy call below will fail and be caught too
+            }
+
+            var copied = await JS.InvokeAsync<bool>("habitinatorCopyText", JsonText);
+            await Notifier.NotifyAsync(
+                copied ? "Copied to clipboard." : "Copying failed — select the text manually.",
+                copied ? Severity.Success : Severity.Warning);
+        }
+        catch (Exception)
+        {
+            await Notifier.NotifyAsync("Copying failed — select the text manually.", Severity.Warning);
+        }
+        finally
+        {
+            _copying = false;
+        }
+    }
+}

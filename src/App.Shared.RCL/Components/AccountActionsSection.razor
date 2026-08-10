@@ -1,5 +1,10 @@
+@using Microsoft.JSInterop
+@using App.Shared.RCL.Components.Dialogs
 @inject IUserNotifier Notifier
 @inject IAccountActionsService AccountActions
+@inject IUserDataExportService Export
+@inject IDialogService DialogService
+@inject IJSRuntime JS
 
 <MudStack Spacing="3">
     @if (ShowTitle)
@@ -27,6 +32,18 @@
 
     <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
         <MudStack Spacing="2">
+            <MudText Typo="Typo.subtitle1" Class="mb-1">Export your data</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
+                Download everything Habitinator stores for your account — board items and activity history - as a JSON file.
+            </MudText>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="_exporting" OnClick="ExportDataAsync">
+                Export data (JSON)
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+        <MudStack Spacing="2">
             <MudText Typo="Typo.subtitle1" Class="mb-1">Delete account</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
                 Permanently delete your account and all of your data. This cannot be undone.
@@ -47,6 +64,59 @@
     private string _confirmPassword = string.Empty;
     private bool _savingPassword;
     private bool _deleting;
+    private bool _exporting;
+
+    private async Task ExportDataAsync()
+    {
+        if (_exporting) return;
+        _exporting = true;
+        try
+        {
+            var data = await Export.ExportAsync();
+            var json = System.Text.Json.JsonSerializer.Serialize(
+                data,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            var fileName = $"habitinator-export-{data.ExportedAtUtc:yyyyMMdd-HHmm}.json";
+
+            bool downloaded;
+            try
+            {
+                await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardUiState.js");
+                downloaded = await JS.InvokeAsync<bool>("habitinatorDownloadJson", fileName, json);
+            }
+            catch (Exception)
+            {
+                downloaded = false;
+            }
+
+            if (downloaded)
+            {
+                await Notifier.NotifyAsync("Export downloaded.", Severity.Success);
+            }
+            else
+            {
+                var options = new DialogOptions
+                {
+                    MaxWidth = MaxWidth.Medium,
+                    FullWidth = true,
+                    CloseButton = true,
+                    CloseOnEscapeKey = true
+                };
+                await DialogService.ShowAsync<ExportDataDialog>(
+                    "Your data export",
+                    new DialogParameters<ExportDataDialog> { { x => x.JsonText, json } },
+                    options);
+            }
+        }
+        catch (Exception ex)
+        {
+            await Notifier.NotifyAsync(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _exporting = false;
+        }
+    }
 
     private async Task ChangePasswordAsync()
     {

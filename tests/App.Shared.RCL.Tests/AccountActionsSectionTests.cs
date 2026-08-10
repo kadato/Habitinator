@@ -21,6 +21,7 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
     private readonly BunitContext _ctx = new();
     private readonly IAccountActionsService _accountActions = Substitute.For<IAccountActionsService>();
     private readonly IUserNotifier _notifier = Substitute.For<IUserNotifier>();
+    private readonly IUserDataExportService _export = Substitute.For<IUserDataExportService>();
 
     public AccountActionsSectionTests()
     {
@@ -28,6 +29,9 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         _ctx.Services.AddMudServices();
         _ctx.Services.AddSingleton<IAccountActionsService>(_accountActions);
         _ctx.Services.AddSingleton<IUserNotifier>(_notifier);
+        _ctx.Services.AddSingleton<IUserDataExportService>(_export);
+        _export.ExportAsync(Arg.Any<CancellationToken>())
+            .Returns(new UserDataExportDto(DateTimeOffset.UtcNow, [], []));
 
         // Render PopoverProvider to satisfy MudBlazor components
         _ctx.Render<MudPopoverProvider>();
@@ -52,9 +56,10 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         inputs[2].Instance.Label.Should().Be("Confirm new password");
 
         var buttons = cut.FindComponents<MudButton>();
-        buttons.Should().HaveCount(2);
+        buttons.Should().HaveCount(3);
         cut.FindAll("button")[0].TextContent.Should().Contain("Change password");
-        cut.FindAll("button")[1].TextContent.Should().Contain("Delete account");
+        cut.FindAll("button")[1].TextContent.Should().Contain("Export data");
+        cut.FindAll("button")[2].TextContent.Should().Contain("Delete account");
     }
 
     [Fact]
@@ -149,10 +154,26 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         var cut = _ctx.Render<AccountActionsSection>();
         var buttons = cut.FindComponents<MudButton>();
 
-        // Act - Click Delete Account (buttons[1])
-        await cut.InvokeAsync(() => buttons[1].Instance.OnClick.InvokeAsync(null));
+        // Act - Click Delete Account (buttons[2])
+        await cut.InvokeAsync(() => buttons[2].Instance.OnClick.InvokeAsync(null));
 
         // Assert
         await _accountActions.Received(1).DeleteAccountAsync();
+    }
+
+    [Fact]
+    public async Task ExportData_CallsService_AndAttemptsDownload()
+    {
+        // Arrange
+        var cut = _ctx.Render<AccountActionsSection>();
+        var buttons = cut.FindComponents<MudButton>();
+
+        // Act - Click Export Data (buttons[1])
+        await cut.InvokeAsync(() => buttons[1].Instance.OnClick.InvokeAsync(null));
+
+        // Assert
+        await _export.Received(1).ExportAsync(Arg.Any<CancellationToken>());
+        var jsLog = string.Join(";", _ctx.JSInterop.Invocations.Select(i => i.Identifier));
+        jsLog.Should().Contain("habitinatorLoadScript");
     }
 }

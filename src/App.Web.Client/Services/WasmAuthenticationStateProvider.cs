@@ -1,5 +1,7 @@
 using System.Security.Claims;
 
+using App.Shared.RCL.Models;
+
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 
@@ -67,6 +69,4 @@ internal sealed class WasmAuthenticationStateProvider : AuthenticationStateProvi
 
         return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
     }
-
-    private sealed record AuthStatusDto(bool IsAuthenticated, string? Email);
 }

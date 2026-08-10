@@ -1,3 +1,5 @@
+using App.Shared.RCL.Models;
+
 namespace App.Shared.RCL.Services.Remote;
 
 public sealed class RemoteAccountActionsService : IAccountActionsService
@@ -23,6 +25,4 @@ public sealed class RemoteAccountActionsService : IAccountActionsService
         using var res = await Client.PostAsync("api/account/delete", null, cancellationToken);
         res.EnsureSuccessStatusCode();
     }
-
-    private sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 }

@@ -2,7 +2,6 @@ using System.Text.Json.Serialization;
 
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services.Remote;
-using App.Web.Models;
 
 namespace App.Web.Services;
 
@@ -10,7 +9,6 @@ namespace App.Web.Services;
 [JsonSerializable(typeof(HabitUpdateRequest))]
 [JsonSerializable(typeof(DailyUpdateRequest))]
 [JsonSerializable(typeof(TodoUpdateRequest))]
-[JsonSerializable(typeof(BoardSectionRequest))]
 [JsonSerializable(typeof(DailyCompleteForDateRequest))]
 [JsonSerializable(typeof(RegisterRequest))]
 [JsonSerializable(typeof(LoginRequest))]

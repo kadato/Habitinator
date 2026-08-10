@@ -1,5 +1,6 @@
 using System.Net;
 
+using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 
 namespace App.Web.Services;
@@ -34,6 +35,4 @@ public sealed class WebAccountActionsService : IAccountActionsService
             throw new InvalidOperationException("Account deletion failed.");
         }
     }
-
-    private sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 }

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 
+using App.Shared.RCL.Models;
 using App.Web.Data;
 
 using Microsoft.AspNetCore.Components;
@@ -90,6 +91,4 @@ internal sealed class IdentityRevalidatingAuthenticationStateProvider : Revalida
         _subscription.Dispose();
         base.Dispose(disposing);
     }
-
-    private sealed record AuthStatusDto(bool IsAuthenticated, string? Email);
 }

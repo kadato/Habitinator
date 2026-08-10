@@ -2,7 +2,7 @@ using App.Shared.RCL.Services;
 
 namespace App.MAUI.Services.LocalBoard;
 
-public sealed partial class MauiBoardSyncStatus : IBoardSyncStatus, IDisposable
+public sealed partial class MauiBoardSyncStatus : IBoardSyncStatus
 {
     private volatile bool _isOffline;
     private volatile bool _isSyncing;
@@ -16,11 +16,6 @@ public sealed partial class MauiBoardSyncStatus : IBoardSyncStatus, IDisposable
     private void OnConnectivityChanged(object? sender, ConnectivityChangedEventArgs e)
     {
         IsOffline = e.NetworkAccess != NetworkAccess.Internet;
-    }
-
-    public void Dispose()
-    {
-        Connectivity.Current.ConnectivityChanged -= OnConnectivityChanged;
     }
 
     public bool IsOffline

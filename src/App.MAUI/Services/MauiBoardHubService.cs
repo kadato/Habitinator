@@ -6,16 +6,16 @@ using Microsoft.Extensions.Logging;
 
 namespace App.MAUI.Services;
 
+#pragma warning disable CA1001, S2930 // DI singleton: owns long-lived disposable state and is never disposed by the container.
 public sealed partial class MauiBoardHubService(
     IAuthTokenStore tokens,
     IRemoteBoardRefreshService refresh,
     MauiApiEndpointOptions api,
-    ILogger<MauiBoardHubService> logger) : IAsyncDisposable
+    ILogger<MauiBoardHubService> logger)
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly CancellationTokenSource _lifetimeCts = new();
     private HubConnection? _connection;
-    private bool _disposed;
 
     public async Task EnsureConnectedAsync(CancellationToken cancellationToken = default)
     {
@@ -82,20 +82,6 @@ public sealed partial class MauiBoardHubService(
         }
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        _disposed = true;
-        await _lifetimeCts.CancelAsync().ConfigureAwait(false);
-        await DisconnectAsync(CancellationToken.None).ConfigureAwait(false);
-        _gate.Dispose();
-        _lifetimeCts.Dispose();
-    }
-
     private async Task OnBoardChangedAsync()
     {
         try
@@ -131,3 +117,4 @@ public sealed partial class MauiBoardHubService(
         }
     }
 }
+#pragma warning restore CA1001, S2930

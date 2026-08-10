@@ -11,7 +11,8 @@ using Android.Content;
 namespace App.MAUI.Services;
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1075:URIs should not be hardcoded", Justification = "Update URL is static and pointing to public GitHub Releases API")]
-public sealed partial class MauiAppUpdaterService : IAppUpdaterService, IDisposable
+#pragma warning disable CA1001 // DI singleton: owns a long-lived HttpClient and is never disposed by the container.
+public sealed partial class MauiAppUpdaterService : IAppUpdaterService
 {
     private readonly HttpClient _httpClient;
 
@@ -19,12 +20,6 @@ public sealed partial class MauiAppUpdaterService : IAppUpdaterService, IDisposa
     {
         _httpClient = new HttpClient();
         _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Habitinator", "1.0"));
-    }
-
-    public void Dispose()
-    {
-        _httpClient.Dispose();
-        GC.SuppressFinalize(this);
     }
 
     public bool IsSupported =>
@@ -260,3 +255,4 @@ public sealed partial class MauiAppUpdaterService : IAppUpdaterService, IDisposa
         public string BrowserDownloadUrl { get; set; } = string.Empty;
     }
 }
+#pragma warning restore CA1001

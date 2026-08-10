@@ -13,9 +13,9 @@ namespace App.MAUI.Services;
 ///     the current board. Reschedules when settings change or the app is foregrounded so the message stays
 ///     up to date.
 /// </summary>
-public sealed partial class MauiDailyReminderService : IDisposable
+public sealed partial class MauiDailyReminderService
 {
-    public const int NotificationId = 42_001;
+    private const int NotificationId = 42_001;
 
     public const string AndroidChannelId = "habitinator.daily";
     private readonly LocalFirstBoardDataService _board;
@@ -35,11 +35,6 @@ public sealed partial class MauiDailyReminderService : IDisposable
         _board = board;
         _logger = logger;
         _notificationSettings.Changed += OnSettingsChanged;
-    }
-
-    public void Dispose()
-    {
-        _notificationSettings.Changed -= OnSettingsChanged;
     }
 
     private void OnSettingsChanged(object? sender, EventArgs e)

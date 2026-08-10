@@ -6,10 +6,10 @@ using Microsoft.Extensions.Logging;
 namespace App.MAUI.Services;
 
 /// <summary>Periodic drain + pull; also invoked on hub/visibility refresh and app resume.</summary>
-public sealed partial class MauiBoardSyncCoordinator : IDisposable
+#pragma warning disable CA1001, S2930 // DI singleton: owns long-lived disposable state and is never disposed by the container.
+public sealed partial class MauiBoardSyncCoordinator
 {
     private const int StuckAfterAttempts = 8;
-    private static readonly TimeSpan ShutdownWait = TimeSpan.FromSeconds(5);
 
     private readonly LocalFirstBoardDataService _board;
     private readonly IAuthTokenStore _tokens;
@@ -20,7 +20,6 @@ public sealed partial class MauiBoardSyncCoordinator : IDisposable
     private readonly SemaphoreSlim _run = new(1, 1);
     private readonly PeriodicTimer _timer = new(TimeSpan.FromSeconds(45));
     private readonly CancellationTokenSource _appStopping = new();
-    private readonly Task _loopTask;
 
     public MauiBoardSyncCoordinator(
         LocalFirstBoardDataService board,
@@ -36,7 +35,7 @@ public sealed partial class MauiBoardSyncCoordinator : IDisposable
         _initialLoad = initialLoad;
         _refresh = refresh;
         _logger = logger;
-        _loopTask = Task.Run(() => PeriodicLoopAsync(_appStopping.Token), _appStopping.Token);
+        _ = Task.Run(() => PeriodicLoopAsync(_appStopping.Token), _appStopping.Token);
     }
 
     /// <summary>Fire-and-forget sync (resume / post-login).</summary>
@@ -164,21 +163,5 @@ public sealed partial class MauiBoardSyncCoordinator : IDisposable
             // shutdown
         }
     }
-
-    public void Dispose()
-    {
-        _appStopping.Cancel();
-        try
-        {
-            _loopTask.Wait(ShutdownWait, _appStopping.Token);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Board sync loop did not stop cleanly.");
-        }
-
-        _appStopping.Dispose();
-        _timer.Dispose();
-        _run.Dispose();
-    }
 }
+#pragma warning restore CA1001, S2930

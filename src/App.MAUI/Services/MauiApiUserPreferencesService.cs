@@ -11,7 +11,8 @@ namespace App.MAUI.Services;
 ///     When logged in, loads and saves user preferences on the server.
 ///     Falls back to <see cref="Preferences" /> when offline or not authenticated.
 /// </summary>
-public sealed class MauiApiUserPreferencesService : IUserPreferencesService, IDisposable
+#pragma warning disable CA1001 // DI singleton: owns a long-lived LocalFirstRemoteStore and is never disposed by the container.
+public sealed class MauiApiUserPreferencesService : IUserPreferencesService
 {
     private const string PreferencesKey = "user_preferences_v1";
 
@@ -130,14 +131,9 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService, IDi
         Preferences.Set(key, UserPreferencesJson.Serialize(preferences));
     }
 
-    public void Dispose()
-    {
-        _apiSession.Changed -= OnSessionChanged;
-        _store.Dispose();
-    }
-
     private void OnSessionChanged(object? sender, EventArgs e)
     {
         Changed?.Invoke(this, EventArgs.Empty);
     }
 }
+#pragma warning restore CA1001

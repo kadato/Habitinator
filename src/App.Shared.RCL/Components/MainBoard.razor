@@ -1,5 +1,4 @@
 @inject GlobalTimerService TimerService
-@inject NavigationManager Navigation
 @inject IBoardDataService BoardDataService
 @inject ITimerSessionLogService TimerSessionLog
 @inject IDialogService DialogService
@@ -13,7 +12,6 @@
 @inject IUserDateFormatService DateFormatService
 @inject IUndoService UndoService
 @inject IInitialBoardLoadGate InitialBoardLoad
-@inject ConflictResolutionService ConflictResolution
 @inject IUserNotifier Notifier
 @inject IOnboardingStore OnboardingStore
 @inject PersistentComponentState ApplicationState
@@ -278,9 +276,6 @@
 @implements IAsyncDisposable
 
 @code {
-    [Parameter] public string? SignedInEmail { get; set; }
-
-
     private List<BoardItem> Habits { get; set; } = [];
     private List<BoardItem> Dailies { get; set; } = [];
     private List<BoardItem> Todos { get; set; } = [];
@@ -388,7 +383,6 @@
         RemoteBoardRefresh.RegisterForRemoteRefresh(HandleRemoteBoardRefreshedAsync);
         UndoService.OnStateChanged += HandleUndoStateChanged;
         UndoService.OnUndoPerformed += HandleUndoPerformed;
-        ConflictResolution.ConflictDetected += HandleConflictDetected;
         PreferencesService.Changed += OnPreferencesChanged;
         await LoadShortcutsPreferenceAsync();
         await InitialLoadAsync();
@@ -468,7 +462,6 @@
         RemoteBoardRefresh.UnregisterForRemoteRefresh(HandleRemoteBoardRefreshedAsync);
         UndoService.OnStateChanged -= HandleUndoStateChanged;
         UndoService.OnUndoPerformed -= HandleUndoPerformed;
-        ConflictResolution.ConflictDetected -= HandleConflictDetected;
         PreferencesService.Changed -= OnPreferencesChanged;
         if (_boardClientScriptsStarted)
         {
@@ -939,69 +932,6 @@
         }
     }
 
-    [JSInvokable]
-    public void NavigateTo(string path)
-    {
-        Navigation.NavigateTo(path);
-    }
-
-    public async Task OpenEditHabitPublicAsync(BoardItem item)
-    {
-        var options = new DialogOptions
-        {
-            MaxWidth = MaxWidth.Small,
-            FullWidth = false,
-            CloseButton = false,
-            CloseOnEscapeKey = true,
-            NoHeader = true
-        };
-        var parameters = new DialogParameters<EditHabitDialog> { { x => x.Item, item } };
-        var dialog = await DialogService.ShowAsync<EditHabitDialog>(string.Empty, parameters, options);
-        var result = await dialog.Result;
-        if (result is { Canceled: false })
-        {
-            await OnBoardChanged();
-        }
-    }
-
-    public async Task OpenEditDailyPublicAsync(BoardItem item)
-    {
-        var options = new DialogOptions
-        {
-            MaxWidth = MaxWidth.Small,
-            FullWidth = false,
-            CloseButton = false,
-            CloseOnEscapeKey = true,
-            NoHeader = true
-        };
-        var parameters = new DialogParameters<EditDailyDialog> { { x => x.Item, item } };
-        var dialog = await DialogService.ShowAsync<EditDailyDialog>(string.Empty, parameters, options);
-        var result = await dialog.Result;
-        if (result is { Canceled: false })
-        {
-            await OnBoardChanged();
-        }
-    }
-
-    public async Task OpenEditTodoPublicAsync(BoardItem item)
-    {
-        var options = new DialogOptions
-        {
-            MaxWidth = MaxWidth.Small,
-            FullWidth = false,
-            CloseButton = false,
-            CloseOnEscapeKey = true,
-            NoHeader = true
-        };
-        var parameters = new DialogParameters<EditTodoDialog> { { x => x.Item, item } };
-        var dialog = await DialogService.ShowAsync<EditTodoDialog>(string.Empty, parameters, options);
-        var result = await dialog.Result;
-        if (result is { Canceled: false })
-        {
-            await OnBoardChanged();
-        }
-    }
-
     public async Task CreateItemPublicAsync(BoardSection section)
     {
         var defaultTitle = section switch
@@ -1107,42 +1037,6 @@
         };
 
         return await dialog.Result;
-    }
-
-
-
-    private void HandleConflictDetected(object? sender, ConflictInfoEventArgs e)
-    {
-        _ = InvokeAsync(async () =>
-        {
-            var options = new DialogOptions
-            {
-                CloseButton = false,
-                CloseOnEscapeKey = false,
-                NoHeader = true
-            };
-            
-            var parameters = new DialogParameters<ConflictResolutionDialog>
-            {
-                { x => x.Conflict, e.Conflict }
-            };
-
-            var dialog = await DialogService.ShowAsync<ConflictResolutionDialog>(
-                string.Empty, parameters, options);
-            
-            var result = await dialog.Result;
-            if (result is not null && !result.Canceled && result.Data is ConflictResolutionChoice choice)
-            {
-                ConflictResolution.Resolve(e.Conflict.OperationId, choice);
-            }
-            else
-            {
-                ConflictResolution.Resolve(e.Conflict.OperationId, ConflictResolutionChoice.Cancel);
-            }
-            
-            _lastLocalMutationTime = DateTimeOffset.UtcNow;
-            await LoadBoardAsync();
-        });
     }
 
     private async Task OpenArchivedItemsDialogAsync()

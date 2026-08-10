@@ -46,7 +46,6 @@ builder.Services.AddScoped<ITimerSessionLogService, TimerSessionLogService>();
 builder.Services.AddScoped<RemoteBoardRefreshService>();
 builder.Services.AddScoped<IRemoteBoardRefreshService>(sp => sp.GetRequiredService<RemoteBoardRefreshService>());
 builder.Services.AddSingleton<IBoardSyncStatus, NoOpBoardSyncStatus>();
-builder.Services.AddSingleton<ConflictResolutionService>();
 builder.Services.AddScoped<BoardRemoteNotifyBridge>();
 builder.Services.AddScoped<IInitialBoardLoadGate, InitialBoardLoadGate>();
 builder.Services.AddScoped<IUndoService, UndoService>();

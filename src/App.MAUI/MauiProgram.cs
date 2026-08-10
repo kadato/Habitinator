@@ -61,7 +61,6 @@ public static class MauiProgram
         builder.Services.AddSingleton<RemoteBoardRefreshService>();
         builder.Services.AddSingleton<MauiBoardSyncStatus>();
         builder.Services.AddSingleton<IBoardSyncStatus>(sp => sp.GetRequiredService<MauiBoardSyncStatus>());
-        builder.Services.AddSingleton<ConflictResolutionService>();
         builder.Services.AddSingleton<MauiInitialBoardLoadSignal>();
         builder.Services.AddSingleton<MauiBoardSyncCoordinator>();
         builder.Services.AddSingleton<IRemoteBoardRefreshService>(sp =>

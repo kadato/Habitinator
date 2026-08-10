@@ -120,7 +120,6 @@ public static class DependencyInjectionExtensions
         services.AddScoped<DemoUserResolver>();
         services.AddScoped<IRemoteBoardRefreshService, RemoteBoardRefreshService>();
         services.AddSingleton<IBoardSyncStatus, NoOpBoardSyncStatus>();
-        services.AddSingleton<ConflictResolutionService>();
         services.AddScoped<BoardRemoteNotifyBridge>();
         services.AddSingleton<BoardSnapshotCache>();
         services.AddSingleton<DailyStreakMapCache>();

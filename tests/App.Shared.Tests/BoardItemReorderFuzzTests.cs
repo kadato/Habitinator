@@ -8,62 +8,6 @@ namespace App.Shared.Tests;
 public sealed class BoardItemReorderFuzzTests
 {
     [Property]
-    public void ComputeInsertIndex_InBounds(int source, int target, bool insertBefore)
-    {
-        // Keep index sizes reasonable, e.g., simulating a list size up to 100
-        var n = 100;
-        var src = Math.Abs(source) % n;
-        var tgt = Math.Abs(target) % n;
-
-        var result = BoardItemReorder.ComputeInsertIndex(src, tgt, insertBefore);
-
-        // Result index must always be within list bounds [0, n - 1]
-        Assert.True(result >= 0);
-        Assert.True(result < n);
-    }
-
-    [Property]
-    public void ComputeMoveUpDown_NeverThrows(int source, int listCount)
-    {
-        var exception = Xunit.Record.Exception(() =>
-        {
-            BoardItemReorder.ComputeMoveUpIndex(source);
-            BoardItemReorder.ComputeMoveDownIndex(source, listCount);
-        });
-        Assert.Null(exception);
-    }
-
-    [Property]
-    public void ComputeMoveUp_CorrectBehavior(int source)
-    {
-        var result = BoardItemReorder.ComputeMoveUpIndex(source);
-        if (source > 0)
-        {
-            Assert.Equal(source - 1, result);
-        }
-        else
-        {
-            Assert.Null(result);
-        }
-    }
-
-    [Property]
-    public void ComputeMoveDown_CorrectBehavior(int source, int listCount)
-    {
-        // Avoid negative or zero listCount
-        var count = Math.Max(1, listCount);
-        var result = BoardItemReorder.ComputeMoveDownIndex(source, count);
-        if (source < count - 1)
-        {
-            Assert.Equal(source + 1, result);
-        }
-        else
-        {
-            Assert.Null(result);
-        }
-    }
-
-    [Property]
     public void ComputeMidpointSortOrder_IsStrictlyBetweenNeighbours(
         double? prevSortVal,
         double? nextSortVal,

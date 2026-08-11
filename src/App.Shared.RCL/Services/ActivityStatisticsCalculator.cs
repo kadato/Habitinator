@@ -75,9 +75,9 @@ public static class ActivityStatisticsCalculator
         var totalFocusSec = rows
             .Where(x => x.EventType == ActivityEventType.TimerSession)
             .Sum(x => x.DurationSeconds.GetValueOrDefault());
-        var totalFocusMinutes = (totalFocusSec + 30) / 60;
+        var totalFocusMinutes = FocusMinutes(totalFocusSec);
 
-        var actualEnd = end > todayCutoff ? todayCutoff : end;
+        var actualEnd = ClampEndToCutoff(end, todayCutoff);
         var startWeek = StartOfIsoWeek(start);
         var endWeek = StartOfIsoWeek(actualEnd);
         var weekSpan = (endWeek.DayNumber - startWeek.DayNumber) / 7;
@@ -99,12 +99,7 @@ public static class ActivityStatisticsCalculator
         }
 
         var gridStartMonday = StartOfIsoWeek(start);
-        var endMonday = StartOfIsoWeek(actualEnd);
-        var gridWeekColumns = ((endMonday.DayNumber - gridStartMonday.DayNumber) / 7) + 1;
-        if (gridWeekColumns < 1)
-        {
-            gridWeekColumns = 1;
-        }
+        var gridWeekColumns = WeekGridColumns(start, actualEnd);
 
         var heat = BuildHeatmapGrid(perDay, start, end, todayCutoff, gridStartMonday, gridWeekColumns, maxDayCount);
 
@@ -215,7 +210,7 @@ public static class ActivityStatisticsCalculator
                 }
             }
 
-            weekBars.Add(new ActivityWeekBarDto(i, ws, ev, (focus + 30) / 60));
+            weekBars.Add(new ActivityWeekBarDto(i, ws, ev, FocusMinutes(focus)));
         }
         return weekBars;
     }
@@ -229,26 +224,14 @@ public static class ActivityStatisticsCalculator
         int gridWeekColumns,
         int maxDayCount)
     {
-        List<ActivityHeatmapCellDto> heat = [with(capacity: gridWeekColumns * 7)];
-        for (var c = 0; c < gridWeekColumns; c++)
-        {
-            for (var r = 0; r < 7; r++)
-            {
-                var date = gridStartMonday.AddDays((c * 7) + r);
-                var inRange = date >= start && date <= end && date <= todayCutoff;
-                if (!inRange)
-                {
-                    heat.Add(new ActivityHeatmapCellDto(r, c, date, 0, 0, false));
-                }
-                else
-                {
-                    var count = perDay.TryGetValue(date, out var t) ? t.count : 0;
-                    var intensity = IntensityFor(count, maxDayCount);
-                    heat.Add(new ActivityHeatmapCellDto(r, c, date, count, intensity, true));
-                }
-            }
-        }
-        return heat;
+        return BuildHeatmapCells(
+            gridStartMonday,
+            gridWeekColumns,
+            start,
+            end,
+            todayCutoff,
+            d => perDay.TryGetValue(d, out var t) ? t.count : 0,
+            maxDayCount);
     }
 
     public static DailyContributionsViewDto BuildDailyContributions(
@@ -329,7 +312,7 @@ public static class ActivityStatisticsCalculator
         DateOnly rangeEnd,
         DateOnly todayCutoff)
     {
-        var commonEnd = rangeEnd > todayCutoff ? todayCutoff : rangeEnd;
+        var commonEnd = ClampEndToCutoff(rangeEnd, todayCutoff);
         var earliestDailyStart = commonEnd; // Default
         foreach (var di in dailyItemRows)
         {
@@ -350,11 +333,7 @@ public static class ActivityStatisticsCalculator
             }
         }
 
-        var commonStart = earliestDailyStart < rangeStart ? rangeStart : earliestDailyStart;
-        if (commonStart > commonEnd)
-        {
-            commonStart = commonEnd;
-        }
+        var commonStart = ClampCommonStart(earliestDailyStart, rangeStart, commonEnd);
         return (commonStart, commonEnd);
     }
 
@@ -387,13 +366,7 @@ public static class ActivityStatisticsCalculator
                 countByDay,
                 maxInRange);
 
-            var gStartW = StartOfIsoWeek(commonStart);
-            var gEndW = StartOfIsoWeek(commonEnd);
-            var columns = ((gEndW.DayNumber - gStartW.DayNumber) / 7) + 1;
-            if (columns < 1)
-            {
-                columns = 1;
-            }
+            var columns = WeekGridColumns(commonStart, commonEnd);
 
             graphs.Add(new DailyContributionGraphDto(di.Id, di.Title, graphHeat, columns, maxInRange));
         }
@@ -417,13 +390,9 @@ public static class ActivityStatisticsCalculator
         var habitIds = habitItemRows.Select(x => x.Id).ToHashSet();
         var byItem = BuildHabitEventDayMap(eventRowsInRange, habitIds);
 
-        var commonEnd = rangeEnd > todayCutoff ? todayCutoff : rangeEnd;
+        var commonEnd = ClampEndToCutoff(rangeEnd, todayCutoff);
         var earliestCreated = habitItemRows.Min(x => x.CreatedAt);
-        var commonStart = earliestCreated < rangeStart ? rangeStart : earliestCreated;
-        if (commonStart > commonEnd)
-        {
-            commonStart = commonEnd;
-        }
+        var commonStart = ClampCommonStart(earliestCreated, rangeStart, commonEnd);
 
         var graphs = BuildHabitContributionGraphs(habitItemRows, byItem, commonStart, commonEnd);
 
@@ -500,13 +469,7 @@ public static class ActivityStatisticsCalculator
                 countByDay,
                 maxInRange);
 
-            var gStartW = StartOfIsoWeek(commonStart);
-            var gEndW = StartOfIsoWeek(commonEnd);
-            var columns = ((gEndW.DayNumber - gStartW.DayNumber) / 7) + 1;
-            if (columns < 1)
-            {
-                columns = 1;
-            }
+            var columns = WeekGridColumns(commonStart, commonEnd);
 
             var periodDays = commonEnd.DayNumber - commonStart.DayNumber + 1;
             if (periodDays < 1)
@@ -565,7 +528,7 @@ public static class ActivityStatisticsCalculator
             }
         }
 
-        var focusMinutesTotal = (focusSec + 30) / 60;
+        var focusMinutesTotal = FocusMinutes(focusSec);
         return new ActivityDayDetailDto(day, list, focusMinutesTotal);
     }
 
@@ -609,35 +572,40 @@ public static class ActivityStatisticsCalculator
         Dictionary<DateOnly, int> countByDay,
         int maxInRange)
     {
-        var gridStartMonday = StartOfIsoWeek(rangeStart);
-        var endMonday = StartOfIsoWeek(rangeEnd);
-        var gridWeekColumns = ((endMonday.DayNumber - gridStartMonday.DayNumber) / 7) + 1;
-        if (gridWeekColumns < 1)
-        {
-            gridWeekColumns = 1;
-        }
+        return BuildHeatmapCells(
+            StartOfIsoWeek(rangeStart),
+            WeekGridColumns(rangeStart, rangeEnd),
+            rangeStart,
+            rangeEnd,
+            todayCutoff,
+            d => countByDay.TryGetValue(d, out var n) ? n : 0,
+            maxInRange);
+    }
 
+    private static List<ActivityHeatmapCellDto> BuildHeatmapCells(
+        DateOnly gridStartMonday,
+        int gridWeekColumns,
+        DateOnly rangeStart,
+        DateOnly rangeEnd,
+        DateOnly todayCutoff,
+        Func<DateOnly, int> countFor,
+        int maxCount)
+    {
         List<ActivityHeatmapCellDto> heat = [with(capacity: gridWeekColumns * 7)];
         for (var c = 0; c < gridWeekColumns; c++)
         {
             for (var r = 0; r < 7; r++)
             {
                 var date = gridStartMonday.AddDays((c * 7) + r);
-                var inWindow = date >= rangeStart && date <= rangeEnd;
-                if (!inWindow)
+                var inRange = date >= rangeStart && date <= rangeEnd && date <= todayCutoff;
+                if (!inRange)
                 {
                     heat.Add(new ActivityHeatmapCellDto(r, c, date, 0, 0, false));
                     continue;
                 }
 
-                if (date > todayCutoff)
-                {
-                    heat.Add(new ActivityHeatmapCellDto(r, c, date, 0, 0, false));
-                    continue;
-                }
-
-                var count = countByDay.TryGetValue(date, out var n) ? n : 0;
-                var intensity = IntensityFor(count, maxInRange);
+                var count = countFor(date);
+                var intensity = IntensityFor(count, maxCount);
                 heat.Add(new ActivityHeatmapCellDto(r, c, date, count, intensity, true));
             }
         }
@@ -756,6 +724,25 @@ public static class ActivityStatisticsCalculator
     {
         var mondayOffset = ((int)d.DayOfWeek + 6) % 7;
         return d.AddDays(-mondayOffset);
+    }
+
+    private static int WeekGridColumns(DateOnly start, DateOnly end)
+    {
+        var startMonday = StartOfIsoWeek(start);
+        var endMonday = StartOfIsoWeek(end);
+        var columns = ((endMonday.DayNumber - startMonday.DayNumber) / 7) + 1;
+        return columns < 1 ? 1 : columns;
+    }
+
+    private static int FocusMinutes(int totalSeconds) => (totalSeconds + 30) / 60;
+
+    private static DateOnly ClampEndToCutoff(DateOnly rangeEnd, DateOnly todayCutoff) =>
+        rangeEnd > todayCutoff ? todayCutoff : rangeEnd;
+
+    private static DateOnly ClampCommonStart(DateOnly earliest, DateOnly rangeStart, DateOnly commonEnd)
+    {
+        var start = earliest < rangeStart ? rangeStart : earliest;
+        return start > commonEnd ? commonEnd : start;
     }
 
     private static int IntensityFor(int count, int maxInRange)

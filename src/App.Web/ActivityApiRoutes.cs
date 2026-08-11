@@ -23,56 +23,58 @@ internal static class ActivityApiRoutes
         activityApi.MapPost("log", LogActivityAsync);
     }
 
-    private static async Task<IResult> GetHabitContributionsAsync(
+    private static Task<IResult> GetHabitContributionsAsync(
         ClaimsPrincipal user,
         ActivityStatisticsService stats,
         string? period,
         string? tag,
-        CancellationToken cancellationToken)
-    {
-        if (AuthenticatedUserId.TryGet(user) is not { } userId)
-        {
-            return Results.Unauthorized();
-        }
+        CancellationToken cancellationToken) =>
+        RunStatsQueryAsync(
+            user,
+            (userId, ct) => stats.GetHabitContributionsAsync(userId, period, tag, ct),
+            x => Results.Ok(x),
+            cancellationToken);
 
-        return Results.Ok(await stats.GetHabitContributionsAsync(userId, period, tag, cancellationToken));
-    }
-
-    private static async Task<IResult> GetDashboardAsync(
+    private static Task<IResult> GetDashboardAsync(
         ClaimsPrincipal user,
         ActivityStatisticsService stats,
         string? period,
         string? tag,
-        CancellationToken cancellationToken)
-    {
-        if (AuthenticatedUserId.TryGet(user) is not { } userId)
-        {
-            return Results.Unauthorized();
-        }
+        CancellationToken cancellationToken) =>
+        RunStatsQueryAsync(
+            user,
+            (userId, ct) => stats.GetDashboardAsync(userId, period, tag, ct),
+            x => Results.Ok(x),
+            cancellationToken);
 
-        return Results.Ok(await stats.GetDashboardAsync(userId, period, tag, cancellationToken));
-    }
-
-    private static async Task<IResult> GetDailyContributionsAsync(
+    private static Task<IResult> GetDailyContributionsAsync(
         ClaimsPrincipal user,
         ActivityStatisticsService stats,
         string? period,
         string? tag,
-        CancellationToken cancellationToken)
-    {
-        if (AuthenticatedUserId.TryGet(user) is not { } userId)
-        {
-            return Results.Unauthorized();
-        }
+        CancellationToken cancellationToken) =>
+        RunStatsQueryAsync(
+            user,
+            (userId, ct) => stats.GetDailyContributionsAsync(userId, period, tag, ct),
+            x => Results.Ok(x),
+            cancellationToken);
 
-        return Results.Ok(await stats.GetDailyContributionsAsync(userId, period, tag, cancellationToken));
-    }
-
-    private static async Task<IResult> GetActivityDayDetailAsync(
+    private static Task<IResult> GetActivityDayDetailAsync(
         ClaimsPrincipal user,
         ActivityStatisticsService stats,
         DateOnly date,
         string? tag,
+        CancellationToken cancellationToken) =>
+        RunStatsQueryAsync(
+            user,
+            (userId, ct) => stats.GetActivityDayDetailAsync(userId, date, tag, ct),
+            x => Results.Ok(x),
+            cancellationToken);
+
+    private static async Task<IResult> RunStatsQueryAsync<T>(
+        ClaimsPrincipal user,
+        Func<Guid, CancellationToken, Task<T>> query,
+        Func<T, IResult> toResult,
         CancellationToken cancellationToken)
     {
         if (AuthenticatedUserId.TryGet(user) is not { } userId)
@@ -80,7 +82,7 @@ internal static class ActivityApiRoutes
             return Results.Unauthorized();
         }
 
-        return Results.Ok(await stats.GetActivityDayDetailAsync(userId, date, tag, cancellationToken));
+        return toResult(await query(userId, cancellationToken));
     }
 
     private static async Task<IResult> LogActivityAsync(

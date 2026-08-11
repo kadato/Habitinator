@@ -35,14 +35,7 @@ public sealed class ActivityStatisticsService(
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, tag, cancellationToken);
 
-        var ev = db.UserActivityEvents.AsNoTracking()
-            .Where(e => e.UserId == userId && e.OccurredAtUtc >= fromUtc && e.OccurredAtUtc < toUtc);
-        if (allowedIds is not null)
-        {
-            ev = ev.Where(e => e.BoardItemId != null && allowedIds.Contains(e.BoardItemId.Value));
-        }
-
-        var rows = await ev
+        var rows = await EventsInRange(db, userId, fromUtc, toUtc, allowedIds)
             .OrderBy(e => e.OccurredAtUtc)
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
             .ToListAsync(cancellationToken);
@@ -87,14 +80,7 @@ public sealed class ActivityStatisticsService(
         var availableTags = await GetDistinctTagsForUserAsync(db, userId, cancellationToken);
         var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, tag, cancellationToken);
 
-        var evq = db.UserActivityEvents.AsNoTracking()
-            .Where(e => e.UserId == userId && e.OccurredAtUtc >= fromUtc && e.OccurredAtUtc < toUtc);
-        if (allowedIds is not null)
-        {
-            evq = evq.Where(e => e.BoardItemId != null && allowedIds.Contains(e.BoardItemId.Value));
-        }
-
-        var rows = await evq
+        var rows = await EventsInRange(db, userId, fromUtc, toUtc, allowedIds)
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
             .ToListAsync(cancellationToken);
 
@@ -119,56 +105,23 @@ public sealed class ActivityStatisticsService(
         }
 
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-        var options = await BuildDailyPeriodOptionsAsync(db, userId, utcToday, cancellationToken);
-        (var key, var rangeStart, var rangeEnd) =
-            ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, utcToday, options);
+        var ctx = await LoadContributionsQueryAsync(db, userId, BoardSection.Daily, periodKey, tag, utcToday, cancellationToken);
 
-        var fromUtc = rangeStart.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var toUtc = rangeEnd.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-
-        var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, tag, cancellationToken);
-
-        var dailyQ = db.BoardItems.AsNoTracking()
-            .Where(b => b.UserId == userId && b.DeletedAtUtc == null && b.Section == BoardSection.Daily);
-        if (allowedIds is not null)
-        {
-            dailyQ = dailyQ.Where(b => allowedIds.Contains(b.Id));
-        }
-
-        var dailyItemRawRows = await dailyQ
-            .OrderBy(b => b.Title)
-            .Select(b => new { b.Id, b.Title, b.DailyStartDate, b.CreatedAtUtc })
-            .ToListAsync(cancellationToken);
-
-        List<DailyItemStatsDto> dailyItemRows = [.. dailyItemRawRows.Select(b => new DailyItemStatsDto(
+        List<DailyItemStatsDto> dailyItemRows = [.. ctx.ItemRows.Select(b => new DailyItemStatsDto(
             b.Id,
             b.Title,
             b.DailyStartDate != null ? DateOnly.FromDateTime(b.DailyStartDate.Value) : null,
             DateOnly.FromDateTime(timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime)
         ))];
 
-        var evQ = db.UserActivityEvents.AsNoTracking()
-            .Where(e =>
-                e.UserId == userId &&
-                e.OccurredAtUtc >= fromUtc &&
-                e.OccurredAtUtc < toUtc);
-        if (allowedIds is not null)
-        {
-            evQ = evQ.Where(e => e.BoardItemId != null && allowedIds.Contains(e.BoardItemId.Value));
-        }
-
-        var eventRows = await evQ
-            .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
-            .ToListAsync(cancellationToken);
-
         var result = ActivityStatisticsCalculator.BuildDailyContributions(
-            eventRows,
+            ctx.EventRows,
             dailyItemRows,
-            key,
-            options,
-            rangeStart,
-            rangeEnd,
-            utcToday);
+            ctx.Key,
+            ctx.Options,
+            ctx.RangeStart,
+            ctx.RangeEnd,
+            ctx.UtcToday);
 
         userCache.DailyContributions.Set(cacheKey, result);
         return result;
@@ -189,6 +142,50 @@ public sealed class ActivityStatisticsService(
         }
 
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var ctx = await LoadContributionsQueryAsync(db, userId, BoardSection.Habit, periodKey, tag, utcToday, cancellationToken);
+
+        var result = ActivityStatisticsCalculator.BuildHabitContributions(
+            ctx.EventRows,
+            [.. ctx.ItemRows.Select(b => new HabitItemStatsDto(
+                b.Id,
+                b.Title,
+                DateOnly.FromDateTime(timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime)))],
+            ctx.Key,
+            ctx.Options,
+            ctx.RangeStart,
+            ctx.RangeEnd,
+            ctx.UtcToday);
+
+        userCache.HabitContributions.Set(cacheKey, result);
+        return result;
+    }
+
+    private static IQueryable<UserActivityEventEntity> EventsInRange(
+        ApplicationDbContext db,
+        Guid userId,
+        DateTimeOffset fromUtc,
+        DateTimeOffset toUtc,
+        HashSet<Guid>? allowedIds)
+    {
+        var ev = db.UserActivityEvents.AsNoTracking()
+            .Where(e => e.UserId == userId && e.OccurredAtUtc >= fromUtc && e.OccurredAtUtc < toUtc);
+        if (allowedIds is not null)
+        {
+            ev = ev.Where(e => e.BoardItemId != null && allowedIds.Contains(e.BoardItemId.Value));
+        }
+
+        return ev;
+    }
+
+    private static async Task<ContributionsQueryContext> LoadContributionsQueryAsync(
+        ApplicationDbContext db,
+        Guid userId,
+        BoardSection section,
+        string? periodKey,
+        string? tag,
+        DateOnly utcToday,
+        CancellationToken cancellationToken)
+    {
         var options = await BuildDailyPeriodOptionsAsync(db, userId, utcToday, cancellationToken);
         (var key, var rangeStart, var rangeEnd) =
             ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, utcToday, options);
@@ -198,47 +195,35 @@ public sealed class ActivityStatisticsService(
 
         var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, tag, cancellationToken);
 
-        var habitQ = db.BoardItems.AsNoTracking()
-            .Where(b => b.UserId == userId && b.DeletedAtUtc == null && b.Section == BoardSection.Habit);
+        var itemQ = db.BoardItems.AsNoTracking()
+            .Where(b => b.UserId == userId && b.DeletedAtUtc == null && b.Section == section);
         if (allowedIds is not null)
         {
-            habitQ = habitQ.Where(b => allowedIds.Contains(b.Id));
+            itemQ = itemQ.Where(b => allowedIds.Contains(b.Id));
         }
 
-        var habitItemRows = await habitQ
+        var itemRows = await itemQ
             .OrderBy(b => b.Title)
-            .Select(b => new { b.Id, b.Title, b.CreatedAtUtc })
+            .Select(b => new BoardItemRef(b.Id, b.Title, b.DailyStartDate, b.CreatedAtUtc))
             .ToListAsync(cancellationToken);
 
-        var evQ = db.UserActivityEvents.AsNoTracking()
-            .Where(e =>
-                e.UserId == userId &&
-                e.OccurredAtUtc >= fromUtc &&
-                e.OccurredAtUtc < toUtc);
-        if (allowedIds is not null)
-        {
-            evQ = evQ.Where(e => e.BoardItemId != null && allowedIds.Contains(e.BoardItemId.Value));
-        }
-
-        var eventRows = await evQ
+        var eventRows = await EventsInRange(db, userId, fromUtc, toUtc, allowedIds)
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
             .ToListAsync(cancellationToken);
 
-        var result = ActivityStatisticsCalculator.BuildHabitContributions(
-            eventRows,
-            [.. habitItemRows.Select(b => new HabitItemStatsDto(
-                b.Id,
-                b.Title,
-                DateOnly.FromDateTime(timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime)))],
-            key,
-            options,
-            rangeStart,
-            rangeEnd,
-            utcToday);
-
-        userCache.HabitContributions.Set(cacheKey, result);
-        return result;
+        return new ContributionsQueryContext(options, key, rangeStart, rangeEnd, utcToday, eventRows, itemRows);
     }
+
+    private sealed record BoardItemRef(Guid Id, string Title, DateTime? DailyStartDate, DateTimeOffset CreatedAtUtc);
+
+    private sealed record ContributionsQueryContext(
+        IReadOnlyList<DailyGraphPeriodOption> Options,
+        string Key,
+        DateOnly RangeStart,
+        DateOnly RangeEnd,
+        DateOnly UtcToday,
+        List<UserActivityEventRecord> EventRows,
+        List<BoardItemRef> ItemRows);
 
     private static async Task<IReadOnlyList<string>> GetDistinctTagsForUserAsync(
         ApplicationDbContext db,

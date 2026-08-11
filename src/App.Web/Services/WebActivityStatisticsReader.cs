@@ -7,16 +7,16 @@ namespace App.Web.Services;
 public sealed class WebActivityStatisticsReader : IActivityStatisticsReader
 {
     private readonly AuthenticationStateProvider _authenticationStateProvider;
-    private readonly DemoUserResolver _demoUserResolver;
+    private readonly CurrentUserAccessor _currentUserAccessor;
     private readonly ActivityStatisticsService _statisticsService;
 
     public WebActivityStatisticsReader(
         AuthenticationStateProvider authenticationStateProvider,
-        DemoUserResolver demoUserResolver,
+        CurrentUserAccessor currentUserAccessor,
         ActivityStatisticsService statisticsService)
     {
         _authenticationStateProvider = authenticationStateProvider;
-        _demoUserResolver = demoUserResolver;
+        _currentUserAccessor = currentUserAccessor;
         _statisticsService = statisticsService;
     }
 
@@ -51,12 +51,6 @@ public sealed class WebActivityStatisticsReader : IActivityStatisticsReader
     private async Task<Guid> RequireUserIdAsync(CancellationToken cancellationToken)
     {
         var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
-        var user = state.User;
-        if (user.Identity?.IsAuthenticated != true)
-        {
-            throw new InvalidOperationException("Sign in required.");
-        }
-
-        return await _demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
+        return await _currentUserAccessor.ResolveAsync(state.User, cancellationToken);
     }
 }

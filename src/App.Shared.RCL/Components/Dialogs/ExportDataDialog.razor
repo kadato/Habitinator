@@ -51,12 +51,12 @@
 
             var copied = await JS.InvokeAsync<bool>("habitinatorCopyText", JsonText);
             await Notifier.NotifyAsync(
-                copied ? "Copied to clipboard." : "Copying failed — select the text manually.",
+                copied ? "Copied to clipboard." : "Copying failed. Select the text manually.",
                 copied ? Severity.Success : Severity.Warning);
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync("Copying failed — select the text manually.", Severity.Warning);
+            await Notifier.NotifyAsync("Copying failed. Select the text manually.", Severity.Warning);
         }
         finally
         {

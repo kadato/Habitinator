@@ -289,21 +289,11 @@
                             config.ActionColor = Color.Primary;
                             config.OnClick = async snackbar =>
                             {
-                                var parameters = new DialogParameters<UpdateDialog>
-                                {
-                                    { x => x.LatestVersion, result.LatestVersion },
-                                    { x => x.ReleaseNotes, result.ReleaseNotes },
-                                    { x => x.DownloadUrl, result.DownloadUrl }
-                                };
-
-                                var options = new DialogOptions 
-                                { 
-                                    CloseButton = false, 
-                                    MaxWidth = MaxWidth.Small,
-                                    FullWidth = true
-                                };
-
-                                await DialogService.ShowAsync<UpdateDialog>("New Update Available", parameters, options);
+                                await UpdateDialogHelper.ShowUpdateDialogAsync(
+                                    DialogService,
+                                    result.LatestVersion,
+                                    result.ReleaseNotes,
+                                    result.DownloadUrl);
                             };
                         });
                 });

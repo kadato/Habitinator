@@ -1,0 +1,23 @@
+<div class="edit-daily-delete-wrap">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" Style="width: 100%;">
+        <MudButton Variant="Variant.Text"
+                   Color="Color.Warning"
+                   Size="Size.Small"
+                   StartIcon="@Icons.Material.Outlined.Archive"
+                   OnClick="OnArchive">
+            Archive
+        </MudButton>
+        <MudButton Variant="Variant.Text"
+                   Color="Color.Error"
+                   Size="Size.Small"
+                   StartIcon="@Icons.Material.Outlined.DeleteOutline"
+                   OnClick="OnDelete">
+            Delete
+        </MudButton>
+    </MudStack>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnArchive { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+}

@@ -1,0 +1,64 @@
+<div class="edit-daily-header">
+    <div class="edit-daily-header__toolbar">
+        <MudText Typo="Typo.subtitle1" Class="edit-daily-header__title">@TitleText</MudText>
+        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+            <MudButton Variant="Variant.Text"
+                       Class="edit-daily-header__cancel"
+                       OnClick="OnCancel">
+                Cancel
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Size="Size.Medium"
+                       Class="edit-daily-header__save"
+                       OnClick="OnSave">
+                Save
+            </MudButton>
+        </MudStack>
+    </div>
+
+    <MudStack Spacing="0">
+        <MudText Typo="Typo.caption" Class="edit-daily-label-header">Title*</MudText>
+        <MudTextField Value="Title"
+                      ValueChanged="@((string value) => OnTitleValueChanged(value))"
+                      Variant="Variant.Outlined"
+                      Class="edit-daily-field-header"
+                      Placeholder="@TitlePlaceholder"
+                      Immediate="true"
+                      Margin="Margin.Dense"/>
+
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mt-2 mb-1">
+            <MudText Typo="Typo.caption" Class="edit-daily-label-header">Notes</MudText>
+        </MudStack>
+        <MudTextField Value="Notes"
+                      ValueChanged="@((string value) => OnNotesValueChanged(value))"
+                      Variant="Variant.Outlined"
+                      Class="edit-daily-field-header"
+                      Placeholder="Add notes"
+                      Lines="3"
+                      Margin="Margin.Dense"/>
+    </MudStack>
+</div>
+
+@code {
+    [Parameter] public string TitleText { get; set; } = string.Empty;
+    [Parameter] public string TitlePlaceholder { get; set; } = string.Empty;
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> TitleChanged { get; set; }
+    [Parameter] public string? Notes { get; set; }
+    [Parameter] public EventCallback<string?> NotesChanged { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+
+    private void OnTitleValueChanged(string value)
+    {
+        Title = value;
+        _ = TitleChanged.InvokeAsync(value);
+    }
+
+    private void OnNotesValueChanged(string? value)
+    {
+        Notes = value;
+        _ = NotesChanged.InvokeAsync(value);
+    }
+}

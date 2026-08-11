@@ -7,6 +7,7 @@
 @inject IDialogService DialogService
 @inject IUserDateFormatService DateFormatService
 @inject IUserTimeZoneService TimeZoneService
+@inject IUserNotifier Notifier
 @inject IJSRuntime JSRuntime
 @inject PersistentComponentState ApplicationState
 @implements IDisposable
@@ -100,11 +101,6 @@
     }
     else
     {
-        @if (_data.TotalEvents == 0)
-        {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-2">No activity logged yet. Use habits, dailies, to-dos, or the focus timer on the board.</MudAlert>
-        }
-
         <!-- Main Dashboard Layout -->
         <div class="stats-dashboard-layout">
             <div class="stats-dashboard-main">
@@ -490,7 +486,7 @@
         _subscription.Dispose();
     }
 
-    private async Task LoadStatisticsAsync(string periodKey)
+    private async Task LoadStatisticsAsync(string periodKey, bool userInitiated = false)
     {
         _heatmapToday = DailySchedule.LocalToday(TimeZoneService);
         _loadingDailies = true;
@@ -551,6 +547,11 @@
             _shouldScrollToEnd = true;
             ComputeWeeklyReview();
             await LoadBestStreakAsync();
+
+            if (userInitiated && _data.TotalEvents == 0)
+            {
+                await NotifyNoEventsAsync();
+            }
         }
         catch (Exception dex)
         {
@@ -568,6 +569,15 @@
             _loadingDailies = false;
             _loadingHabits = false;
         }
+    }
+
+    private Task NotifyNoEventsAsync()
+    {
+        var unfiltered = string.IsNullOrEmpty(_tagFilter) && _selectedPeriodKey == DailyGraphPeriods.Rolling370Days;
+        var message = unfiltered
+            ? "No activity logged yet. Use habits, dailies, to-dos, or the focus timer on the board."
+            : "No events recorded for this selection.";
+        return Notifier.NotifyAsync(message, Severity.Info).AsTask();
     }
 
     private void ComputeWeeklyReview()
@@ -701,7 +711,7 @@
         }
 
         _selectedPeriodKey = newPeriod;
-        await RefreshAsync(() => LoadStatisticsAsync(_selectedPeriodKey));
+        await RefreshAsync(() => LoadStatisticsAsync(_selectedPeriodKey, userInitiated: true));
     }
 
     private string FormatBusiestDayShort(DateOnly day) => DateFormatService.Format(day);
@@ -722,7 +732,7 @@
 
         _selectedTags = newTags;
         _tagFilter = string.Join(",", _selectedTags);
-        await RefreshAsync(() => LoadStatisticsAsync(_selectedPeriodKey));
+        await RefreshAsync(() => LoadStatisticsAsync(_selectedPeriodKey, userInitiated: true));
     }
 
     private async Task RefreshAsync(Func<Task> load)

@@ -7,7 +7,7 @@ namespace App.Shared.RCL.Services;
 /// </summary>
 public static class DailyStreakCalculator
 {
-    public const int MaxStreak = 9999;
+    public const int MaxStreak = DailySchedule.MaxHistoryDays;
 
     /// <summary>UTC instant used when logging a backdated check so the day matches <paramref name="day" />.</summary>
     public static DateTimeOffset BackdatedDailyEventOccurredAt(DateOnly day) =>
@@ -72,28 +72,14 @@ public static class DailyStreakCalculator
             DailySchedule.StreakHistoryScheduleStart(dailyStart, end, effectiveRepeat, effectiveInterval, MaxStreak);
 
         var n = 0;
-        var d = end;
-        var maxSteps = 20_000;
-        while (maxSteps-- > 0)
+        foreach (var d in DailySchedule.WalkScheduledDaysBackward(end, historyStart, effectiveRepeat, effectiveInterval))
         {
-            if (d < historyStart)
-            {
-                break;
-            }
-
-            if (!DailySchedule.IsScheduledOn(historyStart, effectiveRepeat, effectiveInterval, d))
-            {
-                d = d.AddDays(-1);
-                continue;
-            }
-
             if (!IsCalendarDayNetCompleted(d, GetDayListOrNull(eventsByDay, d), dailyLastCompletedOn))
             {
                 break;
             }
 
             n++;
-            d = d.AddDays(-1);
         }
 
         return Math.Min(MaxStreak, n);

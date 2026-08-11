@@ -60,7 +60,7 @@ public sealed class DailyStreakBackfillTests
     [Fact]
     public void GetLastN_NullStart_Daily_Still_Backfills_Prior_Days()
     {
-        // Without a stored start date, board "due" anchors at UTC today — streak history must not treat
+        // Without a stored start date, board "due" anchors at UTC today - streak history must not treat
         // yesterday as before the habit's schedule, or manual streak / stats heatmaps get no rows.
         var notAfter = new DateOnly(2026, 4, 26);
         var days = DailyStreakBackfill.GetLastNScheduledCompletionDays(

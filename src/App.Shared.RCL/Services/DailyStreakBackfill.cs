@@ -8,7 +8,7 @@ namespace App.Shared.RCL.Services;
 /// </summary>
 public static class DailyStreakBackfill
 {
-    /// <summary>UTC noon — real toggles use <see cref="DateTimeOffset.UtcNow" />, so we can tell synthetics apart.</summary>
+    /// <summary>UTC noon - real toggles use <see cref="DateTimeOffset.UtcNow" />, so we can tell synthetics apart.</summary>
     public const int StreakBackfillHourUtc = 12;
 
     /// <summary>
@@ -37,25 +37,17 @@ public static class DailyStreakBackfill
         var effectiveRepeat = dailyStart is null ? DailyRepeatType.Daily : repeat;
         var effectiveInterval = dailyStart is null ? 1 : repeatInterval;
 
-        var n = Math.Min(9999, streakCount);
+        var n = Math.Min(DailySchedule.MaxHistoryDays, streakCount);
         var scheduleStart = DailySchedule.StreakHistoryScheduleStart(
             dailyStart, notAfter, effectiveRepeat, effectiveInterval, n);
         var list = new List<DateOnly>(n);
-        var d = notAfter;
-        var maxSteps = 20_000;
-        while (list.Count < n && maxSteps-- > 0)
+        foreach (var d in DailySchedule.WalkScheduledDaysBackward(notAfter, scheduleStart, effectiveRepeat, effectiveInterval))
         {
-            if (d < scheduleStart)
+            list.Add(d);
+            if (list.Count >= n)
             {
                 break;
             }
-
-            if (DailySchedule.IsScheduledOn(scheduleStart, effectiveRepeat, effectiveInterval, d))
-            {
-                list.Add(d);
-            }
-
-            d = d.AddDays(-1);
         }
 
         return list;

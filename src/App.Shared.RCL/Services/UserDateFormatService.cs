@@ -50,11 +50,6 @@ public sealed class UserDateFormatService : IUserDateFormatService, IDisposable
         return dateTime.ToString($"{EffectiveFormat} HH:mm", CultureInfo.InvariantCulture);
     }
 
-    public string Format(DateTimeOffset dateTimeOffset)
-    {
-        return dateTimeOffset.ToString($"{EffectiveFormat} HH:mm", CultureInfo.InvariantCulture);
-    }
-
     private string EffectiveFormat => _initialized ? _dateFormat : UserPreferences.DefaultDateFormat;
 
     private void OnPreferencesChanged(object? sender, EventArgs e)

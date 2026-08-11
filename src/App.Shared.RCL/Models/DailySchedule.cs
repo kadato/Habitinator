@@ -8,6 +8,12 @@ namespace App.Shared.RCL.Models;
 /// </summary>
 public static class DailySchedule
 {
+    /// <summary>Hard cap on how many days a backward schedule walk may step before giving up.</summary>
+    public const int MaxScheduledStepCap = 20_000;
+
+    /// <summary>Hard cap on how many history days any streak walk or anchor may span.</summary>
+    public const int MaxHistoryDays = 9999;
+
     /// <summary>
     ///     Gets today's date in the user's local timezone, or UTC if no timezone service is available.
     ///     This is the primary "today" for daily scheduling.
@@ -83,7 +89,7 @@ public static class DailySchedule
 
     private static DateOnly StreakHistoryEveryDayAnchor(DateOnly notAfter, int streakWindow)
     {
-        var s = Math.Min(9999, Math.Max(1, streakWindow));
+        var s = Math.Min(MaxHistoryDays, Math.Max(1, streakWindow));
         return notAfter.AddDays(-(s + 31));
     }
 
@@ -100,7 +106,7 @@ public static class DailySchedule
         int streakWindow)
     {
         var interval = Math.Max(1, Math.Min(999, rawInterval < 1 ? 1 : rawInterval));
-        var s = Math.Min(9999, Math.Max(1, streakWindow));
+        var s = Math.Min(MaxHistoryDays, Math.Max(1, streakWindow));
         return repeat switch
         {
             DailyRepeatType.Weekly => PhaseMatchedPeriodAnchor(dailyStart, notAfter, s, 7 * interval, 31),
@@ -224,6 +230,35 @@ public static class DailySchedule
     {
         ArgumentNullException.ThrowIfNull(daily);
         return IsScheduledOn(daily.DailyStartDate, daily.DailyRepeat, daily.DailyRepeatInterval, on);
+    }
+
+    /// <summary>
+    ///     Yields scheduled days walking backward from <paramref name="from" />, newest first, stopping
+    ///     before <paramref name="scheduleAnchor" /> and after <paramref name="maxSteps" /> days.
+    /// </summary>
+    public static IEnumerable<DateOnly> WalkScheduledDaysBackward(
+        DateOnly from,
+        DateOnly scheduleAnchor,
+        DailyRepeatType repeat,
+        int interval,
+        int maxSteps = MaxScheduledStepCap)
+    {
+        var d = from;
+        var steps = maxSteps;
+        while (steps-- > 0)
+        {
+            if (d < scheduleAnchor)
+            {
+                yield break;
+            }
+
+            if (IsScheduledOn(scheduleAnchor, repeat, interval, d))
+            {
+                yield return d;
+            }
+
+            d = d.AddDays(-1);
+        }
     }
 
     /// <summary>Whether this daily is checked off for the given calendar day (local timezone).</summary>

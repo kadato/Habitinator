@@ -16,16 +16,19 @@ public static class FocusDurationInput
 
     public static TimeSpan MaxFocusDuration { get; } = new(23, 59, 59);
 
-    private static readonly Regex SecondsSuffixRegex = new(@"^(\d+)\s*s$", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(250));
-    private static readonly Regex MinutesSecondsRegex = new(@"^(\d+)\s*m\s*(\d+)\s*s$", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(250));
-    private static readonly Regex ThreePartColonRegex = new(@"^(\d+):(\d+):(\d+)$", RegexOptions.None, TimeSpan.FromMilliseconds(250));
-    private static readonly Regex TwoPartColonRegex = new(@"^(\d+):(\d+)$", RegexOptions.None, TimeSpan.FromMilliseconds(250));
-    private static readonly Regex MinutesOnlySuffixRegex = new(@"^(\d+)\s*m$", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(250));
-    private static readonly Regex HmsLongFormARegex = new(@"^(\d{1,2})h(\d{1,2})m(\d{1,2})s$", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(250));
-    private static readonly Regex HmsLongFormBRegex = new(@"^(\d{1,2})h(\d{1,2})m$", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(250));
-    private static readonly Regex HmsLongFormCRegex = new(@"^(\d{1,2})h(\d{1,2})s$", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(250));
-    private static readonly Regex HMSuffixFormRegex = new(@"^(\d{1,2})\s*h(?:\s*(\d{1,2})\s*m?)?$", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(250));
-    private static readonly Regex PlainMinutesRegex = new(@"^\d{1,4}$", RegexOptions.None, TimeSpan.FromMilliseconds(250));
+    private static readonly Regex FocusDurationRegex = new(
+        @"^((?<secSuffix>\d+)\s*s"
+        + @"|(?<minSecMin>\d+)\s*m\s*(?<minSecSec>\d+)\s*s"
+        + @"|(?<threeH>\d+):(?<threeM>\d+):(?<threeS>\d+)"
+        + @"|(?<twoH>\d+):(?<twoM>\d+)"
+        + @"|(?<minOnly>\d+)\s*m"
+        + @"|(?<hmsH>\d{1,2})h(?<hmsM>\d{1,2})m(?<hmsS>\d{1,2})s"
+        + @"|(?<hmsBH>\d{1,2})h(?<hmsBM>\d{1,2})m"
+        + @"|(?<hmsCH>\d{1,2})h(?<hmsCS>\d{1,2})s"
+        + @"|(?<sufH>\d{1,2})\s*h(?:\s*(?<sufM>\d{1,2})\s*m?)?"
+        + @"|(?<plain>\d{1,4}))$",
+        RegexOptions.IgnoreCase,
+        TimeSpan.FromMilliseconds(250));
 
     public static string FormatForAlertLabel(TimeSpan t)
     {
@@ -120,47 +123,114 @@ public static class FocusDurationInput
         }
 
         var input = raw.Trim();
-        if (TryParseSecondsSuffix(input, out var sec))
+        var m = FocusDurationRegex.Match(input);
+        if (!m.Success)
         {
-            return Assign(ref duration, sec);
+            return false;
         }
 
-        if (TryParseMinutesSeconds(input, out var ms))
+        if (m.Groups["secSuffix"].Success)
         {
-            return Assign(ref duration, ms);
+            if (!int.TryParse(m.Groups["secSuffix"].Value, out var sec) || sec <= 0)
+            {
+                return false;
+            }
+
+            return Assign(ref duration, TryFromTotalSeconds(sec, out var d) ? d : null);
         }
 
-        if (TryParseThreePartColon(input, out var three))
+        if (m.Groups["minSecMin"].Success)
         {
-            return Assign(ref duration, three);
+            if (!int.TryParse(m.Groups["minSecMin"].Value, out var min) ||
+                !int.TryParse(m.Groups["minSecSec"].Value, out var sec))
+            {
+                return false;
+            }
+
+            if (sec is < 0 or > 59 || min < 0)
+            {
+                return false;
+            }
+
+            return Assign(ref duration, TryFromTotalSeconds(min * 60L + sec, out var d) ? d : null);
         }
 
-        if (TryParseTwoPartColon(input, out var two))
+        if (m.Groups["threeH"].Success)
         {
-            return Assign(ref duration, two);
+            if (!int.TryParse(m.Groups["threeH"].Value, out var h) ||
+                !int.TryParse(m.Groups["threeM"].Value, out var min) ||
+                !int.TryParse(m.Groups["threeS"].Value, out var sec))
+            {
+                return false;
+            }
+
+            return TryValidateAndCreate(h, min, sec, out duration);
         }
 
-        if (TryParseMinutesOnlySuffix(input, out var mOnly))
+        if (m.Groups["twoH"].Success)
         {
-            return Assign(ref duration, mOnly);
+            if (!int.TryParse(m.Groups["twoH"].Value, out var h) ||
+                !int.TryParse(m.Groups["twoM"].Value, out var min))
+            {
+                return false;
+            }
+
+            return TryValidateAndCreate(h, min, 0, out duration);
         }
 
-        if (TryParseHmsLongForm(input, out var hms))
+        if (m.Groups["minOnly"].Success)
         {
-            return Assign(ref duration, hms);
+            if (!int.TryParse(m.Groups["minOnly"].Value, out var mins) || mins <= 0)
+            {
+                return false;
+            }
+
+            return Assign(ref duration, TryFromTotalSeconds(mins * 60L, out var d) ? d : null);
         }
 
-        if (TryParseHMSuffixForm(input, out var hm))
+        if (m.Groups["hmsH"].Success)
         {
-            return Assign(ref duration, hm);
+            return TryValidateAndCreate(
+                int.Parse(m.Groups["hmsH"].Value, CultureInfo.InvariantCulture),
+                int.Parse(m.Groups["hmsM"].Value, CultureInfo.InvariantCulture),
+                int.Parse(m.Groups["hmsS"].Value, CultureInfo.InvariantCulture),
+                out duration);
         }
 
-        if (TryParsePlainMinutes(input, out var plain))
+        if (m.Groups["hmsBH"].Success)
         {
-            return Assign(ref duration, plain);
+            return TryValidateAndCreate(
+                int.Parse(m.Groups["hmsBH"].Value, CultureInfo.InvariantCulture),
+                int.Parse(m.Groups["hmsBM"].Value, CultureInfo.InvariantCulture),
+                0,
+                out duration);
         }
 
-        return false;
+        if (m.Groups["hmsCH"].Success)
+        {
+            return TryValidateAndCreate(
+                int.Parse(m.Groups["hmsCH"].Value, CultureInfo.InvariantCulture),
+                0,
+                int.Parse(m.Groups["hmsCS"].Value, CultureInfo.InvariantCulture),
+                out duration);
+        }
+
+        if (m.Groups["sufH"].Success)
+        {
+            var h = int.Parse(m.Groups["sufH"].Value, CultureInfo.InvariantCulture);
+            var min = m.Groups["sufM"].Success
+                ? int.Parse(m.Groups["sufM"].Value, CultureInfo.InvariantCulture)
+                : 0;
+            return TryValidateAndCreate(h, min, 0, out duration);
+        }
+
+        var plainMins = int.Parse(m.Groups["plain"].Value, CultureInfo.InvariantCulture);
+        if (plainMins <= 0)
+        {
+            return false;
+        }
+
+        return Assign(ref duration, TryFromTotalSeconds(plainMins * 60L, out var plainDuration) ? plainDuration : null);
     }
 
     private static bool Assign(ref TimeSpan? slot, TimeSpan? value)
@@ -171,163 +241,8 @@ public static class FocusDurationInput
         }
 
         v = Clamp(v);
-        if (v <= TimeSpan.Zero)
-        {
-            return false;
-        }
-
         slot = v;
         return true;
-    }
-
-    private static bool TryParseSecondsSuffix(string s, out TimeSpan? duration)
-    {
-        duration = null;
-        var m = SecondsSuffixRegex.Match(s);
-        if (!m.Success)
-        {
-            return false;
-        }
-
-        if (!int.TryParse(m.Groups[1].Value, out var sec) || sec <= 0)
-        {
-            return false;
-        }
-
-        return TryFromTotalSeconds(sec, out duration);
-    }
-
-    private static bool TryParseMinutesSeconds(string s, out TimeSpan? duration)
-    {
-        duration = null;
-        var m = MinutesSecondsRegex.Match(s);
-        if (!m.Success)
-        {
-            return false;
-        }
-
-        if (!int.TryParse(m.Groups[1].Value, out var min) ||
-            !int.TryParse(m.Groups[2].Value, out var sec))
-        {
-            return false;
-        }
-
-        if (sec is < 0 or > 59 || min < 0)
-        {
-            return false;
-        }
-
-        return TryFromTotalSeconds(min * 60L + sec, out duration);
-    }
-
-    private static bool TryParseThreePartColon(string s, out TimeSpan? duration)
-    {
-        duration = null;
-        var m = ThreePartColonRegex.Match(s);
-        if (!m.Success)
-        {
-            return false;
-        }
-
-        if (!int.TryParse(m.Groups[1].Value, out var h) ||
-            !int.TryParse(m.Groups[2].Value, out var min) ||
-            !int.TryParse(m.Groups[3].Value, out var sec))
-        {
-            return false;
-        }
-
-        if (min is < 0 or > 59 || sec is < 0 or > 59 || h is < 0 or > 23)
-        {
-            return false;
-        }
-
-        if (h == 0 && min == 0 && sec == 0)
-        {
-            return false;
-        }
-
-        return TryFromTotalSeconds(h * 3600L + min * 60L + sec, out duration);
-    }
-
-    private static bool TryParseTwoPartColon(string s, out TimeSpan? duration)
-    {
-        duration = null;
-        var m = TwoPartColonRegex.Match(s);
-        if (!m.Success)
-        {
-            return false;
-        }
-
-        if (!int.TryParse(m.Groups[1].Value, out var h) ||
-            !int.TryParse(m.Groups[2].Value, out var min))
-        {
-            return false;
-        }
-
-        if (min is < 0 or > 59 || h is < 0 or > 23)
-        {
-            return false;
-        }
-
-        if (h == 0 && min == 0)
-        {
-            return false;
-        }
-
-        return TryFromTotalSeconds(h * 3600L + min * 60L, out duration);
-    }
-
-    private static bool TryParseMinutesOnlySuffix(string s, out TimeSpan? duration)
-    {
-        duration = null;
-        var m = MinutesOnlySuffixRegex.Match(s);
-        if (!m.Success)
-        {
-            return false;
-        }
-
-        if (!int.TryParse(m.Groups[1].Value, out var mins) || mins <= 0)
-        {
-            return false;
-        }
-
-        return TryFromTotalSeconds(mins * 60L, out duration);
-    }
-
-    private static bool TryParseHmsLongForm(string s, out TimeSpan? duration)
-    {
-        duration = null;
-        var a = HmsLongFormARegex.Match(s);
-        if (a.Success)
-        {
-            return TryValidateAndCreate(
-                int.Parse(a.Groups[1].Value, CultureInfo.InvariantCulture),
-                int.Parse(a.Groups[2].Value, CultureInfo.InvariantCulture),
-                int.Parse(a.Groups[3].Value, CultureInfo.InvariantCulture),
-                out duration);
-        }
-
-        var b = HmsLongFormBRegex.Match(s);
-        if (b.Success)
-        {
-            return TryValidateAndCreate(
-                int.Parse(b.Groups[1].Value, CultureInfo.InvariantCulture),
-                int.Parse(b.Groups[2].Value, CultureInfo.InvariantCulture),
-                0,
-                out duration);
-        }
-
-        var c = HmsLongFormCRegex.Match(s);
-        if (c.Success)
-        {
-            return TryValidateAndCreate(
-                int.Parse(c.Groups[1].Value, CultureInfo.InvariantCulture),
-                0,
-                int.Parse(c.Groups[2].Value, CultureInfo.InvariantCulture),
-                out duration);
-        }
-
-        return false;
     }
 
     private static bool TryValidateAndCreate(int h, int m, int sec, out TimeSpan? duration)
@@ -344,47 +259,6 @@ public static class FocusDurationInput
         }
 
         return TryFromTotalSeconds(h * 3600L + m * 60L + sec, out duration);
-    }
-
-    private static bool TryParseHMSuffixForm(string s, out TimeSpan? duration)
-    {
-        duration = null;
-        var m = HMSuffixFormRegex.Match(s);
-        if (!m.Success)
-        {
-            return false;
-        }
-
-        var h = int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
-        var min = m.Groups[2].Success ? int.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture) : 0;
-        if (min is < 0 or > 59 || h is < 0 or > 23)
-        {
-            return false;
-        }
-
-        if (h == 0 && min == 0)
-        {
-            return false;
-        }
-
-        return TryFromTotalSeconds(h * 3600L + min * 60L, out duration);
-    }
-
-    private static bool TryParsePlainMinutes(string s, out TimeSpan? duration)
-    {
-        duration = null;
-        if (!PlainMinutesRegex.IsMatch(s))
-        {
-            return false;
-        }
-
-        var mins = int.Parse(s, CultureInfo.InvariantCulture);
-        if (mins <= 0)
-        {
-            return false;
-        }
-
-        return TryFromTotalSeconds(mins * 60L, out duration);
     }
 
     private static bool TryFromTotalSeconds(long totalSec, out TimeSpan? duration)

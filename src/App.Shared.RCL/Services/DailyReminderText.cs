@@ -6,7 +6,7 @@ using App.Shared.RCL.Models;
 namespace App.Shared.RCL.Services;
 
 /// <summary>
-///     Builds the title and body for the daily board reminder. Uses the same “today” calendar as
+///     Builds the title and body for the daily board reminder. Uses the same "today" calendar as
 ///     the board (<see cref="DailySchedule" /> UTC) so dailies and to-dos match what the user sees in the app.
 /// </summary>
 public static class DailyReminderText
@@ -60,7 +60,7 @@ public static class DailyReminderText
         }
 
         var body = sb.ToString();
-        if (body.Length > maxBodyLength)
+        if (maxBodyLength > 0 && body.Length > maxBodyLength)
         {
             body = body[..(maxBodyLength - 1)] + "…";
         }
@@ -90,7 +90,7 @@ public static class DailyReminderText
             sb.Append(t.Title);
             if (due != todayUtc)
             {
-                sb.Append(" — ");
+                sb.Append(" - ");
                 sb.Append(FormatDate(due, dateFormat));
             }
 

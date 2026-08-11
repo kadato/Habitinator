@@ -14,6 +14,4 @@ public interface IUserDateFormatService
     string Format(DateOnly dateValue);
 
     string Format(DateTime dateTime);
-
-    string Format(DateTimeOffset dateTimeOffset);
 }

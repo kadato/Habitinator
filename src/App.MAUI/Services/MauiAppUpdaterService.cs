@@ -78,19 +78,7 @@ public sealed partial class MauiAppUpdaterService : IAppUpdaterService
             var currentVersion = AppInfo.Current.Version;
             var updateAvailable = latestVersion > currentVersion;
 
-            // Find platform-specific installer asset
-#if ANDROID
-            var asset = release.Assets.FirstOrDefault(a => a.Name.EndsWith(".apk", StringComparison.OrdinalIgnoreCase));
-            var downloadUrl = asset?.BrowserDownloadUrl ?? string.Empty;
-            var expectedAssetType = "Android APK (.apk)";
-#elif WINDOWS
-            var asset = release.Assets.FirstOrDefault(a => a.Name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase) || a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
-            var downloadUrl = asset?.BrowserDownloadUrl ?? string.Empty;
-            var expectedAssetType = "Windows Installer (.msi/.exe)";
-#else
-            var downloadUrl = string.Empty;
-            var expectedAssetType = "supported platform installer";
-#endif
+            var (downloadUrl, expectedAssetType) = SelectPlatformAsset(release);
 
             if (updateAvailable && string.IsNullOrEmpty(downloadUrl))
             {
@@ -231,6 +219,20 @@ public sealed partial class MauiAppUpdaterService : IAppUpdaterService
         Environment.Exit(0);
 #else
         await Task.CompletedTask;
+#endif
+    }
+
+    private static (string DownloadUrl, string ExpectedAssetType) SelectPlatformAsset(GitHubRelease release)
+    {
+#if ANDROID
+        var asset = release.Assets.FirstOrDefault(a => a.Name.EndsWith(".apk", StringComparison.OrdinalIgnoreCase));
+        return (asset?.BrowserDownloadUrl ?? string.Empty, "Android APK file");
+#elif WINDOWS
+        var asset = release.Assets.FirstOrDefault(a => a.Name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase) || a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+        return (asset?.BrowserDownloadUrl ?? string.Empty, "Windows .msi or .exe installer");
+#else
+        _ = release;
+        return (string.Empty, "supported platform installer");
 #endif
     }
 

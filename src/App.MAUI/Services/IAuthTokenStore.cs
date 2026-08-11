@@ -33,26 +33,22 @@ public sealed class AuthTokenStore : IAuthTokenStore
         return SetOrRemoveAsync(TokenKey, token, cancellationToken);
     }
 
-    public async Task<string?> GetEmailAsync(CancellationToken cancellationToken = default)
-    {
-        return await GetAsyncInternal(EmailKey, cancellationToken);
-    }
+    public Task<string?> GetEmailAsync(CancellationToken cancellationToken = default) =>
+        GetAsyncInternal(EmailKey, cancellationToken);
 
     public Task SetEmailAsync(string? email, CancellationToken cancellationToken = default)
     {
         return SetOrRemoveAsync(EmailKey, email, cancellationToken);
     }
 
-    private static Task<string?> GetAsyncInternal(string key, CancellationToken cancellationToken)
-    {
-        return RunSerializedAsync(
+    private static Task<string?> GetAsyncInternal(string key, CancellationToken cancellationToken) =>
+        RunSerializedAsync(
             async () =>
             {
                 var t = await SecureStorage.GetAsync(key);
                 return string.IsNullOrWhiteSpace(t) ? null : t;
             },
             cancellationToken);
-    }
 
     private static async Task SetOrRemoveAsync(string key, string? value, CancellationToken cancellationToken)
     {
@@ -99,27 +95,12 @@ public sealed class AuthTokenStore : IAuthTokenStore
 
     private static async Task RunSerializedAsync(Func<Task> action, CancellationToken cancellationToken)
     {
-        await StorageLock.WaitAsync(cancellationToken);
-        try
-        {
-            var attempt = 0;
-            while (true)
+        await RunSerializedAsync(
+            async () =>
             {
-                try
-                {
-                    await action();
-                    return;
-                }
-                catch (IOException) when (attempt < IoRetries)
-                {
-                    attempt++;
-                    await Task.Delay(20 * attempt, cancellationToken);
-                }
-            }
-        }
-        finally
-        {
-            StorageLock.Release();
-        }
+                await action();
+                return true;
+            },
+            cancellationToken);
     }
 }

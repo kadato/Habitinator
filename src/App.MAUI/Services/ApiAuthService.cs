@@ -17,23 +17,28 @@ public sealed class ApiAuthService
         _http = http;
     }
 
-    public async Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
+    public Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
         var client = _http.CreateClient("apiAuth");
-        using var res = await client.PostAsJsonAsync("api/auth/login", request, Serializer, cancellationToken);
-        if (!res.IsSuccessStatusCode)
-        {
-            return null;
-        }
-
-        return await res.Content.ReadFromJsonAsync<LoginResponse>(Serializer, cancellationToken);
+        return PostLoginAsync(
+            () => client.PostAsJsonAsync("api/auth/login", request, Serializer, cancellationToken),
+            cancellationToken);
     }
 
     /// <summary>Sign in as the server-configured demo guest (JWT), same user as web guest-login.</summary>
-    public async Task<LoginResponse?> GuestJwtLoginAsync(CancellationToken cancellationToken = default)
+    public Task<LoginResponse?> GuestJwtLoginAsync(CancellationToken cancellationToken = default)
     {
         var client = _http.CreateClient("apiAuth");
-        using var res = await client.PostAsync("api/auth/guest-jwt", null, cancellationToken);
+        return PostLoginAsync(
+            () => client.PostAsync("api/auth/guest-jwt", null, cancellationToken),
+            cancellationToken);
+    }
+
+    private static async Task<LoginResponse?> PostLoginAsync(
+        Func<Task<HttpResponseMessage>> send,
+        CancellationToken cancellationToken)
+    {
+        using var res = await send();
         if (!res.IsSuccessStatusCode)
         {
             return null;

@@ -1,4 +1,3 @@
-@inject GlobalTimerService TimerService
 @inject IBoardDataService BoardDataService
 @inject ITimerSessionLogService TimerSessionLog
 @inject IDialogService DialogService
@@ -190,49 +189,29 @@
                 </div>
 
                 <div class="board-section-tab-content" id="board-tab-panel-@_mobileSectionIndex" role="tabpanel" aria-labelledby="board-tab-@_mobileSectionIndex">
-                    @if (_mobileSectionIndex == 0)
+                    @foreach (var col in BoardColumns)
                     {
-                        <BoardColumn Section="BoardSection.Habit"
-                                     Items="FilteredHabits"
-                                     IsBoardFilterExcludingAll="Habits.Count > 0 && FilteredHabits.Count == 0"
-                                     OnChanged="OnBoardChanged"/>
-                    }
-                    else if (_mobileSectionIndex == 1)
-                    {
-                        <BoardColumn Section="BoardSection.Daily"
-                                     Items="FilteredDailies"
-                                     IsBoardFilterExcludingAll="Dailies.Count > 0 && FilteredDailies.Count == 0"
-                                     OnChanged="OnBoardChanged"/>
-                    }
-                    else if (_mobileSectionIndex == 2)
-                    {
-                        <BoardColumn Section="BoardSection.Todo"
-                                     Items="FilteredTodos"
-                                     IsBoardFilterExcludingAll="Todos.Count > 0 && FilteredTodos.Count == 0"
-                                     OnChanged="OnBoardChanged"/>
+                        if (col.Section == (BoardSection)_mobileSectionIndex)
+                        {
+                            <BoardColumn Section="col.Section"
+                                         Items="col.Items"
+                                         IsBoardFilterExcludingAll="col.IsExcluded"
+                                         OnChanged="OnBoardChanged"/>
+                        }
                     }
                 </div>
             </div>
             <div class="board-columns-desktop">
                 <MudGrid Spacing="2" Class="board-columns-grid w-100">
-                    <MudItem xs="12" md="4">
-                        <BoardColumn Section="BoardSection.Habit"
-                                        Items="FilteredHabits"
-                                        IsBoardFilterExcludingAll="Habits.Count > 0 && FilteredHabits.Count == 0"
-                                        OnChanged="OnBoardChanged"/>
-                    </MudItem>
-                    <MudItem xs="12" md="4">
-                        <BoardColumn Section="BoardSection.Daily"
-                                        Items="FilteredDailies"
-                                        IsBoardFilterExcludingAll="Dailies.Count > 0 && FilteredDailies.Count == 0"
-                                        OnChanged="OnBoardChanged"/>
-                    </MudItem>
-                    <MudItem xs="12" md="4">
-                        <BoardColumn Section="BoardSection.Todo"
-                                        Items="FilteredTodos"
-                                        IsBoardFilterExcludingAll="Todos.Count > 0 && FilteredTodos.Count == 0"
-                                        OnChanged="OnBoardChanged"/>
-                    </MudItem>
+                    @foreach (var col in BoardColumns)
+                    {
+                        <MudItem xs="12" md="4">
+                            <BoardColumn Section="col.Section"
+                                         Items="col.Items"
+                                         IsBoardFilterExcludingAll="col.IsExcluded"
+                                         OnChanged="OnBoardChanged"/>
+                        </MudItem>
+                    }
                 </MudGrid>
             </div>
         </div>
@@ -308,6 +287,22 @@
     private int OpenTodoCount => _filteredTodos.Count(t => !t.IsCompleted);
 
     private int _mobileSectionIndex;
+
+    private sealed record ColumnSpec(BoardSection Section, IReadOnlyList<BoardItem> Items, bool IsExcluded);
+
+    private ColumnSpec[] BoardColumns => new[]
+    {
+        new ColumnSpec(BoardSection.Habit, FilteredHabits, IsFilteredOut(BoardSection.Habit)),
+        new ColumnSpec(BoardSection.Daily, FilteredDailies, IsFilteredOut(BoardSection.Daily)),
+        new ColumnSpec(BoardSection.Todo, FilteredTodos, IsFilteredOut(BoardSection.Todo))
+    };
+
+    private bool IsFilteredOut(BoardSection section) => section switch
+    {
+        BoardSection.Habit => Habits.Count > 0 && FilteredHabits.Count == 0,
+        BoardSection.Daily => Dailies.Count > 0 && FilteredDailies.Count == 0,
+        _ => Todos.Count > 0 && FilteredTodos.Count == 0
+    };
 
     private string GetSectionSwitcherClass(int index) =>
         index == _mobileSectionIndex
@@ -391,9 +386,9 @@
     private Task PersistBoardData()
     {
         var snapshot = new BoardSnapshot(
-            Habits ?? new List<BoardItem>(),
-            Dailies ?? new List<BoardItem>(),
-            Todos ?? new List<BoardItem>()
+            Habits,
+            Dailies,
+            Todos
         );
         ApplicationState.PersistAsJson("board_snapshot", snapshot);
         return Task.CompletedTask;
@@ -564,33 +559,27 @@
 
     private async Task InitialLoadAsync()
     {
-        _isLoading = true;
-        _loadError = null;
-        try
-        {
-            await LoadBoardAsync();
-        }
-        catch (Exception ex)
-        {
-            _loadError = ex is InvalidOperationException
-                ? ex.Message
-                : "Could not load your board. Please try again.";
-        }
-        finally
-        {
-            _isLoading = false;
-            _initialLoadComplete = true;
-            InitialBoardLoad.MarkComplete();
-        }
+        await LoadAsync(LoadBoardAsync);
+        _initialLoadComplete = true;
+        InitialBoardLoad.MarkComplete();
     }
 
     private async Task RetryLoadAsync()
+    {
+        await LoadAsync(LoadBoardAsync);
+        if (_loadError is null && _dailyRetroClientReady)
+        {
+            await TryOpenDailyYesterdayRetroIfNeededAsync();
+        }
+    }
+
+    private async Task LoadAsync(Func<Task> load)
     {
         _isLoading = true;
         _loadError = null;
         try
         {
-            await LoadBoardAsync();
+            await load();
         }
         catch (Exception ex)
         {
@@ -601,11 +590,6 @@
         finally
         {
             _isLoading = false;
-        }
-
-        if (_loadError is null && _dailyRetroClientReady)
-        {
-            await TryOpenDailyYesterdayRetroIfNeededAsync();
         }
     }
 
@@ -762,14 +746,6 @@
             }
 
             var yesterdayDate = today.AddDays(-1);
-            var options = new DialogOptions
-            {
-                MaxWidth = MaxWidth.Small,
-                FullWidth = false,
-                CloseButton = false,
-                CloseOnEscapeKey = true,
-                NoHeader = true
-            };
             var parameters = new DialogParameters<DailyYesterdayRetroDialog>
             {
                 { x => x.DueOn, yesterdayDate },
@@ -777,7 +753,7 @@
             };
 
             var dialog = await DialogService.ShowAsync<DailyYesterdayRetroDialog>(
-                string.Empty, parameters, options);
+                string.Empty, parameters, DialogDefaults.SmallEditor);
             var result = await dialog.Result;
 
             try
@@ -821,14 +797,7 @@
                 return;
             }
 
-            var options = new DialogOptions
-            {
-                MaxWidth = MaxWidth.Small,
-                FullWidth = false,
-                CloseButton = false,
-                CloseOnEscapeKey = true,
-                NoHeader = true
-            };
+            var options = DialogDefaults.SmallEditor;
             var parameters = new DialogParameters<OnboardingDialog>
             {
                 {
@@ -1017,14 +986,7 @@
 
     private async Task<DialogResult?> OpenItemEditorForCreatedAsync(BoardSection section, BoardItem item)
     {
-        var options = new DialogOptions
-        {
-            MaxWidth = MaxWidth.Small,
-            FullWidth = false,
-            CloseButton = false,
-            CloseOnEscapeKey = true,
-            NoHeader = true
-        };
+        var options = DialogDefaults.SmallEditor;
 
         IDialogReference dialog = section switch
         {

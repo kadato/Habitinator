@@ -51,7 +51,7 @@ else
         await Session.SetSessionAsync(r);
         // SetSessionAsync fires Session.Changed → OnSessionChanged → StateHasChanged,
         // which re-renders this component and switches from HomeLanding to MainBoard.
-        // No NavigateTo("/") needed — we are already on "/" and the router would not
+        // No NavigateTo("/") needed - we are already on "/" and the router would not
         // re-create the page component anyway, leaving the board invisible.
     }
 }

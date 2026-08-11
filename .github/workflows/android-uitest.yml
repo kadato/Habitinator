@@ -1,5 +1,5 @@
 # Manual Android UI tests (Appium + emulator). Heavy; run when changing MAUI Android UI.
-# Prereqs on the runner: MAUI Android workload, Node (Appium 2), emulator — may need tuning per SDK updates.
+# Prereqs on the runner: MAUI Android workload, Node (Appium 2), emulator - may need tuning per SDK updates.
 
 name: Android UI tests
 

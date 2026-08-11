@@ -29,7 +29,7 @@ public sealed class ZalgoSanitizerTests
     [Fact]
     public void IsZalgo_TwoCombiningPerBase_ReturnsFalse()
     {
-        // Vietnamese "ợ" = o + combining horn (U+031B) + combining dot below (U+0323) — 2 marks
+        // Vietnamese "ợ" = o plus combining horn U+031B and combining dot below U+0323 - 2 marks
         var input = "o\u031B\u0323";
         ZalgoSanitizer.IsZalgo(input).Should().BeFalse();
     }
@@ -65,8 +65,8 @@ public sealed class ZalgoSanitizerTests
     [InlineData("café")]
     [InlineData("naïve")]
     [InlineData("résumé")]
-    [InlineData("こんにちは")]      // Japanese — no combining marks
-    [InlineData("😀 emoji test")]  // Emoji (surrogate pair) — no combining marks
+    [InlineData("こんにちは")]      // Japanese - no combining marks
+    [InlineData("😀 emoji test")]  // Emoji as a surrogate pair - no combining marks
     public void Sanitize_CleanText_ReturnsSameInstance(string input)
     {
         // No Zalgo → should return the original string instance (fast path)
@@ -78,7 +78,7 @@ public sealed class ZalgoSanitizerTests
     [Fact]
     public void Sanitize_TwoCombiningPerBase_ReturnsSameInstance()
     {
-        var input = "o\u031B\u0323"; // Vietnamese ợ — 2 marks, at limit
+        var input = "o\u031B\u0323"; // Vietnamese ợ - 2 marks, at limit
         var result = ZalgoSanitizer.Sanitize((string?)input);
         result.Should().Be(input);
         object.ReferenceEquals(result, input).Should().BeTrue();

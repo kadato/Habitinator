@@ -114,7 +114,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
 
         // Act - Transition to Offline and Offline problem message simultaneously
         _boardSync.IsOffline = true;
-        _boardSync.SyncProblemMessage = "Offline — board changes stay on this device...";
+        _boardSync.SyncProblemMessage = "Offline - board changes stay on this device until you reconnect.";
         await cut.InvokeAsync(_boardSync.RaiseChanged);
 
         // Assert - Warn was sent, Error was suppressed

@@ -445,7 +445,7 @@ a {
     }
 }
 
-/* Desktop header nav — global styles (MudButton root is outside component CSS isolation) */
+/* Desktop header nav - global styles. MudButton root is outside component CSS isolation. */
 .app-header-nav {
     gap: var(--space-2) var(--space-4);
     margin-left: 0;

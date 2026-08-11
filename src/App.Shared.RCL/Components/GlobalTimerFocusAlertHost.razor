@@ -115,7 +115,7 @@
         {
             var label = string.IsNullOrEmpty(TimerService.TargetId) ? "Open session" : TimerService.TargetId;
             var dur = FocusDurationInput.FormatForAlertLabel(TimerService.FocusAlertAfter ?? TimeSpan.Zero);
-            var message = $"Time's up ({dur}) — {label}";
+            var message = $"Time's up - {dur}: {label}";
             TimerService.PauseForFocusTimeUp();
             _ = InvokeAsync(async () =>
             {
@@ -140,7 +140,7 @@
     {
         var label = string.IsNullOrEmpty(TimerService.TargetId) ? "Focus Session" : TimerService.TargetId;
         var durLabel = FocusDurationInput.FormatForAlertLabel(TimerService.FocusAlertAfter ?? TimeSpan.Zero);
-        var message = $"Focus session complete ({durLabel}) — {label}";
+        var message = $"Focus session complete - {durLabel}: {label}";
 
         try
         {
@@ -239,14 +239,14 @@
                 "Time's up",
                 "(" + durationLabel + ") is up for \"" + targetLabel + "\". "
                 + "The timer keeps running while you decide. If you actually finished, log this session and update the board. "
-                + "If you are not done yet, choose Not done — the timer continues and you will not get another time's up alert this session.",
+                + "If you are not done yet, choose Not done. The timer continues and you will not get another time's up alert this session.",
                 "Yes, log session",
                 "Not done");
         }
         catch (Exception)
         {
             await UserNotifier.NotifyAsync(
-                "Time's up — open the board to log your session, or use Stop & log on the timer.",
+                "Time's up. Open the board to log your session, or use Stop & log on the timer.",
                 Severity.Info,
                 cancellationToken);
             TimerService.ResumeAfterFocusPromptNotDone();

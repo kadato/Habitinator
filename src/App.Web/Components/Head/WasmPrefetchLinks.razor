@@ -51,7 +51,7 @@
 
     private static bool ShouldPrefetch(string name)
     {
-        // Skip compressed variants — the browser/CDN handles Accept-Encoding
+        // Skip compressed variants - the browser/CDN handles Accept-Encoding
         if (name.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) ||
             name.EndsWith(".br", StringComparison.OrdinalIgnoreCase))
             return false;
@@ -61,7 +61,7 @@
             name.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase))
             return false;
 
-        // Skip ICU globalization data files — HybridGlobalization uses browser APIs instead
+        // Skip ICU globalization data files - HybridGlobalization uses browser APIs instead
         if (name.StartsWith("icudt_", StringComparison.OrdinalIgnoreCase) ||
             name.StartsWith("icudt.", StringComparison.OrdinalIgnoreCase))
             return false;

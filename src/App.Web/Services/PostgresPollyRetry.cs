@@ -15,9 +15,9 @@ public static class PostgresPollyRetry
     {
         var options = new RetryStrategyOptions
         {
-            MaxRetryAttempts = 5,
+            MaxRetryAttempts = PostgresRetryDefaults.RetryMaxCount,
             Delay = TimeSpan.FromSeconds(1),
-            MaxDelay = TimeSpan.FromSeconds(16),
+            MaxDelay = PostgresRetryDefaults.RetryMaxDelay,
             BackoffType = DelayBackoffType.Exponential,
             UseJitter = true,
             ShouldHandle = new PredicateBuilder().Handle<Exception>(PostgresTransientErrors.IsTransient),

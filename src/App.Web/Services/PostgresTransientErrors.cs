@@ -9,8 +9,10 @@ namespace App.Web.Services;
 /// <summary>Detects PostgreSQL / Neon connection failures that are safe to retry.</summary>
 public static class PostgresTransientErrors
 {
+    public static readonly string[] AdditionalSqlStates = ["57P01", "08006", "08003"];
+
     private static readonly SearchValues<string> SqlStates = SearchValues.Create(
-        ["57P01", "08006", "08003"], StringComparison.Ordinal);
+        AdditionalSqlStates, StringComparison.Ordinal);
 
     private static readonly string[] MessageSubstrings =
     [

@@ -17,7 +17,6 @@ public sealed partial class LocalFirstBoardDataService(
     RemoteBoardDataService remote,
     IServiceProvider services,
     IUserTimeZoneService timeZone,
-    IUserPreferencesService preferences,
     MauiBoardSyncStatus syncStatus,
     ILogger<LocalFirstBoardDataService> logger)
     : IBoardDataService, IMauiBoardLocalStoreLifecycle
@@ -28,7 +27,9 @@ public sealed partial class LocalFirstBoardDataService(
 
     private async Task<DateOnly> TodayAsync(CancellationToken cancellationToken)
     {
-        var prefs = await preferences.GetAsync(cancellationToken);
+        var prefs = await services
+            .GetRequiredService<IUserPreferencesService>()
+            .GetAsync(cancellationToken);
         return DailySchedule.LocalToday(timeZone, prefs.DayStartLocalTime);
     }
 

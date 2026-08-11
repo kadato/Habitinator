@@ -75,13 +75,8 @@ public sealed partial class LocalFirstBoardDataService(
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            if (!await HasAuthAsync(cancellationToken))
-            {
-                return EmptySnapshot();
-            }
-
-            userKey = await ResolveUserKeyAsync(cancellationToken);
-            if (string.IsNullOrWhiteSpace(userKey))
+            userKey = await ResolveAuthedUserKeyAsync(cancellationToken);
+            if (userKey is null)
             {
                 return EmptySnapshot();
             }
@@ -101,37 +96,43 @@ public sealed partial class LocalFirstBoardDataService(
             _gate.Release();
         }
 
-        if (shouldFetchRemote && !string.IsNullOrWhiteSpace(userKey))
+        if (shouldFetchRemote)
         {
-            BoardSnapshot? fresh = null;
-            try
-            {
-                // Network HTTP call happens OUTSIDE the _gate lock:
-                fresh = await remote.GetSnapshotAsync(cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogDebug(ex, "Initial board hydrate from API skipped (offline or error).");
-            }
-
-            if (fresh is not null)
-            {
-                await _gate.WaitAsync(cancellationToken);
-                try
-                {
-                    await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-                    await ReplaceMirrorAsync(db, userKey, fresh, cancellationToken);
-                    var today = await TodayAsync(cancellationToken);
-                    snap = ReadSnapshot(db, userKey, today);
-                }
-                finally
-                {
-                    _gate.Release();
-                }
-            }
+            snap = await TryFetchAndReplaceIfEmptyAsync(userKey, cancellationToken) ?? snap;
         }
 
         return snap;
+    }
+
+    private async Task<BoardSnapshot?> TryFetchAndReplaceIfEmptyAsync(string userKey, CancellationToken cancellationToken)
+    {
+        BoardSnapshot? fresh = null;
+        try
+        {
+            // Network HTTP call happens OUTSIDE the _gate lock:
+            fresh = await remote.GetSnapshotAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Initial board hydrate from API skipped. Offline or error.");
+        }
+
+        if (fresh is null)
+        {
+            return null;
+        }
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            await ReplaceMirrorAsync(db, userKey, fresh, cancellationToken);
+            return ReadSnapshot(db, userKey, await TodayAsync(cancellationToken));
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     public async Task<BoardItem?> GetItemAsync(Guid itemId, CancellationToken cancellationToken = default)
@@ -141,13 +142,8 @@ public sealed partial class LocalFirstBoardDataService(
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            if (!await HasAuthAsync(cancellationToken))
-            {
-                return null;
-            }
-
-            var userKey = await ResolveUserKeyAsync(cancellationToken);
-            if (string.IsNullOrWhiteSpace(userKey))
+            var userKey = await ResolveAuthedUserKeyAsync(cancellationToken);
+            if (userKey is null)
             {
                 return null;
             }
@@ -250,26 +246,19 @@ public sealed partial class LocalFirstBoardDataService(
     public Task<BoardItem?> RenameItemAsync(BoardSection section, Guid itemId, string title,
         CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
-            async (db, userKey) =>
-            {
-                var row = await db.BoardItems.FirstOrDefaultAsync(
-                    x => x.UserKey == userKey && x.Id == itemId,
-                    cancellationToken);
-                if (row is null)
+            async (db, userKey) => await UpdateRowAsync(
+                db,
+                userKey,
+                itemId,
+                null,
+                BoardOutboxOperationKind.Rename,
+                (row, expected) => new RenameOutboxPayload(section, itemId, row.Title, expected),
+                row =>
                 {
-                    return null;
-                }
-
-                var expected = row.ServerUpdatedAtUtc;
-                row.Title = ZalgoSanitizer.SanitizeAndTrim(title);
-                Enqueue(
-                    db,
-                    userKey,
-                    BoardOutboxOperationKind.Rename,
-                    new RenameOutboxPayload(section, itemId, row.Title, expected));
-                await db.SaveChangesAsync(cancellationToken);
-                return row.ToModel();
-            },
+                    row.Title = ZalgoSanitizer.SanitizeAndTrim(title);
+                    return Task.CompletedTask;
+                },
+                cancellationToken),
             cancellationToken);
 
     public Task<bool> DeleteItemAsync(BoardSection section, Guid itemId,
@@ -282,78 +271,58 @@ public sealed partial class LocalFirstBoardDataService(
                     return true;
                 }
 
-                var row = await db.BoardItems.FirstOrDefaultAsync(
-                    x => x.UserKey == userKey && x.Id == itemId,
-                    cancellationToken);
-                if (row is null)
-                {
-                    return false;
-                }
-
-                var expected = row.ServerUpdatedAtUtc;
-                db.BoardItems.Remove(row);
-                Enqueue(
+                return await UpdateRowAsync(
                     db,
                     userKey,
+                    itemId,
+                    null,
                     BoardOutboxOperationKind.Delete,
-                    new SectionItemOutboxPayload(section, itemId, expected));
-                await db.SaveChangesAsync(cancellationToken);
-                return true;
+                    (row, expected) => new SectionItemOutboxPayload(section, itemId, expected),
+                    row =>
+                    {
+                        db.BoardItems.Remove(row);
+                        return Task.CompletedTask;
+                    },
+                    cancellationToken) is not null;
             },
             cancellationToken);
 
     public Task<BoardItem?> ArchiveItemAsync(BoardSection section, Guid itemId,
         CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
-            async (db, userKey) =>
-            {
-                var row = await db.BoardItems.FirstOrDefaultAsync(
-                    x => x.UserKey == userKey && x.Id == itemId,
-                    cancellationToken);
-                if (row is null)
+            async (db, userKey) => await UpdateRowAsync(
+                db,
+                userKey,
+                itemId,
+                null,
+                BoardOutboxOperationKind.Archive,
+                (row, expected) => new SectionItemOutboxPayload(section, itemId, expected),
+                row =>
                 {
-                    return null;
-                }
-
-                var expected = row.ServerUpdatedAtUtc;
-                row.IsArchived = true;
-                row.ServerUpdatedAtUtc = DateTimeOffset.UtcNow;
-
-                Enqueue(
-                    db,
-                    userKey,
-                    BoardOutboxOperationKind.Archive,
-                    new SectionItemOutboxPayload(section, itemId, expected));
-                await db.SaveChangesAsync(cancellationToken);
-                return row.ToModel();
-            },
+                    row.IsArchived = true;
+                    row.ServerUpdatedAtUtc = DateTimeOffset.UtcNow;
+                    return Task.CompletedTask;
+                },
+                cancellationToken),
             cancellationToken);
 
     public Task<BoardItem?> UnarchiveItemAsync(BoardSection section, Guid itemId,
         CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
-            async (db, userKey) =>
-            {
-                var row = await db.BoardItems.FirstOrDefaultAsync(
-                    x => x.UserKey == userKey && x.Id == itemId,
-                    cancellationToken);
-                if (row is null)
+            async (db, userKey) => await UpdateRowAsync(
+                db,
+                userKey,
+                itemId,
+                null,
+                BoardOutboxOperationKind.Unarchive,
+                (row, expected) => new SectionItemOutboxPayload(section, itemId, expected),
+                row =>
                 {
-                    return null;
-                }
-
-                var expected = row.ServerUpdatedAtUtc;
-                row.IsArchived = false;
-                row.ServerUpdatedAtUtc = DateTimeOffset.UtcNow;
-
-                Enqueue(
-                    db,
-                    userKey,
-                    BoardOutboxOperationKind.Unarchive,
-                    new SectionItemOutboxPayload(section, itemId, expected));
-                await db.SaveChangesAsync(cancellationToken);
-                return row.ToModel();
-            },
+                    row.IsArchived = false;
+                    row.ServerUpdatedAtUtc = DateTimeOffset.UtcNow;
+                    return Task.CompletedTask;
+                },
+                cancellationToken),
             cancellationToken);
 
     public async Task<BoardSnapshot> GetArchivedSnapshotAsync(CancellationToken cancellationToken = default)
@@ -374,22 +343,7 @@ public sealed partial class LocalFirstBoardDataService(
             var today = await TodayAsync(cancellationToken);
             var items = await db.BoardItems.AsNoTracking().Where(x => x.UserKey == userKey && x.IsArchived).ToListAsync(cancellationToken);
 
-            List<BoardItem> habits = [.. items.Where(x => x.Section == BoardSection.Habit)
-                .OrderBy(x => x.SortOrder ?? double.MaxValue)
-                .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
-                .Select(x => x.ToModel())];
-            List<BoardItem> dailies = [.. items.Where(x => x.Section == BoardSection.Daily)
-                .OrderBy(x => IsDailyRowCompleteForToday(x, today) ? 1 : 0)
-                .ThenBy(x => x.SortOrder ?? double.MaxValue)
-                .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
-                .Select(x => x.ToModel())];
-            List<BoardItem> todos = [.. items.Where(x => x.Section == BoardSection.Todo)
-                .OrderBy(x => x.IsCompleted ? 1 : 0)
-                .ThenBy(x => x.TodoDueDate.HasValue ? 1 : 0)
-                .ThenBy(x => x.TodoDueDate ?? DateOnly.MaxValue)
-                .ThenBy(x => x.SortOrder ?? double.MaxValue)
-                .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
-                .Select(x => x.ToModel())];
+            var (habits, dailies, todos) = OrderRows(items, today);
 
             return new(habits, dailies, todos);
         }
@@ -402,109 +356,109 @@ public sealed partial class LocalFirstBoardDataService(
     public Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId,
         CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
-            async (db, userKey) =>
-            {
-                var row = await db.BoardItems.FirstOrDefaultAsync(
-                    x => x.UserKey == userKey && x.Id == itemId,
-                    cancellationToken);
-                if (row is null)
+            async (db, userKey) => await UpdateRowAsync(
+                db,
+                userKey,
+                itemId,
+                null,
+                BoardOutboxOperationKind.Toggle,
+                (row, expected) => new SectionItemOutboxPayload(section, itemId, expected),
+                async row =>
                 {
-                    return null;
-                }
-
-                var expected = row.ServerUpdatedAtUtc;
-                ApplyLocalToggle(section, row, await TodayAsync(cancellationToken));
-                Enqueue(
-                    db,
-                    userKey,
-                    BoardOutboxOperationKind.Toggle,
-                    new SectionItemOutboxPayload(section, itemId, expected));
-                await db.SaveChangesAsync(cancellationToken);
-                return row.ToModel();
-            },
+                    ApplyLocalToggle(section, row, await TodayAsync(cancellationToken));
+                },
+                cancellationToken),
             cancellationToken);
 
     public Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn,
         CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
-            async (db, userKey) =>
-            {
-                var row = await db.BoardItems.FirstOrDefaultAsync(
-                    x => x.UserKey == userKey && x.Id == itemId && x.Section == BoardSection.Daily,
-                    cancellationToken);
-                if (row is null)
+            async (db, userKey) => await UpdateRowAsync(
+                db,
+                userKey,
+                itemId,
+                BoardSection.Daily,
+                BoardOutboxOperationKind.CompleteDailyForDate,
+                (row, expected) => new CompleteDailyOutboxPayload(itemId, completedOn, expected),
+                row =>
                 {
-                    return null;
-                }
-
-                var expected = row.ServerUpdatedAtUtc;
-                row.DailyLastCompletedOn = completedOn;
-                row.IsCompleted = true;
-                Enqueue(
-                    db,
-                    userKey,
-                    BoardOutboxOperationKind.CompleteDailyForDate,
-                    new CompleteDailyOutboxPayload(itemId, completedOn, expected));
-                await db.SaveChangesAsync(cancellationToken);
-                return row.ToModel();
-            },
+                    row.DailyLastCompletedOn = completedOn;
+                    row.IsCompleted = true;
+                    return Task.CompletedTask;
+                },
+                cancellationToken),
             cancellationToken);
 
     public Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
-            async (db, userKey) =>
-            {
-                var row = await db.BoardItems.FirstOrDefaultAsync(
-                    x => x.UserKey == userKey && x.Id == itemId && x.Section == BoardSection.Habit,
-                    cancellationToken);
-                if (row is null)
+            async (db, userKey) => await UpdateRowAsync(
+                db,
+                userKey,
+                itemId,
+                BoardSection.Habit,
+                BoardOutboxOperationKind.HabitIncrement,
+                (row, expected) => new ItemIdOutboxPayload(itemId, expected),
+                row =>
                 {
-                    return null;
-                }
+                    if (row.TrackPlus)
+                    {
+                        row.Counter++;
+                    }
 
-                var expectedInc = row.ServerUpdatedAtUtc;
-                if (row.TrackPlus)
-                {
-                    row.Counter++;
-                }
-
-                Enqueue(
-                    db,
-                    userKey,
-                    BoardOutboxOperationKind.HabitIncrement,
-                    new ItemIdOutboxPayload(itemId, expectedInc));
-                await db.SaveChangesAsync(cancellationToken);
-                return row.ToModel();
-            },
+                    return Task.CompletedTask;
+                },
+                cancellationToken),
             cancellationToken);
 
     public Task<BoardItem?> IncrementHabitMinusAsync(Guid itemId, CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
-            async (db, userKey) =>
-            {
-                var row = await db.BoardItems.FirstOrDefaultAsync(
-                    x => x.UserKey == userKey && x.Id == itemId && x.Section == BoardSection.Habit,
-                    cancellationToken);
-                if (row is null)
+            async (db, userKey) => await UpdateRowAsync(
+                db,
+                userKey,
+                itemId,
+                BoardSection.Habit,
+                BoardOutboxOperationKind.HabitDecrement,
+                (row, expected) => new ItemIdOutboxPayload(itemId, expected),
+                row =>
                 {
-                    return null;
-                }
+                    if (row.TrackMinus)
+                    {
+                        row.NegativeCounter++;
+                    }
 
-                var expectedDec = row.ServerUpdatedAtUtc;
-                if (row.TrackMinus)
-                {
-                    row.NegativeCounter++;
-                }
-
-                Enqueue(
-                    db,
-                    userKey,
-                    BoardOutboxOperationKind.HabitDecrement,
-                    new ItemIdOutboxPayload(itemId, expectedDec));
-                await db.SaveChangesAsync(cancellationToken);
-                return row.ToModel();
-            },
+                    return Task.CompletedTask;
+                },
+                cancellationToken),
             cancellationToken);
+
+    private static async Task<BoardItem?> UpdateRowAsync(
+        LocalBoardDbContext db,
+        string userKey,
+        Guid itemId,
+        BoardSection? section,
+        BoardOutboxOperationKind kind,
+        Func<LocalBoardItemRow, DateTimeOffset?, object> payloadFactory,
+        Func<LocalBoardItemRow, Task> mutate,
+        CancellationToken cancellationToken)
+    {
+        IQueryable<LocalBoardItemRow> query = db.BoardItems.Where(x => x.UserKey == userKey && x.Id == itemId);
+        if (section is not null)
+        {
+            query = query.Where(x => x.Section == section);
+        }
+
+        var row = await query.FirstOrDefaultAsync(cancellationToken);
+        if (row is null)
+        {
+            return null;
+        }
+
+        var expected = row.ServerUpdatedAtUtc;
+        await mutate(row);
+        Enqueue(db, userKey, kind, payloadFactory(row, expected));
+        await db.SaveChangesAsync(cancellationToken);
+        return row.ToModel();
+    }
 
     private static async Task HandleSortOrderUpdateAsync(
         LocalBoardDbContext db,
@@ -539,51 +493,41 @@ public sealed partial class LocalFirstBoardDataService(
         UpdateHabitArgs args,
         CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
-            async (db, userKey) =>
-            {
-                var row = await db.BoardItems.FirstOrDefaultAsync(
-                    x => x.UserKey == userKey && x.Id == itemId && x.Section == BoardSection.Habit,
-                    cancellationToken);
-                if (row is null)
+            async (db, userKey) => await UpdateRowAsync(
+                db,
+                userKey,
+                itemId,
+                BoardSection.Habit,
+                BoardOutboxOperationKind.UpdateHabit,
+                (row, expected) => new UpdateHabitOutboxPayload(
+                    itemId,
+                    row.Title,
+                    row.Notes,
+                    row.Tags,
+                    row.TrackPlus,
+                    row.TrackMinus,
+                    row.ResetPeriod,
+                    row.Counter,
+                    row.NegativeCounter,
+                    row.ChecklistJson,
+                    expected,
+                    row.SortOrder),
+                async row =>
                 {
-                    return null;
-                }
-
-                var expected = row.ServerUpdatedAtUtc;
-                row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
-                row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
-                row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
-                row.TrackPlus = args.TrackPlus;
-                row.TrackMinus = args.TrackMinus;
-                row.ResetPeriod = args.ResetPeriod;
-                row.Counter = args.Counter;
-                row.NegativeCounter = args.NegativeCounter;
-                row.ChecklistJson = string.IsNullOrWhiteSpace(args.ChecklistJson)
-                    ? null
-                    : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(args.ChecklistJson));
-
-                await HandleSortOrderUpdateAsync(db, userKey, BoardSection.Habit, itemId, args.SortOrder, row, cancellationToken);
-
-                Enqueue(
-                    db,
-                    userKey,
-                    BoardOutboxOperationKind.UpdateHabit,
-                    new UpdateHabitOutboxPayload(
-                        itemId,
-                        row.Title,
-                        row.Notes,
-                        row.Tags,
-                        row.TrackPlus,
-                        row.TrackMinus,
-                        row.ResetPeriod,
-                        row.Counter,
-                        row.NegativeCounter,
-                        row.ChecklistJson,
-                        expected,
-                        row.SortOrder));
-                await db.SaveChangesAsync(cancellationToken);
-                return row.ToModel();
-            },
+                    row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
+                    row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
+                    row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
+                    row.TrackPlus = args.TrackPlus;
+                    row.TrackMinus = args.TrackMinus;
+                    row.ResetPeriod = args.ResetPeriod;
+                    row.Counter = args.Counter;
+                    row.NegativeCounter = args.NegativeCounter;
+                    row.ChecklistJson = string.IsNullOrWhiteSpace(args.ChecklistJson)
+                        ? null
+                        : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(args.ChecklistJson));
+                    await HandleSortOrderUpdateAsync(db, userKey, BoardSection.Habit, itemId, args.SortOrder, row, cancellationToken);
+                },
+                cancellationToken),
             cancellationToken);
 
     public Task<BoardItem?> UpdateTodoAsync(
@@ -591,45 +535,35 @@ public sealed partial class LocalFirstBoardDataService(
         UpdateTodoArgs args,
         CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
-            async (db, userKey) =>
-            {
-                var row = await db.BoardItems.FirstOrDefaultAsync(
-                    x => x.UserKey == userKey && x.Id == itemId && x.Section == BoardSection.Todo,
-                    cancellationToken);
-                if (row is null)
+            async (db, userKey) => await UpdateRowAsync(
+                db,
+                userKey,
+                itemId,
+                BoardSection.Todo,
+                BoardOutboxOperationKind.UpdateTodo,
+                (row, expected) => new UpdateTodoOutboxPayload(
+                    itemId,
+                    row.Title,
+                    row.Notes,
+                    row.Tags,
+                    row.ChecklistJson,
+                    args.DueDate,
+                    expected,
+                    row.SortOrder,
+                    args.TodoRepeatIntervalDays),
+                async row =>
                 {
-                    return null;
-                }
-
-                var expectedTodo = row.ServerUpdatedAtUtc;
-                row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
-                row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
-                row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
-                row.ChecklistJson = string.IsNullOrWhiteSpace(args.ChecklistJson)
-                    ? null
-                    : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(args.ChecklistJson));
-                row.TodoDueDate = args.DueDate;
-                row.TodoRepeatIntervalDays = args.TodoRepeatIntervalDays;
-
-                await HandleSortOrderUpdateAsync(db, userKey, BoardSection.Todo, itemId, args.SortOrder, row, cancellationToken);
-
-                Enqueue(
-                    db,
-                    userKey,
-                    BoardOutboxOperationKind.UpdateTodo,
-                    new UpdateTodoOutboxPayload(
-                        itemId,
-                        row.Title,
-                        row.Notes,
-                        row.Tags,
-                        row.ChecklistJson,
-                        args.DueDate,
-                        expectedTodo,
-                        row.SortOrder,
-                        args.TodoRepeatIntervalDays));
-                await db.SaveChangesAsync(cancellationToken);
-                return row.ToModel();
-            },
+                    row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
+                    row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
+                    row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
+                    row.ChecklistJson = string.IsNullOrWhiteSpace(args.ChecklistJson)
+                        ? null
+                        : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(args.ChecklistJson));
+                    row.TodoDueDate = args.DueDate;
+                    row.TodoRepeatIntervalDays = args.TodoRepeatIntervalDays;
+                    await HandleSortOrderUpdateAsync(db, userKey, BoardSection.Todo, itemId, args.SortOrder, row, cancellationToken);
+                },
+                cancellationToken),
             cancellationToken);
 
     public Task<BoardItem?> UpdateDailyAsync(
@@ -637,49 +571,39 @@ public sealed partial class LocalFirstBoardDataService(
         UpdateDailyArgs args,
         CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
-            async (db, userKey) =>
-            {
-                var row = await db.BoardItems.FirstOrDefaultAsync(
-                    x => x.UserKey == userKey && x.Id == itemId && x.Section == BoardSection.Daily,
-                    cancellationToken);
-                if (row is null)
+            async (db, userKey) => await UpdateRowAsync(
+                db,
+                userKey,
+                itemId,
+                BoardSection.Daily,
+                BoardOutboxOperationKind.UpdateDaily,
+                (row, expected) => new UpdateDailyOutboxPayload(
+                    itemId,
+                    row.Title,
+                    row.Notes,
+                    row.Tags,
+                    args.StartDate,
+                    args.Repeat,
+                    args.RepeatInterval,
+                    row.ChecklistJson,
+                    args.Counter,
+                    expected,
+                    row.SortOrder),
+                async row =>
                 {
-                    return null;
-                }
-
-                var expectedDaily = row.ServerUpdatedAtUtc;
-                row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
-                row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
-                row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
-                row.DailyStartDate = args.StartDate;
-                row.DailyRepeat = args.Repeat;
-                row.DailyRepeatInterval = args.RepeatInterval;
-                row.ChecklistJson = string.IsNullOrWhiteSpace(args.ChecklistJson)
-                    ? null
-                    : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(args.ChecklistJson));
-                row.Counter = args.Counter;
-
-                await HandleSortOrderUpdateAsync(db, userKey, BoardSection.Daily, itemId, args.SortOrder, row, cancellationToken);
-
-                Enqueue(
-                    db,
-                    userKey,
-                    BoardOutboxOperationKind.UpdateDaily,
-                    new UpdateDailyOutboxPayload(
-                        itemId,
-                        row.Title,
-                        row.Notes,
-                        row.Tags,
-                        args.StartDate,
-                        args.Repeat,
-                        args.RepeatInterval,
-                        row.ChecklistJson,
-                        args.Counter,
-                        expectedDaily,
-                        row.SortOrder));
-                await db.SaveChangesAsync(cancellationToken);
-                return row.ToModel();
-            },
+                    row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
+                    row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
+                    row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
+                    row.DailyStartDate = args.StartDate;
+                    row.DailyRepeat = args.Repeat;
+                    row.DailyRepeatInterval = args.RepeatInterval;
+                    row.ChecklistJson = string.IsNullOrWhiteSpace(args.ChecklistJson)
+                        ? null
+                        : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(args.ChecklistJson));
+                    row.Counter = args.Counter;
+                    await HandleSortOrderUpdateAsync(db, userKey, BoardSection.Daily, itemId, args.SortOrder, row, cancellationToken);
+                },
+                cancellationToken),
             cancellationToken);
 
     /// <summary>Runs at most one outbox HTTP operation. Returns true if an entry was processed successfully.</summary>
@@ -693,13 +617,8 @@ public sealed partial class LocalFirstBoardDataService(
         try
         {
             await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            if (!await HasAuthAsync(cancellationToken))
-            {
-                return false;
-            }
-
-            var userKey = await ResolveUserKeyAsync(cancellationToken);
-            if (string.IsNullOrWhiteSpace(userKey))
+            var userKey = await ResolveAuthedUserKeyAsync(cancellationToken);
+            if (userKey is null)
             {
                 return false;
             }
@@ -737,22 +656,7 @@ public sealed partial class LocalFirstBoardDataService(
         {
             await ExecuteOutboxRemoteByIdAsync(operationId, remote, cancellationToken);
 
-            await _gate.WaitAsync(cancellationToken);
-            try
-            {
-                await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-                var still = await db.Outbox.FindAsync([operationId], cancellationToken);
-                if (still is not null)
-                {
-                    db.Outbox.Remove(still);
-                }
-
-                await db.SaveChangesAsync(cancellationToken);
-            }
-            finally
-            {
-                _gate.Release();
-            }
+            await DropOutboxOperationAsync(operationId, cancellationToken);
 
             return true;
         }
@@ -763,23 +667,7 @@ public sealed partial class LocalFirstBoardDataService(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Outbox operation {OperationId} failed.", operationId);
-            await _gate.WaitAsync(cancellationToken);
-            try
-            {
-                await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-                var still = await db.Outbox.FindAsync([operationId], cancellationToken);
-                if (still is not null)
-                {
-                    still.AttemptCount++;
-                    still.LastAttemptUtc = DateTime.UtcNow;
-                    still.LastError = ex.Message;
-                    await db.SaveChangesAsync(cancellationToken);
-                }
-            }
-            finally
-            {
-                _gate.Release();
-            }
+            await RecordOutboxFailureAsync(operationId, ex.Message, cancellationToken);
 
             return false;
         }
@@ -961,13 +849,8 @@ public sealed partial class LocalFirstBoardDataService(
         try
         {
             await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            if (!await HasAuthAsync(cancellationToken))
-            {
-                return null;
-            }
-
-            var userKey = await ResolveUserKeyAsync(cancellationToken);
-            if (string.IsNullOrWhiteSpace(userKey))
+            var userKey = await ResolveAuthedUserKeyAsync(cancellationToken);
+            if (userKey is null)
             {
                 return null;
             }
@@ -1155,6 +1038,9 @@ public sealed partial class LocalFirstBoardDataService(
     private static async Task ExecuteOutboxRemoteAsync(SemaphoreSlim gate, IDbContextFactory<LocalBoardDbContext> dbFactory,
         BoardOutboxRow head, RemoteBoardDataService api, CancellationToken cancellationToken)
     {
+        async Task Patch(Guid itemId, BoardItem? updated) =>
+            await PatchLocalAsync(gate, dbFactory, itemId, head.UserKey, updated, cancellationToken);
+
         switch (head.Kind)
         {
             case BoardOutboxOperationKind.Create:
@@ -1174,7 +1060,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
+                    await Patch(p.ItemId, updated);
                     return;
                 }
             case BoardOutboxOperationKind.Delete:
@@ -1197,7 +1083,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
+                    await Patch(p.ItemId, updated);
                     return;
                 }
             case BoardOutboxOperationKind.CompleteDailyForDate:
@@ -1209,7 +1095,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
+                    await Patch(p.ItemId, updated);
                     return;
                 }
             case BoardOutboxOperationKind.HabitIncrement:
@@ -1220,7 +1106,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
+                    await Patch(p.ItemId, updated);
                     return;
                 }
             case BoardOutboxOperationKind.HabitDecrement:
@@ -1231,7 +1117,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
+                    await Patch(p.ItemId, updated);
                     return;
                 }
             case BoardOutboxOperationKind.UpdateHabit:
@@ -1253,7 +1139,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
+                    await Patch(p.ItemId, updated);
                     return;
                 }
             case BoardOutboxOperationKind.UpdateTodo:
@@ -1272,7 +1158,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
+                    await Patch(p.ItemId, updated);
                     return;
                 }
             case BoardOutboxOperationKind.UpdateDaily:
@@ -1293,7 +1179,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
+                    await Patch(p.ItemId, updated);
                     return;
                 }
             case BoardOutboxOperationKind.Archive:
@@ -1305,7 +1191,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
+                    await Patch(p.ItemId, updated);
                     return;
                 }
             case BoardOutboxOperationKind.Unarchive:
@@ -1317,7 +1203,7 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
-                    await PatchLocalAsync(gate, dbFactory, p.ItemId, head.UserKey, updated, cancellationToken);
+                    await Patch(p.ItemId, updated);
                     return;
                 }
             default:
@@ -1335,6 +1221,27 @@ public sealed partial class LocalFirstBoardDataService(
             if (still is not null)
             {
                 db.Outbox.Remove(still);
+                await db.SaveChangesAsync(cancellationToken);
+            }
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private async Task RecordOutboxFailureAsync(Guid operationId, string message, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            var still = await db.Outbox.FindAsync([operationId], cancellationToken);
+            if (still is not null)
+            {
+                still.AttemptCount++;
+                still.LastAttemptUtc = DateTime.UtcNow;
+                still.LastError = message;
                 await db.SaveChangesAsync(cancellationToken);
             }
         }
@@ -1413,17 +1320,8 @@ public sealed partial class LocalFirstBoardDataService(
             case BoardSection.Daily:
                 {
                     var done = row.DailyLastCompletedOn == today || (row.DailyLastCompletedOn is null && row.IsCompleted);
-                    if (done)
-                    {
-                        row.DailyLastCompletedOn = null;
-                        row.IsCompleted = false;
-                    }
-                    else
-                    {
-                        row.DailyLastCompletedOn = today;
-                        row.IsCompleted = true;
-                    }
-
+                    row.DailyLastCompletedOn = done ? null : today;
+                    row.IsCompleted = !done;
                     break;
                 }
             case BoardSection.Todo:
@@ -1441,16 +1339,8 @@ public sealed partial class LocalFirstBoardDataService(
         {
             await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
-            if (!await HasAuthAsync(cancellationToken))
-            {
-                throw new InvalidOperationException("Sign in to change your board.");
-            }
-
-            var userKey = await ResolveUserKeyAsync(cancellationToken);
-            if (string.IsNullOrWhiteSpace(userKey))
-            {
-                throw new InvalidOperationException("Sign in to change your board.");
-            }
+            var userKey = await ResolveAuthedUserKeyAsync(cancellationToken)
+                ?? throw new InvalidOperationException("Sign in to change your board.");
 
             await EnsureUserScopeAsync(db, userKey, cancellationToken);
             return await action(db, userKey);
@@ -1570,9 +1460,27 @@ public sealed partial class LocalFirstBoardDataService(
     private async Task<bool> HasAuthAsync(CancellationToken cancellationToken) =>
         !string.IsNullOrEmpty(await tokens.GetAccessTokenAsync(cancellationToken));
 
+    private async Task<string?> ResolveAuthedUserKeyAsync(CancellationToken cancellationToken)
+    {
+        if (!await HasAuthAsync(cancellationToken))
+        {
+            return null;
+        }
+
+        var userKey = await ResolveUserKeyAsync(cancellationToken);
+        return string.IsNullOrWhiteSpace(userKey) ? null : userKey;
+    }
+
     private static BoardSnapshot ReadSnapshot(LocalBoardDbContext db, string userKey, DateOnly today)
     {
         List<LocalBoardItemRow> items = [.. db.BoardItems.AsNoTracking().Where(x => x.UserKey == userKey && !x.IsArchived)];
+        var (habits, dailies, todos) = OrderRows(items, today);
+        return new(habits, dailies, todos);
+    }
+
+    private static (List<BoardItem> Habits, List<BoardItem> Dailies, List<BoardItem> Todos) OrderRows(
+        IReadOnlyList<LocalBoardItemRow> items, DateOnly today)
+    {
         // Match BoardPersistenceService.GetSnapshotAsync ordering (web app).
         List<BoardItem> habits = [.. items.Where(x => x.Section == BoardSection.Habit)
             .OrderBy(x => x.SortOrder ?? double.MaxValue)
@@ -1593,7 +1501,7 @@ public sealed partial class LocalFirstBoardDataService(
             .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
             .ThenBy(x => x.Id)
             .Select(x => x.ToModel())];
-        return new(habits, dailies, todos);
+        return (habits, dailies, todos);
     }
 
     private static bool IsDailyRowCompleteForToday(LocalBoardItemRow row, DateOnly today)
@@ -1671,42 +1579,29 @@ public sealed partial class LocalFirstBoardDataService(
         var boardColumns = await GetTableColumnsAsync(db, "BoardItems", cancellationToken);
         var metaColumns = await GetTableColumnsAsync(db, "Meta", cancellationToken);
 
-        if (!boardColumns.Contains("ServerUpdatedAtUtc"))
+        (string Column, string Ddl)[] boardMigrations =
+        [
+            ("ServerUpdatedAtUtc", "ALTER TABLE BoardItems ADD COLUMN ServerUpdatedAtUtc TEXT NULL;"),
+            ("CreatedAtUtc", "ALTER TABLE BoardItems ADD COLUMN CreatedAtUtc TEXT NULL;"),
+            ("IsArchived", "ALTER TABLE BoardItems ADD COLUMN IsArchived INTEGER NOT NULL DEFAULT 0;"),
+            ("TodoRepeatIntervalDays", "ALTER TABLE BoardItems ADD COLUMN TodoRepeatIntervalDays INTEGER NULL;")
+        ];
+
+        foreach (var (column, ddl) in boardMigrations)
         {
-            await db.Database.ExecuteSqlRawAsync(
-                "ALTER TABLE BoardItems ADD COLUMN ServerUpdatedAtUtc TEXT NULL;",
-                cancellationToken);
+            if (!boardColumns.Contains(column))
+            {
+                await db.Database.ExecuteSqlRawAsync(ddl, cancellationToken);
+            }
         }
 
-        if (!boardColumns.Contains("CreatedAtUtc"))
-        {
-            await db.Database.ExecuteSqlRawAsync(
-                "ALTER TABLE BoardItems ADD COLUMN CreatedAtUtc TEXT NULL;",
-                cancellationToken);
-        }
-
-        var addedSortOrder = !boardColumns.Contains("SortOrder");
-        if (addedSortOrder)
+        if (!boardColumns.Contains("SortOrder"))
         {
             await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE BoardItems ADD COLUMN SortOrder REAL NULL;",
                 cancellationToken);
             await db.Database.ExecuteSqlRawAsync(
                 "UPDATE BoardItems SET SortOrder = rowid WHERE SortOrder IS NULL;",
-                cancellationToken);
-        }
-
-        if (!boardColumns.Contains("IsArchived"))
-        {
-            await db.Database.ExecuteSqlRawAsync(
-                "ALTER TABLE BoardItems ADD COLUMN IsArchived INTEGER NOT NULL DEFAULT 0;",
-                cancellationToken);
-        }
-
-        if (!boardColumns.Contains("TodoRepeatIntervalDays"))
-        {
-            await db.Database.ExecuteSqlRawAsync(
-                "ALTER TABLE BoardItems ADD COLUMN TodoRepeatIntervalDays INTEGER NULL;",
                 cancellationToken);
         }
 

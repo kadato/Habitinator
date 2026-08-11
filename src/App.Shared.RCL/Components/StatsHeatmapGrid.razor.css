@@ -1,0 +1,148 @@
+/* Container holds rowlabels (outside) and scrollable wrap (inside) so labels stay visible when scrolled. */
+.stats-heatmap-container {
+    --stats-cell: 11px;
+    --stats-grid-gap: 2px;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.2rem;
+    width: 100%;
+    max-width: 100%;
+}
+
+.stats-heatmap-container--large {
+    --stats-cell: 16px;
+    --stats-grid-gap: 3px;
+}
+
+.stats-heatmap-wrap {
+    overflow-x: scroll;
+    overflow-y: hidden;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-top: 4px;
+    padding-bottom: 10px;
+}
+
+/* Custom scrollbar styling to make scrollbars always visible and elegant */
+.stats-heatmap-wrap {
+    --scrollbar-thumb: color-mix(in srgb, var(--mud-palette-primary) 30%, var(--mud-palette-text-secondary) 25%);
+    --scrollbar-track: var(--mud-palette-background-gray);
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+@supports not (scrollbar-color: auto) {
+    .stats-heatmap-wrap::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .stats-heatmap-wrap::-webkit-scrollbar-track {
+        background: var(--scrollbar-track);
+        border-radius: 3px;
+    }
+
+    .stats-heatmap-wrap::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb);
+        border-radius: 3px;
+    }
+}
+
+.stats-heatmap-rowlabels {
+    display: grid;
+    grid-template-rows: repeat(7, var(--stats-cell));
+    gap: var(--stats-grid-gap);
+    align-items: center;
+    font-size: 0.58rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--mud-palette-text-secondary);
+    text-align: right;
+    flex: 0 0 0.7rem;
+    box-sizing: border-box;
+    padding-top: 4px;
+}
+
+.stats-heatmap-container--large .stats-heatmap-rowlabels {
+    font-size: 0.62rem;
+    flex: 0 0 var(--space-5);
+}
+
+.stats-heatmap-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--stats-cols, 1), var(--stats-cell));
+    grid-template-rows: repeat(7, var(--stats-cell));
+    gap: var(--stats-grid-gap);
+    flex: 0 0 auto;
+    min-width: max-content;
+    padding-right: 12px;
+}
+
+.stats-cell {
+    width: var(--stats-cell);
+    height: var(--stats-cell);
+    border-radius: 2px;
+    box-sizing: border-box;
+}
+
+button.stats-cell {
+    display: block;
+    padding: 0;
+    border: 0;
+    font: inherit;
+    line-height: 0;
+    cursor: pointer;
+}
+
+button.stats-cell:focus-visible,
+button.stats-cell:focus {
+    outline: 2px solid var(--mud-palette-primary) !important;
+    outline-offset: 1px !important;
+    position: relative !important;
+    z-index: 5 !important;
+}
+
+.stats-heatmap-day--today {
+    position: relative;
+    z-index: 2;
+    box-shadow:
+        0 0 0 1px var(--mud-palette-surface),
+        0 0 0 3px var(--mud-palette-primary);
+}
+
+.stats-lvl-0 {
+    background: var(--mud-palette-table-hover);
+}
+
+.stats-lvl-1 {
+    background: color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-surface) 65%);
+}
+
+.stats-lvl-2 {
+    background: color-mix(in srgb, var(--mud-palette-primary) 55%, var(--mud-palette-surface) 45%);
+}
+
+.stats-lvl-3 {
+    background: color-mix(in srgb, var(--mud-palette-primary) 80%, var(--mud-palette-surface) 20%);
+}
+
+.stats-lvl-4 {
+    background: var(--mud-palette-primary);
+}
+
+.stats-lvl-na {
+    background: transparent;
+    opacity: 0.25;
+    border: 1px dashed var(--mud-palette-table-lines);
+}
+
+.stats-daily-missed {
+    background: var(--mud-palette-background-gray);
+    border: 1px solid var(--mud-palette-table-lines);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mud-palette-text-primary) 14%, transparent);
+}
+
+.stats-daily-done {
+    background: var(--mud-palette-primary);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary) 30%);
+}

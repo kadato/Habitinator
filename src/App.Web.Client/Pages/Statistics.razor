@@ -6,9 +6,7 @@
 
 <AuthorizeView>
     <NotAuthorized>
-        <MudText Typo="Typo.h4">Statistics</MudText>
-        <MudText Class="mb-2">Sign in to see your activity and focus time.</MudText>
-        <MudButton Href="/auth/login" Target="_self" Variant="Variant.Filled" Color="Color.Primary">Log in</MudButton>
+        <SignInPrompt Title="Statistics" Message="Sign in to see your activity and focus time."/>
     </NotAuthorized>
     <Authorized>
         <div class="stats-page-wrapper">

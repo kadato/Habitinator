@@ -1,0 +1,94 @@
+@namespace App.Shared.RCL.Components
+@using App.Shared.RCL.Services
+
+<div class="stats-heatmap-container @ContainerClass">
+    <div class="stats-heatmap-rowlabels" aria-hidden="true">
+        <span>M</span>
+        <span></span>
+        <span>W</span>
+        <span></span>
+        <span>F</span>
+        <span></span>
+        <span>S</span>
+    </div>
+    <div class="stats-heatmap-wrap">
+        <div class="stats-heatmap-grid" style="--stats-cols: @Columns;">
+            @for (var r = 0; r < 7; r++)
+            {
+                @for (var c = 0; c < Columns; c++)
+                {
+                    var row = r;
+                    var col = c;
+                    if (Cells.TryGetValue((row, col), out var cell))
+                    {
+                        if (cell.InDataRange)
+                        {
+                            var cellClass = GetCellClass(row, col);
+                            var cellTitle = GetCellTitle(row, col);
+                            var cellAria = GetCellAriaLabel(row, col);
+                            var cellIsToday = IsToday(row, col);
+                            if (OnCellClick is not null)
+                            {
+                                <button type="button"
+                                        class="@cellClass"
+                                        title="@cellTitle"
+                                        aria-label="@cellAria"
+                                        aria-current="@(cellIsToday ? "date" : null)"
+                                        @attributes="RovingAttributes(row, col)"
+                                        @onclick="() => OnCellClickAsync(row, col)">
+                                </button>
+                            }
+                            else
+                            {
+                                <div class="@cellClass"
+                                     title="@cellTitle"
+                                     aria-label="@cellAria"
+                                     aria-current="@(cellIsToday ? "date" : null)"></div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="stats-cell stats-lvl-na" title=""></div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="stats-cell stats-lvl-na" title=""></div>
+                    }
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Columns { get; set; }
+    [Parameter] public string ContainerClass { get; set; } = string.Empty;
+    [Parameter] public bool IncludeRovingTabindex { get; set; }
+    [Parameter] public IReadOnlyDictionary<(int R, int C), ActivityHeatmapCellDto> Cells { get; set; } = new Dictionary<(int, int), ActivityHeatmapCellDto>();
+    [Parameter] public Func<int, int, bool> IsToday { get; set; } = (_, _) => false;
+    [Parameter] public Func<int, int, string> GetCellClass { get; set; } = (_, _) => string.Empty;
+    [Parameter] public Func<int, int, string?> GetCellTitle { get; set; } = (_, _) => null;
+    [Parameter] public Func<int, int, string?> GetCellAriaLabel { get; set; } = (_, _) => null;
+    [Parameter] public Func<int, int, Task>? OnCellClick { get; set; }
+
+    private Dictionary<string, object> RovingAttributes(int r, int c)
+    {
+        if (!IncludeRovingTabindex)
+        {
+            return [];
+        }
+
+        return new Dictionary<string, object>
+        {
+            { "data-row", r },
+            { "data-col", c },
+            { "tabindex", 0 }
+        };
+    }
+
+    private Task OnCellClickAsync(int r, int c)
+    {
+        return OnCellClick is null ? Task.CompletedTask : OnCellClick(r, c);
+    }
+}

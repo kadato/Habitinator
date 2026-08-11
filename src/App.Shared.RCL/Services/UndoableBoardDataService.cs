@@ -118,33 +118,14 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         {
             await _inner.UpdateHabitAsync(
                 recreated.Id,
-                new UpdateHabitArgs(
-                    item.Title,
-                    item.Notes,
-                    item.Tags,
-                    item.TrackPlus,
-                    item.TrackMinus,
-                    item.ResetPeriod,
-                    item.Counter,
-                    item.NegativeCounter,
-                    item.ChecklistJson,
-                    item.SortOrder),
+                UpdateHabitArgs.From(item),
                 CancellationToken.None).ConfigureAwait(false);
         }
         else if (section == BoardSection.Daily)
         {
             await _inner.UpdateDailyAsync(
                 recreated.Id,
-                new UpdateDailyArgs(
-                    item.Title,
-                    item.Notes,
-                    item.Tags,
-                    item.DailyStartDate,
-                    item.DailyRepeat,
-                    item.DailyRepeatInterval,
-                    item.ChecklistJson,
-                    item.Counter,
-                    item.SortOrder),
+                UpdateDailyArgs.From(item),
                 CancellationToken.None).ConfigureAwait(false);
             if (item.IsCompleted)
             {
@@ -155,14 +136,7 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         {
             await _inner.UpdateTodoAsync(
                 recreated.Id,
-                new UpdateTodoArgs(
-                    item.Title,
-                    item.Notes,
-                    item.Tags,
-                    item.ChecklistJson,
-                    item.TodoDueDate,
-                    item.SortOrder,
-                    item.TodoRepeatIntervalDays),
+                UpdateTodoArgs.From(item),
                 CancellationToken.None).ConfigureAwait(false);
             if (item.IsCompleted)
             {
@@ -208,17 +182,7 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
                 {
                     await _inner.UpdateHabitAsync(
                         itemId,
-                        new UpdateHabitArgs(
-                            current.Title,
-                            current.Notes,
-                            current.Tags,
-                            current.TrackPlus,
-                            current.TrackMinus,
-                            current.ResetPeriod,
-                            Math.Max(0, current.Counter - 1),
-                            current.NegativeCounter,
-                            current.ChecklistJson,
-                            current.SortOrder),
+                        UpdateHabitArgs.From(current) with { Counter = Math.Max(0, current.Counter - 1) },
                         CancellationToken.None);
                 }
             }, [$"item:{itemId:N}:counter"]);
@@ -244,17 +208,7 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
                 {
                     await _inner.UpdateHabitAsync(
                         itemId,
-                        new UpdateHabitArgs(
-                            current.Title,
-                            current.Notes,
-                            current.Tags,
-                            current.TrackPlus,
-                            current.TrackMinus,
-                            current.ResetPeriod,
-                            current.Counter,
-                            Math.Max(0, current.NegativeCounter - 1),
-                            current.ChecklistJson,
-                            current.SortOrder),
+                        UpdateHabitArgs.From(current) with { NegativeCounter = Math.Max(0, current.NegativeCounter - 1) },
                         CancellationToken.None);
                 }
             }, [$"item:{itemId:N}:counter"]);

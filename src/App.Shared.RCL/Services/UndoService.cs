@@ -211,12 +211,6 @@ public sealed class UndoService : IUndoService, IDisposable
             || kb.StartsWith(ka + ":", StringComparison.Ordinal)));
     }
 
-    public void Clear()
-    {
-        _undoStack.Clear();
-        OnStateChanged?.Invoke(this, EventArgs.Empty);
-    }
-
     private async Task ShowUndoSnackbarAsync(UndoAction action)
     {
         try

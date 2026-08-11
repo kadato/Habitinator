@@ -20,16 +20,9 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService
         string? itemTitleSnapshot = null,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var req = new ActivityLogRequest(eventType, boardItemId, durationSeconds, itemTitleSnapshot);
-            using var res = await Client.PostAsJsonAsync("api/activity/log", req, cancellationToken);
-            res.EnsureSuccessStatusCode();
-        }
-        catch
-        {
-            // best-effort
-        }
+        await PostBestEffortAsync(
+            new ActivityLogRequest(eventType, boardItemId, durationSeconds, itemTitleSnapshot),
+            cancellationToken);
     }
 
     public async Task LogTimerSessionAsync(
@@ -44,9 +37,15 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService
             return;
         }
 
+        await PostBestEffortAsync(
+            new ActivityLogRequest(ActivityEventType.TimerSession, boardItemId, sec, customLabel),
+            cancellationToken);
+    }
+
+    private async Task PostBestEffortAsync(ActivityLogRequest req, CancellationToken cancellationToken)
+    {
         try
         {
-            var req = new ActivityLogRequest(ActivityEventType.TimerSession, boardItemId, sec, customLabel);
             using var res = await Client.PostAsJsonAsync("api/activity/log", req, cancellationToken);
             res.EnsureSuccessStatusCode();
         }

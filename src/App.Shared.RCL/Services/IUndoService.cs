@@ -18,7 +18,6 @@ public interface IUndoService
     IDisposable BeginBatch(string description);
     Task UndoAsync();
     Task UndoAsync(Guid actionId);
-    void Clear();
     event EventHandler? OnStateChanged;
     event EventHandler? OnUndoPerformed;
 }

@@ -9,12 +9,6 @@ public sealed class BoardRemoteConflictException : Exception
     public string ResponseBody { get; }
     public BoardItem? ServerItem { get; }
 
-    public BoardRemoteConflictException()
-        : base("Board API returned 409 Conflict.")
-    {
-        ResponseBody = string.Empty;
-    }
-
     public BoardRemoteConflictException(string responseBody)
         : base("Board API returned 409 Conflict.")
     {
@@ -31,11 +25,5 @@ public sealed class BoardRemoteConflictException : Exception
         {
             // Ignore parse errors if payload isn't structured as expected
         }
-    }
-
-    public BoardRemoteConflictException(string message, Exception innerException)
-        : base(message, innerException)
-    {
-        ResponseBody = string.Empty;
     }
 }

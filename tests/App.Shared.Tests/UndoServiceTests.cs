@@ -745,7 +745,6 @@ public sealed class UndoableBoardDataServiceTests
         public IDisposable BeginBatch(string description) => inner.BeginBatch(description);
         public Task UndoAsync() => inner.UndoAsync();
         public Task UndoAsync(Guid actionId) => inner.UndoAsync(actionId);
-        public void Clear() => inner.Clear();
     }
 
     [Fact]

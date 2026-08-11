@@ -60,18 +60,11 @@ public sealed class ActivityLoggingBoardDataService(
         var updated = await _inner.CompleteDailyForDateAsync(itemId, completedOn, cancellationToken);
         if (updated is not null)
         {
-            try
-            {
-                await _activityLog.LogActivityAsync(
-                    ActivityEventType.DailyComplete,
-                    itemId,
-                    itemTitleSnapshot: updated.Title,
-                    cancellationToken: cancellationToken);
-            }
-            catch (Exception)
-            {
-                // Log failure is non-critical, proceed with the UI action
-            }
+            await LogBestEffortAsync(() => _activityLog.LogActivityAsync(
+                ActivityEventType.DailyComplete,
+                itemId,
+                itemTitleSnapshot: updated.Title,
+                cancellationToken: cancellationToken));
         }
 
         return updated;
@@ -109,14 +102,7 @@ public sealed class ActivityLoggingBoardDataService(
                 (_, true) => ActivityEventType.TodoUncomplete,
                 (_, false) => ActivityEventType.TodoComplete
             };
-            try
-            {
-                await _activityLog.LogActivityAsync(type, itemId, itemTitleSnapshot: updated.Title, cancellationToken: cancellationToken);
-            }
-            catch (Exception)
-            {
-                // best-effort
-            }
+            await LogBestEffortAsync(() => _activityLog.LogActivityAsync(type, itemId, itemTitleSnapshot: updated.Title, cancellationToken: cancellationToken));
         }
 
         return updated;
@@ -127,18 +113,11 @@ public sealed class ActivityLoggingBoardDataService(
         var updated = await _inner.IncrementHabitPlusAsync(itemId, cancellationToken);
         if (updated is not null)
         {
-            try
-            {
-                await _activityLog.LogActivityAsync(
-                    ActivityEventType.HabitPlus,
-                    itemId,
-                    itemTitleSnapshot: updated.Title,
-                    cancellationToken: cancellationToken);
-            }
-            catch (Exception)
-            {
-                // Log failure is non-critical, proceed with the UI action
-            }
+            await LogBestEffortAsync(() => _activityLog.LogActivityAsync(
+                ActivityEventType.HabitPlus,
+                itemId,
+                itemTitleSnapshot: updated.Title,
+                cancellationToken: cancellationToken));
         }
 
         return updated;
@@ -149,21 +128,26 @@ public sealed class ActivityLoggingBoardDataService(
         var updated = await _inner.IncrementHabitMinusAsync(itemId, cancellationToken);
         if (updated is not null)
         {
-            try
-            {
-                await _activityLog.LogActivityAsync(
-                    ActivityEventType.HabitMinus,
-                    itemId,
-                    itemTitleSnapshot: updated.Title,
-                    cancellationToken: cancellationToken);
-            }
-            catch (Exception)
-            {
-                // Log failure is non-critical, proceed with the UI action
-            }
+            await LogBestEffortAsync(() => _activityLog.LogActivityAsync(
+                ActivityEventType.HabitMinus,
+                itemId,
+                itemTitleSnapshot: updated.Title,
+                cancellationToken: cancellationToken));
         }
 
         return updated;
+    }
+
+    private static async Task LogBestEffortAsync(Func<Task> log)
+    {
+        try
+        {
+            await log().ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            // Log failure is non-critical, proceed with the UI action
+        }
     }
 
     public Task<BoardItem?> UpdateHabitAsync(

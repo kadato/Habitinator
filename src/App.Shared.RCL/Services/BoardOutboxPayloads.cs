@@ -10,25 +10,30 @@ public static class BoardOutboxJson
     public static JsonSerializerOptions Options => JsonDefaults.Api;
 }
 
+internal interface IOutboxItemIdPayload
+{
+    Guid ItemId { get; }
+}
+
 public sealed record CreateOutboxPayload(BoardSection Section, string Title, Guid ClientItemId);
 
 public sealed record RenameOutboxPayload(
     BoardSection Section,
     Guid ItemId,
     string Title,
-    DateTimeOffset? ExpectedServerUpdatedAtUtc = null);
+    DateTimeOffset? ExpectedServerUpdatedAtUtc = null) : IOutboxItemIdPayload;
 
 public sealed record SectionItemOutboxPayload(
     BoardSection Section,
     Guid ItemId,
-    DateTimeOffset? ExpectedServerUpdatedAtUtc = null);
+    DateTimeOffset? ExpectedServerUpdatedAtUtc = null) : IOutboxItemIdPayload;
 
 public sealed record CompleteDailyOutboxPayload(
     Guid ItemId,
     DateOnly CompletedOn,
-    DateTimeOffset? ExpectedServerUpdatedAtUtc = null);
+    DateTimeOffset? ExpectedServerUpdatedAtUtc = null) : IOutboxItemIdPayload;
 
-public sealed record ItemIdOutboxPayload(Guid ItemId, DateTimeOffset? ExpectedServerUpdatedAtUtc = null);
+public sealed record ItemIdOutboxPayload(Guid ItemId, DateTimeOffset? ExpectedServerUpdatedAtUtc = null) : IOutboxItemIdPayload;
 
 public sealed record UpdateHabitOutboxPayload(
     Guid ItemId,
@@ -42,7 +47,7 @@ public sealed record UpdateHabitOutboxPayload(
     int NegativeCounter,
     string? ChecklistJson,
     DateTimeOffset? ExpectedServerUpdatedAtUtc = null,
-    double? SortOrder = null);
+    double? SortOrder = null) : IOutboxItemIdPayload;
 
 public sealed record UpdateTodoOutboxPayload(
     Guid ItemId,
@@ -53,7 +58,7 @@ public sealed record UpdateTodoOutboxPayload(
     DateOnly? DueDate,
     DateTimeOffset? ExpectedServerUpdatedAtUtc = null,
     double? SortOrder = null,
-    int? TodoRepeatIntervalDays = null);
+    int? TodoRepeatIntervalDays = null) : IOutboxItemIdPayload;
 
 public sealed record UpdateDailyOutboxPayload(
     Guid ItemId,
@@ -66,7 +71,7 @@ public sealed record UpdateDailyOutboxPayload(
     string? ChecklistJson,
     int Counter,
     DateTimeOffset? ExpectedServerUpdatedAtUtc = null,
-    double? SortOrder = null);
+    double? SortOrder = null) : IOutboxItemIdPayload;
 
 public static class BoardOutboxPayloadMapper
 {
@@ -117,101 +122,61 @@ public static class BoardOutboxPayloadMapper
 
     private static Guid MapId(Guid id, Guid clientId, Guid serverId) => id == clientId ? serverId : id;
 
-    private static string RemapRenameClientId(string json, Guid clientId, Guid serverId)
+    private static string RemapRenameClientId(string json, Guid clientId, Guid serverId) =>
+        RemapItemId(json, clientId, serverId, (RenameOutboxPayload p, Guid id) => p with { ItemId = id });
+
+    private static string RemapSectionItemClientId(string json, Guid clientId, Guid serverId) =>
+        RemapItemId(json, clientId, serverId, (SectionItemOutboxPayload p, Guid id) => p with { ItemId = id });
+
+    private static string RemapCompleteDailyClientId(string json, Guid clientId, Guid serverId) =>
+        RemapItemId(json, clientId, serverId, (CompleteDailyOutboxPayload p, Guid id) => p with { ItemId = id });
+
+    private static string RemapItemIdClientId(string json, Guid clientId, Guid serverId) =>
+        RemapItemId(json, clientId, serverId, (ItemIdOutboxPayload p, Guid id) => p with { ItemId = id });
+
+    private static string RemapUpdateHabitClientId(string json, Guid clientId, Guid serverId) =>
+        RemapItemId(json, clientId, serverId, (UpdateHabitOutboxPayload p, Guid id) => p with { ItemId = id });
+
+    private static string RemapUpdateTodoClientId(string json, Guid clientId, Guid serverId) =>
+        RemapItemId(json, clientId, serverId, (UpdateTodoOutboxPayload p, Guid id) => p with { ItemId = id });
+
+    private static string RemapUpdateDailyClientId(string json, Guid clientId, Guid serverId) =>
+        RemapItemId(json, clientId, serverId, (UpdateDailyOutboxPayload p, Guid id) => p with { ItemId = id });
+
+    private static string RemapRenameVersion(string json, DateTimeOffset newVersion) =>
+        RemapExpectedVersion(json, newVersion, (RenameOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v });
+
+    private static string RemapSectionItemVersion(string json, DateTimeOffset newVersion) =>
+        RemapExpectedVersion(json, newVersion, (SectionItemOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v });
+
+    private static string RemapCompleteDailyVersion(string json, DateTimeOffset newVersion) =>
+        RemapExpectedVersion(json, newVersion, (CompleteDailyOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v });
+
+    private static string RemapItemIdVersion(string json, DateTimeOffset newVersion) =>
+        RemapExpectedVersion(json, newVersion, (ItemIdOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v });
+
+    private static string RemapUpdateHabitVersion(string json, DateTimeOffset newVersion) =>
+        RemapExpectedVersion(json, newVersion, (UpdateHabitOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v });
+
+    private static string RemapUpdateTodoVersion(string json, DateTimeOffset newVersion) =>
+        RemapExpectedVersion(json, newVersion, (UpdateTodoOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v });
+
+    private static string RemapUpdateDailyVersion(string json, DateTimeOffset newVersion) =>
+        RemapExpectedVersion(json, newVersion, (UpdateDailyOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v });
+
+    private static string RemapItemId<T>(string json, Guid clientId, Guid serverId, Func<T, Guid, T> withItemId)
+        where T : class, IOutboxItemIdPayload
     {
-        var p = JsonSerializer.Deserialize<RenameOutboxPayload>(json, BoardOutboxJson.Options);
-        var updated = p is null ? null : p with { ItemId = MapId(p.ItemId, clientId, serverId) };
+        var p = JsonSerializer.Deserialize<T>(json, BoardOutboxJson.Options);
+        var updated = p is null ? null : withItemId(p, MapId(p.ItemId, clientId, serverId));
         return JsonSerializer.Serialize(updated, BoardOutboxJson.Options);
     }
 
-    private static string RemapSectionItemClientId(string json, Guid clientId, Guid serverId)
+    private static string RemapExpectedVersion<T>(string json, DateTimeOffset newVersion, Func<T, DateTimeOffset?, T> withVersion)
+        where T : class, IOutboxItemIdPayload
     {
-        var p = JsonSerializer.Deserialize<SectionItemOutboxPayload>(json, BoardOutboxJson.Options);
-        var updated = p is null ? null : p with { ItemId = MapId(p.ItemId, clientId, serverId) };
-        return JsonSerializer.Serialize(updated, BoardOutboxJson.Options);
-    }
-
-    private static string RemapCompleteDailyClientId(string json, Guid clientId, Guid serverId)
-    {
-        var p = JsonSerializer.Deserialize<CompleteDailyOutboxPayload>(json, BoardOutboxJson.Options);
-        var updated = p is null ? null : p with { ItemId = MapId(p.ItemId, clientId, serverId) };
-        return JsonSerializer.Serialize(updated, BoardOutboxJson.Options);
-    }
-
-    private static string RemapItemIdClientId(string json, Guid clientId, Guid serverId)
-    {
-        var p = JsonSerializer.Deserialize<ItemIdOutboxPayload>(json, BoardOutboxJson.Options);
-        var updated = p is null ? null : p with { ItemId = MapId(p.ItemId, clientId, serverId) };
-        return JsonSerializer.Serialize(updated, BoardOutboxJson.Options);
-    }
-
-    private static string RemapUpdateHabitClientId(string json, Guid clientId, Guid serverId)
-    {
-        var p = JsonSerializer.Deserialize<UpdateHabitOutboxPayload>(json, BoardOutboxJson.Options);
-        var updated = p is null ? null : p with { ItemId = MapId(p.ItemId, clientId, serverId) };
-        return JsonSerializer.Serialize(updated, BoardOutboxJson.Options);
-    }
-
-    private static string RemapUpdateTodoClientId(string json, Guid clientId, Guid serverId)
-    {
-        var p = JsonSerializer.Deserialize<UpdateTodoOutboxPayload>(json, BoardOutboxJson.Options);
-        var updated = p is null ? null : p with { ItemId = MapId(p.ItemId, clientId, serverId) };
-        return JsonSerializer.Serialize(updated, BoardOutboxJson.Options);
-    }
-
-    private static string RemapUpdateDailyClientId(string json, Guid clientId, Guid serverId)
-    {
-        var p = JsonSerializer.Deserialize<UpdateDailyOutboxPayload>(json, BoardOutboxJson.Options);
-        var updated = p is null ? null : p with { ItemId = MapId(p.ItemId, clientId, serverId) };
-        return JsonSerializer.Serialize(updated, BoardOutboxJson.Options);
-    }
-
-    private static string RemapRenameVersion(string json, DateTimeOffset newVersion)
-    {
-        var p = JsonSerializer.Deserialize<RenameOutboxPayload>(json, BoardOutboxJson.Options);
-        var updated = p is null ? null : p with { ExpectedServerUpdatedAtUtc = newVersion };
-        return JsonSerializer.Serialize(updated, BoardOutboxJson.Options);
-    }
-
-    private static string RemapSectionItemVersion(string json, DateTimeOffset newVersion)
-    {
-        var p = JsonSerializer.Deserialize<SectionItemOutboxPayload>(json, BoardOutboxJson.Options);
-        var updated = p is null ? null : p with { ExpectedServerUpdatedAtUtc = newVersion };
-        return JsonSerializer.Serialize(updated, BoardOutboxJson.Options);
-    }
-
-    private static string RemapCompleteDailyVersion(string json, DateTimeOffset newVersion)
-    {
-        var p = JsonSerializer.Deserialize<CompleteDailyOutboxPayload>(json, BoardOutboxJson.Options);
-        var updated = p is null ? null : p with { ExpectedServerUpdatedAtUtc = newVersion };
-        return JsonSerializer.Serialize(updated, BoardOutboxJson.Options);
-    }
-
-    private static string RemapItemIdVersion(string json, DateTimeOffset newVersion)
-    {
-        var p = JsonSerializer.Deserialize<ItemIdOutboxPayload>(json, BoardOutboxJson.Options);
-        var updated = p is null ? null : p with { ExpectedServerUpdatedAtUtc = newVersion };
-        return JsonSerializer.Serialize(updated, BoardOutboxJson.Options);
-    }
-
-    private static string RemapUpdateHabitVersion(string json, DateTimeOffset newVersion)
-    {
-        var p = JsonSerializer.Deserialize<UpdateHabitOutboxPayload>(json, BoardOutboxJson.Options);
-        var updated = p is null ? null : p with { ExpectedServerUpdatedAtUtc = newVersion };
-        return JsonSerializer.Serialize(updated, BoardOutboxJson.Options);
-    }
-
-    private static string RemapUpdateTodoVersion(string json, DateTimeOffset newVersion)
-    {
-        var p = JsonSerializer.Deserialize<UpdateTodoOutboxPayload>(json, BoardOutboxJson.Options);
-        var updated = p is null ? null : p with { ExpectedServerUpdatedAtUtc = newVersion };
-        return JsonSerializer.Serialize(updated, BoardOutboxJson.Options);
-    }
-
-    private static string RemapUpdateDailyVersion(string json, DateTimeOffset newVersion)
-    {
-        var p = JsonSerializer.Deserialize<UpdateDailyOutboxPayload>(json, BoardOutboxJson.Options);
-        var updated = p is null ? null : p with { ExpectedServerUpdatedAtUtc = newVersion };
+        var p = JsonSerializer.Deserialize<T>(json, BoardOutboxJson.Options);
+        var updated = p is null ? null : withVersion(p, newVersion);
         return JsonSerializer.Serialize(updated, BoardOutboxJson.Options);
     }
 }

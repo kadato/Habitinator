@@ -36,7 +36,7 @@ internal static class BoardApiRoutes
         boardApi.MapGet("/",
             async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not Guid userId)
+                if (ResolveUser(user) is not Guid userId)
                 {
                     return Results.Unauthorized();
                 }
@@ -49,7 +49,7 @@ internal static class BoardApiRoutes
             async (HttpRequest request, ClaimsPrincipal user, BoardPersistenceService boardPersistenceService,
                 CancellationToken cancellationToken) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not Guid userId)
+                if (ResolveUser(user) is not Guid userId)
                 {
                     return Results.Unauthorized();
                 }
@@ -72,7 +72,7 @@ internal static class BoardApiRoutes
         boardApi.MapGet("/archived",
             async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not Guid userId)
+                if (ResolveUser(user) is not Guid userId)
                 {
                     return Results.Unauthorized();
                 }
@@ -85,7 +85,7 @@ internal static class BoardApiRoutes
             async (ClaimsPrincipal user, BoardPersistenceService boardPersistenceService,
                 CancellationToken cancellationToken) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not Guid userId)
+                if (ResolveUser(user) is not Guid userId)
                 {
                     return Results.Unauthorized();
                 }
@@ -94,6 +94,8 @@ internal static class BoardApiRoutes
                 return Results.Json(streaks, Json);
             });
     }
+
+    private static Guid? ResolveUser(ClaimsPrincipal user) => AuthenticatedUserId.TryGet(user);
 
     private static void MapGeneralMutationRoutes(RouteGroupBuilder boardApi)
     {
@@ -117,7 +119,7 @@ internal static class BoardApiRoutes
         BoardSection section,
         ItemTitleRequest request)
     {
-        if (AuthenticatedUserId.TryGet(user) is not Guid userId)
+        if (ResolveUser(user) is not Guid userId)
         {
             return Results.Unauthorized();
         }
@@ -137,7 +139,7 @@ internal static class BoardApiRoutes
         Guid itemId,
         ItemTitleRequest request)
     {
-        if (AuthenticatedUserId.TryGet(user) is not Guid userId)
+        if (ResolveUser(user) is not Guid userId)
         {
             return Results.Unauthorized();
         }
@@ -157,7 +159,7 @@ internal static class BoardApiRoutes
         BoardSection section,
         Guid itemId)
     {
-        if (AuthenticatedUserId.TryGet(user) is not Guid userId)
+        if (ResolveUser(user) is not Guid userId)
         {
             return Results.Unauthorized();
         }
@@ -176,7 +178,7 @@ internal static class BoardApiRoutes
         BoardSection section,
         Guid itemId)
     {
-        if (AuthenticatedUserId.TryGet(user) is not Guid userId)
+        if (ResolveUser(user) is not Guid userId)
         {
             return Results.Unauthorized();
         }
@@ -195,7 +197,7 @@ internal static class BoardApiRoutes
         BoardSection section,
         Guid itemId)
     {
-        if (AuthenticatedUserId.TryGet(user) is not Guid userId)
+        if (ResolveUser(user) is not Guid userId)
         {
             return Results.Unauthorized();
         }
@@ -204,19 +206,7 @@ internal static class BoardApiRoutes
         return await RunIdempotentAsync(ctx.Http, ctx.Idem, userId, "DELETE", "", async ct =>
         {
             var r = await ctx.Board.DeleteItemAsync(userId, section, itemId, expected, ct);
-            return r.Status switch
-            {
-                BoardMutationStatus.Ok => (204, "", null),
-                BoardMutationStatus.NotFound => (404, "", null),
-                BoardMutationStatus.Conflict => (
-                    409,
-                    JsonSerializer.Serialize(new { problem = "version_conflict", item = r.Item }, Json),
-                    JsonContentType),
-                _ => (
-                    500,
-                    JsonSerializer.Serialize(new { detail = "Unexpected board mutation status." }, Json),
-                    JsonContentType)
-            };
+            return MutationToOutcome(r, okStatus: StatusCodes.Status204NoContent);
         }, ctx.CancellationToken);
     }
 
@@ -226,7 +216,7 @@ internal static class BoardApiRoutes
         BoardSection section,
         Guid itemId)
     {
-        if (AuthenticatedUserId.TryGet(user) is not Guid userId)
+        if (ResolveUser(user) is not Guid userId)
         {
             return Results.Unauthorized();
         }
@@ -241,155 +231,174 @@ internal static class BoardApiRoutes
 
     private static void MapHabitRoutes(RouteGroupBuilder boardApi)
     {
-        boardApi.MapPost("/habits/{itemId:guid}/increment",
-            async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
-                Guid itemId, CancellationToken cancellationToken) =>
-            {
-                if (AuthenticatedUserId.TryGet(user) is not Guid userId)
-                {
-                    return Results.Unauthorized();
-                }
+        boardApi.MapPost("/habits/{itemId:guid}/increment", HandleIncrementHabitAsync);
+        boardApi.MapPost("/habits/{itemId:guid}/decrement", HandleDecrementHabitAsync);
+        boardApi.MapPut("/habits/{itemId:guid}", HandleUpdateHabitAsync);
+    }
 
-                var expected = ReadExpectedUpdatedAtUtc(http.Request);
-                return await RunIdempotentAsync(http, idem, userId, "POST", "", async ct =>
-                {
-                    var r = await board.IncrementHabitPlusAsync(userId, itemId, expected, ct);
-                    return MutationToOutcome(r);
-                }, cancellationToken);
-            });
+    private static async Task<IResult> HandleIncrementHabitAsync(
+        [AsParameters] BoardMutationContext ctx,
+        ClaimsPrincipal user,
+        Guid itemId)
+    {
+        if (ResolveUser(user) is not Guid userId)
+        {
+            return Results.Unauthorized();
+        }
 
-        boardApi.MapPost("/habits/{itemId:guid}/decrement",
-            async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
-                Guid itemId, CancellationToken cancellationToken) =>
-            {
-                if (AuthenticatedUserId.TryGet(user) is not Guid userId)
-                {
-                    return Results.Unauthorized();
-                }
+        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
+        return await RunIdempotentAsync(ctx.Http, ctx.Idem, userId, "POST", "", async ct =>
+        {
+            var r = await ctx.Board.IncrementHabitPlusAsync(userId, itemId, expected, ct);
+            return MutationToOutcome(r);
+        }, ctx.CancellationToken);
+    }
 
-                var expected = ReadExpectedUpdatedAtUtc(http.Request);
-                return await RunIdempotentAsync(http, idem, userId, "POST", "", async ct =>
-                {
-                    var r = await board.IncrementHabitMinusAsync(userId, itemId, expected, ct);
-                    return MutationToOutcome(r);
-                }, cancellationToken);
-            });
+    private static async Task<IResult> HandleDecrementHabitAsync(
+        [AsParameters] BoardMutationContext ctx,
+        ClaimsPrincipal user,
+        Guid itemId)
+    {
+        if (ResolveUser(user) is not Guid userId)
+        {
+            return Results.Unauthorized();
+        }
 
-        boardApi.MapPut("/habits/{itemId:guid}",
-            async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
-                Guid itemId, HabitUpdateRequest request, CancellationToken cancellationToken) =>
-            {
-                if (AuthenticatedUserId.TryGet(user) is not Guid userId)
-                {
-                    return Results.Unauthorized();
-                }
+        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
+        return await RunIdempotentAsync(ctx.Http, ctx.Idem, userId, "POST", "", async ct =>
+        {
+            var r = await ctx.Board.IncrementHabitMinusAsync(userId, itemId, expected, ct);
+            return MutationToOutcome(r);
+        }, ctx.CancellationToken);
+    }
 
-                var expected = ReadExpectedUpdatedAtUtc(http.Request);
-                return await RunIdempotentAsync(http, idem, userId, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
-                {
-                    var r = await board.UpdateHabitAsync(
-                        userId,
-                        itemId,
-                        new UpdateHabitArgs(
-                            request.Title,
-                            request.Notes,
-                            request.Tags,
-                            request.TrackPlus,
-                            request.TrackMinus,
-                            request.ResetPeriod,
-                            request.Counter,
-                            request.NegativeCounter,
-                            DailyChecklistJson.Serialize(DailyChecklistJson.Parse(request.ChecklistJson)),
-                            request.SortOrder,
-                            expected),
-                        ct);
-                    return MutationToOutcome(r);
-                }, cancellationToken);
-            });
+    private static async Task<IResult> HandleUpdateHabitAsync(
+        [AsParameters] BoardMutationContext ctx,
+        ClaimsPrincipal user,
+        Guid itemId,
+        HabitUpdateRequest request)
+    {
+        if (ResolveUser(user) is not Guid userId)
+        {
+            return Results.Unauthorized();
+        }
+
+        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
+        return await RunIdempotentAsync(ctx.Http, ctx.Idem, userId, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
+        {
+            var r = await ctx.Board.UpdateHabitAsync(
+                userId,
+                itemId,
+                new UpdateHabitArgs(
+                    request.Title,
+                    request.Notes,
+                    request.Tags,
+                    request.TrackPlus,
+                    request.TrackMinus,
+                    request.ResetPeriod,
+                    request.Counter,
+                    request.NegativeCounter,
+                    DailyChecklistJson.Serialize(DailyChecklistJson.Parse(request.ChecklistJson)),
+                    request.SortOrder,
+                    expected),
+                ct);
+            return MutationToOutcome(r);
+        }, ctx.CancellationToken);
     }
 
     private static void MapTodoRoutes(RouteGroupBuilder boardApi)
     {
-        boardApi.MapPut("/todos/{itemId:guid}",
-            async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
-                Guid itemId, TodoUpdateRequest request, CancellationToken cancellationToken) =>
-            {
-                if (AuthenticatedUserId.TryGet(user) is not Guid userId)
-                {
-                    return Results.Unauthorized();
-                }
+        boardApi.MapPut("/todos/{itemId:guid}", HandleUpdateTodoAsync);
+    }
 
-                var expected = ReadExpectedUpdatedAtUtc(http.Request);
-                return await RunIdempotentAsync(http, idem, userId, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
-                {
-                    var r = await board.UpdateTodoAsync(
-                        userId,
-                        itemId,
-                        new UpdateTodoArgs(
-                            request.Title,
-                            request.Notes,
-                            request.Tags,
-                            DailyChecklistJson.Serialize(DailyChecklistJson.Parse(request.ChecklistJson)),
-                            request.DueDate,
-                            request.SortOrder,
-                            request.TodoRepeatIntervalDays,
-                            expected),
-                        ct);
-                    return MutationToOutcome(r);
-                }, cancellationToken);
-            });
+    private static async Task<IResult> HandleUpdateTodoAsync(
+        [AsParameters] BoardMutationContext ctx,
+        ClaimsPrincipal user,
+        Guid itemId,
+        TodoUpdateRequest request)
+    {
+        if (ResolveUser(user) is not Guid userId)
+        {
+            return Results.Unauthorized();
+        }
+
+        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
+        return await RunIdempotentAsync(ctx.Http, ctx.Idem, userId, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
+        {
+            var r = await ctx.Board.UpdateTodoAsync(
+                userId,
+                itemId,
+                new UpdateTodoArgs(
+                    request.Title,
+                    request.Notes,
+                    request.Tags,
+                    DailyChecklistJson.Serialize(DailyChecklistJson.Parse(request.ChecklistJson)),
+                    request.DueDate,
+                    request.SortOrder,
+                    request.TodoRepeatIntervalDays,
+                    expected),
+                ct);
+            return MutationToOutcome(r);
+        }, ctx.CancellationToken);
     }
 
     private static void MapDailyRoutes(RouteGroupBuilder boardApi)
     {
-        boardApi.MapPut("/dailies/{itemId:guid}",
-            async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
-                Guid itemId, DailyUpdateRequest request, CancellationToken cancellationToken) =>
-            {
-                if (AuthenticatedUserId.TryGet(user) is not Guid userId)
-                {
-                    return Results.Unauthorized();
-                }
+        boardApi.MapPut("/dailies/{itemId:guid}", HandleUpdateDailyAsync);
+        boardApi.MapPost("/dailies/{itemId:guid}/complete-for-date", HandleCompleteDailyForDateAsync);
+    }
 
-                var expected = ReadExpectedUpdatedAtUtc(http.Request);
-                return await RunIdempotentAsync(http, idem, userId, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
-                {
-                    var r = await board.UpdateDailyAsync(
-                        userId,
-                        itemId,
-                        new UpdateDailyArgs(
-                            request.Title,
-                            request.Notes,
-                            request.Tags,
-                            request.StartDate,
-                            request.Repeat,
-                            request.RepeatInterval,
-                            DailyChecklistJson.Serialize(DailyChecklistJson.Parse(request.ChecklistJson)),
-                            request.Counter,
-                            request.SortOrder,
-                            expected),
-                        ct);
-                    return MutationToOutcome(r);
-                }, cancellationToken);
-            });
+    private static async Task<IResult> HandleUpdateDailyAsync(
+        [AsParameters] BoardMutationContext ctx,
+        ClaimsPrincipal user,
+        Guid itemId,
+        DailyUpdateRequest request)
+    {
+        if (ResolveUser(user) is not Guid userId)
+        {
+            return Results.Unauthorized();
+        }
 
-        boardApi.MapPost("/dailies/{itemId:guid}/complete-for-date",
-            async (HttpContext http, ClaimsPrincipal user, BoardPersistenceService board, BoardIdempotencyService idem,
-                Guid itemId, DailyCompleteForDateRequest request, CancellationToken cancellationToken) =>
-            {
-                if (AuthenticatedUserId.TryGet(user) is not Guid userId)
-                {
-                    return Results.Unauthorized();
-                }
+        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
+        return await RunIdempotentAsync(ctx.Http, ctx.Idem, userId, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
+        {
+            var r = await ctx.Board.UpdateDailyAsync(
+                userId,
+                itemId,
+                new UpdateDailyArgs(
+                    request.Title,
+                    request.Notes,
+                    request.Tags,
+                    request.StartDate,
+                    request.Repeat,
+                    request.RepeatInterval,
+                    DailyChecklistJson.Serialize(DailyChecklistJson.Parse(request.ChecklistJson)),
+                    request.Counter,
+                    request.SortOrder,
+                    expected),
+                ct);
+            return MutationToOutcome(r);
+        }, ctx.CancellationToken);
+    }
 
-                var expected = ReadExpectedUpdatedAtUtc(http.Request);
-                return await RunIdempotentAsync(http, idem, userId, "POST", JsonSerializer.Serialize(request, Json), async ct =>
-                {
-                    var r = await board.CompleteDailyForDateAsync(
-                        userId, itemId, request.CompletedOn, expected, ct);
-                    return MutationToOutcome(r);
-                }, cancellationToken);
-            });
+    private static async Task<IResult> HandleCompleteDailyForDateAsync(
+        [AsParameters] BoardMutationContext ctx,
+        ClaimsPrincipal user,
+        Guid itemId,
+        DailyCompleteForDateRequest request)
+    {
+        if (ResolveUser(user) is not Guid userId)
+        {
+            return Results.Unauthorized();
+        }
+
+        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
+        return await RunIdempotentAsync(ctx.Http, ctx.Idem, userId, "POST", JsonSerializer.Serialize(request, Json), async ct =>
+        {
+            var r = await ctx.Board.CompleteDailyForDateAsync(
+                userId, itemId, request.CompletedOn, expected, ct);
+            return MutationToOutcome(r);
+        }, ctx.CancellationToken);
     }
 
     /// <summary>Runs a board mutation with the shared idempotency + optimistic-concurrency envelope.</summary>
@@ -450,14 +459,14 @@ internal static class BoardApiRoutes
         return null;
     }
 
-    private static (int statusCode, string body, string? contentType) MutationToOutcome(BoardMutationResult r) =>
+    private static (int statusCode, string body, string? contentType) MutationToOutcome(BoardMutationResult r, int okStatus = 200) =>
         r.Status switch
         {
             BoardMutationStatus.Ok when r.Item is not null => (
-                200,
+                okStatus,
                 JsonSerializer.Serialize(r.Item, Json),
                 JsonContentType),
-            BoardMutationStatus.Ok => (204, "", null),
+            BoardMutationStatus.Ok => (okStatus, "", null),
             BoardMutationStatus.NotFound => (404, "", null),
             BoardMutationStatus.Conflict => (
                 409,

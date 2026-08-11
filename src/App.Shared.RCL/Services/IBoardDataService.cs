@@ -13,7 +13,20 @@ public sealed record UpdateHabitArgs(
     int NegativeCounter,
     string? ChecklistJson = null,
     double? SortOrder = null,
-    DateTimeOffset? ExpectedUpdatedAtUtc = null);
+    DateTimeOffset? ExpectedUpdatedAtUtc = null)
+{
+    public static UpdateHabitArgs From(BoardItem item) => new(
+        item.Title,
+        item.Notes,
+        item.Tags,
+        item.TrackPlus,
+        item.TrackMinus,
+        item.ResetPeriod,
+        item.Counter,
+        item.NegativeCounter,
+        item.ChecklistJson,
+        item.SortOrder);
+}
 
 public sealed record UpdateTodoArgs(
     string Title,
@@ -23,7 +36,17 @@ public sealed record UpdateTodoArgs(
     DateOnly? DueDate,
     double? SortOrder = null,
     int? TodoRepeatIntervalDays = null,
-    DateTimeOffset? ExpectedUpdatedAtUtc = null);
+    DateTimeOffset? ExpectedUpdatedAtUtc = null)
+{
+    public static UpdateTodoArgs From(BoardItem item) => new(
+        item.Title,
+        item.Notes,
+        item.Tags,
+        item.ChecklistJson,
+        item.TodoDueDate,
+        item.SortOrder,
+        item.TodoRepeatIntervalDays);
+}
 
 public sealed record UpdateDailyArgs(
     string Title,
@@ -35,7 +58,19 @@ public sealed record UpdateDailyArgs(
     string? ChecklistJson,
     int Counter,
     double? SortOrder = null,
-    DateTimeOffset? ExpectedUpdatedAtUtc = null);
+    DateTimeOffset? ExpectedUpdatedAtUtc = null)
+{
+    public static UpdateDailyArgs From(BoardItem item) => new(
+        item.Title,
+        item.Notes,
+        item.Tags,
+        item.DailyStartDate,
+        item.DailyRepeat,
+        item.DailyRepeatInterval,
+        item.ChecklistJson,
+        item.Counter,
+        item.SortOrder);
+}
 
 public interface IBoardDataService
 {

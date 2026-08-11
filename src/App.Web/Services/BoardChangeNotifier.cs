@@ -1,4 +1,5 @@
 using App.Shared.RCL.Hubs;
+using App.Shared.RCL.Models;
 using App.Web.Hubs;
 
 using Microsoft.AspNetCore.SignalR;
@@ -11,9 +12,9 @@ public interface IBoardChangeNotifier
 }
 
 public sealed class BoardChangeNotifier(
-    BoardSnapshotCache snapshotCache,
+    MemoryCacheStore<BoardSnapshot> snapshotCache,
     ActivityStatisticsCache statsCache,
-    DailyStreakMapCache streakCache,
+    MemoryCacheStore<Dictionary<Guid, int>> streakCache,
     IHubContext<BoardHub> hub,
     ILogger<BoardChangeNotifier> logger) : IBoardChangeNotifier
 {

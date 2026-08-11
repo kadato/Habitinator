@@ -3,8 +3,7 @@ namespace App.Shared.RCL.Services;
 public sealed record BoardColumnFilterState(
     string? HabitFilter,
     string? DailyFilter,
-    string? TodoFilter,
-    bool? TodoSortDueSoon);
+    string? TodoFilter);
 
 public interface IBoardColumnStateStore
 {

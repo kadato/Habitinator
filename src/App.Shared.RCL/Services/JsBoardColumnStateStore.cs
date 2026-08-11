@@ -3,8 +3,8 @@ using Microsoft.JSInterop;
 namespace App.Shared.RCL.Services;
 
 /// <summary>
-///     Persists per-column board filters (and the to-do due-soon sort) in localStorage so the
-///     filters survive navigation and reloads. Keyed per account.
+///     Persists per-column board filters in localStorage so the filters survive navigation
+///     and reloads. Keyed per account.
 /// </summary>
 public sealed class JsBoardColumnStateStore : IBoardColumnStateStore
 {
@@ -63,19 +63,8 @@ public sealed class JsBoardColumnStateStore : IBoardColumnStateStore
         }
     }
 
-    private async Task EnsureScriptLoadedAsync()
+    private Task EnsureScriptLoadedAsync()
     {
-        try
-        {
-            await _js.InvokeVoidAsync("habitinatorLoadScript", JsFile).ConfigureAwait(false);
-        }
-        catch (JSDisconnectedException)
-        {
-            // Ignored during navigation
-        }
-        catch (JSException)
-        {
-            // Ignored; invoke calls below will fail and be caught too
-        }
+        return JsInvokeSafe.InvokeVoidAsync(_js, "habitinatorLoadScript", JsFile);
     }
 }

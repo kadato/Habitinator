@@ -12,7 +12,6 @@ namespace App.Shared.RCL.Components;
 
 public partial class BoardColumn : IAsyncDisposable
 {
-    [Inject] public required GlobalTimerService TimerService { get; set; }
     [Inject] public required IBoardDataService BoardData { get; set; }
     [Inject] public required IDialogService DialogService { get; set; }
     [Inject] public required IUserNotifier Notifier { get; set; }
@@ -35,12 +34,6 @@ public partial class BoardColumn : IAsyncDisposable
     private HabitListFilter _habitFilter;
     private DailyListFilter _dailyFilter = DailyListFilter.Due;
     private TodoListFilter _todoFilter = TodoListFilter.Active;
-    private bool _sortDueSoon;
-
-    private Dictionary<string, object> SortDueSoonAria => new()
-    {
-        { "aria-pressed", _sortDueSoon ? "true" : "false" }
-    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -78,8 +71,6 @@ public partial class BoardColumn : IAsyncDisposable
         {
             _todoFilter = todo;
         }
-
-        _sortDueSoon = state.TodoSortDueSoon ?? false;
     }
 
     private async Task PersistStateAsync()
@@ -89,8 +80,7 @@ public partial class BoardColumn : IAsyncDisposable
             await ColumnState.SetAsync(new BoardColumnFilterState(
                 _habitFilter.ToString(),
                 _dailyFilter.ToString(),
-                _todoFilter.ToString(),
-                _sortDueSoon));
+                _todoFilter.ToString()));
         }
         catch (Exception)
         {
@@ -115,13 +105,6 @@ public partial class BoardColumn : IAsyncDisposable
     private void SetTodoFilter(TodoListFilter filter)
     {
         _todoFilter = filter;
-        _needRefresh = true;
-        _ = PersistStateAsync();
-    }
-
-    private void ToggleTodoSortDueSoon()
-    {
-        _sortDueSoon = !_sortDueSoon;
         _needRefresh = true;
         _ = PersistStateAsync();
     }
@@ -377,11 +360,6 @@ public partial class BoardColumn : IAsyncDisposable
     private IReadOnlyList<BoardItem> OrderTodos(IReadOnlyList<BoardItem> items) =>
         _todoFilter switch
         {
-            TodoListFilter.Active when _sortDueSoon => [.. items
-                .OrderBy(x => x.TodoDueDate.HasValue ? 0 : 1)
-                .ThenBy(x => x.TodoDueDate)
-                .ThenBy(x => GetEffectiveSortOrder(x) ?? double.MaxValue)
-                .ThenBy(x => x.Id)],
             TodoListFilter.Active => TodoOrdering.OrderForActiveTab(items, GetEffectiveSortOrder),
             TodoListFilter.Scheduled => TodoOrdering.OrderForScheduledTab(items),
             _ => OrderBySort(items)
@@ -464,8 +442,8 @@ public partial class BoardColumn : IAsyncDisposable
     {
         return Section switch
         {
-            BoardSection.Habit => "These are your habits — use +/− to log a rep and undo. Click the title for notes and subtasks. The global timer can follow the habit you trigger.",
-            BoardSection.Daily => "Dailies are for recurring work — use the square when you are done for today. Click the title to edit details, or the trash icon to delete.",
+            BoardSection.Habit => "These are your habits. Use +/− to log a rep and undo. Click the title for notes and subtasks. The global timer can follow the habit you trigger.",
+            BoardSection.Daily => "Dailies are for recurring work. Use the square when you are done for today. Click the title to edit details, or the trash icon to delete.",
             BoardSection.Todo => "To Do's are one-off. On Active, drag cards to reorder; Scheduled sorts by due date. Click the title to edit details.",
             _ => string.Empty
         };
@@ -741,23 +719,15 @@ public partial class BoardColumn : IAsyncDisposable
                     TodoRepeatIntervalDays: item.TodoRepeatIntervalDays));
             await BoardData.ToggleItemAsync(BoardSection.Todo, item.Id);
             await Notifier.NotifyAsync(
-                $"Repeating to-do — next occurrence {DateFormatService.Format(nextDue)}.",
+                $"Repeating to-do. Next occurrence {DateFormatService.Format(nextDue)}.",
                 Severity.Info);
         });
     }
 
     private async Task OpenEditHabitAsync(BoardItem item)
     {
-        DialogOptions options = new()
-        {
-            MaxWidth = MaxWidth.Small,
-            FullWidth = false,
-            CloseButton = false,
-            CloseOnEscapeKey = true,
-            NoHeader = true
-        };
         DialogParameters<EditHabitDialog> parameters = new() { { x => x.Item, item } };
-        var dialog = await DialogService.ShowAsync<EditHabitDialog>(string.Empty, parameters, options);
+        var dialog = await DialogService.ShowAsync<EditHabitDialog>(string.Empty, parameters, DialogDefaults.SmallEditor);
         var result = await dialog.Result;
         if (result is { Canceled: false, Data: EditHabitDialogResult r })
         {
@@ -817,16 +787,8 @@ public partial class BoardColumn : IAsyncDisposable
 
     private async Task OpenEditDailyAsync(BoardItem item)
     {
-        DialogOptions options = new()
-        {
-            MaxWidth = MaxWidth.Small,
-            FullWidth = false,
-            CloseButton = false,
-            CloseOnEscapeKey = true,
-            NoHeader = true
-        };
         DialogParameters<EditDailyDialog> parameters = new() { { x => x.Item, item } };
-        var dialog = await DialogService.ShowAsync<EditDailyDialog>(string.Empty, parameters, options);
+        var dialog = await DialogService.ShowAsync<EditDailyDialog>(string.Empty, parameters, DialogDefaults.SmallEditor);
         var result = await dialog.Result;
         if (result is { Canceled: false, Data: EditDailyDialogResult r })
         {
@@ -884,16 +846,8 @@ public partial class BoardColumn : IAsyncDisposable
 
     private async Task OpenEditTodoAsync(BoardItem item)
     {
-        DialogOptions options = new()
-        {
-            MaxWidth = MaxWidth.Small,
-            FullWidth = false,
-            CloseButton = false,
-            CloseOnEscapeKey = true,
-            NoHeader = true
-        };
         DialogParameters<EditTodoDialog> parameters = new() { { x => x.Item, item } };
-        var dialog = await DialogService.ShowAsync<EditTodoDialog>(string.Empty, parameters, options);
+        var dialog = await DialogService.ShowAsync<EditTodoDialog>(string.Empty, parameters, DialogDefaults.SmallEditor);
         var result = await dialog.Result;
         if (result is { Canceled: false, Data: EditTodoDialogResult r })
         {
@@ -959,48 +913,26 @@ public partial class BoardColumn : IAsyncDisposable
     private Task DeleteAsync(Guid id) =>
         ApplyDeletionAsync(id, () => BoardData.DeleteItemAsync(Section, id));
 
-    private async Task MoveToTopAsync(BoardItem item)
+    private Task MoveToTopAsync(BoardItem item) => MoveToIndexAsync(item, 0);
+
+    private Task MoveToBottomAsync(BoardItem item) => MoveToIndexAsync(item, VisibleItems().Count - 1);
+
+    private async Task MoveToIndexAsync(BoardItem item, int targetIndex)
     {
         List<BoardItem> visible = [.. VisibleItems()];
         var sourceIndex = visible.FindIndex(x => x.Id == item.Id);
-        if (sourceIndex <= 0)
+        if (sourceIndex < 0 || sourceIndex == targetIndex)
         {
             return;
         }
 
         List<BoardItem> reordered = [.. visible];
         reordered.RemoveAt(sourceIndex);
-        reordered.Insert(0, item);
+        reordered.Insert(targetIndex, item);
 
         var newSortOrder = Section == BoardSection.Todo && _todoFilter == TodoListFilter.Active
-            ? TodoOrdering.ComputeMidpointSortOrderForActiveTab(reordered, 0, GetEffectiveSortOrder)
-            : BoardItemReorder.ComputeMidpointSortOrder(reordered, 0, GetEffectiveSortOrder);
-
-        if (newSortOrder is not { } sortOrder)
-        {
-            return;
-        }
-
-        await ApplySortOrderAsync(item.Id, sortOrder, () => PersistReorderAsync(item, sortOrder));
-    }
-
-    private async Task MoveToBottomAsync(BoardItem item)
-    {
-        List<BoardItem> visible = [.. VisibleItems()];
-        var sourceIndex = visible.FindIndex(x => x.Id == item.Id);
-        if (sourceIndex < 0 || sourceIndex == visible.Count - 1)
-        {
-            return;
-        }
-
-        List<BoardItem> reordered = [.. visible];
-        reordered.RemoveAt(sourceIndex);
-        reordered.Add(item);
-        var insertAt = reordered.Count - 1;
-
-        var newSortOrder = Section == BoardSection.Todo && _todoFilter == TodoListFilter.Active
-            ? TodoOrdering.ComputeMidpointSortOrderForActiveTab(reordered, insertAt, GetEffectiveSortOrder)
-            : BoardItemReorder.ComputeMidpointSortOrder(reordered, insertAt, GetEffectiveSortOrder);
+            ? TodoOrdering.ComputeMidpointSortOrderForActiveTab(reordered, targetIndex, GetEffectiveSortOrder)
+            : BoardItemReorder.ComputeMidpointSortOrder(reordered, targetIndex, GetEffectiveSortOrder);
 
         if (newSortOrder is not { } sortOrder)
         {

@@ -92,13 +92,6 @@
                         @onclick="@(() => SetTodoFilter(TodoListFilter.Done))">
                     Done
                 </button>
-                <button type="button"
-                        class="@GetFilterBtnClass(_sortDueSoon)"
-                        title="Sort open to-dos by due date, soonest first"
-                        @attributes="SortDueSoonAria"
-                        @onclick="ToggleTodoSortDueSoon">
-                    Due soon
-                </button>
             }
         </div>
 
@@ -160,17 +153,7 @@
                     @foreach (var item in visibleItems)
                     {
                         <div @key="item.Id" data-id="@item.Id" class="board-sortable-item">
-                            <BoardItemCard Item="item"
-                                           Section="Section"
-                                           CanReorder="canReorder"
-                                           OnHabitUp="@(() => HabitUpAsync(item))"
-                                           OnHabitDown="@(() => HabitDownAsync(item))"
-                                           OnToggle="@(() => ToggleAsync(item))"
-                                           OnOpenEditor="@(() => OpenItemEditorAsync(item))"
-                                           OnMoveToTop="@(() => MoveToTopAsync(item))"
-                                           OnMoveToBottom="@(() => MoveToBottomAsync(item))"
-                                           OnDelete="@(() => DeleteAsync(item.Id))"
-                                           OnSetChecklistItemDone="@(args => SetChecklistItemDoneAsync(item, args.ChecklistItemId, args.IsDone))" />
+                            @ItemCard(item)
                         </div>
                     }
                 </div>
@@ -179,17 +162,7 @@
             {
                 @foreach (var item in visibleItems)
                 {
-                    <BoardItemCard Item="item"
-                                   Section="Section"
-                                   CanReorder="canReorder"
-                                   OnHabitUp="@(() => HabitUpAsync(item))"
-                                   OnHabitDown="@(() => HabitDownAsync(item))"
-                                   OnToggle="@(() => ToggleAsync(item))"
-                                   OnOpenEditor="@(() => OpenItemEditorAsync(item))"
-                                   OnMoveToTop="@(() => MoveToTopAsync(item))"
-                                   OnMoveToBottom="@(() => MoveToBottomAsync(item))"
-                                   OnDelete="@(() => DeleteAsync(item.Id))"
-                                   OnSetChecklistItemDone="@(args => SetChecklistItemDoneAsync(item, args.ChecklistItemId, args.IsDone))" />
+                    @ItemCard(item)
                 }
             }
         </div>
@@ -199,3 +172,20 @@
         <MudText Typo="Typo.caption" Color="Color.Secondary">@GetFooterText()</MudText>
     </MudCardActions>
 </MudCard>
+
+@code {
+    private RenderFragment ItemCard(BoardItem item) => __builder =>
+    {
+        <BoardItemCard Item="item"
+                       Section="Section"
+                       CanReorder="IsItemDraggable()"
+                       OnHabitUp="@(() => HabitUpAsync(item))"
+                       OnHabitDown="@(() => HabitDownAsync(item))"
+                       OnToggle="@(() => ToggleAsync(item))"
+                       OnOpenEditor="@(() => OpenItemEditorAsync(item))"
+                       OnMoveToTop="@(() => MoveToTopAsync(item))"
+                       OnMoveToBottom="@(() => MoveToBottomAsync(item))"
+                       OnDelete="@(() => DeleteAsync(item.Id))"
+                       OnSetChecklistItemDone="@(args => SetChecklistItemDoneAsync(item, args.ChecklistItemId, args.IsDone))"/>
+    };
+}

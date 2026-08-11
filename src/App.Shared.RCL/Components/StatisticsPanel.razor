@@ -309,34 +309,51 @@
                                 <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Filters</MudText>
                             </div>
                             <div class="stats-filter-row">
-                                @if ((_data.AvailableTags?.Count ?? 0) > 0)
-                                {
-                                    <MudSelect T="string"
-                                               Label="Tags"
-                                               Variant="Variant.Outlined"
-                                               Dense="true"
-                                               Margin="Margin.Dense"
-                                               MultiSelection="true"
-                                               MultiSelectionTextFunc="@(new Func<IReadOnlyList<string>, string>(GetMultiSelectionText))"
-                                               SelectedValues="_selectedTags"
-                                               SelectedValuesChanged="OnSelectedTagsChanged"
-                                               Clearable="true"
-                                               Style="width:100%"
-                                               Class="stats-tag-select-sidebar">
+                                <MudSelect T="string"
+                                           Label="Tags"
+                                           Variant="Variant.Outlined"
+                                           Dense="true"
+                                           Margin="Margin.Dense"
+                                           MultiSelection="true"
+                                           SelectAll="true"
+                                           SelectAllText="All tags"
+                                           Adornment="Adornment.Start"
+                                           AdornmentIcon="@Icons.Material.Outlined.LocalOffer"
+                                           MultiSelectionTextFunc="@(new Func<IReadOnlyList<string>, string>(GetMultiSelectionText))"
+                                           SelectedValues="_selectedTags"
+                                           SelectedValuesChanged="OnSelectedTagsChanged"
+                                           Clearable="true"
+                                           Disabled="@((_data.AvailableTags?.Count ?? 0) == 0)"
+                                           AnchorOrigin="Origin.BottomLeft"
+                                           TransformOrigin="Origin.TopLeft"
+                                           MaxHeight="300"
+                                           Style="width:100%"
+                                           Class="stats-tag-select-sidebar">
+                                    @if ((_data.AvailableTags?.Count ?? 0) > 0)
+                                    {
                                         @foreach (var t in _data.AvailableTags ?? [])
                                         {
                                             <MudSelectItem T="string" Value="@t">@t</MudSelectItem>
                                         }
-                                    </MudSelect>
-                                }
+                                    }
+                                    else
+                                    {
+                                        <MudSelectItem T="string" Value="@(string.Empty)" Disabled="true">No tags created yet</MudSelectItem>
+                                    }
+                                </MudSelect>
 
                                 <MudSelect T="string"
                                            Label="Period"
                                            Variant="Variant.Outlined"
                                            Dense="true"
                                            Margin="Margin.Dense"
+                                           Adornment="Adornment.Start"
+                                           AdornmentIcon="@Icons.Material.Outlined.DateRange"
                                            Value="_selectedPeriodKey"
                                            ValueChanged="OnStatsPeriodChanged"
+                                           AnchorOrigin="Origin.BottomLeft"
+                                           TransformOrigin="Origin.TopLeft"
+                                           MaxHeight="300"
                                            Style="width:100%"
                                            Class="stats-year-select-sidebar">
                                     @if (_periodOptions is not null)
@@ -348,6 +365,33 @@
                                     }
                                 </MudSelect>
                             </div>
+
+                            @if (_selectedTags.Count > 0)
+                            {
+                                <div class="d-flex flex-wrap align-center gap-1 mt-1">
+                                    @foreach (var tag in _selectedTags)
+                                    {
+                                        <MudChip T="string"
+                                                 Color="Color.Primary"
+                                                 Variant="Variant.Outlined"
+                                                 Size="Size.Small"
+                                                 OnClose="() => OnRemoveTagFilterAsync(tag)"
+                                                 Class="ma-0">
+                                            @tag
+                                        </MudChip>
+                                    }
+                                    @if (_selectedTags.Count > 1)
+                                    {
+                                        <MudButton Variant="Variant.Text"
+                                                   Color="Color.Secondary"
+                                                   Size="Size.Small"
+                                                   OnClick="OnClearTagFiltersAsync"
+                                                   Class="pa-0 min-w-0 font-size-xs ms-1">
+                                            Clear all
+                                        </MudButton>
+                                    }
+                                </div>
+                            }
 
                             @if (_periodBusy)
                             {
@@ -486,7 +530,7 @@
         _subscription.Dispose();
     }
 
-    private async Task LoadStatisticsAsync(string periodKey, bool userInitiated = false)
+    private async Task LoadStatisticsAsync(string periodKey)
     {
         _heatmapToday = DailySchedule.LocalToday(TimeZoneService);
         _loadingDailies = true;
@@ -547,11 +591,6 @@
             _shouldScrollToEnd = true;
             ComputeWeeklyReview();
             await LoadBestStreakAsync();
-
-            if (userInitiated && _data.TotalEvents == 0)
-            {
-                await NotifyNoEventsAsync();
-            }
         }
         catch (Exception dex)
         {
@@ -569,15 +608,6 @@
             _loadingDailies = false;
             _loadingHabits = false;
         }
-    }
-
-    private Task NotifyNoEventsAsync()
-    {
-        var unfiltered = string.IsNullOrEmpty(_tagFilter) && _selectedPeriodKey == DailyGraphPeriods.Rolling370Days;
-        var message = unfiltered
-            ? "No activity logged yet. Use habits, dailies, to-dos, or the focus timer on the board."
-            : "No events recorded for this selection.";
-        return Notifier.NotifyAsync(message, Severity.Info).AsTask();
     }
 
     private void ComputeWeeklyReview()
@@ -711,7 +741,7 @@
         }
 
         _selectedPeriodKey = newPeriod;
-        await RefreshAsync(() => LoadStatisticsAsync(_selectedPeriodKey, userInitiated: true));
+        await RefreshAsync(() => LoadStatisticsAsync(_selectedPeriodKey));
     }
 
     private string FormatBusiestDayShort(DateOnly day) => DateFormatService.Format(day);
@@ -719,7 +749,9 @@
     private static string GetMultiSelectionText(IReadOnlyList<string> selectedValues)
     {
         if (selectedValues is null || selectedValues.Count == 0) return "All tags";
-        return string.Join(", ", selectedValues);
+        if (selectedValues.Count == 1) return selectedValues[0];
+        if (selectedValues.Count == 2) return $"{selectedValues[0]}, {selectedValues[1]}";
+        return $"{selectedValues.Count} tags selected";
     }
 
     private async Task OnSelectedTagsChanged(IReadOnlyCollection<string> values)
@@ -732,7 +764,18 @@
 
         _selectedTags = newTags;
         _tagFilter = string.Join(",", _selectedTags);
-        await RefreshAsync(() => LoadStatisticsAsync(_selectedPeriodKey, userInitiated: true));
+        await RefreshAsync(() => LoadStatisticsAsync(_selectedPeriodKey));
+    }
+
+    private async Task OnRemoveTagFilterAsync(string tag)
+    {
+        var newTags = _selectedTags.Where(t => !string.Equals(t, tag, StringComparison.OrdinalIgnoreCase)).ToList();
+        await OnSelectedTagsChanged(newTags);
+    }
+
+    private async Task OnClearTagFiltersAsync()
+    {
+        await OnSelectedTagsChanged(Array.Empty<string>());
     }
 
     private async Task RefreshAsync(Func<Task> load)

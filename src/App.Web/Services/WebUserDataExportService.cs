@@ -6,19 +6,13 @@ namespace App.Web.Services;
 
 public sealed class WebUserDataExportService(
     AuthenticationStateProvider authenticationStateProvider,
-    DemoUserResolver demoUserResolver,
+    CurrentUserAccessor currentUserAccessor,
     UserDataExportService exportService) : IUserDataExportService
 {
     public async Task<UserDataExportDto> ExportAsync(CancellationToken cancellationToken = default)
     {
         var state = await authenticationStateProvider.GetAuthenticationStateAsync();
-        var user = state.User;
-        if (user.Identity?.IsAuthenticated != true)
-        {
-            throw new InvalidOperationException("Sign in required.");
-        }
-
-        var userId = await demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
+        var userId = await currentUserAccessor.ResolveAsync(state.User, cancellationToken);
         return await exportService.BuildAsync(userId, cancellationToken);
     }
 }

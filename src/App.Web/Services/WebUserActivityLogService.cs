@@ -8,16 +8,16 @@ namespace App.Web.Services;
 public sealed class WebUserActivityLogService : IUserActivityLogService
 {
     private readonly AuthenticationStateProvider _authenticationStateProvider;
-    private readonly DemoUserResolver _demoUserResolver;
+    private readonly CurrentUserAccessor _currentUserAccessor;
     private readonly BoardPersistenceService _persistence;
 
     public WebUserActivityLogService(
         AuthenticationStateProvider authenticationStateProvider,
-        DemoUserResolver demoUserResolver,
+        CurrentUserAccessor currentUserAccessor,
         BoardPersistenceService boardPersistence)
     {
         _authenticationStateProvider = authenticationStateProvider;
-        _demoUserResolver = demoUserResolver;
+        _currentUserAccessor = currentUserAccessor;
         _persistence = boardPersistence;
     }
 
@@ -29,15 +29,14 @@ public sealed class WebUserActivityLogService : IUserActivityLogService
         CancellationToken cancellationToken = default)
     {
         var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
-        var user = state.User;
-        if (user.Identity?.IsAuthenticated != true)
+        var userId = await _currentUserAccessor.TryResolveAsync(state.User, cancellationToken);
+        if (userId is null)
         {
             return;
         }
 
-        var userId = await _demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
         await _persistence.LogActivityAsync(
-            userId,
+            userId.Value,
             eventType,
             boardItemId,
             durationSeconds,
@@ -48,20 +47,19 @@ public sealed class WebUserActivityLogService : IUserActivityLogService
     public async Task LogTimerSessionAsync(TimeSpan duration, Guid? boardItemId, string? customLabel = null,
         CancellationToken cancellationToken = default)
     {
-        var sec = (int)Math.Min(int.MaxValue, Math.Max(0, duration.TotalSeconds));
+        var sec = BoardPersistenceService.DurationSeconds(duration);
         if (sec == 0)
         {
             return;
         }
 
         var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
-        var user = state.User;
-        if (user.Identity?.IsAuthenticated != true)
+        var userId = await _currentUserAccessor.TryResolveAsync(state.User, cancellationToken);
+        if (userId is null)
         {
             return;
         }
 
-        var userId = await _demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
-        await _persistence.LogTimerSessionAsync(userId, duration, boardItemId, customLabel, cancellationToken);
+        await _persistence.LogTimerSessionAsync(userId.Value, duration, boardItemId, customLabel, cancellationToken);
     }
 }

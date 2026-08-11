@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 
 using Npgsql;
@@ -79,10 +80,7 @@ public static class DependencyInjectionExtensions
     public static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration configuration)
     {
         var dbConnectionString = PostgresResilienceConnectionString.EnsureColdStartTimeouts(
-            configuration.GetConnectionString("DefaultConnection")
-            ?? configuration.GetConnectionString("habitinatordb")
-            ?? throw new InvalidOperationException(
-                "No PostgreSQL connection string configured. Set ConnectionStrings:DefaultConnection or run through Aspire (habitinatordb)."));
+            PostgresMigrationConnectionStrings.ResolvePrimary(configuration));
 
         services.AddNpgsqlDataSource(dbConnectionString, builder =>
         {
@@ -118,11 +116,18 @@ public static class DependencyInjectionExtensions
         services.AddScoped<ITimerSessionLogService, TimerSessionLogService>();
         services.AddHttpContextAccessor();
         services.AddScoped<DemoUserResolver>();
+        services.AddScoped<CurrentUserAccessor>();
         services.AddScoped<IRemoteBoardRefreshService, RemoteBoardRefreshService>();
         services.AddSingleton<IBoardSyncStatus, NoOpBoardSyncStatus>();
         services.AddScoped<BoardRemoteNotifyBridge>();
-        services.AddSingleton<BoardSnapshotCache>();
-        services.AddSingleton<DailyStreakMapCache>();
+        services.AddSingleton(sp => new MemoryCacheStore<BoardSnapshot>(
+            sp.GetRequiredService<IMemoryCache>(),
+            "",
+            TimeSpan.FromSeconds(4)));
+        services.AddSingleton(sp => new MemoryCacheStore<Dictionary<Guid, int>>(
+            sp.GetRequiredService<IMemoryCache>(),
+            "streak_map_",
+            TimeSpan.FromSeconds(30)));
         services.AddSingleton<ActivityStatisticsCache>();
         services.AddSingleton<IBoardChangeNotifier, BoardChangeNotifier>();
         services.AddScoped<BoardPersistenceService>();

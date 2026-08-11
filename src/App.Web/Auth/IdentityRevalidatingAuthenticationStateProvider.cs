@@ -57,11 +57,6 @@ internal sealed class IdentityRevalidatingAuthenticationStateProvider : Revalida
             return false;
         }
 
-        if (!userManager.SupportsUserSecurityStamp)
-        {
-            return true;
-        }
-
         var principalStamp = principal.FindFirstValue(_options.Value.ClaimsIdentity.SecurityStampClaimType);
         var userStamp = await userManager.GetSecurityStampAsync(user).ConfigureAwait(false);
         return principalStamp == userStamp;

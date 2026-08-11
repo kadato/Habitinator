@@ -9,7 +9,7 @@ namespace App.Web.Services;
 
 public sealed class WebUserPreferencesService(
     AuthenticationStateProvider authenticationStateProvider,
-    DemoUserResolver demoUserResolver,
+    CurrentUserAccessor currentUserAccessor,
     IDbContextFactory<ApplicationDbContext> dbFactory,
     IBoardChangeNotifier boardChangeNotifier,
     IHttpContextAccessor httpContextAccessor,
@@ -25,8 +25,8 @@ public sealed class WebUserPreferencesService(
         try
         {
             var state = await authenticationStateProvider.GetAuthenticationStateAsync();
-            var user = state.User;
-            if (user.Identity?.IsAuthenticated != true)
+            var userId = await currentUserAccessor.TryResolveAsync(state.User, cancellationToken);
+            if (userId is null)
             {
                 _cachedUserId = null;
                 _cachedPreferences = null;
@@ -35,7 +35,6 @@ public sealed class WebUserPreferencesService(
                 return guestPrefs;
             }
 
-            var userId = await demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
             if (_cachedUserId == userId && _cachedPreferences is not null)
             {
                 return _cachedPreferences;
@@ -70,14 +69,12 @@ public sealed class WebUserPreferencesService(
             var httpContext = httpContextAccessor.HttpContext;
             if (httpContext is not null && httpContext.Request.Cookies.TryGetValue(ThemeCookie.Name, out var themeCookie))
             {
-                if (themeCookie == "light")
+                prefs.Theme = themeCookie switch
                 {
-                    prefs.Theme = AppTheme.Light;
-                }
-                else if (themeCookie == "dark")
-                {
-                    prefs.Theme = AppTheme.Dark;
-                }
+                    "light" => AppTheme.Light,
+                    "dark" => AppTheme.Dark,
+                    _ => prefs.Theme
+                };
             }
         }
         catch
@@ -89,13 +86,12 @@ public sealed class WebUserPreferencesService(
     public async Task SaveAsync(UserPreferences preferences, CancellationToken cancellationToken = default)
     {
         var state = await authenticationStateProvider.GetAuthenticationStateAsync();
-        var user = state.User;
-        if (user.Identity?.IsAuthenticated != true)
+        var userId = await currentUserAccessor.TryResolveAsync(state.User, cancellationToken);
+        if (userId is null)
         {
             return;
         }
 
-        var userId = await demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
         if (row is null)
@@ -108,6 +104,6 @@ public sealed class WebUserPreferencesService(
         _cachedUserId = userId;
         _cachedPreferences = preferences;
         Changed?.Invoke(this, EventArgs.Empty);
-        await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+        await boardChangeNotifier.NotifyBoardChangedAsync(userId.Value, cancellationToken);
     }
 }

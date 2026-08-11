@@ -9,7 +9,7 @@ namespace App.Web.Services;
 
 public sealed class WebNotificationSettingsService(
     AuthenticationStateProvider authenticationStateProvider,
-    DemoUserResolver demoUserResolver,
+    CurrentUserAccessor currentUserAccessor,
     IDbContextFactory<ApplicationDbContext> dbFactory,
     IBoardChangeNotifier boardChangeNotifier) : INotificationSettingsService
 {
@@ -18,13 +18,12 @@ public sealed class WebNotificationSettingsService(
     public async Task<NotificationSettings> GetAsync(CancellationToken cancellationToken = default)
     {
         var state = await authenticationStateProvider.GetAuthenticationStateAsync();
-        var user = state.User;
-        if (user.Identity?.IsAuthenticated != true)
+        var userId = await currentUserAccessor.TryResolveAsync(state.User, cancellationToken);
+        if (userId is null)
         {
             return NotificationSettings.CreateDefault();
         }
 
-        var userId = await demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
         return row?.NotificationSettings ?? NotificationSettings.CreateDefault();
@@ -33,13 +32,12 @@ public sealed class WebNotificationSettingsService(
     public async Task SaveAsync(NotificationSettings settings, CancellationToken cancellationToken = default)
     {
         var state = await authenticationStateProvider.GetAuthenticationStateAsync();
-        var user = state.User;
-        if (user.Identity?.IsAuthenticated != true)
+        var userId = await currentUserAccessor.TryResolveAsync(state.User, cancellationToken);
+        if (userId is null)
         {
             return;
         }
 
-        var userId = await demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
         if (row is null)
@@ -50,6 +48,6 @@ public sealed class WebNotificationSettingsService(
         row.NotificationSettings = settings;
         await db.SaveChangesAsync(cancellationToken);
         Changed?.Invoke(this, EventArgs.Empty);
-        await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+        await boardChangeNotifier.NotifyBoardChangedAsync(userId.Value, cancellationToken);
     }
 }

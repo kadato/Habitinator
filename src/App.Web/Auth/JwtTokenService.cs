@@ -28,10 +28,10 @@ public sealed class JwtTokenService
     {
         List<Claim> claims =
         [
-            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
-            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Name, user.UserName ?? string.Empty)
+            new(AppClaims.Subject, user.Id.ToString()),
+            new(AppClaims.Email, user.Email ?? string.Empty),
+            new(AppClaims.NameIdentifier, user.Id.ToString()),
+            new(AppClaims.Name, user.UserName ?? string.Empty)
         ];
 
         var token = new JwtSecurityToken(

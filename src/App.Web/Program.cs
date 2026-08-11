@@ -6,7 +6,6 @@ using App.Web.DependencyInjection;
 using App.Web.Services;
 
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.EntityFrameworkCore;
 
 using MudBlazor;
 using MudBlazor.Services;

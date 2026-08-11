@@ -24,93 +24,70 @@ internal static class SettingsApiRoutes
         settingsApi.MapPreferencesSettingsEndpoints();
     }
 
-    private static void MapNotificationSettingsEndpoints(this IEndpointRouteBuilder settingsApi)
-    {
-        settingsApi.MapGet("/notifications",
-            async Task<Results<Ok<NotificationSettings>, UnauthorizedHttpResult, NotFound>> (
-                ClaimsPrincipal user, ApplicationDbContext db, CancellationToken cancellationToken) =>
+    private static void MapNotificationSettingsEndpoints(this IEndpointRouteBuilder settingsApi) =>
+        settingsApi.MapSettingsEndpoints(
+            "notifications",
+            static row => row.NotificationSettings,
+            static () => NotificationSettings.CreateDefault(),
+            static (row, value) => row.NotificationSettings = value);
+
+    private static void MapPreferencesSettingsEndpoints(this IEndpointRouteBuilder settingsApi) =>
+        settingsApi.MapSettingsEndpoints(
+            "preferences",
+            static row => row.UserPreferences,
+            static () => UserPreferences.CreateDefault(),
+            static (row, value) => row.UserPreferences = value,
+            static value =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId)
-                {
-                    return TypedResults.Unauthorized();
-                }
-
-                var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-                if (row is null)
-                {
-                    return TypedResults.NotFound();
-                }
-
-                var settings = row.NotificationSettings ?? NotificationSettings.CreateDefault();
-                return TypedResults.Ok(settings);
-            });
-
-        settingsApi.MapPut("/notifications",
-            async Task<Results<NoContent, UnauthorizedHttpResult, NotFound>> (
-                ClaimsPrincipal user, ApplicationDbContext db, IBoardChangeNotifier boardChangeNotifier,
-                NotificationSettings body, CancellationToken cancellationToken) =>
-            {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId)
-                {
-                    return TypedResults.Unauthorized();
-                }
-
-                var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-                if (row is null)
-                {
-                    return TypedResults.NotFound();
-                }
-
-                row.NotificationSettings = body;
-                await db.SaveChangesAsync(cancellationToken);
-                await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
-                return TypedResults.NoContent();
-            });
-    }
-
-    private static void MapPreferencesSettingsEndpoints(this IEndpointRouteBuilder settingsApi)
-    {
-        settingsApi.MapGet("/preferences",
-            async Task<Results<Ok<UserPreferences>, UnauthorizedHttpResult, NotFound>> (
-                ClaimsPrincipal user, ApplicationDbContext db, CancellationToken cancellationToken) =>
-            {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId)
-                {
-                    return TypedResults.Unauthorized();
-                }
-
-                var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-                if (row is null)
-                {
-                    return TypedResults.NotFound();
-                }
-
-                var settings = row.UserPreferences ?? UserPreferences.CreateDefault();
-                return TypedResults.Ok(settings);
-            });
-
-        settingsApi.MapPut("/preferences",
-            async Task<Results<NoContent, UnauthorizedHttpResult, NotFound>> (
-                ClaimsPrincipal user, ApplicationDbContext db, IBoardChangeNotifier boardChangeNotifier,
-                UserPreferences body, CancellationToken cancellationToken) =>
-            {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId)
-                {
-                    return TypedResults.Unauthorized();
-                }
-
-                var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-                if (row is null)
-                {
-                    return TypedResults.NotFound();
-                }
-
-                // Sanitize free-text field before persisting
-                body.DisplayName = string.IsNullOrWhiteSpace(body.DisplayName)
+                value.DisplayName = string.IsNullOrWhiteSpace(value.DisplayName)
                     ? null
-                    : ZalgoSanitizer.Sanitize(body.DisplayName.Trim());
+                    : ZalgoSanitizer.Sanitize(value.DisplayName.Trim());
+            });
 
-                row.UserPreferences = body;
+    private static void MapSettingsEndpoints<T>(
+        this IEndpointRouteBuilder settingsApi,
+        string segment,
+        Func<ApplicationUser, T?> getter,
+        Func<T> defaultValue,
+        Action<ApplicationUser, T> setter,
+        Action<T>? sanitize = null)
+    {
+        settingsApi.MapGet("/" + segment,
+            async Task<Results<Ok<T>, UnauthorizedHttpResult, NotFound>> (
+                ClaimsPrincipal user, ApplicationDbContext db, CancellationToken cancellationToken) =>
+            {
+                if (AuthenticatedUserId.TryGet(user) is not { } userId)
+                {
+                    return TypedResults.Unauthorized();
+                }
+
+                var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+                if (row is null)
+                {
+                    return TypedResults.NotFound();
+                }
+
+                return TypedResults.Ok(getter(row) ?? defaultValue());
+            });
+
+        settingsApi.MapPut("/" + segment,
+            async Task<Results<NoContent, UnauthorizedHttpResult, NotFound>> (
+                ClaimsPrincipal user, ApplicationDbContext db, IBoardChangeNotifier boardChangeNotifier,
+                T body, CancellationToken cancellationToken) =>
+            {
+                if (AuthenticatedUserId.TryGet(user) is not { } userId)
+                {
+                    return TypedResults.Unauthorized();
+                }
+
+                var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+                if (row is null)
+                {
+                    return TypedResults.NotFound();
+                }
+
+                sanitize?.Invoke(body);
+                setter(row, body);
                 await db.SaveChangesAsync(cancellationToken);
                 await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
                 return TypedResults.NoContent();

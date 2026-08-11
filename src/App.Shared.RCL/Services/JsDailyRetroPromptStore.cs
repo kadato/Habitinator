@@ -33,19 +33,7 @@ public sealed class JsDailyRetroPromptStore : IDailyRetroPromptStore
 
     public async Task<DateOnly?> GetLastPromptResolvedLocalDateAsync(CancellationToken cancellationToken = default)
     {
-        string? s;
-        try
-        {
-            s = await _js.InvokeAsync<string?>("habitinatorGetDailyRetroResolved", GetKey()).ConfigureAwait(false);
-        }
-        catch (JSDisconnectedException)
-        {
-            return null;
-        }
-        catch (JSException)
-        {
-            return null;
-        }
+        var s = await JsInvokeSafe.InvokeAsync<string?>(_js, "habitinatorGetDailyRetroResolved", GetKey());
 
         if (string.IsNullOrWhiteSpace(s) || !DateOnly.TryParse(s, CultureInfo.InvariantCulture, out var d))
         {
@@ -58,17 +46,6 @@ public sealed class JsDailyRetroPromptStore : IDailyRetroPromptStore
     public async Task SetPromptResolvedForTodayAsync(CancellationToken cancellationToken = default)
     {
         var ymd = DailySchedule.LocalToday(_clock, _timeZoneService).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        try
-        {
-            await _js.InvokeVoidAsync("habitinatorSetDailyRetroResolved", GetKey(), ymd).ConfigureAwait(false);
-        }
-        catch (JSDisconnectedException)
-        {
-            // JS Interop disconnected/failed during navigation/disposal, safe to ignore
-        }
-        catch (JSException)
-        {
-            // JS Interop disconnected/failed during navigation/disposal, safe to ignore
-        }
+        await JsInvokeSafe.InvokeVoidAsync(_js, "habitinatorSetDailyRetroResolved", GetKey(), ymd);
     }
 }

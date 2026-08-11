@@ -43,11 +43,7 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
 
     public event EventHandler? Changed;
 
-    private string GetKey()
-    {
-        var email = _apiSession.Email;
-        return string.IsNullOrEmpty(email) ? PreferencesKey : $"{PreferencesKey}_{email}";
-    }
+    private string GetKey() => LocalFirstRemoteStore.KeyFor(_apiSession.Email, PreferencesKey);
 
     public async Task<UserPreferences> GetAsync(CancellationToken cancellationToken = default)
     {

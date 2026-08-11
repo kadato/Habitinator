@@ -2,6 +2,13 @@ using Microsoft.Extensions.Logging;
 
 namespace App.Shared.RCL.Services;
 
+/// <summary>Key helpers for local-first settings stores.</summary>
+public static class LocalFirstRemoteStore
+{
+    public static string KeyFor(string? email, string prefix) =>
+        string.IsNullOrWhiteSpace(email) ? prefix : $"{prefix}_{email}";
+}
+
 /// <summary>
 ///     Coordinates local-first reads with best-effort background refreshes from a remote
 ///     source. Serializes local writes so a stale background fetch can never overwrite

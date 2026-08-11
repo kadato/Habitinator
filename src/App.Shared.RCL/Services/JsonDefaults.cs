@@ -17,4 +17,10 @@ public static class JsonDefaults
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
+
+    /// <summary>Human-readable export files. Default naming, indented output.</summary>
+    public static readonly JsonSerializerOptions Export = new()
+    {
+        WriteIndented = true
+    };
 }

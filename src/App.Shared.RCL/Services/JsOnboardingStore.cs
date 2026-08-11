@@ -59,19 +59,8 @@ public sealed class JsOnboardingStore : IOnboardingStore
         }
     }
 
-    private async Task EnsureScriptLoadedAsync()
+    private Task EnsureScriptLoadedAsync()
     {
-        try
-        {
-            await _js.InvokeVoidAsync("habitinatorLoadScript", JsFile).ConfigureAwait(false);
-        }
-        catch (JSDisconnectedException)
-        {
-            // Ignored during navigation
-        }
-        catch (JSException)
-        {
-            // Ignored; invoke calls below will fail and be caught too
-        }
+        return JsInvokeSafe.InvokeVoidAsync(_js, "habitinatorLoadScript", JsFile);
     }
 }

@@ -46,7 +46,7 @@ internal sealed class WasmUserPreferencesService : IUserPreferencesService, IDis
         var authState = await _authStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
         var email = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
                     ?? authState.User.Identity?.Name;
-        return string.IsNullOrEmpty(email) ? PreferencesKey : $"{PreferencesKey}_{email}";
+        return LocalFirstRemoteStore.KeyFor(email, PreferencesKey);
     }
 
     public async Task<UserPreferences> GetAsync(CancellationToken cancellationToken = default)

@@ -1,0 +1,8 @@
+<MudText Typo="Typo.h4">@Title</MudText>
+<MudText Class="mb-2">@Message</MudText>
+<MudButton Href="/auth/login" Target="_self" Variant="Variant.Filled" Color="Color.Primary">Log in</MudButton>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Message { get; set; } = string.Empty;
+}

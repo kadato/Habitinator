@@ -34,7 +34,7 @@
         <MudStack Spacing="2">
             <MudText Typo="Typo.subtitle1" Class="mb-1">Export your data</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
-                Download everything Habitinator stores for your account — board items and activity history - as a JSON file.
+                Download everything Habitinator stores for your account as a JSON file, including board items and activity history.
             </MudText>
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="_exporting" OnClick="ExportDataAsync">
                 Export data (JSON)
@@ -73,9 +73,7 @@
         try
         {
             var data = await Export.ExportAsync();
-            var json = System.Text.Json.JsonSerializer.Serialize(
-                data,
-                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            var json = System.Text.Json.JsonSerializer.Serialize(data, JsonDefaults.Export);
             var fileName = $"habitinator-export-{data.ExportedAtUtc:yyyyMMdd-HHmm}.json";
 
             bool downloaded;

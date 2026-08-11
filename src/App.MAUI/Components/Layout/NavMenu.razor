@@ -1,6 +1,7 @@
 @implements IDisposable
 @inject NavigationManager Nav
 @inject IApiSession Session
+@using global::App.Shared.RCL.Components.Layout
 
 @{
     var navClass = "";
@@ -65,25 +66,7 @@ else
 
     private bool IsActivePath(string path, NavLinkMatch match)
     {
-        var rel = Nav.ToBaseRelativePath(Nav.Uri).TrimStart('/').TrimEnd('/');
-        var p = path.TrimStart('/').TrimEnd('/');
-
-        if (match == NavLinkMatch.All)
-        {
-            if (string.IsNullOrEmpty(p))
-            {
-                return string.IsNullOrEmpty(rel);
-            }
-
-            return string.Equals(rel, p, StringComparison.OrdinalIgnoreCase);
-        }
-
-        if (string.IsNullOrEmpty(p))
-        {
-            return true;
-        }
-
-        return rel.StartsWith(p, StringComparison.OrdinalIgnoreCase);
+        return NavMenuPaths.IsActivePath(Nav.ToBaseRelativePath(Nav.Uri), path, match);
     }
 
     private RenderFragment MobileNavItem(string href, string path, NavLinkMatch match, string icon, string label) => __builder =>

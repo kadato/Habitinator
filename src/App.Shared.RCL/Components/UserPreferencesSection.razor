@@ -115,7 +115,7 @@
                     <MudItem xs="12" sm="6">
                         <MudNumericField T="int" Label="Sessions before long break"
                                          Variant="Variant.Outlined" dense="true"
-                                         Min="1" Max="20"
+                                         Min="1" Max="12"
                                          Value="_model.PomodoroCyclesBeforeLongBreak"
                                          ValueChanged="OnCyclesChanged"
                                          Immediate="true"
@@ -289,21 +289,9 @@
         TimeZoneService.SetOverride(_model?.TimeZoneOverrideId);
     }
 
-    private UserPreferences Clone(UserPreferences s)
+    private static UserPreferences Clone(UserPreferences s)
     {
-        return new UserPreferences
-        {
-            DateFormat = s.DateFormat,
-            DayStartLocalTime = s.DayStartLocalTime,
-            TimeZoneOverrideId = s.TimeZoneOverrideId,
-            DisplayName = s.DisplayName,
-            Theme = s.Theme,
-            PomodoroWorkDurationMinutes = s.PomodoroWorkDurationMinutes,
-            PomodoroShortBreakMinutes = s.PomodoroShortBreakMinutes,
-            PomodoroLongBreakMinutes = s.PomodoroLongBreakMinutes,
-            PomodoroCyclesBeforeLongBreak = s.PomodoroCyclesBeforeLongBreak,
-            EnableKeyboardShortcuts = s.EnableKeyboardShortcuts
-        };
+        return UserPreferencesJson.DeserializeOrDefault(UserPreferencesJson.Serialize(s));
     }
 
     private async Task AutoSaveAsync()
@@ -324,7 +312,7 @@
     private void OnDisplayNameChanged(string value)
     {
         if (_model is null) return;
-        // Strip Zalgo characters silently before storing — the sanitised value is
+        // Strip Zalgo characters silently before storing - the sanitised value is
         // what the user will see after blur, which makes the effect self-evident.
         var sanitized = ZalgoSanitizer.Sanitize(value);
         _displayName = sanitized ?? string.Empty;
@@ -413,26 +401,36 @@
 
     private void OnWorkDurationChanged(int value)
     {
-        if (_model is null) return;
-        _model.PomodoroWorkDurationMinutes = Math.Clamp(value, 1, 180);
+        var model = _model;
+        if (model is null) return;
+        ClampPomodoroValue(v => model.PomodoroWorkDurationMinutes = v, 1, 180, value);
     }
 
     private void OnShortBreakChanged(int value)
     {
-        if (_model is null) return;
-        _model.PomodoroShortBreakMinutes = Math.Clamp(value, 1, 60);
+        var model = _model;
+        if (model is null) return;
+        ClampPomodoroValue(v => model.PomodoroShortBreakMinutes = v, 1, 60, value);
     }
 
     private void OnLongBreakChanged(int value)
     {
-        if (_model is null) return;
-        _model.PomodoroLongBreakMinutes = Math.Clamp(value, 1, 120);
+        var model = _model;
+        if (model is null) return;
+        ClampPomodoroValue(v => model.PomodoroLongBreakMinutes = v, 1, 120, value);
     }
 
     private void OnCyclesChanged(int value)
     {
+        var model = _model;
+        if (model is null) return;
+        ClampPomodoroValue(v => model.PomodoroCyclesBeforeLongBreak = v, 1, 12, value);
+    }
+
+    private void ClampPomodoroValue(Action<int> set, int min, int max, int value)
+    {
         if (_model is null) return;
-        _model.PomodoroCyclesBeforeLongBreak = Math.Clamp(value, 1, 20);
+        set(Math.Clamp(value, min, max));
     }
 
     private bool ValidateInputs()
@@ -442,6 +440,8 @@
         _dayStartError = null;
 
         if (_model is null) return false;
+
+        _model.Normalize();
 
         if (!string.IsNullOrWhiteSpace(_model.DisplayName) && _model.DisplayName.Length > 40)
         {
@@ -455,11 +455,6 @@
         catch (FormatException)
         {
             _dateFormatError = "Date format is not valid.";
-        }
-
-        if (_model.DayStartLocalTime < TimeSpan.Zero || _model.DayStartLocalTime >= TimeSpan.FromDays(1))
-        {
-            _dayStartError = "Day start must be within a single day (00:00 - 23:59).";
         }
 
         return _displayNameError is null && _dateFormatError is null && _dayStartError is null;

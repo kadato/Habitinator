@@ -97,19 +97,19 @@
                 <MudSwitch T="bool"
                            Color="Color.Primary"
                            Value="_model.ShowSuccessToasts"
-                           ValueChanged="v => { _model.ShowSuccessToasts = v; _ = AutoSaveAsync(); }"
+                           ValueChanged="OnShowSuccessToastsChanged"
                            Disabled="!_model.InAppMessagesEnabled"
                            Label="Show success messages"/>
                 <MudSwitch T="bool"
                            Color="Color.Primary"
                            Value="_model.ShowWarningToasts"
-                           ValueChanged="v => { _model.ShowWarningToasts = v; _ = AutoSaveAsync(); }"
+                           ValueChanged="OnShowWarningToastsChanged"
                            Disabled="!_model.InAppMessagesEnabled"
                            Label="Show warnings"/>
                 <MudSwitch T="bool"
                            Color="Color.Primary"
                            Value="_model.ShowErrorToasts"
-                           ValueChanged="v => { _model.ShowErrorToasts = v; _ = AutoSaveAsync(); }"
+                           ValueChanged="OnShowErrorToastsChanged"
                            Disabled="!_model.InAppMessagesEnabled"
                            Label="Show errors"/>
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
@@ -156,7 +156,7 @@
                 <MudSwitch T="bool"
                            Color="Color.Primary"
                            Value="_model.FocusTimerAlertsEnabled"
-                           ValueChanged="v => { _model.FocusTimerAlertsEnabled = v; _ = AutoSaveAsync(); }"
+                           ValueChanged="OnFocusTimerAlertsEnabledChanged"
                            Label="Focus timer alerts"/>
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
                     When the session timer reaches the duration you set on the board, shows a dialog (and optional sound or browser notification). Leave the duration empty for a plain stopwatch with no alert.
@@ -164,7 +164,7 @@
                 <MudSwitch T="bool"
                            Color="Color.Primary"
                            Value="_model.SyncFailureAlertsEnabled"
-                           ValueChanged="v => { _model.SyncFailureAlertsEnabled = v; _ = AutoSaveAsync(); }"
+                           ValueChanged="OnSyncFailureAlertsEnabledChanged"
                            Label="Sync / offline issue alerts"/>
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
                     Get alerted when the app cannot reach the server, data failed to sync, or you are working offline, when that detection is available.
@@ -172,7 +172,7 @@
                 <MudSwitch T="bool"
                            Color="Color.Primary"
                            Value="_model.SoundEnabledForDeviceNotifications"
-                           ValueChanged="v => { _model.SoundEnabledForDeviceNotifications = v; _ = AutoSaveAsync(); }"
+                           ValueChanged="OnSoundEnabledForDeviceNotificationsChanged"
                            Label="Sound for device notifications(mobile)"/>
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
                     Plays a sound with push or system notifications on a phone or tablet, in addition to any on-screen alert.
@@ -282,35 +282,32 @@
 
     private Task OnInAppChanged(bool v)
     {
-        if (_model is null)
-        {
-            return Task.CompletedTask;
-        }
+        return SetAndSaveAsync(m => m.InAppMessagesEnabled = v);
+    }
 
-        _model.InAppMessagesEnabled = v;
-        return AutoSaveAsync();
+    private Task OnShowSuccessToastsChanged(bool v)
+    {
+        return SetAndSaveAsync(m => m.ShowSuccessToasts = v);
+    }
+
+    private Task OnShowWarningToastsChanged(bool v)
+    {
+        return SetAndSaveAsync(m => m.ShowWarningToasts = v);
+    }
+
+    private Task OnShowErrorToastsChanged(bool v)
+    {
+        return SetAndSaveAsync(m => m.ShowErrorToasts = v);
     }
 
     private Task OnToastDurationChanged(NotificationToastDuration v)
     {
-        if (_model is null)
-        {
-            return Task.CompletedTask;
-        }
-
-        _model.ToastDuration = v;
-        return AutoSaveAsync();
+        return SetAndSaveAsync(m => m.ToastDuration = v);
     }
 
     private Task OnDailyReminderEnabledChanged(bool v)
     {
-        if (_model is null)
-        {
-            return Task.CompletedTask;
-        }
-
-        _model.DailyReminderEnabled = v;
-        return AutoSaveAsync();
+        return SetAndSaveAsync(m => m.DailyReminderEnabled = v);
     }
 
     private Task OnDailyReminderTimeChanged(TimeSpan? t)
@@ -321,19 +318,27 @@
         }
 
         _dailyReminderTime = t;
-        _model.DailyReminderTime = t;
-        return AutoSaveAsync();
+        return SetAndSaveAsync(m => m.DailyReminderTime = t);
     }
 
     private Task OnQuietHoursEnabledChanged(bool v)
     {
-        if (_model is null)
-        {
-            return Task.CompletedTask;
-        }
+        return SetAndSaveAsync(m => m.QuietHoursEnabled = v);
+    }
 
-        _model.QuietHoursEnabled = v;
-        return AutoSaveAsync();
+    private Task OnFocusTimerAlertsEnabledChanged(bool v)
+    {
+        return SetAndSaveAsync(m => m.FocusTimerAlertsEnabled = v);
+    }
+
+    private Task OnSyncFailureAlertsEnabledChanged(bool v)
+    {
+        return SetAndSaveAsync(m => m.SyncFailureAlertsEnabled = v);
+    }
+
+    private Task OnSoundEnabledForDeviceNotificationsChanged(bool v)
+    {
+        return SetAndSaveAsync(m => m.SoundEnabledForDeviceNotifications = v);
     }
 
     private Task OnQuietStartChanged(TimeSpan? t)
@@ -345,10 +350,9 @@
 
         _quietStart = t;
         // Convert local time to UTC for storage
-        _model.QuietHoursStartUtc = t.HasValue
+        return SetAndSaveAsync(m => m.QuietHoursStartUtc = t.HasValue
             ? TimeZoneService.ConvertLocalTimeToUtc(t.Value)
-            : null;
-        return AutoSaveAsync();
+            : null);
     }
 
     private Task OnQuietEndChanged(TimeSpan? t)
@@ -360,9 +364,19 @@
 
         _quietEnd = t;
         // Convert local time to UTC for storage
-        _model.QuietHoursEndUtc = t.HasValue
+        return SetAndSaveAsync(m => m.QuietHoursEndUtc = t.HasValue
             ? TimeZoneService.ConvertLocalTimeToUtc(t.Value)
-            : null;
+            : null);
+    }
+
+    private Task SetAndSaveAsync(Action<NotificationSettings> mutate)
+    {
+        if (_model is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        mutate(_model);
         return AutoSaveAsync();
     }
 

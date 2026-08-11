@@ -75,6 +75,7 @@
     gap: var(--stats-grid-gap);
     flex: 0 0 auto;
     min-width: max-content;
+    padding-left: 4px;
     padding-right: 12px;
 }
 

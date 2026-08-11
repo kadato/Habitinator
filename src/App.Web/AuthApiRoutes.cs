@@ -46,31 +46,33 @@ internal static class AuthApiRoutes
 
     private static async Task<IResult> RegisterAsync(
         RegisterRequest request,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        ApplicationDbContext dbContext,
+        IBoardChangeNotifier notifier,
+        ILoggerFactory loggerFactory)
     {
-        if (!RegistrationEmailValidation.IsValid(request.Email))
+        var (user, createResult) = await CreateUserCoreAsync(userManager, request.Email, request.Password);
+        if (user is null)
         {
-            return Results.BadRequest<IEnumerable<string>>(["Enter a valid email address."]);
+            if (createResult is null)
+            {
+                return Results.BadRequest<IEnumerable<string>>(["Enter a valid email address."]);
+            }
+
+            return Results.BadRequest(MapRegistrationErrorsToUserFacing(createResult.Errors));
         }
 
-        var user = new ApplicationUser
-        {
-            UserName = request.Email,
-            Email = request.Email
-        };
-
-        var result = await userManager.CreateAsync(user, request.Password);
-        if (!result.Succeeded)
-        {
-            return Results.BadRequest(MapRegistrationErrorsToUserFacing(result.Errors));
-        }
+        await SeedNewUserBoardAsync(dbContext, notifier, user.Id, loggerFactory);
 
         return Results.Ok(new { message = "Registration successful." });
     }
 
     private static async Task<IResult> RegisterFormAsync(
         HttpContext httpContext,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        ApplicationDbContext dbContext,
+        IBoardChangeNotifier notifier,
+        ILoggerFactory loggerFactory)
     {
         var form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
         var email = form["Email"].ToString();
@@ -81,9 +83,28 @@ internal static class AuthApiRoutes
             return Results.LocalRedirect("/auth/register?error=1");
         }
 
+        var (user, createResult) = await CreateUserCoreAsync(userManager, email, password);
+        if (user is null)
+        {
+            var retry = createResult is null
+                ? "?error=1"
+                : $"?error=1&email={Uri.EscapeDataString(email)}";
+            return Results.LocalRedirect($"/auth/register{retry}");
+        }
+
+        await SeedNewUserBoardAsync(dbContext, notifier, user.Id, loggerFactory);
+
+        return Results.LocalRedirect("/auth/login?registered=1");
+    }
+
+    private static async Task<(ApplicationUser? User, IdentityResult? CreateResult)> CreateUserCoreAsync(
+        UserManager<ApplicationUser> userManager,
+        string email,
+        string password)
+    {
         if (!RegistrationEmailValidation.IsValid(email))
         {
-            return Results.LocalRedirect("/auth/register?error=1");
+            return (null, null);
         }
 
         var user = new ApplicationUser
@@ -93,13 +114,7 @@ internal static class AuthApiRoutes
         };
 
         var result = await userManager.CreateAsync(user, password);
-        if (!result.Succeeded)
-        {
-            var retry = $"?error=1&email={Uri.EscapeDataString(email)}";
-            return Results.LocalRedirect("/auth/register" + retry);
-        }
-
-        return Results.LocalRedirect("/auth/login?registered=1");
+        return result.Succeeded ? (user, null) : (null, result);
     }
 
     private static async Task<IResult> LoginAsync(
@@ -133,20 +148,12 @@ internal static class AuthApiRoutes
     private static async Task<IResult> GuestJwtLoginAsync(
         HttpContext httpContext,
         SignInManager<ApplicationUser> signInManager,
-        UserManager<ApplicationUser> userManager,
         JwtTokenService jwtTokenService,
         IOptions<DemoUserOptions> demoOptions,
         ILoggerFactory loggerFactory)
     {
         var logger = loggerFactory.CreateLogger("AuthApiRoutes");
-        var email = demoOptions.Value.Email;
-        var user = await userManager.FindByEmailAsync(email);
-        if (user is null)
-        {
-            await TryRecoverDemoGuestAsync(httpContext.RequestServices, logger, httpContext.RequestAborted);
-            user = await userManager.FindByEmailAsync(email);
-        }
-
+        var user = await FindOrRecoverDemoGuestAsync(httpContext.RequestServices, logger, httpContext.RequestAborted);
         if (user is null)
         {
             return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
@@ -170,19 +177,10 @@ internal static class AuthApiRoutes
     private static async Task<IResult> GuestLoginAsync(
         HttpContext httpContext,
         SignInManager<ApplicationUser> signInManager,
-        UserManager<ApplicationUser> userManager,
-        IOptions<DemoUserOptions> demoOptions,
         ILoggerFactory loggerFactory)
     {
         var logger = loggerFactory.CreateLogger("AuthApiRoutes");
-        var email = demoOptions.Value.Email;
-        var guestUser = await userManager.FindByEmailAsync(email);
-        if (guestUser is null)
-        {
-            await TryRecoverDemoGuestAsync(httpContext.RequestServices, logger, httpContext.RequestAborted);
-            guestUser = await userManager.FindByEmailAsync(email);
-        }
-
+        var guestUser = await FindOrRecoverDemoGuestAsync(httpContext.RequestServices, logger, httpContext.RequestAborted);
         if (guestUser is null)
         {
             return Results.LocalRedirect("/auth/login?guest=missing");
@@ -339,6 +337,23 @@ internal static class AuthApiRoutes
                 "Username", "Email", StringComparison.OrdinalIgnoreCase)
         })];
 
+    private static async Task<ApplicationUser?> FindOrRecoverDemoGuestAsync(
+        IServiceProvider services,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+        var email = services.GetRequiredService<IOptions<DemoUserOptions>>().Value.Email;
+        var user = await userManager.FindByEmailAsync(email);
+        if (user is null)
+        {
+            await TryRecoverDemoGuestAsync(services, logger, cancellationToken);
+            user = await userManager.FindByEmailAsync(email);
+        }
+
+        return user;
+    }
+
     private static async Task TryRecoverDemoGuestAsync(IServiceProvider services, ILogger logger, CancellationToken cancellationToken = default)
     {
         try
@@ -348,6 +363,23 @@ internal static class AuthApiRoutes
         catch (Exception ex)
         {
             logger.LogWarning(ex, "On-demand demo data seeding failed.");
+        }
+    }
+
+    private static async Task SeedNewUserBoardAsync(
+        ApplicationDbContext db,
+        IBoardChangeNotifier notifier,
+        Guid userId,
+        ILoggerFactory loggerFactory)
+    {
+        try
+        {
+            await NewUserBoardSeeder.SeedIfMissingAsync(db, notifier, userId);
+        }
+        catch (Exception ex)
+        {
+            loggerFactory.CreateLogger("AuthApiRoutes").LogWarning(ex,
+                "Failed to seed the getting-started board for new user {UserId}.", userId);
         }
     }
 }

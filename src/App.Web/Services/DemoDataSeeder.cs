@@ -19,6 +19,21 @@ public static class DemoDataSeeder
         var notifier = scope.ServiceProvider.GetRequiredService<IBoardChangeNotifier>();
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DemoDataSeeder");
 
+        await EnsureMigrationsAsync(configuration, logger, cancellationToken);
+
+        var demo = options.Value;
+        var guest = await CreateOrResetGuestAsync(userManager, dbContext, demo, notifier, logger, cancellationToken);
+        if (guest is null)
+        {
+            return;
+        }
+
+        await SeedModesAsync(demo, guest, dbContext, notifier, logger, cancellationToken);
+    }
+
+    private static async Task EnsureMigrationsAsync(IConfiguration configuration, ILogger logger,
+        CancellationToken cancellationToken)
+    {
         var primaryCs = PostgresResilienceConnectionString.EnsureColdStartTimeouts(
             PostgresMigrationConnectionStrings.ResolvePrimary(configuration));
         var migrationCs = PostgresResilienceConnectionString.EnsureColdStartTimeouts(
@@ -41,8 +56,16 @@ public static class DemoDataSeeder
             },
             logger,
             cancellationToken);
+    }
 
-        var demo = options.Value;
+    private static async Task<ApplicationUser?> CreateOrResetGuestAsync(
+        UserManager<ApplicationUser> userManager,
+        ApplicationDbContext dbContext,
+        DemoUserOptions demo,
+        IBoardChangeNotifier notifier,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
         var guest = await userManager.FindByEmailAsync(demo.Email);
         if (guest is null)
         {
@@ -60,8 +83,11 @@ public static class DemoDataSeeder
                 var reasons = string.Join("; ", createResult.Errors.Select(x => x.Description));
                 throw new InvalidOperationException($"Failed to create demo guest user: {reasons}");
             }
+
+            return guest;
         }
-        else if (demo.ForceReseed)
+
+        if (demo.ForceReseed)
         {
             // Reset to configured password so the demo login always matches config after a reseed.
             var token = await userManager.GeneratePasswordResetTokenAsync(guest);
@@ -89,9 +115,20 @@ public static class DemoDataSeeder
             logger.LogWarning(
                 "Demo guest reseeded (ForceReseed). Turn off {Section}:{Flag} in configuration or environment when finished.",
                 DemoUserOptions.SectionName, nameof(demo.ForceReseed));
-            return;
+            return null;
         }
 
+        return guest;
+    }
+
+    private static async Task SeedModesAsync(
+        DemoUserOptions demo,
+        ApplicationUser guest,
+        ApplicationDbContext dbContext,
+        IBoardChangeNotifier notifier,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
         if (demo.ForceReseedActivity)
         {
             try
@@ -125,20 +162,12 @@ public static class DemoDataSeeder
     private static async Task ClearGuestDataAsync(ApplicationDbContext db, Guid guestUserId,
         CancellationToken cancellationToken)
     {
-        var events = await db.UserActivityEvents.Where(e => e.UserId == guestUserId).ToListAsync(cancellationToken);
-        if (events.Count > 0)
-        {
-            db.UserActivityEvents.RemoveRange(events);
-        }
+        await DemoGuestSeeder.RemoveAllActivityEventsAsync(db, guestUserId, cancellationToken);
 
         var items = await db.BoardItems.Where(b => b.UserId == guestUserId).ToListAsync(cancellationToken);
         if (items.Count > 0)
         {
             db.BoardItems.RemoveRange(items);
-        }
-
-        if (events.Count > 0 || items.Count > 0)
-        {
             await db.SaveChangesAsync(cancellationToken);
         }
     }

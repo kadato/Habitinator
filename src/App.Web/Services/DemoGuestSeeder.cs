@@ -47,8 +47,7 @@ public static class DemoGuestSeeder
         Guid guestUserId,
         CancellationToken cancellationToken = default)
     {
-        if (await db.BoardItems.AnyAsync(
-                x => x.UserId == guestUserId && x.DeletedAtUtc == null && !x.IsArchived, cancellationToken))
+        if (await BoardSeedHelpers.HasLiveBoardItemsAsync(db, guestUserId, cancellationToken))
         {
             return;
         }
@@ -111,15 +110,7 @@ public static class DemoGuestSeeder
         ]);
 
         var order = 0;
-        void AddBoardRow(BoardItemEntity row)
-        {
-            var seq = order++;
-            row.SortOrder = seq + 1.0;
-            var t = utcNow.AddSeconds(seq);
-            row.CreatedAtUtc = t;
-            row.UpdatedAtUtc = t;
-            db.BoardItems.Add(row);
-        }
+        void AddBoardRow(BoardItemEntity row) => BoardSeedHelpers.AddBoardRow(db, row, ref order, utcNow);
 
         AddBoardRow(new BoardItemEntity
         {
@@ -160,6 +151,7 @@ public static class DemoGuestSeeder
             UserId = guestUserId,
             Section = BoardSection.Daily,
             Title = "Workout",
+            Notes = "Completing a daily grows your streak - see the flame in the card footer. Miss a day and it resets.",
             Tags = "health, body",
             ChecklistJson = workoutCheck,
             IsCompleted = false,
@@ -174,6 +166,7 @@ public static class DemoGuestSeeder
             UserId = guestUserId,
             Section = BoardSection.Daily,
             Title = "Deep work block",
+            Notes = "Try the focus timer in the toolbar - finished sessions count toward your statistics.",
             Tags = "focus, work",
             ChecklistJson = deepCheck,
             IsCompleted = true,
@@ -188,6 +181,7 @@ public static class DemoGuestSeeder
             UserId = guestUserId,
             Section = BoardSection.Daily,
             Title = "Water the plants",
+            Notes = "Weekly schedule - due every week from its start date. Change it in the edit dialog.",
             Tags = "home, health",
             ChecklistJson = plantsCheck,
             IsCompleted = false,
@@ -216,6 +210,7 @@ public static class DemoGuestSeeder
             UserId = guestUserId,
             Section = BoardSection.Todo,
             Title = "Buy groceries",
+            Notes = "Open the card to edit the subtasks or set a due date.",
             Tags = "home, errands",
             ChecklistJson = groceriesSub,
             IsCompleted = false,
@@ -227,7 +222,7 @@ public static class DemoGuestSeeder
             UserId = guestUserId,
             Section = BoardSection.Todo,
             Title = "Submit project draft",
-            Notes = "Due in a few days — open the card to set another due date or subtasks.",
+            Notes = "Due in a few days. Open the card to set another due date or subtasks.",
             Tags = "school, focus",
             IsCompleted = false,
             DailyStartDate = UtcDay(today.AddDays(3))
@@ -238,6 +233,7 @@ public static class DemoGuestSeeder
             UserId = guestUserId,
             Section = BoardSection.Todo,
             Title = "Skincare routine (evening)",
+            Notes = "Subtasks stay on the card - tick each one off as you go.",
             Tags = "health, personal",
             ChecklistJson = skincareSub,
             IsCompleted = false,
@@ -249,6 +245,7 @@ public static class DemoGuestSeeder
             UserId = guestUserId,
             Section = BoardSection.Todo,
             Title = "Return library books",
+            Notes = "Overdue? The due date badge turns red. Open the card to move it.",
             Tags = "school, errands",
             IsCompleted = false,
             DailyStartDate = UtcDay(today.AddDays(-2))
@@ -270,9 +267,22 @@ public static class DemoGuestSeeder
             UserId = guestUserId,
             Section = BoardSection.Todo,
             Title = "File expense report",
+            Notes = "Completed to-dos stay on the board - archive this one from the options menu when done.",
             Tags = "work",
             IsCompleted = true,
             DailyStartDate = UtcDay(today.AddDays(-1))
+        });
+        AddBoardRow(new BoardItemEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = guestUserId,
+            Section = BoardSection.Todo,
+            Title = "Weekly review",
+            Notes = "Recurring to-do - completing it moves the due date forward by a week.",
+            Tags = "work, planning",
+            IsCompleted = false,
+            DailyStartDate = UtcDay(today.AddDays(1)),
+            TodoRepeatIntervalDays = 7
         });
 
         for (var i = 0; i < 3; i++)
@@ -299,14 +309,22 @@ public static class DemoGuestSeeder
         Guid guestUserId,
         CancellationToken cancellationToken = default)
     {
-        var existing = await db.UserActivityEvents.Where(e => e.UserId == guestUserId).ToListAsync(cancellationToken);
+        await RemoveAllActivityEventsAsync(db, guestUserId, cancellationToken);
+
+        await SeedDemoActivityCoreAsync(db, guestUserId, cancellationToken);
+    }
+
+    internal static async Task RemoveAllActivityEventsAsync(
+        ApplicationDbContext db,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var existing = await db.UserActivityEvents.Where(e => e.UserId == userId).ToListAsync(cancellationToken);
         if (existing.Count > 0)
         {
             db.UserActivityEvents.RemoveRange(existing);
             await db.SaveChangesAsync(cancellationToken);
         }
-
-        await SeedDemoActivityCoreAsync(db, guestUserId, cancellationToken);
     }
 
     private static async Task SeedDemoActivityIfMissingAsync(

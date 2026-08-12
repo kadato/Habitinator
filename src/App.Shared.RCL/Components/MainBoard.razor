@@ -769,6 +769,10 @@
             {
                 _ = CompleteDailiesInBackgroundAsync(ids, yesterdayDate);
             }
+            else
+            {
+                await RefreshStreaksAsync();
+            }
         }
         catch (Exception)
         {
@@ -857,13 +861,20 @@
         try
         {
             var streaks = await BoardDataService.GetStreakMapAsync();
+            var anyChanged = false;
             for (var i = 0; i < Dailies.Count; i++)
             {
                 var daily = Dailies[i];
                 if (streaks.TryGetValue(daily.Id, out var s) && s != daily.Counter)
                 {
                     Dailies[i] = daily with { Counter = s };
+                    anyChanged = true;
                 }
+            }
+
+            if (anyChanged)
+            {
+                await InvokeAsync(StateHasChanged);
             }
         }
         catch (Exception)

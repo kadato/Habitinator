@@ -1,5 +1,6 @@
 @inject IUserNotifier Notifier
 @inject IUserDateFormatService DateFormatService
+@inject IDialogService DialogService
 
 <MudDialog Class="edit-daily-dialog"
            ContentClass="edit-daily-dialog__content"
@@ -14,6 +15,11 @@
                           OnSave="SaveAsync"/>
 
         <div class="edit-daily-body">
+            <button type="button" class="edit-daily-heatmap-btn" @onclick="OpenHeatmapDialogAsync">
+                <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" Class="edit-daily-heatmap-btn__icon" />
+                <span>View Heatmap</span>
+            </button>
+
             <ChecklistEditor @bind-Value="_checklistRows"/>
 
             <MudText Typo="Typo.caption" Class="edit-daily-label-body d-block mb-1 mt-2">Start date</MudText>
@@ -108,14 +114,12 @@
         await DateFormatService.InitializeAsync();
         _title = Item.Title;
         _notes = Item.Notes;
-        _tags = string.Join(", ", BoardTagUtil.ParseTags(Item.Tags));
+        _tags = EditDialogHelpers.FormatTags(Item.Tags);
         _counter = Item.Counter;
         _startDate = Item.DailyStartDate?.ToDateTime(TimeOnly.MinValue) ?? DateTime.Today;
         _repeat = Item.DailyRepeat;
         _repeatInterval = Item.DailyRepeatInterval < 1 ? 1 : Item.DailyRepeatInterval;
-        _checklistRows = DailyChecklistJson.Parse(Item.ChecklistJson)
-            .Select(x => new ChecklistRow { Id = x.Id, Text = x.Text, IsDone = x.IsDone })
-            .ToList();
+        _checklistRows = EditDialogHelpers.ParseChecklistRows(Item.ChecklistJson);
     }
 
     private void OnShellClick()
@@ -166,13 +170,13 @@
             return;
         }
 
-        var tagsPayload = string.IsNullOrWhiteSpace(_tags) ? null : _tags;
-        var checklistPayload = DailyChecklistJson.Serialize(ChecklistRow.ToChecklistModel(_checklistRows));
+        var tagsPayload = EditDialogHelpers.CleanStringPayload(_tags);
+        var checklistPayload = EditDialogHelpers.SerializeChecklistRows(_checklistRows);
         var start = DateOnly.FromDateTime(_startDate.Value);
         var result = new EditDailyDialogResult(
             EditDialogAction.Save,
             _title.Trim(),
-            string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim(),
+            EditDialogHelpers.CleanStringPayload(_notes),
             tagsPayload,
             start,
             _repeat,
@@ -199,5 +203,21 @@
             "", null, null, default, default, 0, "", 0
         );
         MudDialog.Close(DialogResult.Ok(result));
+    }
+
+    private async Task OpenHeatmapDialogAsync()
+    {
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+        var parameters = new DialogParameters<DailyHeatmapDialog>
+        {
+            { x => x.BoardItemId, Item.Id },
+            { x => x.Title, string.IsNullOrWhiteSpace(_title) ? Item.Title : _title }
+        };
+        await DialogService.ShowAsync<DailyHeatmapDialog>(string.Empty, parameters, options);
     }
 }

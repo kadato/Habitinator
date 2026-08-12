@@ -1,0 +1,206 @@
+@namespace App.Shared.RCL.Components.Dialogs
+@using App.Shared.RCL.Models
+@using App.Shared.RCL.Services
+@using Microsoft.JSInterop
+@inject IActivityStatisticsReader Stats
+@inject IUserTimeZoneService TimeZoneService
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+@inject IUserDateFormatService DateFormatService
+
+<MudDialog Class="daily-heatmap-dialog"
+           ContentClass="daily-heatmap-dialog__content"
+           Style="width: min(36rem, calc(100vw - 2rem));">
+    <DialogContent>
+        <div class="daily-heatmap-shell">
+            <div class="daily-heatmap-header pa-4 border-b">
+                <div class="d-flex align-center justify-space-between">
+                    <MudText Typo="Typo.h6" Class="font-weight-bold ma-0">@Title</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="Close" aria-label="Close heatmap"/>
+                </div>
+
+                @if (_periodOptions.Count > 0)
+                {
+                    <div class="mt-2">
+                        <MudSelect T="string"
+                                   Value="_selectedPeriodKey"
+                                   ValueChanged="OnPeriodChangedAsync"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Dense="true"
+                                   Class="daily-heatmap-period-select mb-2"
+                                   AnchorOrigin="Origin.BottomLeft"
+                                   TransformOrigin="Origin.TopLeft">
+                            @foreach (var opt in _periodOptions)
+                            {
+                                <MudSelectItem Value="@opt.Key">@opt.Label</MudSelectItem>
+                            }
+                        </MudSelect>
+
+                        <div>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text" Class="ma-0">
+                                @_completedCount completed in this period
+                            </MudChip>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="daily-heatmap-body pa-4">
+                @if (_loading)
+                {
+                    <div class="pa-4 text-center">
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-3" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Loading heatmap data...</MudText>
+                    </div>
+                }
+                else if (_error is not null)
+                {
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@_error</MudAlert>
+                }
+                else if (_graph is not null)
+                {
+                    <div class="daily-heatmap-grid-container">
+                        <StatsHeatmapGrid Columns="_graph.GridWeekColumns"
+                                          Cells="_cellIndex"
+                                          IsToday="@((r, c) => _cellIndex.TryGetValue((r, c), out var cell) && IsHeatmapToday(cell.Date))"
+                                          GetCellClass="@((r, c) => DailyHeatmapCellClass(_cellIndex[(r, c)]))"
+                                          GetCellTitle="@((r, c) => DailyHeatmapDayTitle(_cellIndex[(r, c)].Date, _cellIndex[(r, c)].Count))"
+                                          GetCellAriaLabel="@((r, c) => DailyHeatmapDayTitle(_cellIndex[(r, c)].Date, _cellIndex[(r, c)].Count))"
+                                          OnCellClick="OnCellClickAsync"/>
+                    </div>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-2">
+                        No heatmap history recorded for this daily yet.
+                    </MudText>
+                }
+            </div>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter] [EditorRequired] public Guid BoardItemId { get; set; }
+
+    [Parameter] public string Title { get; set; } = "Daily";
+
+    private string _selectedPeriodKey = DailyGraphPeriods.Rolling370Days;
+    private IReadOnlyList<DailyGraphPeriodOption> _periodOptions = [];
+    private DailyContributionGraphDto? _graph;
+    private Dictionary<(int R, int C), ActivityHeatmapCellDto> _cellIndex = [];
+    private bool _loading = true;
+    private string? _error;
+    private DateOnly _heatmapToday;
+    private int _completedCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await DateFormatService.InitializeAsync();
+        _heatmapToday = DailySchedule.LocalToday(TimeZoneService);
+        await LoadDataAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_graph is not null)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("scrollHeatmapsToEnd");
+            }
+            catch
+            {
+                // Ignore JS invocation failures in non-browser context
+            }
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var data = await Stats.GetDailyContributionsAsync(_selectedPeriodKey);
+            _periodOptions = data.PeriodOptions;
+            if (!string.IsNullOrEmpty(data.PeriodKey))
+            {
+                _selectedPeriodKey = data.PeriodKey;
+            }
+
+            _graph = data.Graphs.FirstOrDefault(g => g.BoardItemId == BoardItemId);
+            if (_graph is null && !string.IsNullOrWhiteSpace(Title))
+            {
+                _graph = data.Graphs.FirstOrDefault(g => string.Equals(g.Title, Title, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (_graph is not null)
+            {
+                _cellIndex = _graph.Heatmap.ToDictionary(x => (x.DayRow, x.WeekCol));
+                _completedCount = _graph.Heatmap.Count(x => x.InDataRange && x.Count > 0);
+            }
+            else
+            {
+                _cellIndex = [];
+                _completedCount = 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OnPeriodChangedAsync(string newPeriod)
+    {
+        _selectedPeriodKey = newPeriod;
+        await LoadDataAsync();
+    }
+
+    private bool IsHeatmapToday(DateOnly date) => date == _heatmapToday;
+
+    private string DailyHeatmapCellClass(ActivityHeatmapCellDto cell)
+    {
+        return $"stats-cell {(cell.Count > 0 ? "stats-daily-done" : "stats-daily-missed")}{(IsHeatmapToday(cell.Date) ? " stats-heatmap-day--today" : "")}";
+    }
+
+    private string DailyHeatmapDayTitle(DateOnly date, int count)
+    {
+        var status = count > 0 ? "Done" : "Not done";
+        var dateStr = DateFormatService.Format(date);
+        var baseTitle = $"{dateStr} · {status}";
+        return IsHeatmapToday(date) ? $"Today · {baseTitle}" : baseTitle;
+    }
+
+    private async Task OnCellClickAsync(int row, int col)
+    {
+        if (_cellIndex.TryGetValue((row, col), out var cell) && cell.InDataRange)
+        {
+            var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true,
+                CloseOnEscapeKey = true
+            };
+            var parameters = new DialogParameters<ActivityDayDetailDialog>
+            {
+                { x => x.Date, cell.Date }
+            };
+            var dateStr = DateFormatService.Format(cell.Date);
+            await DialogService.ShowAsync<ActivityDayDetailDialog>($"{cell.Date.DayOfWeek} · {dateStr}", parameters, options);
+        }
+    }
+
+    private void Close()
+    {
+        MudDialog.Cancel();
+    }
+}

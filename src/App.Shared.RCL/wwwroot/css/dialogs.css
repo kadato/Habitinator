@@ -716,3 +716,26 @@
     min-width: 0;
     line-height: 1.4;
 }
+
+/* ── View Heatmap action button ── */
+.edit-daily-heatmap-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    width: 100%;
+    padding: 0.6rem 0.85rem;
+    margin-bottom: var(--space-3);
+    background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-divider));
+    border-radius: var(--radius-lg);
+    color: var(--mud-palette-primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: none;
+    cursor: pointer;
+}
+
+.edit-daily-heatmap-btn__icon {
+    flex-shrink: 0;
+}

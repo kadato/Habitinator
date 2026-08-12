@@ -10,7 +10,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <AnalysisMode>All</AnalysisMode>
-    <NoWarn>$(NoWarn);CA1716;IDE0130;NU1605;CS1591;CS1573;CS1574;CS1587;CS1572;CS1570;CS0419</NoWarn>
+    <NoWarn>$(NoWarn);CA1716;IDE0130;NU1605;CS1591;CS1573;CS1574;CS1587;CS1572;CS1570;CS0419;BL0013</NoWarn>
     <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
     <RunAnalyzers>true</RunAnalyzers>
   </PropertyGroup>

@@ -24,8 +24,7 @@ public sealed class WebUserPreferencesService(
     {
         try
         {
-            var state = await authenticationStateProvider.GetAuthenticationStateAsync();
-            var userId = await currentUserAccessor.TryResolveAsync(state.User, cancellationToken);
+            var userId = await currentUserAccessor.TryResolveAsync(authenticationStateProvider, cancellationToken);
             if (userId is null)
             {
                 _cachedUserId = null;
@@ -85,8 +84,7 @@ public sealed class WebUserPreferencesService(
 
     public async Task SaveAsync(UserPreferences preferences, CancellationToken cancellationToken = default)
     {
-        var state = await authenticationStateProvider.GetAuthenticationStateAsync();
-        var userId = await currentUserAccessor.TryResolveAsync(state.User, cancellationToken);
+        var userId = await currentUserAccessor.TryResolveAsync(authenticationStateProvider, cancellationToken);
         if (userId is null)
         {
             return;

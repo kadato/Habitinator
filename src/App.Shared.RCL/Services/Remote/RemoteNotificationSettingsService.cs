@@ -38,11 +38,7 @@ public sealed class RemoteNotificationSettingsService : INotificationSettingsSer
 
     public event EventHandler? Changed;
 
-    private string GetKey()
-    {
-        var email = _sessionProvider.Email;
-        return string.IsNullOrEmpty(email) ? PreferencesKey : $"{PreferencesKey}_{email}";
-    }
+    private string GetKey() => LocalFirstRemoteStore.KeyFor(_sessionProvider.Email, PreferencesKey);
 
     public Task<NotificationSettings> GetAsync(CancellationToken cancellationToken = default)
     {

@@ -397,14 +397,14 @@
                   <div class="timer-pomodoro-info-field">
                       <MudField Label="Pomodoro session" Variant="Variant.Outlined" Margin="Margin.Dense" Class="timer-pomodoro-field-control" tabindex="-1">
                           <div class="timer-pomodoro-info-container" style="display: flex !important; align-items: center !important; justify-content: space-between !important; width: 100% !important; height: 100% !important; gap: 8px !important; white-space: nowrap !important; overflow: hidden !important;">
-                              <div class="timer-pomodoro-info-item timer-pomodoro-info-item--next" style="display: inline-flex !important; align-items: center !important; white-space: nowrap !important; flex-shrink: 0 !important;" title="Next Pomodoro: @GetNextPomodoroLabelAndDuration()">
+                              <div class="timer-pomodoro-info-item timer-pomodoro-info-item--next" style="display: inline-flex !important; align-items: center !important; white-space: nowrap !important; flex-shrink: 0 !important;" title="@GetNextPomodoroTitle()">
                                   <MudIcon Icon="@Icons.Material.Filled.ArrowCircleRight" Size="Size.Small" Class="mr-1 next-icon" />
                                   <span class="info-value next-value">@GetNextPomodoroLabelAndDuration()</span>
                               </div>
                               <div class="timer-pomodoro-info-divider"></div>
-                              <div class="timer-pomodoro-info-item timer-pomodoro-info-item--done" style="display: inline-flex !important; align-items: center !important; white-space: nowrap !important; flex-shrink: 0 !important;" title="Completed: @TimerService.CompletedWorkIntervalsCount overall, @GetCompletedInCurrentCycle() of @TimerService.IntervalsBeforeLongBreak in current cycle">
+                              <div class="timer-pomodoro-info-item timer-pomodoro-info-item--done" style="display: inline-flex !important; align-items: center !important; white-space: nowrap !important; flex-shrink: 0 !important;" title="@GetCompletedPomodoroTitle()">
                                   <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1 done-icon" Color="Color.Success" />
-                                  <span class="info-value total-value">@TimerService.CompletedWorkIntervalsCount (@GetCompletedInCurrentCycle()/@TimerService.IntervalsBeforeLongBreak)</span>
+                                   <span class="info-value total-value">@TimerService.CompletedWorkIntervalsCount - @GetCompletedInCurrentCycle()/@TimerService.IntervalsBeforeLongBreak</span>
                               </div>
                           </div>
                       </MudField>
@@ -759,7 +759,7 @@
             _ => TimerService.WorkDuration
         };
 
-        return $"{nextState} ({GlobalTimerService.FormatTimeSpan(nextDuration)})";
+        return $"{nextState}: {GlobalTimerService.FormatTimeSpan(nextDuration)}";
     }
 
     private string GetPomodoroStatusLabel() => TimerService.StatusLabel;
@@ -804,6 +804,11 @@
             ToggleExpanded();
         }
     }
+
+    private string GetNextPomodoroTitle() => $"Next Pomodoro: {GetNextPomodoroLabelAndDuration()}";
+
+    private string GetCompletedPomodoroTitle() =>
+        $"Completed: {TimerService.CompletedWorkIntervalsCount} overall, {GetCompletedInCurrentCycle()} of {TimerService.IntervalsBeforeLongBreak} in current cycle";
 
     private void ToggleSettings()
     {

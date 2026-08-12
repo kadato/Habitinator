@@ -409,9 +409,9 @@ public partial class BoardColumn : IAsyncDisposable
     {
         return Section switch
         {
-            BoardSection.Habit => "Establish New Habits",
-            BoardSection.Daily => "Track Daily Routines",
-            BoardSection.Todo => "Capture To-Dos",
+            BoardSection.Habit => "No habits yet",
+            BoardSection.Daily => "No dailies yet",
+            BoardSection.Todo => "No to-dos yet",
             _ => "No items here yet"
         };
     }
@@ -420,10 +420,10 @@ public partial class BoardColumn : IAsyncDisposable
     {
         return Section switch
         {
-            BoardSection.Habit => "Habits are long-term routines you want to build or break. Log them continuously using the +/- buttons.",
-            BoardSection.Daily => "Dailies repeat on custom schedules (like daily or weekly). Check them off when completed for the day.",
-            BoardSection.Todo => "To-Dos are one-off tasks. Use them to manage specific deadlines, checklists, and single actions.",
-            _ => "Add an item above to get started."
+            BoardSection.Habit => "Add long-term habits to build or break. Log progress with + or -.",
+            BoardSection.Daily => "Add recurring routines. Check them off when done for the day.",
+            BoardSection.Todo => "Add single tasks. Set deadlines and checklists.",
+            _ => "Add an item above to start."
         };
     }
 
@@ -431,9 +431,9 @@ public partial class BoardColumn : IAsyncDisposable
     {
         return Section switch
         {
-            BoardSection.Habit => "Habits are long-term behaviors you want to build or break. They have +/− counters that track your performance over time without a final 'done' state.",
-            BoardSection.Daily => "Dailies are recurring tasks (daily, weekly, etc.). They reset automatically at midnight and must be checked off for each scheduled period to sustain your streak.",
-            BoardSection.Todo => "To-Dos are one-off tasks with specific due dates, checklist steps, and notes. They are marked complete once and remain on the board or in the archive.",
+            BoardSection.Habit => "Habits track long-term goals without a final done state. Use counters to log progress.",
+            BoardSection.Daily => "Dailies repeat on set schedules like daily or weekly. They reset at midnight. Check them off each period to keep your streak.",
+            BoardSection.Todo => "To-Dos are single tasks with due dates, checklists, and notes.",
             _ => string.Empty
         };
     }
@@ -442,9 +442,9 @@ public partial class BoardColumn : IAsyncDisposable
     {
         return Section switch
         {
-            BoardSection.Habit => "These are your habits. Use +/− to log a rep and undo. Click the title for notes and subtasks. The global timer can follow the habit you trigger.",
-            BoardSection.Daily => "Dailies are for recurring work. Use the square when you are done for today. Click the title to edit details, or the trash icon to delete.",
-            BoardSection.Todo => "To Do's are one-off. On Active, drag cards to reorder; Scheduled sorts by due date. Click the title to edit details.",
+            BoardSection.Habit => "Habits track long-term goals. Use + or - to log entries. Click title for notes.",
+            BoardSection.Daily => "Dailies repeat automatically. Check off when done for today. Click title for details.",
+            BoardSection.Todo => "To-Dos are single tasks. On Active, drag cards to reorder. Click title for details.",
             _ => string.Empty
         };
     }

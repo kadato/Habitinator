@@ -17,8 +17,7 @@ public sealed class WebNotificationSettingsService(
 
     public async Task<NotificationSettings> GetAsync(CancellationToken cancellationToken = default)
     {
-        var state = await authenticationStateProvider.GetAuthenticationStateAsync();
-        var userId = await currentUserAccessor.TryResolveAsync(state.User, cancellationToken);
+        var userId = await currentUserAccessor.TryResolveAsync(authenticationStateProvider, cancellationToken);
         if (userId is null)
         {
             return NotificationSettings.CreateDefault();
@@ -31,8 +30,7 @@ public sealed class WebNotificationSettingsService(
 
     public async Task SaveAsync(NotificationSettings settings, CancellationToken cancellationToken = default)
     {
-        var state = await authenticationStateProvider.GetAuthenticationStateAsync();
-        var userId = await currentUserAccessor.TryResolveAsync(state.User, cancellationToken);
+        var userId = await currentUserAccessor.TryResolveAsync(authenticationStateProvider, cancellationToken);
         if (userId is null)
         {
             return;

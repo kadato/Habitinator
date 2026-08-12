@@ -118,7 +118,7 @@
                             <div class="stats-weekly-tile">
                                 <span class="stats-weekly-tile__label">Events</span>
                                 <span class="stats-weekly-tile__value">@week.Events</span>
-                                <span class="stats-weekly-tile__delta @(week.PercentChange >= 0 ? "stats-weekly-tile__delta--up" : "stats-weekly-tile__delta--down")">
+                                <span class="@GetWeeklyDeltaClass(week.PercentChange)">
                                     @(week.PercentChange >= 0 ? "▲" : "▼") @Math.Abs(week.PercentChange)% vs last week
                                 </span>
                             </div>
@@ -168,14 +168,14 @@
                 <MudPaper Class="pa-4 stats-dashboard-card mt-4" Elevation="0" Outlined="true">
                     <MudText Typo="Typo.subtitle1" Class="font-weight-bold mb-1">All activity by week</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-3">
-                        @FormatRange(_data.WeekBarsRangeStart, _data.WeekBarsRangeEnd) · @(_data.WeekBars.Count) week(s)
+                        @FormatRange(_data.WeekBarsRangeStart, _data.WeekBarsRangeEnd) · @(_data.WeekBars.Count) @(_data.WeekBars.Count == 1 ? "week" : "weeks")
                     </MudText>
                     
                     <div class="stats-week-bars" style="--stats-week-bar-max: @(_weekBarMax == 0 ? 1 : _weekBarMax);">
                         @foreach (var w in _data.WeekBars)
                         {
                             var h = _weekBarMax == 0 ? 0 : (int)Math.Round(100.0 * w.EventCount / _weekBarMax);
-                            <div class="stats-week-bar-wrap" title="@($"{DateFormatService.Format(w.WeekStart)} week: {w.EventCount} events, {w.FocusMinutes} min focus")">
+                            <div class="stats-week-bar-wrap" title="@FormatWeekBarTooltip(w)">
                                 <div class="stats-week-bar" style="height: @(h)%"></div>
                             </div>
                         }
@@ -281,7 +281,7 @@
                                         <div class="stats-habit-block pa-3 border rounded mud-border-lines-default stats-block-bg">
                                             <div class="d-flex align-center justify-space-between gap-2 mb-2">
                                                 <MudText Typo="Typo.subtitle2" Class="font-weight-bold stats-habit-title ma-0">@habit.Title</MudText>
-                                                <span class="stats-habit-ratio" title="@habit.ActiveDayCount active day(s) of @habit.PeriodDayCount in this period">
+                                                <span class="stats-habit-ratio" title="@FormatHabitRatioTooltip(habit.ActiveDayCount, habit.PeriodDayCount)">
                                                     @HabitActiveRatioLabel(habit.ActiveDayCount, habit.PeriodDayCount)
                                                 </span>
                                             </div>
@@ -834,6 +834,18 @@
     }
 
     private string FormatRange(DateOnly from, DateOnly to) => $"{DateFormatService.Format(from)} → {DateFormatService.Format(to)}";
+
+    private static string GetWeeklyDeltaClass(int percentChange) =>
+        percentChange >= 0 ? "stats-weekly-tile__delta stats-weekly-tile__delta--up" : "stats-weekly-tile__delta stats-weekly-tile__delta--down";
+
+    private string FormatWeekBarTooltip(ActivityWeekBarDto w) =>
+        $"{DateFormatService.Format(w.WeekStart)} week: {w.EventCount} events, {w.FocusMinutes} min focus";
+
+    private static string FormatHabitRatioTooltip(int activeDayCount, int periodDayCount)
+    {
+        var label = activeDayCount == 1 ? "day" : "days";
+        return $"{activeDayCount} active {label} of {periodDayCount} in this period";
+    }
 
     private string FormatDateWithWeekday(DateOnly date)
     {

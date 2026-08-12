@@ -75,7 +75,7 @@
             else
             {
                 await UserNotifier.NotifyAsync(
-                    "Back online. Connection to the server restored.",
+                    "Back online. Server connection restored.",
                     MudBlazor.Severity.Success);
             }
         }
@@ -92,7 +92,7 @@
                 && !currentOffline
                 && !_prevSyncProblemMessage.Contains("Offline", StringComparison.OrdinalIgnoreCase))
             {
-                await UserNotifier.NotifyAsync("Sync issues resolved. All changes synchronized.", MudBlazor.Severity.Success);
+                await UserNotifier.NotifyAsync("Sync issues resolved. All changes synced.", MudBlazor.Severity.Success);
             }
         }
 

@@ -92,11 +92,6 @@ internal static class ActivityApiRoutes
         ActivityLogRequest body,
         CancellationToken cancellationToken)
     {
-        if (AuthenticatedUserId.TryGet(user) is null)
-        {
-            return Results.Unauthorized();
-        }
-
         if (body.DurationSeconds.HasValue && (body.DurationSeconds.Value < 0 || body.DurationSeconds.Value > 86400))
         {
             return Results.BadRequest(new { detail = "Duration must be between 0 and 86,400 seconds (24 hours)." });

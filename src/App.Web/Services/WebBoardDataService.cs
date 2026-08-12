@@ -7,7 +7,7 @@ namespace App.Web.Services;
 
 public sealed class WebBoardDataService(
     AuthenticationStateProvider authenticationStateProvider,
-    DemoUserResolver demoUserResolver,
+    CurrentUserAccessor currentUserAccessor,
     BoardPersistenceService boardPersistenceService) : IBoardDataService
 {
 
@@ -101,12 +101,8 @@ public sealed class WebBoardDataService(
         return await boardPersistenceService.GetDailyStreakMapAsync(userId, cancellationToken);
     }
 
-    private async Task<Guid> GetCurrentUserIdAsync(CancellationToken cancellationToken)
-    {
-        var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        return await demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
-    }
+    private Task<Guid> GetCurrentUserIdAsync(CancellationToken cancellationToken) =>
+        currentUserAccessor.ResolveAsync(authenticationStateProvider, cancellationToken);
 
     private async Task<BoardItem?> MutateAsync(Func<Guid, CancellationToken, Task<BoardMutationResult>> op,
         CancellationToken cancellationToken)

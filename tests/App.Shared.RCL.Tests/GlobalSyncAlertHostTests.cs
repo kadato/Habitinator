@@ -63,7 +63,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
 
         // Assert
         await _notifier.Received(1).NotifyAsync(
-            "Back online. Connection to the server restored.",
+            "Back online. Server connection restored.",
             Severity.Success);
     }
 
@@ -99,7 +99,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
 
         // Assert
         await _notifier.Received(1).NotifyAsync(
-            "Sync issues resolved. All changes synchronized.",
+            "Sync issues resolved. All changes synced.",
             Severity.Success);
     }
 

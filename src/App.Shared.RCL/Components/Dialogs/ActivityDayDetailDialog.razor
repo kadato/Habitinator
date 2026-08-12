@@ -152,7 +152,7 @@
         }
 
         var m = (s + 30) / 60;
-        return m < 1 ? " (< 1 min)" : $" ({m} min)";
+        return m < 1 ? " under 1 min" : $" {m} min";
     }
 
     private static string GetEventIcon(ActivityEventType eventType) =>
@@ -189,8 +189,8 @@
         {
             ActivityEventType.DailyComplete => "Daily task completed",
             ActivityEventType.TodoComplete => "To-do completed",
-            ActivityEventType.HabitPlus => "Habit incremented (+)",
-            ActivityEventType.HabitMinus => "Habit decremented (−)",
+            ActivityEventType.HabitPlus => "Habit logged +",
+            ActivityEventType.HabitMinus => "Habit logged -",
             ActivityEventType.TimerSession => "Focus session completed",
             _ => e.EventType.ToString()
         };

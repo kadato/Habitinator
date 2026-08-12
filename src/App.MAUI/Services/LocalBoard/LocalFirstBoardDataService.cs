@@ -249,10 +249,7 @@ public sealed partial class LocalFirstBoardDataService(
             async (db, userKey) => await UpdateRowAsync(
                 db,
                 userKey,
-                itemId,
-                null,
-                BoardOutboxOperationKind.Rename,
-                (row, expected) => new RenameOutboxPayload(section, itemId, row.Title, expected),
+                new RowUpdateOp(itemId, null, BoardOutboxOperationKind.Rename, (row, expected) => new RenameOutboxPayload(section, itemId, row.Title, expected)),
                 row =>
                 {
                     row.Title = ZalgoSanitizer.SanitizeAndTrim(title);
@@ -274,10 +271,7 @@ public sealed partial class LocalFirstBoardDataService(
                 return await UpdateRowAsync(
                     db,
                     userKey,
-                    itemId,
-                    null,
-                    BoardOutboxOperationKind.Delete,
-                    (row, expected) => new SectionItemOutboxPayload(section, itemId, expected),
+                    new RowUpdateOp(itemId, null, BoardOutboxOperationKind.Delete, (row, expected) => new SectionItemOutboxPayload(section, itemId, expected)),
                     row =>
                     {
                         db.BoardItems.Remove(row);
@@ -293,10 +287,7 @@ public sealed partial class LocalFirstBoardDataService(
             async (db, userKey) => await UpdateRowAsync(
                 db,
                 userKey,
-                itemId,
-                null,
-                BoardOutboxOperationKind.Archive,
-                (row, expected) => new SectionItemOutboxPayload(section, itemId, expected),
+                new RowUpdateOp(itemId, null, BoardOutboxOperationKind.Archive, (row, expected) => new SectionItemOutboxPayload(section, itemId, expected)),
                 row =>
                 {
                     row.IsArchived = true;
@@ -312,10 +303,7 @@ public sealed partial class LocalFirstBoardDataService(
             async (db, userKey) => await UpdateRowAsync(
                 db,
                 userKey,
-                itemId,
-                null,
-                BoardOutboxOperationKind.Unarchive,
-                (row, expected) => new SectionItemOutboxPayload(section, itemId, expected),
+                new RowUpdateOp(itemId, null, BoardOutboxOperationKind.Unarchive, (row, expected) => new SectionItemOutboxPayload(section, itemId, expected)),
                 row =>
                 {
                     row.IsArchived = false;
@@ -359,10 +347,7 @@ public sealed partial class LocalFirstBoardDataService(
             async (db, userKey) => await UpdateRowAsync(
                 db,
                 userKey,
-                itemId,
-                null,
-                BoardOutboxOperationKind.Toggle,
-                (row, expected) => new SectionItemOutboxPayload(section, itemId, expected),
+                new RowUpdateOp(itemId, null, BoardOutboxOperationKind.Toggle, (row, expected) => new SectionItemOutboxPayload(section, itemId, expected)),
                 async row =>
                 {
                     ApplyLocalToggle(section, row, await TodayAsync(cancellationToken));
@@ -376,10 +361,7 @@ public sealed partial class LocalFirstBoardDataService(
             async (db, userKey) => await UpdateRowAsync(
                 db,
                 userKey,
-                itemId,
-                BoardSection.Daily,
-                BoardOutboxOperationKind.CompleteDailyForDate,
-                (row, expected) => new CompleteDailyOutboxPayload(itemId, completedOn, expected),
+                new RowUpdateOp(itemId, BoardSection.Daily, BoardOutboxOperationKind.CompleteDailyForDate, (row, expected) => new CompleteDailyOutboxPayload(itemId, completedOn, expected)),
                 row =>
                 {
                     row.DailyLastCompletedOn = completedOn;
@@ -394,10 +376,7 @@ public sealed partial class LocalFirstBoardDataService(
             async (db, userKey) => await UpdateRowAsync(
                 db,
                 userKey,
-                itemId,
-                BoardSection.Habit,
-                BoardOutboxOperationKind.HabitIncrement,
-                (row, expected) => new ItemIdOutboxPayload(itemId, expected),
+                new RowUpdateOp(itemId, BoardSection.Habit, BoardOutboxOperationKind.HabitIncrement, (row, expected) => new ItemIdOutboxPayload(itemId, expected)),
                 row =>
                 {
                     if (row.TrackPlus)
@@ -415,10 +394,7 @@ public sealed partial class LocalFirstBoardDataService(
             async (db, userKey) => await UpdateRowAsync(
                 db,
                 userKey,
-                itemId,
-                BoardSection.Habit,
-                BoardOutboxOperationKind.HabitDecrement,
-                (row, expected) => new ItemIdOutboxPayload(itemId, expected),
+                new RowUpdateOp(itemId, BoardSection.Habit, BoardOutboxOperationKind.HabitDecrement, (row, expected) => new ItemIdOutboxPayload(itemId, expected)),
                 row =>
                 {
                     if (row.TrackMinus)
@@ -431,20 +407,23 @@ public sealed partial class LocalFirstBoardDataService(
                 cancellationToken),
             cancellationToken);
 
+    private readonly record struct RowUpdateOp(
+        Guid ItemId,
+        BoardSection? Section,
+        BoardOutboxOperationKind Kind,
+        Func<LocalBoardItemRow, DateTimeOffset?, object> PayloadFactory);
+
     private static async Task<BoardItem?> UpdateRowAsync(
         LocalBoardDbContext db,
         string userKey,
-        Guid itemId,
-        BoardSection? section,
-        BoardOutboxOperationKind kind,
-        Func<LocalBoardItemRow, DateTimeOffset?, object> payloadFactory,
+        RowUpdateOp op,
         Func<LocalBoardItemRow, Task> mutate,
         CancellationToken cancellationToken)
     {
-        IQueryable<LocalBoardItemRow> query = db.BoardItems.Where(x => x.UserKey == userKey && x.Id == itemId);
-        if (section is not null)
+        var query = db.BoardItems.Where(x => x.UserKey == userKey && x.Id == op.ItemId);
+        if (op.Section is not null)
         {
-            query = query.Where(x => x.Section == section);
+            query = query.Where(x => x.Section == op.Section);
         }
 
         var row = await query.FirstOrDefaultAsync(cancellationToken);
@@ -455,7 +434,7 @@ public sealed partial class LocalFirstBoardDataService(
 
         var expected = row.ServerUpdatedAtUtc;
         await mutate(row);
-        Enqueue(db, userKey, kind, payloadFactory(row, expected));
+        Enqueue(db, userKey, op.Kind, op.PayloadFactory(row, expected));
         await db.SaveChangesAsync(cancellationToken);
         return row.ToModel();
     }
@@ -496,10 +475,7 @@ public sealed partial class LocalFirstBoardDataService(
             async (db, userKey) => await UpdateRowAsync(
                 db,
                 userKey,
-                itemId,
-                BoardSection.Habit,
-                BoardOutboxOperationKind.UpdateHabit,
-                (row, expected) => new UpdateHabitOutboxPayload(
+                new RowUpdateOp(itemId, BoardSection.Habit, BoardOutboxOperationKind.UpdateHabit, (row, expected) => new UpdateHabitOutboxPayload(
                     itemId,
                     row.Title,
                     row.Notes,
@@ -511,7 +487,7 @@ public sealed partial class LocalFirstBoardDataService(
                     row.NegativeCounter,
                     row.ChecklistJson,
                     expected,
-                    row.SortOrder),
+                    row.SortOrder)),
                 async row =>
                 {
                     row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
@@ -522,9 +498,7 @@ public sealed partial class LocalFirstBoardDataService(
                     row.ResetPeriod = args.ResetPeriod;
                     row.Counter = args.Counter;
                     row.NegativeCounter = args.NegativeCounter;
-                    row.ChecklistJson = string.IsNullOrWhiteSpace(args.ChecklistJson)
-                        ? null
-                        : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(args.ChecklistJson));
+                    row.ChecklistJson = DailyChecklistJson.Normalize(args.ChecklistJson);
                     await HandleSortOrderUpdateAsync(db, userKey, BoardSection.Habit, itemId, args.SortOrder, row, cancellationToken);
                 },
                 cancellationToken),
@@ -538,10 +512,7 @@ public sealed partial class LocalFirstBoardDataService(
             async (db, userKey) => await UpdateRowAsync(
                 db,
                 userKey,
-                itemId,
-                BoardSection.Todo,
-                BoardOutboxOperationKind.UpdateTodo,
-                (row, expected) => new UpdateTodoOutboxPayload(
+                new RowUpdateOp(itemId, BoardSection.Todo, BoardOutboxOperationKind.UpdateTodo, (row, expected) => new UpdateTodoOutboxPayload(
                     itemId,
                     row.Title,
                     row.Notes,
@@ -550,15 +521,13 @@ public sealed partial class LocalFirstBoardDataService(
                     args.DueDate,
                     expected,
                     row.SortOrder,
-                    args.TodoRepeatIntervalDays),
+                    args.TodoRepeatIntervalDays)),
                 async row =>
                 {
                     row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
                     row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
                     row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
-                    row.ChecklistJson = string.IsNullOrWhiteSpace(args.ChecklistJson)
-                        ? null
-                        : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(args.ChecklistJson));
+                    row.ChecklistJson = DailyChecklistJson.Normalize(args.ChecklistJson);
                     row.TodoDueDate = args.DueDate;
                     row.TodoRepeatIntervalDays = args.TodoRepeatIntervalDays;
                     await HandleSortOrderUpdateAsync(db, userKey, BoardSection.Todo, itemId, args.SortOrder, row, cancellationToken);
@@ -574,10 +543,7 @@ public sealed partial class LocalFirstBoardDataService(
             async (db, userKey) => await UpdateRowAsync(
                 db,
                 userKey,
-                itemId,
-                BoardSection.Daily,
-                BoardOutboxOperationKind.UpdateDaily,
-                (row, expected) => new UpdateDailyOutboxPayload(
+                new RowUpdateOp(itemId, BoardSection.Daily, BoardOutboxOperationKind.UpdateDaily, (row, expected) => new UpdateDailyOutboxPayload(
                     itemId,
                     row.Title,
                     row.Notes,
@@ -588,7 +554,7 @@ public sealed partial class LocalFirstBoardDataService(
                     row.ChecklistJson,
                     args.Counter,
                     expected,
-                    row.SortOrder),
+                    row.SortOrder)),
                 async row =>
                 {
                     row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
@@ -597,9 +563,7 @@ public sealed partial class LocalFirstBoardDataService(
                     row.DailyStartDate = args.StartDate;
                     row.DailyRepeat = args.Repeat;
                     row.DailyRepeatInterval = args.RepeatInterval;
-                    row.ChecklistJson = string.IsNullOrWhiteSpace(args.ChecklistJson)
-                        ? null
-                        : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(args.ChecklistJson));
+                    row.ChecklistJson = DailyChecklistJson.Normalize(args.ChecklistJson);
                     row.Counter = args.Counter;
                     await HandleSortOrderUpdateAsync(db, userKey, BoardSection.Daily, itemId, args.SortOrder, row, cancellationToken);
                 },

@@ -157,7 +157,7 @@
         {
             confirmed = await DialogService.ShowMessageBoxAsync(
                 "Focus session complete!",
-                $"Focus session is complete for \"{label}\". Would you like to log this progress to the board?",
+                $"Focus session complete for \"{label}\". Log this session to the board?",
                 "Yes, log session",
                 "No");
         }
@@ -237,9 +237,7 @@
         {
             confirmed = await DialogService.ShowMessageBoxAsync(
                 "Time's up",
-                "(" + durationLabel + ") is up for \"" + targetLabel + "\". "
-                + "The timer keeps running while you decide. If you actually finished, log this session and update the board. "
-                + "If you are not done yet, choose Not done. The timer continues and you will not get another time's up alert this session.",
+                durationLabel + " complete for \"" + targetLabel + "\". Log this session to the board?",
                 "Yes, log session",
                 "Not done");
         }

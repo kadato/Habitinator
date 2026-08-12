@@ -59,7 +59,7 @@
                         <div class="empty-state">
                             <MudIcon Icon="@Icons.Material.Filled.SearchOff" Class="empty-icon" />
                             <div class="empty-text">No archived items found</div>
-                            <div class="empty-subtext">@(string.IsNullOrWhiteSpace(_searchQuery) ? "All clean! You don't have any archived items in this section." : "Try adjusting your search query or filters.")</div>
+                            <div class="empty-subtext">@(string.IsNullOrWhiteSpace(_searchQuery) ? "No archived items in this section." : "Try changing your search or filter.")</div>
                         </div>
                     }
                     else
@@ -307,7 +307,7 @@
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync("Something went wrong. Please check your connection and try again.", Severity.Error);
+            await Notifier.NotifyAsync("Could not complete request. Check connection and try again.", Severity.Error);
             if (entry is not null)
             {
                 _allEntries.Add(entry.Value);
@@ -358,7 +358,7 @@
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync("Something went wrong. Please check your connection and try again.", Severity.Error);
+            await Notifier.NotifyAsync("Could not complete request. Check connection and try again.", Severity.Error);
             if (entry is not null)
             {
                 _allEntries.Add(entry.Value);

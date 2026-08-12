@@ -629,8 +629,8 @@ public sealed class BoardPersistenceService(
                         trackMinus = true;
                     }
 
-                    await ApplyCommonEditsAsync(entity, args.Title, args.Notes, args.Tags, args.ChecklistJson,
-                        userId, args.SortOrder, BoardSection.Habit, cancellationToken);
+                    await ApplyCommonEditsAsync(entity, new CommonItemEditFields(args.Title, args.Notes, args.Tags, args.ChecklistJson, args.SortOrder),
+                        userId, BoardSection.Habit, cancellationToken);
                     entity.TrackPlus = trackPlus;
                     entity.TrackMinus = trackMinus;
                     entity.ResetPeriod = (int)args.ResetPeriod;
@@ -657,8 +657,8 @@ public sealed class BoardPersistenceService(
                 {
                     DateTime? dueUtc = args.DueDate?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
-                    await ApplyCommonEditsAsync(entity, args.Title, args.Notes, args.Tags, args.ChecklistJson,
-                        userId, args.SortOrder, BoardSection.Todo, cancellationToken);
+                    await ApplyCommonEditsAsync(entity, new CommonItemEditFields(args.Title, args.Notes, args.Tags, args.ChecklistJson, args.SortOrder),
+                        userId, BoardSection.Todo, cancellationToken);
                     entity.DailyStartDate = dueUtc;
                     entity.TodoRepeatIntervalDays = args.TodoRepeatIntervalDays is > 0
                         ? Math.Min(365, args.TodoRepeatIntervalDays.Value)
@@ -692,8 +692,8 @@ public sealed class BoardPersistenceService(
 
                     DateOnly? newStartD = startUtc is { } su ? DateOnly.FromDateTime(su) : null;
 
-                    await ApplyCommonEditsAsync(entity, args.Title, args.Notes, args.Tags, args.ChecklistJson,
-                        userId, args.SortOrder, BoardSection.Daily, cancellationToken);
+                    await ApplyCommonEditsAsync(entity, new CommonItemEditFields(args.Title, args.Notes, args.Tags, args.ChecklistJson, args.SortOrder),
+                        userId, BoardSection.Daily, cancellationToken);
                     entity.DailyStartDate = startUtc;
                     entity.DailyRepeatType = (int)args.Repeat;
                     entity.DailyRepeatInterval = n;
@@ -1091,25 +1091,26 @@ public sealed class BoardPersistenceService(
         return entity.DailyLastCompletedOn is null && entity.IsCompleted;
     }
 
+    private readonly record struct CommonItemEditFields(
+        string Title,
+        string? Notes,
+        string? Tags,
+        string? ChecklistJson,
+        double? SortOrder);
+
     private async Task ApplyCommonEditsAsync(
         BoardItemEntity entity,
-        string title,
-        string? notes,
-        string? tags,
-        string? checklistJson,
+        CommonItemEditFields fields,
         Guid userId,
-        double? sortOrder,
         BoardSection section,
         CancellationToken cancellationToken)
     {
-        entity.Title = ZalgoSanitizer.SanitizeAndTrim(title);
-        entity.Notes = string.IsNullOrWhiteSpace(notes) ? null : ZalgoSanitizer.SanitizeAndTrim(notes);
-        entity.Tags = string.IsNullOrWhiteSpace(tags) ? null : ZalgoSanitizer.SanitizeAndTrim(tags);
-        entity.ChecklistJson = string.IsNullOrWhiteSpace(checklistJson)
-            ? null
-            : DailyChecklistJson.Serialize(DailyChecklistJson.Parse(checklistJson));
+        entity.Title = ZalgoSanitizer.SanitizeAndTrim(fields.Title);
+        entity.Notes = string.IsNullOrWhiteSpace(fields.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(fields.Notes);
+        entity.Tags = string.IsNullOrWhiteSpace(fields.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(fields.Tags);
+        entity.ChecklistJson = DailyChecklistJson.Normalize(fields.ChecklistJson);
 
-        await UpdateSortOrderIfNeededAsync(userId, section, entity, sortOrder, cancellationToken);
+        await UpdateSortOrderIfNeededAsync(userId, section, entity, fields.SortOrder, cancellationToken);
     }
 
     private async Task UpdateSortOrderIfNeededAsync(

@@ -143,12 +143,10 @@
     private async Task CheckForUpdatesAsync()
     {
         _isChecking = true;
-        StateHasChanged();
 
         var result = await UpdaterService.CheckForUpdateAsync();
 
         _isChecking = false;
-        StateHasChanged();
 
         if (!string.IsNullOrEmpty(result.ErrorMessage))
         {

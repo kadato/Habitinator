@@ -137,6 +137,20 @@ public class DailyStreakCalculatorTests
     }
 
     [Fact]
+    public void ComputeStreak_WhenYesterdayWasMissed_ShouldBeZero()
+    {
+        var start = new DateOnly(2024, 5, 10);
+        var today = new DateOnly(2024, 5, 15);
+
+        // Last completed was 13th. 14th, yesterday was missed and not completed.
+        var lastCompleted = new DateOnly(2024, 5, 13);
+        var events = new Dictionary<DateOnly, List<(DateTimeOffset, ActivityEventType)>>();
+
+        var streak = DailyStreakCalculator.ComputeStreak(start, DailyRepeatType.Daily, 1, today, events, lastCompleted);
+        streak.Should().Be(0);
+    }
+
+    [Fact]
     public void ComputeStreak_WithLastCompletedDateProperty_ShouldBeHonored()
     {
         var start = new DateOnly(2024, 5, 10);

@@ -140,15 +140,13 @@
     {
         _title = Item.Title;
         _notes = Item.Notes;
-        _tags = string.Join(", ", BoardTagUtil.ParseTags(Item.Tags));
+        _tags = EditDialogHelpers.FormatTags(Item.Tags);
         _trackPlus = Item.TrackPlus;
         _trackMinus = Item.TrackMinus;
         _resetPeriod = Item.ResetPeriod;
         _counter = Item.Counter;
         _negativeCounter = Item.NegativeCounter;
-        _checklistRows = DailyChecklistJson.Parse(Item.ChecklistJson)
-            .Select(x => new ChecklistRow { Id = x.Id, Text = x.Text, IsDone = x.IsDone })
-            .ToList();
+        _checklistRows = EditDialogHelpers.ParseChecklistRows(Item.ChecklistJson);
     }
 
     private void OnShellClick()
@@ -171,16 +169,16 @@
 
         if (!_trackPlus && !_trackMinus)
         {
-            await Notifier.NotifyAsync("Turn on at least one counter (+ and/or −).", Severity.Warning);
+            await Notifier.NotifyAsync("Turn on at least one counter.", Severity.Warning);
             return;
         }
 
-        var tagsPayload = string.IsNullOrWhiteSpace(_tags) ? null : _tags;
-        var checklistPayload = DailyChecklistJson.Serialize(ChecklistRow.ToChecklistModel(_checklistRows));
+        var tagsPayload = EditDialogHelpers.CleanStringPayload(_tags);
+        var checklistPayload = EditDialogHelpers.SerializeChecklistRows(_checklistRows);
         var result = new EditHabitDialogResult(
             EditDialogAction.Save,
             _title.Trim(),
-            string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim(),
+            EditDialogHelpers.CleanStringPayload(_notes),
             tagsPayload,
             _trackPlus,
             _trackMinus,

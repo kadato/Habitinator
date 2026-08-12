@@ -126,4 +126,6 @@ public static class DailyChecklistJson
 
         return JsonSerializer.Serialize(cleaned, JsonDefaults.Storage);
     }
+
+    public static string? Normalize(string? json) => Serialize(Parse(json));
 }

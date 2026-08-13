@@ -3,39 +3,35 @@
     background: var(--mud-palette-surface) !important;
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent) !important;
     border-radius: var(--space-6) !important;
-    box-shadow: 
-        0 24px 38px 3px rgba(0, 0, 0, 0.08), 
-        0 9px 46px 8px rgba(0, 0, 0, 0.06), 
-        0 11px 15px -7px rgba(0, 0, 0, 0.1) !important;
     overflow: hidden;
     margin-top: 10vh !important;
 }
 
 .archived-title {
     font-weight: 700;
-    font-size: 1.15rem;
+    font-size: 1.1rem;
     letter-spacing: -0.015em;
     display: flex;
     align-items: center;
-    gap: 0.65rem;
+    gap: var(--space-4);
     color: var(--mud-palette-text-primary);
 }
 
 .archived-title-count {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 600;
-    background: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
-    color: var(--mud-palette-primary);
-    padding: 0.15rem var(--space-4);
+    background: color-mix(in srgb, var(--mud-palette-text-secondary) 12%, transparent);
+    color: var(--mud-palette-text-secondary);
+    padding: 0.1rem 0.5rem;
     border-radius: var(--radius-pill);
-    margin-left: var(--space-1);
+    font-variant-numeric: tabular-nums;
 }
 
 .dialog-body {
     display: flex;
     flex-direction: column;
-    gap: var(--space-6);
-    padding-top: var(--space-4);
+    gap: var(--space-5);
+    padding-top: var(--space-3);
 }
 
 /* ── Search Bar ── */
@@ -65,73 +61,62 @@
     border-width: 1.5px !important;
 }
 
-/* ── Filter Chips ── */
-.filter-chips {
+/* ── Filter Tabs ── */
+.filter-tabs {
     display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-4);
-    padding-bottom: var(--space-5);
+    gap: var(--space-6);
     border-bottom: 1px solid var(--mud-palette-divider);
+    padding: 0 var(--space-1);
+    overflow-x: auto;
+    scrollbar-width: none;
 }
 
-.filter-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-3);
-    padding: var(--space-3) 0.85rem;
-    border-radius: var(--radius-pill);
-    font-size: 0.825rem;
+.filter-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.filter-tab {
+    appearance: none;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    padding: 0.4rem 0.1rem;
+    font-family: inherit;
+    font-size: 0.85rem;
     font-weight: 600;
-    background: color-mix(in srgb, var(--mud-palette-background-gray) 40%, var(--mud-palette-surface));
-    border: 1px solid transparent;
     color: var(--mud-palette-text-secondary);
     cursor: pointer;
-    outline: none;
-    user-select: none;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: color var(--dur-fast) ease, border-color var(--dur-fast) ease;
 }
 
-.filter-chip.active {
-    background: var(--mud-palette-primary) !important;
-    color: var(--mud-palette-primary-contrast-text) !important;
-    border-color: var(--mud-palette-primary) !important;
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--mud-palette-primary) 25%, transparent) !important;
-    transform: translateY(-0.5px);
+.filter-tab.active {
+    color: var(--mud-palette-primary);
+    border-bottom-color: var(--mud-palette-primary);
 }
 
-.chip-count {
-    font-size: 0.725rem;
-    opacity: 0.85;
-    background: rgba(0, 0, 0, 0.06);
-    padding: 0.05rem var(--space-3);
-    border-radius: var(--radius-pill);
-    font-weight: 700;
+.filter-tab-count {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--mud-palette-text-disabled);
+    font-variant-numeric: tabular-nums;
 }
 
-.filter-chip.active .chip-count {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-/* Colored status indicator dot inside filter chips */
-.chip-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-}
-
-.dot-habit { background: var(--hab-type-habit); }
-.dot-daily { background: var(--hab-type-daily); }
-.dot-todo { background: var(--hab-type-todo); }
-
-.filter-chip.active .chip-dot {
-    background: currentColor !important;
+.filter-tab.active .filter-tab-count {
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, transparent);
 }
 
 /* ── Scrollable List ── */
 .archived-list {
     display: flex;
     flex-direction: column;
-    gap: 0.65rem;
-    max-height: 24rem;
+    max-height: 26rem;
     overflow-y: auto;
     padding: var(--space-1) 0.15rem;
     margin-right: -0.15rem;
@@ -156,16 +141,13 @@
     justify-content: center;
     padding: 3rem var(--space-7);
     text-align: center;
-    background: color-mix(in srgb, var(--mud-palette-background-gray) 30%, var(--mud-palette-surface));
-    border: 1px dashed var(--mud-palette-divider);
-    border-radius: var(--radius-xl);
 }
 
 .empty-icon {
-    font-size: 3rem;
+    font-size: 2.5rem;
     color: var(--mud-palette-text-disabled);
     margin-bottom: var(--space-5);
-    opacity: 0.7;
+    opacity: 0.6;
 }
 
 .empty-text {
@@ -180,114 +162,57 @@
     margin-top: var(--space-1);
 }
 
-/* ── Item Cards ── */
-.archived-item-card {
+/* ── Item Rows ── */
+.archive-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0.85rem 1.1rem;
-    border-radius: var(--radius-xl);
-    border: 1px solid var(--mud-palette-divider);
-    position: relative;
-    overflow: hidden;
+    gap: var(--space-5);
+    padding: 0.7rem 0.25rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 55%, transparent);
 }
 
-/* Accent background per item type */
-.archived-item-card.card-habit {
-    background: color-mix(in srgb, var(--hab-type-habit) 4%, transparent);
-    border-color: color-mix(in srgb, var(--hab-type-habit) 12%, transparent);
+.archive-row:last-child {
+    border-bottom: none;
 }
 
-.archived-item-card.card-daily {
-    background: color-mix(in srgb, var(--hab-type-daily) 4%, transparent);
-    border-color: color-mix(in srgb, var(--hab-type-daily) 12%, transparent);
+.archive-row-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    color: var(--mud-palette-text-secondary);
 }
 
-.archived-item-card.card-todo {
-    background: color-mix(in srgb, var(--hab-type-todo) 4%, transparent);
-    border-color: color-mix(in srgb, var(--hab-type-todo) 12%, transparent);
-}
+.archive-row-icon--habit { color: var(--hab-type-habit); }
+.archive-row-icon--daily { color: var(--mud-palette-primary); }
+.archive-row-icon--todo { color: var(--hab-type-todo); }
 
-.archived-item-info {
+.archive-row-info {
     display: flex;
     flex-direction: column;
-    gap: var(--space-1);
+    gap: 0.1rem;
     min-width: 0;
-    flex-grow: 1;
+    flex: 1;
 }
 
-.title-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-4);
-    min-width: 0;
-}
-
-.item-icon {
-    font-size: 1.15rem;
-    flex-shrink: 0;
-}
-
-.card-habit .item-icon { color: var(--hab-type-habit); }
-.card-daily .item-icon { color: var(--hab-type-daily); }
-.card-todo .item-icon { color: var(--hab-type-todo); }
-
-.archived-item-title {
+.archive-row-title {
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     color: var(--mud-palette-text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.archived-item-meta {
-    font-size: 0.775rem;
+.archive-row-meta {
+    font-size: 0.75rem;
     color: var(--mud-palette-text-secondary);
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--space-3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.meta-divider {
-    color: var(--mud-palette-text-disabled);
-    opacity: 0.5;
-}
-
-/* Small visual type badges */
-.type-badge {
-    font-size: 0.65rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    padding: 0.1rem 0.45rem;
-    border-radius: var(--radius-sm);
-    display: inline-flex;
-    align-items: center;
-    line-height: 1.2;
-}
-
-.badge-habit {
-    background-color: color-mix(in srgb, var(--hab-type-habit) 8%, transparent);
-    color: #0f766e;
-}
-
-.badge-daily {
-    background-color: color-mix(in srgb, var(--hab-type-daily) 8%, transparent);
-    color: var(--mud-palette-primary);
-}
-
-.badge-todo {
-    background-color: color-mix(in srgb, var(--hab-type-todo) 8%, transparent);
-    color: #b45309; /* readable dark amber */
-}
-
-/* Action button styling */
-.archived-actions {
+.archive-row-actions {
     display: flex;
     align-items: center;
     gap: var(--space-2);
     flex-shrink: 0;
-    margin-left: var(--space-5);
 }

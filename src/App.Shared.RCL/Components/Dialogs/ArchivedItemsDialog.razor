@@ -6,8 +6,7 @@
 <MudDialog Class="archived-dialog" Style="width: min(34rem, calc(100vw - 2rem)); margin-top: 10vh;">
     <TitleContent>
         <div class="archived-title">
-            <MudIcon Icon="@Icons.Material.Filled.Archive" Color="Color.Primary" />
-            <span>Archived Items</span>
+            <span>Archive</span>
             @if (!_loading && TotalCount > 0)
             {
                 <span class="archived-title-count">@TotalCount</span>
@@ -37,18 +36,18 @@
                                       Immediate="true" />
                     </div>
 
-                    <div class="filter-chips">
-                        <button type="button" class="@FilterChipClass(null)" @onclick="() => SetFilter(null)">
-                            All <span class="chip-count">@TotalCount</span>
+                    <div class="filter-tabs" role="tablist" aria-label="Filter archived items">
+                        <button type="button" role="tab" aria-selected="@(_selectedSection == null ? "true" : "false")" class="@FilterTabClass(null)" @onclick="() => SetFilter(null)">
+                            All <span class="filter-tab-count">@TotalCount</span>
                         </button>
-                        <button type="button" class="@FilterChipClass(BoardSection.Habit)" @onclick="() => SetFilter(BoardSection.Habit)">
-                            <span class="chip-dot dot-habit"></span> Habits <span class="chip-count">@HabitsCount</span>
+                        <button type="button" role="tab" aria-selected="@(_selectedSection == BoardSection.Habit ? "true" : "false")" class="@FilterTabClass(BoardSection.Habit)" @onclick="() => SetFilter(BoardSection.Habit)">
+                            Habits <span class="filter-tab-count">@HabitsCount</span>
                         </button>
-                        <button type="button" class="@FilterChipClass(BoardSection.Daily)" @onclick="() => SetFilter(BoardSection.Daily)">
-                            <span class="chip-dot dot-daily"></span> Dailies <span class="chip-count">@DailiesCount</span>
+                        <button type="button" role="tab" aria-selected="@(_selectedSection == BoardSection.Daily ? "true" : "false")" class="@FilterTabClass(BoardSection.Daily)" @onclick="() => SetFilter(BoardSection.Daily)">
+                            Dailies <span class="filter-tab-count">@DailiesCount</span>
                         </button>
-                        <button type="button" class="@FilterChipClass(BoardSection.Todo)" @onclick="() => SetFilter(BoardSection.Todo)">
-                            <span class="chip-dot dot-todo"></span> To-Dos <span class="chip-count">@TodosCount</span>
+                        <button type="button" role="tab" aria-selected="@(_selectedSection == BoardSection.Todo ? "true" : "false")" class="@FilterTabClass(BoardSection.Todo)" @onclick="() => SetFilter(BoardSection.Todo)">
+                            To-dos <span class="filter-tab-count">@TodosCount</span>
                         </button>
                     </div>
                 }
@@ -57,9 +56,9 @@
                     @if (GetFilteredItems().Count == 0)
                     {
                         <div class="empty-state">
-                            <MudIcon Icon="@Icons.Material.Filled.SearchOff" Class="empty-icon" />
-                            <div class="empty-text">No archived items found</div>
-                            <div class="empty-subtext">@(string.IsNullOrWhiteSpace(_searchQuery) ? "No archived items in this section." : "Try changing your search or filter.")</div>
+                            <MudIcon Icon="@Icons.Material.Filled.Inbox" Class="empty-icon" />
+                            <div class="empty-text">No archived items</div>
+                            <div class="empty-subtext">@(string.IsNullOrWhiteSpace(_searchQuery) ? "Nothing archived in this section." : "Try a different search.")</div>
                         </div>
                     }
                     else
@@ -68,25 +67,11 @@
                         {
                             var item = entry.Item;
                             var section = entry.Section;
-                            var cardClass = section switch
+                            var iconClass = section switch
                             {
-                                BoardSection.Habit => "card-habit",
-                                BoardSection.Daily => "card-daily",
-                                BoardSection.Todo => "card-todo",
-                                _ => ""
-                            };
-                            var badgeClass = section switch
-                            {
-                                BoardSection.Habit => "badge-habit",
-                                BoardSection.Daily => "badge-daily",
-                                BoardSection.Todo => "badge-todo",
-                                _ => ""
-                            };
-                            var badgeText = section switch
-                            {
-                                BoardSection.Habit => "Habit",
-                                BoardSection.Daily => "Daily",
-                                BoardSection.Todo => "To-Do",
+                                BoardSection.Habit => "archive-row-icon--habit",
+                                BoardSection.Daily => "archive-row-icon--daily",
+                                BoardSection.Todo => "archive-row-icon--todo",
                                 _ => ""
                             };
                             var itemIcon = section switch
@@ -96,42 +81,30 @@
                                 BoardSection.Todo => Icons.Material.Filled.FormatListBulleted,
                                 _ => Icons.Material.Filled.Help
                             };
+                            var metaText = section switch
+                            {
+                                BoardSection.Habit => $"Resets {item.ResetPeriod} · {item.Counter} logged · -{item.NegativeCounter} missed",
+                                BoardSection.Daily => $"Streak {item.Counter} days",
+                                _ => item.TodoDueDate is { } due ? $"Due {due:yyyy-MM-dd}" : "No due date"
+                            };
 
-                            <div class="archived-item-card @cardClass" @key="item.Id">
-                                <div class="archived-item-info">
-                                    <div class="title-row">
-                                        <MudIcon Icon="@itemIcon" Class="item-icon" />
-                                        <span class="archived-item-title" title="@item.Title">@item.Title</span>
-                                        <span class="type-badge @badgeClass">@badgeText</span>
-                                    </div>
-                                    <div class="archived-item-meta">
-                                        @if (section == BoardSection.Habit)
-                                        {
-                                            <span>Reset: <strong>@item.ResetPeriod</strong></span>
-                                            <span class="meta-divider">•</span>
-                                            <span>Counter: <strong>@item.Counter</strong> / <strong>-@item.NegativeCounter</strong></span>
-                                        }
-                                        else if (section == BoardSection.Daily)
-                                        {
-                                            <span>Streak: <strong>@item.Counter</strong> days</span>
-                                        }
-                                        else if (section == BoardSection.Todo)
-                                        {
-                                            <span>Due: <strong>@(item.TodoDueDate?.ToString("yyyy-MM-dd") ?? "No due date")</strong></span>
-                                        }
-                                    </div>
+                            <div class="archive-row" @key="item.Id">
+                                <MudIcon Icon="@itemIcon" Class="@($"archive-row-icon {iconClass}")" />
+                                <div class="archive-row-info">
+                                    <span class="archive-row-title" title="@item.Title">@item.Title</span>
+                                    <span class="archive-row-meta">@metaText</span>
                                 </div>
-                                <div class="archived-actions">
-                                    <MudButton StartIcon="@Icons.Material.Filled.Unarchive" 
-                                               Color="Color.Primary" 
+                                <div class="archive-row-actions">
+                                    <MudButton StartIcon="@Icons.Material.Filled.Unarchive"
+                                               Color="Color.Primary"
                                                Variant="Variant.Text"
                                                Size="Size.Small"
                                                OnClick="@(() => UnarchiveAsync(section, item))"
                                                Disabled="_isClosing">
                                         Restore
                                     </MudButton>
-                                    <MudButton StartIcon="@Icons.Material.Filled.DeleteForever" 
-                                               Color="Color.Error" 
+                                    <MudButton StartIcon="@Icons.Material.Filled.DeleteForever"
+                                               Color="Color.Error"
                                                Variant="Variant.Text"
                                                Size="Size.Small"
                                                OnClick="@(() => DeletePermanentlyAsync(section, item))"
@@ -267,8 +240,8 @@
         _selectedSection = section;
     }
 
-    private string FilterChipClass(BoardSection? section) =>
-        _selectedSection == section ? "filter-chip active" : "filter-chip";
+    private string FilterTabClass(BoardSection? section) =>
+        _selectedSection == section ? "filter-tab active" : "filter-tab";
 
     private async Task UnarchiveAsync(BoardSection section, BoardItem item)
     {

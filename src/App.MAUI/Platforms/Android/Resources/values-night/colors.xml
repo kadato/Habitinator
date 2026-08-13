@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+	<!-- Overrides the splash color generated from MauiSplashScreen Color="#3b82f6"
+	     so the native splash matches the app's dark theme (#030712) in night mode.
+	     The white logo mark stays visible on the dark background. -->
+	<color name="maui_splash_color">#030712</color>
+</resources>

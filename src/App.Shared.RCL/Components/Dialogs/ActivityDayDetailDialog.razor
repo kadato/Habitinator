@@ -1,14 +1,12 @@
 @inject IActivityStatisticsReader Stats
 @inject IUserTimeZoneService TimeZoneService
+@inject IUserDateFormatService DateFormatService
 
 <MudDialog Class="activity-day-detail-dialog"
            ContentClass="activity-day-detail-dialog__content">
     <DialogContent>
         @if (_loading)
         {
-            <div class="activity-day-detail-summary mb-3">
-                <MudSkeleton Width="120px" Height="20px" />
-            </div>
             <MudTable Items="new byte[4]"
                       Dense="true"
                       Hover="false"
@@ -48,20 +46,15 @@
         }
         else if (_detail is not null)
         {
-            <div class="activity-day-detail-summary mb-3">
-                <MudText Typo="Typo.body2">
-                    @FormatActivitySummary(_detail)
-                </MudText>
-                @if (!string.IsNullOrWhiteSpace(TagFilter))
-                {
-                    <div class="d-flex align-center gap-1 flex-wrap mt-1">
-                        @foreach (var t in TagFilter.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                        {
-                            <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small" Class="ma-0">@t</MudChip>
-                        }
-                    </div>
-                }
-            </div>
+            @if (!string.IsNullOrWhiteSpace(TagFilter))
+            {
+                <div class="d-flex align-center gap-1 flex-wrap mb-2">
+                    @foreach (var t in TagFilter.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    {
+                        <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small" Class="ma-0">@t</MudChip>
+                    }
+                </div>
+            }
             <MudTable Items="_detail.Events"
                       Dense="true"
                       Hover="false"
@@ -121,21 +114,36 @@
         {
             _loading = false;
         }
+
+        await UpdateTitleAsync();
+    }
+
+    private async Task UpdateTitleAsync()
+    {
+        try
+        {
+            var date = DateFormatService.Format(Date);
+            var title = _detail is null ? date : $"{date} · {BuildSummary(_detail)}";
+            await MudDialog.SetTitleAsync(title);
+        }
+        catch
+        {
+            // Dialog may already be closed. The title stays as provided by the caller.
+        }
+    }
+
+    private static string BuildSummary(ActivityDayDetailDto detail)
+    {
+        var count = detail.Events.Count;
+        var label = count == 1 ? "1 activity" : $"{count} activities";
+        return detail.FocusMinutesTotal > 0
+            ? $"{label} · {detail.FocusMinutesTotal} min focus"
+            : label;
     }
 
     private void Close()
     {
         MudDialog?.Cancel();
-    }
-
-    private static string FormatActivitySummary(ActivityDayDetailDto detail)
-    {
-        var count = detail.Events.Count;
-        var label = count == 1 ? "activity" : "activities";
-        var summary = $"{count} {label}";
-        if (detail.FocusMinutesTotal > 0)
-            summary += $" · {detail.FocusMinutesTotal} min focus";
-        return summary;
     }
 
     private string FormatLocalTime(DateTimeOffset utcTime)
@@ -160,8 +168,8 @@
         {
             ActivityEventType.DailyComplete => Icons.Material.Filled.CheckCircle,
             ActivityEventType.TodoComplete => Icons.Material.Filled.CheckBox,
-            ActivityEventType.HabitPlus => Icons.Material.Filled.AddCircle,
-            ActivityEventType.HabitMinus => Icons.Material.Filled.RemoveCircle,
+            ActivityEventType.HabitPlus => Icons.Material.Filled.Add,
+            ActivityEventType.HabitMinus => Icons.Material.Filled.Remove,
             ActivityEventType.TimerSession => Icons.Material.Filled.Timer,
             _ => Icons.Material.Filled.Label
         };
@@ -169,11 +177,11 @@
     private static Color GetEventColor(ActivityEventType eventType) =>
         eventType switch
         {
-            ActivityEventType.DailyComplete => Color.Success,
-            ActivityEventType.TodoComplete => Color.Success,
-            ActivityEventType.HabitPlus => Color.Primary,
-            ActivityEventType.HabitMinus => Color.Warning,
-            ActivityEventType.TimerSession => Color.Info,
+            ActivityEventType.DailyComplete => Color.Primary,
+            ActivityEventType.TodoComplete => Color.Warning,
+            ActivityEventType.HabitPlus => Color.Success,
+            ActivityEventType.HabitMinus => Color.Error,
+            ActivityEventType.TimerSession => Color.Secondary,
             _ => Color.Default
         };
 

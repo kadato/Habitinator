@@ -58,6 +58,9 @@
     --hab-type-daily: var(--mud-palette-primary);
     --hab-type-todo: #f59e0b; /* amber-500 */
 
+    /* Card container borders. Softer than the divider line, theme-aware. */
+    --hab-border-card: light-dark(rgba(15, 23, 42, 0.10), rgba(255, 255, 255, 0.06));
+
     /* Brand gradient (splash bars and loaders) */
     --hab-brand-gradient: linear-gradient(90deg, #3b82f6, #8b5cf6);
 }

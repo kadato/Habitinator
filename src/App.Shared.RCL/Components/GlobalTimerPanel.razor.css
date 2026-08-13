@@ -1,8 +1,7 @@
 .timer-panel {
     margin: 0.15rem 0 var(--space-2);
     border-radius: var(--radius-xl);
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
-    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 80%, transparent);
+    border: 1px solid var(--hab-border-card);
     position: relative;
     overflow: visible;
     width: 100%;
@@ -30,22 +29,6 @@
     .timer-panel__content {
         padding: 12px 18px !important;
     }
-}
-
-.timer-panel::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    height: 3px;
-    background: linear-gradient(
-        90deg,
-        var(--mud-palette-primary),
-        var(--mud-palette-tertiary),
-        var(--mud-palette-secondary)
-    );
-    border-radius: 16px 16px 0 0;
 }
 
 /* Active session: compact sticky strip */
@@ -488,7 +471,7 @@
 .custom-timer-toggle {
     display: flex;
     width: 100%;
-    background-color: var(--mud-palette-background-grey);
+    background-color: var(--mud-palette-background-gray);
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 35%, transparent);
     border-radius: var(--radius-pill);
     padding: 4px;

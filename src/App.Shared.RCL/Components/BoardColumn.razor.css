@@ -3,15 +3,8 @@
     height: 100%;
     border-radius: var(--space-6);
     overflow: hidden;
-    background: linear-gradient(
-        165deg,
-        color-mix(in srgb, var(--mud-palette-background) 70%, var(--mud-palette-surface) 30%) 0%,
-        color-mix(in srgb, var(--mud-palette-background) 90%, var(--mud-palette-surface) 10%) 100%
-    );
-    border: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
-    box-shadow:
-        0 12px 40px color-mix(in srgb, var(--mud-palette-black) 15%, transparent),
-        0 0 0 1px color-mix(in srgb, var(--mud-palette-text-primary) 4%, transparent) inset;
+    background: var(--mud-palette-background-gray);
+    border: 1px solid var(--hab-border-card);
 }
 
 .board-column ::deep .mud-card-header,
@@ -26,18 +19,6 @@
 
 .board-column ::deep .mud-card-content {
     padding: 0 0.85rem 0.65rem !important;
-}
-
-.board-column--habit {
-    border-left: 4px solid var(--hab-type-habit);
-}
-
-.board-column--daily {
-    border-left: 4px solid var(--mud-palette-primary);
-}
-
-.board-column--todo {
-    border-left: 4px solid var(--hab-type-todo);
 }
 
 .board-title {
@@ -94,17 +75,17 @@
     flex: 1 1 0px !important;
     width: 0 !important;
     min-width: 0 !important;
-    height: 36px !important;
-    min-height: 36px !important;
+    height: 32px !important;
+    min-height: 32px !important;
     padding: var(--space-1) var(--space-3) !important;
     border-radius: var(--radius-md) !important;
-    border: 1px solid var(--mud-palette-primary, #2563eb) !important;
+    border: 1px solid transparent !important;
     background-color: transparent !important;
-    color: var(--mud-palette-primary, #2563eb) !important;
+    color: var(--mud-palette-text-secondary) !important;
     font-size: 0.8rem !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.02em;
+    font-weight: 600 !important;
+    text-transform: none !important;
+    letter-spacing: 0;
     cursor: pointer !important;
     display: inline-flex !important;
     align-items: center !important;
@@ -121,9 +102,13 @@
 .board-filter-btn:focus,
 .board-filter-btn:focus-visible {
     background-color: transparent !important;
-    color: var(--mud-palette-primary, #2563eb) !important;
-    border-color: var(--mud-palette-primary, #2563eb) !important;
-    outline: none !important;
+    color: var(--mud-palette-text-secondary) !important;
+    border-color: transparent !important;
+}
+
+.board-filter-btn:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: -2px;
 }
 
 .board-filter-btn:active {
@@ -136,11 +121,16 @@
 .board-filter-btn--active,
 .board-filter-btn--active:focus,
 .board-filter-btn--active:focus-visible {
-    background-color: var(--mud-palette-primary, #2563eb) !important;
-    color: #ffffff !important;
-    border-color: var(--mud-palette-primary, #2563eb) !important;
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35) !important;
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent) !important;
+    color: var(--mud-palette-primary) !important;
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, transparent) !important;
+    font-weight: 700 !important;
     outline: none !important;
+}
+
+.board-filter-btn:hover:not(.board-filter-btn--active) {
+    background-color: color-mix(in srgb, var(--mud-palette-text-secondary) 8%, transparent) !important;
+    color: var(--mud-palette-text-primary) !important;
 }
 
 .board-add-wrap ::deep .mud-input-outlined {
@@ -278,7 +268,7 @@
     padding: var(--space-8) var(--space-6);
     border: 1.5px dashed color-mix(in srgb, var(--mud-palette-text-primary) 12%, transparent);
     border-radius: var(--space-5);
-    background-color: color-mix(in srgb, var(--mud-palette-background-grey) 25%, transparent);
+    background-color: color-mix(in srgb, var(--mud-palette-background-gray) 25%, transparent);
     margin: var(--space-4) 0;
 }
 
@@ -290,25 +280,10 @@
     height: 2.75rem;
     border-radius: 50%;
     margin-bottom: var(--space-5);
-}
-
-.board-column--habit .empty-state-icon-container {
-    background-color: color-mix(in srgb, var(--hab-type-habit) 12%, transparent);
-    color: var(--hab-type-habit);
-}
-
-.board-column--daily .empty-state-icon-container {
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
-    color: var(--mud-palette-primary);
-}
-
-.board-column--todo .empty-state-icon-container {
-    background-color: color-mix(in srgb, var(--hab-type-todo) 12%, transparent);
-    color: var(--hab-type-todo);
+    color: var(--mud-palette-text-secondary);
 }
 
 .empty-state-icon-container--filter {
-    background-color: color-mix(in srgb, var(--mud-palette-text-secondary) 12%, transparent) !important;
     color: var(--mud-palette-text-secondary) !important;
 }
 

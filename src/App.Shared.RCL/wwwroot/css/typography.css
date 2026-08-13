@@ -61,6 +61,13 @@ h1, h2, h3, h4, h5, h6, .edit-daily-header__title {
     text-wrap: balance;
 }
 
+/* FocusOnNavigate moves focus to the page heading after navigation.
+   Headings are not interactive, so drop the default focus ring. */
+h1:focus-visible,
+h1:focus {
+    outline: none;
+}
+
 p, .auth-form-hint, .edit-daily-label-body, .habit-tag-picker__empty {
     text-wrap: pretty;
 }

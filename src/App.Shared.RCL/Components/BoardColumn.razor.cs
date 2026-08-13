@@ -16,7 +16,6 @@ public partial class BoardColumn : IAsyncDisposable
     [Inject] public required IDialogService DialogService { get; set; }
     [Inject] public required IUserNotifier Notifier { get; set; }
     [Inject] public required IUserTimeZoneService TimeZoneService { get; set; }
-    [Inject] public required IUserDateFormatService DateFormatService { get; set; }
     [Inject] public required IUndoService UndoService { get; set; }
     [Inject] public required IJSRuntime JS { get; set; }
     [Inject] public required IBoardColumnStateStore ColumnState { get; set; }
@@ -717,10 +716,8 @@ public partial class BoardColumn : IAsyncDisposable
                     nextDue,
                     SortOrder: item.SortOrder,
                     TodoRepeatIntervalDays: item.TodoRepeatIntervalDays));
+            // The undo toast for the toggle is the notification for this action.
             await BoardData.ToggleItemAsync(BoardSection.Todo, item.Id);
-            await Notifier.NotifyAsync(
-                $"Repeating to-do. Next occurrence {DateFormatService.Format(nextDue)}.",
-                Severity.Info);
         });
     }
 
@@ -882,11 +879,8 @@ public partial class BoardColumn : IAsyncDisposable
             }
 
             await OnChanged.InvokeAsync();
-            if (deleted == toDelete.Count)
-            {
-                await Notifier.NotifyAsync($"Deleted {deleted} done to-do(s).", Severity.Success);
-            }
-            else
+            // Full success is covered by the batch undo toast for "Delete N done to-dos".
+            if (deleted < toDelete.Count)
             {
                 await Notifier.NotifyAsync(
                     $"Removed {deleted} of {toDelete.Count} to-do(s). Some could not be deleted.",

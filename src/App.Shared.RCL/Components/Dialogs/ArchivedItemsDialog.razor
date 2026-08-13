@@ -46,16 +46,16 @@
                     </div>
 
                     <div class="filter-tabs" role="tablist" aria-label="Filter archived items">
-                        <button type="button" role="tab" aria-selected="@(_selectedSection == null ? "true" : "false")" class="@FilterTabClass(null)" @onclick="() => SetFilter(null)">
+                        <button type="button" role="tab" aria-selected="@AriaSelected(_selectedSection == null)" class="@FilterTabClass(null)" @onclick="() => SetFilter(null)">
                             All <span class="filter-tab-count">@TotalCount</span>
                         </button>
-                        <button type="button" role="tab" aria-selected="@(_selectedSection == BoardSection.Habit ? "true" : "false")" class="@FilterTabClass(BoardSection.Habit)" @onclick="() => SetFilter(BoardSection.Habit)">
+                        <button type="button" role="tab" aria-selected="@AriaSelected(_selectedSection == BoardSection.Habit)" class="@FilterTabClass(BoardSection.Habit)" @onclick="() => SetFilter(BoardSection.Habit)">
                             Habits <span class="filter-tab-count">@HabitsCount</span>
                         </button>
-                        <button type="button" role="tab" aria-selected="@(_selectedSection == BoardSection.Daily ? "true" : "false")" class="@FilterTabClass(BoardSection.Daily)" @onclick="() => SetFilter(BoardSection.Daily)">
+                        <button type="button" role="tab" aria-selected="@AriaSelected(_selectedSection == BoardSection.Daily)" class="@FilterTabClass(BoardSection.Daily)" @onclick="() => SetFilter(BoardSection.Daily)">
                             Dailies <span class="filter-tab-count">@DailiesCount</span>
                         </button>
-                        <button type="button" role="tab" aria-selected="@(_selectedSection == BoardSection.Todo ? "true" : "false")" class="@FilterTabClass(BoardSection.Todo)" @onclick="() => SetFilter(BoardSection.Todo)">
+                        <button type="button" role="tab" aria-selected="@AriaSelected(_selectedSection == BoardSection.Todo)" class="@FilterTabClass(BoardSection.Todo)" @onclick="() => SetFilter(BoardSection.Todo)">
                             To-dos <span class="filter-tab-count">@TodosCount</span>
                         </button>
                     </div>
@@ -239,6 +239,8 @@
     private string FilterTabClass(BoardSection? section) =>
         _selectedSection == section ? "filter-tab active" : "filter-tab";
 
+    private static string AriaSelected(bool condition) => condition ? "true" : "false";
+
     private async Task UnarchiveAsync(BoardSection section, BoardItem item)
     {
         var index = _allEntries.FindIndex(x => x.Item.Id == item.Id);
@@ -259,11 +261,8 @@
         try
         {
             var res = await BoardData.UnarchiveItemAsync(section, item.Id);
-            if (res is not null)
-            {
-                await Notifier.NotifyAsync($"Restored \"{item.Title}\" back to the board.", Severity.Success);
-            }
-            else
+            // Success is covered by the "Unarchive" undo toast.
+            if (res is null)
             {
                 await Notifier.NotifyAsync($"Failed to restore \"{item.Title}\".", Severity.Error);
                 if (entry is not null)
@@ -310,11 +309,8 @@
         try
         {
             var success = await BoardData.DeleteItemAsync(section, item.Id);
-            if (success)
-            {
-                await Notifier.NotifyAsync($"Permanently deleted \"{item.Title}\".", Severity.Success);
-            }
-            else
+            // Success is covered by the "Delete" undo toast.
+            if (!success)
             {
                 await Notifier.NotifyAsync($"Failed to delete \"{item.Title}\".", Severity.Error);
                 if (entry is not null)

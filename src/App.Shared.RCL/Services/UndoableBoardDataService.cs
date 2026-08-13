@@ -175,7 +175,7 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         var result = await _inner.IncrementHabitPlusAsync(itemId, cancellationToken);
         if (result is not null && !_undoService.IsUndoing)
         {
-            _undoService.RegisterUndo($"Increment + for \"{item.Title}\"", async () =>
+            _undoService.RegisterUndo($"Incremented \"{item.Title}\"", async () =>
             {
                 var current = await FindItemAsync(itemId, CancellationToken.None);
                 if (current is not null)
@@ -201,7 +201,7 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         var result = await _inner.IncrementHabitMinusAsync(itemId, cancellationToken);
         if (result is not null && !_undoService.IsUndoing)
         {
-            _undoService.RegisterUndo($"Increment − for \"{item.Title}\"", async () =>
+            _undoService.RegisterUndo($"Decremented \"{item.Title}\"", async () =>
             {
                 var current = await FindItemAsync(itemId, CancellationToken.None);
                 if (current is not null)
@@ -291,6 +291,8 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
     private const string FieldTitle = "title";
     private const string FieldNotes = "notes";
     private const string FieldTags = "tags";
+    private const string FieldCounter = "counter";
+    private const string FieldNegativeCounter = "negcounter";
     private const string ChecklistFieldPrefix = "checklist:";
 
     private static string ItemKey(Guid itemId) => $"item:{itemId:N}";
@@ -336,11 +338,11 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         }
         if (item.Counter != args.Counter)
         {
-            diff["counter"] = item.Counter;
+            diff[FieldCounter] = item.Counter;
         }
         if (item.NegativeCounter != args.NegativeCounter)
         {
-            diff["negcounter"] = item.NegativeCounter;
+            diff[FieldNegativeCounter] = item.NegativeCounter;
         }
         DiffChecklist(diff, item.ChecklistJson, args.ChecklistJson);
         return diff;
@@ -402,7 +404,7 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         }
         if (item.Counter != args.Counter)
         {
-            diff["counter"] = item.Counter;
+            diff[FieldCounter] = item.Counter;
         }
         DiffChecklist(diff, item.ChecklistJson, args.ChecklistJson);
         return diff;
@@ -484,8 +486,8 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
                 diff.TryGetValue("trackplus", out var trackPlus) ? DiffCast(trackPlus, current.TrackPlus) : current.TrackPlus,
                 diff.TryGetValue("trackminus", out var trackMinus) ? DiffCast(trackMinus, current.TrackMinus) : current.TrackMinus,
                 diff.TryGetValue("resetperiod", out var resetPeriod) ? DiffCast(resetPeriod, current.ResetPeriod) : current.ResetPeriod,
-                diff.TryGetValue("counter", out var counter) ? DiffCast(counter, current.Counter) : current.Counter,
-                diff.TryGetValue("negcounter", out var negativeCounter) ? DiffCast(negativeCounter, current.NegativeCounter) : current.NegativeCounter,
+                diff.TryGetValue(FieldCounter, out var counter) ? DiffCast(counter, current.Counter) : current.Counter,
+                diff.TryGetValue(FieldNegativeCounter, out var negativeCounter) ? DiffCast(negativeCounter, current.NegativeCounter) : current.NegativeCounter,
                 ApplyChecklistDiff(current.ChecklistJson, diff)),
             CancellationToken.None);
     }
@@ -529,7 +531,7 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
                 diff.TryGetValue("repeat", out var repeat) ? DiffCast(repeat, current.DailyRepeat) : current.DailyRepeat,
                 diff.TryGetValue("interval", out var interval) ? DiffCast(interval, current.DailyRepeatInterval) : current.DailyRepeatInterval,
                 ApplyChecklistDiff(current.ChecklistJson, diff),
-                diff.TryGetValue("counter", out var counter) ? DiffCast(counter, current.Counter) : current.Counter),
+                diff.TryGetValue(FieldCounter, out var counter) ? DiffCast(counter, current.Counter) : current.Counter),
             CancellationToken.None);
     }
 

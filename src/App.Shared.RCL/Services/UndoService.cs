@@ -238,7 +238,7 @@ public sealed class UndoService : IUndoService, IDisposable
                 config =>
                 {
                     AppSnackbar.Configure(config, ms);
-                    config.DuplicatesBehavior = SnackbarDuplicatesBehavior.Allow;
+                    config.SnackbarTypeClass = $"{AppSnackbar.ToastTypeClass} undo-toast";
                 },
                 action.SnackbarKey);
         }

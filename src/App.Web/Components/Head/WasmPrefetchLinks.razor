@@ -66,7 +66,7 @@
             name.StartsWith("icudt.", StringComparison.OrdinalIgnoreCase))
             return false;
 
-        // Include .wasm (assemblies + native runtime) and .js (dotnet runtime scripts)
+        // Include .wasm, the assemblies and native runtime, and .js, the dotnet runtime scripts.
         return name.EndsWith(".wasm", StringComparison.OrdinalIgnoreCase) ||
                name.EndsWith(".js", StringComparison.OrdinalIgnoreCase);
     }

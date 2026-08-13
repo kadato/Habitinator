@@ -24,7 +24,7 @@ public sealed class GlobalTimerService(IClock clock)
 
     public int CompletedWorkIntervalsCount { get; private set; }
 
-    // Configurable durations populated from UserPreferences (in UI component)
+    // Configurable durations populated from UserPreferences in the UI component
     public TimeSpan WorkDuration { get; set; } = TimeSpan.FromMinutes(25);
 
     public TimeSpan ShortBreakDuration { get; set; } = TimeSpan.FromMinutes(5);
@@ -37,12 +37,12 @@ public sealed class GlobalTimerService(IClock clock)
 
     public string? TargetId { get; private set; }
 
-    /// <summary>When the target is a board row, the item id. Otherwise null (e.g. free-text session).</summary>
+    /// <summary>When the target is a board row, the item id. Otherwise null, as in a free-text session.</summary>
     public Guid? BoardItemId { get; private set; }
 
     /// <summary>
     ///     Optional total elapsed length at which a "time's up" event may fire until <see cref="Stop" />.
-    ///     <see langword="null" /> or non-positive: no automatic end alert (stopwatch only).
+    ///     <see langword="null" /> or non-positive: no automatic end alert, stopwatch only.
     /// </summary>
     public TimeSpan? FocusAlertAfter
     {
@@ -76,7 +76,7 @@ public sealed class GlobalTimerService(IClock clock)
     ///     Returns <see langword="true" /> when the timer is <see cref="IsRunning">running</see>,
     ///     a positive <see cref="FocusAlertAfter" /> is set, and <see cref="Elapsed" /> has reached the next milestone.
     ///     The caller should <see cref="PauseForFocusTimeUp" /> and show a prompt, then
-    ///     either <see cref="Stop" /> (log) or <see cref="ResumeAfterFocusPromptNotDone" /> (not done).
+    ///     either <see cref="Stop" /> to log or <see cref="ResumeAfterFocusPromptNotDone" /> for not done.
     /// </summary>
     public bool TryConsumeFocusDurationReached()
     {

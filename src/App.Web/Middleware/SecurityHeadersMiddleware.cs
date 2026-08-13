@@ -32,7 +32,7 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next)
             "upgrade-insecure-requests";
 #pragma warning restore S7039
 
-        // Set aggressive caching for fingerprinted framework assets (immutable, 1 year)
+        // Set aggressive caching for fingerprinted framework assets. They are immutable, so cache for 1 year.
         if (IsImmutableAsset(context.Request.Path))
         {
             headers.CacheControl = "public, max-age=31536000, immutable";

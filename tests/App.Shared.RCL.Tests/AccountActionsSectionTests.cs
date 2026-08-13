@@ -154,7 +154,7 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         var cut = _ctx.Render<AccountActionsSection>();
         var buttons = cut.FindComponents<MudButton>();
 
-        // Act - Click Delete Account (buttons[2])
+        // Act - Click Delete Account, buttons[2]
         await cut.InvokeAsync(() => buttons[2].Instance.OnClick.InvokeAsync(null));
 
         // Assert
@@ -168,7 +168,7 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         var cut = _ctx.Render<AccountActionsSection>();
         var buttons = cut.FindComponents<MudButton>();
 
-        // Act - Click Export Data (buttons[1])
+        // Act - Click Export Data, buttons[1]
         await cut.InvokeAsync(() => buttons[1].Instance.OnClick.InvokeAsync(null));
 
         // Assert

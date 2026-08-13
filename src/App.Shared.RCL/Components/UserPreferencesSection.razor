@@ -184,7 +184,7 @@
             <MudStack Spacing="2">
                 <MudText Typo="Typo.subtitle1" Class="mb-1">Keyboard Shortcuts</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
-                    Enable keyboard shortcuts to navigate and control the app quickly.
+                    Enable keyboard shortcuts to move through and control the app quickly.
                 </MudText>
                 <MudSwitch T="bool" Label="Enable keyboard shortcuts" Color="Color.Primary"
                            Value="_model.EnableKeyboardShortcuts" ValueChanged="OnEnableKeyboardShortcutsChanged" />
@@ -355,7 +355,7 @@
         }
         else
         {
-            // Pin to dark mode (app default) when unpinning from system. User can toggle with button
+            // Pin to dark mode, the app default, when unpinning from system. User can toggle with button
             _model.Theme = AppTheme.Dark;
         }
         UpdatePinnedThemeState();
@@ -365,7 +365,7 @@
     private async Task TogglePinnedTheme()
     {
         if (_model is null) return;
-        // Flip pinned theme: light → dark, dark → light
+        // Flip pinned theme: light to dark, dark to light
         _model.Theme = _model.Theme == AppTheme.Dark ? AppTheme.Light : AppTheme.Dark;
         UpdatePinnedThemeState();
         await AutoSaveAsync();

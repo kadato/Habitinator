@@ -2,7 +2,7 @@ using System.Net;
 
 namespace App.MAUI.Services;
 
-/// <summary>Clears stored JWT when the API returns 401 so the UI can return to sign-in (expired or revoked token).</summary>
+/// <summary>Clears stored JWT when the API returns 401 so the UI can return to sign-in with an expired or revoked token.</summary>
 public sealed partial class ClearSessionOnUnauthorizedHandler : DelegatingHandler
 {
     private readonly IApiSession _session;

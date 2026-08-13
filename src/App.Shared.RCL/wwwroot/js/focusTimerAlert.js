@@ -1,4 +1,4 @@
-// Browser chime + system notification for focus "time's up" (used from Blazor IJSRuntime).
+// Browser chime + system notification for focus "time's up", used from Blazor IJSRuntime.
 // eslint-disable-next-line no-unused-vars
 globalThis.habitinatorFocusTimeUp = function (title, body, playSound, showSystemNotification) {
     if (playSound) {
@@ -10,7 +10,7 @@ globalThis.habitinatorFocusTimeUp = function (title, body, playSound, showSystem
     }
 };
 
-// Browser chime + system notification for break completed (used from Blazor IJSRuntime).
+// Browser chime + system notification for break completed, used from Blazor IJSRuntime.
 // eslint-disable-next-line no-unused-vars
 globalThis.habitinatorBreakTimeUp = function (title, body, playSound, showSystemNotification) {
     if (playSound) {
@@ -74,7 +74,7 @@ function playBreakChime() {
                 ctx.resume();
             }
             const t0 = ctx.currentTime;
-            // Play a gentle two-tone chime (C5 then E5)
+            // Play a gentle two-tone chime, C5 then E5
             const tones = [523.25, 659.25];
             for (let i = 0; i < tones.length; i++) {
                 const o = ctx.createOscillator();

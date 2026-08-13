@@ -11,7 +11,7 @@ using MudBlazor.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
-// Suppress verbose HttpClient logs (only show warnings/errors)
+// Suppress verbose HttpClient logs, only show warnings and errors
 builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
 builder.Logging.AddFilter("Microsoft.AspNetCore.Authorization", LogLevel.Warning);
 

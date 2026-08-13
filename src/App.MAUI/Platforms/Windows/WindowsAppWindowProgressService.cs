@@ -92,13 +92,13 @@ public class WindowsAppWindowProgressService : MauiAppWindowProgressService
             return;
         }
 
-        // Draw the badge bitmap dynamically (16x16 size for taskbar overlay)
+        // Draw the badge bitmap dynamically, 16x16 size for the taskbar overlay
         using var bitmap = new Bitmap(16, 16);
         using var graphics = Graphics.FromImage(bitmap);
         graphics.TextRenderingHint = TextRenderingHint.SingleBitPerPixelGridFit;
         graphics.SmoothingMode = SmoothingMode.HighSpeed;
 
-        // Draw background badge circle (colored blue matching MudBlazor Primary/Info #3b82f6)
+        // Draw the background badge circle, colored blue to match MudBlazor Primary/Info #3b82f6
         using (var brush = new SolidBrush(System.Drawing.Color.FromArgb(220, 59, 130, 246)))
         {
             graphics.FillEllipse(brush, 0, 0, 16, 16);

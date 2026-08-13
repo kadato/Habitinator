@@ -20,7 +20,7 @@
  */
 
 :root {
-    /* Spacing scale (rem) */
+    /* Spacing scale, in rem */
     --space-1: 0.25rem;
     --space-2: 0.35rem;
     --space-3: 0.4rem;
@@ -48,12 +48,12 @@
     --mobile-nav-height: 44px;
     --control-height: 40px;
 
-    /* Elevation layers (app-defined, above MudBlazor's own scale) */
+    /* Elevation layers, app-defined and above MudBlazor's own scale */
     --z-nav: 1200;
     --z-error: 1000;
     --z-max: 99999;
 
-    /* Item-type accent colors (single source for board, cards, and dialogs) */
+    /* Item-type accent colors, the single source for board, cards, and dialogs */
     --hab-type-habit: #0d9488; /* teal-600 */
     --hab-type-daily: var(--mud-palette-primary);
     --hab-type-todo: #f59e0b; /* amber-500 */
@@ -61,6 +61,6 @@
     /* Card container borders. Softer than the divider line, theme-aware. */
     --hab-border-card: light-dark(rgba(15, 23, 42, 0.10), rgba(255, 255, 255, 0.06));
 
-    /* Brand gradient (splash bars and loaders) */
+    /* Brand gradient, used for splash bars and loaders */
     --hab-brand-gradient: linear-gradient(90deg, #3b82f6, #8b5cf6);
 }

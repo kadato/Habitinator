@@ -30,10 +30,10 @@ public sealed class BoardItemEntity
 
     public int NegativeCounter { get; set; }
 
-    /// <summary>UTC date (time ignored) for daily scheduling.</summary>
+    /// <summary>UTC date, the time is ignored, for daily scheduling.</summary>
     public DateTime? DailyStartDate { get; set; }
 
-    /// <summary>When set, completing the to-do advances its due date by this many days (recurring to-do).</summary>
+    /// <summary>When set, completing the to-do advances its due date by this many days, a recurring to-do.</summary>
     public int? TodoRepeatIntervalDays { get; set; }
 
     public int DailyRepeatType { get; set; }
@@ -51,7 +51,7 @@ public sealed class BoardItemEntity
     /// <summary>User-defined sort position within a section. New items get max+1. Drag-and-drop sets midpoint between neighbours.</summary>
     public double SortOrder { get; set; }
 
-    /// <summary>When set, the row is a tombstone (soft-deleted). Live board queries exclude these.</summary>
+    /// <summary>When set, the row is a tombstone, soft-deleted. Live board queries exclude these.</summary>
     public DateTimeOffset? DeletedAtUtc { get; set; }
 
     /// <summary>True if the item is archived and hidden from the active board.</summary>

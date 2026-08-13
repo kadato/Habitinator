@@ -9,7 +9,7 @@ public sealed class LocalBoardItemRow
 {
     public Guid Id { get; set; }
 
-    /// <summary>Normalized account key (email) bound to this row.</summary>
+    /// <summary>Normalized account key, the email, bound to this row.</summary>
     public string UserKey { get; set; } = "";
 
     public BoardSection Section { get; set; }
@@ -54,7 +54,7 @@ public sealed class LocalBoardItemRow
     /// <summary>Last known server <c>UpdatedAtUtc</c> for If-Match. Null for purely local rows.</summary>
     public DateTimeOffset? ServerUpdatedAtUtc { get; set; }
 
-    /// <summary>Server creation time (display/audit only. Not used for list ordering).</summary>
+    /// <summary>Server creation time for display and audit only. Not used for list ordering.</summary>
     public DateTimeOffset? CreatedAtUtc { get; set; }
 
     public double? SortOrder { get; set; }

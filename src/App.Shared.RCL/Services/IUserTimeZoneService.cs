@@ -3,13 +3,13 @@ namespace App.Shared.RCL.Services;
 /// <summary>Provides the user's local timezone and conversion utilities.</summary>
 public interface IUserTimeZoneService
 {
-    /// <summary>The detected timezone ID (e.g., "America/New_York"), or null if not detected.</summary>
+    /// <summary>The detected timezone ID, e.g. "America/New_York", or null if not detected.</summary>
     string? TimeZoneId { get; }
 
     /// <summary>Whether the timezone has been successfully detected.</summary>
     bool IsDetected { get; }
 
-    /// <summary>Overrides the timezone ID used for conversions (null to use detected).</summary>
+    /// <summary>Overrides the timezone ID used for conversions. Null means use detected.</summary>
     void SetOverride(string? timeZoneId);
 
     /// <summary>
@@ -32,24 +32,24 @@ public interface IUserTimeZoneService
 
     /// <summary>
     ///     Gets the current date in the user's local timezone.
-    ///     This is used for daily scheduling (when do dailies reset).
+    ///     This is used for daily scheduling, when dailies reset.
     /// </summary>
     DateOnly LocalToday { get; }
 
     /// <summary>
-    ///     Converts a local TimeSpan (time-of-day) to UTC time-of-day.
-    ///     Handles date rollover (e.g., 11 PM EST = 4 AM UTC next day).
+    ///     Converts a local TimeSpan, a time-of-day, to UTC time-of-day.
+    ///     Handles date rollover, e.g. 11 PM EST equals 4 AM UTC the next day.
     /// </summary>
     TimeSpan ConvertLocalTimeToUtc(TimeSpan localTime);
 
     /// <summary>
-    ///     Converts a UTC TimeSpan (time-of-day) to local time-of-day.
+    ///     Converts a UTC TimeSpan, a time-of-day, to local time-of-day.
     ///     Handles date rollover.
     /// </summary>
     TimeSpan ConvertUtcTimeToLocal(TimeSpan utcTime);
 
     /// <summary>
-    ///     Gets a display-friendly timezone abbreviation (e.g., "UTC+2", "EST").
+    ///     Gets a display-friendly timezone abbreviation, e.g. "UTC+2" or "EST".
     /// </summary>
     string GetTimeZoneAbbreviation();
 }

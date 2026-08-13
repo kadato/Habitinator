@@ -8,19 +8,19 @@ namespace App.Shared.RCL.Services;
 /// </summary>
 public static class DailyStreakBackfill
 {
-    /// <summary>UTC noon - real toggles use <see cref="DateTimeOffset.UtcNow" />, so we can tell synthetics apart.</summary>
+    /// <summary>UTC noon. Real toggles use <see cref="DateTimeOffset.UtcNow" />, so we can tell synthetics apart.</summary>
     public const int StreakBackfillHourUtc = 12;
 
     /// <summary>
     ///     The most recent <paramref name="streakCount" /> scheduled days on or before <paramref name="notAfter" />,
-    ///     in iteration order (newest first). Fewer than <paramref name="streakCount" /> if the schedule
+    ///     in iteration order, newest first. Fewer than <paramref name="streakCount" /> if the schedule
     ///     or start date does not allow more days. For manual streak from the daily edit dialog, use
     ///     <c>notAfter = <see cref="DailySchedule.LocalToday" />.AddDays(-1)</c> so the count is previous days only
     ///     and does not mark today.
     /// </summary>
     /// <remarks>
-    ///     A <c>null</c> <paramref name="dailyStart" /> means the board treats the daily as due from today
-    ///     (every day scheduled), so the backfill covers consecutive days regardless of the repeat pattern.
+    ///     A <c>null</c> <paramref name="dailyStart" /> means the board treats the daily as due from today,
+    ///     so every day is scheduled and the backfill covers consecutive days regardless of the repeat pattern.
     /// </remarks>
     public static IReadOnlyList<DateOnly> GetLastNScheduledCompletionDays(
         DateOnly? dailyStart,

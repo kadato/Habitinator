@@ -11,6 +11,6 @@ public interface IUserActivityLogService
         string? itemTitleSnapshot = null,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Records a focus timer session for statistics (independent of board progress updates).</summary>
+    /// <summary>Records a focus timer session for statistics, independent of board progress updates.</summary>
     Task LogTimerSessionAsync(TimeSpan duration, Guid? boardItemId, string? customLabel = null, CancellationToken cancellationToken = default);
 }

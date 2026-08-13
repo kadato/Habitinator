@@ -3,11 +3,11 @@ using Npgsql;
 namespace App.Web.Services;
 
 /// <summary>
-/// Ensures connection parameters tolerate managed Postgres cold starts (e.g. Neon scale-to-zero).
+/// Ensures connection parameters tolerate managed Postgres cold starts, e.g. Neon scale-to-zero.
 /// </summary>
 public static class PostgresResilienceConnectionString
 {
-    /// <summary>Minimum <see cref="NpgsqlConnectionStringBuilder.Timeout"/> (seconds) for opening a connection.</summary>
+    /// <summary>Minimum <see cref="NpgsqlConnectionStringBuilder.Timeout"/> in seconds for opening a connection.</summary>
     public const int MinimumConnectionTimeoutSeconds = 15;
 
     /// <summary>

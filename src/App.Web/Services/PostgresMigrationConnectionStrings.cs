@@ -3,7 +3,7 @@ using Npgsql;
 namespace App.Web.Services;
 
 /// <summary>
-/// Neon (and similar) pooled endpoints use PgBouncer transaction pooling, which is not reliable for
+/// Neon and similar pooled endpoints use PgBouncer transaction pooling, which is not reliable for
 /// EF Core <see cref="Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.MigrateAsync" />.
 /// Derives a direct compute hostname from the standard Neon pooled host pattern when needed.
 /// </summary>

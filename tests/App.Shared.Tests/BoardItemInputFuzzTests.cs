@@ -64,10 +64,10 @@ public sealed class BoardItemInputFuzzTests
             Assert.Equal(parsedItem.Text.Trim(), parsedItem.Text);
             Assert.False(ZalgoSanitizer.IsZalgo(parsedItem.Text));
 
-            // Check that the original ID (or a generated one if Guid.Empty) and IsDone match
+            // Check that the original ID, or a generated one if Guid.Empty, and IsDone match
             Assert.NotEqual(Guid.Empty, parsedItem.Id);
 
-            // Find corresponding input item (order is preserved for non-empty items)
+            // Find corresponding input item. Order is preserved for non-empty items.
             var inputItemsWithText = items.Where(x => !string.IsNullOrWhiteSpace(x.Text)).ToList();
             var correspondingInput = inputItemsWithText[i];
 

@@ -1,6 +1,6 @@
 :root {
     color-scheme: light dark;
-    /* Canvas backgrounds follow the MudBlazor theme, fallbacks cover pre-theme rendering (splash screens) */
+    /* Canvas backgrounds follow the MudBlazor theme. Fallbacks cover pre-theme rendering, the splash screens. */
     --hab-bg-light: var(--mud-palette-background, #f8fafc);
     --hab-bg-dark: var(--mud-palette-background, #0b0f19);
 }
@@ -120,7 +120,7 @@ html.light-theme .wasm-splash__hint {
     }
 }
 
-/* -- Top Loading Bar (legacy, inside WASM-rendered layout) -- */
+/* -- Top Loading Bar, legacy, inside the WASM-rendered layout -- */
 #habitinator-loading-bar {
     position: fixed;
     top: 0;
@@ -186,7 +186,7 @@ a {
     color: var(--mud-palette-primary);
 }
 
-/* Focus ring for auth-page checkboxes (form/button styling lives in auth-pages.css) */
+/* Focus ring for auth-page checkboxes. Form and button styling lives in auth-pages.css. */
 .form-check-input:focus {
   box-shadow: 0 0 0 0.1rem var(--mud-palette-surface), 0 0 0 var(--space-1) var(--mud-palette-primary);
 }
@@ -359,7 +359,7 @@ a {
     text-transform: none !important;
 }
 
-/* Responsive visibility (do not rely on Bootstrap display utilities for app chrome) */
+/* Responsive visibility. Do not rely on Bootstrap display utilities for app chrome. */
 .app-show-mobile-only,
 .app-show-mobile-only.mud-button-root,
 .app-show-mobile-only.mud-icon-button {
@@ -494,7 +494,7 @@ a {
     box-shadow: 0 2px 6px color-mix(in srgb, var(--mud-palette-primary) 30%, transparent) !important;
 }
 
-/* Mobile nav tabs inside the app bar (always rendered by MudAppBar) */
+/* Mobile nav tabs inside the app bar, always rendered by MudAppBar */
 .app-top-bar__stack {
     display: flex;
     flex-direction: column;
@@ -607,7 +607,7 @@ a {
     }
 }
 
-/* -- App toasts (bottom-left snackbar) -- */
+/* -- App toasts, bottom-left snackbar -- */
 .habitinator-toast {
     position: relative;
     overflow: hidden;
@@ -766,7 +766,7 @@ a {
     transition: background-color var(--dur-slow) ease, backdrop-filter var(--dur-slow) ease;
 }
 
-/* Base dialog style (all dialogs except those with custom outer shells) */
+/* Base dialog style. All dialogs except those with custom outer shells. */
 .mud-dialog:not(.edit-daily-dialog):not(.edit-habit-dialog):not(.daily-yesterday-dialog) {
     border-radius: var(--space-6) !important;
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent) !important;
@@ -797,7 +797,7 @@ a {
     letter-spacing: -0.015em;
 }
 
-/* Consistent Dialog Actions (Footer) */
+/* Consistent Dialog Actions, the Footer */
 .mud-dialog .mud-dialog-actions {
     border-top: 1px solid var(--mud-palette-divider) !important;
     padding: var(--space-6) 1.25rem !important;
@@ -819,7 +819,7 @@ a {
     border-radius: var(--radius-md) !important;
 }
 
-/* -- Activity Day Detail Dialog (Heatmap Details) Redesign -- */
+/* -- Activity Day Detail Dialog, Heatmap Details, Redesign -- */
 
 /* Dialog content container custom spacing */
 .activity-day-detail-dialog .activity-day-detail-dialog__content {

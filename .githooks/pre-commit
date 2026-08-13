@@ -96,7 +96,7 @@ echo "=================================================="
 build_failed=false
 
 # Build only the target framework that matches the current OS.
-# Avoids requiring every SDK (Android, iOS, MacCatalyst) to be installed
+# Avoids requiring every SDK, Android, iOS, or MacCatalyst, to be installed
 # on every developer machine. Controlled via the SingleTfmOnly property
 # already defined in App.MAUI.csproj.
 build_args="--configuration Release -p:TreatWarningsAsErrors=true -p:SingleTfmOnly=true"

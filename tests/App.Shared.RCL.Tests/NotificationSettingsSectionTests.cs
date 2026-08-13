@@ -195,7 +195,7 @@ public sealed class NotificationSettingsSectionTests : IAsyncDisposable
         };
         _settingsService.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(settings));
 
-        // Let's mock local-to-UTC conversion: shift start by 4 hours (+4h)
+        // Mock local-to-UTC conversion: shift start by 4 hours, plus 4 hours.
         _timeZoneService.ConvertLocalTimeToUtc(TimeSpan.FromHours(18)).Returns(TimeSpan.FromHours(22));
         _timeZoneService.ConvertLocalTimeToUtc(TimeSpan.FromHours(2)).Returns(TimeSpan.FromHours(6));
 

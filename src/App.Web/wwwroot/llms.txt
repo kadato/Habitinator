@@ -2,7 +2,7 @@
 
 > Cross-platform habits, dailies, and to-dos with focus timer and statistics.
 
-Habitinator is a productivity app (Blazor web + .NET MAUI). User board data is private and requires authentication; this file describes public surfaces only.
+Habitinator is a Blazor web and .NET MAUI productivity app. User board data is private and requires authentication. This file describes public surfaces only.
 
 ## Product
 
@@ -16,11 +16,11 @@ Habitinator is a productivity app (Blazor web + .NET MAUI). User board data is p
 - `/auth/login` - sign in
 - `/auth/register` - create account
 
-## API (authenticated)
+## API, authenticated
 
 - [OpenAPI](https://habitinator.app/openapi/v1.json)
 - [API catalog](https://habitinator.app/.well-known/api-catalog)
-- [Board REST API](/api/board) (JWT or cookie auth)
+- [Board REST API](/api/board) with JWT or cookie auth
 - [Health](https://habitinator.app/health)
 
 ## Privacy

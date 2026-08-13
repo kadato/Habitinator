@@ -411,8 +411,8 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
     }
 
     /// <summary>
-    ///     Records only the checklist lines whose done state changed. When the line ids differ
-    ///     (lines added or removed) the whole field is treated as one change.
+    ///     Records only the checklist lines whose done state changed. When the line ids differ,
+    ///     lines added or removed, the whole field is treated as one change.
     /// </summary>
     private static void DiffChecklist(Dictionary<string, object?> diff, string? beforeJson, string? afterJson)
     {

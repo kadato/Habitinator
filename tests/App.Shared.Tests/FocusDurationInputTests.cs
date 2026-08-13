@@ -105,7 +105,7 @@ public sealed class FocusDurationInputTests
     }
 
     [Theory]
-    // Negative or zero timespans -> "0s"
+    // Negative or zero timespans become "0s"
     [InlineData(0, "0s")]
     [InlineData(-10, "0s")]
     // Under 60 seconds
@@ -125,13 +125,13 @@ public sealed class FocusDurationInputTests
     // Round hours
     [InlineData(60 * 60, "1h")]
     [InlineData(5 * 60 * 60, "5h")]
-    // Hours and minutes (no seconds)
+    // Hours and minutes, no seconds
     [InlineData(60 * 60 + 15 * 60, "1h 15m")]
     [InlineData(23 * 60 * 60 + 59 * 60, "23h 59m")]
-    // Minutes and seconds (no hours)
+    // Minutes and seconds, no hours
     [InlineData(5 * 60 + 30, "5m 30s")]
     [InlineData(59 * 60 + 59, "59m 59s")]
-    // Hours and seconds (no minutes)
+    // Hours and seconds, no minutes
     [InlineData(60 * 60 + 2, "1h 0m 2s")]
     [InlineData(23 * 60 * 60 + 59, "23h 0m 59s")]
     // Hours, minutes, and seconds
@@ -159,21 +159,21 @@ public sealed class FocusDurationInputTests
     }
 
     [Theory]
-    // Seconds only (h == 0, m == 0)
+    // Seconds only, h == 0 and m == 0
     [InlineData(45, "45s")]
     [InlineData(59, "59s")]
-    // Minutes only (h == 0, s == 0) -> "m"
+    // Minutes only, h == 0 and s == 0, becomes "m"
     [InlineData(60, "1")]
     [InlineData(25 * 60, "25")]
-    // Minutes and seconds (h == 0, m > 0, s > 0) -> "m m s s"
+    // Minutes and seconds, h == 0, m > 0, s > 0, becomes "m m s s"
     [InlineData(5 * 60 + 30, "5m30s")]
-    // Hours only (m == 0, s == 0) -> "h h"
+    // Hours only, m == 0 and s == 0, becomes "h h"
     [InlineData(3600, "1h")]
     [InlineData(5 * 3600, "5h")]
-    // Hours and minutes (s == 0) -> "h:mm"
+    // Hours and minutes, s == 0, becomes "h:mm"
     [InlineData(3600 + 15 * 60, "1:15")]
     [InlineData(3600 + 5 * 60, "1:05")]
-    // Hours, minutes, and seconds -> "h:mm:ss"
+    // Hours, minutes, and seconds becomes "h:mm:ss"
     [InlineData(3600 + 120 + 3, "1:02:03")]
     [InlineData(23 * 3600 + 59 * 60 + 59, "23:59:59")]
     public void FormatForField_ProducesExpected(int seconds, string expected)

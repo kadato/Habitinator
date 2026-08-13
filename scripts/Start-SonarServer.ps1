@@ -64,7 +64,7 @@ try {
     $res = Invoke-RestMethod -Uri "http://localhost:$port/api/user_tokens/revoke?name=HabitinatorScanner" -Method Post -Headers $newAuthHeader
     Write-Host "Revoked old token if it existed."
 } catch {
-    Write-Verbose "Failed to revoke old token (might not exist): $_"
+    Write-Verbose "Failed to revoke old token. It might not exist: $_"
 }
 
 # Generate new token

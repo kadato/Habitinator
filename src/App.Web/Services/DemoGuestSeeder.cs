@@ -30,7 +30,7 @@ public static class DemoGuestSeeder
         await SeedDemoActivityIfMissingAsync(db, guestUserId, cancellationToken);
     }
 
-    /// <summary>Replaces the full demo board and activity log (caller must clear guest data first).</summary>
+    /// <summary>Replaces the full demo board and activity log. The caller must clear guest data first.</summary>
     public static async Task ReseedAllAsync(
         ApplicationDbContext db,
         IBoardChangeNotifier notifier,
@@ -55,8 +55,8 @@ public static class DemoGuestSeeder
         await InsertDemoBoardAsync(db, notifier, guestUserId, cancellationToken);
     }
 
-    /// <summary>Inserts the full demo board (habits, dailies, to-dos with tags, checklists, due dates).
-    ///     Caller must ensure this user's board rows are cleared when replacing existing data.</summary>
+    /// <summary>Inserts the full demo board, habits, dailies, and to-dos with tags, checklists, and due dates.
+    ///     The caller must ensure this user's board rows are cleared when replacing existing data.</summary>
     public static async Task InsertDemoBoardAsync(
         ApplicationDbContext db,
         IBoardChangeNotifier notifier,
@@ -332,8 +332,8 @@ public static class DemoGuestSeeder
         Guid guestUserId,
         CancellationToken cancellationToken)
     {
-        // Only fill an empty (or board-only backfill) log. Never append a second year on startup.
-        // Full replace is ReseedActivityAsync (ForceReseed / ForceReseedActivity only).
+        // Only fill an empty log, or one with a board-only backfill. Never append a second year on startup.
+        // Full replace is ReseedActivityAsync, ForceReseed or ForceReseedActivity only.
         var n = await db.UserActivityEvents.CountAsync(e => e.UserId == guestUserId, cancellationToken);
         if (n >= HeatmapPresentThreshold)
         {

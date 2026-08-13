@@ -1,4 +1,4 @@
-// JavaScript helper to scroll heatmap wrapper elements to the end (rightmost edge) on load/filter changes
+// JavaScript helper to scroll heatmap wrapper elements to the end, the rightmost edge, on load and filter changes
 globalThis.scrollHeatmapsToEnd = function () {
     requestAnimationFrame(() => {
         setTimeout(() => {

@@ -21,7 +21,7 @@ public static class TodoOrdering
             .ThenBy(x => x.Id)];
     }
 
-    /// <summary>Scheduled tab: due date ascending (caller filters to dated items only).</summary>
+    /// <summary>Scheduled tab: due date ascending. The caller filters to dated items only.</summary>
     public static IReadOnlyList<BoardItem> OrderForScheduledTab(IEnumerable<BoardItem> items)
     {
         return [.. items
@@ -71,7 +71,7 @@ public static class TodoOrdering
             return ToStoredSortOrder(item, GetActiveDisplayOrder(prevItem, getSortOrder) + 1.0);
         }
 
-        // Dated item placed at the top of the dated block (directly under undated items).
+        // Dated item placed at the top of the dated block, directly under undated items.
         if (IsPlacedAtTopOfDatedBlock(itemDated, hasPrev, prevDated))
         {
             if (next is { } nextItem && nextDated)
@@ -84,7 +84,7 @@ public static class TodoOrdering
             return ToStoredSortOrder(item, DatedSortOrderOffset + 1.0);
         }
 
-        // Undated at the very top (no undated neighbour above).
+        // Undated at the very top, with no undated neighbour above.
         if (IsPlacedAtVeryTop(itemDated, hasPrev))
         {
             if (next is { } nextItemTop && !nextDated)

@@ -4,7 +4,7 @@ using App.Shared.RCL.Models;
 
 namespace App.Shared.RCL.Services;
 
-/// <summary>Item ids touched by pending outbox operations (for merge: do not apply remote upsert/delete for these ids).</summary>
+/// <summary>Item ids touched by pending outbox operations. For merge, do not apply remote upsert/delete for these ids.</summary>
 public static class BoardOutboxReferencedIds
 {
     public static HashSet<Guid> CollectFromPayloads(IEnumerable<(BoardOutboxOperationKind Kind, string PayloadJson)> rows)

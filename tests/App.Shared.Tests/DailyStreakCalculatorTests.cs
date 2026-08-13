@@ -96,7 +96,7 @@ public class DailyStreakCalculatorTests
             { new DateOnly(2024, 5, 12), new List<(DateTimeOffset, ActivityEventType)> { (new DateTimeOffset(2024, 5, 12, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete) } }
         };
 
-        // Today is not completed yet, so the streak should be 3 (12th, 13th, 14th)
+        // Today is not completed yet, so the streak should be 3, the 12th, 13th, and 14th
         var streak = DailyStreakCalculator.ComputeStreak(start, DailyRepeatType.Daily, 1, today, events, null);
         streak.Should().Be(3);
     }
@@ -124,14 +124,14 @@ public class DailyStreakCalculatorTests
         var start = new DateOnly(2024, 5, 10);
         var today = new DateOnly(2024, 5, 15);
 
-        // 13th is missing (not completed)
+        // 13th is missing, not completed
         var events = new Dictionary<DateOnly, List<(DateTimeOffset, ActivityEventType)>>
         {
             { new DateOnly(2024, 5, 14), new List<(DateTimeOffset, ActivityEventType)> { (new DateTimeOffset(2024, 5, 14, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete) } },
             { new DateOnly(2024, 5, 12), new List<(DateTimeOffset, ActivityEventType)> { (new DateTimeOffset(2024, 5, 12, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete) } }
         };
 
-        // Streak is only 1 (yesterday, since 13th was missed)
+        // Streak is only 1, yesterday, since the 13th was missed
         var streak = DailyStreakCalculator.ComputeStreak(start, DailyRepeatType.Daily, 1, today, events, null);
         streak.Should().Be(1);
     }
@@ -173,7 +173,7 @@ public class DailyStreakCalculatorTests
         var start = new DateOnly(2024, 5, 10); // Friday
         var today = new DateOnly(2024, 5, 18); // Next Sunday
 
-        // Repeat every 2 days. Scheduled days are: 10th (Fri), 12th (Sun), 14th (Tue), 16th (Thu), 18th (Sat/Sun)
+        // Repeat every 2 days. Scheduled days are the 10th, Fri, the 12th, Sun, the 14th, Tue, the 16th, Thu, the 18th, Sat and Sun.
         // Let's complete: 16th, 14th, 12th, 10th
         var events = new Dictionary<DateOnly, List<(DateTimeOffset, ActivityEventType)>>
         {
@@ -184,7 +184,7 @@ public class DailyStreakCalculatorTests
         };
 
         // 18th is scheduled but not completed yet. So streak runs from 16th back to 10th.
-        // The days are 16th, 14th, 12th, 10th (4 scheduled days completed)
+        // The days are the 16th, 14th, 12th, and 10th, 4 scheduled days completed
         var streak = DailyStreakCalculator.ComputeStreak(start, DailyRepeatType.Daily, 2, today, events, null);
         streak.Should().Be(4);
     }

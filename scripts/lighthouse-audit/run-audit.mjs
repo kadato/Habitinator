@@ -25,14 +25,14 @@ async function run() {
   await new Promise(resolve => setTimeout(resolve, 1000));
   console.log('Server warmed up!');
   
-  // 1. Audit landing page (anonymous)
+  // 1. Audit landing page, anonymous
   console.log('Auditing anonymous landing page...');
   const landingReport = await runLighthouse(baseUrl, 9222, false);
   fs.writeFileSync('report-landing.json', JSON.stringify(landingReport.lhr, null, 2));
   fs.writeFileSync('report-landing.html', landingReport.report[1]); // output is array of [json, html]
   console.log('Anonymous landing page scores:', getScores(landingReport.lhr));
   
-  // 2. Audit login page (anonymous)
+  // 2. Audit login page, anonymous
   console.log('Auditing anonymous login page...');
   const loginReport = await runLighthouse(`${baseUrl}/auth/login`, 9222, false);
   fs.writeFileSync('report-login.json', JSON.stringify(loginReport.lhr, null, 2));

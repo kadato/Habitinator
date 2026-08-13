@@ -1,6 +1,6 @@
 namespace App.Shared.RCL.Models;
 
-/// <summary>User preferences for in-app toasts and (where supported) local device notifications. JSON-serializable.</summary>
+/// <summary>User preferences for in-app toasts and local device notifications where supported. JSON-serializable.</summary>
 public sealed class NotificationSettings
 {
     public bool InAppMessagesEnabled { get; set; } = true;
@@ -15,7 +15,7 @@ public sealed class NotificationSettings
 
     public bool DailyReminderEnabled { get; set; } = true;
 
-    /// <summary>Time of day for daily reminder (date portion ignored).</summary>
+    /// <summary>Time of day for daily reminder, the date portion is ignored.</summary>
     public TimeSpan? DailyReminderTime { get; set; } = TimeSpan.FromHours(7);
 
     public bool FocusTimerAlertsEnabled { get; set; } = true;

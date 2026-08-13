@@ -35,7 +35,7 @@ internal sealed class WasmAuthenticationStateProvider : AuthenticationStateProvi
             return _cache;
         }
 
-        // 2. Fallback to API check if state was not persisted (e.g. initial load without prerendering, or dynamic re-auth)
+        // 2. Fallback to API check if state was not persisted. Covers initial load without prerendering and re-auth.
         try
         {
             status = await Client.GetFromJsonAsync<AuthStatusDto>("api/auth/status").ConfigureAwait(false);

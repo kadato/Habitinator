@@ -4,12 +4,12 @@ namespace App.MAUI;
 
 public static class MauiAppSettings
 {
-    /// <summary>Set by AppHost on the MAUI process to the <c>app-web</c> HTTP endpoint (see AppHost <c>Program.cs</c>).</summary>
+    /// <summary>Set by AppHost on the MAUI process to the <c>app-web</c> HTTP endpoint. See AppHost <c>Program.cs</c>.</summary>
     internal const string EnvApiBaseUrl = "HABITINATOR_API_BASE_URL";
 
     /// <summary>
-    ///     Resolves the App.Web API origin (no trailing slash). The mobile app does not host the API:
-    ///     run <c>App.Web</c> (or Aspire AppHost, which sets <see cref="EnvApiBaseUrl" />), or override via env/appsettings.
+    ///     Resolves the App.Web API origin with no trailing slash. The mobile app does not host the API:
+    ///     run <c>App.Web</c> or the Aspire AppHost, which sets <see cref="EnvApiBaseUrl" />. Override via env or appsettings.
     /// </summary>
     public static string ResolveApiBaseUrl(IConfiguration configuration)
     {

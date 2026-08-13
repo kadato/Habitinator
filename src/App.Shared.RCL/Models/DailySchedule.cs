@@ -3,7 +3,7 @@ using App.Shared.RCL.Services;
 namespace App.Shared.RCL.Models;
 
 /// <summary>
-///     Due dates for dailies from start date, repeat type, and interval. Uses local <see cref="DateOnly" /> (calendar)
+///     Due dates for dailies from start date, repeat type, and interval. Uses local <see cref="DateOnly" />, the calendar
 ///     based on the user's detected timezone, falling back to UTC if unavailable.
 /// </summary>
 public static class DailySchedule
@@ -61,7 +61,7 @@ public static class DailySchedule
     ///     scheduled, but streak backfill and <see cref="Services.DailyStreakCalculator" /> must still
     ///     count prior scheduled days, so we create the start far enough before
     ///     <paramref name="notAfter" />. When <paramref name="dailyStart" /> is on or after
-    ///     <paramref name="notAfter" /> (item created today but streak history targets yesterday),
+    ///     <paramref name="notAfter" />, the case of an item created today but streak history targeting yesterday,
     ///     we extend the real schedule backward with the same phase instead of treating the history as
     ///     empty, so backfilled days line up with the days the board actually schedules.
     /// </summary>
@@ -261,7 +261,7 @@ public static class DailySchedule
         }
     }
 
-    /// <summary>Whether this daily is checked off for the given calendar day (local timezone).</summary>
+    /// <summary>Whether this daily is checked off for the given calendar day in the local timezone.</summary>
     public static bool IsCompleteForDate(BoardItem daily, DateOnly on)
     {
         ArgumentNullException.ThrowIfNull(daily);
@@ -275,7 +275,7 @@ public static class DailySchedule
     }
 
     /// <summary>
-    ///     Dailies that were due on the previous calendar day (local timezone) and not completed for that day, excluding
+    ///     Dailies that were due on the previous calendar day in the local timezone and not completed for that day, excluding
     ///     items already checked for <paramref name="today" /> to avoid clobbering a same-day check when backfilling.
     ///     Null-start dailies are "due from today" on the board, so one created on the local
     ///     <paramref name="today" /> did not exist yesterday and is not offered in the catch-up dialog.

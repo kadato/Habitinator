@@ -1,4 +1,4 @@
-/* Shared welcome / login / register layout (web + MAUI). */
+/* Shared welcome, login, and register layout for web and MAUI. */
 
 .auth-page {
     --auth-shell-max: 28rem;

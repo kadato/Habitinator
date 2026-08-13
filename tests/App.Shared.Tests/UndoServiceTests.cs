@@ -489,7 +489,7 @@ public sealed class UndoableBoardDataServiceTests
             itemId,
             Arg.Any<CancellationToken>());
 
-        // 4. Simulate undoing the edit (rename) second, which should rename the restored item using the original Guid
+        // 4. Simulate undoing the edit, the rename, second. This should rename the restored item using the original Guid.
         await renameUndoCallback();
 
         // Verify that RenameItemAsync was called on the original itemId to restore the original name
@@ -542,16 +542,16 @@ public sealed class UndoableBoardDataServiceTests
                 return Guid.NewGuid();
             });
 
-        // 1. Perform first increment (Counter goes 3 -> 4)
+        // 1. Perform first increment. Counter goes from 3 to 4
         await _undoableService.IncrementHabitPlusAsync(itemId);
 
-        // 2. Perform second increment (Counter goes 4 -> 5)
+        // 2. Perform second increment. Counter goes from 4 to 5
         await _undoableService.IncrementHabitPlusAsync(itemId);
 
         firstUndoCallback.Should().NotBeNull();
         secondUndoCallback.Should().NotBeNull();
 
-        // 3. Simulate undoing the first increment first (out of order).
+        // 3. Simulate undoing the first increment first, out of order.
         // The current state is Counter = 5. Undoing first increment should decrement Counter to 4.
         await firstUndoCallback();
 
@@ -794,7 +794,7 @@ public sealed class UndoableBoardDataServiceTests
         var undoableService = new UndoableBoardDataService(_inner, realUndoService);
 
         // Act
-        // 1. Increment twice: 3 -> 4, then 4 -> 5
+        // 1. Increment twice: from 3 to 4, then from 4 to 5
         await undoableService.IncrementHabitPlusAsync(itemId);
         await undoableService.IncrementHabitPlusAsync(itemId);
 

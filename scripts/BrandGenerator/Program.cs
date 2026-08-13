@@ -3,10 +3,10 @@ using System.Text.RegularExpressions;
 
 using BrandGenerator;
 
-// Generates every derived Habitinator brand asset from the (src/App.Shared.RCL/wwwroot/brand/mark.svg).
+// Generates every derived Habitinator brand asset from src/App.Shared.RCL/wwwroot/brand/mark.svg.
 // Run from the repo root:
 //   dotnet run --project scripts/BrandGenerator
-// A consistency test (BrandMarkConsistencyTests) fails if any generated file
+// A consistency test, BrandMarkConsistencyTests, fails if any generated file
 // drifts from the canonical mark, so edit mark.svg, run this, commit both.
 
 var repoRoot = FindRepoRoot();
@@ -135,7 +135,7 @@ foreach (var (OutputPath, Content) in outputs)
     await Console.Out.WriteLineAsync($"Wrote {Path.GetRelativePath(repoRoot, OutputPath)}");
 }
 
-// Raster exports via BrandExporter (SVG -> PNG).
+// Raster exports via BrandExporter, converting SVG to PNG.
 var pngExports = new (string Svg, string Png, int Width, int Height)[]
 {
     (Path.Combine(repoRoot, "src", AppWeb, Wwwroot, "favicon.svg"),

@@ -1,6 +1,6 @@
 # Exports Habitinator brand raster assets from SVG masters in src/App.Web/wwwroot/brand/.
-# Requires: .NET SDK (scripts/BrandExporter), Node.js (npx @resvg/resvg-js-cli for OG wordmark fonts).
-# Optional: ImageMagick (magick) for multi-size .ico.
+# Requires: .NET SDK, scripts/BrandExporter, and Node.js, npx @resvg/resvg-js-cli for OG wordmark fonts.
+# Optional: ImageMagick, magick, for multi-size .ico.
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $BrandDir = Join-Path $RepoRoot "src\App.Web\wwwroot\brand"
@@ -20,7 +20,7 @@ function Export-Svg {
     }
     dotnet run --project $ExporterProj -c Release -- `
         $InputSvg $OutputFile $Width $Height
-    if ($LASTEXITCODE -ne 0) { throw "Export failed: $InputSvg -> $OutputFile" }
+    if ($LASTEXITCODE -ne 0) { throw "Export failed: $InputSvg to $OutputFile" }
 }
 
 function Export-WordmarkOg {
@@ -42,7 +42,7 @@ function Export-WordmarkOg {
             --font-file "fonts/PlusJakartaSans-Medium.woff2" `
             --font-default-family "Plus Jakarta Sans" `
             (Split-Path -Leaf $InputSvg) $OutputFile
-        if ($LASTEXITCODE -ne 0) { throw "OG export failed: $InputSvg -> $OutputFile" }
+        if ($LASTEXITCODE -ne 0) { throw "OG export failed: $InputSvg to $OutputFile" }
     }
     finally {
         Pop-Location

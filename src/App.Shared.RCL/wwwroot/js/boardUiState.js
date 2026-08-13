@@ -43,7 +43,7 @@ globalThis.habitinatorSetOnboardingDone = function (key, done) {
 };
 
 // Downloads a JSON payload as a file. Returns false when the environment does not
-// support programmatic downloads (e.g. MAUI WebView), so callers can fall back.
+// support programmatic downloads, e.g. the MAUI WebView, so callers can fall back.
 globalThis.habitinatorDownloadJson = function (fileName, jsonText) {
     try {
         const blob = new Blob([jsonText], { type: 'application/json' });

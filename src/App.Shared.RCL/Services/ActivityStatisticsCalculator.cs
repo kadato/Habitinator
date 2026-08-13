@@ -2,7 +2,7 @@ using App.Shared.RCL.Models;
 
 namespace App.Shared.RCL.Services;
 
-/// <summary>Shared aggregation logic for activity statistics (web DB and MAUI local store).</summary>
+/// <summary>Shared aggregation logic for activity statistics, used by the web DB and the MAUI local store.</summary>
 public static class ActivityStatisticsCalculator
 {
     private const int HeatmapDataDays = 370;
@@ -637,7 +637,7 @@ public static class ActivityStatisticsCalculator
     }
 
     /// <summary>
-    ///     For each (board item, UTC calendar day), last event wins: daily is "done" for that day in stats
+    ///     For each board item and UTC calendar day pair, the last event wins: the daily is "done" for that day in stats
     ///     only if the last complete/uncomplete for that pair is <paramref name="completeType" />.
     ///     Events are stored and grouped by UTC calendar day.
     /// </summary>

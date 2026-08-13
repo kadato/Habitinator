@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace App.MAUI.Services;
 
-/// <summary>Reads unverified JWT payload fields for display only (e.g. email when SecureStorage has no copy).</summary>
+/// <summary>Reads unverified JWT payload fields for display only, e.g. email when SecureStorage has no copy.</summary>
 internal static class JwtAccessTokenDisplayClaims
 {
     public static string? TryGetEmail(string? jwt)

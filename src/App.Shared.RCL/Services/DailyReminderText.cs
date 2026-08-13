@@ -7,7 +7,7 @@ namespace App.Shared.RCL.Services;
 
 /// <summary>
 ///     Builds the title and body for the daily board reminder. Uses the same "today" calendar as
-///     the board (<see cref="DailySchedule" /> UTC) so dailies and to-dos match what the user sees in the app.
+///     the board, see <see cref="DailySchedule" /> UTC, so dailies and to-dos match what the user sees in the app.
 /// </summary>
 public static class DailyReminderText
 {

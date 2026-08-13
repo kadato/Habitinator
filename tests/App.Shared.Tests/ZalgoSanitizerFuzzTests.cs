@@ -92,7 +92,7 @@ public sealed class ZalgoSanitizerFuzzTests
         }
         else
         {
-            // If it is clean (within limits), it shouldn't be Zalgo (unless baseText itself was Zalgo)
+            // If it is clean, within limits, it shouldn't be Zalgo unless baseText itself was Zalgo
             if (!ZalgoSanitizer.IsZalgo(baseText))
             {
                 Assert.False(ZalgoSanitizer.IsZalgo(input));

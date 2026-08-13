@@ -44,7 +44,7 @@ internal sealed class WasmLocalSettingsStore : ILocalSettingsStore
         }
         catch
         {
-            // Ignore storage errors in browser (e.g. private browsing storage limits)
+            // Ignore storage errors in browser, e.g. private browsing storage limits
         }
     }
 }

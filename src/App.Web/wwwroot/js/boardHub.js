@@ -1,4 +1,4 @@
-// Requires global `signalR` from @microsoft/signalr (see App.razor).
+// Requires global `signalR` from @microsoft/signalr. See App.razor.
 globalThis.HabitinatorBoardHub = (function () {
   let connection = null;
   let dotNetHelper = null;

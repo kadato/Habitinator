@@ -1,5 +1,5 @@
-# Prefer OIDC workload federation (repo variables AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID).
-# Fallback: secret AZURE_CREDENTIALS (service principal JSON). Rotate off JSON once OIDC is configured.
+# Prefer OIDC workload federation with the repo variables AZURE_CLIENT_ID, AZURE_TENANT_ID, and AZURE_SUBSCRIPTION_ID.
+# Fallback: secret AZURE_CREDENTIALS, the service principal JSON. Rotate off JSON once OIDC is configured.
 name: Azure login
 description: OIDC when AZURE_CLIENT_ID is set; otherwise legacy AZURE_CREDENTIALS.
 inputs:

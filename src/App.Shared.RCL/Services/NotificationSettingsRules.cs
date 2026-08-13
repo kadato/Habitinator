@@ -91,11 +91,11 @@ public sealed class NotificationSettingsRules : INotificationSettingsRules
         // Check if current local time falls within quiet hours window
         if (quietStartLocal < quietEndLocal)
         {
-            // Window doesn't cross midnight (e.g., 10 PM to 6 AM would be start > end)
+            // Window doesn't cross midnight, e.g. 10 PM to 6 AM would be start > end
             return localTimeOfDay >= quietStartLocal && localTimeOfDay < quietEndLocal;
         }
 
-        // Window crosses midnight (e.g., 10 PM to 6 AM)
+        // Window crosses midnight, e.g. 10 PM to 6 AM
         return localTimeOfDay >= quietStartLocal || localTimeOfDay < quietEndLocal;
     }
 }

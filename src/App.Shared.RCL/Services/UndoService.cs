@@ -138,7 +138,7 @@ public sealed class UndoService : IUndoService, IDisposable
             var target = _undoStack[index];
 
             // Undoing an older action out of order: any newer action that may touch the same state must
-            // be undone first (newest first) so the target's inverse applies to a consistent snapshot.
+            // be undone first, newest first, so the target's inverse applies to a consistent snapshot.
             // Newer actions with disjoint keys are left pending. Their undos only revert their own change.
             var toUndo = new List<UndoAction>();
             if (actionId is not null)

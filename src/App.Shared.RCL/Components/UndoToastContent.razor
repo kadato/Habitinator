@@ -19,7 +19,7 @@
     /// <summary>Invoked when the Undo button is clicked.</summary>
     [Parameter] public Func<Task>? OnUndo { get; set; }
 
-    /// <summary>Invoked when the card body is clicked (dismiss).</summary>
+    /// <summary>Invoked when the card body is clicked, to dismiss.</summary>
     [Parameter] public Func<Task>? OnDismiss { get; set; }
 
     private async Task HandleUndo()

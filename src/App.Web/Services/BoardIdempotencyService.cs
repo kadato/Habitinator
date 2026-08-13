@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace App.Web.Services;
 
-/// <summary>Idempotent replay for board mutations (Idempotency-Key + request fingerprint).</summary>
+/// <summary>Idempotent replay for board mutations, using the Idempotency-Key and request fingerprint.</summary>
 public sealed class BoardIdempotencyService(
     ApplicationDbContext db,
     ILogger<BoardIdempotencyService> logger)

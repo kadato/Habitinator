@@ -4,7 +4,7 @@ using Microsoft.Playwright;
 
 namespace App.Web.E2E;
 
-/// <summary>Browser smoke tests. Requires a running web app (see README / CI: set E2E_BASE_URL).</summary>
+/// <summary>Browser smoke tests. Requires a running web app. See README and CI, set E2E_BASE_URL.</summary>
 public sealed class WebSmokeTests
 {
     private static string BaseUrl =>

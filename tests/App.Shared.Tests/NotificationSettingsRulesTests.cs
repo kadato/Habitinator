@@ -7,7 +7,7 @@ using MudBlazor;
 
 namespace App.Shared.Tests;
 
-/// <summary>Mock timezone service for tests that assumes UTC (no conversion).</summary>
+/// <summary>Mock timezone service for tests that assumes UTC, so no conversion happens.</summary>
 public sealed class TestTimeZoneService : IUserTimeZoneService
 {
     public string? TimeZoneId => "UTC";

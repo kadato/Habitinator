@@ -282,7 +282,7 @@ public sealed class BoardPersistenceService(
                 IsCompleted = false,
                 Counter = 0,
                 NegativeCounter = 0,
-                // Null = "due from UTC today" without blocking streak backfill / stats for prior days (see DailySchedule).
+                // Null means "due from UTC today". It does not block streak backfill or stats for prior days. See DailySchedule.
                 DailyStartDate = null,
                 DailyRepeatType = (int)DailyRepeatType.Daily,
                 DailyRepeatInterval = 1,
@@ -513,10 +513,10 @@ public sealed class BoardPersistenceService(
         }, cancellationToken);
 
     /// <summary>
-    ///     Computes the event-derived streak for a daily entity (including events added but not yet
-    ///     saved) and applies it to <see cref="BoardItemEntity.Counter" /> so the board, edit dialog,
-    ///     and statistics stay aligned after check/uncheck (avoids Max(computed, counter) sticking on
-    ///     an old manual value). The caller persists the counter in its own SaveChanges round-trip.
+    ///     Computes the event-derived streak for a daily entity, including events added but not yet
+    ///     saved, and applies it to <see cref="BoardItemEntity.Counter" /> so the board, edit dialog,
+    ///     and statistics stay aligned after check/uncheck. This avoids Max(computed, counter) sticking on
+    ///     an old manual value. The caller persists the counter in its own SaveChanges round-trip.
     /// </summary>
     private async Task<IReadOnlyDictionary<Guid, int>> ComputeDailyStreakMapAsync(
         Guid userId,
@@ -699,9 +699,9 @@ public sealed class BoardPersistenceService(
                     entity.DailyRepeatInterval = n;
                     entity.Counter = streakClamped;
 
-                    // Always reconcile streak backfill, not only when Counter/schedule appear to change. Otherwise a save
-                    // with the same values (e.g. only title changed) or a previously skipped run leaves no DailyComplete
-                    // rows, so statistics/heatmap never match the daily streak.
+                    // Always reconcile streak backfill, not only when Counter or schedule appear to change. Otherwise a save
+                    // with the same values, e.g. only the title changed, or a previously skipped run leaves no DailyComplete
+                    // rows, so statistics and the heatmap never match the daily streak.
                     var streakNotAfter = today.AddDays(-1);
                     await ReconcileDailyStreakBackfillAsync(userId, itemId,
                         new DailyBackfillArgs(newStartD, args.Repeat, n, streakClamped),
@@ -771,7 +771,7 @@ public sealed class BoardPersistenceService(
         var newSet = new HashSet<DateOnly>(DailyStreakBackfill.GetLastNScheduledCompletionDays(
             args.DailyStart, args.Repeat, args.Interval, args.Streak, notAfter));
 
-        // Only synthetic backfill markers (fixed UTC hour) can be reconciled away. Real toggles
+        // Only synthetic backfill markers, the fixed UTC hour, can be reconciled away. Real toggles
         // are never removed. Filtering by the marker hour keeps the loaded set bounded by the
         // backfill history instead of the full activity log for the item.
         var toRemove = await dbContext.UserActivityEvents
@@ -836,7 +836,7 @@ public sealed class BoardPersistenceService(
     private static readonly IReadOnlyDictionary<Guid, int> EmptyDailyStreaks =
         FrozenDictionary<Guid, int>.Empty;
 
-    /// <summary>Maps entity to API model (queries the DB for daily streaks). Streak queries use
+    /// <summary>Maps entity to API model, querying the DB for daily streaks. Streak queries use
     /// <see cref="IDbContextFactory{ApplicationDbContext}"/> so they do not overlap the scoped
     /// context. Still await this before <see cref="IBoardChangeNotifier.NotifyBoardChangedAsync" /> for ordering.</summary>
     private async Task<BoardItem> ToModelWithDailyStreaksAsync(

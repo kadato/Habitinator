@@ -64,7 +64,7 @@ globalThis.addEventListener('fetch', event => {
         return;
     }
 
-    // -- Framework assets: cache-first + network update (immutable, fingerprinted) --
+    // -- Framework assets: cache-first with network update. They are immutable and fingerprinted. --
     if (FRAMEWORK_ASSET_PATTERN.test(url.pathname) || CONTENT_ASSET_PATTERN.test(url.pathname)) {
         event.respondWith(
             caches.open(FRAMEWORK_CACHE).then(cache =>

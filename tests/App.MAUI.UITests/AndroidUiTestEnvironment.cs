@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace App.MAUI.UITests;
 
-/// <summary>Android UI tests run only when opted in (emulator + Appium + APK). Default <c>dotnet test</c> skips them.</summary>
+/// <summary>Android UI tests run only when opted in, with an emulator, Appium, and an APK. Default <c>dotnet test</c> skips them.</summary>
 internal static class AndroidUiTestEnvironment
 {
     internal const string EnableVar = "ANDROID_UI_TESTS";

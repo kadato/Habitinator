@@ -164,7 +164,7 @@ public sealed partial class MauiAppUpdaterService : IAppUpdaterService
             throw new FileNotFoundException("Downloaded APK file not found.", localPath);
         }
 
-        // Request Install permission check for Android 8.0+ (Oreo / API 26)
+        // Request Install permission check for Android 8.0+, Oreo / API 26
         if (OperatingSystem.IsAndroidVersionAtLeast(26) && context.PackageManager != null && !context.PackageManager.CanRequestPackageInstalls())
         {
             // Guide user to the system settings page to enable unknown sources install for this app

@@ -25,7 +25,7 @@ public sealed class ApiAuthService
             cancellationToken);
     }
 
-    /// <summary>Sign in as the server-configured demo guest (JWT), same user as web guest-login.</summary>
+    /// <summary>Sign in as the server-configured demo guest via JWT, same user as web guest-login.</summary>
     public Task<LoginResponse?> GuestJwtLoginAsync(CancellationToken cancellationToken = default)
     {
         var client = _http.CreateClient("apiAuth");

@@ -117,7 +117,7 @@ public sealed partial class MauiDailyReminderService
         }
     }
 
-    /// <summary>Next <paramref name="timeOfDay" /> on the device clock (today if still ahead, else tomorrow).</summary>
+    /// <summary>Next <paramref name="timeOfDay" /> on the device clock, today if still ahead, else tomorrow.</summary>
     internal static DateTime NextLocalNotificationTime(TimeSpan timeOfDay)
     {
         if (timeOfDay < TimeSpan.Zero || timeOfDay >= TimeSpan.FromDays(1))

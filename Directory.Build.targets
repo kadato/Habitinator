@@ -1,7 +1,7 @@
 <Project>
   <!-- Automatically configure git hooks path for developers on local builds -->
   <Target Name="ConfigureGitHooks" BeforeTargets="PrepareForBuild" Condition="'$(CI)' != 'true' and '$(GITHUB_ACTIONS)' != 'true' and '$(MSBuildProjectName)' == 'App.Shared.RCL'">
-    <!-- Read the current hooksPath (read-only, no lock) -->
+    <!-- Read the current hooksPath. Read-only, no lock. -->
     <Exec Command="git config core.hooksPath" 
           ConsoleToMSBuild="true" 
           IgnoreExitCode="true" 

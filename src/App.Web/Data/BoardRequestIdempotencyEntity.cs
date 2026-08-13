@@ -1,6 +1,6 @@
 namespace App.Web.Data;
 
-/// <summary>Stores completed idempotent board API responses (Idempotency-Key header).</summary>
+/// <summary>Stores completed idempotent board API responses. Uses the Idempotency-Key header.</summary>
 public sealed class BoardRequestIdempotencyEntity
 {
     public Guid Id { get; set; }
@@ -9,10 +9,10 @@ public sealed class BoardRequestIdempotencyEntity
 
     public ApplicationUser? User { get; set; }
 
-    /// <summary>Client-supplied key (MAUI uses outbox OperationId).</summary>
+    /// <summary>Client-supplied key. MAUI uses the outbox OperationId.</summary>
     public string IdempotencyKey { get; set; } = "";
 
-    /// <summary>SHA-256 hex (64 chars) of method + path + canonical request fingerprint.</summary>
+    /// <summary>SHA-256 hex, 64 chars, of method plus path plus canonical request fingerprint.</summary>
     public string RequestFingerprintHex { get; set; } = "";
 
     /// <summary>-1 = in-flight. Otherwise HTTP status code.</summary>

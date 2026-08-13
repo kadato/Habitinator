@@ -59,7 +59,7 @@
 </AuthPageShell>
 
 @code {
-    /// <summary>When true, posts to the web cookie guest-login endpoint. When false, uses <see cref="OnContinueAsDemoGuest"/> (MAUI / JWT flow).</summary>
+    /// <summary>When true, posts to the web cookie guest-login endpoint. When false, uses <see cref="OnContinueAsDemoGuest"/> for the MAUI / JWT flow.</summary>
     [Parameter] public bool UseCookieGuestLogin { get; set; } = true;
 
     [Parameter] public EventCallback OnContinueAsDemoGuest { get; set; }

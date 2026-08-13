@@ -20,8 +20,8 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    # Same GitHub Environment as deploy-azure-web so OIDC subject is
-    # repo:OWNER/REPO:environment:production (one Entra federated credential for CI + tag releases).
+    # Same GitHub Environment as deploy-azure-web so the OIDC subject is
+    # repo:OWNER/REPO:environment:production, one Entra federated credential for CI and tag releases.
     environment: production
     outputs:
       api_base_url: ${{ steps.resolve.outputs.api_base_url }}

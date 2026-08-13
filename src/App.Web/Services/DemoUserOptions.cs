@@ -17,7 +17,7 @@ public sealed class DemoUserOptions
     public bool ForceReseed { get; set; }
 
     /// <summary>
-    /// When true, only the guest activity log is cleared and regenerated (board items are kept).
+    /// When true, only the guest activity log is cleared and regenerated. Board items are kept.
     /// Set with <c>DemoUser__ForceReseedActivity=true</c>.
     /// </summary>
     public bool ForceReseedActivity { get; set; }

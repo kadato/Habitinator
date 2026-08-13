@@ -1,4 +1,4 @@
-/* Primary navigation (desktop header). */
+/* Primary navigation, the desktop header. */
 .app-header-nav {
     gap: var(--space-2) var(--space-4);
     margin-left: 0;
@@ -11,7 +11,7 @@
     align-items: stretch;
 }
 
-/* Desktop header button visuals live in wwwroot/app.css (global) so MudButton roots are styled reliably. */
+/* Desktop header button visuals live in wwwroot/app.css, the global styles, so MudButton roots are styled reliably. */
 
 .app-header-nav.flex-column .app-header-nav-slot {
     width: 100%;

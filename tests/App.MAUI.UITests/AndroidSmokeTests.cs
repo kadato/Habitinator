@@ -6,7 +6,7 @@ using OpenQA.Selenium.Support.UI;
 
 namespace App.MAUI.UITests;
 
-/// <summary>Native-shell checks for the MAUI Blazor app on Android (Appium + UiAutomator2).</summary>
+/// <summary>Native-shell checks for the MAUI Blazor app on Android, using Appium and UiAutomator2.</summary>
 public sealed class AndroidSmokeTests
 {
     private static AndroidDriver CreateDriver(string apkPath)

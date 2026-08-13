@@ -729,7 +729,7 @@ public sealed partial class LocalFirstBoardDataService(
             return false;
         }
 
-        // 2. Last-Write-Wins (LWW) check: compare local update enqueued time against server updated timestamp.
+        // 2. Last-Write-Wins, LWW, check: compare local update enqueued time against server updated timestamp.
         var serverTime = serverItem.ServerUpdatedAtUtc ?? DateTimeOffset.MinValue;
         if (localTime >= serverTime)
         {
@@ -1445,7 +1445,7 @@ public sealed partial class LocalFirstBoardDataService(
     private static (List<BoardItem> Habits, List<BoardItem> Dailies, List<BoardItem> Todos) OrderRows(
         IReadOnlyList<LocalBoardItemRow> items, DateOnly today)
     {
-        // Match BoardPersistenceService.GetSnapshotAsync ordering (web app).
+        // Match BoardPersistenceService.GetSnapshotAsync ordering, the web app.
         List<BoardItem> habits = [.. items.Where(x => x.Section == BoardSection.Habit)
             .OrderBy(x => x.SortOrder ?? double.MaxValue)
             .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)

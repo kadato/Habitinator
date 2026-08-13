@@ -99,7 +99,7 @@ public sealed class DailyStreakCalculatorTests
     [Fact]
     public void Today_not_scheduled_ends_chain_before_today()
     {
-        // Tuesday not a "weekly" occurrence. Only previous Monday counts. Today (Wed) is not in streak anchor.
+        // Tuesday is not a "weekly" occurrence. Only previous Monday counts. Today, Wed, is not in the streak anchor.
         var start = new DateOnly(2026, 4, 20); // Mon
         var today = new DateOnly(2026, 4, 22);  // Wed
         var mon = new DateOnly(2026, 4, 20);
@@ -142,7 +142,7 @@ public sealed class DailyStreakCalculatorTests
     public void Null_start_interval_daily_counts_every_completed_day()
     {
         // A null start means the board schedules every day, so an interval-2 daily the user checks
-        // daily must count every consecutive day (previously only every other day was counted).
+        // daily must count every consecutive day. Previously only every other day was counted.
         var today = new DateOnly(2026, 4, 27);
         var completed = Enumerable.Range(0, 10).Select(i => today.AddDays(-1 - i)).ToArray();
         var grouped = DailyStreakCalculator.GroupDailyEventsByUtcDay(
@@ -155,8 +155,8 @@ public sealed class DailyStreakCalculatorTests
     [Fact]
     public void Start_today_interval3_counts_scheduled_days_when_today_done()
     {
-        // Created today with an explicit start: the streak must follow the real schedule phase
-        // (today, today-3, ...) instead of a misaligned synthetic anchor that yielded 0.
+        // Created today with an explicit start: the streak must follow the real schedule phase,
+        // today, today-3, and so on, instead of a misaligned synthetic anchor that yielded 0.
         var today = new DateOnly(2026, 4, 27);
         var completed = new[] { today, today.AddDays(-3), today.AddDays(-6) };
         var grouped = DailyStreakCalculator.GroupDailyEventsByUtcDay(

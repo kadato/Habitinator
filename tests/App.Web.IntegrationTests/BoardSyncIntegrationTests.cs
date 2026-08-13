@@ -179,7 +179,7 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
         var snapshot = await GetSnapshotAsync(client, token);
         var todo1 = snapshot.Todos.First(x => x.Id == t1.Id);
 
-        // 3. Update the second item's sort order to be extremely close to the first item's sort order (1e-12 difference)
+        // 3. Update the second item's sort order to be extremely close to the first item's, a 1e-12 difference
         var targetSortOrder = todo1.SortOrder - 1e-12;
         using var put = new HttpRequestMessage(HttpMethod.Put, $"/api/board/todos/{t2.Id}");
         put.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -190,11 +190,11 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
         // 4. Fetch the snapshot again
         var updatedSnapshot = await GetSnapshotAsync(client, token);
 
-        // 5. Verify they are rebalanced to sequential values (e.g. 1.0, 2.0, 3.0)
+        // 5. Verify they are rebalanced to sequential values, e.g. 1.0, 2.0, 3.0
         var sortedTodos = updatedSnapshot.Todos.OrderBy(x => x.SortOrder).ToList();
         sortedTodos.Count.Should().BeGreaterThanOrEqualTo(3);
 
-        // Check that the gap between all consecutive elements in the list is exactly 1.0 (indicating sequential rebalancing)
+        // Check that the gap between all consecutive elements in the list is exactly 1.0. This indicates sequential rebalancing.
         for (var i = 0; i < sortedTodos.Count - 1; i++)
         {
             (sortedTodos[i + 1].SortOrder - sortedTodos[i].SortOrder).Should().BeApproximately(1.0, 0.0001);

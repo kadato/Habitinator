@@ -67,7 +67,7 @@ public sealed class BoardMaintenanceHostedService(
             .Where(x => x.DeletedAtUtc != null && x.DeletedAtUtc < tombCutoff)
             .ExecuteDeleteAsync(ct);
 
-        // Recurring to-dos: when their (advanced) due date has begun, bring them back to the active
+        // Recurring to-dos: when their advanced due date has begun, bring them back to the active
         // board. Due dates are stored as UTC midnight of the user's local date, so `due <= now`
         // means the local date has started in every time zone.
         var recurringRolledBack = await db.BoardItems

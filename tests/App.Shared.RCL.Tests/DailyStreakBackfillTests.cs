@@ -96,7 +96,7 @@ public sealed class DailyStreakBackfillTests
     public void GetLastN_NullStart_Interval2_Returns_Consecutive_Days()
     {
         // Null start means the board schedules every day, so manual streak backfill must cover
-        // consecutive days even when the repeat interval is > 1 (previously it shifted a day).
+        // consecutive days even when the repeat interval is greater than 1. Previously it shifted a day.
         var notAfter = new DateOnly(2026, 4, 26);
         var days = DailyStreakBackfill.GetLastNScheduledCompletionDays(
             null, DailyRepeatType.Daily, 2, 3, notAfter);

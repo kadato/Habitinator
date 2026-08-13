@@ -4,8 +4,8 @@ using System.Text;
 namespace App.Shared.RCL;
 
 /// <summary>
-/// Strips excess Unicode combining characters (Zalgo text) from user-supplied strings
-/// while preserving legitimate diacritical marks such as accents (é, ñ, ü, etc.).
+/// Strips excess Unicode combining characters, Zalgo text, from user-supplied strings
+/// while preserving legitimate diacritical marks such as accents, é, ñ, and ü.
 /// </summary>
 /// <remarks>
 /// Zalgo text works by stacking hundreds of combining diacritics on a single base character.
@@ -17,7 +17,7 @@ public static class ZalgoSanitizer
 {
     /// <summary>
     /// Maximum number of combining codepoints allowed per grapheme cluster.
-    /// Value of 2 preserves common double-accented characters (e.g. Vietnamese tonal marks)
+    /// Value of 2 preserves common double-accented characters, e.g. Vietnamese tonal marks,
     /// while eliminating all practical Zalgo stacking.
     /// </summary>
     public const int MaxCombiningPerBase = 2;
@@ -78,7 +78,7 @@ public static class ZalgoSanitizer
     /// <summary>
     /// Sanitizes Zalgo text and trims whitespace in one step.
     /// Returns <see cref="string.Empty"/> when <paramref name="input"/> is <see langword="null"/>.
-    /// This is the recommended overload for non-nullable contexts (e.g. API request fields).
+    /// This is the recommended overload for non-nullable contexts, e.g. API request fields.
     /// </summary>
     public static string SanitizeAndTrim(string? input)
         => string.IsNullOrWhiteSpace(input) ? string.Empty : (Sanitize(input.Trim()) ?? string.Empty);

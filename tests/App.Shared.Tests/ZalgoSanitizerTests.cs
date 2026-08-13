@@ -50,7 +50,7 @@ public sealed class ZalgoSanitizerTests
         ZalgoSanitizer.IsZalgo(input).Should().BeTrue();
     }
 
-    // -- Sanitize (nullable overload) --
+    // -- Sanitize, nullable overload --
 
     [Fact]
     public void Sanitize_Null_ReturnsNull()
@@ -69,7 +69,7 @@ public sealed class ZalgoSanitizerTests
     [InlineData("😀 emoji test")]  // Emoji as a surrogate pair - no combining marks
     public void Sanitize_CleanText_ReturnsSameInstance(string input)
     {
-        // No Zalgo → should return the original string instance (fast path)
+        // No Zalgo. Should return the original string instance, the fast path
         var result = ZalgoSanitizer.Sanitize((string?)input);
         result.Should().Be(input);
         object.ReferenceEquals(result, input).Should().BeTrue("clean text must not allocate");
@@ -87,7 +87,7 @@ public sealed class ZalgoSanitizerTests
     [Fact]
     public void Sanitize_ExcessCombining_StripsExcess()
     {
-        // 'a' + 3 combining marks → should strip ALL combining marks from it (since it's Zalgo)
+        // 'a' plus 3 combining marks. Should strip ALL combining marks since it's Zalgo
         var input = "a\u0300\u0301\u0302";
         var result = ZalgoSanitizer.Sanitize((string?)input);
         result.Should().Be("a");

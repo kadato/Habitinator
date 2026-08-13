@@ -13,7 +13,7 @@ public sealed class BoardItemReorderFuzzTests
         double? nextSortVal,
         int insertAt)
     {
-        // Ignore non-finite values (NaN, Infinity) or excessively large values that cause overflow
+        // Ignore non-finite values, NaN and Infinity, or excessively large values that cause overflow
         if (prevSortVal.HasValue && (!double.IsFinite(prevSortVal.Value) || double.IsNaN(prevSortVal.Value) || Math.Abs(prevSortVal.Value) > 1e9))
         {
             return;

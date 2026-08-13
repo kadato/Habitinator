@@ -153,7 +153,7 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
             // Get timezone ID from browser
             var timeZoneId = await _jsRuntime.InvokeAsync<string?>("habitinatorGetUserTimezone").ConfigureAwait(false);
 
-            // Get offset in minutes (negative for East of UTC, positive for West)
+            // Get offset in minutes. Negative for East of UTC, positive for West.
             var offsetMinutes = await _jsRuntime.InvokeAsync<int>("habitinatorGetTimezoneOffsetMinutes").ConfigureAwait(false);
             _utcOffsetMinutes = offsetMinutes;
 
@@ -187,7 +187,7 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
         }
         catch (JSDisconnectedException)
         {
-            // JS runtime not available (e.g., prerendering)
+            // JS runtime not available, e.g. during prerendering
             _timeZoneInfo = TimeZoneInfo.Local;
             _timeZoneId = _timeZoneInfo?.Id;
         }
@@ -222,7 +222,7 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
     }
 
     /// <summary>
-    ///     Gets the timezone abbreviation for display purposes (e.g., "EST", "UTC+2").
+    ///     Gets the timezone abbreviation for display purposes, e.g. "EST" or "UTC+2".
     /// </summary>
     public string GetTimeZoneAbbreviation()
     {

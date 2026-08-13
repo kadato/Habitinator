@@ -1,4 +1,4 @@
-// UTC calendar day (yyyy-MM-dd) for which the user last dismissed the "yesterday dailies" prompt.
+// UTC calendar day in yyyy-MM-dd form. The day the user last dismissed the "yesterday dailies" prompt.
 globalThis.habitinatorGetDailyRetroResolved = function (key) {
     try {
         return localStorage.getItem(key || "habitinator.dailyRetro.ymd") || "";

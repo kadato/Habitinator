@@ -94,7 +94,7 @@ public interface IBoardDataService
 
     Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId, CancellationToken cancellationToken = default);
 
-    /// <summary>Sets the daily's last completion to a specific past calendar day (UTC), for backdating completion.</summary>
+    /// <summary>Sets the daily's last completion to a specific past calendar day in UTC, for backdating completion.</summary>
     Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn,
         CancellationToken cancellationToken = default);
 

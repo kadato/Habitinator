@@ -127,7 +127,7 @@
     gap: var(--space-4);
 }
 
-/* -- Modern filter bar (always visible) -- */
+/* -- Modern filter bar, always visible -- */
 ::deep .stats-filter-card {
     margin-top: 0 !important;
 }

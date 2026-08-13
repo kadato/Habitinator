@@ -211,7 +211,7 @@ public sealed class GlobalTimerServiceTests
             IntervalsBeforeLongBreak = 4
         };
 
-        // Cycle 1: Work -> Break
+        // Cycle 1: Work then Break
         timer.Start();
         timer.IncrementCompletedIntervals();
         timer.TransitionToBreak();
@@ -226,7 +226,7 @@ public sealed class GlobalTimerServiceTests
         Assert.Equal(PomodoroState.Work, timer.CurrentPomodoroState);
         Assert.Equal(TimeSpan.FromMinutes(25), timer.FocusAlertAfter);
 
-        // Advance count to 4 (so modulo cycle hits IntervalsBeforeLongBreak)
+        // Advance count to 4 so the modulo cycle hits IntervalsBeforeLongBreak
         timer.IncrementCompletedIntervals(); // 2
         timer.IncrementCompletedIntervals(); // 3
         timer.IncrementCompletedIntervals(); // 4
@@ -303,7 +303,7 @@ public sealed class GlobalTimerServiceTests
         Assert.Equal("Short Break", timer.StatusLabel);
         Assert.Equal("05:00", timer.GetDisplayTime());
 
-        // Non-Pomodoro mode (Stopwatch)
+        // Non-Pomodoro mode, the stopwatch
         timer.PomodoroModeEnabled = false;
         timer.Reset();
         timer.Start();

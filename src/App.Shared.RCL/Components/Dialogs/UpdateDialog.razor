@@ -113,7 +113,7 @@
                 InvokeAsync(StateHasChanged);
             });
 
-            // If we successfully launched the installer (or redirect to settings for permissions), close the dialog
+            // If we successfully launched the installer, or redirected to settings for permissions, close the dialog
             MudDialog.Close();
         }
         catch (Exception ex)

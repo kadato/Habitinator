@@ -1,4 +1,4 @@
-// When the tab or WebView becomes visible again, reload the board (covers missed SignalR pushes).
+// When the tab or WebView becomes visible again, reload the board. This covers missed SignalR pushes.
 globalThis.HabitinatorBoardVisibility = (function () {
   let dotNetHelper = null;
 
@@ -130,7 +130,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     }
   }
 
-  // Helper for generating shortcut keys to avoid duplication (S4144)
+  // Helper for generating shortcut keys to avoid duplication, S4144
   function getDynamicKey(index, useTwoChars) {
     if (!useTwoChars) {
       return availableKeys[index];
@@ -259,7 +259,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
       return;
     }
 
-    // 1. Navigation Elements (fixed shortcuts)
+    // 1. Navigation Elements, fixed shortcuts
     const allLinks = Array.from(document.querySelectorAll('a[href], button, [role="button"], .mud-button-root, .app-mobile-nav__item, .app-bottom-nav__item, .app-header-nav-btn'));
     
     const boardEl = allLinks.find(el => {
@@ -283,7 +283,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     });
     addTarget(settingsEl, "P", "nav");
 
-    // 2. Common Inputs (fixed shortcuts)
+    // 2. Common Inputs, fixed shortcuts
     const searchInput = document.querySelector('.board-search-field input, #board-search') ||
                         Array.from(document.querySelectorAll('input[placeholder*="Search" i]'))
                         .find(el => {
@@ -301,14 +301,14 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     const todoInput = document.querySelector('.board-column--todo .board-add-wrap input, input[placeholder*="Add to-do" i]');
     addTarget(todoInput, "O", "input");
 
-    // 2b. Statistics Filters (fixed shortcuts)
+    // 2b. Statistics Filters, fixed shortcuts
     const statsTagSelect = document.querySelector('.stats-tag-select-sidebar .mud-input-slot');
     addTarget(statsTagSelect, "G", "input");
 
     const statsPeriodSelect = document.querySelector('.stats-year-select-sidebar .mud-input-slot');
     addTarget(statsPeriodSelect, "R", "input");
 
-    // 3. Dynamic elements allocation (prefix-free)
+    // 3. Elements added at runtime, without prefix
     const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([disabled]), textarea:not([disabled]), select:not([disabled]), [contenteditable="true"], .mud-input-slot:not([disabled])'))
       .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideToggle(el));
 
@@ -501,7 +501,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     }
   }
 
-  // Extracted helper functions for Escape key handling to reduce Cognitive Complexity (S3776)
+  // Extracted helper functions for Escape key handling to reduce Cognitive Complexity, S3776
   function handleTagPickerEscape(e, activeElement) {
     if (activeElement?.classList.contains('habit-tag-picker__search')) {
       e.preventDefault();
@@ -517,7 +517,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     return false;
   }
 
-  // Extracted helper functions for Escape key handling to reduce Cognitive Complexity (S3776)
+  // Extracted helper functions for Escape key handling to reduce Cognitive Complexity, S3776
   function handleTagsPopoverEscape(activeElement) {
     const tagsPopover = document.querySelector('.board-tags-menu-popover');
     if (tagsPopover && isElementVisible(tagsPopover)) {
@@ -531,7 +531,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     return false;
   }
 
-  // Extracted helper functions for Escape key handling to reduce Cognitive Complexity (S3776)
+  // Extracted helper functions for Escape key handling to reduce Cognitive Complexity, S3776
   function handleOpenPopoverEscape(activeElement) {
     const hasOpenPopover = Array.from(document.querySelectorAll('.mud-popover')).some(isElementVisible);
     if (hasOpenPopover) {
@@ -558,7 +558,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     return false;
   }
 
-  // Extracted helper functions for Escape key handling to reduce Cognitive Complexity (S3776)
+  // Extracted helper functions for Escape key handling to reduce Cognitive Complexity, S3776
   function handleEditModeEscape(e, activeElement, isEdit) {
     if (isEdit && activeElement && !activeElement.closest('.mud-popover')) {
       if (activeElement.closest('.edit-daily-dialog, .edit-habit-dialog')) {
@@ -630,7 +630,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     }
   }
 
-  // Extracted helper functions for onKeyDown to reduce Cognitive Complexity (S3776)
+  // Extracted helper functions for onKeyDown to reduce Cognitive Complexity, S3776
   function preventPopoverScroll(e) {
     if (!shortcutModeActive && document.querySelector('.mud-popover-open')) {
       if (e.key !== 'Escape' && e.key !== 'Esc') {
@@ -707,7 +707,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     const dotNetHelper = boardHelper || layoutHelper;
     if (!dotNetHelper) return;
 
-    // 1. Global shortcut: Ctrl+Z / Cmd+Z (Undo)
+    // 1. Global shortcut: Ctrl+Z / Cmd+Z, undo
     const isUndo = (e.ctrlKey || e.metaKey) && e.code === 'KeyZ';
 
     if (isEdit) {

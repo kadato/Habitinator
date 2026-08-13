@@ -6,7 +6,7 @@ using App.Shared.RCL.Services.Remote;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-#pragma warning disable IDE0005 // Required by Android TFM (not auto-imported there)
+#pragma warning disable IDE0005 // Required by Android TFM, not auto-imported there
 using Microsoft.Extensions.Logging;
 #pragma warning restore IDE0005
 
@@ -111,7 +111,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<INotificationSettingsService, RemoteNotificationSettingsService>();
         builder.Services.AddSingleton<IUserPreferencesService, MauiApiUserPreferencesService>();
         builder.Services.AddSingleton<MauiDailyReminderService>();
-        // Scoped: UserNotifier -> ISnackbar uses NavigationManager, which is only valid inside the Blazor WebView scope (not root/singleton).
+        // Scoped: UserNotifier feeds ISnackbar, which uses NavigationManager. NavigationManager is only valid inside the Blazor WebView scope, not root or singleton.
         builder.Services.AddScoped<IUserNotifier, UserNotifier>();
         builder.Services.AddScoped<IFocusTimerClientAlerts, FocusTimerClientAlerts>();
         builder.Services.AddScoped<IDailyRetroPromptStore, JsDailyRetroPromptStore>();

@@ -10,7 +10,7 @@ public sealed class UserPreferences
     /// <summary>Local time-of-day when the user considers a new day to start.</summary>
     public TimeSpan DayStartLocalTime { get; set; } = TimeSpan.Zero;
 
-    /// <summary>Optional timezone override (IANA/Windows ID).</summary>
+    /// <summary>Optional timezone override using an IANA or Windows ID.</summary>
     public string? TimeZoneOverrideId { get; set; }
 
     public string? DisplayName { get; set; }

@@ -3,8 +3,8 @@ using Microsoft.Extensions.Options;
 namespace App.Web.Services;
 
 /// <summary>
-/// Runs EF migrations + demo seed after the web host starts listening so Azure App Service warmup
-/// (/health) is not blocked by long-running seed work (e.g. guest activity heatmap).
+/// Runs EF migrations and demo seed after the web host starts listening so Azure App Service warmup,
+/// the /health probe, is not blocked by long-running seed work such as the guest activity heatmap.
 /// </summary>
 public sealed class DemoDataInitializationHostedService : BackgroundService
 {
@@ -80,7 +80,7 @@ public sealed class DemoInitializationOptions
 {
     public const string SectionName = "DemoInitialization";
 
-    /// <summary>Retries when Postgres is waking (Neon) or transiently unavailable.</summary>
+    /// <summary>Retries when Postgres is waking on Neon or transiently unavailable.</summary>
     public int MaxAttempts { get; set; } = 6;
 
     public int RetryDelaySeconds { get; set; } = 5;

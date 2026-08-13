@@ -224,7 +224,7 @@
     }
 }
 
-/* Extra horizontal breathing room on large viewports (Bootstrap sm/md already step px via px-sm-5). */
+/* Extra horizontal breathing room on large viewports. Bootstrap sm/md already step px via px-sm-5. */
 @media (min-width: 1280px) {
     ::deep .board-main-container.mud-container--fluid,
     ::deep .board-main-container.mud-container {

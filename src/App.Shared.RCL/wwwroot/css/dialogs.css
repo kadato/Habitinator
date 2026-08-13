@@ -1,4 +1,4 @@
-/* -- Shared styles for the edit dialogs (Habit / Daily / To Do) --
+/* -- Shared styles for the edit dialogs, Habit, Daily, and To Do --
    Single source of truth for all three edit dialogs. Class names are dialog-unique. --*/
 /* -- Pop-in animation for modern entry -- */
 @keyframes modal-pop {
@@ -88,7 +88,7 @@
     color: var(--mud-palette-error) !important;
 }
 
-/* -- Labels and Fields (macOS-like styling) -- */
+/* -- Labels and Fields, macOS-like styling -- */
 .edit-daily-label-header {
     color: var(--mud-palette-text-secondary) !important;
     font-weight: 600;

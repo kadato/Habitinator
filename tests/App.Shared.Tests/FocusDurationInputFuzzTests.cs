@@ -45,7 +45,7 @@ public sealed class FocusDurationInputFuzzTests
     [Property]
     public void FormatForField_Clamping_Invariants(TimeSpan ts)
     {
-        // For any TimeSpan (including negative, zero, and huge ones)
+        // For any TimeSpan, including negative, zero, and huge ones
         var formatted = FocusDurationInput.FormatForField(ts);
 
         if (ts.TotalSeconds <= 0)

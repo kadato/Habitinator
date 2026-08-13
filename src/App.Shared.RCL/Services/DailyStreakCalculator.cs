@@ -3,7 +3,7 @@ using App.Shared.RCL.Models;
 namespace App.Shared.RCL.Services;
 
 /// <summary>
-///     Consecutive daily streak from UTC completion history (per calendar day) and the daily schedule.
+///     Consecutive daily streak from UTC completion history, per calendar day, and the daily schedule.
 /// </summary>
 public static class DailyStreakCalculator
 {
@@ -26,7 +26,7 @@ public static class DailyStreakCalculator
             ? eventsOnDay[^1].Type == ActivityEventType.DailyComplete
             : dailyLastCompletedOn == d;
 
-    /// <summary>Groups events by calendar day (UTC) and only DailyComplete / DailyUncomplete.</summary>
+    /// <summary>Groups events by calendar day in UTC, keeping only DailyComplete and DailyUncomplete.</summary>
     public static Dictionary<DateOnly, List<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)>> GroupDailyEventsByUtcDay(
         IEnumerable<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)> source)
     {
@@ -41,8 +41,8 @@ public static class DailyStreakCalculator
 
     /// <summary>
     ///     Consecutive completed <em>scheduled</em> days counting backward. <paramref name="today" /> is included
-    ///     only when it is completed for this daily (events or <paramref name="dailyLastCompletedOn" />).
-    ///     otherwise the chain ends at the previous calendar day, so a not-yet-checked-off today does not
+    ///     only when it is completed for this daily, via events or <paramref name="dailyLastCompletedOn" />.
+    ///     Otherwise the chain ends at the previous calendar day, so a not-yet-checked-off today does not
     ///     add to the streak.
     /// </summary>
     /// <remarks>

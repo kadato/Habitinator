@@ -93,7 +93,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         _boardSync.SyncProblemMessage = "Stuck outbox item.";
         var cut = _ctx.Render<GlobalSyncAlertHost>();
 
-        // Act - Transition to Null (resolved)
+        // Act - Transition to null, meaning resolved
         _boardSync.SyncProblemMessage = null;
         await cut.InvokeAsync(_boardSync.RaiseChanged);
 

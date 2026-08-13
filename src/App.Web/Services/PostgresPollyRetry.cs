@@ -4,8 +4,8 @@ using Polly.Retry;
 namespace App.Web.Services;
 
 /// <summary>
-/// Polly-based retries for operations that should not nest EF Core's execution strategy
-/// (e.g. migrations run with a fresh <see cref="DbContext" /> on each attempt).
+/// Polly-based retries for operations that should not nest EF Core's execution strategy.
+/// Migrations run with a fresh <see cref="DbContext" /> on each attempt.
 /// </summary>
 public static class PostgresPollyRetry
 {

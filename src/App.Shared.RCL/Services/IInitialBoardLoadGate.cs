@@ -1,6 +1,6 @@
 namespace App.Shared.RCL.Services;
 
-/// <summary>Signals when the home board has finished its first data load (used to defer non-critical startup work).</summary>
+/// <summary>Signals when the home board has finished its first data load, used to defer non-critical startup work.</summary>
 public interface IInitialBoardLoadGate
 {
     bool IsComplete { get; }

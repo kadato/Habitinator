@@ -205,7 +205,7 @@
     line-height: 1.35;
 }
 
-/* Extra space between subtask checkbox control and label text (MudBlazor 9). */
+/* Extra space between subtask checkbox control and label text in MudBlazor 9. */
 .board-subtask-list__row .board-subtask-cb ::deep .mud-input-control {
     display: flex;
     flex-direction: row;

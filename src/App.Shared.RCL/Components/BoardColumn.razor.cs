@@ -234,7 +234,7 @@ public partial class BoardColumn : IAsyncDisposable
                     && serverItem.DailyStartDate == overrideItem.DailyStartDate
                     && serverItem.DailyRepeat == overrideItem.DailyRepeat
                     && serverItem.DailyRepeatInterval == overrideItem.DailyRepeatInterval;
-                // Note: We intentionally do NOT check Counter (streak) here because the server
+                // Note: We intentionally do NOT check Counter, the streak, here because the server
                 // automatically increments/updates it upon completion, which would prevent
                 // the optimistic override from being pruned.
             }
@@ -459,7 +459,7 @@ public partial class BoardColumn : IAsyncDisposable
         };
     }
 
-    // -- Reordering (SortableJS) --
+    // -- Reordering via SortableJS --
 
     [JSInvokable]
     public async Task OnJsReorderAsync(int oldIndex, int newIndex)

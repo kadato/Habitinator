@@ -91,11 +91,11 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         var tzSelect = cut.FindComponent<MudSelect<string>>();
         tzSelect.Instance.Value.Should().Be("America/New_York");
 
-        // Theme is now a 2-state toggle (MudSwitch + MudButton), not a MudSelect
+        // Theme is now a 2-state toggle, MudSwitch plus MudButton, not a MudSelect
         var themeSwitch = cut.FindComponents<MudSwitch<bool>>()[0];
-        // Preference is Dark (pinned), so "Sync with system" is OFF
+        // Preference is Dark, pinned, so "Sync with system" is OFF
         themeSwitch.Instance.Value.Should().BeFalse();
-        // The toggle button label should reflect the opposite of pinned (Light mode)
+        // The toggle button label should reflect the opposite of pinned, Light mode
         cut.Markup.Should().Contain("Light mode");
     }
 
@@ -203,7 +203,7 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         // Initial: Sync with system is ON
         themeSwitch.Instance.Value.Should().BeTrue();
 
-        // Act - turn off system sync (pins to dark)
+        // Act - turn off system sync, which pins to dark
         await cut.InvokeAsync(() => themeSwitch.Instance.ValueChanged.InvokeAsync(false));
 
         // Assert - default pinned theme is Dark when unpinning
@@ -226,7 +226,7 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         var themeSwitch = cut.FindComponents<MudSwitch<bool>>()[0];
         themeSwitch.Instance.Value.Should().BeFalse();
 
-        // Find the theme toggle button (the MudButton next to the switch)
+        // Find the theme toggle button, the MudButton next to the switch
         var themeBtn = cut.FindAll(".text-transform-none").First(b => b.TextContent.Contains("mode"));
 
         // Act - click the toggle button to switch from Dark to Light
@@ -318,7 +318,7 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         var cut = _ctx.Render<UserPreferencesSection>();
         var dateFormatField = cut.FindComponents<MudTextField<string>>()[1];
 
-        // Act - change to a new valid format dynamically (before blur)
+        // Act - change to a new valid format dynamically, before blur
         var newFormat = "dd/MM/yyyy";
         var expectedPreview = DateTime.Now.ToString(newFormat, CultureInfo.InvariantCulture);
         await cut.InvokeAsync(() => dateFormatField.Instance.ValueChanged.InvokeAsync(newFormat));
@@ -406,14 +406,14 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         var cut = _ctx.Render<UserPreferencesSection>();
         var dateFormatField = cut.FindComponents<MudTextField<string>>()[1];
 
-        // 1. Set invalid format and blur -> expect error and no save
+        // 1. Set invalid format and blur. Expect error and no save
         await cut.InvokeAsync(() => dateFormatField.Instance.ValueChanged.InvokeAsync("%"));
         await cut.InvokeAsync(() => dateFormatField.Instance.OnBlur.InvokeAsync(new Microsoft.AspNetCore.Components.Web.FocusEventArgs()));
 
         dateFormatField.Instance.Error.Should().BeTrue();
         await _preferencesService.DidNotReceiveWithAnyArgs().SaveAsync(null!);
 
-        // 2. Set valid format and blur -> expect error cleared and save called
+        // 2. Set valid format and blur. Expect error cleared and save called
         await cut.InvokeAsync(() => dateFormatField.Instance.ValueChanged.InvokeAsync("dd/MM/yyyy"));
         await cut.InvokeAsync(() => dateFormatField.Instance.OnBlur.InvokeAsync(new Microsoft.AspNetCore.Components.Web.FocusEventArgs()));
 

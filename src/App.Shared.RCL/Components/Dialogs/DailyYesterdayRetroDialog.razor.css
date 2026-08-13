@@ -128,7 +128,7 @@
     flex-shrink: 0;
     padding: 0;
     background-clip: padding-box;
-    color: var(--mud-palette-success-contrast-text);
+    color: var(--mud-palette-success-text);
     transition: border-color var(--dur-normal) ease, background-color var(--dur-normal) ease, transform var(--dur-normal) cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 

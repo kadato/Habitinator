@@ -50,7 +50,7 @@
 
 .auth-card {
     background: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-divider);
+    border: 1px solid var(--hab-border-card);
     border-radius: var(--space-5);
     padding: 1.35rem 1.25rem;
     box-shadow:

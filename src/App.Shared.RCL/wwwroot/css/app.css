@@ -306,6 +306,16 @@ a {
     }
 }
 
+/* Soften card container borders app-wide. Outlined MudPaper cards in settings and stats. */
+.mud-paper-outlined {
+    border-color: var(--hab-border-card);
+}
+
+/* Soften outlined input borders app-wide. Error, focus, hover, and disabled states keep MudBlazor's colors. */
+.mud-input-outlined .mud-input-outlined-border {
+    border-color: light-dark(rgba(15, 23, 42, 0.14), rgba(255, 255, 255, 0.12));
+}
+
 /* App bar: MudToolBar can shrink-wrap; force full width + flex spacer so user/logout stay on the right edge */
 .mud-appbar.app-top-bar {
     display: flex !important;
@@ -650,7 +660,7 @@ a {
 .undo-toast-btn {
     flex-shrink: 0;
     background: var(--mud-palette-error);
-    color: var(--mud-palette-error-contrast-text, #fff);
+    color: var(--mud-palette-error-text, #fff);
     border: none;
     border-radius: var(--mud-default-borderradius, 0.375rem);
     padding: var(--space-2) var(--space-6);

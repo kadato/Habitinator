@@ -581,7 +581,7 @@
 }
 
 .habit-tag-picker__option:focus-visible {
-    background: var(--mud-palette-action-hover);
+    background: var(--mud-palette-action-default-hover);
     color: var(--mud-palette-text-primary);
     outline: none;
 }

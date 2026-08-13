@@ -10,13 +10,6 @@
     padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
-.timer-panel--active {
-    position: sticky;
-    top: var(--board-sticky-top, 4.5rem);
-    z-index: calc(var(--mud-zindex-appbar, 1100) - 2);
-    background: var(--mud-palette-surface);
-}
-
 .timer-panel__content {
     width: 100%;
     max-width: 100%;
@@ -31,156 +24,46 @@
     }
 }
 
-/* Active session: compact sticky strip */
-.timer-running-strip {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-    min-width: 0;
-    width: 100%;
-}
-
-.timer-running-strip__main {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    min-width: 0;
-}
-
-.timer-running-target {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 100%;
-    font-weight: 600;
-    font-size: 1.5rem;
-}
-
-.timer-running-strip__actions {
-    display: flex;
-    justify-content: center;
-    gap: var(--space-4);
-    width: 100%;
-}
-
-@media (min-width: 960px) {
-    .timer-running-strip__actions {
-        justify-content: flex-end;
-        width: auto;
-    }
-}
-
 /*
- * Toolbar: CSS grid so the middle column always consumes space between clock and buttons.
+ * Unified toolbar: one layout whether the timer is idle, paused, or running.
+ * The left slot always has the same size. It shows the mode toggle when idle
+ * and the fixed-size clock while a session is active, so nothing shifts.
  */
-.timer-compact {
+.timer-toolbar {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--space-5);
+    gap: var(--space-4);
     min-width: 0;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
 }
 
-.timer-compact__left-col {
+.timer-toolbar__left {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     width: 100%;
+    min-height: 52px;
 }
 
-.timer-compact__right-col {
+.timer-toolbar__clock {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+}
+
+.timer-toolbar__main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
     width: 100%;
-}
-
-@media (min-width: 960px) {
-    /* One centered row: toggle, inputs, and actions, sized to content so the buttons hug the inputs */
-    .timer-compact {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: center;
-        align-items: center;
-        gap: var(--space-6) var(--space-7);
-    }
-
-    .timer-compact__left-col {
-        flex: 0 0 auto;
-        align-items: flex-start;
-        width: auto;
-        padding-right: var(--space-7);
-        border-right: 1px solid color-mix(in srgb, var(--mud-palette-divider) 15%, transparent);
-    }
-
-    .timer-compact__right-col {
-        flex: 0 1 520px;
-        width: auto;
-        min-width: 300px;
-        max-width: 800px;
-    }
-
-    .timer-compact__actions {
-        flex: 0 0 auto;
-        justify-content: center;
-        width: auto;
-    }
-}
-
-@media (max-width: 959.98px) {
-    /* Tighter gap between the app bar nav and the stopwatch card on small screens */
-    .timer-panel {
-        margin-top: 0;
-    }
-
-    .timer-compact__left-col {
-        order: 1;
-        width: 100%;
-        display: flex;
-        justify-content: center;
-    }
-
-    .custom-timer-toggle {
-        width: 100%;
-        max-width: 100%;
-        display: flex;
-    }
-
-    .custom-timer-toggle .toggle-btn {
-        flex: 1 1 50%;
-        width: 50%;
-        min-height: 44px;
-        padding: 8px 16px;
-    }
-
-    .timer-compact__right-col {
-        order: 2;
-    }
-
-    .timer-compact__actions {
-        order: 3;
-        display: flex;
-        justify-content: center;
-        gap: var(--space-5);
-        width: 100%;
-    }
-
-    .timer-running-strip__main {
-        align-items: center;
-        text-align: center;
-    }
-
-    .timer-running-strip__main .timer-clock-header {
-        width: 100% !important;
-        max-width: 100%;
-        justify-content: center !important;
-    }
-
-    .timer-running-target {
-        text-align: center;
-        font-size: 1.3rem;
-    }
 }
 
 .timer-clock-header {
@@ -190,23 +73,9 @@
     width: max-content;
 }
 
-.timer-clock-header--strip {
-    width: auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-@media (min-width: 960px) {
-    .timer-clock-header--strip {
-        min-width: 8.5ch;
-        justify-content: flex-start;
-    }
-}
-
 ::deep .timer-value {
     font-family: var(--hab-font-mono) !important;
-    font-size: 4rem !important;
+    font-size: 3.5rem !important;
     line-height: 1 !important;
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
@@ -220,17 +89,21 @@
     padding: 0;
 }
 
-::deep .timer-value--strip {
-    font-size: 3.5rem !important;
-}
-
 .timer-clock-header ::deep .timer-value {
     margin-top: 0 !important;
     margin-bottom: 0 !important;
 }
 
-.timer-compact > .timer-inputs-pair {
-    min-width: 0;
+.timer-toolbar__actions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    align-self: center;
+    min-height: 2.875rem;
+    box-sizing: border-box;
     width: 100%;
 }
 
@@ -259,17 +132,112 @@
     align-items: end;
 }
 
+@media (min-width: 960px) {
+    /* One centered row: toggle or clock, inputs, and actions */
+    .timer-toolbar {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: var(--space-6) var(--space-7);
+    }
+
+    .timer-toolbar__left {
+        flex: 0 0 auto;
+        width: auto;
+        min-height: 56px;
+        padding-right: var(--space-7);
+        border-right: 1px solid color-mix(in srgb, var(--mud-palette-divider) 15%, transparent);
+    }
+
+    .timer-toolbar__main {
+        flex: 1 1 520px;
+        width: auto;
+        min-width: 300px;
+        max-width: 800px;
+        align-items: stretch;
+    }
+
+    .timer-toolbar__actions {
+        justify-content: center;
+        width: auto;
+        flex: 0 0 auto;
+    }
+}
+
+@media (min-width: 1280px) {
+    /* Wide screens: wider spacing */
+    .timer-toolbar {
+        gap: var(--space-6) var(--space-8);
+    }
+}
+
 @media (max-width: 959.98px) {
-    .timer-inputs-pair {
-        grid-template-columns: minmax(0, 1fr);
+    /* Tighter gap between the app bar nav and the timer card on small screens */
+    .timer-panel {
+        margin-top: 0;
+    }
+
+    .timer-toolbar__left {
+        order: 1;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+
+    .custom-timer-toggle {
+        width: 100%;
+        max-width: 100%;
+        display: flex;
+    }
+
+    .custom-timer-toggle .toggle-btn {
+        flex: 1 1 50%;
+        width: 50%;
+        min-height: 44px;
+        padding: 8px 16px;
+    }
+
+    .timer-toolbar__main {
+        order: 2;
+        align-items: center;
+    }
+
+    .timer-toolbar__actions {
+        order: 3;
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--space-5);
+        width: 100%;
     }
 
     ::deep .timer-value {
-        font-size: 3.25rem !important;
+        font-size: 3rem !important;
+    }
+}
+
+@media (max-width: 399.98px) {
+    ::deep .timer-value {
+        font-size: 2.5rem !important;
     }
 
-    ::deep .timer-value--strip {
-        font-size: 3.0rem !important;
+    .timer-mobile-header-text {
+        font-size: 0.95rem;
+    }
+
+    .timer-toolbar__actions {
+        gap: var(--space-3);
+    }
+
+    ::deep .timer-icon-btn {
+        width: 2.5rem !important;
+        height: 2.5rem !important;
+        min-width: 2.5rem !important;
+        min-height: 2.5rem !important;
+    }
+
+    .timer-inputs-pair {
+        gap: var(--space-2);
     }
 }
 
@@ -333,39 +301,6 @@
     }
 }
 
-@media (max-width: 399.98px) {
-    ::deep .timer-value {
-        font-size: 2.75rem !important;
-    }
-
-    ::deep .timer-value--strip {
-        font-size: 2.5rem !important;
-    }
-
-    .timer-mobile-header-text {
-        font-size: 0.95rem;
-    }
-
-    .timer-running-strip__actions {
-        gap: var(--space-3);
-    }
-
-    ::deep .timer-icon-btn {
-        width: 2.5rem !important;
-        height: 2.5rem !important;
-        min-width: 2.5rem !important;
-        min-height: 2.5rem !important;
-    }
-
-    .timer-compact__actions {
-        gap: var(--space-3);
-    }
-
-    .timer-inputs-pair {
-        gap: var(--space-2);
-    }
-}
-
 .timer-target-field,
 .timer-focus-textfield {
     width: 100%;
@@ -426,41 +361,6 @@
     white-space: pre-line;
     line-height: 1.4;
     display: block;
-}
-
-.timer-compact__actions {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-2);
-    justify-content: flex-end;
-    align-self: center;
-    min-height: 2.875rem;
-    box-sizing: border-box;
-}
-
-@media (min-width: 960px) {
-    .timer-running-strip {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--space-5);
-    }
-
-    .timer-running-strip__main {
-        flex: 1 1 auto;
-        flex-direction: row;
-        align-items: center;
-        gap: 1.25rem;
-    }
-
-    .timer-running-strip__actions {
-        display: flex;
-        flex-wrap: wrap;
-        width: auto;
-        flex: 0 0 auto;
-    }
 }
 
 /* Custom Segmented Control styling */
@@ -552,7 +452,7 @@
     background-color: var(--mud-palette-secondary);
 }
 
-/* Active strip Pomodoro info styling */
+/* Pomodoro status styling */
 .timer-pomodoro-status-strip {
     display: inline-flex;
     align-items: center;
@@ -667,16 +567,5 @@
     .timer-pomodoro-field-control ::deep .timer-pomodoro-info-container {
         justify-content: space-between;
         padding: 0 2px;
-    }
-}
-
-/* Wide screens: bigger timer value and wider spacing */
-@media (min-width: 1280px) {
-    .timer-compact {
-        gap: var(--space-6) var(--space-8);
-    }
-
-    ::deep .timer-value--strip {
-        font-size: 4rem !important;
     }
 }

@@ -12,8 +12,6 @@
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Microsoft.Playwright" />
-    <PackageReference Include="SixLabors.ImageSharp" />
-    <PackageReference Include="NSubstitute" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>

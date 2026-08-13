@@ -63,7 +63,6 @@
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.13.0" />
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <PackageVersion Include="Microsoft.Playwright" Version="1.61.0" />
-    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
 
     <!-- BrandExporter script dependencies -->
     <PackageVersion Include="SkiaSharp" Version="3.116.1" />

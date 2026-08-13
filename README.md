@@ -21,15 +21,70 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 ---
 
 ## Preview
+
 <div align="center">
 
+<p align="center">
+<strong>Board</strong> | <strong>Statistics</strong> | <strong>Focus timer</strong><br><br>
 <picture>
-  <source media="(prefers-color-scheme: dark)"  srcset="docs/automation/demo-video-dark.gif">
-  <source media="(prefers-color-scheme: light)" srcset="docs/automation/demo-video-light.gif">
-  <img src="docs/automation/demo-video-dark.gif" alt="Habitinator demo">
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/automation/screenshots/board-dark.png">
+  <img alt="Board with habits, dailies and to-dos" src="./docs/automation/screenshots/board-light.png" width="220">
 </picture>
+&nbsp;&nbsp;
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/automation/screenshots/statistics-dark.png">
+  <img alt="Statistics with activity heatmap" src="./docs/automation/screenshots/statistics-light.png" width="220">
+</picture>
+&nbsp;&nbsp;
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/automation/screenshots/timer-dark.png">
+  <img alt="Running focus timer" src="./docs/automation/screenshots/timer-light.png" width="220">
+</picture>
+</p>
+
+<br>
+
+<p align="center">
+<strong>Edit habit</strong> | <strong>Edit daily</strong> | <strong>Activity day detail</strong><br><br>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/automation/screenshots/edit-habit-dark.png">
+  <img alt="Edit a habit" src="./docs/automation/screenshots/edit-habit-light.png" width="220">
+</picture>
+&nbsp;&nbsp;
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/automation/screenshots/edit-daily-dark.png">
+  <img alt="Edit a daily" src="./docs/automation/screenshots/edit-daily-light.png" width="220">
+</picture>
+&nbsp;&nbsp;
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/automation/screenshots/activity-day-detail-dark.png">
+  <img alt="Activity detail for one day" src="./docs/automation/screenshots/activity-day-detail-light.png" width="220">
+</picture>
+</p>
+
+<br>
+
+<p align="center">
+<strong>Welcome</strong> | <strong>Sign in</strong> | <strong>Settings</strong><br><br>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/automation/screenshots/welcome-dark.png">
+  <img alt="Welcome page" src="./docs/automation/screenshots/welcome-light.png" width="220">
+</picture>
+&nbsp;&nbsp;
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/automation/screenshots/login-dark.png">
+  <img alt="Sign in page" src="./docs/automation/screenshots/login-light.png" width="220">
+</picture>
+&nbsp;&nbsp;
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/automation/screenshots/settings-dark.png">
+  <img alt="Settings page" src="./docs/automation/screenshots/settings-light.png" width="220">
+</picture>
+</p>
 
 </div>
+
+> Screenshots are regenerated with `tools/Habitinator.Screenshots/run.ps1`. It uses Playwright with a mobile viewport in light and dark themes.
 
 ---
 
@@ -47,7 +102,7 @@ Download the latest build from the [releases page](https://github.com/tothKaroly
 
 **Windows runtime note:** if your release is framework-dependent, install [.NET Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/11.0) once.
 
-#### Option 1: Prebuilt packages (recommended)
+#### Option 1: Prebuilt packages, recommended
 
 1. Pick your platform from the table above
 2. Download the package and its `.sha256` file
@@ -59,7 +114,7 @@ Download the latest build from the [releases page](https://github.com/tothKaroly
 # Windows
 dotnet build -t:Run -f net11.0-windows10.0.19041.0
 
-# Android (requires Android SDK)
+# Android, requires the Android SDK
 dotnet build -t:Run -f net11.0-android
 ```
 
@@ -93,10 +148,10 @@ dotnet build -t:Run -f net11.0-android
 | Layer | Technologies |
 |-------|--------------|
 | **Runtime** | .NET 11 |
-| **Web UI** | Blazor Web App (Interactive WebAssembly), MudBlazor |
-| **Native Apps** | .NET MAUI + Blazor Hybrid (Android, iOS, macOS, Windows) |
-| **Database (Server)** | Neon Serverless PostgreSQL / any PostgreSQL via EF Core |
-| **Database (Client)** | SQLite via EF Core |
+| **Web UI** | Blazor Web App with Interactive WebAssembly, MudBlazor |
+| **Native Apps** | .NET MAUI + Blazor Hybrid for Android, iOS, macOS, Windows |
+| **Database, Server** | Neon Serverless PostgreSQL / any PostgreSQL via EF Core |
+| **Database, Client** | SQLite via EF Core |
 | **Orchestration** | .NET Aspire AppHost |
 
 ---
@@ -106,7 +161,7 @@ dotnet build -t:Run -f net11.0-android
 ### Prerequisites
 Make sure you have Docker installed and running for the local PostgreSQL container.
 
-### Run and Debug (via Aspire)
+### Run and Debug via Aspire
 Run the following command to start PostgreSQL, the web backend, and the native client host environment:
 ```powershell
 dotnet run --project src/AppHost/AppHost.csproj
@@ -117,11 +172,17 @@ The application will automatically seed a guest account on startup:
 - **Email:** `guest@habitinator.local`
 - **Password:** `Guest123!`
 
+### Regenerating Screenshots
+To regenerate the mobile screenshots in the [Preview](#preview) section, requires the web app running, e.g. via AppHost:
+```powershell
+pwsh ./tools/Habitinator.Screenshots/run.ps1 -BaseUrl "http://127.0.0.1:5033"
+```
+
 ---
 
 ## Architecture and Database
 
-Here are the project dependencies and database schema (auto-updated via documentation scripts):
+Here are the project dependencies, auto-updated via documentation scripts:
 
 ### Solution Graph
 <!-- HABITINATOR_MERMAID_BEGIN:solution-graph -->
@@ -147,30 +208,3 @@ flowchart LR
   AppHost --> App_Web
 ```
 <!-- HABITINATOR_MERMAID_END:solution-graph -->
-
-### Database Schema
-<!-- HABITINATOR_MERMAID_BEGIN:database-schema -->
-```mermaid
-flowchart TB
-%% Auto-generated from EF Core ApplicationDbContextModelSnapshot
-  AspNetRoleClaims["AspNetRoleClaims"]
-  AspNetRoles["AspNetRoles"]
-  AspNetUserClaims["AspNetUserClaims"]
-  AspNetUserLogins["AspNetUserLogins"]
-  AspNetUserRoles["AspNetUserRoles"]
-  AspNetUserTokens["AspNetUserTokens"]
-  AspNetUsers["AspNetUsers"]
-  BoardItems["BoardItems"]
-  BoardRequestIdempotencies["BoardRequestIdempotencies"]
-  UserActivityEvents["UserActivityEvents"]
-  AspNetRoles -->|fk| AspNetRoleClaims
-  AspNetRoles -->|fk| AspNetUserRoles
-  AspNetUsers -->|fk| AspNetUserClaims
-  AspNetUsers -->|fk| AspNetUserLogins
-  AspNetUsers -->|fk| AspNetUserRoles
-  AspNetUsers -->|fk| AspNetUserTokens
-  AspNetUsers -->|fk| BoardItems
-  AspNetUsers -->|fk| BoardRequestIdempotencies
-  AspNetUsers -->|fk| UserActivityEvents
-```
-<!-- HABITINATOR_MERMAID_END:database-schema -->

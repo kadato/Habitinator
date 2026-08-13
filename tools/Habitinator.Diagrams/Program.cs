@@ -16,7 +16,6 @@ var outDir = Path.GetFullPath(args.Length > 1 ? args[1] : Path.Combine(repoRoot,
 Directory.CreateDirectory(outDir);
 
 var slnxPath = Path.Combine(repoRoot, "Habitinator.slnx");
-var snapshotPath = Path.Combine(repoRoot, "src", "App.Web", "Data", "Migrations", "ApplicationDbContextModelSnapshot.cs");
 
 if (!File.Exists(slnxPath))
 {
@@ -26,16 +25,6 @@ if (!File.Exists(slnxPath))
 
 await File.WriteAllTextAsync(Path.Combine(outDir, "solution-graph.mmd"), BuildSolutionMermaid(slnxPath, repoRoot), Encoding.UTF8);
 await Console.Out.WriteLineAsync($"Wrote {Path.Combine(outDir, "solution-graph.mmd")}");
-
-if (File.Exists(snapshotPath))
-{
-    await File.WriteAllTextAsync(Path.Combine(outDir, "database-schema.mmd"), BuildErMermaid(snapshotPath), Encoding.UTF8);
-    await Console.Out.WriteLineAsync($"Wrote {Path.Combine(outDir, "database-schema.mmd")}");
-}
-else
-{
-    await Console.Out.WriteLineAsync($"Skip ER diagram (snapshot missing): {snapshotPath}");
-}
 
 static string BuildSolutionMermaid(string slnxPath, string repoRoot)
 {
@@ -120,135 +109,3 @@ static string SanitizeMermaidId(string name)
 }
 
 static string EscapeMermaidLabel(string name) => name.Replace("\"", "'");
-
-static string BuildErMermaid(string snapshotPath)
-{
-    var content = File.ReadAllText(snapshotPath);
-    var tableByType = new Dictionary<string, string>(StringComparer.Ordinal);
-    var relationships = new List<(string ChildType, string ParentType)>();
-
-    foreach (var (type, body) in SplitEntityBlocks(content))
-    {
-        var tm = Regex.Match(body, @"\.ToTable\(""([^""]+)""", RegexOptions.None, TimeSpan.FromSeconds(1));
-        if (tm.Success)
-        {
-            tableByType[type] = tm.Groups[1].Value;
-        }
-
-        foreach (Match hm in Regex.Matches(body, @"b\.HasOne\(""([^""]+)""[\s\S]*?\.HasForeignKey\(""([^""]+)""\)", RegexOptions.None, TimeSpan.FromSeconds(1)))
-        {
-            var parentType = hm.Groups[1].Value;
-            relationships.Add((type, parentType));
-        }
-    }
-
-    var edges = new List<(string ParentTable, string ChildTable)>();
-    foreach (var (childType, parentType) in relationships)
-    {
-        if (!tableByType.TryGetValue(childType, out var childTable))
-        {
-            continue;
-        }
-
-        if (!tableByType.TryGetValue(parentType, out var parentTable))
-        {
-            continue;
-        }
-
-        if (string.Equals(childTable, parentTable, StringComparison.Ordinal))
-        {
-            continue;
-        }
-
-        edges.Add((parentTable, childTable));
-    }
-
-    edges = edges
-        .Distinct()
-        .OrderBy(e => e.ParentTable, StringComparer.Ordinal)
-        .ThenBy(e => e.ChildTable, StringComparer.Ordinal)
-        .ToList();
-
-    var tableNames = new SortedSet<string>(StringComparer.Ordinal);
-    foreach (var (p, c) in edges)
-    {
-        tableNames.Add(p);
-        tableNames.Add(c);
-    }
-
-    var sb = new StringBuilder();
-    sb.AppendLine("flowchart TB");
-    sb.AppendLine("%% Auto-generated from EF Core ApplicationDbContextModelSnapshot");
-
-    foreach (var t in tableNames)
-    {
-        sb.AppendLine(CultureInfo.InvariantCulture, $"  {SanitizeMermaidId(t)}[\"{EscapeMermaidLabel(t)}\"]");
-    }
-
-    foreach (var (parentTable, childTable) in edges)
-    {
-        sb.AppendLine(CultureInfo.InvariantCulture, $"  {SanitizeMermaidId(parentTable)} -->|fk| {SanitizeMermaidId(childTable)}");
-    }
-
-    return sb.ToString();
-}
-
-static IEnumerable<(string Type, string Body)> SplitEntityBlocks(string content)
-{
-    const string prefix = "modelBuilder.Entity(\"";
-    var idx = 0;
-    while (true)
-    {
-        var start = content.IndexOf(prefix, idx, StringComparison.Ordinal);
-        if (start < 0)
-        {
-            yield break;
-        }
-
-        start += prefix.Length;
-        var typeEnd = content.IndexOf('"', start);
-        if (typeEnd < 0)
-        {
-            yield break;
-        }
-
-        var type = content[start..typeEnd];
-        var braceStart = content.IndexOf('{', typeEnd);
-        if (braceStart < 0)
-        {
-            yield break;
-        }
-
-        var endBrace = FindMatchingBrace(content, braceStart);
-        if (endBrace < 0)
-        {
-            yield break;
-        }
-
-        var body = content[braceStart..(endBrace + 1)];
-        yield return (type, body);
-        idx = endBrace + 1;
-    }
-}
-
-static int FindMatchingBrace(string s, int openIdx)
-{
-    var depth = 0;
-    for (var i = openIdx; i < s.Length; i++)
-    {
-        if (s[i] == '{')
-        {
-            depth++;
-        }
-        else if (s[i] == '}')
-        {
-            depth--;
-            if (depth == 0)
-            {
-                return i;
-            }
-        }
-    }
-
-    return -1;
-}

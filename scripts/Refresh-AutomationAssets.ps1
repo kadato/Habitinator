@@ -1,8 +1,8 @@
 #Requires -Version 7
 <#
   Regenerates committed documentation assets under docs/automation/.
-  - Mermaid: solution graph + database FK flowchart (no running server).
-  - OpenAPI JSON + Playwright PNGs: require App.Web reachable at -BaseUrl (PostgreSQL must match appsettings).
+  - Mermaid: solution graph + database FK flowchart, no running server needed.
+  - OpenAPI JSON + mobile screenshots: require App.Web reachable at -BaseUrl. PostgreSQL must match appsettings.
 
   Example:
     pwsh ./scripts/Refresh-AutomationAssets.ps1
@@ -28,7 +28,7 @@ function Sync-ReadmeMermaidEmbeds {
 
     $readmePath = Join-Path $RepoRootPath "README.md"
     if (-not (Test-Path $readmePath)) {
-        Write-Warning "README.md not found; skip Mermaid embed sync."
+        Write-Warning "README.md not found. Skip Mermaid embed sync."
         return
     }
 
@@ -37,7 +37,6 @@ function Sync-ReadmeMermaidEmbeds {
 
     $sections = @(
         @{ Id = "solution-graph"; File = "solution-graph.mmd" }
-        @{ Id = "database-schema"; File = "database-schema.mmd" }
     )
 
     foreach ($s in $sections) {
@@ -57,7 +56,7 @@ function Sync-ReadmeMermaidEmbeds {
 
         $newText = [regex]::Replace($text, $pattern, $replacement)
         if ($newText -ceq $text) {
-            Write-Warning "README: marker block '$($s.Id)' not found or pattern mismatch; section not updated."
+            Write-Warning "README: marker block '$($s.Id)' not found or pattern mismatch. Section not updated."
         }
         else {
             $text = $newText
@@ -68,7 +67,7 @@ function Sync-ReadmeMermaidEmbeds {
     Write-Output "== README Mermaid embeds synced from docs/automation/*.mmd"
 }
 
-Write-Host "== Diagrams (Mermaid) -> $docsAutomation"
+Write-Host "== Diagrams (Mermaid) to $docsAutomation"
 dotnet build (Join-Path $repoRoot "tools" "Habitinator.Diagrams" "Habitinator.Diagrams.csproj") --configuration Release
 dotnet run --project (Join-Path $repoRoot "tools" "Habitinator.Diagrams" "Habitinator.Diagrams.csproj") `
     --configuration Release --no-build -- `
@@ -83,42 +82,13 @@ try {
     Invoke-WebRequest -Uri "$base/openapi/v1.json" -OutFile $openApiPath -UseBasicParsing
 }
 catch {
-    Write-Warning "OpenAPI download failed (is App.Web running at $base ?): $_"
+    Write-Warning "OpenAPI download failed. Is App.Web running at $base ? $_"
 }
 
-Write-Host "== Playwright screenshots -> $shotDir"
-$env:E2E_BASE_URL = $base
-$env:E2E_SCREENSHOT_DIR = $shotDir
-dotnet build (Join-Path $repoRoot "tests" "App.Web.E2E" "App.Web.E2E.csproj") --configuration Release
-$pw = Join-Path $repoRoot "tests" "App.Web.E2E" "bin" "Release" "net11.0" "playwright.ps1"
-if (Test-Path $pw) {
-    & $pw install chromium
-}
-else {
-    Write-Warning "playwright.ps1 not found; build E2E project first."
-}
-
-try {
-    try {
-        # Run all documentation screenshot tests (not just the original one)
-        dotnet test (Join-Path $repoRoot "tests" "App.Web.E2E" "App.Web.E2E.csproj") `
-            --configuration Release --no-build `
-            --filter "FullyQualifiedName~DocumentationScreenshotsTests"
-    }
-    catch {
-        Write-Warning "Screenshot tests failed (is App.Web running with seeded demo guest?): $_"
-    }
-
-    if (Test-Path $shotDir) {
-        Write-Host "`n== Generated screenshots:"
-        Get-ChildItem -Path $shotDir -Filter "*.png" | ForEach-Object {
-            Write-Host "   - $($_.Name)"
-        }
-    }
-}
-finally {
-    Remove-Item Env:E2E_BASE_URL -ErrorAction SilentlyContinue
-    Remove-Item Env:E2E_SCREENSHOT_DIR -ErrorAction SilentlyContinue
+Write-Host "== Playwright screenshots (mobile, light+dark) to $shotDir"
+& (Join-Path $repoRoot "tools" "Habitinator.Screenshots" "run.ps1") -BaseUrl $base
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Screenshot generation failed. Is App.Web running with the seeded demo guest? Exit code $LASTEXITCODE"
 }
 
 Write-Host "Done. Review changes under docs/automation/ and README.md, then commit."

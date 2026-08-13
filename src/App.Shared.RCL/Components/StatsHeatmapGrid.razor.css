@@ -1,4 +1,4 @@
-/* Container holds rowlabels (outside) and scrollable wrap (inside) so labels stay visible when scrolled. */
+/* Container holds rowlabels outside and the scrollable wrap inside, so labels stay visible when scrolled. */
 .stats-heatmap-container {
     --stats-cell: 11px;
     --stats-grid-gap: 2px;
@@ -14,6 +14,7 @@
     --stats-grid-gap: 3px;
 }
 
+/* Custom scrollbar styling to make scrollbars always visible and elegant */
 .stats-heatmap-wrap {
     overflow-x: scroll;
     overflow-y: hidden;
@@ -21,10 +22,6 @@
     min-width: 0;
     padding-top: 4px;
     padding-bottom: 10px;
-}
-
-/* Custom scrollbar styling to make scrollbars always visible and elegant */
-.stats-heatmap-wrap {
     --scrollbar-thumb: color-mix(in srgb, var(--mud-palette-primary) 30%, var(--mud-palette-text-secondary) 25%);
     --scrollbar-track: var(--mud-palette-background-gray);
     scrollbar-width: thin;

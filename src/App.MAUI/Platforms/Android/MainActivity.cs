@@ -25,7 +25,7 @@ public class MainActivity : MauiAppCompatActivity
             return;
         }
 
-        // Allow content to draw behind system bars (status bar + navigation bar)
+        // Allow content to draw behind system bars, the status bar and navigation bar.
         WindowCompat.SetDecorFitsSystemWindows(Window, false);
 
         // Make status bar and navigation bar transparent so the app background shows through
@@ -35,39 +35,39 @@ public class MainActivity : MauiAppCompatActivity
             Window.SetNavigationBarColor(Android.Graphics.Color.Transparent);
         }
 
-        UpdateStatusBarAppearance();
+        UpdateStatusBarAppearance(Window, Resources);
     }
 
     public override void OnConfigurationChanged(Configuration newConfig)
     {
         base.OnConfigurationChanged(newConfig);
 
-        // When following system theme (UserAppTheme == Unspecified), react to
+        // When following system theme, UserAppTheme == Unspecified, react to
         // system dark mode changes so status bar icons stay readable
         if (Microsoft.Maui.Controls.Application.Current?.UserAppTheme ==
             Microsoft.Maui.ApplicationModel.AppTheme.Unspecified)
         {
-            UpdateStatusBarAppearance();
+            UpdateStatusBarAppearance(Window, Resources);
         }
     }
 
-    private void UpdateStatusBarAppearance()
+    private static void UpdateStatusBarAppearance(Android.Views.Window? window, Resources? resources)
     {
-        if (Window?.DecorView == null)
+        if (window?.DecorView == null)
         {
             return;
         }
 
-        var insetsController = WindowCompat.GetInsetsController(Window, Window.DecorView);
+        var insetsController = WindowCompat.GetInsetsController(window, window.DecorView);
         if (insetsController == null)
         {
             return;
         }
 
-        var isDarkMode = ResolveIsDarkMode(Resources);
+        var isDarkMode = ResolveIsDarkMode(resources);
 
-        // On dark backgrounds we need light (white) status bar icons → AppearanceLightStatusBars = false
-        // On light backgrounds we need dark status bar icons       → AppearanceLightStatusBars = true
+        // On dark backgrounds we need light, white status bar icons. AppearanceLightStatusBars = false
+        // On light backgrounds we need dark status bar icons. AppearanceLightStatusBars = true
         insetsController.AppearanceLightStatusBars = !isDarkMode;
         insetsController.AppearanceLightNavigationBars = !isDarkMode;
     }

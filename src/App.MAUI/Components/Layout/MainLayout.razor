@@ -15,7 +15,7 @@
 
 <MudThemeProvider @ref="_mudThemeProvider" Theme="@HabitinatorMudTheme.Default" @bind-IsDarkMode="@_isDarkMode"/>
 <MudPopoverProvider/>
-<MudDialogProvider BackdropClick="false"/>
+<MudDialogProvider BackdropClick="true"/>
 <MudSnackbarProvider/>
 <TimeZoneInitializer />
 
@@ -177,7 +177,7 @@
             await JS.InvokeVoidAsync("habitinatorSetTheme", _isDarkMode ? "dark" : "light");
 
             // Keep the native status bar icon appearance in sync with the Blazor theme.
-            // When following the system theme, let the OS decide;
+            // When following the system theme, let the OS decide.
             // otherwise, lock to the user's explicit choice.
             if (Microsoft.Maui.Controls.Application.Current is { } app)
             {

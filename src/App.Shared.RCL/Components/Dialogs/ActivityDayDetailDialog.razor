@@ -81,9 +81,6 @@
             </MudTable>
         }
     </DialogContent>
-    <DialogActions>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">Close</MudButton>
-    </DialogActions>
 </MudDialog>
 
 @code {
@@ -139,11 +136,6 @@
         return detail.FocusMinutesTotal > 0
             ? $"{label} · {detail.FocusMinutesTotal} min focus"
             : label;
-    }
-
-    private void Close()
-    {
-        MudDialog?.Cancel();
     }
 
     private string FormatLocalTime(DateTimeOffset utcTime)

@@ -21,7 +21,8 @@ public static class UpdateDialogHelper
 
         var options = new DialogOptions
         {
-            CloseButton = false,
+            CloseButton = true,
+            CloseOnEscapeKey = true,
             MaxWidth = MaxWidth.Small,
             FullWidth = true
         };

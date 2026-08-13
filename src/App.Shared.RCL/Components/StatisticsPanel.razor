@@ -695,7 +695,7 @@
         }
         catch (Exception)
         {
-            // Ignored; the KPI simply stays empty
+            // Ignored. The KPI simply stays empty
         }
     }
 
@@ -808,7 +808,8 @@
         {
             MaxWidth = MaxWidth.Medium,
             FullWidth = true,
-            CloseOnEscapeKey = true
+            CloseOnEscapeKey = true,
+            CloseButton = true
         };
         var filterTag = string.IsNullOrEmpty(_tagFilter) ? null : _tagFilter;
         var parameters = new DialogParameters<ActivityDayDetailDialog>

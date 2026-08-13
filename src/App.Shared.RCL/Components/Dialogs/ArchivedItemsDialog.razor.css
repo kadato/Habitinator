@@ -13,8 +13,24 @@
     letter-spacing: -0.015em;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: var(--space-4);
     color: var(--mud-palette-text-primary);
+}
+
+.archived-title__label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.archived-title__close {
+    color: var(--mud-palette-text-secondary) !important;
+}
+
+.archived-title__close:hover {
+    background-color: color-mix(in srgb, var(--mud-palette-error) 10%, transparent) !important;
+    color: var(--mud-palette-error) !important;
 }
 
 .archived-title-count {
@@ -34,7 +50,7 @@
     padding-top: var(--space-3);
 }
 
-/* ── Search Bar ── */
+/* -- Search Bar -- */
 .search-container {
     width: 100%;
 }
@@ -61,7 +77,7 @@
     border-width: 1.5px !important;
 }
 
-/* ── Filter Tabs ── */
+/* -- Filter Tabs -- */
 .filter-tabs {
     display: flex;
     gap: var(--space-6);
@@ -112,7 +128,7 @@
     color: color-mix(in srgb, var(--mud-palette-primary) 70%, transparent);
 }
 
-/* ── Scrollable List ── */
+/* -- Scrollable List -- */
 .archived-list {
     display: flex;
     flex-direction: column;
@@ -133,7 +149,7 @@
     border-radius: var(--radius-pill);
 }
 
-/* ── Empty State ── */
+/* -- Empty State -- */
 .empty-state {
     display: flex;
     flex-direction: column;
@@ -162,7 +178,7 @@
     margin-top: var(--space-1);
 }
 
-/* ── Item Rows ── */
+/* -- Item Rows -- */
 .archive-row {
     display: flex;
     align-items: center;

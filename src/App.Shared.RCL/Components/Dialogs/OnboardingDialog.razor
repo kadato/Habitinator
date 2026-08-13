@@ -9,6 +9,12 @@
                 <div class="onboarding-logo" aria-hidden="true">
                     <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Medium"/>
                 </div>
+                <MudIconButton Icon="@Icons.Material.Filled.Close"
+                               Class="onboarding-header__close"
+                               aria-label="Close"
+                               Size="Size.Small"
+                               title="Close"
+                               OnClick="DismissAsync"/>
                 <MudText Typo="Typo.h6" Class="font-weight-bold mb-1">Welcome to Habitinator</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
                     Track habits, dailies and to-dos on one board, and stay focused with the timer.
@@ -60,13 +66,6 @@
                            OnClick="CreateFirstHabitAsync">
                     Create your first habit
                 </MudButton>
-                <MudButton Variant="Variant.Text"
-                           Color="Color.Default"
-                           FullWidth="true"
-                           Size="Size.Medium"
-                           OnClick="DismissAsync">
-                    Explore the board first
-                </MudButton>
             </div>
         </div>
     </DialogContent>
@@ -85,7 +84,7 @@
         }
         catch (Exception)
         {
-            // Ignored; onboarding may show again on the next visit
+            // Ignored. Onboarding may show again on the next visit
         }
 
         if (OnCreateFirstHabit.HasDelegate)
@@ -104,7 +103,7 @@
         }
         catch (Exception)
         {
-            // Ignored; onboarding may show again on the next visit
+            // Ignored. Onboarding may show again on the next visit
         }
 
         MudDialog.Close(DialogResult.Ok(false));

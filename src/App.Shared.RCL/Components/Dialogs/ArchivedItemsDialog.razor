@@ -6,11 +6,20 @@
 <MudDialog Class="archived-dialog" Style="width: min(34rem, calc(100vw - 2rem)); margin-top: 10vh;">
     <TitleContent>
         <div class="archived-title">
-            <span>Archive</span>
-            @if (!_loading && TotalCount > 0)
-            {
-                <span class="archived-title-count">@TotalCount</span>
-            }
+            <div class="archived-title__label">
+                <span>Archive</span>
+                @if (!_loading && TotalCount > 0)
+                {
+                    <span class="archived-title-count">@TotalCount</span>
+                }
+            </div>
+            <MudIconButton Icon="@Icons.Material.Filled.Close"
+                           aria-label="Close"
+                           Size="Size.Small"
+                           title="Close"
+                           Class="archived-title__close"
+                           OnClick="Close"
+                           Disabled="_isClosing"/>
         </div>
     </TitleContent>
     <DialogContent>
@@ -119,19 +128,6 @@
             </div>
         }
     </DialogContent>
-    <DialogActions>
-        <MudButton Color="Color.Secondary" OnClick="Close" Class="px-6 py-2" Disabled="_isClosing">
-            @if (_isClosing && _inFlightTasks.Count > 0)
-            {
-                <MudProgressCircular Class="ms-n1 me-2" Size="Size.Small" Indeterminate="true" />
-                <span>Closing...</span>
-            }
-            else
-            {
-                <span>Close</span>
-            }
-        </MudButton>
-    </DialogActions>
 </MudDialog>
 
 @code {

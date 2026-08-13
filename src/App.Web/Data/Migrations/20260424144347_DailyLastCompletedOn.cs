@@ -16,7 +16,7 @@ public partial class DailyLastCompletedOn : Migration
             type: "timestamp with time zone",
             nullable: true);
 
-        // Completed dailies before this column had no date; treat them as done on upgrade day (UTC).
+        // Completed dailies before this column had no date. Treat them as done on upgrade day (UTC).
         migrationBuilder.Sql(
             """
             UPDATE "BoardItems"

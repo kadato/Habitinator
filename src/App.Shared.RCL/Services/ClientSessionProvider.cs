@@ -43,7 +43,7 @@ public sealed class ClientSessionProvider : IClientSessionProvider, IDisposable
         }
         catch
         {
-            // Keep the previous state; the next change notification retries.
+            // Keep the previous state. The next change notification retries.
         }
     }
 
@@ -61,7 +61,7 @@ public sealed class ClientSessionProvider : IClientSessionProvider, IDisposable
         }
         catch
         {
-            // Keep the previous state; the next change notification retries.
+            // Keep the previous state. The next change notification retries.
         }
     }
 

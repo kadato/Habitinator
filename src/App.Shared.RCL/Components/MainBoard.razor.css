@@ -209,7 +209,7 @@
     max-width: none !important;
 }
 
-/* Search field & tags/archive buttons uniform 36px height */
+/* Search field and tags/archive buttons uniform 36px height */
 .board-search-wrapper {
     display: flex !important;
     align-items: center !important;
@@ -286,7 +286,7 @@
     display: none !important;
 }
 
-/* Tags & Archive Buttons */
+/* Tags and Archive Buttons */
 .board-tags-menu-activator {
     display: inline-flex !important;
     align-items: center !important;
@@ -479,7 +479,7 @@
         box-sizing: border-box !important;
     }
 
-    /* Hide column card header & chrome completely in mobile tabbed view so the
+    /* Hide column card header and chrome completely in mobile tabbed view so the
        filter toolbar, add-field, item cards and footer span the same full width
        as the section switcher above them (edges align perfectly). */
     .board-columns-mobile ::deep .board-column {

@@ -19,7 +19,7 @@
         0 11px 15px -7px rgba(0, 0, 0, 0.1);
 }
 
-/* ── Header ── */
+/* -- Header -- */
 .daily-yesterday-header {
     background: var(--mud-palette-surface);
     padding: 1.25rem 1.25rem var(--space-6);
@@ -71,7 +71,7 @@
     font-weight: 600;
 }
 
-/* ── Body ── */
+/* -- Body -- */
 .daily-yesterday-body {
     background: var(--mud-palette-surface);
     padding: var(--space-5) 1.25rem;
@@ -193,7 +193,7 @@
     color: var(--mud-palette-text-secondary);
 }
 
-/* ── Footer ── */
+/* -- Footer -- */
 .daily-yesterday-footer {
     border-top: 1px solid var(--mud-palette-divider);
     background: var(--mud-palette-surface);

@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace App.MAUI.Services.LocalBoard;
 
-/// <summary>SQLite-backed board with outbound outbox; network I/O is driven by <see cref="MauiBoardSyncCoordinator" />.</summary>
+/// <summary>SQLite-backed board with outbound outbox. Network I/O is driven by <see cref="MauiBoardSyncCoordinator" />.</summary>
 #pragma warning disable CA1001 // DI singleton: owns a long-lived SemaphoreSlim and is never disposed by the container.
 public sealed partial class LocalFirstBoardDataService(
     IDbContextFactory<LocalBoardDbContext> dbFactory,

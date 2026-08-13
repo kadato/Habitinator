@@ -9,7 +9,7 @@ Before performing timestamp comparison, the system checks if the local version's
 * Title
 * Completion status (`IsCompleted`)
 * Habit counter (`Counter` / `NegativeCounter`)
-* Notes & Tags
+* Notes and Tags
 * Checklist items (`ChecklistJson`)
 * Section-specific configurations (e.g., reset periods, due dates, start dates)
 * Drag-and-drop ordering (`SortOrder`)

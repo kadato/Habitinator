@@ -83,7 +83,7 @@ public static class ZalgoSanitizer
     public static string SanitizeAndTrim(string? input)
         => string.IsNullOrWhiteSpace(input) ? string.Empty : (Sanitize(input.Trim()) ?? string.Empty);
 
-    // ── helpers ─────────────────────────────────────────────────────────────
+    // -- helpers --
 
     private static int CountCombining(string cluster)
     {

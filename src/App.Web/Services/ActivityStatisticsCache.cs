@@ -31,7 +31,7 @@ public sealed class ActivityStatisticsCache
         public BoundedCache<(DateOnly Day, string? Tag), ActivityDayDetailDto> DayDetail { get; } = new(MaxEntriesPerUser);
     }
 
-    /// <summary>Thread-safe dictionary with a fixed capacity; evicts the oldest entries when full.</summary>
+    /// <summary>Thread-safe dictionary with a fixed capacity. Evicts the oldest entries when full.</summary>
     public sealed class BoundedCache<TKey, TValue> where TKey : notnull
     {
         private readonly int _capacity;

@@ -12,7 +12,7 @@ public interface IApiSession
     string? Email { get; }
 
     /// <summary>
-    ///     Raised when login state, email, or readiness changes. Blazor should refresh UI; injected session properties
+    ///     Raised when login state, email, or readiness changes. Blazor should refresh UI. Injected session properties
     ///     are not parameters.
     /// </summary>
     event EventHandler? Changed;

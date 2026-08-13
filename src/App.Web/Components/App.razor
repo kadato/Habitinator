@@ -186,7 +186,7 @@
 
 <body>
 
-<!-- ── WASM Loading Splash (only shown when Interactive WebAssembly will load) ── -->
+<!-- WASM Loading Splash (only shown when Interactive WebAssembly will load) -->
 @if (HttpContext?.User?.Identity?.IsAuthenticated == true)
 {
 <div id="habitinator-wasm-splash" aria-label="Loading application" role="status">
@@ -208,7 +208,7 @@
     var splash = document.getElementById('habitinator-wasm-splash');
     if (!splash) return;
 
-    // ── Progress stage definitions (time-based fallback) ──
+    // -- Progress stage definitions (time-based fallback) --
     var stages = [
         { afterMs: 0,    text: 'Starting\u2026',                  pct: 5  },
         { afterMs: 600,  text: 'Loading Blazor runtime\u2026',     pct: 15 },
@@ -248,7 +248,7 @@
     // Start the first stage immediately, schedule the rest
     scheduleNext();
 
-    // ── Hook: blazor.web.js finished loading ──
+    // -- Hook: blazor.web.js finished loading --
     var blazorScript = document.querySelector('script[src*="blazor.web"]');
     if (blazorScript) {
         blazorScript.addEventListener('load', function() {
@@ -256,12 +256,12 @@
         });
     }
 
-    // ── Hook: progress update from Program.cs (via JSInvokable) ──
+    // -- Hook: progress update from Program.cs (via JSInvokable) --
     window.habUpdateProgress = function(text, pct) {
         setProgress(text, pct);
     };
 
-    // ── Hook: remove splash (called from MainLayout via JSInvokable or habitinatorRemoveLoadingBar) ──
+    // -- Hook: remove splash (called from MainLayout via JSInvokable or habitinatorRemoveLoadingBar) --
     window.habRemoveSplash = function() {
         if (closed) return;
         closed = true;

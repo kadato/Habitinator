@@ -1,6 +1,6 @@
 namespace App.Shared.RCL.Services;
 
-/// <summary>MAUI local-first sync surface for UI; web uses <see cref="NoOpBoardSyncStatus" />.</summary>
+/// <summary>MAUI local-first sync surface for UI. Web uses <see cref="NoOpBoardSyncStatus" />.</summary>
 public interface IBoardSyncStatus
 {
     bool IsOffline { get; }

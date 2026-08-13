@@ -202,7 +202,7 @@ public sealed class DemoVideoGenerator
             await page.GotoAsync($"{BaseUrl}/settings?theme={suffix}", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
             await page.WaitForTimeoutAsync(1500);
 
-            // -- Tab 1: Profile & Preferences (Active by default)
+            // -- Tab 1: Profile and Preferences (Active by default)
             await SmoothScrollAsync(page, down: true);
             await page.WaitForTimeoutAsync(800);
             await SmoothScrollAsync(page, down: false);
@@ -216,7 +216,7 @@ public sealed class DemoVideoGenerator
             await SmoothScrollAsync(page, down: false);
             await page.WaitForTimeoutAsync(800);
 
-            // -- Tab 3: Security & Account
+            // -- Tab 3: Security and Account
             await page.GetByRole(AriaRole.Tab, new() { Name = "Security & Account" }).ClickAsync();
             await page.WaitForTimeoutAsync(800);
             await SmoothScrollAsync(page, down: true);

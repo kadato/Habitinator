@@ -4,7 +4,7 @@
  * global and component stylesheets. Load this file first, before any other
  * app stylesheet.
  *
- * ── Breakpoint scale ─────────────────────────────────────────────────────
+ * -- Breakpoint scale --
  * Media query conditions cannot use var() so always write these literals:
  *
  *   narrow   max-width: 359.98px   phone portrait

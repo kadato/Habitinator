@@ -4,7 +4,7 @@ using FluentAssertions;
 
 namespace App.Shared.RCL.Tests;
 
-/// <summary>Smoke test for bUnit wiring; MudBlazor dialogs are covered via integration/E2E or manual QA.</summary>
+/// <summary>Smoke test for bUnit wiring. MudBlazor dialogs are covered via integration/E2E or manual QA.</summary>
 public sealed class SampleEchoTests
 {
     [Fact]

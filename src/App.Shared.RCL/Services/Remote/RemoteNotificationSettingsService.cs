@@ -78,7 +78,7 @@ public sealed class RemoteNotificationSettingsService : INotificationSettingsSer
         }
         catch (Exception ex)
         {
-            // Best-effort save; the local copy is already updated
+            // Best-effort save. The local copy is already updated
             _logger.LogDebug(ex, "Failed to save notification settings to the server.");
         }
 

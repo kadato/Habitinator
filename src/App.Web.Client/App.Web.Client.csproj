@@ -14,19 +14,19 @@
     <!-- Webcil: repackage DLLs as .wasm for better CDN/proxy compatibility -->
     <WasmEnableWebcil>true</WasmEnableWebcil>
 
-    <!-- ── Size optimizations (safe) ── -->
+    <!-- Size optimizations (safe) -->
     <EventSourceSupport>false</EventSourceSupport>
     <UseSystemResourceKeys>true</UseSystemResourceKeys>
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
 
-    <!-- ── AOT build optimizations (Release only, no effect in Debug) ── -->
+    <!-- AOT build optimizations (Release only, no effect in Debug) -->
     <WasmNativeStrip Condition="'$(Configuration)' == 'Release'">true</WasmNativeStrip>
     <WasmStripILAfterAOT Condition="'$(Configuration)' == 'Release'">true</WasmStripILAfterAOT>
 
-    <!-- ── Runtime performance ── -->
+    <!-- Runtime performance -->
     <BlazorWebAssemblyJiterpreter>true</BlazorWebAssemblyJiterpreter>
 
-    <!-- ── Trim safety ── -->
+    <!-- Trim safety -->
     <!-- JsonSerializerIsReflectionEnabledByDefault is NOT set here because
          the Blazor WASM runtime itself uses reflection-based JSON internally
          for component parameter marshaling and state persistence. Keeping it

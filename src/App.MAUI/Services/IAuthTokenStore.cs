@@ -12,7 +12,7 @@ public interface IAuthTokenStore
 }
 
 /// <summary>
-///     Unpackaged Windows <see cref="SecureStorage" /> uses a single <c>securestorage.dat</c> with exclusive create;
+///     Unpackaged Windows <see cref="SecureStorage" /> uses a single <c>securestorage.dat</c> with exclusive create.
 ///     parallel HTTP 401s (see <see cref="ClearSessionOnUnauthorizedHandler" />) must not run
 ///     <c>Remove</c>/<c>Set</c> concurrently.
 /// </summary>

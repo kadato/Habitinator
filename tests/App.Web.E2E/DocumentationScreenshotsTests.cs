@@ -309,7 +309,7 @@ public sealed class DocumentationScreenshotsTests
             }
             catch (TimeoutException)
             {
-                // Screenshot already captured; reset is best-effort cleanup.
+                // Screenshot already captured. Reset is best-effort cleanup.
             }
         }
     }

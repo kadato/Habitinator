@@ -771,7 +771,7 @@ public sealed class BoardPersistenceService(
         var newSet = new HashSet<DateOnly>(DailyStreakBackfill.GetLastNScheduledCompletionDays(
             args.DailyStart, args.Repeat, args.Interval, args.Streak, notAfter));
 
-        // Only synthetic backfill markers (fixed UTC hour) can be reconciled away; real toggles
+        // Only synthetic backfill markers (fixed UTC hour) can be reconciled away. Real toggles
         // are never removed. Filtering by the marker hour keeps the loaded set bounded by the
         // backfill history instead of the full activity log for the item.
         var toRemove = await dbContext.UserActivityEvents
@@ -838,7 +838,7 @@ public sealed class BoardPersistenceService(
 
     /// <summary>Maps entity to API model (queries the DB for daily streaks). Streak queries use
     /// <see cref="IDbContextFactory{ApplicationDbContext}"/> so they do not overlap the scoped
-    /// context; still await this before <see cref="IBoardChangeNotifier.NotifyBoardChangedAsync" /> for ordering.</summary>
+    /// context. Still await this before <see cref="IBoardChangeNotifier.NotifyBoardChangedAsync" /> for ordering.</summary>
     private async Task<BoardItem> ToModelWithDailyStreaksAsync(
         Guid userId,
         BoardItemEntity entity,

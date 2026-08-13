@@ -15,7 +15,7 @@ public static class DailyStreakCalculator
 
     /// <summary>
     ///     For each day, completion is: last <see cref="ActivityEventType.DailyComplete" /> or
-    ///     <see cref="ActivityEventType.DailyUncomplete" /> for that day wins; a day with no such events
+    ///     <see cref="ActivityEventType.DailyUncomplete" /> for that day wins. A day with no such events
     ///     is completed only if it equals <paramref name="dailyLastCompletedOn" />.
     /// </summary>
     public static bool IsCalendarDayNetCompleted(
@@ -41,7 +41,7 @@ public static class DailyStreakCalculator
 
     /// <summary>
     ///     Consecutive completed <em>scheduled</em> days counting backward. <paramref name="today" /> is included
-    ///     only when it is completed for this daily (events or <paramref name="dailyLastCompletedOn" />);
+    ///     only when it is completed for this daily (events or <paramref name="dailyLastCompletedOn" />).
     ///     otherwise the chain ends at the previous calendar day, so a not-yet-checked-off today does not
     ///     add to the streak.
     /// </summary>
@@ -65,7 +65,7 @@ public static class DailyStreakCalculator
         var todayDone = todayOnSchedule &&
             IsCalendarDayNetCompleted(today, GetDayListOrNull(eventsByDay, today), dailyLastCompletedOn);
 
-        // Do not count today until it is done; count only through prior days when it is not.
+        // Do not count today until it is done. Count only through prior days when it is not.
         var end = todayDone ? today : today.AddDays(-1);
 
         var historyStart =

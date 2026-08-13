@@ -7,7 +7,7 @@ namespace App.Shared.Tests;
 
 public sealed class ZalgoSanitizerTests
 {
-    // ── IsZalgo ─────────────────────────────────────────────────────────────
+    // -- IsZalgo --
 
     [Fact]
     public void IsZalgo_Null_ReturnsFalse()
@@ -50,7 +50,7 @@ public sealed class ZalgoSanitizerTests
         ZalgoSanitizer.IsZalgo(input).Should().BeTrue();
     }
 
-    // ── Sanitize (nullable overload) ─────────────────────────────────────────
+    // -- Sanitize (nullable overload) --
 
     [Fact]
     public void Sanitize_Null_ReturnsNull()
@@ -106,7 +106,7 @@ public sealed class ZalgoSanitizerTests
     [Fact]
     public void Sanitize_MixedCleanAndZalgo_OnlyStripsZalgoParts()
     {
-        // "Hi" is clean; "a\u0300\u0301\u0302" is Zalgo; " ok" is clean
+        // "Hi" is clean. "a\u0300\u0301\u0302" is Zalgo. " ok" is clean
         var input = "Hi " + "a\u0300\u0301\u0302" + " ok";
         var result = ZalgoSanitizer.Sanitize((string?)input);
         result.Should().Be("Hi a ok");
@@ -122,7 +122,7 @@ public sealed class ZalgoSanitizerTests
         result.Should().Be("a b");
     }
 
-    // ── SanitizeAndTrim ─────────────────────────────────────────────────────
+    // -- SanitizeAndTrim --
 
     [Fact]
     public void SanitizeAndTrim_Null_ReturnsEmptyString()
@@ -146,7 +146,7 @@ public sealed class ZalgoSanitizerTests
         result.Should().Be("z");
     }
 
-    // ── Real-world Zalgo samples ────────────────────────────────────────────
+    // -- Real-world Zalgo samples --
 
     [Fact]
     public void Sanitize_RealWorldZalgoTitle_IsSafe()
@@ -162,7 +162,7 @@ public sealed class ZalgoSanitizerTests
         result.Should().Contain("H").And.Contain("a").And.Contain("b").And.Contain("i").And.Contain("t");
     }
 
-    // ── DailyChecklistJson Sanitization ─────────────────────────────────────
+    // -- DailyChecklistJson Sanitization --
 
     [Fact]
     public void DailyChecklistJson_Serialize_SanitizesChecklistItemText()

@@ -1,6 +1,6 @@
 /* MAUI Blazor Hybrid platform-specific stylesheet overrides */
 
-/* ── MAUI Loading Splash ─────────────────────────────────────────────── */
+/* -- MAUI Loading Splash -- */
 
 .maui-splash {
     position: fixed;
@@ -100,7 +100,7 @@
     }
 }
 
-/* ── Fonts ───────────────────────────────────────────────────────────── */
+/* -- Fonts -- */
 
 @font-face {
     font-family: "JetBrains Mono";
@@ -198,7 +198,7 @@
     overflow: visible !important;
 }
 
-/* ── MAUI app bar measures ~3.9rem; override the shared fallback ── */
+/* -- MAUI app bar measures ~3.9rem. Override the shared fallback -- */
 @media (max-width: 959.98px) {
     .app-shell-layout {
         --app-top-bar-offset: 3.9rem;
@@ -218,7 +218,7 @@
     }
 }
 
-/* ── Horizontal padding on very narrow MAUI screens ── */
+/* -- Horizontal padding on very narrow MAUI screens -- */
 @media (max-width: 767.98px) {
     .board-main-container.mud-container {
         padding-left: var(--space-5) !important;

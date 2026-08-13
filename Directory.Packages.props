@@ -22,7 +22,7 @@
     <PackageVersion Include="Plugin.LocalNotification" Version="14.1.1" />
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
 
-    <!-- Shared UI & Webassembly Client dependencies -->
+    <!-- Shared UI and Webassembly Client dependencies -->
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="$(DotNetVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="$(DotNetVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="$(DotNetVersion)" />

@@ -46,14 +46,14 @@ public sealed record BoardItem(
     bool TrackMinus = true,
     int NegativeCounter = 0,
     HabitResetPeriod ResetPeriod = HabitResetPeriod.Daily,
-    /// <summary>Start date for scheduling (dailies only; null = unset).</summary>
+    /// <summary>Start date for scheduling (dailies only. Null = unset).</summary>
     DateOnly? DailyStartDate = null,
     DailyRepeatType DailyRepeat = DailyRepeatType.Daily,
     int DailyRepeatInterval = 1,
     string? ChecklistJson = null,
-    /// <summary>UTC calendar day the daily was last checked off. Used for dailies; null = not completed for this cycle.</summary>
+    /// <summary>UTC calendar day the daily was last checked off. Used for dailies. Null = not completed for this cycle.</summary>
     DateOnly? DailyLastCompletedOn = null,
-    /// <summary>Due date for to-dos; stored in the same DB column as daily start when section is to-do.</summary>
+    /// <summary>Due date for to-dos. Stored in the same DB column as daily start when section is to-do.</summary>
     DateOnly? TodoDueDate = null,
     /// <summary>When set, completing the to-do advances its due date by this many days (recurring to-do).</summary>
     int? TodoRepeatIntervalDays = null,
@@ -61,7 +61,7 @@ public sealed record BoardItem(
     DateTimeOffset? ServerUpdatedAtUtc = null,
     /// <summary>Server creation time for display and audit only. Do not use for ordering.</summary>
     DateTimeOffset? CreatedAtUtc = null,
-    /// <summary>Explicit user-defined sort position. New items get max+1; reorder sets midpoint between neighbours.</summary>
+    /// <summary>Explicit user-defined sort position. New items get max+1. Reorder sets midpoint between neighbours.</summary>
     double? SortOrder = null,
     /// <summary>True if the item is archived and hidden from the active board.</summary>
     bool IsArchived = false);

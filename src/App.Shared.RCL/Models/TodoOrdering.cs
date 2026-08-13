@@ -10,7 +10,7 @@ public static class TodoOrdering
     /// </summary>
     public const double DatedSortOrderOffset = 1_000_000_000.0;
 
-    /// <summary>Active tab: undated first, then manual order; uses a unified display order for drag midpoints.</summary>
+    /// <summary>Active tab: undated first, then manual order. Uses a unified display order for drag midpoints.</summary>
     public static IReadOnlyList<BoardItem> OrderForActiveTab(
         IEnumerable<BoardItem> items,
         Func<BoardItem, double?>? getSortOrder = null)
@@ -47,7 +47,7 @@ public static class TodoOrdering
     }
 
     /// <summary>
-    /// Midpoint sort order after a drop on the Active tab; neighbours use the same ordering as <see cref="OrderForActiveTab"/>.
+    /// Midpoint sort order after a drop on the Active tab. Neighbours use the same ordering as <see cref="OrderForActiveTab"/>.
     /// </summary>
     public static double? ComputeMidpointSortOrderForActiveTab(
         IReadOnlyList<BoardItem> reordered,

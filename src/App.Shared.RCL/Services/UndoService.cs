@@ -139,7 +139,7 @@ public sealed class UndoService : IUndoService, IDisposable
 
             // Undoing an older action out of order: any newer action that may touch the same state must
             // be undone first (newest first) so the target's inverse applies to a consistent snapshot.
-            // Newer actions with disjoint keys are left pending; their undos only revert their own change.
+            // Newer actions with disjoint keys are left pending. Their undos only revert their own change.
             var toUndo = new List<UndoAction>();
             if (actionId is not null)
             {
@@ -244,7 +244,7 @@ public sealed class UndoService : IUndoService, IDisposable
         }
         catch (Exception ex)
         {
-            // Best-effort snackbar; the action is still on the undo stack
+            // Best-effort snackbar. The action is still on the undo stack
             _logger.LogDebug(ex, "Failed to show the undo snackbar.");
         }
     }

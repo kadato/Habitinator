@@ -99,7 +99,7 @@ public sealed class DailyStreakCalculatorTests
     [Fact]
     public void Today_not_scheduled_ends_chain_before_today()
     {
-        // Tuesday not a "weekly" occurrence; only previous Monday counts; today (Wed) is not in streak anchor.
+        // Tuesday not a "weekly" occurrence. Only previous Monday counts. Today (Wed) is not in streak anchor.
         var start = new DateOnly(2026, 4, 20); // Mon
         var today = new DateOnly(2026, 4, 22);  // Wed
         var mon = new DateOnly(2026, 4, 20);

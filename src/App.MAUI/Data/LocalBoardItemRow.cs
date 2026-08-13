@@ -51,10 +51,10 @@ public sealed class LocalBoardItemRow
     /// <summary>True until the server acknowledges a create for this client-generated id.</summary>
     public bool AwaitingServerCreate { get; set; }
 
-    /// <summary>Last known server <c>UpdatedAtUtc</c> for If-Match; null for purely local rows.</summary>
+    /// <summary>Last known server <c>UpdatedAtUtc</c> for If-Match. Null for purely local rows.</summary>
     public DateTimeOffset? ServerUpdatedAtUtc { get; set; }
 
-    /// <summary>Server creation time (display/audit only; not used for list ordering).</summary>
+    /// <summary>Server creation time (display/audit only. Not used for list ordering).</summary>
     public DateTimeOffset? CreatedAtUtc { get; set; }
 
     public double? SortOrder { get; set; }

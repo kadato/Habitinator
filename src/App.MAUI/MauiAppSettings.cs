@@ -21,7 +21,7 @@ public static class MauiAppSettings
         }
         else
         {
-            // Optional override; omit in appsettings so Android uses 10.0.2.2 and Windows uses 127.0.0.1.
+            // Optional override. Omit in appsettings so Android uses 10.0.2.2 and Windows uses 127.0.0.1.
             var fromConfig = configuration["Api:BaseUrl"];
             if (!string.IsNullOrWhiteSpace(fromConfig))
             {

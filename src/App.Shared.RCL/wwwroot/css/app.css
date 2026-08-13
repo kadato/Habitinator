@@ -5,7 +5,7 @@
     --hab-bg-dark: var(--mud-palette-background, #0b0f19);
 }
 
-/* ── WASM Loading Splash Screen ─────────────────────────────────────────── */
+/* -- WASM Loading Splash Screen -- */
 
 #habitinator-wasm-splash {
     position: fixed;
@@ -120,7 +120,7 @@ html.light-theme .wasm-splash__hint {
     }
 }
 
-/* ── Top Loading Bar (legacy, inside WASM-rendered layout) ─────────────── */
+/* -- Top Loading Bar (legacy, inside WASM-rendered layout) -- */
 #habitinator-loading-bar {
     position: fixed;
     top: 0;
@@ -316,7 +316,7 @@ a {
     border-color: light-dark(rgba(15, 23, 42, 0.14), rgba(255, 255, 255, 0.12));
 }
 
-/* App bar: MudToolBar can shrink-wrap; force full width + flex spacer so user/logout stay on the right edge */
+/* App bar: MudToolBar can shrink-wrap. Force full width + flex spacer so user/logout stay on the right edge */
 .mud-appbar.app-top-bar {
     display: flex !important;
 }
@@ -442,7 +442,7 @@ a {
         display: none !important;
     }
 
-    /* Single-row mobile app bar; offset main content below fixed app bar.
+    /* Single-row mobile app bar. Offset main content below fixed app bar.
        Keep the extra gap small but never less than the actual app bar height,
        so the first card sits close to the nav without clipping under it. */
     .app-shell-layout {
@@ -607,7 +607,7 @@ a {
     }
 }
 
-/* ── App toasts (bottom-left snackbar) ───────────────────────────────────── */
+/* -- App toasts (bottom-left snackbar) -- */
 .habitinator-toast {
     padding: 0 !important;
     background: var(--mud-palette-surface) !important;
@@ -671,7 +671,7 @@ a {
     cursor: pointer;
 }
 
-/* ── Premium Dialog Styling Overrides ────────────────────────────────────── */
+/* -- Premium Dialog Styling Overrides -- */
 
 /* Upgraded Backdrop blur on all dialog overlays */
 .mud-dialog-container {
@@ -729,7 +729,7 @@ a {
     border-radius: var(--radius-md) !important;
 }
 
-/* ── Activity Day Detail Dialog (Heatmap Details) Redesign ──────────────── */
+/* -- Activity Day Detail Dialog (Heatmap Details) Redesign -- */
 
 /* Dialog content container custom spacing */
 .activity-day-detail-dialog .activity-day-detail-dialog__content {
@@ -799,7 +799,7 @@ a {
     border-radius: var(--radius-sm);
 }
 
-/* ── Small-screen optimizations ── */
+/* -- Small-screen optimizations -- */
 @media (max-width: 480px) {
     .activity-day-detail-dialog .activity-day-detail-dialog__content {
         padding: var(--space-5) !important;
@@ -853,7 +853,7 @@ a {
     }
 }
 
-/* Details Description & Status Indicator */
+/* Details Description and Status Indicator */
 .activity-desc-wrap {
     display: inline-flex;
     align-items: center;

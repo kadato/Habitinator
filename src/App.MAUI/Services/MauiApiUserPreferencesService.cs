@@ -85,7 +85,7 @@ public sealed class MauiApiUserPreferencesService : IUserPreferencesService
         }
         catch (Exception ex)
         {
-            // Best-effort save; the local copy is already updated
+            // Best-effort save. The local copy is already updated
             _logger.LogDebug(ex, "Failed to save user preferences to the server.");
         }
 

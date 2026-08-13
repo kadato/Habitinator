@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace App.MAUI.Services;
 
-/// <summary>Periodic drain + pull; also invoked on hub/visibility refresh and app resume.</summary>
+/// <summary>Periodic drain + pull. Also invoked on hub/visibility refresh and app resume.</summary>
 #pragma warning disable CA1001, S2930 // DI singleton: owns long-lived disposable state and is never disposed by the container.
 public sealed partial class MauiBoardSyncCoordinator
 {

@@ -46,7 +46,7 @@
             }
             catch (Exception)
             {
-                // Ignored; the copy call below will fail and be caught too
+                // Ignored. The copy call below will fail and be caught too
             }
 
             var copied = await JS.InvokeAsync<bool>("habitinatorCopyText", JsonText);

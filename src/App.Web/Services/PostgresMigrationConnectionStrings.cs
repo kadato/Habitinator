@@ -17,7 +17,7 @@ public static class PostgresMigrationConnectionStrings
 
     /// <summary>
     /// Connection string used only for applying EF migrations at startup. Prefer direct Neon host
-    /// over <c>-pooler</c>; override with <c>ConnectionStrings:MigrationConnection</c> if needed.
+    /// over <c>-pooler</c>. Override with <c>ConnectionStrings:MigrationConnection</c> if needed.
     /// </summary>
     public static string ResolveForMigrations(IConfiguration configuration)
     {

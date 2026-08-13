@@ -53,7 +53,7 @@ public sealed class TimerSessionLogService(
         }
         catch (Exception)
         {
-            // Statistics persistence is best-effort; board feedback is primary.
+            // Statistics persistence is best-effort. Board feedback is primary.
         }
 
         if (boardError)

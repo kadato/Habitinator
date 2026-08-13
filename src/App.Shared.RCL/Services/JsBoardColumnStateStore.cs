@@ -59,7 +59,7 @@ public sealed class JsBoardColumnStateStore : IBoardColumnStateStore
         }
         catch (JSException)
         {
-            // Safe to ignore; filters simply won't persist
+            // Safe to ignore. Filters simply won't persist
         }
     }
 

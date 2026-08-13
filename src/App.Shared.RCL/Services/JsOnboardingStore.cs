@@ -55,7 +55,7 @@ public sealed class JsOnboardingStore : IOnboardingStore
         }
         catch (JSException)
         {
-            // Safe to ignore; onboarding may show again next visit
+            // Safe to ignore. Onboarding may show again next visit
         }
     }
 

@@ -37,7 +37,7 @@ public sealed class GlobalTimerService(IClock clock)
 
     public string? TargetId { get; private set; }
 
-    /// <summary>When the target is a board row, the item id; otherwise null (e.g. free-text session).</summary>
+    /// <summary>When the target is a board row, the item id. Otherwise null (e.g. free-text session).</summary>
     public Guid? BoardItemId { get; private set; }
 
     /// <summary>
@@ -62,7 +62,7 @@ public sealed class GlobalTimerService(IClock clock)
     public bool IsRunning => _runningSince.HasValue;
 
     /// <summary>
-    ///     A "time's up" dialog is showing; the stopwatch keeps running. The user must log, pick not done, or (if
+    ///     A "time's up" dialog is showing. The stopwatch keeps running. The user must log, pick not done, or (if
     ///     misrouted) use <see cref="Start" /> which dismisses the prompt the same as not done.
     /// </summary>
     public bool AwaitingFocusTimeUpPrompt { get; private set; }
@@ -162,7 +162,7 @@ public sealed class GlobalTimerService(IClock clock)
     }
 
     /// <summary>
-    ///     Dismisses a focus <c>time's up</c> prompt after "not done". The stopwatch keeps running; no further
+    ///     Dismisses a focus <c>time's up</c> prompt after "not done". The stopwatch keeps running. No further
     ///     time's up alerts fire until <see cref="Stop" /> or <see cref="Reset" /> and a new session starts.
     /// </summary>
     public void ResumeAfterFocusPromptNotDone()
@@ -182,7 +182,7 @@ public sealed class GlobalTimerService(IClock clock)
     }
 
     /// <summary>
-    ///     Enters the focus <c>time's up</c> prompt state. The stopwatch keeps running; call <see cref="Stop" /> to log,
+    ///     Enters the focus <c>time's up</c> prompt state. The stopwatch keeps running. Call <see cref="Stop" /> to log,
     ///     or <see cref="ResumeAfterFocusPromptNotDone" /> after "not done".
     /// </summary>
     public void PauseForFocusTimeUp()

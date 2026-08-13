@@ -64,7 +64,7 @@ globalThis.addEventListener('fetch', event => {
         return;
     }
 
-    // ── Framework assets: cache-first + network update (immutable, fingerprinted) ──
+    // -- Framework assets: cache-first + network update (immutable, fingerprinted) --
     if (FRAMEWORK_ASSET_PATTERN.test(url.pathname) || CONTENT_ASSET_PATTERN.test(url.pathname)) {
         event.respondWith(
             caches.open(FRAMEWORK_CACHE).then(cache =>
@@ -84,7 +84,7 @@ globalThis.addEventListener('fetch', event => {
         return;
     }
 
-    // ── Navigation requests: network-first, fall back to cached shell ──
+    // -- Navigation requests: network-first, fall back to cached shell --
     if (event.request.mode === 'navigate') {
         event.respondWith(
             fetch(event.request).catch(() => {
@@ -94,7 +94,7 @@ globalThis.addEventListener('fetch', event => {
         return;
     }
 
-    // ── Other assets: cache-first ──
+    // -- Other assets: cache-first --
     event.respondWith(
         caches.match(event.request).then(cachedResponse => {
             if (cachedResponse) {

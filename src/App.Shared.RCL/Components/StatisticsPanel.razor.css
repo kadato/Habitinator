@@ -81,7 +81,7 @@
     box-sizing: border-box;
 }
 
-/* Sidebar: filters on top, KPIs below; sticky on large screens. */
+/* Sidebar: filters on top, KPIs below. Sticky on large screens. */
 .stats-dashboard-layout {
     display: flex;
     flex-direction: column;
@@ -127,7 +127,7 @@
     gap: var(--space-4);
 }
 
-/* ── Modern filter bar (always visible) ── */
+/* -- Modern filter bar (always visible) -- */
 ::deep .stats-filter-card {
     margin-top: 0 !important;
 }
@@ -174,7 +174,7 @@
     text-align: center;
 }
 
-/* ── Desktop: stack filter selects vertically, align top ── */
+/* -- Desktop: stack filter selects vertically, align top -- */
 @media (min-width: 960px) {
     .stats-sidebar-column {
         position: sticky;

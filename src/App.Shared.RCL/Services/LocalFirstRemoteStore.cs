@@ -108,7 +108,7 @@ public sealed class LocalFirstRemoteStore<T> : IDisposable
         }
         catch (OperationCanceledException)
         {
-            // Shutdown or cancellation; nothing to do.
+            // Shutdown or cancellation. Nothing to do.
         }
         catch (Exception ex)
         {

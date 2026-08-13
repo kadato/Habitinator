@@ -80,7 +80,7 @@ internal sealed class WasmUserPreferencesService : IUserPreferencesService, IDis
         }
         catch (Exception ex)
         {
-            // Best-effort write to remote; local is updated
+            // Best-effort write to remote. Local is updated
             _logger.LogDebug(ex, "Failed to save user preferences to the server.");
         }
 

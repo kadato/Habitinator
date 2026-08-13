@@ -49,7 +49,7 @@ public sealed class RemoteBoardRefreshService : IRemoteBoardRefreshService
                 }
                 catch
                 {
-                    // best-effort; other subscribers still run
+                    // best-effort. Other subscribers still run
                 }
             }
         }

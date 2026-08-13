@@ -14,7 +14,7 @@ public sealed class UserActivityEventEntity
 
     public ActivityEventType EventType { get; set; }
 
-    /// <summary>Target board item when applicable; may reference a deleted item.</summary>
+    /// <summary>Target board item when applicable. May reference a deleted item.</summary>
     public Guid? BoardItemId { get; set; }
 
     /// <summary>Only for <see cref="ActivityEventType.TimerSession" />: focus duration in whole seconds.</summary>

@@ -36,7 +36,7 @@ internal static class PipelineExtensions
             app.UseRateLimiter();
         }
 
-        // Used by AppHost WithHttpHealthCheck; anonymous, no auth required.
+        // Used by AppHost WithHttpHealthCheck. Anonymous, no auth required.
         app.MapGet("/health", () => Results.Text("OK", "text/plain"));
 
         app.MapGet("/.well-known/change-password", () => Results.Redirect("/settings", permanent: false));

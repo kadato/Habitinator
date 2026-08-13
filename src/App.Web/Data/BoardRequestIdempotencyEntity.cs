@@ -15,7 +15,7 @@ public sealed class BoardRequestIdempotencyEntity
     /// <summary>SHA-256 hex (64 chars) of method + path + canonical request fingerprint.</summary>
     public string RequestFingerprintHex { get; set; } = "";
 
-    /// <summary>-1 = in-flight; otherwise HTTP status code.</summary>
+    /// <summary>-1 = in-flight. Otherwise HTTP status code.</summary>
     public int ResponseStatusCode { get; set; }
 
     public string ResponseBody { get; set; } = "";

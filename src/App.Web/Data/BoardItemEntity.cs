@@ -48,7 +48,7 @@ public sealed class BoardItemEntity
 
     public DateTimeOffset UpdatedAtUtc { get; set; }
 
-    /// <summary>User-defined sort position within a section. New items get max+1; drag-and-drop sets midpoint between neighbours.</summary>
+    /// <summary>User-defined sort position within a section. New items get max+1. Drag-and-drop sets midpoint between neighbours.</summary>
     public double SortOrder { get; set; }
 
     /// <summary>When set, the row is a tombstone (soft-deleted). Live board queries exclude these.</summary>

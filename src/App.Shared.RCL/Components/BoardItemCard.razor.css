@@ -384,7 +384,7 @@
     }
 }
 
-/* Gamified Streak & Habit Badges */
+/* Gamified Streak and Habit Badges */
 .board-streak--active {
     color: #f97316 !important; /* amber/orange active flame */
 }
@@ -437,7 +437,7 @@
     text-transform: capitalize;
 }
 
-/* Habit Right-Aligned Layout & Button Improvements */
+/* Habit Right-Aligned Layout and Button Improvements */
 .board-card.board-row--habit {
     grid-template-columns: minmax(0, 1fr) auto;
     column-gap: 0.2rem;

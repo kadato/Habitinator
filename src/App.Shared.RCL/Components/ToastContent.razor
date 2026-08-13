@@ -1,22 +1,76 @@
-<div class="undo-toast-body"
+<div class="toast-content severity-@SeverityCssClass"
      @onclick="HandleDismiss"
      @onclick:stopPropagation="true"
+     @ontouchstart="HandleTouchStart"
+     @ontouchend="HandleTouchEnd"
      @onkeydown="HandleKeyDown"
      role="button"
      tabindex="0"
      aria-label="Dismiss notification">
-    <span class="undo-toast-message">@Message</span>
+    <span class="toast-content-icon">
+        <MudIcon Icon="@SeverityIcon" Size="Size.Small"/>
+    </span>
+    <span class="toast-content-message">@Message</span>
+    <button class="toast-content-dismiss" type="button" aria-label="Dismiss" @onclick="HandleDismiss" @onclick:stopPropagation="true">
+        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small"/>
+    </button>
 </div>
 
 @code {
     [Parameter] public string Message { get; set; } = string.Empty;
 
+    [Parameter] public Severity Severity { get; set; } = Severity.Normal;
+
+    /// <summary>Invoked when the toast body or dismiss button is clicked.</summary>
     [Parameter] public Func<Task>? OnDismiss { get; set; }
+
+    private string SeverityCssClass => Severity switch
+    {
+        Severity.Success => "success",
+        Severity.Warning => "warning",
+        Severity.Error => "error",
+        _ => "info"
+    };
+
+    private string SeverityIcon => Severity switch
+    {
+        Severity.Success => Icons.Material.Filled.CheckCircle,
+        Severity.Warning => Icons.Material.Filled.WarningAmber,
+        Severity.Error => Icons.Material.Filled.ErrorOutline,
+        _ => Icons.Material.Filled.Info
+    };
 
     private async Task HandleDismiss()
     {
         if (OnDismiss is not null)
             await OnDismiss();
+    }
+
+    private double _touchStartX;
+    private double _touchStartY;
+
+    private void HandleTouchStart(TouchEventArgs e)
+    {
+        if (e.TargetTouches.Length > 0)
+        {
+            _touchStartX = e.TargetTouches[0].ClientX;
+            _touchStartY = e.TargetTouches[0].ClientY;
+        }
+    }
+
+    private async Task HandleTouchEnd(TouchEventArgs e)
+    {
+        if (e.ChangedTouches.Length == 0)
+        {
+            return;
+        }
+
+        var dx = e.ChangedTouches[0].ClientX - _touchStartX;
+        var dy = e.ChangedTouches[0].ClientY - _touchStartY;
+        if (Math.Abs(dx) > 50 && Math.Abs(dx) > Math.Abs(dy))
+        {
+            await HandleDismiss();
+        }
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)

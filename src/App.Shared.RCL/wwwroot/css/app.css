@@ -609,19 +609,43 @@ a {
 
 /* -- App toasts (bottom-left snackbar) -- */
 .habitinator-toast {
+    position: relative;
+    overflow: hidden;
     padding: 0 !important;
     background: var(--mud-palette-surface) !important;
     color: var(--mud-palette-text-primary) !important;
-    border-radius: var(--space-5) !important;
-    border: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 8%, transparent) !important;
+    border-radius: var(--radius-xl) !important;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 70%, transparent) !important;
     box-shadow:
-        0 12px 40px color-mix(in srgb, var(--mud-palette-text-primary) 10%, transparent),
-        0 2px 10px color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent) !important;
+        0 12px 40px color-mix(in srgb, var(--mud-palette-text-primary) 12%, transparent),
+        0 2px 10px color-mix(in srgb, var(--mud-palette-text-primary) 7%, transparent) !important;
     cursor: pointer;
     animation: toast-slide-in var(--dur-slow) cubic-bezier(0.22, 1, 0.36, 1);
     align-self: flex-start !important;
     width: fit-content !important;
     min-width: auto !important;
+    max-width: min(24rem, calc(100vw - 2rem)) !important;
+}
+
+/* Severity accent stripe on the leading edge */
+.habitinator-toast::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: 3px;
+    background: var(--toast-accent, var(--mud-palette-primary));
+    pointer-events: none;
+}
+
+.habitinator-toast.severity-info    { --toast-accent: var(--mud-palette-info); }
+.habitinator-toast.severity-success { --toast-accent: var(--mud-palette-success); }
+.habitinator-toast.severity-warning { --toast-accent: var(--mud-palette-warning); }
+.habitinator-toast.severity-error   { --toast-accent: var(--mud-palette-error); }
+
+/* Undo toasts: no accent stripe. The Undo button carries the color */
+.habitinator-toast.undo-toast::before {
+    display: none;
 }
 
 @keyframes toast-slide-in {
@@ -641,12 +665,63 @@ a {
     margin: 0 !important;
 }
 
-.undo-toast-body {
+/* -- Typed message toast -- */
+.toast-content {
     display: flex;
     align-items: center;
     gap: var(--space-5);
     width: 100%;
-    padding: var(--space-4) 0.875rem;
+    padding: var(--space-5) var(--space-6);
+}
+
+.toast-content-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--toast-accent, var(--mud-palette-primary)) 14%, transparent);
+    color: var(--toast-accent, var(--mud-palette-primary));
+}
+
+.toast-content-message {
+    flex: 1;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--mud-palette-text-primary);
+    line-height: 1.45;
+}
+
+.toast-content-dismiss {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--mud-palette-text-secondary);
+    cursor: pointer;
+    padding: 0;
+    transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.toast-content-dismiss:hover {
+    background: color-mix(in srgb, var(--mud-palette-text-primary) 8%, transparent);
+    color: var(--mud-palette-text-primary);
+}
+
+/* -- Undo toast -- */
+.undo-toast-body {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    width: 100%;
+    padding: var(--space-5) var(--space-6);
 }
 
 .undo-toast-message {
@@ -655,6 +730,7 @@ a {
     font-weight: 500;
     color: var(--mud-palette-text-primary);
     line-height: 1.4;
+    overflow-wrap: anywhere;
 }
 
 .undo-toast-btn {
@@ -662,13 +738,22 @@ a {
     background: var(--mud-palette-error);
     color: var(--mud-palette-error-text, #fff);
     border: none;
-    border-radius: var(--mud-default-borderradius, 0.375rem);
-    padding: var(--space-2) var(--space-6);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-6);
     font-size: 0.8rem;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     cursor: pointer;
+    transition: background var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+
+.undo-toast-btn:hover {
+    background: color-mix(in srgb, var(--mud-palette-error) 85%, #000);
+}
+
+.undo-toast-btn:active {
+    transform: scale(0.97);
 }
 
 /* -- Premium Dialog Styling Overrides -- */
@@ -698,6 +783,11 @@ a {
     background: var(--mud-palette-surface) !important;
     border-bottom: 1px solid var(--mud-palette-divider) !important;
     padding: 1.25rem 1.25rem var(--space-6) !important;
+}
+
+/* Message boxes: honor line breaks in message text */
+.mud-dialog.mud-message-box .mud-dialog-content {
+    white-space: pre-line;
 }
 
 .mud-dialog .mud-dialog-title .mud-typography {

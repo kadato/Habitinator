@@ -46,7 +46,7 @@ public sealed class UserNotifier : IUserNotifier, IDisposable
         }
 
         var ms = _notificationRules.VisibleStateDurationMs(settings.ToastDuration);
-        AppSnackbar.AddMessage(_snackbar, message, ms);
+        AppSnackbar.AddMessage(_snackbar, message, ms, severity);
     }
 
     private async ValueTask<NotificationSettings> GetCachedAsync(CancellationToken cancellationToken)

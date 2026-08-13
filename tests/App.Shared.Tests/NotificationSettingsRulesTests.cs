@@ -109,9 +109,9 @@ public sealed class NotificationSettingsRulesTests
     }
 
     [Theory]
-    [InlineData(NotificationToastDuration.Short, 6000)]
-    [InlineData(NotificationToastDuration.Normal, 12_000)]
-    [InlineData(NotificationToastDuration.Long, 20_000)]
+    [InlineData(NotificationToastDuration.Short, 4000)]
+    [InlineData(NotificationToastDuration.Normal, 8000)]
+    [InlineData(NotificationToastDuration.Long, 14_000)]
     public void Undo_duration_presets_are_longer_than_general_toasts(
         NotificationToastDuration preset,
         int expectedMs)

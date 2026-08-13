@@ -150,7 +150,7 @@
 
         if (!string.IsNullOrEmpty(result.ErrorMessage))
         {
-            Snackbar.Add(result.ErrorMessage, Severity.Error);
+            AppSnackbar.AddMessage(Snackbar, result.ErrorMessage, 6_000, Severity.Error);
             return;
         }
 
@@ -164,7 +164,7 @@
         }
         else
         {
-            Snackbar.Add("Habitinator is up to date!", Severity.Success);
+            AppSnackbar.AddMessage(Snackbar, "Habitinator is up to date!", 6_000, Severity.Success);
         }
     }
 }

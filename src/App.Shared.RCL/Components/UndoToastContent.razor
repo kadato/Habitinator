@@ -1,12 +1,14 @@
 <div class="undo-toast-body"
      @onclick="HandleDismiss"
      @onclick:stopPropagation="true"
+     @ontouchstart="HandleTouchStart"
+     @ontouchend="HandleTouchEnd"
      @onkeydown="HandleKeyDown"
      role="button"
      tabindex="0"
      aria-label="Dismiss notification">
     <span class="undo-toast-message">@Description</span>
-    <button class="undo-toast-btn" @onclick="HandleUndo" @onclick:stopPropagation="true">
+    <button class="undo-toast-btn" type="button" @onclick="HandleUndo" @onclick:stopPropagation="true">
         Undo
     </button>
 </div>
@@ -30,6 +32,33 @@
     {
         if (OnDismiss is not null)
             await OnDismiss();
+    }
+
+    private double _touchStartX;
+    private double _touchStartY;
+
+    private void HandleTouchStart(TouchEventArgs e)
+    {
+        if (e.TargetTouches.Length > 0)
+        {
+            _touchStartX = e.TargetTouches[0].ClientX;
+            _touchStartY = e.TargetTouches[0].ClientY;
+        }
+    }
+
+    private async Task HandleTouchEnd(TouchEventArgs e)
+    {
+        if (e.ChangedTouches.Length == 0)
+        {
+            return;
+        }
+
+        var dx = e.ChangedTouches[0].ClientX - _touchStartX;
+        var dy = e.ChangedTouches[0].ClientY - _touchStartY;
+        if (Math.Abs(dx) > 50 && Math.Abs(dx) > Math.Abs(dy))
+        {
+            await HandleDismiss();
+        }
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)

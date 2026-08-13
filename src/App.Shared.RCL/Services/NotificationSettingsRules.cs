@@ -54,15 +54,15 @@ public sealed class NotificationSettingsRules : INotificationSettingsRules
         };
     }
 
-    /// <summary>Longer auto-dismiss for undo snackbars so stacked toasts stay readable.</summary>
+    /// <summary>Slightly longer auto-dismiss than plain toasts so the Undo button stays clickable.</summary>
     public int UndoVisibleStateDurationMs(NotificationToastDuration preset)
     {
         return preset switch
         {
-            NotificationToastDuration.Short => 6000,
-            NotificationToastDuration.Normal => 12_000,
-            NotificationToastDuration.Long => 20_000,
-            _ => 12_000
+            NotificationToastDuration.Short => 4000,
+            NotificationToastDuration.Normal => 8000,
+            NotificationToastDuration.Long => 14_000,
+            _ => 8000
         };
     }
 

@@ -9,4 +9,4 @@ public interface ITimerSessionLogService
     Task<TimerSessionLogResult> LogStoppedSessionAsync(TimeSpan duration, CancellationToken cancellationToken = default);
 }
 
-public sealed record TimerSessionLogResult(bool BoardUpdateFailed, string UserMessage);
+public sealed record TimerSessionLogResult(bool BoardUpdateFailed, bool BoardProgressed, string UserMessage);

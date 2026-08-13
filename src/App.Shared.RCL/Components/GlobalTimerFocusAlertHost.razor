@@ -157,7 +157,7 @@
         {
             confirmed = await DialogService.ShowMessageBoxAsync(
                 "Focus session complete!",
-                $"Focus session complete for \"{label}\". Log this session to the board?",
+                $"Focus session complete for \"{label}\".\nLog this session to the board?",
                 "Yes, log session",
                 "No");
         }
@@ -176,7 +176,11 @@
             if (duration > TimeSpan.Zero)
             {
                 var result = await TimerSessionLog.LogStoppedSessionAsync(duration, cancellationToken);
-                await UserNotifier.NotifyAsync(result.UserMessage, Severity.Success, cancellationToken);
+                // When board progress was made, the undo toast for that action is the notification.
+                if (result.BoardUpdateFailed || !result.BoardProgressed)
+                {
+                    await UserNotifier.NotifyAsync(result.UserMessage, result.BoardUpdateFailed ? Severity.Error : Severity.Success, cancellationToken);
+                }
             }
         }
         else
@@ -237,7 +241,7 @@
         {
             confirmed = await DialogService.ShowMessageBoxAsync(
                 "Time's up",
-                durationLabel + " complete for \"" + targetLabel + "\". Log this session to the board?",
+                durationLabel + " complete for \"" + targetLabel + "\".\nLog this session to the board?",
                 "Yes, log session",
                 "Not done");
         }
@@ -264,7 +268,11 @@
         if (duration > TimeSpan.Zero)
         {
             var result = await TimerSessionLog.LogStoppedSessionAsync(duration, cancellationToken);
-            await UserNotifier.NotifyAsync(result.UserMessage, Severity.Success, cancellationToken);
+            // When board progress was made, the undo toast for that action is the notification.
+            if (result.BoardUpdateFailed || !result.BoardProgressed)
+            {
+                await UserNotifier.NotifyAsync(result.UserMessage, result.BoardUpdateFailed ? Severity.Error : Severity.Success, cancellationToken);
+            }
         }
 
         TimerService.ClearTargetAndFocus();

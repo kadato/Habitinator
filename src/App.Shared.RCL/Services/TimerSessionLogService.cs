@@ -26,13 +26,14 @@ public sealed class TimerSessionLogService(
         var boardId = _timer.BoardItemId ?? await ResolveBoardItemIdFromTitleAsync(targetType, targetId, cancellationToken)
             .ConfigureAwait(false);
         var boardError = false;
+        var boardProgressed = false;
 
         if (boardId is Guid id && targetType is "Habit" or "Daily" or "Todo")
         {
             try
             {
-                var progressed = await UpdateBoardItemProgressAsync(id, targetType, cancellationToken).ConfigureAwait(false);
-                if (progressed)
+                boardProgressed = await UpdateBoardItemProgressAsync(id, targetType, cancellationToken).ConfigureAwait(false);
+                if (boardProgressed)
                 {
                     _timer.SetManualTarget(null);
                     await _remoteBoardRefresh.NotifyFromRemoteAsync(cancellationToken).ConfigureAwait(false);
@@ -60,11 +61,13 @@ public sealed class TimerSessionLogService(
         {
             return new TimerSessionLogResult(
                 true,
+                boardProgressed,
                 $"Timer stopped ({duration:hh\\:mm\\:ss}), but the board could not be updated. Check your connection and try again.");
         }
 
         return new TimerSessionLogResult(
             false,
+            boardProgressed,
             $"Timer log saved for {targetType ?? "Unassigned"} '{targetId ?? "-"}' with duration {duration:hh\\:mm\\:ss}.");
     }
 

@@ -716,7 +716,12 @@
     {
         _lastLocalMutationTime = DateTimeOffset.UtcNow;
         var result = await TimerSessionLog.LogStoppedSessionAsync(duration);
-        await Notifier.NotifyAsync(result.UserMessage, result.BoardUpdateFailed ? Severity.Error : Severity.Success);
+        // When board progress was made, the undo toast for that action is the notification.
+        if (result.BoardUpdateFailed || !result.BoardProgressed)
+        {
+            await Notifier.NotifyAsync(result.UserMessage, result.BoardUpdateFailed ? Severity.Error : Severity.Success);
+        }
+
         await LoadBoardAsync();
     }
 

@@ -2,7 +2,7 @@
 @inject IUserPreferencesService PreferencesService
 @implements IDisposable
 
-<MudCard Class="@GetTimerPanelClass()" Elevation="0" Outlined="true">
+<div class="@GetTimerPanelClass()">
     <div class="@MobileHeaderClass"
          @onclick="ToggleExpanded"
          @onkeydown="OnMobileHeaderKeyDown"
@@ -12,7 +12,14 @@
          aria-label="Toggle timer panel">
         <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="w-100 px-3 py-2">
             <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="min-w-0 flex-grow-1">
-                <MudIcon Icon="@(TimerService.PomodoroModeEnabled ? Icons.Material.Filled.Alarm : Icons.Material.Filled.Timer)" Color="Color.Primary" Size="Size.Medium"/>
+                @if (TimerService.PomodoroModeEnabled)
+                {
+                    <PomodoroIcon Size="Size.Medium"/>
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Primary" Size="Size.Medium"/>
+                }
                 @if (IsSessionActive)
                 {
                     <MudText Typo="Typo.subtitle2" Class="font-weight-bold timer-mobile-header-text">
@@ -39,7 +46,7 @@
 
     <div class="timer-collapse-outer">
         <MudCollapse Expanded="@_expanded" Class="timer-collapse-wrapper">
-            <MudCardContent Class="pa-2 pa-sm-3 timer-panel__content">
+            <div class="pa-2 pa-sm-3 timer-panel__content">
         @if (IsSessionActive)
         {
             <div class="timer-running-strip" role="group" aria-label="Active session timer">
@@ -173,7 +180,7 @@
                                 @onclick="() => OnPomodoroModeToggleChanged(true)"
                                 @attributes="PomodoroToggleAria"
                                 aria-label="Pomodoro mode">
-                            <MudIcon Icon="@Icons.Material.Filled.Alarm" Size="Size.Medium" aria-hidden="true"/>
+                            <PomodoroIcon Size="Size.Medium"/>
                             <span class="toggle-btn-label">Pomodoro</span>
                         </button>
                     </div>
@@ -210,10 +217,10 @@
                 </div>
             </div>
         }
-            </MudCardContent>
+            </div>
         </MudCollapse>
     </div>
-</MudCard>
+</div>
 
 @code {
     [Parameter] public EventCallback<TimeSpan> OnLogSaved { get; set; }
@@ -362,7 +369,7 @@
                                        @bind-Text="FocusDurationText"
                                        OnBlur="OnFocusDurationBlur"
                                        Label="Time's up after"
-                                       Placeholder="e.g. 25, 1:20, 90s, 0:0:30"
+                                       Placeholder="25, 1:20, 90s, 0:0:30"
                                        Clearable="true"
                                        Variant="Variant.Outlined"
                                        Margin="Margin.Dense"

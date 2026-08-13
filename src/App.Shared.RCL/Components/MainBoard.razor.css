@@ -193,7 +193,7 @@
     flex-wrap: nowrap !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 0.65rem var(--space-6) !important;
+    gap: 0.65rem var(--space-5) !important;
     width: 100% !important;
 }
 

@@ -1,0 +1,16 @@
+.pomodoro-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.pomodoro-icon--small {
+    width: 1.15rem;
+    height: 1.15rem;
+}
+
+.pomodoro-icon--large {
+    width: 2rem;
+    height: 2rem;
+}

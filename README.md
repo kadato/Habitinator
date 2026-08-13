@@ -2,9 +2,9 @@
 
 <div align="center">
 
-![.NET 10](https://img.shields.io/badge/.NET-10.0-3b82f6?logo=dotnet)
-![.NET MAUI](https://img.shields.io/badge/.NET_MAUI-Blazor_Hybrid-3b82f6?logo=dotnet)
-![Blazor](https://img.shields.io/badge/Blazor-Interactive_Server-3b82f6?logo=blazor)
+![.NET 11](https://img.shields.io/badge/.NET-11.0-3b82f6?logo=dotnet)
+![.NET MAUI](https://img.shields.io/badge/.NET_MAUI-11.0-3b82f6?logo=dotnet)
+![Blazor](https://img.shields.io/badge/Blazor-Interactive_WebAssembly-3b82f6?logo=blazor)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17.6-4169E1?logo=postgresql)
 ![SQLite](https://img.shields.io/badge/SQLite-Local--First-003B57?logo=sqlite)
 ![Platforms](https://img.shields.io/badge/Platforms-Android%20%7C%20Windows%20%7C%20iOS%20%7C%20macOS-blue)
@@ -14,7 +14,7 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 
 **Live Demo:** [habitinator.app](https://habitinator.app)
 
-[Demo](https://habitinator.app) • [Preview](#preview) • [Download](#download--install) • [Features](#key-features) • [Tech Stack](#technology-stack) • [Getting Started](#getting-started)
+[Demo](https://habitinator.app) | [Preview](#preview) | [Download](#download-and-install) | [Features](#key-features) | [Tech Stack](#technology-stack) | [Getting Started](#getting-started)
 
 </div>
 
@@ -33,28 +33,27 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 
 ---
 
-## Download & Install
+## Download and Install
 
-### Available builds
+Download the latest build from the [releases page](https://github.com/tothKarolyDavid/Habitinator/releases/latest), or use the direct links below. Every package ships with a SHA256 checksum file.
 
-**Live Demo (Web):** [https://habitinator.app](https://habitinator.app)  
-**Latest Release:** [![GitHub Release](https://img.shields.io/github/v/release/tothKarolyDavid/Habitinator)](https://github.com/tothKarolyDavid/Habitinator/releases/latest)
+| Platform | Package | Size | Notes |
+|----------|---------|------|-------|
+| Android | [![APK](https://img.shields.io/badge/APK-3ddc84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/tothKarolyDavid/Habitinator/releases/latest/download/Habitinator-android.apk) | 41 MB | Install on device. Enable unknown sources first |
+| Windows | [![Installer](https://img.shields.io/badge/Installer-0078d6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/tothKarolyDavid/Habitinator/releases/latest/download/Habitinator-windows-x64-setup.exe) | 53 MB | Installer with auto-updates. Recommended |
+| Windows | [![Portable ZIP](https://img.shields.io/badge/Portable%20ZIP-1f6feb?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/tothKarolyDavid/Habitinator/releases/latest/download/Habitinator-windows-x64.zip) | 78 MB | Portable. Extract and run |
+| iOS / macOS | *Source only* | - | Build from source using the .NET MAUI workload |
+| Web | [![Web App](https://img.shields.io/badge/Web%20App-6b46c1?style=for-the-badge&logo=web&logoColor=white)](https://habitinator.app) | - | Live demo, no install needed |
 
-| Platform | Package | Notes |
-|----------|---------|-------|
-| Android | [Habitinator-android.apk](https://github.com/tothKarolyDavid/Habitinator/releases/latest/download/Habitinator-android.apk) | Install on-device (unknown sources required) |
-| Windows | [Habitinator-windows-x64.zip](https://github.com/tothKarolyDavid/Habitinator/releases/latest/download/Habitinator-windows-x64.zip) | Portable app, extract and run |
-| iOS / macOS | *Source only* | Build from source using .NET MAUI workload |
+**Windows runtime note:** if your release is framework-dependent, install [.NET Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/11.0) once.
 
-**Windows runtime note:** if your release is framework-dependent, install [.NET Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) once.
+#### Option 1: Prebuilt packages (recommended)
 
-#### Option 1: Use prebuilt release assets (recommended)
+1. Pick your platform from the table above
+2. Download the package and its `.sha256` file
+3. Verify the checksum, then follow the platform steps below
 
-1. Open [latest releases](https://github.com/tothKarolyDavid/Habitinator/releases/latest)
-2. Download your platform package
-3. Follow platform steps below
-
-#### Option 2: Build locally with .NET SDK
+#### Option 2: Build from source
 
 ```powershell
 # Windows
@@ -74,9 +73,9 @@ dotnet build -t:Run -f net11.0-android
 
 #### Windows
 
-1. Extract the ZIP file
-2. Run `Habitinator.exe`
-3. If prompted, install .NET Desktop Runtime
+**Installer:** run `Habitinator-windows-x64-setup.exe` and follow the setup wizard. It keeps the app updated.
+
+**Portable:** extract the ZIP file, then run `Habitinator.exe`. If prompted, install .NET Desktop Runtime.
 
 ---
 
@@ -84,8 +83,8 @@ dotnet build -t:Run -f net11.0-android
 
 - **Core Planner**: Track habits, dailies, and to-dos. Organize them with tags, notes, and checklists.
 - **Global Session Timer**: A stopwatch with target logging to trace time spent on specific items.
-- **Statistics & Heatmap**: Interactive heatmap dashboard to monitor your progress over time.
-- **Local-First & Sync**: The mobile/desktop clients run on SQLite for offline support and sync changes automatically to a server-side PostgreSQL backend.
+- **Statistics and Heatmap**: Interactive heatmap dashboard to monitor your progress over time.
+- **Local-First and Sync**: The mobile/desktop clients run on SQLite for offline support and sync changes automatically to a server-side PostgreSQL backend.
 
 ---
 
@@ -93,8 +92,8 @@ dotnet build -t:Run -f net11.0-android
 
 | Layer | Technologies |
 |-------|--------------|
-| **Runtime** | .NET 10 |
-| **Web UI** | Blazor Web App (Interactive Server), MudBlazor |
+| **Runtime** | .NET 11 |
+| **Web UI** | Blazor Web App (Interactive WebAssembly), MudBlazor |
 | **Native Apps** | .NET MAUI + Blazor Hybrid (Android, iOS, macOS, Windows) |
 | **Database (Server)** | Neon Serverless PostgreSQL / any PostgreSQL via EF Core |
 | **Database (Client)** | SQLite via EF Core |
@@ -107,7 +106,7 @@ dotnet build -t:Run -f net11.0-android
 ### Prerequisites
 Make sure you have Docker installed and running for the local PostgreSQL container.
 
-### Run & Debug (via Aspire)
+### Run and Debug (via Aspire)
 Run the following command to start PostgreSQL, the web backend, and the native client host environment:
 ```powershell
 dotnet run --project src/AppHost/AppHost.csproj
@@ -120,7 +119,7 @@ The application will automatically seed a guest account on startup:
 
 ---
 
-## Architecture & Database
+## Architecture and Database
 
 Here are the project dependencies and database schema (auto-updated via documentation scripts):
 

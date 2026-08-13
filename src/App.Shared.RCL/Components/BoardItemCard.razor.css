@@ -96,18 +96,22 @@
     display: inline-flex;
     align-items: center;
     max-width: 7.5rem;
-    padding: 0.1rem 0.45rem;
-    background: color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
-    border: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 10%, transparent);
-    border-radius: 4px;
+    padding: 0.15rem 0.5rem;
+    background: color-mix(in srgb, var(--tag-color, var(--mud-palette-primary)) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--tag-color, var(--mud-palette-primary)) 30%, transparent);
+    border-radius: var(--radius-sm);
     font-size: 0.68rem;
     font-weight: 600;
     line-height: 1.25;
-    color: var(--mud-palette-text-secondary);
+    color: var(--tag-color, var(--mud-palette-primary));
     user-select: none;
     white-space: nowrap;
+}
+
+.board-card__tag-badge__text {
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .board-card__tag-badge--more {

@@ -107,14 +107,18 @@
                     {
                         @foreach (var tag in TagsList)
                         {
-                            <span class="board-card__tag-badge" title="@tag">@tag</span>
+                            <span class="board-card__tag-badge" style="@TagBadgeStyle(tag)" title="@tag">
+                                <span class="board-card__tag-badge__text">@tag</span>
+                            </span>
                         }
                     }
                     else
                     {
                         @foreach (var tag in TagsList.Take(2))
                         {
-                            <span class="board-card__tag-badge" title="@tag">@tag</span>
+                            <span class="board-card__tag-badge" style="@TagBadgeStyle(tag)" title="@tag">
+                                <span class="board-card__tag-badge__text">@tag</span>
+                            </span>
                         }
                         <span class="board-card__tag-badge board-card__tag-badge--more" title='@(string.Join(", ", TagsList.Skip(2)))'>+@(TagsList.Count - 2)</span>
                     }

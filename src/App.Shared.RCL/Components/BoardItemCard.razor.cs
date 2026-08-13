@@ -67,6 +67,30 @@ public partial class BoardItemCard
         };
     }
 
+    /// <summary>
+    ///     Deterministic accent color per tag so the same tag always gets the same hue. The lightness is
+    ///     theme-aware: darker in light mode, brighter in dark mode, so the text stays readable on both.
+    /// </summary>
+    private static string TagBadgeStyle(string tag)
+    {
+        var hue = StableHash(tag) % 360;
+        return $"--tag-color: light-dark(hsl({hue} 60% 38%), hsl({hue} 70% 62%))";
+    }
+
+    private static int StableHash(string value)
+    {
+        unchecked
+        {
+            var hash = 17;
+            foreach (var c in value)
+            {
+                hash = hash * 31 + c;
+            }
+
+            return hash;
+        }
+    }
+
     private static string GetCheckClass(BoardSection section, BoardItem item)
     {
         if (item.IsCompleted)

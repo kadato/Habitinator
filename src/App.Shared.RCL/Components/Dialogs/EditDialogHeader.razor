@@ -2,18 +2,16 @@
     <div class="edit-daily-header__toolbar">
         <MudText Typo="Typo.subtitle1" Class="edit-daily-header__title">@TitleText</MudText>
         <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
-            <MudButton Variant="Variant.Text"
-                       Class="edit-daily-header__cancel"
-                       OnClick="OnCancel">
-                Cancel
-            </MudButton>
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       Size="Size.Medium"
-                       Class="edit-daily-header__save"
-                       OnClick="OnSave">
-                Save
-            </MudButton>
+            @if (!string.IsNullOrEmpty(SaveStatus))
+            {
+                <span class="edit-daily-header__status @SaveStatusClass">@SaveStatusText</span>
+            }
+            <MudIconButton Icon="@Icons.Material.Filled.Close"
+                           Class="edit-daily-header__close"
+                           aria-label="Close"
+                           Size="Size.Small"
+                           title="Close"
+                           OnClick="OnClose"/>
         </MudStack>
     </div>
 
@@ -36,6 +34,7 @@
                       Class="edit-daily-field-header"
                       Placeholder="Add notes"
                       Lines="3"
+                      Immediate="true"
                       Margin="Margin.Dense"/>
     </MudStack>
 </div>
@@ -47,8 +46,24 @@
     [Parameter] public EventCallback<string> TitleChanged { get; set; }
     [Parameter] public string? Notes { get; set; }
     [Parameter] public EventCallback<string?> NotesChanged { get; set; }
-    [Parameter] public EventCallback OnCancel { get; set; }
-    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public string SaveStatus { get; set; } = string.Empty;
+
+    private string SaveStatusText => SaveStatus switch
+    {
+        "saving" => "Saving…",
+        "error" => "Save failed",
+        "saved" => "Saved",
+        _ => string.Empty
+    };
+
+    private string SaveStatusClass => SaveStatus switch
+    {
+        "saving" => "edit-daily-header__status--saving",
+        "error" => "edit-daily-header__status--error",
+        "saved" => "edit-daily-header__status--saved",
+        _ => string.Empty
+    };
 
     private void OnTitleValueChanged(string value)
     {

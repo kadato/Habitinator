@@ -445,7 +445,7 @@
         }
         catch
         {
-            // keep existing UI; user can use Retry
+            // keep existing UI. User can use Retry
         }
 
         await InvokeAsync(StateHasChanged);
@@ -879,7 +879,7 @@
         }
         catch (Exception)
         {
-            // Silently ignore; board will reflect updated streaks on next full load
+            // Silently ignore. Board will reflect updated streaks on next full load
         }
     }
 
@@ -930,15 +930,15 @@
                 var result = await OpenItemEditorForCreatedAsync(section, item);
                 if (result is { Canceled: false, Data: not null })
                 {
-                    await ApplyCreatedItemEditAsync(section, item.Id, result.Data);
+                    await HandleCreatedItemDialogActionAsync(section, item.Id, result.Data);
                 }
-                else if (result is { Canceled: true })
+
+                // The dialog autosaves every change, so an item that is still identical to the
+                // freshly created one was never edited. Drop it to avoid cluttering the board.
+                var current = await BoardDataService.GetItemAsync(item.Id);
+                if (current is not null && current == item)
                 {
-                    var current = await BoardDataService.GetItemAsync(item.Id);
-                    if (current is not null && current.Title == item.Title)
-                    {
-                        await BoardDataService.DeleteItemAsync(section, item.Id);
-                    }
+                    await BoardDataService.DeleteItemAsync(section, item.Id);
                 }
 
                 await OnBoardChanged();
@@ -950,48 +950,23 @@
         }
     }
 
-    private async Task ApplyCreatedItemEditAsync(BoardSection section, Guid itemId, object data)
+    private async Task HandleCreatedItemDialogActionAsync(BoardSection section, Guid itemId, object data)
     {
-        if (section == BoardSection.Habit && data is EditHabitDialogResult h)
+        EditDialogAction? action = data switch
         {
-            await BoardDataService.UpdateHabitAsync(
-                itemId,
-                new UpdateHabitArgs(
-                    h.Title,
-                    h.Notes,
-                    h.Tags,
-                    h.TrackPlus,
-                    h.TrackMinus,
-                    h.ResetPeriod,
-                    h.Counter,
-                    h.NegativeCounter,
-                    h.ChecklistJson));
+            EditHabitDialogResult h => h.Action,
+            EditDailyDialogResult d => d.Action,
+            EditTodoDialogResult t => t.Action,
+            _ => null
+        };
+
+        if (action == EditDialogAction.Archive)
+        {
+            await BoardDataService.ArchiveItemAsync(section, itemId);
         }
-        else if (section == BoardSection.Daily && data is EditDailyDialogResult d)
+        else if (action == EditDialogAction.Delete)
         {
-            await BoardDataService.UpdateDailyAsync(
-                itemId,
-                new UpdateDailyArgs(
-                    d.Title,
-                    d.Notes,
-                    d.Tags,
-                    d.StartDate,
-                    d.Repeat,
-                    d.RepeatInterval,
-                    d.ChecklistJson,
-                    d.Counter));
-        }
-        else if (section == BoardSection.Todo && data is EditTodoDialogResult t)
-        {
-            await BoardDataService.UpdateTodoAsync(
-                itemId,
-                new UpdateTodoArgs(
-                    t.Title,
-                    t.Notes,
-                    t.Tags,
-                    t.ChecklistJson,
-                    t.DueDate,
-                    TodoRepeatIntervalDays: t.RepeatIntervalDays));
+            await BoardDataService.DeleteItemAsync(section, itemId);
         }
     }
 
@@ -1016,7 +991,7 @@
     {
         var options = new DialogOptions
         {
-            CloseButton = true,
+            CloseButton = false,
             CloseOnEscapeKey = true,
             NoHeader = false,
             Position = DialogPosition.TopCenter

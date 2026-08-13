@@ -12,10 +12,11 @@
                     <div class="edit-daily-checklist__row" @key="row.Key">
                         <MudCheckBox T="bool"
                                      Value="row.IsDone"
-                                     ValueChanged="@(v => SetChecklistDone(idx, v))"
+                                     ValueChanged="@((bool v) => SetChecklistDone(idx, v))"
                                      Class="ma-0"
                                      Color="Color.Primary"/>
-                        <MudTextField @bind-Value="row.Text"
+                        <MudTextField Value="row.Text"
+                                      ValueChanged="@((string v) => SetChecklistText(idx, v))"
                                       Variant="Variant.Text"
                                       Class="edit-daily-checklist__input flex-grow-1"
                                       Placeholder="Checklist item"
@@ -54,12 +55,24 @@
 
     private void SetChecklistDone(int index, bool done)
     {
-        if (index < 0 || index >= Value.Count)
+        if (index < 0 || index >= Value.Count || Value[index].IsDone == done)
         {
             return;
         }
 
         Value[index].IsDone = done;
+        _ = ValueChanged.InvokeAsync(Value);
+    }
+
+    private void SetChecklistText(int index, string text)
+    {
+        if (index < 0 || index >= Value.Count)
+        {
+            return;
+        }
+
+        Value[index].Text = text ?? string.Empty;
+        _ = ValueChanged.InvokeAsync(Value);
     }
 
     private void RemoveChecklistLine(int index)

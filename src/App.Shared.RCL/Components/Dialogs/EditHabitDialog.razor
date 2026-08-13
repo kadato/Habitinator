@@ -1,4 +1,4 @@
-@inject IUserNotifier Notifier
+@inherits AutosaveEditDialogBase<EditHabitDialogResult>
 
 <MudDialog Class="edit-daily-dialog"
            ContentClass="edit-daily-dialog__content"
@@ -8,19 +8,22 @@
     <EditDialogHeader TitleText="Edit Habit"
                       TitlePlaceholder="Habit title"
                       @bind-Title="_title"
+                      @bind-Title:after="OnTitleEdited"
                       @bind-Notes="_notes"
-                      OnCancel="Cancel"
-                      OnSave="SaveAsync"/>
+                      @bind-Notes:after="OnNotesEdited"
+                      OnClose="CloseAsync"
+                      SaveStatus="SaveStatus"/>
 
     <div class="edit-daily-body">
-        <ChecklistEditor @bind-Value="_checklistRows"/>
+        <ChecklistEditor @bind-Value="_checklistRows"
+                         @bind-Value:after="OnChecklistEdited"/>
 
         <fieldset class="mb-3" style="border: none; padding: 0; margin: 0;">
             <legend class="edit-daily-label-body d-block mb-2" style="font-size: 0.75rem;">Which counters to show</legend>
             <div class="habit-track">
                 <button type="button"
                         class="habit-track__option @(_trackPlus ? "habit-track__option--on-good" : string.Empty)"
-                        @onclick="@(() => _trackPlus = !_trackPlus)"
+                        @onclick="ToggleTrackPlus"
                         @attributes="PlusAria">
                     <span class="habit-track__circle habit-track__circle--good">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
@@ -32,7 +35,7 @@
                 </button>
                 <button type="button"
                         class="habit-track__option @(_trackMinus ? "habit-track__option--on-bad" : string.Empty)"
-                        @onclick="@(() => _trackMinus = !_trackMinus)"
+                        @onclick="ToggleTrackMinus"
                         @attributes="MinusAria">
                     <span class="habit-track__circle habit-track__circle--bad">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
@@ -42,18 +45,21 @@
                     <span class="habit-track__label">Minus</span>
                 </button>
             </div>
-            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1 mb-0">Turn on one or both. At least one must stay on when you save.</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1 mb-0">Turn on one or both. At least one stays on.</MudText>
         </fieldset>
 
         <fieldset class="mb-3" style="border: none; padding: 0; margin: 0;">
             <legend class="edit-daily-label-body d-block mb-1" style="font-size: 0.75rem;">Tags</legend>
-            <TagPicker @bind-Tags="_tags" TriggerId="edit-habit-tags-trigger" @ref="_tagPicker"/>
+            <TagPicker @bind-Tags="_tags"
+                       @bind-Tags:after="OnTagsEdited"
+                       TriggerId="edit-habit-tags-trigger" @ref="_tagPicker"/>
         </fieldset>
 
         <fieldset class="mb-3" style="border: none; padding: 0; margin: 0;">
             <legend class="edit-daily-label-body d-block mb-1 mt-2" style="font-size: 0.75rem;">Reset counter</legend>
             <MudSelect T="HabitResetPeriod"
                        @bind-Value="_resetPeriod"
+                       @bind-Value:after="OnDiscreteEdited"
                        Variant="Variant.Outlined"
                        Class="edit-daily-field-body edit-habit-select"
                        Margin="Margin.Dense"
@@ -80,6 +86,7 @@
                                        OnClick="DecrementPlusLocal"
                                        Disabled="@(_counter < 1)"/>
                         <MudNumericField @bind-Value="_counter"
+                                         @bind-Value:after="OnCounterEdited"
                                          Variant="Variant.Outlined"
                                          Class="counter-adjust__field"
                                          Min="0"
@@ -98,6 +105,7 @@
                                        OnClick="DecrementMinusLocal"
                                        Disabled="@(_negativeCounter < 1)"/>
                         <MudNumericField @bind-Value="_negativeCounter"
+                                         @bind-Value:after="OnCounterEdited"
                                          Variant="Variant.Outlined"
                                          Class="counter-adjust__field"
                                          Min="0"
@@ -119,8 +127,6 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
-
     [Parameter] [EditorRequired] public required BoardItem Item { get; set; }
 
     private string _title = string.Empty;
@@ -136,8 +142,11 @@
 
     private List<ChecklistRow> _checklistRows = [];
 
+    protected override string BatchDescription => $"Edit \"{Item.Title}\"";
+
     protected override void OnInitialized()
     {
+        base.OnInitialized();
         _title = Item.Title;
         _notes = Item.Notes;
         _tags = EditDialogHelpers.FormatTags(Item.Tags);
@@ -154,45 +163,97 @@
         _tagPicker?.Dismiss();
     }
 
-    private void Cancel()
+    private void OnTitleEdited()
     {
-        MudDialog.Cancel();
+        ScheduleSave();
     }
 
-    private async Task SaveAsync()
+    private void OnNotesEdited()
     {
-        if (string.IsNullOrWhiteSpace(_title))
-        {
-            await Notifier.NotifyAsync("Title is required.", Severity.Warning);
-            return;
-        }
+        ScheduleSave();
+    }
 
+    private Task OnTagsEdited()
+    {
+        return SaveNowAsync();
+    }
+
+    private void OnChecklistEdited()
+    {
+        ScheduleSave(300);
+    }
+
+    private void OnDiscreteEdited()
+    {
+        _ = SaveNowAsync();
+    }
+
+    private void OnCounterEdited()
+    {
+        ScheduleSave(400);
+    }
+
+    private void ToggleTrackPlus()
+    {
+        _trackPlus = !_trackPlus;
         if (!_trackPlus && !_trackMinus)
         {
-            await Notifier.NotifyAsync("Turn on at least one counter.", Severity.Warning);
-            return;
+            _trackMinus = true;
         }
 
+        _ = SaveNowAsync();
+    }
+
+    private void ToggleTrackMinus()
+    {
+        _trackMinus = !_trackMinus;
+        if (!_trackPlus && !_trackMinus)
+        {
+            _trackPlus = true;
+        }
+
+        _ = SaveNowAsync();
+    }
+
+    protected override async Task SaveValuesAsync(CancellationToken cancellationToken = default)
+    {
+        var title = string.IsNullOrWhiteSpace(_title) ? Item.Title : _title.Trim();
         var tagsPayload = EditDialogHelpers.CleanStringPayload(_tags);
         var checklistPayload = EditDialogHelpers.SerializeChecklistRows(_checklistRows);
-        var result = new EditHabitDialogResult(
-            EditDialogAction.Save,
+        await BoardData.UpdateHabitAsync(
+            Item.Id,
+            new UpdateHabitArgs(
+                title,
+                EditDialogHelpers.CleanStringPayload(_notes),
+                tagsPayload,
+                _trackPlus,
+                _trackMinus,
+                _resetPeriod,
+                _counter,
+                _negativeCounter,
+                checklistPayload),
+            cancellationToken);
+    }
+
+    protected override EditHabitDialogResult BuildResult(EditDialogAction action)
+    {
+        return new EditHabitDialogResult(
+            action,
             _title.Trim(),
             EditDialogHelpers.CleanStringPayload(_notes),
-            tagsPayload,
+            EditDialogHelpers.CleanStringPayload(_tags),
             _trackPlus,
             _trackMinus,
             _resetPeriod,
             _counter,
             _negativeCounter,
-            checklistPayload
-        );
-        MudDialog.Close(DialogResult.Ok(result));
+            EditDialogHelpers.SerializeChecklistRows(_checklistRows));
     }
 
     private void IncrementPlusLocal()
     {
         _counter++;
+        _ = SaveNowAsync();
     }
 
     private void DecrementPlusLocal()
@@ -201,11 +262,14 @@
         {
             _counter--;
         }
+
+        _ = SaveNowAsync();
     }
 
     private void IncrementMinusLocal()
     {
         _negativeCounter++;
+        _ = SaveNowAsync();
     }
 
     private void DecrementMinusLocal()
@@ -214,24 +278,18 @@
         {
             _negativeCounter--;
         }
+
+        _ = SaveNowAsync();
     }
 
     private void ArchiveAsync()
     {
-        var result = new EditHabitDialogResult(
-            EditDialogAction.Archive,
-            "", null, null, false, false, default, 0, 0, ""
-        );
-        MudDialog.Close(DialogResult.Ok(result));
+        CloseWithAction(EditDialogAction.Archive);
     }
 
     private void DeleteAsync()
     {
-        var result = new EditHabitDialogResult(
-            EditDialogAction.Delete,
-            "", null, null, false, false, default, 0, 0, ""
-        );
-        MudDialog.Close(DialogResult.Ok(result));
+        CloseWithAction(EditDialogAction.Delete);
     }
 
     private Dictionary<string, object> PlusAria => new() { { "aria-pressed", _trackPlus ? "true" : "false" } };

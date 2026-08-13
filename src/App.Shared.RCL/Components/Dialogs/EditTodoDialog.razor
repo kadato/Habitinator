@@ -1,4 +1,4 @@
-@inject IUserNotifier Notifier
+@inherits AutosaveEditDialogBase<EditTodoDialogResult>
 @inject IUserDateFormatService DateFormatService
 
 <MudDialog Class="edit-daily-dialog"
@@ -9,15 +9,19 @@
             <EditDialogHeader TitleText="Edit To Do"
                               TitlePlaceholder="To-do title"
                               @bind-Title="_title"
+                              @bind-Title:after="OnTitleEdited"
                               @bind-Notes="_notes"
-                              OnCancel="Cancel"
-                              OnSave="SaveAsync"/>
+                              @bind-Notes:after="OnNotesEdited"
+                              OnClose="CloseAsync"
+                              SaveStatus="SaveStatus"/>
 
             <div class="edit-daily-body">
-                <ChecklistEditor @bind-Value="_checklistRows"/>
+                <ChecklistEditor @bind-Value="_checklistRows"
+                                 @bind-Value:after="OnChecklistEdited"/>
 
                 <MudText Typo="Typo.caption" Class="edit-daily-label-body d-block mb-1 mt-2">Due date</MudText>
                 <MudDatePicker @bind-Date="_dueDate"
+                               @bind-Date:after="OnDiscreteEdited"
                                Variant="Variant.Outlined"
                                Editable="true"
                                Class="edit-daily-field-body edit-daily-date"
@@ -30,6 +34,7 @@
                 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
                     <MudNumericField T="int"
                                      @bind-Value="_repeatIntervalDays"
+                                     @bind-Value:after="OnIntervalEdited"
                                      Variant="Variant.Outlined"
                                      Class="edit-todo-repeat-field"
                                      Min="0"
@@ -43,7 +48,9 @@
 
                 <fieldset class="mb-3" style="border: none; padding: 0; margin: 0;">
                     <legend class="edit-daily-label-body d-block mb-1 mt-2" style="font-size: 0.75rem;">Tags</legend>
-                    <TagPicker @bind-Tags="_tags" TriggerId="edit-todo-tags-trigger" @ref="_tagPicker"/>
+                    <TagPicker @bind-Tags="_tags"
+                               @bind-Tags:after="OnTagsEdited"
+                               TriggerId="edit-todo-tags-trigger" @ref="_tagPicker"/>
                 </fieldset>
 
                 <EditDialogFooterActions OnArchive="ArchiveAsync" OnDelete="DeleteAsync"/>
@@ -53,8 +60,6 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
-
     [Parameter] [EditorRequired] public required BoardItem Item { get; set; }
 
     private string _title = string.Empty;
@@ -64,6 +69,8 @@
     private List<ChecklistRow> _checklistRows = [];
     private DateTime? _dueDate;
     private int _repeatIntervalDays;
+
+    protected override string BatchDescription => $"Edit \"{Item.Title}\"";
 
     protected override async Task OnInitializedAsync()
     {
@@ -81,49 +88,74 @@
         _tagPicker?.Dismiss();
     }
 
-    private void Cancel()
+    private void OnTitleEdited()
     {
-        MudDialog.Cancel();
+        ScheduleSave();
     }
 
-    private async Task SaveAsync()
+    private void OnNotesEdited()
     {
-        if (string.IsNullOrWhiteSpace(_title))
-        {
-            await Notifier.NotifyAsync("Title is required.", Severity.Warning);
-            return;
-        }
+        ScheduleSave();
+    }
 
+    private Task OnTagsEdited()
+    {
+        return SaveNowAsync();
+    }
+
+    private void OnChecklistEdited()
+    {
+        ScheduleSave(300);
+    }
+
+    private void OnDiscreteEdited()
+    {
+        _ = SaveNowAsync();
+    }
+
+    private void OnIntervalEdited()
+    {
+        ScheduleSave(400);
+    }
+
+    protected override async Task SaveValuesAsync(CancellationToken cancellationToken = default)
+    {
+        var title = string.IsNullOrWhiteSpace(_title) ? Item.Title : _title.Trim();
         var tagsPayload = EditDialogHelpers.CleanStringPayload(_tags);
         var checklistPayload = EditDialogHelpers.SerializeChecklistRows(_checklistRows);
         DateOnly? due = _dueDate is { } d ? DateOnly.FromDateTime(d.Date) : null;
-        var result = new EditTodoDialogResult(
-            EditDialogAction.Save,
+        await BoardData.UpdateTodoAsync(
+            Item.Id,
+            new UpdateTodoArgs(
+                title,
+                EditDialogHelpers.CleanStringPayload(_notes),
+                tagsPayload,
+                checklistPayload,
+                due,
+                TodoRepeatIntervalDays: _repeatIntervalDays > 0 ? _repeatIntervalDays : null),
+            cancellationToken);
+    }
+
+    protected override EditTodoDialogResult BuildResult(EditDialogAction action)
+    {
+        DateOnly? due = _dueDate is { } d ? DateOnly.FromDateTime(d.Date) : null;
+        return new EditTodoDialogResult(
+            action,
             _title.Trim(),
             EditDialogHelpers.CleanStringPayload(_notes),
-            tagsPayload,
-            checklistPayload,
+            EditDialogHelpers.CleanStringPayload(_tags),
+            EditDialogHelpers.SerializeChecklistRows(_checklistRows),
             due,
-            _repeatIntervalDays > 0 ? _repeatIntervalDays : null
-        );
-        MudDialog.Close(DialogResult.Ok(result));
+            _repeatIntervalDays > 0 ? _repeatIntervalDays : null);
     }
 
     private void ArchiveAsync()
     {
-        var result = new EditTodoDialogResult(
-            EditDialogAction.Archive,
-            "", null, null, "", null, null
-        );
-        MudDialog.Close(DialogResult.Ok(result));
+        CloseWithAction(EditDialogAction.Archive);
     }
 
     private void DeleteAsync()
     {
-        var result = new EditTodoDialogResult(
-            EditDialogAction.Delete,
-            "", null, null, "", null, null
-        );
-        MudDialog.Close(DialogResult.Ok(result));
+        CloseWithAction(EditDialogAction.Delete);
     }
 }

@@ -1,6 +1,6 @@
-/* ── Shared styles for the edit dialogs (Habit / Daily / To Do) ──
-   Single source of truth for all three edit dialogs. Class names are dialog-unique. ──*/
-/* ── Pop-in animation for modern entry ── */
+/* -- Shared styles for the edit dialogs (Habit / Daily / To Do) --
+   Single source of truth for all three edit dialogs. Class names are dialog-unique. --*/
+/* -- Pop-in animation for modern entry -- */
 @keyframes modal-pop {
     from {
         opacity: 0;
@@ -41,7 +41,7 @@
     animation: modal-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-/* ── Header Toolbar ── */
+/* -- Header Toolbar -- */
 .edit-daily-header {
     background: var(--mud-palette-surface);
     padding: 1.25rem 1.25rem var(--space-6);
@@ -64,29 +64,31 @@
     color: var(--mud-palette-text-primary) !important;
 }
 
-.edit-daily-header__cancel {
+.edit-daily-header__status {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+}
+
+.edit-daily-header__status--saved {
+    color: #16a34a;
+}
+
+.edit-daily-header__status--error {
+    color: var(--mud-palette-error);
+}
+
+.edit-daily-header__close {
     color: var(--mud-palette-text-secondary) !important;
-    text-transform: none !important;
-    min-width: auto;
-    padding: 0.45rem 0.85rem !important;
-    font-weight: 600 !important;
-    border-radius: var(--radius-md) !important;
-    font-size: 0.875rem !important;
 }
 
-.edit-daily-header__save {
-    background: var(--mud-palette-primary) !important;
-    color: #ffffff !important;
-    text-transform: none !important;
-    font-size: 0.875rem !important;
-    font-weight: 600 !important;
-    min-width: 5rem !important;
-    padding: 0.45rem 1.15rem !important;
-    border-radius: var(--radius-lg) !important;
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--mud-palette-primary) 30%, transparent) !important;
+.edit-daily-header__close:hover {
+    background-color: color-mix(in srgb, var(--mud-palette-error) 10%, transparent) !important;
+    color: var(--mud-palette-error) !important;
 }
 
-/* ── Labels & Fields (macOS-like styling) ── */
+/* -- Labels and Fields (macOS-like styling) -- */
 .edit-daily-label-header {
     color: var(--mud-palette-text-secondary) !important;
     font-weight: 600;
@@ -145,7 +147,7 @@
     max-height: 10lh;
 }
 
-/* ── Body Layout ── */
+/* -- Body Layout -- */
 .edit-daily-body {
     background: var(--mud-palette-surface);
     padding: var(--space-6) 1.25rem var(--space-7);
@@ -167,7 +169,7 @@
     margin-left: 0.15rem;
 }
 
-/* ── Checklist Section ── */
+/* -- Checklist Section -- */
 .edit-daily-checklist-panels {
     margin-bottom: var(--space-1);
 }
@@ -276,7 +278,7 @@
     font-size: 0.875rem;
 }
 
-/* ── Advanced section ── */
+/* -- Advanced section -- */
 .edit-daily-advanced .mud-expand-panel {
     background: color-mix(in srgb, var(--mud-palette-background-gray) 30%, var(--mud-palette-surface)) !important;
     border: 1px solid var(--mud-palette-divider);
@@ -358,7 +360,7 @@
     font-size: 0.8rem;
 }
 
-/* ── Tag Picker Widget ── */
+/* -- Tag Picker Widget -- */
 .habit-tag-picker {
     position: relative;
     width: 100%;
@@ -491,7 +493,7 @@
         0 -12px 32px -4px rgba(0, 0, 0, 0.12),
         0 -4px 12px -2px rgba(0, 0, 0, 0.08);
     
-    /* Smooth CSS Entry & Exit Transition */
+    /* Smooth CSS Entry and Exit Transition */
     opacity: 0;
     transform: translateY(8px) scale(0.97);
     pointer-events: none;
@@ -599,7 +601,7 @@
     width: 100%;
 }
 
-/* ── Habit Track Option Buttons (+ / -) ── */
+/* -- Habit Track Option Buttons (+ / -) -- */
 .habit-track {
     display: flex;
     justify-content: center;
@@ -685,7 +687,7 @@
     font-weight: 750 !important;
 }
 
-/* ── Advanced section ── */
+/* -- Advanced section -- */
 .counter-adjust {
     display: flex;
     align-items: center;
@@ -718,7 +720,7 @@
     line-height: 1.4;
 }
 
-/* ── View Heatmap action button ── */
+/* -- View Heatmap action button -- */
 .edit-daily-heatmap-btn {
     display: flex;
     align-items: center;

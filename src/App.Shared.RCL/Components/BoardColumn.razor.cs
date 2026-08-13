@@ -460,7 +460,7 @@ public partial class BoardColumn : IAsyncDisposable
         };
     }
 
-    // ── Reordering (SortableJS) ─────────────────────────────
+    // -- Reordering (SortableJS) --
 
     [JSInvokable]
     public async Task OnJsReorderAsync(int oldIndex, int newIndex)
@@ -731,52 +731,16 @@ public partial class BoardColumn : IAsyncDisposable
         var result = await dialog.Result;
         if (result is { Canceled: false, Data: EditHabitDialogResult r })
         {
-            await HandleEditHabitResultAsync(item, r);
+            switch (r.Action)
+            {
+                case EditDialogAction.Archive:
+                    await ArchiveHabitAsync(item);
+                    break;
+                case EditDialogAction.Delete:
+                    await DeleteHabitAsync(item);
+                    break;
+            }
         }
-    }
-
-    private async Task HandleEditHabitResultAsync(BoardItem item, EditHabitDialogResult r)
-    {
-        switch (r.Action)
-        {
-            case EditDialogAction.Save:
-                await SaveHabitAsync(item, r);
-                break;
-            case EditDialogAction.Archive:
-                await ArchiveHabitAsync(item);
-                break;
-            case EditDialogAction.Delete:
-                await DeleteHabitAsync(item);
-                break;
-        }
-    }
-
-    private Task SaveHabitAsync(BoardItem item, EditHabitDialogResult r)
-    {
-        var optimistic = item with
-        {
-            Title = r.Title,
-            Notes = r.Notes,
-            Tags = r.Tags,
-            TrackPlus = r.TrackPlus,
-            TrackMinus = r.TrackMinus,
-            ResetPeriod = r.ResetPeriod,
-            Counter = r.Counter,
-            NegativeCounter = r.NegativeCounter,
-            ChecklistJson = r.ChecklistJson
-        };
-        return ApplyOverrideAsync(item.Id, optimistic, () => BoardData.UpdateHabitAsync(
-            item.Id,
-            new UpdateHabitArgs(
-                r.Title,
-                r.Notes,
-                r.Tags,
-                r.TrackPlus,
-                r.TrackMinus,
-                r.ResetPeriod,
-                r.Counter,
-                r.NegativeCounter,
-                r.ChecklistJson)));
     }
 
     private Task ArchiveHabitAsync(BoardItem item) =>
@@ -792,50 +756,16 @@ public partial class BoardColumn : IAsyncDisposable
         var result = await dialog.Result;
         if (result is { Canceled: false, Data: EditDailyDialogResult r })
         {
-            await HandleEditDailyResultAsync(item, r);
+            switch (r.Action)
+            {
+                case EditDialogAction.Archive:
+                    await ArchiveDailyAsync(item);
+                    break;
+                case EditDialogAction.Delete:
+                    await DeleteDailyAsync(item);
+                    break;
+            }
         }
-    }
-
-    private async Task HandleEditDailyResultAsync(BoardItem item, EditDailyDialogResult r)
-    {
-        switch (r.Action)
-        {
-            case EditDialogAction.Save:
-                await SaveDailyAsync(item, r);
-                break;
-            case EditDialogAction.Archive:
-                await ArchiveDailyAsync(item);
-                break;
-            case EditDialogAction.Delete:
-                await DeleteDailyAsync(item);
-                break;
-        }
-    }
-
-    private Task SaveDailyAsync(BoardItem item, EditDailyDialogResult r)
-    {
-        var optimistic = item with
-        {
-            Title = r.Title,
-            Notes = r.Notes,
-            Tags = r.Tags,
-            DailyStartDate = r.StartDate,
-            DailyRepeat = r.Repeat,
-            DailyRepeatInterval = r.RepeatInterval,
-            ChecklistJson = r.ChecklistJson,
-            Counter = r.Counter
-        };
-        return ApplyOverrideAsync(item.Id, optimistic, () => BoardData.UpdateDailyAsync(
-            item.Id,
-            new UpdateDailyArgs(
-                r.Title,
-                r.Notes,
-                r.Tags,
-                r.StartDate,
-                r.Repeat,
-                r.RepeatInterval,
-                r.ChecklistJson,
-                r.Counter)));
     }
 
     private Task ArchiveDailyAsync(BoardItem item) =>
@@ -851,46 +781,16 @@ public partial class BoardColumn : IAsyncDisposable
         var result = await dialog.Result;
         if (result is { Canceled: false, Data: EditTodoDialogResult r })
         {
-            await HandleEditTodoResultAsync(item, r);
+            switch (r.Action)
+            {
+                case EditDialogAction.Archive:
+                    await ArchiveTodoAsync(item);
+                    break;
+                case EditDialogAction.Delete:
+                    await DeleteTodoAsync(item);
+                    break;
+            }
         }
-    }
-
-    private async Task HandleEditTodoResultAsync(BoardItem item, EditTodoDialogResult r)
-    {
-        switch (r.Action)
-        {
-            case EditDialogAction.Save:
-                await SaveTodoAsync(item, r);
-                break;
-            case EditDialogAction.Archive:
-                await ArchiveTodoAsync(item);
-                break;
-            case EditDialogAction.Delete:
-                await DeleteTodoAsync(item);
-                break;
-        }
-    }
-
-    private Task SaveTodoAsync(BoardItem item, EditTodoDialogResult r)
-    {
-        var optimistic = item with
-        {
-            Title = r.Title,
-            Notes = r.Notes,
-            Tags = r.Tags,
-            ChecklistJson = r.ChecklistJson,
-            TodoDueDate = r.DueDate,
-            TodoRepeatIntervalDays = r.RepeatIntervalDays
-        };
-        return ApplyOverrideAsync(item.Id, optimistic, () => BoardData.UpdateTodoAsync(
-            item.Id,
-            new UpdateTodoArgs(
-                r.Title,
-                r.Notes,
-                r.Tags,
-                r.ChecklistJson,
-                r.DueDate,
-                TodoRepeatIntervalDays: r.RepeatIntervalDays)));
     }
 
     private Task ArchiveTodoAsync(BoardItem item) =>

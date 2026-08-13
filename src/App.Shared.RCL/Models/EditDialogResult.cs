@@ -2,7 +2,7 @@ namespace App.Shared.RCL.Models;
 
 public enum EditDialogAction
 {
-    Save,
+    Close,
     Archive,
     Delete
 }

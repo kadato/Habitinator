@@ -627,24 +627,34 @@
 }
 
 .habit-track__circle {
-    width: 1.75rem;
-    height: 1.75rem;
-    border-radius: 50%;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    transition: all var(--dur-normal) ease;
+    color: #fff;
+    transition: transform var(--dur-fast) cubic-bezier(0.34, 1.56, 0.64, 1),
+                background-color var(--dur-fast) ease;
 }
 
 .habit-track__circle--good {
-    background-color: color-mix(in srgb, #22c55e 12%, transparent);
-    color: #16a34a;
+    background: var(--hab-type-habit);
 }
 
 .habit-track__circle--bad {
-    background-color: color-mix(in srgb, #dc2626 12%, transparent);
-    color: #dc2626;
+    background: #dc2626;
+}
+
+.habit-track__circle svg {
+    width: 1.15rem;
+    height: 1.15rem;
+    stroke-width: 3.5;
+}
+
+.habit-track__option:active .habit-track__circle {
+    transform: translateY(1px) scale(0.92);
 }
 
 .habit-track__label {
@@ -661,11 +671,6 @@
     box-shadow: 0 4px 12px color-mix(in srgb, #22c55e 12%, transparent) !important;
 }
 
-.habit-track__option--on-good .habit-track__circle--good {
-    background-color: #15803d !important;
-    color: #ffffff !important;
-}
-
 .habit-track__option--on-good .habit-track__label {
     color: var(--mud-palette-text-primary) !important;
     font-weight: 750 !important;
@@ -677,14 +682,16 @@
     box-shadow: 0 4px 12px color-mix(in srgb, #dc2626 12%, transparent) !important;
 }
 
-.habit-track__option--on-bad .habit-track__circle--bad {
-    background-color: #dc2626 !important;
-    color: #ffffff !important;
-}
-
 .habit-track__option--on-bad .habit-track__label {
     color: var(--mud-palette-text-primary) !important;
     font-weight: 750 !important;
+}
+
+@media (max-width: 599.98px) {
+    .habit-track__circle {
+        width: 2.65rem;
+        height: 2.65rem;
+    }
 }
 
 /* -- Advanced section -- */
@@ -696,7 +703,54 @@
 }
 
 .counter-adjust__btn {
-    color: var(--mud-palette-text-secondary) !important;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: none;
+    border-radius: var(--radius-md);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+    color: #fff;
+    transition: transform var(--dur-fast) cubic-bezier(0.34, 1.56, 0.64, 1),
+                background-color var(--dur-fast) ease;
+}
+
+.counter-adjust__btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.counter-adjust__btn--good {
+    background: var(--hab-type-habit);
+}
+
+.counter-adjust__btn--bad {
+    background: #dc2626;
+}
+
+.counter-adjust__btn:active:not(:disabled) {
+    transform: translateY(1px) scale(0.92);
+}
+
+.counter-adjust__btn svg {
+    width: 1.15rem;
+    height: 1.15rem;
+    stroke: currentColor;
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    display: block;
+    pointer-events: none;
+}
+
+@media (max-width: 599.98px) {
+    .counter-adjust__btn {
+        width: 2.65rem;
+        height: 2.65rem;
+    }
 }
 
 .counter-adjust__field {

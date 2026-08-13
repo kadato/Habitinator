@@ -26,7 +26,7 @@
                         @onclick="ToggleTrackPlus"
                         @attributes="PlusAria">
                     <span class="habit-track__circle habit-track__circle--good">
-                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
@@ -38,7 +38,7 @@
                         @onclick="ToggleTrackMinus"
                         @attributes="MinusAria">
                     <span class="habit-track__circle habit-track__circle--bad">
-                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
                     </span>
@@ -80,11 +80,15 @@
                 <ChildContent>
                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">Adjust + count</MudText>
                     <div class="counter-adjust mb-3">
-                        <MudIconButton Icon="@Icons.Material.Filled.Remove"
-                                       aria-label="Decrease + count"
-                                       Class="counter-adjust__btn"
-                                       OnClick="DecrementPlusLocal"
-                                       Disabled="@(_counter < 1)"/>
+                        <button type="button"
+                                class="counter-adjust__btn counter-adjust__btn--bad"
+                                aria-label="Decrease + count"
+                                @onclick="DecrementPlusLocal"
+                                disabled="@(_counter < 1)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                        </button>
                         <MudNumericField @bind-Value="_counter"
                                          @bind-Value:after="OnCounterEdited"
                                          Variant="Variant.Outlined"
@@ -92,18 +96,27 @@
                                          Min="0"
                                          HideSpinButtons="true"
                                          Margin="Margin.Dense"/>
-                        <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                       aria-label="Increase + count"
-                                       Class="counter-adjust__btn"
-                                       OnClick="IncrementPlusLocal"/>
+                        <button type="button"
+                                class="counter-adjust__btn counter-adjust__btn--good"
+                                aria-label="Increase + count"
+                                @onclick="IncrementPlusLocal">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                        </button>
                     </div>
                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">Adjust − count</MudText>
                     <div class="counter-adjust">
-                        <MudIconButton Icon="@Icons.Material.Filled.Remove"
-                                       aria-label="Decrease − count"
-                                       Class="counter-adjust__btn"
-                                       OnClick="DecrementMinusLocal"
-                                       Disabled="@(_negativeCounter < 1)"/>
+                        <button type="button"
+                                class="counter-adjust__btn counter-adjust__btn--bad"
+                                aria-label="Decrease − count"
+                                @onclick="DecrementMinusLocal"
+                                disabled="@(_negativeCounter < 1)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                        </button>
                         <MudNumericField @bind-Value="_negativeCounter"
                                          @bind-Value:after="OnCounterEdited"
                                          Variant="Variant.Outlined"
@@ -111,10 +124,15 @@
                                          Min="0"
                                          HideSpinButtons="true"
                                          Margin="Margin.Dense"/>
-                        <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                       aria-label="Increase − count"
-                                       Class="counter-adjust__btn"
-                                       OnClick="IncrementMinusLocal"/>
+                        <button type="button"
+                                class="counter-adjust__btn counter-adjust__btn--good"
+                                aria-label="Increase − count"
+                                @onclick="IncrementMinusLocal">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                        </button>
                     </div>
                 </ChildContent>
             </MudExpansionPanel>

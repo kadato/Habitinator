@@ -29,7 +29,8 @@ public sealed record DailyContributionGraphDto(
     string Title,
     IReadOnlyList<ActivityHeatmapCellDto> Heatmap,
     int GridWeekColumns,
-    int MaxDayCountInRange);
+    int MaxDayCountInRange,
+    IReadOnlyList<string> AvailablePeriodKeys);
 
 public sealed record DailyGraphPeriodOption(string Key, string Label);
 

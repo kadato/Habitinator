@@ -227,13 +227,7 @@ a {
 
 /* Retroactive Yesterday Dailies Dialog: hide default MudDialog paper so only the inner card is visible */
 .mud-dialog.daily-yesterday-dialog,
-.mud-dialog:has(.daily-yesterday-shell),
-.mud-dialog.daily-heatmap-dialog,
-.mud-paper.daily-heatmap-dialog,
-.mud-dialog:has(.daily-heatmap-shell),
-.mud-paper:has(.daily-heatmap-shell),
-.mud-dialog-container .daily-heatmap-dialog,
-.mud-dialog-container .mud-paper.daily-heatmap-dialog {
+.mud-dialog:has(.daily-yesterday-shell) {
     background: transparent !important;
     box-shadow: none !important;
     border: none !important;
@@ -242,15 +236,6 @@ a {
     overflow-y: visible !important;
     max-height: none !important;
     width: min(34rem, calc(100vw - var(--space-8))) !important;
-}
-
-.mud-dialog.daily-heatmap-dialog .mud-dialog-content,
-.mud-dialog:has(.daily-heatmap-shell) .mud-dialog-content,
-.mud-dialog.daily-heatmap-dialog .daily-heatmap-dialog__content,
-.mud-paper.daily-heatmap-dialog .mud-dialog-content {
-    padding: 0 !important;
-    background: transparent !important;
-    overflow: visible !important;
 }
 
 .mud-dialog.daily-yesterday-dialog .mud-dialog-content,

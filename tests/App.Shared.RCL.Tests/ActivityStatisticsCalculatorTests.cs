@@ -227,6 +227,36 @@ public sealed class ActivityStatisticsCalculatorTests
         view.RangeEnd.Should().Be(todayCutoff);
     }
 
+    [Fact]
+    public void BuildDailyContributions_marks_only_periods_reaching_item_start_as_available()
+    {
+        var todayCutoff = new DateOnly(2026, 8, 12);
+        var options = new[]
+        {
+            new DailyGraphPeriodOption(DailyGraphPeriods.Rolling370Days, "Last 370 days"),
+            new DailyGraphPeriodOption(DailyGraphPeriods.ForCalendarYear(2026), "2026"),
+            new DailyGraphPeriodOption(DailyGraphPeriods.ForCalendarYear(2025), "2025")
+        };
+
+        var recent = new DailyItemStatsDto(Guid.NewGuid(), "Recent", new DateOnly(2026, 6, 1), new DateOnly(2026, 6, 1));
+        var old = new DailyItemStatsDto(Guid.NewGuid(), "Old", null, new DateOnly(2024, 3, 10));
+
+        var view = ActivityStatisticsCalculator.BuildDailyContributions(
+            [],
+            [recent, old],
+            DailyGraphPeriods.Rolling370Days,
+            options,
+            new DateOnly(2025, 8, 8),
+            todayCutoff,
+            todayCutoff);
+
+        var recentGraph = view.Graphs.Single(g => g.BoardItemId == recent.Id);
+        var oldGraph = view.Graphs.Single(g => g.BoardItemId == old.Id);
+
+        recentGraph.AvailablePeriodKeys.Should().BeEquivalentTo("r370", "y2026");
+        oldGraph.AvailablePeriodKeys.Should().BeEquivalentTo("r370", "y2026", "y2025");
+    }
+
     private static DateTimeOffset At(DateOnly day, int hourUtc) =>
         new(day.Year, day.Month, day.Day, hourUtc, 0, 0, TimeSpan.Zero);
 }

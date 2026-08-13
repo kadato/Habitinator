@@ -256,7 +256,7 @@ public static class ActivityStatisticsCalculator
         var dailyIds = dailyItemRows.Select(x => x.Id).ToHashSet();
         var byItem = BuildItemCompletionMap(eventRowsInRange, dailyIds);
         var (commonStart, commonEnd) = FindCommonDates(dailyItemRows, byItem, rangeStart, rangeEnd, todayCutoff);
-        var graphs = BuildDailyContributionGraphs(dailyItemRows, byItem, commonStart, commonEnd, todayCutoff);
+        var graphs = BuildDailyContributionGraphs(dailyItemRows, byItem, commonStart, commonEnd, todayCutoff, options);
 
         return new DailyContributionsViewDto(
             periodKey,
@@ -342,7 +342,8 @@ public static class ActivityStatisticsCalculator
         Dictionary<Guid, Dictionary<DateOnly, int>> byItem,
         DateOnly commonStart,
         DateOnly commonEnd,
-        DateOnly todayCutoff)
+        DateOnly todayCutoff,
+        IReadOnlyList<DailyGraphPeriodOption> options)
     {
         List<DailyContributionGraphDto> graphs = [with(capacity: dailyItemRows.Count)];
         foreach (var di in dailyItemRows)
@@ -368,9 +369,31 @@ public static class ActivityStatisticsCalculator
 
             var columns = WeekGridColumns(commonStart, commonEnd);
 
-            graphs.Add(new DailyContributionGraphDto(di.Id, di.Title, graphHeat, columns, maxInRange));
+            graphs.Add(new DailyContributionGraphDto(
+                di.Id,
+                di.Title,
+                graphHeat,
+                columns,
+                maxInRange,
+                AvailablePeriodKeys(di, options, todayCutoff)));
         }
         return graphs;
+    }
+
+    /// <summary>
+    ///     Periods that can contain recorded data for an item: those whose range reaches the item's first scheduled
+    ///     day. Periods ending before the item existed would only ever show an empty grid.
+    /// </summary>
+    private static List<string> AvailablePeriodKeys(
+        DailyItemStatsDto item,
+        IReadOnlyList<DailyGraphPeriodOption> options,
+        DateOnly todayCutoff)
+    {
+        var dataStart = item.DailyStartDate ?? item.CreatedAt;
+        return options
+            .Where(o => ResolveActivityPeriod(o.Key, todayCutoff, options).End >= dataStart)
+            .Select(o => o.Key)
+            .ToList();
     }
 
     public static HabitContributionsViewDto BuildHabitContributions(

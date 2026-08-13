@@ -3,10 +3,10 @@ using System.Text.RegularExpressions;
 
 namespace App.Shared.RCL.Services;
 
-/// <summary>Parses and formats the "Time's up after" field (optional focus / alert length).</summary>
+/// <summary>Parses and formats the "Time's up after" field, the optional focus or alert length.</summary>
 public static class FocusDurationInput
 {
-    /// <summary>Help copy for the UI tooltip (plain text, can include line breaks).</summary>
+    /// <summary>Help copy for the UI tooltip. Plain text, can include line breaks.</summary>
     public const string HelpTooltip =
         "Optional. When the running timer reaches this length, a \"time's up\" notice runs once. Leave empty for no end alert.\n\n"
         + "You can use minutes, seconds, and h:mm or h:mm:ss. Examples: 25 (25 min), 1:15 (1 h 15 min), 0:0:30 (30 s), 0:1:5 (1 min 5 s), 90s, 5m30s, 1h1m1s, 1:0:0 (1 h), 0:5:0 (5 min). Max 23:59:59.";
@@ -131,99 +131,99 @@ public static class FocusDurationInput
 
         if (m.Groups["secSuffix"].Success)
         {
-            if (!int.TryParse(m.Groups["secSuffix"].Value, out var sec) || sec <= 0)
-            {
-                return false;
-            }
-
-            return Assign(ref duration, TryFromTotalSeconds(sec, out var d) ? d : null);
+            return TryParseSecondsSuffix(m, ref duration);
         }
 
         if (m.Groups["minSecMin"].Success)
         {
-            if (!int.TryParse(m.Groups["minSecMin"].Value, out var min) ||
-                !int.TryParse(m.Groups["minSecSec"].Value, out var sec))
-            {
-                return false;
-            }
-
-            if (sec is < 0 or > 59 || min < 0)
-            {
-                return false;
-            }
-
-            return Assign(ref duration, TryFromTotalSeconds(min * 60L + sec, out var d) ? d : null);
+            return TryParseMinutesAndSeconds(m, ref duration);
         }
 
         if (m.Groups["threeH"].Success)
         {
-            if (!int.TryParse(m.Groups["threeH"].Value, out var h) ||
-                !int.TryParse(m.Groups["threeM"].Value, out var min) ||
-                !int.TryParse(m.Groups["threeS"].Value, out var sec))
-            {
-                return false;
-            }
-
-            return TryValidateAndCreate(h, min, sec, out duration);
+            return TryParseHms(m, "threeH", "threeM", "threeS", ref duration);
         }
 
         if (m.Groups["twoH"].Success)
         {
-            if (!int.TryParse(m.Groups["twoH"].Value, out var h) ||
-                !int.TryParse(m.Groups["twoM"].Value, out var min))
-            {
-                return false;
-            }
-
-            return TryValidateAndCreate(h, min, 0, out duration);
+            return TryParseHms(m, "twoH", "twoM", null, ref duration);
         }
 
         if (m.Groups["minOnly"].Success)
         {
-            if (!int.TryParse(m.Groups["minOnly"].Value, out var mins) || mins <= 0)
-            {
-                return false;
-            }
-
-            return Assign(ref duration, TryFromTotalSeconds(mins * 60L, out var d) ? d : null);
+            return TryParseMinutesOnly(m, ref duration);
         }
 
         if (m.Groups["hmsH"].Success)
         {
-            return TryValidateAndCreate(
-                int.Parse(m.Groups["hmsH"].Value, CultureInfo.InvariantCulture),
-                int.Parse(m.Groups["hmsM"].Value, CultureInfo.InvariantCulture),
-                int.Parse(m.Groups["hmsS"].Value, CultureInfo.InvariantCulture),
-                out duration);
+            return TryParseHms(m, "hmsH", "hmsM", "hmsS", ref duration);
         }
 
         if (m.Groups["hmsBH"].Success)
         {
-            return TryValidateAndCreate(
-                int.Parse(m.Groups["hmsBH"].Value, CultureInfo.InvariantCulture),
-                int.Parse(m.Groups["hmsBM"].Value, CultureInfo.InvariantCulture),
-                0,
-                out duration);
+            return TryParseHms(m, "hmsBH", "hmsBM", null, ref duration);
         }
 
         if (m.Groups["hmsCH"].Success)
         {
-            return TryValidateAndCreate(
-                int.Parse(m.Groups["hmsCH"].Value, CultureInfo.InvariantCulture),
-                0,
-                int.Parse(m.Groups["hmsCS"].Value, CultureInfo.InvariantCulture),
-                out duration);
+            return TryParseHms(m, "hmsCH", null, "hmsCS", ref duration);
         }
 
         if (m.Groups["sufH"].Success)
         {
-            var h = int.Parse(m.Groups["sufH"].Value, CultureInfo.InvariantCulture);
-            var min = m.Groups["sufM"].Success
-                ? int.Parse(m.Groups["sufM"].Value, CultureInfo.InvariantCulture)
-                : 0;
-            return TryValidateAndCreate(h, min, 0, out duration);
+            return TryParseSuffixedHours(m, ref duration);
         }
 
+        return TryParsePlainMinutes(m, ref duration);
+    }
+
+    private static bool TryParseSecondsSuffix(Match m, ref TimeSpan? duration)
+    {
+        if (!int.TryParse(m.Groups["secSuffix"].Value, out var sec) || sec <= 0)
+        {
+            return false;
+        }
+
+        return Assign(ref duration, TryFromTotalSeconds(sec, out var d) ? d : null);
+    }
+
+    private static bool TryParseMinutesAndSeconds(Match m, ref TimeSpan? duration)
+    {
+        if (!int.TryParse(m.Groups["minSecMin"].Value, out var min) ||
+            !int.TryParse(m.Groups["minSecSec"].Value, out var sec))
+        {
+            return false;
+        }
+
+        if (sec is < 0 or > 59 || min < 0)
+        {
+            return false;
+        }
+
+        return Assign(ref duration, TryFromTotalSeconds(min * 60L + sec, out var d) ? d : null);
+    }
+
+    private static bool TryParseMinutesOnly(Match m, ref TimeSpan? duration)
+    {
+        if (!int.TryParse(m.Groups["minOnly"].Value, out var mins) || mins <= 0)
+        {
+            return false;
+        }
+
+        return Assign(ref duration, TryFromTotalSeconds(mins * 60L, out var d) ? d : null);
+    }
+
+    private static bool TryParseSuffixedHours(Match m, ref TimeSpan? duration)
+    {
+        var h = int.Parse(m.Groups["sufH"].Value, CultureInfo.InvariantCulture);
+        var min = m.Groups["sufM"].Success
+            ? int.Parse(m.Groups["sufM"].Value, CultureInfo.InvariantCulture)
+            : 0;
+        return TryValidateAndCreate(h, min, 0, out duration);
+    }
+
+    private static bool TryParsePlainMinutes(Match m, ref TimeSpan? duration)
+    {
         var plainMins = int.Parse(m.Groups["plain"].Value, CultureInfo.InvariantCulture);
         if (plainMins <= 0)
         {
@@ -231,6 +231,30 @@ public static class FocusDurationInput
         }
 
         return Assign(ref duration, TryFromTotalSeconds(plainMins * 60L, out var plainDuration) ? plainDuration : null);
+    }
+
+    private static bool TryParseHms(Match m, string hGroup, string? minGroup, string? secGroup, ref TimeSpan? duration)
+    {
+        if (!int.TryParse(m.Groups[hGroup].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var h))
+        {
+            return false;
+        }
+
+        var min = 0;
+        if (minGroup is not null &&
+            !int.TryParse(m.Groups[minGroup].Value, NumberStyles.None, CultureInfo.InvariantCulture, out min))
+        {
+            return false;
+        }
+
+        var sec = 0;
+        if (secGroup is not null &&
+            !int.TryParse(m.Groups[secGroup].Value, NumberStyles.None, CultureInfo.InvariantCulture, out sec))
+        {
+            return false;
+        }
+
+        return TryValidateAndCreate(h, min, sec, out duration);
     }
 
     private static bool Assign(ref TimeSpan? slot, TimeSpan? value)

@@ -6,65 +6,34 @@ namespace App.Shared.RCL.Services;
 ///     Persists per-column board filters in localStorage so the filters survive navigation
 ///     and reloads. Keyed per account.
 /// </summary>
-public sealed class JsBoardColumnStateStore : IBoardColumnStateStore
+public sealed class JsBoardColumnStateStore : JsPerUserStoreBase, IBoardColumnStateStore
 {
-    private const string JsFile = "_content/App.Shared.RCL/js/boardUiState.js";
-    private const string BaseKey = "habitinator.columnFilters.v1";
-
     private readonly IJSRuntime _js;
-    private readonly IClientSessionProvider _sessionProvider;
 
     public JsBoardColumnStateStore(IJSRuntime js, IClientSessionProvider sessionProvider)
+        : base(js, sessionProvider)
     {
         _js = js;
-        _sessionProvider = sessionProvider;
     }
 
-    private string GetKey()
+    protected override string BaseKey => "habitinator.columnFilters.v1";
+
+    public Task<BoardColumnFilterState?> GetAsync(CancellationToken cancellationToken = default) =>
+        ReadAsync();
+
+    public Task SetAsync(BoardColumnFilterState state, CancellationToken cancellationToken = default) =>
+        WriteAsync(state);
+
+    private async Task<BoardColumnFilterState?> ReadAsync()
     {
-        var email = _sessionProvider.Email;
-        return string.IsNullOrEmpty(email) ? BaseKey : $"{BaseKey}_{email}";
+        // Safe default: no persisted state, fail open. Never throw on JS failure.
+        return await JsInvokeSafe.InvokeAsync<BoardColumnFilterState?>(
+            _js, "habitinatorGetColumnFilterState", GetKey()).ConfigureAwait(false);
     }
 
-    public async Task<BoardColumnFilterState?> GetAsync(CancellationToken cancellationToken = default)
+    private async Task WriteAsync(BoardColumnFilterState state)
     {
-        try
-        {
-            await EnsureScriptLoadedAsync();
-            return await _js.InvokeAsync<BoardColumnFilterState?>("habitinatorGetColumnFilterState", GetKey())
-                .ConfigureAwait(false);
-        }
-        catch (JSDisconnectedException)
-        {
-            // Safe default: no persisted state, fail open. Never throw on JS failure.
-            return null;
-        }
-        catch (JSException)
-        {
-            // Safe default: no persisted state, fail open. Never throw on JS failure.
-            return null;
-        }
-    }
-
-    public async Task SetAsync(BoardColumnFilterState state, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            await EnsureScriptLoadedAsync();
-            await _js.InvokeVoidAsync("habitinatorSetColumnFilterState", GetKey(), state).ConfigureAwait(false);
-        }
-        catch (JSDisconnectedException)
-        {
-            // Safe to ignore during navigation/disposal
-        }
-        catch (JSException)
-        {
-            // Safe to ignore. Filters simply won't persist
-        }
-    }
-
-    private Task EnsureScriptLoadedAsync()
-    {
-        return JsInvokeSafe.InvokeVoidAsync(_js, "habitinatorLoadScript", JsFile);
+        await EnsureScriptLoadedAsync();
+        await JsInvokeSafe.InvokeVoidAsync(_js, "habitinatorSetColumnFilterState", GetKey(), state);
     }
 }

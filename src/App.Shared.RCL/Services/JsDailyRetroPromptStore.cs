@@ -6,11 +6,10 @@ using Microsoft.JSInterop;
 
 namespace App.Shared.RCL.Services;
 
-public sealed class JsDailyRetroPromptStore : IDailyRetroPromptStore
+public sealed class JsDailyRetroPromptStore : JsPerUserStoreBase, IDailyRetroPromptStore
 {
     private readonly IJSRuntime _js;
     private readonly IUserTimeZoneService _timeZoneService;
-    private readonly IClientSessionProvider _sessionProvider;
     private readonly IClock _clock;
 
     public JsDailyRetroPromptStore(
@@ -18,21 +17,18 @@ public sealed class JsDailyRetroPromptStore : IDailyRetroPromptStore
         IUserTimeZoneService timeZoneService,
         IClientSessionProvider sessionProvider,
         IClock clock)
+        : base(js, sessionProvider)
     {
         _js = js;
         _timeZoneService = timeZoneService;
-        _sessionProvider = sessionProvider;
         _clock = clock;
     }
 
-    private string GetKey()
-    {
-        var email = _sessionProvider.Email;
-        return string.IsNullOrEmpty(email) ? "habitinator.dailyRetro.ymd" : $"habitinator.dailyRetro.ymd_{email}";
-    }
+    protected override string BaseKey => "habitinator.dailyRetro.ymd";
 
     public async Task<DateOnly?> GetLastPromptResolvedLocalDateAsync(CancellationToken cancellationToken = default)
     {
+        // Safe default: no persisted state, fail open. Never throw on JS failure.
         var s = await JsInvokeSafe.InvokeAsync<string?>(_js, "habitinatorGetDailyRetroResolved", GetKey());
 
         if (string.IsNullOrWhiteSpace(s) || !DateOnly.TryParse(s, CultureInfo.InvariantCulture, out var d))
@@ -43,9 +39,9 @@ public sealed class JsDailyRetroPromptStore : IDailyRetroPromptStore
         return d;
     }
 
-    public async Task SetPromptResolvedForTodayAsync(CancellationToken cancellationToken = default)
+    public Task SetPromptResolvedForTodayAsync(CancellationToken cancellationToken = default)
     {
         var ymd = DailySchedule.LocalToday(_clock, _timeZoneService).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        await JsInvokeSafe.InvokeVoidAsync(_js, "habitinatorSetDailyRetroResolved", GetKey(), ymd);
+        return JsInvokeSafe.InvokeVoidAsync(_js, "habitinatorSetDailyRetroResolved", GetKey(), ymd);
     }
 }

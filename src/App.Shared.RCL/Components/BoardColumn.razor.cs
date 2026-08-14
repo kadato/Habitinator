@@ -384,9 +384,9 @@ public partial class BoardColumn : IAsyncDisposable
     {
         return Section switch
         {
-            BoardSection.Habit => "Add a Habit",
-            BoardSection.Daily => "Add a Daily",
-            BoardSection.Todo => "Add a To Do",
+            BoardSection.Habit => "Add habit",
+            BoardSection.Daily => "Add daily",
+            BoardSection.Todo => "Add todo",
             _ => "Add"
         };
     }
@@ -533,41 +533,15 @@ public partial class BoardColumn : IAsyncDisposable
         {
             BoardSection.Habit => BoardData.UpdateHabitAsync(
                 item.Id,
-                new UpdateHabitArgs(
-                    item.Title,
-                    item.Notes,
-                    item.Tags,
-                    item.TrackPlus,
-                    item.TrackMinus,
-                    item.ResetPeriod,
-                    item.Counter,
-                    item.NegativeCounter,
-                    item.ChecklistJson,
-                    SortOrder: newSortOrder)),
+                UpdateHabitArgs.From(item) with { SortOrder = newSortOrder }),
 
             BoardSection.Daily => BoardData.UpdateDailyAsync(
                 item.Id,
-                new UpdateDailyArgs(
-                    item.Title,
-                    item.Notes,
-                    item.Tags,
-                    item.DailyStartDate,
-                    item.DailyRepeat,
-                    item.DailyRepeatInterval,
-                    item.ChecklistJson,
-                    item.Counter,
-                    SortOrder: newSortOrder)),
+                UpdateDailyArgs.From(item) with { SortOrder = newSortOrder }),
 
             BoardSection.Todo => BoardData.UpdateTodoAsync(
                 item.Id,
-                new UpdateTodoArgs(
-                    item.Title,
-                    item.Notes,
-                    item.Tags,
-                    item.ChecklistJson,
-                    item.TodoDueDate,
-                    SortOrder: newSortOrder,
-                    TodoRepeatIntervalDays: item.TodoRepeatIntervalDays)),
+                UpdateTodoArgs.From(item) with { SortOrder = newSortOrder }),
 
             _ => Task.CompletedTask
         };
@@ -598,42 +572,19 @@ public partial class BoardColumn : IAsyncDisposable
         {
             mutation = BoardData.UpdateDailyAsync(
                 item.Id,
-                new UpdateDailyArgs(
-                    item.Title,
-                    item.Notes,
-                    item.Tags,
-                    item.DailyStartDate,
-                    item.DailyRepeat,
-                    item.DailyRepeatInterval,
-                    json,
-                    item.Counter));
+                UpdateDailyArgs.From(item) with { ChecklistJson = json });
         }
         else if (Section == BoardSection.Todo)
         {
             mutation = BoardData.UpdateTodoAsync(
                 item.Id,
-                new UpdateTodoArgs(
-                    item.Title,
-                    item.Notes,
-                    item.Tags,
-                    json,
-                    item.TodoDueDate,
-                    TodoRepeatIntervalDays: item.TodoRepeatIntervalDays));
+                UpdateTodoArgs.From(item) with { ChecklistJson = json });
         }
         else
         {
             mutation = BoardData.UpdateHabitAsync(
                 item.Id,
-                new UpdateHabitArgs(
-                    item.Title,
-                    item.Notes,
-                    item.Tags,
-                    item.TrackPlus,
-                    item.TrackMinus,
-                    item.ResetPeriod,
-                    item.Counter,
-                    item.NegativeCounter,
-                    json));
+                UpdateHabitArgs.From(item) with { ChecklistJson = json });
         }
 
         await ApplyOverrideAsync(item.Id, optimistic, () => mutation);
@@ -688,9 +639,10 @@ public partial class BoardColumn : IAsyncDisposable
             return ToggleRecurringTodoAsync(item);
         }
 
-        var nextCompleted = !item.IsCompleted;
-        DateOnly? lastCompleted = nextCompleted ? BoardToday() : null;
-        var optimistic = item with { IsCompleted = nextCompleted, DailyLastCompletedOn = lastCompleted };
+        var today = BoardToday();
+        var (lastCompleted, isCompleted) = DailySchedule.ToggleForToday(
+            item.DailyLastCompletedOn, item.IsCompleted, today);
+        var optimistic = item with { IsCompleted = isCompleted, DailyLastCompletedOn = lastCompleted };
         return ApplyOverrideAsync(item.Id, optimistic, () => BoardData.ToggleItemAsync(Section, item.Id));
     }
 
@@ -708,14 +660,7 @@ public partial class BoardColumn : IAsyncDisposable
         {
             await BoardData.UpdateTodoAsync(
                 item.Id,
-                new UpdateTodoArgs(
-                    item.Title,
-                    item.Notes,
-                    item.Tags,
-                    item.ChecklistJson,
-                    nextDue,
-                    SortOrder: item.SortOrder,
-                    TodoRepeatIntervalDays: item.TodoRepeatIntervalDays));
+                UpdateTodoArgs.From(item) with { DueDate = nextDue });
             // The undo toast for the toggle is the notification for this action.
             await BoardData.ToggleItemAsync(BoardSection.Todo, item.Id);
         });

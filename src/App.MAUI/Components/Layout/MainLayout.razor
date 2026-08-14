@@ -1,19 +1,14 @@
-@inherits LayoutComponentBase
-@using global::App.Shared.RCL.Themes
-@using global::App.Shared.RCL.Models
+@inherits ThemeLayoutBase
 @using global::App.Shared.RCL.Services
-@implements IDisposable
+@using global::App.Shared.RCL.Themes
 @inject IApiSession Session
-@inject IUserPreferencesService PreferencesService
-@inject NavigationManager Nav
-@inject IJSRuntime JS
 @inject IAppUpdaterService UpdaterService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
 <PageTitle>@PageTitles.Brand</PageTitle>
 
-<MudThemeProvider @ref="_mudThemeProvider" Theme="@HabitinatorMudTheme.Default" @bind-IsDarkMode="@_isDarkMode"/>
+<MudThemeProvider @ref="MudThemeProviderRef" Theme="@HabitinatorMudTheme.Default" @bind-IsDarkMode="IsDarkMode"/>
 <MudPopoverProvider/>
 <MudDialogProvider BackdropClick="true"/>
 <MudSnackbarProvider/>
@@ -65,57 +60,12 @@
     private static bool IsPublicWhenLoggedOut(string path) => IsAuthPath(path) || IsHomePath(path);
 
     private bool _sessionInitialized;
-    private UserPreferences? _preferences;
-    private bool _isDarkMode = true;
-    private MudThemeProvider? _mudThemeProvider;
-    private DotNetObjectReference<MainLayout>? _layoutSelfRef;
 
     protected override void OnInitialized()
     {
+        base.OnInitialized();
         Session.Changed += OnSessionChanged;
-        PreferencesService.Changed += OnPreferencesChanged;
-        Nav.LocationChanged += OnLocationChanged;
-
-        _isDarkMode = GetSystemDarkMode();
-    }
-
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
-    {
-        _ = InvokeAsync(StateHasChanged);
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && _mudThemeProvider != null)
-        {
-            await ResolveThemeAsync();
-            await _mudThemeProvider.WatchSystemDarkModeAsync(OnSystemPreferenceChanged);
-        }
-
-        if (firstRender)
-        {
-            try
-            {
-                await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardVisibility.js");
-                _layoutSelfRef = DotNetObjectReference.Create(this);
-                await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.startGlobal", _layoutSelfRef);
-                await SyncKeyboardShortcutsEnabledAsync();
-            }
-            catch
-            {
-                // Ignore JS errors on prerendering or test hosts
-            }
-
-            _ = Task.Run(async () => await CheckForUpdatesOnStartupAsync());
-        }
-    }
-
-    public void Dispose()
-    {
-        Session.Changed -= OnSessionChanged;
-        PreferencesService.Changed -= OnPreferencesChanged;
-        Nav.LocationChanged -= OnLocationChanged;
-        _layoutSelfRef?.Dispose();
+        IsDarkMode = GetSystemDarkMode();
     }
 
     private void OnSessionChanged(object? sender, EventArgs e)
@@ -123,12 +73,34 @@
         _ = InvokeAsync(OnSessionChangedAsync);
     }
 
-    private void OnPreferencesChanged(object? sender, EventArgs e)
+    protected override async Task OnInitializedAsync()
     {
-        _ = InvokeAsync(async () =>
+        await Session.LoadAsync();
+        if (!Session.IsLoggedIn)
+        {
+            var path = new Uri(Nav.Uri).LocalPath.TrimEnd('/');
+            if (!IsPublicWhenLoggedOut(path))
+            {
+                Nav.NavigateTo("/auth/login", replace: true);
+            }
+        }
+        else
         {
             await LoadPreferencesAsync();
-        });
+        }
+
+        _sessionInitialized = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task OnAfterFirstRenderAsync()
+    {
+        if (!Session.IsLoggedIn || !UpdaterService.IsSupported)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () => await CheckForUpdatesOnStartupAsync());
     }
 
     private async Task OnSessionChangedAsync()
@@ -150,120 +122,34 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task LoadPreferencesAsync()
+    protected override async Task SyncNativeThemeAsync(bool isDarkMode)
     {
-        _preferences = await PreferencesService.GetAsync();
-        await ResolveThemeAsync();
-        await SyncKeyboardShortcutsEnabledAsync();
-    }
-
-    private async Task SyncKeyboardShortcutsEnabledAsync()
-    {
-        if (_preferences is null) return;
-        try
+        // Keep the native status bar icon appearance in sync with the Blazor theme.
+        // When following the system theme, let the OS decide.
+        // otherwise, lock to the user's explicit choice.
+        if (Microsoft.Maui.Controls.Application.Current is { } app)
         {
-            await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.setEnabled", _preferences.EnableKeyboardShortcuts);
-        }
-        catch
-        {
-            // Ignore if JS is not available
-        }
-    }
-
-    private async Task SyncHtmlThemeAsync()
-    {
-        try
-        {
-            await JS.InvokeVoidAsync("habitinatorSetTheme", _isDarkMode ? "dark" : "light");
-
-            // Keep the native status bar icon appearance in sync with the Blazor theme.
-            // When following the system theme, let the OS decide.
-            // otherwise, lock to the user's explicit choice.
-            if (Microsoft.Maui.Controls.Application.Current is { } app)
+            if (Preferences?.Theme == AppTheme.System)
             {
-                if (_preferences?.Theme == AppTheme.System)
-                {
-                    app.UserAppTheme = Microsoft.Maui.ApplicationModel.AppTheme.Unspecified;
-                }
-                else if (_isDarkMode)
-                {
-                    app.UserAppTheme = Microsoft.Maui.ApplicationModel.AppTheme.Dark;
-                }
-                else
-                {
-                    app.UserAppTheme = Microsoft.Maui.ApplicationModel.AppTheme.Light;
-                }
-
-                // Keep the safe area, behind the transparent status bar, in sync with the theme.
-                if (app.Windows.FirstOrDefault()?.Page is { } page)
-                {
-                    page.BackgroundColor = _isDarkMode
-                        ? new Microsoft.Maui.Graphics.Color(3, 7, 18)
-                        : new Microsoft.Maui.Graphics.Color(248, 250, 252);
-                }
+                app.UserAppTheme = Microsoft.Maui.ApplicationModel.AppTheme.Unspecified;
             }
-        }
-        catch
-        {
-            // Ignore if JS or MAUI is not available
-        }
-    }
-
-    private async Task ResolveThemeAsync()
-    {
-        if (_preferences is null) return;
-
-        if (_preferences.Theme == AppTheme.Light)
-        {
-            _isDarkMode = false;
-        }
-        else if (_preferences.Theme == AppTheme.Dark)
-        {
-            _isDarkMode = true;
-        }
-        else // System
-        {
-            if (_mudThemeProvider != null)
+            else if (IsDarkMode)
             {
-                _isDarkMode = await _mudThemeProvider.GetSystemDarkModeAsync();
+                app.UserAppTheme = Microsoft.Maui.ApplicationModel.AppTheme.Dark;
             }
             else
             {
-                _isDarkMode = GetSystemDarkMode();
+                app.UserAppTheme = Microsoft.Maui.ApplicationModel.AppTheme.Light;
             }
-        }
-        await SyncHtmlThemeAsync();
-        await InvokeAsync(StateHasChanged);
-    }
 
-    private async Task OnSystemPreferenceChanged(bool isDarkMode)
-    {
-        if (_preferences?.Theme == AppTheme.System)
-        {
-            _isDarkMode = isDarkMode;
-            await SyncHtmlThemeAsync();
-            StateHasChanged();
-        }
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        await Session.LoadAsync();
-        if (!Session.IsLoggedIn)
-        {
-            var path = new Uri(Nav.Uri).LocalPath.TrimEnd('/');
-            if (!IsPublicWhenLoggedOut(path))
+            // Keep the safe area, behind the transparent status bar, in sync with the theme.
+            if (app.Windows.FirstOrDefault()?.Page is { } page)
             {
-                Nav.NavigateTo("/auth/login", replace: true);
+                page.BackgroundColor = IsDarkMode
+                    ? new Microsoft.Maui.Graphics.Color(3, 7, 18)
+                    : new Microsoft.Maui.Graphics.Color(248, 250, 252);
             }
         }
-        else
-        {
-            await LoadPreferencesAsync();
-        }
-
-        _sessionInitialized = true;
-        await InvokeAsync(StateHasChanged);
     }
 
     private async Task CheckForUpdatesOnStartupAsync()
@@ -305,7 +191,7 @@
         }
     }
 
-    private static bool GetSystemDarkMode()
+    protected override bool GetSystemDarkMode()
     {
         try
         {
@@ -318,4 +204,13 @@
         }
     }
 
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            Session.Changed -= OnSessionChanged;
+        }
+
+        base.Dispose(disposing);
+    }
 }

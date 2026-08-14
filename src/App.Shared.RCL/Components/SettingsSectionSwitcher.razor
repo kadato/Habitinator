@@ -1,0 +1,46 @@
+<div class="settings-section-switcher" role="tablist" aria-label="Settings sections">
+    <button type="button"
+            role="tab"
+            @attributes="GetTabAria(0)"
+            class="@GetSwitcherClass(0)"
+            @onclick="() => OnTabSelected(0)">
+        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small"/>
+        <span class="settings-section-switcher__label">Profile</span>
+    </button>
+    <button type="button"
+            role="tab"
+            @attributes="GetTabAria(1)"
+            class="@GetSwitcherClass(1)"
+            @onclick="() => OnTabSelected(1)">
+        <MudIcon Icon="@Icons.Material.Filled.Notifications" Size="Size.Small"/>
+        <span class="settings-section-switcher__label">Alerts</span>
+    </button>
+    <button type="button"
+            role="tab"
+            @attributes="GetTabAria(2)"
+            class="@GetSwitcherClass(2)"
+            @onclick="() => OnTabSelected(2)">
+        <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small"/>
+        <span class="settings-section-switcher__label">Account</span>
+    </button>
+</div>
+
+@code {
+    [Parameter] public int ActiveIndex { get; set; }
+    [Parameter] public EventCallback<int> ActiveIndexChanged { get; set; }
+
+    private static readonly string ButtonBase = "settings-section-switcher__btn";
+    private static readonly string ButtonActive = "settings-section-switcher__btn settings-section-switcher__btn--active";
+
+    private string GetSwitcherClass(int index) => ActiveIndex == index ? ButtonActive : ButtonBase;
+
+    private Dictionary<string, object> GetTabAria(int index) => new()
+    {
+        { "aria-selected", ActiveIndex == index ? "true" : "false" }
+    };
+
+    private Task OnTabSelected(int index)
+    {
+        return ActiveIndexChanged.InvokeAsync(index);
+    }
+}

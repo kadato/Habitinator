@@ -1,19 +1,12 @@
 @using System.Security.Claims
 @using global::App.Shared.RCL
-@using global::App.Shared.RCL.Models
-@using global::App.Shared.RCL.Services
 @using global::App.Shared.RCL.Themes
 @using Microsoft.AspNetCore.WebUtilities
-@implements IDisposable
-@inherits LayoutComponentBase
-@inject IUserPreferencesService PreferencesService
-@inject IUserDateFormatService DateFormatService
-@inject IJSRuntime JS
-@inject NavigationManager Nav
+@inherits ThemeLayoutBase
 
 <PageTitle>@SeoDefaults.DefaultTitle</PageTitle>
 
-<MudThemeProvider @ref="_mudThemeProvider" Theme="@HabitinatorMudTheme.Default" @bind-IsDarkMode="@_isDarkMode"/>
+<MudThemeProvider @ref="MudThemeProviderRef" Theme="@HabitinatorMudTheme.Default" @bind-IsDarkMode="IsDarkMode"/>
 <MudPopoverProvider/>
 <MudDialogProvider BackdropClick="true"/>
 <MudSnackbarProvider/>
@@ -134,17 +127,9 @@
     [CascadingParameter(Name = "IsDarkMode")]
     private bool CascadedIsDarkMode { get; set; } = true;
 
-    private UserPreferences? _preferences;
-    private bool _isDarkMode = true;
-    private MudThemeProvider? _mudThemeProvider;
-    private DotNetObjectReference<MainLayout>? _layoutSelfRef;
-
     protected override async Task OnInitializedAsync()
     {
-        PreferencesService.Changed += OnPreferencesChanged;
-        Nav.LocationChanged += OnLocationChanged;
-
-        _isDarkMode = GetInitialDarkMode();
+        IsDarkMode = GetInitialDarkMode();
 
         // Parse query parameter to avoid flash of wrong theme during loading
         var uri = Nav.ToAbsoluteUri(Nav.Uri);
@@ -153,157 +138,36 @@
             var theme = themeValues.ToString();
             if (string.Equals(theme, "light", StringComparison.OrdinalIgnoreCase))
             {
-                _isDarkMode = false;
+                IsDarkMode = false;
             }
             else if (string.Equals(theme, "dark", StringComparison.OrdinalIgnoreCase))
             {
-                _isDarkMode = true;
+                IsDarkMode = true;
             }
         }
 
         await LoadPreferencesAsync();
     }
 
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    protected override async Task OnAfterFirstRenderAsync()
     {
-        _ = InvokeAsync(StateHasChanged);
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            // 1. Resolve theme first so the application renders in the correct theme before revealing it
-            try
-            {
-                if (_mudThemeProvider != null)
-                {
-                    await ResolveThemeAsync();
-                    await _mudThemeProvider.WatchSystemDarkModeAsync(OnSystemPreferenceChanged);
-                }
-            }
-            catch
-            {
-                // Ignore theme watcher failures
-            }
-
-            // 2. Initialize board visibility script and keyboard shortcuts
-            try
-            {
-                await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardVisibility.js");
-                _layoutSelfRef = DotNetObjectReference.Create(this);
-                await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.startGlobal", _layoutSelfRef);
-                await SyncKeyboardShortcutsEnabledAsync();
-            }
-            catch
-            {
-                // Ignore JS/shortcut initialization errors
-            }
-
-            // 3. Finally, remove the loading bar
-            try
-            {
-                await JS.InvokeVoidAsync("habitinatorRemoveLoadingBar");
-            }
-            catch
-            {
-                // Ignore early JS interop failures
-            }
-        }
-    }
-
-    public void Dispose()
-    {
-        PreferencesService.Changed -= OnPreferencesChanged;
-        Nav.LocationChanged -= OnLocationChanged;
-        _layoutSelfRef?.Dispose();
-    }
-
-    private void OnPreferencesChanged(object? sender, EventArgs e)
-    {
-        _ = InvokeAsync(async () =>
-        {
-            await LoadPreferencesAsync();
-        });
-    }
-
-    private async Task LoadPreferencesAsync()
-    {
-        _preferences = await PreferencesService.GetAsync();
-        DateFormatService.ApplyFromPreferences(_preferences);
-        await ResolveThemeAsync();
-        await SyncKeyboardShortcutsEnabledAsync();
-    }
-
-    private async Task SyncKeyboardShortcutsEnabledAsync()
-    {
-        if (_preferences is null) return;
+        // 3. Finally, remove the loading bar
         try
         {
-            await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.setEnabled", _preferences.EnableKeyboardShortcuts);
+            await JS.InvokeVoidAsync("habitinatorRemoveLoadingBar");
         }
         catch
         {
-            // Ignore if JS is not available, e.g. during prerendering
+            // Ignore early JS interop failures
         }
     }
-
-    private async Task SyncHtmlThemeAsync()
-    {
-        try
-        {
-            await JS.InvokeVoidAsync("habitinatorSetTheme", _isDarkMode ? "dark" : "light");
-        }
-        catch
-        {
-            // Ignore if JS is not available, e.g. prerendering
-        }
-    }
-
-    private async Task ResolveThemeAsync()
-    {
-        if (_preferences is null) return;
-
-        if (_preferences.Theme == AppTheme.Light)
-        {
-            _isDarkMode = false;
-        }
-        else if (_preferences.Theme == AppTheme.Dark)
-        {
-            _isDarkMode = true;
-        }
-        else // System
-        {
-            if (_mudThemeProvider != null)
-            {
-                _isDarkMode = await _mudThemeProvider.GetSystemDarkModeAsync();
-            }
-            else
-            {
-                _isDarkMode = GetSystemDarkMode();
-            }
-        }
-        await SyncHtmlThemeAsync();
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task OnSystemPreferenceChanged(bool isDarkMode)
-    {
-        if (_preferences?.Theme == AppTheme.System)
-        {
-            _isDarkMode = isDarkMode;
-            await SyncHtmlThemeAsync();
-            StateHasChanged();
-        }
-    }
-
 
     private string GetFullIdentity(AuthenticationState auth)
     {
         var email = auth.User.FindFirst(ClaimTypes.Email)?.Value
                     ?? auth.User.Identity?.Name
                     ?? "User";
-        var displayName = _preferences?.DisplayName;
+        var displayName = Preferences?.DisplayName;
         if (string.IsNullOrWhiteSpace(displayName))
         {
             return email;
@@ -314,7 +178,7 @@
 
     private string GetDisplayName(AuthenticationState auth)
     {
-        var displayName = _preferences?.DisplayName;
+        var displayName = Preferences?.DisplayName;
         if (!string.IsNullOrWhiteSpace(displayName))
         {
             return displayName;
@@ -345,7 +209,7 @@
         return GetSystemDarkMode();
     }
 
-    private bool GetSystemDarkMode()
+    protected override bool GetSystemDarkMode()
     {
         if (JS is Microsoft.JSInterop.IJSInProcessRuntime jsInProcess)
         {

@@ -1,4 +1,5 @@
 @page "/settings"
+@inject NavigationManager Nav
 
 <PageMeta Title="@PageTitles.Page("Settings")"
           Description="Notification preferences, account, and app settings."
@@ -48,7 +49,7 @@
                 }
                 else
                 {
-                    <AccountActionsSection ShowTitle="false"/>
+                    <AccountActionsSection ShowTitle="false" OnAccountDeleted="HandleAccountDeleted"/>
                 }
             </div>
         </div>
@@ -65,4 +66,10 @@
     {
         { "aria-selected", _settingsIndex == index ? "true" : "false" }
     };
+
+    private Task HandleAccountDeleted()
+    {
+        Nav.NavigateTo("/?accountDeleted=1", forceLoad: true);
+        return Task.CompletedTask;
+    }
 }

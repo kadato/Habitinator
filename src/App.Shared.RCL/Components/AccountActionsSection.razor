@@ -5,6 +5,7 @@
 @inject IUserDataExportService Export
 @inject IDialogService DialogService
 @inject IJSRuntime JS
+@inject NavigationManager Nav
 
 <MudStack Spacing="3">
     @if (ShowTitle)
@@ -58,6 +59,10 @@
 @code {
     [Parameter]
     public bool ShowTitle { get; set; } = true;
+
+    /// <summary>Raised after the account has been deleted so the host can clear local session state.</summary>
+    [Parameter]
+    public EventCallback OnAccountDeleted { get; set; }
 
     private string _currentPassword = string.Empty;
     private string _newPassword = string.Empty;
@@ -153,10 +158,31 @@
     private async Task DeleteAccountAsync()
     {
         if (_deleting) return;
+
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Delete your account?",
+            "This permanently deletes your account and all of your data. This cannot be undone.",
+            "Delete account",
+            null,
+            "Cancel");
+        if (confirmed != true)
+        {
+            return;
+        }
+
         _deleting = true;
         try
         {
             await AccountActions.DeleteAccountAsync();
+            await Notifier.NotifyAsync("Your account has been deleted.", Severity.Success);
+            if (OnAccountDeleted.HasDelegate)
+            {
+                await OnAccountDeleted.InvokeAsync();
+            }
+            else
+            {
+                Nav.NavigateTo("/?accountDeleted=1", forceLoad: true);
+            }
         }
         catch (Exception ex)
         {

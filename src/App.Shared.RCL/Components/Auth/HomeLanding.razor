@@ -1,7 +1,13 @@
+@inject NavigationManager Nav
+
 <AuthPageShell Title="Welcome to Habitinator"
                Subtitle="Track habits, dailies, and todos on one board."
                Class="auth-landing">
     <ChildContent>
+        @if (_showDeletedMessage)
+        {
+            <div class="alert alert-info" role="alert">Your account has been deleted. Thanks for using Habitinator.</div>
+        }
         <p class="auth-card__section-title">Get started</p>
         <div class="auth-landing__actions">
             <MudButton Variant="Variant.Filled"
@@ -65,6 +71,16 @@
     [Parameter] public EventCallback OnContinueAsDemoGuest { get; set; }
 
     private bool _guestBusy;
+    private bool _showDeletedMessage;
+
+    protected override void OnInitialized()
+    {
+        var query = Nav.ToAbsoluteUri(Nav.Uri).Query;
+        _showDeletedMessage = query
+            .TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Contains("accountDeleted=1", StringComparer.Ordinal);
+    }
 
     private async Task ContinueAsGuestAsync()
     {

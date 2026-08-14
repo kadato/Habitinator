@@ -31,7 +31,7 @@ internal static class AuthApiRoutes
         endpoints.MapPost("/api/auth/guest-jwt", GuestJwtLoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapPost("/api/auth/guest-login", GuestLoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapPost("/api/auth/cookie-login", CookieLoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
-        endpoints.MapPost("/api/auth/cookie-logout", CookieLogoutAsync).RequireAuthorization().DisableAntiforgery();
+        endpoints.MapPost("/api/auth/cookie-logout", CookieLogoutAsync).DisableAntiforgery();
         endpoints.MapGet("/api/auth/status", GetStatus);
     }
 

@@ -81,6 +81,7 @@
 
     <ItemGroup>
         <EmbeddedResource Include="appsettings.json" />
+        <EmbeddedResource Include="appsettings.Android.json" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'" />
         <EmbeddedResource Include="appsettings.Release.json" Condition="Exists('appsettings.Release.json')" />
     </ItemGroup>
 

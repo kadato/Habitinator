@@ -3,21 +3,23 @@ using System.Text.Json.Serialization;
 
 using App.Shared.RCL.Services;
 
+using Microsoft.Extensions.Options;
+
 #if ANDROID
 using Android.Content;
 #endif
 
-
 namespace App.MAUI.Services;
 
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1075:URIs should not be hardcoded", Justification = "Update URL is static and pointing to public GitHub Releases API")]
 #pragma warning disable CA1001 // DI singleton: owns a long-lived HttpClient and is never disposed by the container.
 public sealed partial class MauiAppUpdaterService : IAppUpdaterService
 {
     private readonly HttpClient _httpClient;
+    private readonly Uri _releasesApiUrl;
 
-    public MauiAppUpdaterService()
+    public MauiAppUpdaterService(IOptions<MauiAppUpdaterOptions> options)
     {
+        _releasesApiUrl = options.Value.ReleasesApiUrl;
         _httpClient = new HttpClient();
         _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Habitinator", "1.0"));
     }
@@ -53,8 +55,7 @@ public sealed partial class MauiAppUpdaterService : IAppUpdaterService
 
         try
         {
-            var release = await _httpClient.GetFromJsonAsync<GitHubRelease>(
-                "https://api.github.com/repos/tothKarolyDavid/Habitinator/releases/latest");
+            var release = await _httpClient.GetFromJsonAsync<GitHubRelease>(_releasesApiUrl);
 
             if (release == null || string.IsNullOrWhiteSpace(release.TagName))
             {

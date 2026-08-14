@@ -8,51 +8,20 @@ public static class MauiAppSettings
     internal const string EnvApiBaseUrl = "HABITINATOR_API_BASE_URL";
 
     /// <summary>
-    ///     Resolves the App.Web API origin with no trailing slash. The mobile app does not host the API:
-    ///     run <c>App.Web</c> or the Aspire AppHost, which sets <see cref="EnvApiBaseUrl" />. Override via env or appsettings.
+    ///     Resolves the App.Web API origin with no trailing slash. The mobile app does not host the API.
+    ///     An optional override comes from the <see cref="EnvApiBaseUrl" /> environment variable.
+    ///     Otherwise the value comes from <c>Api:BaseUrl</c> in appsettings, with platform defaults in
+    ///     <c>appsettings.json</c> and <c>appsettings.Android.json</c>.
     /// </summary>
     public static string ResolveApiBaseUrl(IConfiguration configuration)
     {
-        string url;
-        var env = Environment.GetEnvironmentVariable(EnvApiBaseUrl);
-        if (!string.IsNullOrWhiteSpace(env))
+        var fromEnv = Environment.GetEnvironmentVariable(EnvApiBaseUrl);
+        if (!string.IsNullOrWhiteSpace(fromEnv))
         {
-            url = env.Trim().TrimEnd('/');
-        }
-        else
-        {
-            // Optional override. Omit in appsettings so Android uses 10.0.2.2 and Windows uses 127.0.0.1.
-            var fromConfig = configuration["Api:BaseUrl"];
-            if (!string.IsNullOrWhiteSpace(fromConfig))
-            {
-                url = fromConfig.Trim().TrimEnd('/');
-            }
-            else
-            {
-                url = DefaultApiBaseUrlNoSlash.OriginalString;
-            }
+            return fromEnv.Trim().TrimEnd('/');
         }
 
-#if ANDROID
-        var androidHost = "10.0" + ".2.2";
-        if (url.Contains("0.0.0.0") || url.Contains("127.0.0.1") || url.Contains("localhost"))
-        {
-            url = url.Replace("0.0.0.0", androidHost).Replace("127.0.0.1", androidHost).Replace("localhost", androidHost);
-        }
-#else
-        if (url.Contains("0.0.0.0"))
-        {
-            url = url.Replace("0.0.0.0", "127.0.0.1");
-        }
-#endif
-
-        return url;
+        return configuration["Api:BaseUrl"]?.Trim().TrimEnd('/')
+            ?? throw new InvalidOperationException("Api:BaseUrl is not configured in appsettings.");
     }
-
-    /// <summary>Fallback when env and appsettings do not set <c>Api:BaseUrl</c>.</summary>
-#if ANDROID
-    public static Uri DefaultApiBaseUrlNoSlash => new("http" + "://10.0.2.2:5033");
-#else
-    public static Uri DefaultApiBaseUrlNoSlash => new("http" + "://127.0.0.1:5033");
-#endif
 }

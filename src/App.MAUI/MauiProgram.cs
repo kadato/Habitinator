@@ -94,22 +94,25 @@ public static class MauiProgram
 #else
         builder.Services.AddSingleton<IAppWindowProgressService, Services.MauiAppWindowProgressService>();
 #endif
+        builder.Services.AddOptions<MauiAppUpdaterOptions>()
+            .BindConfiguration(MauiAppUpdaterOptions.SectionName);
         builder.Services.AddSingleton<IAppUpdaterService, Services.MauiAppUpdaterService>();
         builder.Services.AddScoped<ITimerSessionLogService, TimerSessionLogService>();
         builder.Services.AddSingleton<IUserActivityLogService, RemoteUserActivityLogService>();
         builder.Services.AddScoped<IUndoService, UndoService>();
         builder.Services.AddScoped<IBoardDataService>(sp =>
         {
+            // Board mutations are replayed to the server via the outbox, and the server records
+            // activity events itself. No logging decorator here: it would write a second event per
+            // action, skewing the activity feed and the daily streak on the same table.
             var inner = sp.GetRequiredService<LocalFirstBoardDataService>();
-            var log = sp.GetRequiredService<IUserActivityLogService>();
-            ActivityLoggingBoardDataService loggingService = new(inner, log,
-                sp.GetRequiredService<IUserTimeZoneService>());
             var undoService = sp.GetRequiredService<IUndoService>();
-            return new UndoableBoardDataService(loggingService, undoService);
+            return new UndoableBoardDataService(inner, undoService);
         });
         builder.Services.AddSingleton<IActivityStatisticsReader, RemoteActivityStatisticsReader>();
         builder.Services.AddSingleton<INotificationSettingsService, RemoteNotificationSettingsService>();
-        builder.Services.AddSingleton<IUserPreferencesService, MauiApiUserPreferencesService>();
+        builder.Services.AddSingleton<IUserPreferencesLocalStore, MauiUserPreferencesLocalStore>();
+        builder.Services.AddSingleton<IUserPreferencesService, LocalFirstUserPreferencesService>();
         builder.Services.AddSingleton<MauiDailyReminderService>();
         // Scoped: UserNotifier feeds ISnackbar, which uses NavigationManager. NavigationManager is only valid inside the Blazor WebView scope, not root or singleton.
         builder.Services.AddScoped<IUserNotifier, UserNotifier>();
@@ -117,7 +120,9 @@ public static class MauiProgram
         builder.Services.AddScoped<IDailyRetroPromptStore, JsDailyRetroPromptStore>();
         builder.Services.AddScoped<IInitialBoardLoadGate>(sp =>
             new InitialBoardLoadGate(sp.GetRequiredService<MauiInitialBoardLoadSignal>()));
-        builder.Services.AddScoped<IUserTimeZoneService, UserTimeZoneService>();
+        // Singleton so the singleton LocalFirstBoardDataService and the Blazor components share one
+        // instance. A scoped instance captured by the singleton would never be initialized or overridden.
+        builder.Services.AddSingleton<IUserTimeZoneService, UserTimeZoneService>();
         builder.Services.AddScoped<INotificationSettingsRules, NotificationSettingsRules>();
         builder.Services.AddSingleton<IUserDateFormatService, UserDateFormatService>();
         builder.Services.AddSingleton<IAccountActionsService, RemoteAccountActionsService>();
@@ -137,6 +142,8 @@ public static class MauiProgram
     {
         var assembly = typeof(MauiProgram).Assembly;
         AddEmbeddedJsonIfPresent(assembly, builder, "appsettings.json");
+        // Platform-specific overrides. Only the Android file is embedded in the Android build.
+        AddEmbeddedJsonIfPresent(assembly, builder, "appsettings.Android.json");
         AddEmbeddedJsonIfPresent(assembly, builder, "appsettings.Release.json");
     }
 

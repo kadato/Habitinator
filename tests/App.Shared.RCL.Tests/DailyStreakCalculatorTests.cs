@@ -19,7 +19,7 @@ public sealed class DailyStreakCalculatorTests
             (At(d2, 10), ActivityEventType.DailyComplete),
             (At(today, 10), ActivityEventType.DailyComplete)
         };
-        var grouped = DailyStreakCalculator.GroupDailyEventsByUtcDay(events);
+        var grouped = DailyStreakCalculator.GroupDailyEventsByLocalDay(events);
         var n = DailyStreakCalculator.ComputeStreak(
             d1,
             DailyRepeatType.Daily,
@@ -41,7 +41,7 @@ public sealed class DailyStreakCalculatorTests
             (At(y2, 10), ActivityEventType.DailyComplete),
             (At(y, 10), ActivityEventType.DailyComplete)
         };
-        var grouped = DailyStreakCalculator.GroupDailyEventsByUtcDay(events);
+        var grouped = DailyStreakCalculator.GroupDailyEventsByLocalDay(events);
         var n = DailyStreakCalculator.ComputeStreak(
             y2,
             DailyRepeatType.Daily,
@@ -63,7 +63,7 @@ public sealed class DailyStreakCalculatorTests
             (At(y2, 12), ActivityEventType.DailyComplete),
             (At(y, 12), ActivityEventType.DailyComplete)
         };
-        var grouped = DailyStreakCalculator.GroupDailyEventsByUtcDay(events);
+        var grouped = DailyStreakCalculator.GroupDailyEventsByLocalDay(events);
         var n = DailyStreakCalculator.ComputeStreak(
             null,
             DailyRepeatType.Daily,
@@ -85,7 +85,7 @@ public sealed class DailyStreakCalculatorTests
             (At(y2, 12), ActivityEventType.DailyComplete),
             (At(y, 12), ActivityEventType.DailyComplete)
         };
-        var grouped = DailyStreakCalculator.GroupDailyEventsByUtcDay(events);
+        var grouped = DailyStreakCalculator.GroupDailyEventsByLocalDay(events);
         var n = DailyStreakCalculator.ComputeStreak(
             today,
             DailyRepeatType.Daily,
@@ -107,7 +107,7 @@ public sealed class DailyStreakCalculatorTests
         {
             (At(mon, 10), ActivityEventType.DailyComplete)
         };
-        var grouped = DailyStreakCalculator.GroupDailyEventsByUtcDay(events);
+        var grouped = DailyStreakCalculator.GroupDailyEventsByLocalDay(events);
         var n = DailyStreakCalculator.ComputeStreak(
             start,
             DailyRepeatType.Weekly,
@@ -127,7 +127,7 @@ public sealed class DailyStreakCalculatorTests
             (At(d, 9), ActivityEventType.DailyComplete),
             (At(d, 10), ActivityEventType.DailyUncomplete)
         };
-        var grouped = DailyStreakCalculator.GroupDailyEventsByUtcDay(events);
+        var grouped = DailyStreakCalculator.GroupDailyEventsByLocalDay(events);
         var n = DailyStreakCalculator.ComputeStreak(
             d,
             DailyRepeatType.Daily,
@@ -145,7 +145,7 @@ public sealed class DailyStreakCalculatorTests
         // daily must count every consecutive day. Previously only every other day was counted.
         var today = new DateOnly(2026, 4, 27);
         var completed = Enumerable.Range(0, 10).Select(i => today.AddDays(-1 - i)).ToArray();
-        var grouped = DailyStreakCalculator.GroupDailyEventsByUtcDay(
+        var grouped = DailyStreakCalculator.GroupDailyEventsByLocalDay(
             completed.Select(d => (At(d, 10), ActivityEventType.DailyComplete)));
         var n = DailyStreakCalculator.ComputeStreak(
             null, DailyRepeatType.Daily, 2, today, grouped, null);
@@ -159,7 +159,7 @@ public sealed class DailyStreakCalculatorTests
         // today, today-3, and so on, instead of a misaligned synthetic anchor that yielded 0.
         var today = new DateOnly(2026, 4, 27);
         var completed = new[] { today, today.AddDays(-3), today.AddDays(-6) };
-        var grouped = DailyStreakCalculator.GroupDailyEventsByUtcDay(
+        var grouped = DailyStreakCalculator.GroupDailyEventsByLocalDay(
             completed.Select(d => (At(d, 10), ActivityEventType.DailyComplete)));
         var n = DailyStreakCalculator.ComputeStreak(
             today, DailyRepeatType.Daily, 3, today, grouped, null);
@@ -171,7 +171,7 @@ public sealed class DailyStreakCalculatorTests
     {
         var today = new DateOnly(2026, 4, 27);
         var completed = new[] { today, today.AddDays(-2) };
-        var grouped = DailyStreakCalculator.GroupDailyEventsByUtcDay(
+        var grouped = DailyStreakCalculator.GroupDailyEventsByLocalDay(
             completed.Select(d => (At(d, 10), ActivityEventType.DailyComplete)));
         var n = DailyStreakCalculator.ComputeStreak(
             today, DailyRepeatType.Daily, 2, today, grouped, null);
@@ -183,7 +183,7 @@ public sealed class DailyStreakCalculatorTests
     {
         var today = new DateOnly(2026, 4, 27);
         var completed = new[] { today.AddDays(-2), today.AddDays(-4) };
-        var grouped = DailyStreakCalculator.GroupDailyEventsByUtcDay(
+        var grouped = DailyStreakCalculator.GroupDailyEventsByLocalDay(
             completed.Select(d => (At(d, 10), ActivityEventType.DailyComplete)));
         var n = DailyStreakCalculator.ComputeStreak(
             today, DailyRepeatType.Daily, 2, today, grouped, null);
@@ -195,7 +195,7 @@ public sealed class DailyStreakCalculatorTests
     {
         var today = new DateOnly(2026, 4, 27); // Monday
         var completed = new[] { today, today.AddDays(-7) };
-        var grouped = DailyStreakCalculator.GroupDailyEventsByUtcDay(
+        var grouped = DailyStreakCalculator.GroupDailyEventsByLocalDay(
             completed.Select(d => (At(d, 10), ActivityEventType.DailyComplete)));
         var n = DailyStreakCalculator.ComputeStreak(
             today, DailyRepeatType.Weekly, 1, today, grouped, null);
@@ -211,7 +211,7 @@ public sealed class DailyStreakCalculatorTests
             (At(yesterday, 20), ActivityEventType.DailyComplete),
             (DailyStreakCalculator.BackdatedDailyEventOccurredAt(yesterday), ActivityEventType.DailyComplete)
         };
-        var grouped = DailyStreakCalculator.GroupDailyEventsByUtcDay(events);
+        var grouped = DailyStreakCalculator.GroupDailyEventsByLocalDay(events);
         var n = DailyStreakCalculator.ComputeStreak(
             yesterday, DailyRepeatType.Daily, 1, new DateOnly(2026, 4, 27), grouped, yesterday);
         n.Should().Be(1);

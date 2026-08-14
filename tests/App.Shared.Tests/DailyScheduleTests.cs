@@ -1,8 +1,26 @@
 using App.Shared.RCL.Models;
+using App.Shared.RCL.Services;
 
 using FluentAssertions;
 
 namespace App.Shared.Tests;
+
+/// <summary>Timezone service with a fixed offset from UTC for day-boundary tests.</summary>
+public sealed class FixedOffsetTimeZoneService(TimeSpan offset) : IUserTimeZoneService
+{
+    public string? TimeZoneId => $"UTC{offset.TotalHours:+#;-#;0}";
+    public bool IsDetected => true;
+    public void SetOverride(string? timeZoneId)
+    {
+    }
+    public DateOnly LocalToday => throw new NotSupportedException();
+    public Task InitializeAsync() => Task.CompletedTask;
+    public DateTimeOffset ConvertToLocal(DateTimeOffset utcTime) => utcTime.ToOffset(offset);
+    public DateTimeOffset ConvertToUtc(DateTimeOffset localTime) => localTime.ToOffset(TimeSpan.Zero);
+    public TimeSpan ConvertLocalTimeToUtc(TimeSpan localTime) => localTime;
+    public TimeSpan ConvertUtcTimeToLocal(TimeSpan utcTime) => utcTime;
+    public string GetTimeZoneAbbreviation() => "UTC";
+}
 
 public class DailyScheduleTests
 {
@@ -105,6 +123,77 @@ public class DailyScheduleTests
         var item = NewDaily("Backdated start", Utc(today), start: new DateOnly(2026, 4, 1));
         DailySchedule.GetYesterdayUncompletedDailies([item], today)
             .Select(x => x.Id).Should().Equal(item.Id);
+    }
+
+    [Fact]
+    public void LocalDay_WithoutTimeZone_UsesUtcDay()
+    {
+        var instant = new DateTimeOffset(2026, 4, 27, 1, 0, 0, TimeSpan.Zero);
+        DailySchedule.LocalDay(instant).Should().Be(new DateOnly(2026, 4, 27));
+    }
+
+    [Fact]
+    public void LocalDay_EastOfUtc_RollsEarlierUtcInstantToLocalDay()
+    {
+        var tz = new FixedOffsetTimeZoneService(TimeSpan.FromHours(2));
+        var instant = new DateTimeOffset(2026, 4, 26, 22, 30, 0, TimeSpan.Zero);
+        DailySchedule.LocalDay(instant, tz).Should().Be(new DateOnly(2026, 4, 27));
+    }
+
+    [Fact]
+    public void LocalDay_WestOfUtc_RollsLaterUtcInstantBackToLocalDay()
+    {
+        var tz = new FixedOffsetTimeZoneService(TimeSpan.FromHours(-8));
+        var instant = new DateTimeOffset(2026, 4, 27, 7, 0, 0, TimeSpan.Zero);
+        DailySchedule.LocalDay(instant, tz).Should().Be(new DateOnly(2026, 4, 26));
+    }
+
+    [Fact]
+    public void LocalDay_AppliesDayStartRollback_MatchingLocalToday()
+    {
+        var dayStart = TimeSpan.FromHours(5);
+        var instant = new DateTimeOffset(2026, 4, 27, 0, 30, 0, TimeSpan.Zero);
+        DailySchedule.LocalDay(instant, dayStartLocalTime: dayStart).Should().Be(new DateOnly(2026, 4, 26));
+        DailySchedule.LocalDay(instant).Should().Be(new DateOnly(2026, 4, 27));
+    }
+
+    [Fact]
+    public void IsCompletedForToday_HonorsDateAndLegacyState()
+    {
+        var today = new DateOnly(2026, 4, 27);
+        DailySchedule.IsCompletedForToday(today, true, today).Should().BeTrue();
+        DailySchedule.IsCompletedForToday(today.AddDays(-1), true, today).Should().BeFalse();
+        DailySchedule.IsCompletedForToday(null, true, today).Should().BeTrue();
+        DailySchedule.IsCompletedForToday(null, false, today).Should().BeFalse();
+    }
+
+    [Fact]
+    public void ToggleForToday_ChecksTodayAndUnchecksYesterday()
+    {
+        var today = new DateOnly(2026, 4, 27);
+
+        DailySchedule.ToggleForToday(null, false, today).Should().Be((today, true));
+        DailySchedule.ToggleForToday(today, true, today).Should().Be((null, false));
+        DailySchedule.ToggleForToday(null, true, today).Should().Be((null, false));
+        DailySchedule.ToggleForToday(today.AddDays(-1), true, today).Should().Be((today, true));
+    }
+
+    [Fact]
+    public void CanCompleteForDate_MatchesServerGuards()
+    {
+        var start = new DateOnly(2026, 4, 1);
+        var today = new DateOnly(2026, 4, 27);
+        var yesterday = today.AddDays(-1);
+
+        DailySchedule.CanCompleteForDate(start, DailyRepeatType.Daily, 1, null, yesterday, today).Should().BeTrue();
+        // Not a past date.
+        DailySchedule.CanCompleteForDate(start, DailyRepeatType.Daily, 1, null, today, today).Should().BeFalse();
+        // Already checked today.
+        DailySchedule.CanCompleteForDate(start, DailyRepeatType.Daily, 1, today, yesterday, today).Should().BeFalse();
+        // Already completed for the target day.
+        DailySchedule.CanCompleteForDate(start, DailyRepeatType.Daily, 1, yesterday, yesterday, today).Should().BeFalse();
+        // Day not scheduled for the item.
+        DailySchedule.CanCompleteForDate(start, DailyRepeatType.Weekly, 1, null, today.AddDays(-2), today).Should().BeFalse();
     }
 
     private static DateTimeOffset Utc(DateOnly day) =>

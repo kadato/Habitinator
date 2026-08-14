@@ -48,7 +48,7 @@ public class DailyStreakCalculatorTests
     }
 
     [Fact]
-    public void GroupDailyEventsByUtcDay_ShouldFilterAndGroupChronologically()
+    public void GroupDailyEventsByLocalDay_ShouldFilterAndGroupChronologically()
     {
         var t1 = new DateTimeOffset(2024, 5, 20, 8, 0, 0, TimeSpan.Zero);
         var t2 = new DateTimeOffset(2024, 5, 20, 12, 0, 0, TimeSpan.Zero);
@@ -63,7 +63,7 @@ public class DailyStreakCalculatorTests
             (t3, ActivityEventType.DailyComplete)
         };
 
-        var grouped = DailyStreakCalculator.GroupDailyEventsByUtcDay(events);
+        var grouped = DailyStreakCalculator.GroupDailyEventsByLocalDay(events);
 
         grouped.Should().HaveCount(2);
 
@@ -187,5 +187,125 @@ public class DailyStreakCalculatorTests
         // The days are the 16th, 14th, 12th, and 10th, 4 scheduled days completed
         var streak = DailyStreakCalculator.ComputeStreak(start, DailyRepeatType.Daily, 2, today, events, null);
         streak.Should().Be(4);
+    }
+
+    [Fact]
+    public void GroupDailyEventsByLocalDay_EastOfUtc_AssignsMidnightCrossingToLocalDay()
+    {
+        var tz = new FixedOffsetTimeZoneService(TimeSpan.FromHours(2));
+        // Local 00:30 on the 15th is UTC 22:30 on the 14th.
+        var events = new[]
+        {
+            (new DateTimeOffset(2026, 4, 14, 22, 30, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)
+        };
+
+        var local = DailyStreakCalculator.GroupDailyEventsByLocalDay(events, tz);
+        local.Keys.Should().Equal(new DateOnly(2026, 4, 15));
+
+        // Without a timezone the events fall on their UTC day, which masks the missed day.
+        var utcFallback = DailyStreakCalculator.GroupDailyEventsByLocalDay(events);
+        utcFallback.Keys.Should().Equal(new DateOnly(2026, 4, 14));
+    }
+
+    [Fact]
+    public void GroupDailyEventsByLocalDay_WestOfUtc_AssignsLateEveningToLocalDay()
+    {
+        var tz = new FixedOffsetTimeZoneService(TimeSpan.FromHours(-8));
+        // Local 23:00 on the 14th is UTC 07:00 on the 15th.
+        var events = new[]
+        {
+            (new DateTimeOffset(2026, 4, 15, 7, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)
+        };
+
+        var local = DailyStreakCalculator.GroupDailyEventsByLocalDay(events, tz);
+        local.Keys.Should().Equal(new DateOnly(2026, 4, 14));
+    }
+
+    [Fact]
+    public void GroupDailyEventsByLocalDay_AppliesDayStartRollback()
+    {
+        var dayStart = TimeSpan.FromHours(5);
+        var events = new[]
+        {
+            (new DateTimeOffset(2026, 4, 15, 0, 30, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)
+        };
+
+        var local = DailyStreakCalculator.GroupDailyEventsByLocalDay(events, dayStartLocalTime: dayStart);
+        local.Keys.Should().Equal(new DateOnly(2026, 4, 14));
+    }
+
+    [Fact]
+    public void ComputeStreak_MissedDayMaskedByUtcGrouping_EastOfUtc_BreaksWithLocalGrouping()
+    {
+        var start = new DateOnly(2026, 4, 1);
+        var today = new DateOnly(2026, 4, 16); // local Thursday
+        var tz = new FixedOffsetTimeZoneService(TimeSpan.FromHours(2));
+
+        // Checked Tuesday the 14th at 23:00 local, missed Wednesday the 15th, checked Thursday the 16th at 00:30 local.
+        // The 00:30 check is UTC 22:30 on the 15th, so UTC grouping places it on the missed day.
+        var events = new[]
+        {
+            (new DateTimeOffset(2026, 4, 14, 21, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete),
+            (new DateTimeOffset(2026, 4, 15, 22, 30, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)
+        };
+        var lastCompleted = new DateOnly(2026, 4, 16);
+
+        // Grouping without a timezone falls back to UTC days, which places the 00:30 check on the
+        // missed day. The timezone-aware grouping keeps the streak broken.
+        var utcFallback = DailyStreakCalculator.GroupDailyEventsByLocalDay(events);
+        var localGrouped = DailyStreakCalculator.GroupDailyEventsByLocalDay(events, tz);
+
+        DailyStreakCalculator.ComputeStreak(start, DailyRepeatType.Daily, 1, today, utcFallback, lastCompleted)
+            .Should().Be(3, "UTC fallback grouping fills the missed day with the next check");
+        DailyStreakCalculator.ComputeStreak(start, DailyRepeatType.Daily, 1, today, localGrouped, lastCompleted)
+            .Should().Be(1, "local grouping keeps the streak broken");
+    }
+
+    [Fact]
+    public void ComputeStreak_MissedDayMaskedByUtcGrouping_WestOfUtc_BreaksWithLocalGrouping()
+    {
+        var start = new DateOnly(2026, 4, 1);
+        var today = new DateOnly(2026, 4, 16); // local Thursday
+        var tz = new FixedOffsetTimeZoneService(TimeSpan.FromHours(-8));
+
+        // Checked Tuesday the 14th at 23:00 local, missed Wednesday the 15th, checked Thursday the 16th at 23:00 local.
+        // The Tue 23:00 check is UTC 07:00 on the 15th, so UTC grouping places it on the missed day.
+        var events = new[]
+        {
+            (new DateTimeOffset(2026, 4, 15, 7, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete),
+            (new DateTimeOffset(2026, 4, 17, 7, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)
+        };
+        var lastCompleted = new DateOnly(2026, 4, 16);
+
+        // Grouping without a timezone falls back to UTC days, which places the Tue evening check on
+        // the missed day. The timezone-aware grouping keeps the streak broken.
+        var utcFallback = DailyStreakCalculator.GroupDailyEventsByLocalDay(events);
+        var localGrouped = DailyStreakCalculator.GroupDailyEventsByLocalDay(events, tz);
+
+        DailyStreakCalculator.ComputeStreak(start, DailyRepeatType.Daily, 1, today, utcFallback, lastCompleted)
+            .Should().Be(2, "UTC fallback grouping counts the missed day");
+        DailyStreakCalculator.ComputeStreak(start, DailyRepeatType.Daily, 1, today, localGrouped, lastCompleted)
+            .Should().Be(1, "local grouping keeps the streak broken");
+    }
+
+    [Fact]
+    public void ComputeStreak_BackdatedRetroMarker_LandsOnTargetDay_ForAnyTimezone()
+    {
+        var start = new DateOnly(2026, 4, 1);
+        var today = new DateOnly(2026, 4, 16);
+        var tz = new FixedOffsetTimeZoneService(TimeSpan.FromHours(2));
+
+        // Retro check-in for yesterday, logged at the fixed 15:00 UTC marker hour.
+        var marker = DailyStreakCalculator.BackdatedDailyEventOccurredAt(today.AddDays(-1));
+        var events = new[]
+        {
+            (marker, ActivityEventType.DailyComplete)
+        };
+
+        var localGrouped = DailyStreakCalculator.GroupDailyEventsByLocalDay(events, tz);
+        localGrouped.Keys.Should().Equal(today.AddDays(-1));
+
+        DailyStreakCalculator.ComputeStreak(start, DailyRepeatType.Daily, 1, today, localGrouped, today.AddDays(-1))
+            .Should().Be(1);
     }
 }

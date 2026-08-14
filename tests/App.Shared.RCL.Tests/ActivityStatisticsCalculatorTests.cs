@@ -217,11 +217,12 @@ public sealed class ActivityStatisticsCalculatorTests
         var view = ActivityStatisticsCalculator.BuildDailyContributions(
             [],
             dailies,
-            DailyGraphPeriods.ForCalendarYear(2026),
-            [],
-            rangeStart,
-            rangeEnd,
-            todayCutoff);
+            new ContributionsRangeContext(
+                DailyGraphPeriods.ForCalendarYear(2026),
+                [],
+                rangeStart,
+                rangeEnd,
+                todayCutoff));
 
         view.RangeStart.Should().Be(new DateOnly(2026, 5, 10));
         view.RangeEnd.Should().Be(todayCutoff);
@@ -244,11 +245,12 @@ public sealed class ActivityStatisticsCalculatorTests
         var view = ActivityStatisticsCalculator.BuildDailyContributions(
             [],
             [recent, old],
-            DailyGraphPeriods.Rolling370Days,
-            options,
-            new DateOnly(2025, 8, 8),
-            todayCutoff,
-            todayCutoff);
+            new ContributionsRangeContext(
+                DailyGraphPeriods.Rolling370Days,
+                options,
+                new DateOnly(2025, 8, 8),
+                todayCutoff,
+                todayCutoff));
 
         var recentGraph = view.Graphs.Single(g => g.BoardItemId == recent.Id);
         var oldGraph = view.Graphs.Single(g => g.BoardItemId == old.Id);
@@ -257,6 +259,60 @@ public sealed class ActivityStatisticsCalculatorTests
         oldGraph.AvailablePeriodKeys.Should().BeEquivalentTo("r370", "y2026", "y2025");
     }
 
+    [Fact]
+    public void BuildDashboard_boundary_event_counts_on_local_day_not_utc_day()
+    {
+        var tz = new FixedOffsetTimeZoneService(TimeSpan.FromHours(2));
+        // Local 00:30 on the 21st is UTC 22:30 on the 20th.
+        var rows = new[]
+        {
+            new UserActivityEventRecord(At(Day.AddDays(-1), 22), ActivityEventType.HabitPlus, HabitId, null, null)
+        };
+
+        var local = ActivityStatisticsCalculator.BuildDashboard(
+            rows, DailyGraphPeriods.Rolling370Days, Day, Day, Day, tz);
+        DayCount(local, Day).Should().Be(1);
+
+        var utc = ActivityStatisticsCalculator.BuildDashboard(
+            rows, DailyGraphPeriods.Rolling370Days, Day, Day, Day);
+        DayCount(utc, Day).Should().Be(0);
+    }
+
+    [Fact]
+    public void BuildDayDetail_nets_toggles_on_local_day_across_utc_midnight()
+    {
+        var tz = new FixedOffsetTimeZoneService(TimeSpan.FromHours(2));
+        // Both toggles happen on the same local day: 00:30 and 02:00 local on the 21st,
+        // which are UTC 20th 22:30 and UTC 21st 00:00.
+        var rows = new[]
+        {
+            Row(Day.AddDays(-1), 22, ActivityEventType.DailyComplete, DailyId),
+            Row(Day, 0, ActivityEventType.DailyUncomplete, DailyId)
+        };
+
+        var local = ActivityStatisticsCalculator.BuildDayDetail(Day, rows, Titles, tz);
+        local.Events.Should().BeEmpty();
+
+        var utc = ActivityStatisticsCalculator.BuildDayDetail(Day, rows, Titles);
+        utc.Events.Should().ContainSingle();
+    }
+
     private static DateTimeOffset At(DateOnly day, int hourUtc) =>
         new(day.Year, day.Month, day.Day, hourUtc, 0, 0, TimeSpan.Zero);
+
+    private sealed class FixedOffsetTimeZoneService(TimeSpan offset) : IUserTimeZoneService
+    {
+        public string? TimeZoneId => "UTC";
+        public bool IsDetected => true;
+        public void SetOverride(string? timeZoneId)
+        {
+        }
+        public DateOnly LocalToday => DateOnly.FromDateTime(DateTime.UtcNow);
+        public Task InitializeAsync() => Task.CompletedTask;
+        public DateTimeOffset ConvertToLocal(DateTimeOffset utcTime) => utcTime.ToOffset(offset);
+        public DateTimeOffset ConvertToUtc(DateTimeOffset localTime) => localTime.ToOffset(TimeSpan.Zero);
+        public TimeSpan ConvertLocalTimeToUtc(TimeSpan localTime) => localTime;
+        public TimeSpan ConvertUtcTimeToLocal(TimeSpan utcTime) => utcTime;
+        public string GetTimeZoneAbbreviation() => "UTC";
+    }
 }

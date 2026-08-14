@@ -2,6 +2,8 @@ using App.Web.Services;
 
 using FluentAssertions;
 
+using Microsoft.Extensions.Logging.Abstractions;
+
 using Npgsql;
 
 namespace App.Web.IntegrationTests;
@@ -76,6 +78,7 @@ public sealed class PostgresPollyRetryTests
 
                 await Task.Yield();
             },
+            NullLogger.Instance,
             CancellationToken.None);
 
         attempts.Should().Be(3);

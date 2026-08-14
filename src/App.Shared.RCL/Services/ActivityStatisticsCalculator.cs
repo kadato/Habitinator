@@ -2,6 +2,16 @@ using App.Shared.RCL.Models;
 
 namespace App.Shared.RCL.Services;
 
+/// <summary>Shared period-resolution parameters for the contributions views.</summary>
+public sealed record ContributionsRangeContext(
+    string PeriodKey,
+    IReadOnlyList<DailyGraphPeriodOption> Options,
+    DateOnly RangeStart,
+    DateOnly RangeEnd,
+    DateOnly TodayCutoff,
+    IUserTimeZoneService? TimeZone = null,
+    TimeSpan? DayStartLocalTime = null);
+
 /// <summary>Shared aggregation logic for activity statistics, used by the web DB and the MAUI local store.</summary>
 public static class ActivityStatisticsCalculator
 {
@@ -9,7 +19,9 @@ public static class ActivityStatisticsCalculator
 
     public static IReadOnlyList<DailyGraphPeriodOption> BuildPeriodOptions(
         DateOnly referenceToday,
-        IReadOnlyList<UserActivityEventRecord> allUserEvents)
+        IReadOnlyList<UserActivityEventRecord> allUserEvents,
+        IUserTimeZoneService? timeZone = null,
+        TimeSpan? dayStartLocalTime = null)
     {
         var maxYear = referenceToday.Year;
         UserActivityEventRecord? first = allUserEvents
@@ -17,7 +29,9 @@ public static class ActivityStatisticsCalculator
             .OrderBy(e => e.OccurredAtUtc)
             .FirstOrDefault();
 
-        var minYear = first is { } f ? f.OccurredAtUtc.UtcDateTime.Year : maxYear;
+        var minYear = first is { } f
+            ? DailySchedule.LocalDay(f.OccurredAtUtc, timeZone, dayStartLocalTime).Year
+            : maxYear;
         if (minYear > maxYear)
         {
             minYear = maxYear;
@@ -66,9 +80,11 @@ public static class ActivityStatisticsCalculator
         string periodKey,
         DateOnly start,
         DateOnly end,
-        DateOnly todayCutoff)
+        DateOnly todayCutoff,
+        IUserTimeZoneService? timeZone = null,
+        TimeSpan? dayStartLocalTime = null)
     {
-        var perDay = PopulatePerDayCounts(rows);
+        var perDay = PopulatePerDayCounts(rows, timeZone, dayStartLocalTime);
         var (maxDayCount, busiestDay) = FindBusiestDay(perDay);
 
         var totalEvents = rows.Count;
@@ -121,14 +137,18 @@ public static class ActivityStatisticsCalculator
     }
 
     private static Dictionary<DateOnly, (int count, int focusSec)> PopulatePerDayCounts(
-        IReadOnlyList<UserActivityEventRecord> rows)
+        IReadOnlyList<UserActivityEventRecord> rows,
+        IUserTimeZoneService? timeZone = null,
+        TimeSpan? dayStartLocalTime = null)
     {
         var perDay = new Dictionary<DateOnly, (int count, int focusSec)>();
-        var netDailyItemDay = BuildNetDailyItemDayMap(rows);
+        var netDailyItemDay = BuildNetDailyItemDayMap(rows, timeZone, dayStartLocalTime);
         var netTodoItemDay = BuildNetToggleItemDayMap(
             rows,
             ActivityEventType.TodoComplete,
-            ActivityEventType.TodoUncomplete);
+            ActivityEventType.TodoUncomplete,
+            timeZone,
+            dayStartLocalTime);
 
         foreach (var r in rows)
         {
@@ -139,7 +159,7 @@ public static class ActivityStatisticsCalculator
                 continue;
             }
 
-            var d = DateOnly.FromDateTime(r.OccurredAtUtc.UtcDateTime);
+            var d = DailySchedule.LocalDay(r.OccurredAtUtc, timeZone, dayStartLocalTime);
             if (!perDay.TryGetValue(d, out var acc))
             {
                 acc = (0, 0);
@@ -237,30 +257,26 @@ public static class ActivityStatisticsCalculator
     public static DailyContributionsViewDto BuildDailyContributions(
         IReadOnlyList<UserActivityEventRecord> eventRowsInRange,
         IReadOnlyList<DailyItemStatsDto> dailyItemRows,
-        string periodKey,
-        IReadOnlyList<DailyGraphPeriodOption> options,
-        DateOnly rangeStart,
-        DateOnly rangeEnd,
-        DateOnly todayCutoff)
+        ContributionsRangeContext range)
     {
         if (dailyItemRows.Count == 0)
         {
             return new DailyContributionsViewDto(
-                periodKey,
-                options,
+                range.PeriodKey,
+                range.Options,
                 [],
-                rangeStart,
-                rangeEnd);
+                range.RangeStart,
+                range.RangeEnd);
         }
 
         var dailyIds = dailyItemRows.Select(x => x.Id).ToHashSet();
-        var byItem = BuildItemCompletionMap(eventRowsInRange, dailyIds);
-        var (commonStart, commonEnd) = FindCommonDates(dailyItemRows, byItem, rangeStart, rangeEnd, todayCutoff);
-        var graphs = BuildDailyContributionGraphs(dailyItemRows, byItem, commonStart, commonEnd, todayCutoff, options);
+        var byItem = BuildItemCompletionMap(eventRowsInRange, dailyIds, range.TimeZone, range.DayStartLocalTime);
+        var (commonStart, commonEnd) = FindCommonDates(dailyItemRows, byItem, range.RangeStart, range.RangeEnd, range.TodayCutoff);
+        var graphs = BuildDailyContributionGraphs(dailyItemRows, byItem, commonStart, commonEnd, range.TodayCutoff, range.Options);
 
         return new DailyContributionsViewDto(
-            periodKey,
-            options,
+            range.PeriodKey,
+            range.Options,
             graphs,
             commonStart,
             commonEnd);
@@ -268,7 +284,9 @@ public static class ActivityStatisticsCalculator
 
     private static Dictionary<Guid, Dictionary<DateOnly, int>> BuildItemCompletionMap(
         IReadOnlyList<UserActivityEventRecord> eventRowsInRange,
-        HashSet<Guid> dailyIds)
+        HashSet<Guid> dailyIds,
+        IUserTimeZoneService? timeZone = null,
+        TimeSpan? dayStartLocalTime = null)
     {
         var inRange = eventRowsInRange
             .Where(e =>
@@ -281,7 +299,7 @@ public static class ActivityStatisticsCalculator
         var byItem = new Dictionary<Guid, Dictionary<DateOnly, int>>();
         var netByItemDay = new Dictionary<(Guid id, DateOnly d), bool>();
         foreach (var g in inRange.GroupBy(e =>
-                 (e.BoardItemId ?? Guid.Empty, DateOnly.FromDateTime(e.OccurredAtUtc.UtcDateTime))))
+                 (e.BoardItemId ?? Guid.Empty, DailySchedule.LocalDay(e.OccurredAtUtc, timeZone, dayStartLocalTime))))
         {
             var last = g.OrderBy(e => e.OccurredAtUtc).Last();
             netByItemDay[g.Key] = last.EventType == ActivityEventType.DailyComplete;
@@ -399,29 +417,25 @@ public static class ActivityStatisticsCalculator
     public static HabitContributionsViewDto BuildHabitContributions(
         IReadOnlyList<UserActivityEventRecord> eventRowsInRange,
         IReadOnlyList<HabitItemStatsDto> habitItemRows,
-        string periodKey,
-        IReadOnlyList<DailyGraphPeriodOption> options,
-        DateOnly rangeStart,
-        DateOnly rangeEnd,
-        DateOnly todayCutoff)
+        ContributionsRangeContext range)
     {
         if (habitItemRows.Count == 0)
         {
-            return new HabitContributionsViewDto(periodKey, options, [], rangeStart, rangeEnd);
+            return new HabitContributionsViewDto(range.PeriodKey, range.Options, [], range.RangeStart, range.RangeEnd);
         }
 
         var habitIds = habitItemRows.Select(x => x.Id).ToHashSet();
-        var byItem = BuildHabitEventDayMap(eventRowsInRange, habitIds);
+        var byItem = BuildHabitEventDayMap(eventRowsInRange, habitIds, range.TimeZone, range.DayStartLocalTime);
 
-        var commonEnd = ClampEndToCutoff(rangeEnd, todayCutoff);
+        var commonEnd = ClampEndToCutoff(range.RangeEnd, range.TodayCutoff);
         var earliestCreated = habitItemRows.Min(x => x.CreatedAt);
-        var commonStart = ClampCommonStart(earliestCreated, rangeStart, commonEnd);
+        var commonStart = ClampCommonStart(earliestCreated, range.RangeStart, commonEnd);
 
         var graphs = BuildHabitContributionGraphs(habitItemRows, byItem, commonStart, commonEnd);
 
         return new HabitContributionsViewDto(
-            periodKey,
-            options,
+            range.PeriodKey,
+            range.Options,
             graphs,
             commonStart,
             commonEnd);
@@ -429,7 +443,9 @@ public static class ActivityStatisticsCalculator
 
     private static Dictionary<Guid, Dictionary<DateOnly, int>> BuildHabitEventDayMap(
         IReadOnlyList<UserActivityEventRecord> eventRowsInRange,
-        HashSet<Guid> habitIds)
+        HashSet<Guid> habitIds,
+        IUserTimeZoneService? timeZone = null,
+        TimeSpan? dayStartLocalTime = null)
     {
         var byItem = new Dictionary<Guid, Dictionary<DateOnly, int>>();
         foreach (var e in eventRowsInRange)
@@ -444,7 +460,7 @@ public static class ActivityStatisticsCalculator
                 continue;
             }
 
-            var d = DateOnly.FromDateTime(e.OccurredAtUtc.UtcDateTime);
+            var d = DailySchedule.LocalDay(e.OccurredAtUtc, timeZone, dayStartLocalTime);
             if (!byItem.TryGetValue(id, out var map))
             {
                 map = [];
@@ -516,22 +532,28 @@ public static class ActivityStatisticsCalculator
     public static ActivityDayDetailDto BuildDayDetail(
         DateOnly day,
         IReadOnlyList<UserActivityEventRecord> rows,
-        IReadOnlyDictionary<Guid, string> titles)
+        IReadOnlyDictionary<Guid, string> titles,
+        IUserTimeZoneService? timeZone = null,
+        TimeSpan? dayStartLocalTime = null)
     {
         var lastDailyToggle = BuildLastToggleItemDayMap(
             rows,
             ActivityEventType.DailyComplete,
-            ActivityEventType.DailyUncomplete);
+            ActivityEventType.DailyUncomplete,
+            timeZone,
+            dayStartLocalTime);
         var lastTodoToggle = BuildLastToggleItemDayMap(
             rows,
             ActivityEventType.TodoComplete,
-            ActivityEventType.TodoUncomplete);
+            ActivityEventType.TodoUncomplete,
+            timeZone,
+            dayStartLocalTime);
 
         List<ActivityDayEventDto> list = [with(capacity: rows.Count)];
         var focusSec = 0;
         foreach (var r in rows.OrderBy(x => x.OccurredAtUtc))
         {
-            if (ShouldSkipEventRow(r, lastDailyToggle, lastTodoToggle))
+            if (ShouldSkipEventRow(r, lastDailyToggle, lastTodoToggle, timeZone, dayStartLocalTime))
             {
                 continue;
             }
@@ -558,7 +580,9 @@ public static class ActivityStatisticsCalculator
     private static bool ShouldSkipEventRow(
         UserActivityEventRecord r,
         Dictionary<(Guid id, DateOnly d), UserActivityEventRecord> lastDailyToggle,
-        Dictionary<(Guid id, DateOnly d), UserActivityEventRecord> lastTodoToggle)
+        Dictionary<(Guid id, DateOnly d), UserActivityEventRecord> lastTodoToggle,
+        IUserTimeZoneService? timeZone = null,
+        TimeSpan? dayStartLocalTime = null)
     {
         if (r.EventType is ActivityEventType.DailyUncomplete or ActivityEventType.TodoUncomplete)
         {
@@ -570,7 +594,7 @@ public static class ActivityStatisticsCalculator
             return r.EventType is ActivityEventType.DailyComplete or ActivityEventType.TodoComplete;
         }
 
-        var utcDay = DateOnly.FromDateTime(r.OccurredAtUtc.UtcDateTime);
+        var utcDay = DailySchedule.LocalDay(r.OccurredAtUtc, timeZone, dayStartLocalTime);
         return r.EventType == ActivityEventType.DailyComplete
             ? !ShouldIncludeNetToggleRow(r, lastDailyToggle, boardId, utcDay, ActivityEventType.DailyComplete)
             : r.EventType == ActivityEventType.TodoComplete && !ShouldIncludeNetToggleRow(r, lastTodoToggle, boardId, utcDay, ActivityEventType.TodoComplete);
@@ -637,16 +661,18 @@ public static class ActivityStatisticsCalculator
     }
 
     /// <summary>
-    ///     For each board item and UTC calendar day pair, the last event wins: the daily is "done" for that day in stats
+    ///     For each board item and local calendar day pair, the last event wins: the daily is "done" for that day in stats
     ///     only if the last complete/uncomplete for that pair is <paramref name="completeType" />.
-    ///     Events are stored and grouped by UTC calendar day.
+    ///     Events are grouped by the user's local day, matching the schedule the board runs on.
     /// </summary>
     private static Dictionary<(Guid id, DateOnly d), bool> BuildNetToggleItemDayMap(
         IReadOnlyList<UserActivityEventRecord> rows,
         ActivityEventType completeType,
-        ActivityEventType uncompleteType)
+        ActivityEventType uncompleteType,
+        IUserTimeZoneService? timeZone = null,
+        TimeSpan? dayStartLocalTime = null)
     {
-        var lastByKey = BuildLastToggleItemDayMap(rows, completeType, uncompleteType);
+        var lastByKey = BuildLastToggleItemDayMap(rows, completeType, uncompleteType, timeZone, dayStartLocalTime);
         var result = new Dictionary<(Guid id, DateOnly d), bool>(lastByKey.Count);
         foreach (var (key, last) in lastByKey)
         {
@@ -678,18 +704,24 @@ public static class ActivityStatisticsCalculator
     }
 
     private static Dictionary<(Guid id, DateOnly d), bool> BuildNetDailyItemDayMap(
-        IReadOnlyList<UserActivityEventRecord> rows)
+        IReadOnlyList<UserActivityEventRecord> rows,
+        IUserTimeZoneService? timeZone = null,
+        TimeSpan? dayStartLocalTime = null)
     {
         return BuildNetToggleItemDayMap(
             rows,
             ActivityEventType.DailyComplete,
-            ActivityEventType.DailyUncomplete);
+            ActivityEventType.DailyUncomplete,
+            timeZone,
+            dayStartLocalTime);
     }
 
     private static Dictionary<(Guid id, DateOnly d), UserActivityEventRecord> BuildLastToggleItemDayMap(
         IReadOnlyList<UserActivityEventRecord> rows,
         ActivityEventType completeType,
-        ActivityEventType uncompleteType)
+        ActivityEventType uncompleteType,
+        IUserTimeZoneService? timeZone = null,
+        TimeSpan? dayStartLocalTime = null)
     {
         var byKey = new Dictionary<(Guid id, DateOnly d), List<UserActivityEventRecord>>();
         foreach (var r in rows)
@@ -704,7 +736,7 @@ public static class ActivityStatisticsCalculator
                 continue;
             }
 
-            var d = DateOnly.FromDateTime(r.OccurredAtUtc.UtcDateTime);
+            var d = DailySchedule.LocalDay(r.OccurredAtUtc, timeZone, dayStartLocalTime);
             var key = (id, d);
             if (!byKey.TryGetValue(key, out var list))
             {

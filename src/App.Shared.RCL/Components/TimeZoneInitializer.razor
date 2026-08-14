@@ -1,4 +1,5 @@
 @inject IUserTimeZoneService TimeZoneService
+@inject IUserPreferencesService PreferencesService
 
 @code {
     private bool _initialized;
@@ -12,5 +13,35 @@
 
         _initialized = true;
         await TimeZoneService.InitializeAsync();
+        await SyncTimeZoneToPreferencesAsync();
+    }
+
+    /// <summary>
+    ///     Persists the detected timezone so the server can compute streaks, retro checks, and
+    ///     statistics in the user's local days instead of UTC.
+    /// </summary>
+    private async Task SyncTimeZoneToPreferencesAsync()
+    {
+        try
+        {
+            var detected = TimeZoneService.TimeZoneId;
+            if (string.IsNullOrWhiteSpace(detected))
+            {
+                return;
+            }
+
+            var prefs = await PreferencesService.GetAsync();
+            if (string.Equals(prefs.TimeZoneOverrideId, detected, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            prefs.TimeZoneOverrideId = detected;
+            await PreferencesService.SaveAsync(prefs);
+        }
+        catch (Exception)
+        {
+            // Best-effort sync. The server falls back to UTC until the timezone is known.
+        }
     }
 }

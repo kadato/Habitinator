@@ -115,8 +115,6 @@ public static class DependencyInjectionExtensions
         services.AddSingleton<IAppUpdaterService, FallbackAppUpdaterService>();
         services.AddScoped<ITimerSessionLogService, TimerSessionLogService>();
         services.AddHttpContextAccessor();
-        services.AddScoped<DemoUserResolver>();
-        services.AddScoped<CurrentUserAccessor>();
         services.AddScoped<IRemoteBoardRefreshService, RemoteBoardRefreshService>();
         services.AddSingleton<IBoardSyncStatus, NoOpBoardSyncStatus>();
         services.AddScoped<BoardRemoteNotifyBridge>();
@@ -158,10 +156,9 @@ public static class DependencyInjectionExtensions
         services.AddScoped<IFocusTimerClientAlerts, FocusTimerClientAlerts>();
         services.AddScoped<IDailyRetroPromptStore, JsDailyRetroPromptStore>();
         services.AddScoped<IClientSessionProvider, ClientSessionProvider>();
-        services.AddScoped<IUserTimeZoneService, UserTimeZoneService>();
+        services.AddScoped<IUserTimeZoneService, ServerTimeZoneService>();
         services.AddScoped<INotificationSettingsRules, NotificationSettingsRules>();
         services.AddScoped<IUserDateFormatService, UserDateFormatService>();
-        services.AddScoped<IAccountActionsService, WebAccountActionsService>();
         services.AddScoped<UserDataExportService>();
         services.AddScoped<IUserDataExportService, WebUserDataExportService>();
         services.AddScoped<IBoardColumnStateStore, JsBoardColumnStateStore>();

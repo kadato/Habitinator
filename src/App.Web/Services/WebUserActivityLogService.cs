@@ -1,5 +1,6 @@
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+using App.Web.Auth;
 
 using Microsoft.AspNetCore.Components.Authorization;
 
@@ -8,16 +9,13 @@ namespace App.Web.Services;
 public sealed class WebUserActivityLogService : IUserActivityLogService
 {
     private readonly AuthenticationStateProvider _authenticationStateProvider;
-    private readonly CurrentUserAccessor _currentUserAccessor;
     private readonly BoardPersistenceService _persistence;
 
     public WebUserActivityLogService(
         AuthenticationStateProvider authenticationStateProvider,
-        CurrentUserAccessor currentUserAccessor,
         BoardPersistenceService boardPersistence)
     {
         _authenticationStateProvider = authenticationStateProvider;
-        _currentUserAccessor = currentUserAccessor;
         _persistence = boardPersistence;
     }
 
@@ -29,7 +27,7 @@ public sealed class WebUserActivityLogService : IUserActivityLogService
         CancellationToken cancellationToken = default)
     {
         var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
-        var userId = await _currentUserAccessor.TryResolveAsync(state.User, cancellationToken);
+        var userId = AuthenticatedUserId.TryGet(state.User);
         if (userId is null)
         {
             return;
@@ -54,7 +52,7 @@ public sealed class WebUserActivityLogService : IUserActivityLogService
         }
 
         var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
-        var userId = await _currentUserAccessor.TryResolveAsync(state.User, cancellationToken);
+        var userId = AuthenticatedUserId.TryGet(state.User);
         if (userId is null)
         {
             return;

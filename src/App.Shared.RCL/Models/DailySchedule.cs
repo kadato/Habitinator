@@ -30,14 +30,19 @@ public static class DailySchedule
     public static DateOnly LocalToday(IClock clock, IUserTimeZoneService? tz = null, TimeSpan? dayStartLocalTime = null)
     {
         ArgumentNullException.ThrowIfNull(clock);
-        return GetLocalDate(tz, clock.UtcNow, dayStartLocalTime);
+        return LocalDay(clock.UtcNow, tz, dayStartLocalTime);
     }
 
-    private static DateOnly GetLocalDate(IUserTimeZoneService? tz, DateTimeOffset utcNow, TimeSpan? dayStartLocalTime)
+    /// <summary>
+    ///     The calendar day an instant falls on in the user's local timezone, applying the day-start
+    ///     rollback. With no timezone service the instant is treated as UTC, matching <see cref="LocalToday" />.
+    ///     Used to assign activity events to the same calendar days the schedule walks.
+    /// </summary>
+    public static DateOnly LocalDay(DateTimeOffset utcInstant, IUserTimeZoneService? tz = null, TimeSpan? dayStartLocalTime = null)
     {
         var local = tz is { IsDetected: true }
-            ? tz.ConvertToLocal(utcNow)
-            : utcNow;
+            ? tz.ConvertToLocal(utcInstant)
+            : utcInstant;
 
         var localDateTime = local.DateTime;
         if (dayStartLocalTime is { } start && start > TimeSpan.Zero && start < TimeSpan.FromDays(1) && localDateTime.TimeOfDay < start)
@@ -267,6 +272,44 @@ public static class DailySchedule
         ArgumentNullException.ThrowIfNull(daily);
         return daily.DailyLastCompletedOn == on;
     }
+
+    /// <summary>
+    ///     Whether the daily counts as checked for <paramref name="today" />: either completed today
+    ///     explicitly, or the legacy state of being completed with no recorded date.
+    /// </summary>
+    public static bool IsCompletedForToday(DateOnly? dailyLastCompletedOn, bool isCompleted, DateOnly today) =>
+        dailyLastCompletedOn == today || (dailyLastCompletedOn is null && isCompleted);
+
+    /// <summary>
+    ///     The single daily check/uncheck rule shared by the web persistence layer, the MAUI local
+    ///     store, and the optimistic UI: checking sets today, unchecking clears the date.
+    /// </summary>
+    public static (DateOnly? DailyLastCompletedOn, bool IsCompleted) ToggleForToday(
+        DateOnly? dailyLastCompletedOn,
+        bool isCompleted,
+        DateOnly today)
+    {
+        return IsCompletedForToday(dailyLastCompletedOn, isCompleted, today)
+            ? (null, false)
+            : (today, true);
+    }
+
+    /// <summary>
+    ///     Whether a retro check-in for <paramref name="completedOn" /> is accepted, mirroring the
+    ///     server's <c>complete-for-date</c> guards: a past date that is scheduled for the item and
+    ///     not already completed for that day, and the item not already checked for today.
+    /// </summary>
+    public static bool CanCompleteForDate(
+        DateOnly? dailyStart,
+        DailyRepeatType repeat,
+        int interval,
+        DateOnly? dailyLastCompletedOn,
+        DateOnly completedOn,
+        DateOnly today) =>
+        completedOn < today
+        && dailyLastCompletedOn != today
+        && dailyLastCompletedOn != completedOn
+        && IsScheduledOn(dailyStart, repeat, interval, completedOn);
 
     /// <summary>Due = scheduled for <paramref name="on" /> and not yet completed for that day.</summary>
     public static bool IsDueOnDate(BoardItem daily, DateOnly on)

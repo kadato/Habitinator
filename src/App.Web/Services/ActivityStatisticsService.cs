@@ -1,5 +1,4 @@
 using System.Collections.Frozen;
-using System.Globalization;
 
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
@@ -14,7 +13,11 @@ public sealed class ActivityStatisticsService(
     IUserTimeZoneService timeZone,
     ActivityStatisticsCache cache)
 {
-    private DateOnly Today() => DailySchedule.LocalToday(timeZone);
+    private Task<(DateOnly Today, TimeSpan? DayStartLocalTime)> TodayAndDayStartAsync(
+        ApplicationDbContext db,
+        Guid userId,
+        CancellationToken cancellationToken) =>
+        UserDayContext.LoadAsync(db, userId, timeZone, cancellationToken);
 
     public async Task<ActivityDayDetailDto> GetActivityDayDetailAsync(
         Guid userId,
@@ -29,16 +32,23 @@ public sealed class ActivityStatisticsService(
             return cached;
         }
 
-        var fromUtc = day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var toUtc = day.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var (_, dayStart) = await TodayAndDayStartAsync(db, userId, cancellationToken);
+
+        // Query one day wider each side so boundary events are captured for any timezone offset,
+        // then keep only rows that fall on the requested local day.
+        var fromUtc = day.AddDays(-1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var toUtc = day.AddDays(2).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, tag, cancellationToken);
 
-        var rows = await EventsInRange(db, userId, fromUtc, toUtc, allowedIds)
+        var allRows = await EventsInRange(db, userId, fromUtc, toUtc, allowedIds)
             .OrderBy(e => e.OccurredAtUtc)
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
             .ToListAsync(cancellationToken);
+
+        var rows = allRows
+            .Where(e => DailySchedule.LocalDay(e.OccurredAtUtc, timeZone, dayStart) == day)
+            .ToList();
 
         List<Guid> boardIds = [.. rows
             .Select(x => x.BoardItemId)
@@ -51,7 +61,7 @@ public sealed class ActivityStatisticsService(
                 .Where(b => b.UserId == userId && boardIds.Contains(b.Id))
                 .ToDictionaryAsync(b => b.Id, b => b.Title, cancellationToken);
 
-        var result = ActivityStatisticsCalculator.BuildDayDetail(day, rows, titles);
+        var result = ActivityStatisticsCalculator.BuildDayDetail(day, rows, titles, timeZone, dayStart);
         userCache.DayDetail.Set(cacheKey, result);
         return result;
     }
@@ -62,7 +72,8 @@ public sealed class ActivityStatisticsService(
         string? tag,
         CancellationToken cancellationToken = default)
     {
-        var utcToday = Today();
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var (utcToday, dayStart) = await TodayAndDayStartAsync(db, userId, cancellationToken);
         var userCache = cache.GetOrCreate(userId);
         (string?, string?, DateOnly) cacheKey = (periodKey, tag, utcToday);
         if (userCache.Dashboard.TryGetValue(cacheKey, out var cached))
@@ -70,12 +81,12 @@ public sealed class ActivityStatisticsService(
             return cached;
         }
 
-        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-        var options = await BuildDailyPeriodOptionsAsync(db, userId, utcToday, cancellationToken);
+        var options = await BuildDailyPeriodOptionsAsync(db, userId, utcToday, dayStart, cancellationToken);
         (var key, var start, var end) = ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, utcToday, options);
 
-        var fromUtc = start.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var toUtc = end.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        // One day of margin on each side keeps boundary events for any timezone offset.
+        var fromUtc = start.AddDays(-1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var toUtc = end.AddDays(2).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
         var availableTags = await GetDistinctTagsForUserAsync(db, userId, cancellationToken);
         var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, tag, cancellationToken);
@@ -84,7 +95,7 @@ public sealed class ActivityStatisticsService(
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
             .ToListAsync(cancellationToken);
 
-        var built = ActivityStatisticsCalculator.BuildDashboard(rows, key, start, end, utcToday);
+        var built = ActivityStatisticsCalculator.BuildDashboard(rows, key, start, end, utcToday, timeZone, dayStart);
         var result = built with { AvailableTags = availableTags };
         userCache.Dashboard.Set(cacheKey, result);
         return result;
@@ -96,7 +107,8 @@ public sealed class ActivityStatisticsService(
         string? tag,
         CancellationToken cancellationToken = default)
     {
-        var utcToday = Today();
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var (utcToday, dayStart) = await TodayAndDayStartAsync(db, userId, cancellationToken);
         var userCache = cache.GetOrCreate(userId);
         (string?, string?, DateOnly) cacheKey = (periodKey, tag, utcToday);
         if (userCache.DailyContributions.TryGetValue(cacheKey, out var cached))
@@ -104,8 +116,11 @@ public sealed class ActivityStatisticsService(
             return cached;
         }
 
-        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-        var ctx = await LoadContributionsQueryAsync(db, userId, BoardSection.Daily, periodKey, tag, utcToday, cancellationToken);
+        var ctx = await LoadContributionsQueryAsync(
+            db,
+            userId,
+            new ContributionsQueryOptions(BoardSection.Daily, periodKey, tag, utcToday, dayStart),
+            cancellationToken);
 
         List<DailyItemStatsDto> dailyItemRows = [.. ctx.ItemRows.Select(b => new DailyItemStatsDto(
             b.Id,
@@ -117,11 +132,14 @@ public sealed class ActivityStatisticsService(
         var result = ActivityStatisticsCalculator.BuildDailyContributions(
             ctx.EventRows,
             dailyItemRows,
-            ctx.Key,
-            ctx.Options,
-            ctx.RangeStart,
-            ctx.RangeEnd,
-            ctx.UtcToday);
+            new ContributionsRangeContext(
+                ctx.Key,
+                ctx.Options,
+                ctx.RangeStart,
+                ctx.RangeEnd,
+                ctx.UtcToday,
+                timeZone,
+                dayStart));
 
         userCache.DailyContributions.Set(cacheKey, result);
         return result;
@@ -133,7 +151,8 @@ public sealed class ActivityStatisticsService(
         string? tag,
         CancellationToken cancellationToken = default)
     {
-        var utcToday = Today();
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var (utcToday, dayStart) = await TodayAndDayStartAsync(db, userId, cancellationToken);
         var userCache = cache.GetOrCreate(userId);
         (string?, string?, DateOnly) cacheKey = (periodKey, tag, utcToday);
         if (userCache.HabitContributions.TryGetValue(cacheKey, out var cached))
@@ -141,8 +160,11 @@ public sealed class ActivityStatisticsService(
             return cached;
         }
 
-        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-        var ctx = await LoadContributionsQueryAsync(db, userId, BoardSection.Habit, periodKey, tag, utcToday, cancellationToken);
+        var ctx = await LoadContributionsQueryAsync(
+            db,
+            userId,
+            new ContributionsQueryOptions(BoardSection.Habit, periodKey, tag, utcToday, dayStart),
+            cancellationToken);
 
         var result = ActivityStatisticsCalculator.BuildHabitContributions(
             ctx.EventRows,
@@ -150,11 +172,14 @@ public sealed class ActivityStatisticsService(
                 b.Id,
                 b.Title,
                 DateOnly.FromDateTime(timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime)))],
-            ctx.Key,
-            ctx.Options,
-            ctx.RangeStart,
-            ctx.RangeEnd,
-            ctx.UtcToday);
+            new ContributionsRangeContext(
+                ctx.Key,
+                ctx.Options,
+                ctx.RangeStart,
+                ctx.RangeEnd,
+                ctx.UtcToday,
+                timeZone,
+                dayStart));
 
         userCache.HabitContributions.Set(cacheKey, result);
         return result;
@@ -177,26 +202,24 @@ public sealed class ActivityStatisticsService(
         return ev;
     }
 
-    private static async Task<ContributionsQueryContext> LoadContributionsQueryAsync(
+    private async Task<ContributionsQueryContext> LoadContributionsQueryAsync(
         ApplicationDbContext db,
         Guid userId,
-        BoardSection section,
-        string? periodKey,
-        string? tag,
-        DateOnly utcToday,
+        ContributionsQueryOptions options,
         CancellationToken cancellationToken)
     {
-        var options = await BuildDailyPeriodOptionsAsync(db, userId, utcToday, cancellationToken);
+        var periodOptions = await BuildDailyPeriodOptionsAsync(db, userId, options.UtcToday, options.DayStartLocalTime, cancellationToken);
         (var key, var rangeStart, var rangeEnd) =
-            ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, utcToday, options);
+            ActivityStatisticsCalculator.ResolveActivityPeriod(options.PeriodKey, options.UtcToday, periodOptions);
 
-        var fromUtc = rangeStart.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var toUtc = rangeEnd.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        // One day of margin on each side keeps boundary events for any timezone offset.
+        var fromUtc = rangeStart.AddDays(-1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var toUtc = rangeEnd.AddDays(2).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
-        var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, tag, cancellationToken);
+        var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, options.Tag, cancellationToken);
 
         var itemQ = db.BoardItems.AsNoTracking()
-            .Where(b => b.UserId == userId && b.DeletedAtUtc == null && b.Section == section);
+            .Where(b => b.UserId == userId && b.DeletedAtUtc == null && b.Section == options.Section);
         if (allowedIds is not null)
         {
             itemQ = itemQ.Where(b => allowedIds.Contains(b.Id));
@@ -211,10 +234,17 @@ public sealed class ActivityStatisticsService(
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
             .ToListAsync(cancellationToken);
 
-        return new ContributionsQueryContext(options, key, rangeStart, rangeEnd, utcToday, eventRows, itemRows);
+        return new ContributionsQueryContext(periodOptions, key, rangeStart, rangeEnd, options.UtcToday, eventRows, itemRows);
     }
 
     private sealed record BoardItemRef(Guid Id, string Title, DateTime? DailyStartDate, DateTimeOffset CreatedAtUtc);
+
+    private sealed record ContributionsQueryOptions(
+        BoardSection Section,
+        string? PeriodKey,
+        string? Tag,
+        DateOnly UtcToday,
+        TimeSpan? DayStartLocalTime);
 
     private sealed record ContributionsQueryContext(
         IReadOnlyList<DailyGraphPeriodOption> Options,
@@ -292,32 +322,29 @@ public sealed class ActivityStatisticsService(
             .Select(r => r.Id)];
     }
 
-    private static async Task<IReadOnlyList<DailyGraphPeriodOption>> BuildDailyPeriodOptionsAsync(
+    private async Task<IReadOnlyList<DailyGraphPeriodOption>> BuildDailyPeriodOptionsAsync(
         ApplicationDbContext db,
         Guid userId,
         DateOnly utcToday,
+        TimeSpan? dayStartLocalTime,
         CancellationToken cancellationToken)
     {
-        var maxYear = utcToday.Year;
         var firstEvent = await db.UserActivityEvents.AsNoTracking()
             .Where(e => e.UserId == userId && e.EventType == ActivityEventType.DailyComplete)
             .MinByAsync(e => e.OccurredAtUtc, cancellationToken);
 
-        var minYear = firstEvent is { } f ? f.OccurredAtUtc.UtcDateTime.Year : maxYear;
-        if (minYear > maxYear)
-        {
-            minYear = maxYear;
-        }
+        var firstRows = firstEvent is null
+            ? []
+            : new[]
+            {
+                new UserActivityEventRecord(
+                    firstEvent.OccurredAtUtc,
+                    firstEvent.EventType,
+                    firstEvent.BoardItemId,
+                    firstEvent.DurationSeconds,
+                    firstEvent.CustomLabel)
+            };
 
-        List<DailyGraphPeriodOption> list =
-        [
-            new(DailyGraphPeriods.Rolling370Days, "Last 370 days")
-        ];
-        for (var y = maxYear; y >= minYear; y--)
-        {
-            list.Add(new DailyGraphPeriodOption(DailyGraphPeriods.ForCalendarYear(y), y.ToString(CultureInfo.InvariantCulture)));
-        }
-
-        return list;
+        return ActivityStatisticsCalculator.BuildPeriodOptions(utcToday, firstRows, timeZone, dayStartLocalTime);
     }
 }

@@ -88,7 +88,6 @@ internal static class ActivityApiRoutes
     private static async Task<IResult> LogActivityAsync(
         ClaimsPrincipal user,
         BoardPersistenceService persistence,
-        DemoUserResolver demoUserResolver,
         ActivityLogRequest body,
         CancellationToken cancellationToken)
     {
@@ -97,7 +96,10 @@ internal static class ActivityApiRoutes
             return Results.BadRequest(new { detail = "Duration must be between 0 and 86,400 seconds (24 hours)." });
         }
 
-        var resolvedUserId = await demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
+        if (AuthenticatedUserId.TryGet(user) is not { } resolvedUserId)
+        {
+            return Results.Unauthorized();
+        }
 
         if (body.EventType == ActivityEventType.TimerSession && body.DurationSeconds.HasValue)
         {

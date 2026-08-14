@@ -26,13 +26,22 @@ public static class DailyStreakCalculator
             ? eventsOnDay[^1].Type == ActivityEventType.DailyComplete
             : dailyLastCompletedOn == d;
 
-    /// <summary>Groups events by calendar day in UTC, keeping only DailyComplete and DailyUncomplete.</summary>
-    public static Dictionary<DateOnly, List<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)>> GroupDailyEventsByUtcDay(
-        IEnumerable<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)> source)
+    /// <summary>
+    ///     Groups events by the user's local calendar day, applying the same timezone and day-start
+    ///     rollback as <see cref="DailySchedule.LocalToday" />. Streak walks schedule in local days, so
+    ///     grouping in UTC would move check-ins made near the day boundary to the neighboring day and
+    ///     mask a missed day. With no timezone, events fall on their UTC day. Backdated check-ins use
+    ///     the fixed <see cref="BackdatedDailyEventOccurredAt" /> hour, which always lands on the
+    ///     target day regardless of timezone.
+    /// </summary>
+    public static Dictionary<DateOnly, List<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)>> GroupDailyEventsByLocalDay(
+        IEnumerable<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)> source,
+        IUserTimeZoneService? timeZone = null,
+        TimeSpan? dayStartLocalTime = null)
     {
         return source
             .Where(e => e.Type is ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete)
-            .GroupBy(e => DateOnly.FromDateTime(e.OccurredAtUtc.UtcDateTime))
+            .GroupBy(e => DailySchedule.LocalDay(e.OccurredAtUtc, timeZone, dayStartLocalTime))
             .ToDictionary(
                 g => g.Key,
                 g => g.OrderBy(e => e.OccurredAtUtc).Select(e => (e.OccurredAtUtc, e.Type)).ToList()

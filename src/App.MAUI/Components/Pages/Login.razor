@@ -1,7 +1,6 @@
 @page "/auth/login"
 @page "/login"
 @using global::App.Shared.RCL.Models
-@using Microsoft.AspNetCore.WebUtilities
 @inject ApiAuthService Auth
 @inject IApiSession Session
 @inject NavigationManager Nav
@@ -22,15 +21,15 @@
         <div class="mb-3">
             <label for="email">Email</label>
             <input class="form-control" id="email" type="email" autocomplete="email"
-                   value="@_email" @oninput="OnEmailInput" disabled="@_busy"/>
+                   value="@_email" @oninput="OnEmailInput" @attributes="FormControlAttrs"/>
         </div>
         <div class="mb-3">
             <label for="password">Password</label>
             <input class="form-control" id="password" type="password" autocomplete="current-password"
-                   value="@_password" @oninput="OnPasswordInput" disabled="@_busy"/>
+                   value="@_password" @oninput="OnPasswordInput" @attributes="FormControlAttrs"/>
         </div>
         <div class="form-check mb-3">
-            <input class="form-check-input" id="remember" type="checkbox" @bind="_rememberMe" disabled="@_busy"/>
+            <input class="form-check-input" id="remember" type="checkbox" @bind="_rememberMe" @attributes="FormControlAttrs"/>
             <label class="form-check-label" for="remember">Remember me</label>
         </div>
         <div class="auth-form-actions">
@@ -68,25 +67,17 @@
     private bool _busy;
     private bool _rememberMe;
 
+    private Dictionary<string, object> FormControlAttrs => _busy
+        ? new Dictionary<string, object> { ["disabled"] = true }
+        : [];
+
     private void OnEmailInput(ChangeEventArgs e) => _email = e.Value?.ToString() ?? string.Empty;
 
     private void OnPasswordInput(ChangeEventArgs e) => _password = e.Value?.ToString() ?? string.Empty;
 
     protected override void OnInitialized()
     {
-        var q = QueryHelpers.ParseQuery(new Uri(Nav.Uri).Query);
-        if (q.ContainsKey("registered") && q["registered"] == "1")
-        {
-            _message = "Registration complete. You can sign in now.";
-        }
-        else if (q.ContainsKey("error") && q["error"] == "1")
-        {
-            _message = "Invalid email or password.";
-        }
-        else if (q.ContainsKey("guest") && q["guest"] == "missing")
-        {
-            _message = "Demo guest user is not available.";
-        }
+        _message = AuthQueryMessages.Resolve(Nav);
     }
 
     protected override async Task OnInitializedAsync()

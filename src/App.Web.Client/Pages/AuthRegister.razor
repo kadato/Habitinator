@@ -42,16 +42,9 @@
 
     protected override void OnInitialized()
     {
-        var q = QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
-        if (q.TryGetValue("email", out var email) && !string.IsNullOrWhiteSpace(email))
-        {
-            _email = email.ToString();
-        }
-
-        if (q.ContainsKey("error") && q["error"] == "1")
-        {
-            _message = "Registration could not be completed. Check the password length, or try another email if this one is already registered.";
-        }
+        var query = AuthQueryMessages.ResolveRegister(Navigation);
+        _email = query.Email ?? string.Empty;
+        _message = query.Message;
     }
 
 }

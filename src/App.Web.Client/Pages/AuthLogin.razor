@@ -53,19 +53,7 @@
 
     protected override void OnInitialized()
     {
-        var q = QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
-        if (q.ContainsKey("error") && q["error"] == "1")
-        {
-            _message = "Invalid email or password.";
-        }
-        else if (q.ContainsKey("guest") && q["guest"] == "missing")
-        {
-            _message = "Demo guest user is not available.";
-        }
-        else if (q.ContainsKey("registered") && q["registered"] == "1")
-        {
-            _message = "Registration complete. You can sign in now.";
-        }
+        _message = AuthQueryMessages.Resolve(Navigation);
     }
 
 }

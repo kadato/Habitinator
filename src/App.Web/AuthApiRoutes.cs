@@ -37,8 +37,8 @@ internal static class AuthApiRoutes
 
     private static void MapAccountEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/account/change-password", ChangePasswordAsync).RequireAuthorization().DisableAntiforgery();
-        endpoints.MapPost("/api/account/delete", DeleteAccountAsync).RequireAuthorization().DisableAntiforgery();
+        endpoints.MapPost("/api/account/change-password", ChangePasswordAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery();
+        endpoints.MapPost("/api/account/delete", DeleteAccountAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery();
         endpoints.MapGet("/api/account/export", ExportDataAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery().RequireRateLimiting("api");
     }
 
@@ -271,16 +271,14 @@ internal static class AuthApiRoutes
 
     private static async Task<IResult> ExportDataAsync(
         ClaimsPrincipal user,
-        DemoUserResolver demoUserResolver,
         UserDataExportService exportService,
         CancellationToken cancellationToken)
     {
-        if (AuthenticatedUserId.TryGet(user) is null)
+        if (AuthenticatedUserId.TryGet(user) is not { } resolvedUserId)
         {
             return Results.Unauthorized();
         }
 
-        var resolvedUserId = await demoUserResolver.ResolveUserIdAsync(user, cancellationToken);
         return Results.Ok(await exportService.BuildAsync(resolvedUserId, cancellationToken));
     }
 

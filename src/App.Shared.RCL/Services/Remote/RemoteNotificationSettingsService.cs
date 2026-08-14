@@ -63,23 +63,15 @@ public sealed class RemoteNotificationSettingsService : INotificationSettingsSer
         var key = GetKey();
         await _store.WriteLocalAsync(key, settings, cancellationToken).ConfigureAwait(false);
 
-        if (!_sessionProvider.IsLoggedIn)
+        if (_sessionProvider.IsLoggedIn)
         {
-            Changed?.Invoke(this, EventArgs.Empty);
-            return;
-        }
-
-        try
-        {
-            using var res = await Client
-                .PutAsJsonAsync("api/settings/notifications", settings, Serializer, cancellationToken)
-                .ConfigureAwait(false);
-            res.EnsureSuccessStatusCode();
-        }
-        catch (Exception ex)
-        {
-            // Best-effort save. The local copy is already updated
-            _logger.LogDebug(ex, "Failed to save notification settings to the server.");
+            await LocalFirstSaves.PutBestEffortAsync(
+                Client,
+                "api/settings/notifications",
+                settings,
+                Serializer,
+                _logger,
+                cancellationToken).ConfigureAwait(false);
         }
 
         Changed?.Invoke(this, EventArgs.Empty);

@@ -126,61 +126,13 @@ public sealed class UndoService : IUndoService, IDisposable
         List<UndoAction>? undone = null;
         try
         {
-            var index = actionId is null
-                ? _undoStack.Count - 1
-                : _undoStack.FindIndex(a => a.Id == actionId);
-
-            if (index < 0)
+            var toUndo = SelectActionsToUndo(actionId);
+            if (toUndo is null)
             {
                 return;
             }
 
-            var target = _undoStack[index];
-
-            // Undoing an older action out of order: any newer action that may touch the same state must
-            // be undone first, newest first, so the target's inverse applies to a consistent snapshot.
-            // Newer actions with disjoint keys are left pending. Their undos only revert their own change.
-            var toUndo = new List<UndoAction>();
-            if (actionId is not null)
-            {
-                for (var i = _undoStack.Count - 1; i > index; i--)
-                {
-                    var newer = _undoStack[i];
-                    if (MayConflict(target, newer))
-                    {
-                        toUndo.Add(newer);
-                    }
-                }
-            }
-
-            toUndo.Add(target);
-
-            Interlocked.Increment(ref _undoingCount);
-            try
-            {
-                foreach (var action in toUndo)
-                {
-                    await action.UndoFunc().ConfigureAwait(false);
-                }
-
-                // Only drop actions from the stack once their undo succeeded, so a failed
-                // undo can be retried instead of being lost.
-                foreach (var action in toUndo)
-                {
-                    _undoStack.Remove(action);
-                }
-
-                undone = toUndo;
-                OnUndoPerformed?.Invoke(this, EventArgs.Empty);
-            }
-            finally
-            {
-                Interlocked.Decrement(ref _undoingCount);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Undo failed; the action remains on the undo stack.");
+            undone = await ExecuteUndoAsync(toUndo);
         }
         finally
         {
@@ -194,6 +146,77 @@ public sealed class UndoService : IUndoService, IDisposable
             }
 
             OnStateChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private List<UndoAction>? SelectActionsToUndo(Guid? actionId)
+    {
+        var index = actionId is null
+            ? _undoStack.Count - 1
+            : _undoStack.FindIndex(a => a.Id == actionId);
+
+        if (index < 0)
+        {
+            return null;
+        }
+
+        var target = _undoStack[index];
+
+        // Undoing an older action out of order: any newer action that may touch the same state must
+        // be undone first, newest first, so the target's inverse applies to a consistent snapshot.
+        // Newer actions with disjoint keys are left pending. Their undos only revert their own change.
+        var toUndo = new List<UndoAction>();
+        if (actionId is not null)
+        {
+            for (var i = _undoStack.Count - 1; i > index; i--)
+            {
+                var newer = _undoStack[i];
+                if (MayConflict(target, newer))
+                {
+                    toUndo.Add(newer);
+                }
+            }
+        }
+
+        toUndo.Add(target);
+        return toUndo;
+    }
+
+    private async Task<List<UndoAction>?> ExecuteUndoAsync(List<UndoAction> toUndo)
+    {
+        Interlocked.Increment(ref _undoingCount);
+        var executed = new List<UndoAction>();
+        try
+        {
+            foreach (var action in toUndo)
+            {
+                await action.UndoFunc().ConfigureAwait(false);
+                executed.Add(action);
+            }
+
+            foreach (var action in toUndo)
+            {
+                _undoStack.Remove(action);
+            }
+
+            OnUndoPerformed?.Invoke(this, EventArgs.Empty);
+            return toUndo;
+        }
+        catch (Exception ex)
+        {
+            // The already-undone prefix must not be re-applied on retry, or the same change
+            // would be reverted twice. Drop it from the stack. Only the failed action stays.
+            foreach (var action in executed)
+            {
+                _undoStack.Remove(action);
+            }
+
+            _logger.LogWarning(ex, "Undo failed after {ExecutedCount} action(s). The failed action remains on the undo stack.", executed.Count);
+            return executed.Count > 0 ? executed : null;
+        }
+        finally
+        {
+            Interlocked.Decrement(ref _undoingCount);
         }
     }
 

@@ -1,4 +1,6 @@
-namespace App.Shared.RCL.Models;
+using App.Shared.RCL.Models;
+
+namespace App.Web.Services;
 
 public enum BoardMutationStatus
 {

@@ -41,15 +41,15 @@ public sealed partial class MauiBoardSyncCoordinator
     /// <summary>Fire-and-forget sync on resume or after login.</summary>
     public void RequestSync()
     {
-        _ = RunPullAndDrainAsync(_appStopping.Token);
+        _ = RunPullAndDrainAsync(notifyOnProgress: true, _appStopping.Token);
     }
 
-    public async Task RunPullAndDrainAsync(CancellationToken cancellationToken)
+    public async Task RunPullAndDrainAsync(bool notifyOnProgress, CancellationToken cancellationToken)
     {
         await _run.WaitAsync(cancellationToken);
         try
         {
-            await RunPullAndDrainCoreAsync(cancellationToken);
+            await RunPullAndDrainCoreAsync(notifyOnProgress, cancellationToken);
         }
         finally
         {
@@ -64,7 +64,7 @@ public sealed partial class MauiBoardSyncCoordinator
         }
     }
 
-    private async Task RunPullAndDrainCoreAsync(CancellationToken cancellationToken)
+    private async Task RunPullAndDrainCoreAsync(bool notifyOnProgress, CancellationToken cancellationToken)
     {
         // Publish the flag before any I/O so concurrent readers (e.g. empty-board
         // fetch-on-read) do not race a run that is about to touch the database.
@@ -96,10 +96,14 @@ public sealed partial class MauiBoardSyncCoordinator
                 progressed = true;
             }
 
-            if (progressed)
+            if (progressed && notifyOnProgress)
             {
                 _status.LastSyncedUtc = DateTimeOffset.UtcNow;
                 _ = _refresh.NotifyFromRemoteAsync(cancellationToken);
+            }
+            else if (progressed)
+            {
+                _status.LastSyncedUtc = DateTimeOffset.UtcNow;
             }
 
             var stuck = await _board.TryGetStuckOutboxHintAsync(StuckAfterAttempts, cancellationToken);
@@ -146,7 +150,7 @@ public sealed partial class MauiBoardSyncCoordinator
             {
                 try
                 {
-                    await RunPullAndDrainAsync(cancellationToken);
+                    await RunPullAndDrainAsync(notifyOnProgress: true, cancellationToken);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {

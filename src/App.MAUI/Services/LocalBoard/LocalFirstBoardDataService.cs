@@ -126,8 +126,18 @@ public sealed partial class LocalFirstBoardDataService(
         try
         {
             await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            await EnsureUserScopeAsync(db, userKey, cancellationToken);
+
+            // Re-check under the gate: an item created while the fetch was in flight must not
+            // be wiped by the replace, or the optimistic UI state would be lost.
+            var today = await TodayAsync(cancellationToken);
+            if (!IsEmpty(ReadSnapshot(db, userKey, today)))
+            {
+                return ReadSnapshot(db, userKey, today);
+            }
+
             await ReplaceMirrorAsync(db, userKey, fresh, cancellationToken);
-            return ReadSnapshot(db, userKey, await TodayAsync(cancellationToken));
+            return ReadSnapshot(db, userKey, today);
         }
         finally
         {
@@ -355,9 +365,11 @@ public sealed partial class LocalFirstBoardDataService(
                 cancellationToken),
             cancellationToken);
 
-    public Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn,
-        CancellationToken cancellationToken = default) =>
-        MutateWithSyncAsync(
+    public async Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn,
+        CancellationToken cancellationToken = default)
+    {
+        var today = await TodayAsync(cancellationToken);
+        return await MutateWithSyncAsync(
             async (db, userKey) => await UpdateRowAsync(
                 db,
                 userKey,
@@ -368,8 +380,15 @@ public sealed partial class LocalFirstBoardDataService(
                     row.IsCompleted = true;
                     return Task.CompletedTask;
                 },
-                cancellationToken),
+                cancellationToken,
+                row => CanCompleteDailyForDate(row, completedOn, today)),
             cancellationToken);
+    }
+
+    /// <summary>Mirrors the server's <c>complete-for-date</c> guards so a rejected retro never queues an outbox op.</summary>
+    private static bool CanCompleteDailyForDate(LocalBoardItemRow row, DateOnly completedOn, DateOnly today) =>
+        DailySchedule.CanCompleteForDate(
+            row.DailyStartDate, row.DailyRepeat, row.DailyRepeatInterval, row.DailyLastCompletedOn, completedOn, today);
 
     public Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
@@ -418,7 +437,8 @@ public sealed partial class LocalFirstBoardDataService(
         string userKey,
         RowUpdateOp op,
         Func<LocalBoardItemRow, Task> mutate,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<LocalBoardItemRow, bool>? canMutate = null)
     {
         var query = db.BoardItems.Where(x => x.UserKey == userKey && x.Id == op.ItemId);
         if (op.Section is not null)
@@ -427,7 +447,7 @@ public sealed partial class LocalFirstBoardDataService(
         }
 
         var row = await query.FirstOrDefaultAsync(cancellationToken);
-        if (row is null)
+        if (row is null || (canMutate is not null && !canMutate(row)))
         {
             return null;
         }
@@ -1047,6 +1067,10 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
+                    // The server rejected the toggle, for example because the item no longer exists. Pull server
+                    // truth so the optimistic local state converges instead of staying divergent.
+                    updated ??= await api.GetItemAsync(p.ItemId, cancellationToken);
+
                     await Patch(p.ItemId, updated);
                     return;
                 }
@@ -1059,6 +1083,11 @@ public sealed partial class LocalFirstBoardDataService(
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
+                    // The server rejected the retro check, for example because the daily is checked
+                    // for today elsewhere or the schedule changed. Replace the optimistic local
+                    // state with server truth so the board and streaks match the server.
+                    updated ??= await api.GetItemAsync(p.ItemId, cancellationToken);
+
                     await Patch(p.ItemId, updated);
                     return;
                 }
@@ -1283,9 +1312,8 @@ public sealed partial class LocalFirstBoardDataService(
                 break;
             case BoardSection.Daily:
                 {
-                    var done = row.DailyLastCompletedOn == today || (row.DailyLastCompletedOn is null && row.IsCompleted);
-                    row.DailyLastCompletedOn = done ? null : today;
-                    row.IsCompleted = !done;
+                    (row.DailyLastCompletedOn, row.IsCompleted) = DailySchedule.ToggleForToday(
+                        row.DailyLastCompletedOn, row.IsCompleted, today);
                     break;
                 }
             case BoardSection.Todo:
@@ -1445,37 +1473,33 @@ public sealed partial class LocalFirstBoardDataService(
     private static (List<BoardItem> Habits, List<BoardItem> Dailies, List<BoardItem> Todos) OrderRows(
         IReadOnlyList<LocalBoardItemRow> items, DateOnly today)
     {
-        // Match BoardPersistenceService.GetSnapshotAsync ordering, the web app.
-        List<BoardItem> habits = [.. items.Where(x => x.Section == BoardSection.Habit)
-            .OrderBy(x => x.SortOrder ?? double.MaxValue)
-            .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
-            .ThenBy(x => x.Id)
+        // Ordering rules are shared with the server snapshot via BoardOrdering, so both clients render the same order.
+        List<BoardItem> habits = [.. BoardOrdering.SortHabits(
+            items.Where(x => x.Section == BoardSection.Habit),
+            x => x.SortOrder ?? double.MaxValue,
+            x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue,
+            x => x.Id)
             .Select(x => x.ToModel())];
-        List<BoardItem> dailies = [.. items.Where(x => x.Section == BoardSection.Daily)
-            .OrderBy(x => IsDailyRowCompleteForToday(x, today) ? 1 : 0)
-            .ThenBy(x => x.SortOrder ?? double.MaxValue)
-            .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
-            .ThenBy(x => x.Id)
+        List<BoardItem> dailies = [.. BoardOrdering.SortDailies(
+            items.Where(x => x.Section == BoardSection.Daily),
+            x => IsDailyRowCompleteForToday(x, today),
+            x => x.SortOrder ?? double.MaxValue,
+            x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue,
+            x => x.Id)
             .Select(x => x.ToModel())];
-        List<BoardItem> todos = [.. items.Where(x => x.Section == BoardSection.Todo)
-            .OrderBy(x => x.IsCompleted ? 1 : 0)
-            .ThenBy(x => x.TodoDueDate.HasValue ? 1 : 0)
-            .ThenBy(x => x.TodoDueDate ?? DateOnly.MaxValue)
-            .ThenBy(x => x.SortOrder ?? double.MaxValue)
-            .ThenBy(x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue)
-            .ThenBy(x => x.Id)
+        List<BoardItem> todos = [.. BoardOrdering.SortTodos(
+            items.Where(x => x.Section == BoardSection.Todo),
+            x => x.IsCompleted,
+            x => x.TodoDueDate?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
+            x => x.SortOrder ?? double.MaxValue,
+            x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue,
+            x => x.Id)
             .Select(x => x.ToModel())];
         return (habits, dailies, todos);
     }
 
-    private static bool IsDailyRowCompleteForToday(LocalBoardItemRow row, DateOnly today)
-    {
-        if (row.DailyLastCompletedOn is { } t && t == today)
-        {
-            return true;
-        }
-        return row.DailyLastCompletedOn is null && row.IsCompleted;
-    }
+    private static bool IsDailyRowCompleteForToday(LocalBoardItemRow row, DateOnly today) =>
+        DailySchedule.IsCompletedForToday(row.DailyLastCompletedOn, row.IsCompleted, today);
 
     private static async Task ReplaceMirrorAsync(LocalBoardDbContext db, string userKey, BoardSnapshot snap,
         CancellationToken cancellationToken)

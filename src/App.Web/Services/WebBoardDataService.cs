@@ -1,5 +1,6 @@
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+using App.Web.Auth;
 
 using Microsoft.AspNetCore.Components.Authorization;
 
@@ -7,7 +8,6 @@ namespace App.Web.Services;
 
 public sealed class WebBoardDataService(
     AuthenticationStateProvider authenticationStateProvider,
-    CurrentUserAccessor currentUserAccessor,
     BoardPersistenceService boardPersistenceService) : IBoardDataService
 {
 
@@ -101,9 +101,13 @@ public sealed class WebBoardDataService(
         return await boardPersistenceService.GetDailyStreakMapAsync(userId, cancellationToken);
     }
 
-    private Task<Guid> GetCurrentUserIdAsync(CancellationToken cancellationToken) =>
-        currentUserAccessor.ResolveAsync(authenticationStateProvider, cancellationToken);
-
+    private async Task<Guid> GetCurrentUserIdAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var state = await authenticationStateProvider.GetAuthenticationStateAsync();
+        return AuthenticatedUserId.TryGet(state.User)
+            ?? throw new InvalidOperationException("Sign in required.");
+    }
     private async Task<BoardItem?> MutateAsync(Func<Guid, CancellationToken, Task<BoardMutationResult>> op,
         CancellationToken cancellationToken)
     {

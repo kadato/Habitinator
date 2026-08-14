@@ -46,8 +46,9 @@ public static class ZalgoSanitizer
     }
 
     /// <summary>
-    /// Removes excess combining diacritical marks from <paramref name="input"/>,
-    /// capping each grapheme cluster at <see cref="MaxCombiningPerBase"/> combining codepoints.
+    /// Removes excess combining diacritical marks from <paramref name="input"/>.
+    /// Clusters with more than <see cref="MaxCombiningPerBase"/> combining codepoints are treated
+    /// as Zalgo and stripped of all combining marks, keeping only the base grapheme.
     /// Returns the original string instance unchanged when no Zalgo is detected.
     /// Returns <see langword="null"/> when <paramref name="input"/> is <see langword="null"/>.
     /// </summary>

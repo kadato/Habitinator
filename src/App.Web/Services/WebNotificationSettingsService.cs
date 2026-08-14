@@ -1,5 +1,6 @@
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+using App.Web.Auth;
 using App.Web.Data;
 
 using Microsoft.AspNetCore.Components.Authorization;
@@ -9,7 +10,6 @@ namespace App.Web.Services;
 
 public sealed class WebNotificationSettingsService(
     AuthenticationStateProvider authenticationStateProvider,
-    CurrentUserAccessor currentUserAccessor,
     IDbContextFactory<ApplicationDbContext> dbFactory,
     IBoardChangeNotifier boardChangeNotifier) : INotificationSettingsService
 {
@@ -17,7 +17,8 @@ public sealed class WebNotificationSettingsService(
 
     public async Task<NotificationSettings> GetAsync(CancellationToken cancellationToken = default)
     {
-        var userId = await currentUserAccessor.TryResolveAsync(authenticationStateProvider, cancellationToken);
+        var state = await authenticationStateProvider.GetAuthenticationStateAsync();
+        var userId = AuthenticatedUserId.TryGet(state.User);
         if (userId is null)
         {
             return NotificationSettings.CreateDefault();
@@ -30,7 +31,8 @@ public sealed class WebNotificationSettingsService(
 
     public async Task SaveAsync(NotificationSettings settings, CancellationToken cancellationToken = default)
     {
-        var userId = await currentUserAccessor.TryResolveAsync(authenticationStateProvider, cancellationToken);
+        var state = await authenticationStateProvider.GetAuthenticationStateAsync();
+        var userId = AuthenticatedUserId.TryGet(state.User);
         if (userId is null)
         {
             return;

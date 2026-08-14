@@ -22,7 +22,7 @@ public sealed class PullBeforeNotifyRemoteBoardRefreshService : IRemoteBoardRefr
 
     public async Task NotifyFromRemoteAsync(CancellationToken cancellationToken = default)
     {
-        await _coordinator.RunPullAndDrainAsync(cancellationToken);
+        await _coordinator.RunPullAndDrainAsync(notifyOnProgress: false, cancellationToken);
         await _core.NotifyFromRemoteAsync(cancellationToken);
     }
 }

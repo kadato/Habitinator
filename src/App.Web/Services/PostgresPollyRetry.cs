@@ -9,8 +9,6 @@ namespace App.Web.Services;
 /// </summary>
 public static class PostgresPollyRetry
 {
-    private static readonly ResiliencePipeline Shared = CreatePipeline(logForRetries: null);
-
     private static ResiliencePipeline CreatePipeline(ILogger? logForRetries)
     {
         var options = new RetryStrategyOptions
@@ -44,15 +42,7 @@ public static class PostgresPollyRetry
             .Build();
     }
 
-    /// <summary>Runs <paramref name="action" /> with exponential backoff, jitter, and transient-error filtering.</summary>
-    public static ValueTask ExecuteAsync(Func<CancellationToken, Task> action,
-        CancellationToken cancellationToken = default) =>
-        Shared.ExecuteAsync(
-            ct => new ValueTask(action(ct)),
-            cancellationToken);
-
-    /// <inheritdoc cref="ExecuteAsync(System.Func{System.Threading.CancellationToken,System.Threading.Tasks.Task},System.Threading.CancellationToken)" />
-    /// <remarks>Logs each retry at warning level when Polly is about to wait and retry.</remarks>
+    /// <summary>Runs <paramref name="action" /> with exponential backoff, jitter, transient-error filtering, and per-attempt logging.</summary>
     public static ValueTask ExecuteAsync(Func<CancellationToken, Task> action, ILogger logForRetries,
         CancellationToken cancellationToken = default) =>
         CreatePipeline(logForRetries).ExecuteAsync(

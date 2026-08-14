@@ -4,7 +4,7 @@
 @using global::App.Web.Services
 @inject IWebHostEnvironment HostEnvironment
 <!DOCTYPE html>
-<html lang="en" class="@GetInitialThemeClass()" data-user-email="@GetUserEmail()" data-server-theme="@GetServerTheme()" data-lighthouse="@(IsLighthouseRequest() ? "true" : "false")">
+<html lang="en" class="@GetInitialThemeClass()" data-user-email="@GetUserEmail()" data-server-theme="@GetServerTheme()" data-lighthouse="@LighthouseValue">
 
 <head>
     <meta charset="utf-8"/>
@@ -12,8 +12,8 @@
     <meta name="color-scheme" content="light dark"/>
     <base href="/"/>
     <!-- DNS preconnect: warm up external origins before they're needed -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin/>
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin="anonymous"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
     <link rel="dns-prefetch" href="https://fonts.googleapis.com"/>
     <link rel="dns-prefetch" href="https://fonts.gstatic.com"/>
     <ResourcePreloader />
@@ -143,11 +143,11 @@
             }
         })();
     </script>
-    <link rel="prefetch" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Regular.woff2"]" as="font" crossorigin="anonymous"/>
-    <link rel="prefetch" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Medium.woff2"]" as="font" crossorigin="anonymous"/>
-    <link rel="prefetch" href="@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2"]" as="font" crossorigin="anonymous"/>
-    <link rel="preload" href="@Assets["_framework/blazor.web.js"]" as="script" crossorigin="anonymous"/>
-    <link rel="preload" href="@Assets["_content/MudBlazor/MudBlazor.min.js"]" as="script" crossorigin="anonymous"/>
+    <link rel="prefetch" href=@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Regular.woff2"] as="font" crossorigin="anonymous"/>
+    <link rel="prefetch" href=@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Medium.woff2"] as="font" crossorigin="anonymous"/>
+    <link rel="prefetch" href=@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2"] as="font" crossorigin="anonymous"/>
+    <link rel="preload" href=@Assets["_framework/blazor.web.js"] as="script" crossorigin="anonymous"/>
+    <link rel="preload" href=@Assets["_content/MudBlazor/MudBlazor.min.js"] as="script" crossorigin="anonymous"/>
 
     <script>
         window.habitinatorAssets = {
@@ -163,16 +163,16 @@
         };
     </script>
 
-    <link rel="stylesheet" href="@Assets["_content/MudBlazor/MudBlazor.min.css"]"/>
-    <link rel="stylesheet" href="@Assets["_content/App.Shared.RCL/css/tokens.css"]"/>
-    <link rel="stylesheet" href="@Assets["_content/App.Shared.RCL/css/typography.css"]"/>
-    <link rel="stylesheet" href="@Assets["_content/App.Shared.RCL/css/app.css"]"/>
-    <link rel="stylesheet" href="@Assets["_content/App.Shared.RCL/css/dialogs.css"]"/>
-    <link rel="stylesheet" href="@Assets["_content/App.Shared.RCL/css/auth-pages.css"]"/>
-    <link rel="stylesheet" href="@Assets["App.Web.styles.css"]" media="print" onload="this.media='all'"/>
-    <noscript><link rel="stylesheet" href="@Assets["App.Web.styles.css"]"/></noscript>
-    <link rel="stylesheet" href="@Assets["App.Web.Client.bundle.scp.css"]"/>
-    <link rel="stylesheet" href="@Assets["_content/App.Shared.RCL/App.Shared.RCL.bundle.scp.css"]"/>
+    <link rel="stylesheet" href=@Assets["_content/MudBlazor/MudBlazor.min.css"]/>
+    <link rel="stylesheet" href=@Assets["_content/App.Shared.RCL/css/tokens.css"]/>
+    <link rel="stylesheet" href=@Assets["_content/App.Shared.RCL/css/typography.css"]/>
+    <link rel="stylesheet" href=@Assets["_content/App.Shared.RCL/css/app.css"]/>
+    <link rel="stylesheet" href=@Assets["_content/App.Shared.RCL/css/dialogs.css"]/>
+    <link rel="stylesheet" href=@Assets["_content/App.Shared.RCL/css/auth-pages.css"]/>
+    <link rel="stylesheet" href=@Assets["App.Web.styles.css"] media="print" onload="this.media='all'"/>
+    <noscript><link rel="stylesheet" href=@Assets["App.Web.styles.css"]/></noscript>
+    <link rel="stylesheet" href=@Assets["App.Web.Client.bundle.scp.css"]/>
+    <link rel="stylesheet" href=@Assets["_content/App.Shared.RCL/App.Shared.RCL.bundle.scp.css"]/>
     <ImportMap/>
     <link rel="icon" href="/favicon.ico" sizes="any"/>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
@@ -283,10 +283,9 @@
         <Routes @rendermode="GetRoutesRenderMode()"/>
     </CascadingAuthenticationState>
 </CascadingValue>
-<ReconnectModal/>
-<script src="@Assets["_content/App.Shared.RCL/js/scriptLoader.js"]" defer></script>
-<script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]" defer crossorigin="anonymous"></script>
-<script src="@Assets["_framework/blazor.web.js"]" defer crossorigin="anonymous"></script>
+<script src=@Assets["_content/App.Shared.RCL/js/scriptLoader.js"] defer></script>
+<script src=@Assets["_content/MudBlazor/MudBlazor.min.js"] defer crossorigin="anonymous"></script>
+<script src=@Assets["_framework/blazor.web.js"] defer crossorigin="anonymous"></script>
 <script>
     window.habitinatorSetWasmLoaded = function () {
         window.habitinatorWasmLoaded = true;
@@ -375,6 +374,8 @@
     {
         return HttpContext?.Request?.Headers?.ContainsKey("x-lighthouse") == true;
     }
+
+    private string LighthouseValue => IsLighthouseRequest() ? "true" : "false";
 }
 
 </html>

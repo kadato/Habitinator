@@ -82,7 +82,7 @@
     [Parameter]
     public string DownloadUrl { get; set; } = string.Empty;
 
-    private string _currentVersion = "1.0.0";
+    private string _currentVersion = string.Empty;
     private bool _isDownloading;
     private int _progressPercent;
     private string _statusText = "Downloading update...";

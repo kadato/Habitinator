@@ -1,5 +1,6 @@
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+using App.Web.Auth;
 using App.Web.Data;
 
 using Microsoft.AspNetCore.Components.Authorization;
@@ -9,10 +10,10 @@ namespace App.Web.Services;
 
 public sealed class WebUserPreferencesService(
     AuthenticationStateProvider authenticationStateProvider,
-    CurrentUserAccessor currentUserAccessor,
     IDbContextFactory<ApplicationDbContext> dbFactory,
     IBoardChangeNotifier boardChangeNotifier,
     IHttpContextAccessor httpContextAccessor,
+    IUserTimeZoneService timeZone,
     ILogger<WebUserPreferencesService> logger) : IUserPreferencesService
 {
     private Guid? _cachedUserId;
@@ -24,7 +25,8 @@ public sealed class WebUserPreferencesService(
     {
         try
         {
-            var userId = await currentUserAccessor.TryResolveAsync(authenticationStateProvider, cancellationToken);
+            var state = await authenticationStateProvider.GetAuthenticationStateAsync();
+            var userId = AuthenticatedUserId.TryGet(state.User);
             if (userId is null)
             {
                 _cachedUserId = null;
@@ -42,6 +44,7 @@ public sealed class WebUserPreferencesService(
             await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
             var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
             var prefs = row?.UserPreferences ?? UserPreferences.CreateDefault();
+            timeZone.SetOverride(prefs.TimeZoneOverrideId);
 
             if (prefs.Theme == AppTheme.System)
             {
@@ -51,6 +54,10 @@ public sealed class WebUserPreferencesService(
             _cachedUserId = userId;
             _cachedPreferences = prefs;
             return prefs;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -84,7 +91,8 @@ public sealed class WebUserPreferencesService(
 
     public async Task SaveAsync(UserPreferences preferences, CancellationToken cancellationToken = default)
     {
-        var userId = await currentUserAccessor.TryResolveAsync(authenticationStateProvider, cancellationToken);
+        var state = await authenticationStateProvider.GetAuthenticationStateAsync();
+        var userId = AuthenticatedUserId.TryGet(state.User);
         if (userId is null)
         {
             return;

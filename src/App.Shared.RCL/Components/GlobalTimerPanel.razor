@@ -478,12 +478,17 @@
         {
             while (await _uiTick.WaitForNextTickAsync(cancellationToken))
             {
-                SyncTimerFieldsFromServiceIfNeeded();
-                if (TimerService.IsRunning)
+                // The PeriodicTimer continuation runs on a thread-pool thread. Field writes and
+                // timer reads must happen on the renderer thread, or they race with user input.
+                await InvokeAsync(() =>
                 {
-                    // Elapsed only changes while running skip re-renders while idle or paused.
-                    await InvokeAsync(StateHasChanged);
-                }
+                    SyncTimerFieldsFromServiceIfNeeded();
+                    if (TimerService.IsRunning)
+                    {
+                        // Elapsed only changes while running skip re-renders while idle or paused.
+                        StateHasChanged();
+                    }
+                });
             }
         }
         catch (OperationCanceledException)

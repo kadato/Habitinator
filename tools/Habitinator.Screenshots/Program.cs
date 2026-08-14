@@ -117,6 +117,10 @@ async Task CaptureBoardScreensAsync(IPage page, string theme)
     await Task.Delay(500);
     await CaptureAsync(page, "board", theme);
 
+    // The yesterday retro dialog can show a moment after the board loads. Clear it before
+    // opening the edit dialogs so it does not swallow the card click.
+    await DismissCatchUpDialogIfPresentAsync(page);
+
     // Edit habit dialog. Habits tab is active by default.
     var habitDialog = await OpenEditDialogAsync(page, "habit");
     await CaptureAsync(page, "edit-habit", theme);
@@ -125,6 +129,7 @@ async Task CaptureBoardScreensAsync(IPage page, string theme)
     // Switch to Dailies tab and open the daily edit dialog
     await page.Locator(".board-section-switcher__btn", new() { HasText = "Dailies" }).ClickAsync();
     await Task.Delay(400);
+    await DismissCatchUpDialogIfPresentAsync(page);
     var dailyDialog = await OpenEditDialogAsync(page, "daily");
     await CaptureAsync(page, "edit-daily", theme);
     await CloseDialogAsync(dailyDialog);
@@ -252,14 +257,14 @@ static async Task DismissCatchUpDialogIfPresentAsync(IPage page)
     var dialog = page.Locator(".daily-yesterday-dialog");
     try
     {
-        await dialog.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 3000 });
+        await dialog.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 6000 });
     }
     catch (TimeoutException)
     {
         return;
     }
 
-    await dialog.GetByRole(AriaRole.Button, new() { Name = "Close" }).ClickAsync(new() { Timeout = 10_000 });
+    await dialog.Locator(".daily-yesterday-header__close-btn").ClickAsync(new() { Timeout = 10_000 });
     await dialog.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 15_000 });
 }
 

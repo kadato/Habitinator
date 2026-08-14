@@ -49,13 +49,18 @@
         {
             while (await _focusTick.WaitForNextTickAsync(cancellationToken))
             {
-                bool isRunning = TimerService.IsRunning;
-                await UpdateTitleIfStateChangedAsync(isRunning);
-
-                if (isRunning && TimerService.TryConsumeFocusDurationReached())
+                // The PeriodicTimer continuation runs on a thread-pool thread. All
+                // GlobalTimerService state access must happen on the renderer thread.
+                await InvokeAsync(async () =>
                 {
-                    HandleFocusDurationReached(cancellationToken);
-                }
+                    bool isRunning = TimerService.IsRunning;
+                    await UpdateTitleIfStateChangedAsync(isRunning);
+
+                    if (isRunning && TimerService.TryConsumeFocusDurationReached())
+                    {
+                        HandleFocusDurationReached(cancellationToken);
+                    }
+                });
             }
         }
         catch (OperationCanceledException)
@@ -163,7 +168,7 @@
         }
         catch (Exception)
         {
-            await UserNotifier.NotifyAsync("Focus complete. Log progress using Stop & log on the timer.", Severity.Info, cancellationToken);
+            await UserNotifier.NotifyAsync("Focus complete. Log progress using Stop and log on the timer.", Severity.Info, cancellationToken);
             TimerService.ResumeAfterFocusPromptNotDone();
             return;
         }
@@ -248,7 +253,7 @@
         catch (Exception)
         {
             await UserNotifier.NotifyAsync(
-                "Time's up. Open the board to log your session, or use Stop & log on the timer.",
+                "Time's up. Open the board to log your session, or use Stop and log on the timer.",
                 Severity.Info,
                 cancellationToken);
             TimerService.ResumeAfterFocusPromptNotDone();

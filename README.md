@@ -14,7 +14,7 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 
 **Live Demo:** [habitinator.app](https://habitinator.app)
 
-[Demo](https://habitinator.app) | [Preview](#preview) | [Download](#download-and-install) | [Features](#key-features) | [Tech Stack](#technology-stack) | [Getting Started](#getting-started)
+[Demo](https://habitinator.app) | [Preview](#preview) | [Download](#download-and-install) | [Features](#key-features) | [Tech stack](#technology-stack) | [Getting Started](#getting-started)
 
 </div>
 
@@ -88,7 +88,7 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 
 ---
 
-## Download and Install
+## Download and install
 
 Download the latest build from the [releases page](https://github.com/tothKarolyDavid/Habitinator/releases/latest), or use the direct links below. Every package ships with a SHA256 checksum file.
 
@@ -102,13 +102,13 @@ Download the latest build from the [releases page](https://github.com/tothKaroly
 
 **Windows runtime note:** if your release is framework-dependent, install [.NET Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/11.0) once.
 
-#### Option 1: Prebuilt packages, recommended
+#### Option 1: prebuilt packages, recommended
 
 1. Pick your platform from the table above
 2. Download the package and its `.sha256` file
 3. Verify the checksum, then follow the platform steps below
 
-#### Option 2: Build from source
+#### Option 2: build from source
 
 ```powershell
 # Windows
@@ -134,16 +134,16 @@ dotnet build -t:Run -f net11.0-android
 
 ---
 
-## Key Features
+## Key features
 
-- **Core Planner**: Track habits, dailies, and to-dos. Organize them with tags, notes, and checklists.
-- **Global Session Timer**: A stopwatch with target logging to trace time spent on specific items.
-- **Statistics and Heatmap**: Interactive heatmap dashboard to monitor your progress over time.
-- **Local-First and Sync**: The mobile/desktop clients run on SQLite for offline support and sync changes automatically to a server-side PostgreSQL backend.
+- **Core planner**: Track habits, dailies, and to-dos. Organize them with tags, notes, and checklists.
+- **Global session timer**: A stopwatch with target logging to trace time spent on specific items.
+- **Statistics and heatmap**: Interactive heatmap dashboard to monitor your progress over time.
+- **Local-first and sync**: The mobile/desktop clients run on SQLite for offline support and sync changes automatically to a server-side PostgreSQL backend.
 
 ---
 
-## Technology Stack
+## Technology stack
 
 | Layer | Technologies |
 |-------|--------------|
@@ -156,35 +156,34 @@ dotnet build -t:Run -f net11.0-android
 
 ---
 
-## Getting Started
+## Getting started
 
 ### Prerequisites
 Make sure you have Docker installed and running for the local PostgreSQL container.
 
-### Run and Debug via Aspire
+### Run and debug via Aspire
 Run the following command to start PostgreSQL, the web backend, and the native client host environment:
 ```powershell
 dotnet run --project src/AppHost/AppHost.csproj
 ```
 
-### Seeded Demo User
+### Seeded demo user
 The application will automatically seed a guest account on startup:
 - **Email:** `guest@habitinator.local`
 - **Password:** `Guest123!`
 
-### Regenerating Screenshots
-To regenerate the mobile screenshots in the [Preview](#preview) section, requires the web app running, e.g. via AppHost:
+### Regenerating screenshots
+To regenerate the mobile screenshots in the [Preview](#preview) section, the web app must be running, for example via AppHost:
 ```powershell
 pwsh ./tools/Habitinator.Screenshots/run.ps1 -BaseUrl "http://127.0.0.1:5033"
 ```
 
 ---
 
-## Architecture and Database
+## Solution graph
 
 Here are the project dependencies, auto-updated via documentation scripts:
 
-### Solution Graph
 <!-- HABITINATOR_MERMAID_BEGIN:solution-graph -->
 ```mermaid
 flowchart LR

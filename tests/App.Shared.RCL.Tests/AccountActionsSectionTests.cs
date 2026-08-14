@@ -7,6 +7,7 @@ using Bunit;
 
 using FluentAssertions;
 
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 
 using MudBlazor;
@@ -19,6 +20,7 @@ namespace App.Shared.RCL.Tests;
 public sealed class AccountActionsSectionTests : IAsyncDisposable
 {
     private readonly BunitContext _ctx = new();
+    private readonly IRenderedComponent<MudDialogProvider> _dialogProvider;
     private readonly IAccountActionsService _accountActions = Substitute.For<IAccountActionsService>();
     private readonly IUserNotifier _notifier = Substitute.For<IUserNotifier>();
     private readonly IUserDataExportService _export = Substitute.For<IUserDataExportService>();
@@ -33,8 +35,9 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         _export.ExportAsync(Arg.Any<CancellationToken>())
             .Returns(new UserDataExportDto(DateTimeOffset.UtcNow, [], []));
 
-        // Render PopoverProvider to satisfy MudBlazor components
+        // Render PopoverProvider and DialogProvider to satisfy MudBlazor components
         _ctx.Render<MudPopoverProvider>();
+        _dialogProvider = _ctx.Render<MudDialogProvider>();
     }
 
     public async ValueTask DisposeAsync()
@@ -148,17 +151,91 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task DeleteAccount_CallsService()
+    public async Task DeleteAccount_RequiresConfirmation_ThenCallsService_Notifies_AndNavigatesToWelcome()
     {
         // Arrange
         var cut = _ctx.Render<AccountActionsSection>();
         var buttons = cut.FindComponents<MudButton>();
 
-        // Act - Click Delete Account, buttons[2]
-        await cut.InvokeAsync(() => buttons[2].Instance.OnClick.InvokeAsync(null));
+        // Act - Click Delete Account, buttons[2]. Do not await: the handler waits on the confirmation dialog.
+        var deleteClick = cut.InvokeAsync(() => buttons[2].Instance.OnClick.InvokeAsync(null));
+
+        // Assert - confirmation dialog is shown and service is not called yet
+        await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Delete your account?"), TimeSpan.FromSeconds(5));
+        await _accountActions.DidNotReceiveWithAnyArgs().DeleteAccountAsync(Arg.Any<CancellationToken>());
+
+        // Act - Confirm deletion
+        var confirmButton = _dialogProvider.FindAll("button").First(b => b.TextContent.Contains("Delete account"));
+        await confirmButton.ClickAsync();
+        await deleteClick;
 
         // Assert
         await _accountActions.Received(1).DeleteAccountAsync();
+        await _notifier.Received(1).NotifyAsync("Your account has been deleted.", Severity.Success);
+
+        var nav = _ctx.Services.GetRequiredService<NavigationManager>();
+        nav.Uri.Should().Be("http://localhost/?accountDeleted=1");
+    }
+
+    [Fact]
+    public async Task DeleteAccount_Cancel_DoesNotCallService()
+    {
+        // Arrange
+        var cut = _ctx.Render<AccountActionsSection>();
+        var buttons = cut.FindComponents<MudButton>();
+
+        // Act - Click Delete Account, buttons[2], then cancel the confirmation
+        var deleteClick = cut.InvokeAsync(() => buttons[2].Instance.OnClick.InvokeAsync(null));
+        await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Cancel"), TimeSpan.FromSeconds(5));
+        var cancelButton = _dialogProvider.FindAll("button").First(b => b.TextContent.Contains("Cancel"));
+        await cancelButton.ClickAsync();
+        await deleteClick;
+
+        // Assert
+        await _accountActions.DidNotReceiveWithAnyArgs().DeleteAccountAsync(Arg.Any<CancellationToken>());
+        _ctx.Services.GetRequiredService<NavigationManager>().Uri.Should().Be("http://localhost/");
+    }
+
+    [Fact]
+    public async Task DeleteAccount_InvokesOnAccountDeleted_WhenProvided()
+    {
+        // Arrange
+        var callbackInvoked = false;
+        var cut = _ctx.Render<AccountActionsSection>(parameters => parameters
+            .Add(x => x.OnAccountDeleted, () => callbackInvoked = true));
+        var buttons = cut.FindComponents<MudButton>();
+
+        // Act - Click Delete Account, buttons[2], then confirm
+        var deleteClick = cut.InvokeAsync(() => buttons[2].Instance.OnClick.InvokeAsync(null));
+        await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Delete your account?"), TimeSpan.FromSeconds(5));
+        var confirmButton = _dialogProvider.FindAll("button").First(b => b.TextContent.Contains("Delete account"));
+        await confirmButton.ClickAsync();
+        await deleteClick;
+
+        // Assert
+        await _accountActions.Received(1).DeleteAccountAsync();
+        callbackInvoked.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DeleteAccount_Failure_ShowsErrorNotification()
+    {
+        // Arrange
+        var cut = _ctx.Render<AccountActionsSection>();
+        var buttons = cut.FindComponents<MudButton>();
+        _accountActions.DeleteAccountAsync(Arg.Any<CancellationToken>())
+            .Returns(x => Task.FromException(new InvalidOperationException("Account deletion failed.")));
+
+        // Act - Click Delete Account, buttons[2], then confirm
+        var deleteClick = cut.InvokeAsync(() => buttons[2].Instance.OnClick.InvokeAsync(null));
+        await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Delete your account?"), TimeSpan.FromSeconds(5));
+        var confirmButton = _dialogProvider.FindAll("button").First(b => b.TextContent.Contains("Delete account"));
+        await confirmButton.ClickAsync();
+        await deleteClick;
+
+        // Assert
+        await _notifier.Received(1).NotifyAsync("Account deletion failed.", Severity.Error);
+        _ctx.Services.GetRequiredService<NavigationManager>().Uri.Should().Be("http://localhost/");
     }
 
     [Fact]

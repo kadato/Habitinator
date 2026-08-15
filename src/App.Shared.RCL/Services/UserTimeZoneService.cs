@@ -10,7 +10,7 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
     private string? _overrideTimeZoneId;
     private int _utcOffsetMinutes;
     private TimeZoneInfo? _timeZoneInfo;
-    private bool _initialized;
+    private bool _browserDetected;
 
     public UserTimeZoneService(IJSRuntime jsRuntime, IClock clock)
     {
@@ -19,12 +19,12 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
     }
 
     public string? TimeZoneId => _timeZoneId;
-    public bool IsDetected => _initialized && _timeZoneInfo is not null;
+    public bool IsDetected => _browserDetected && _timeZoneInfo is not null;
 
     public void SetOverride(string? timeZoneId)
     {
         _overrideTimeZoneId = string.IsNullOrWhiteSpace(timeZoneId) ? null : timeZoneId;
-        if (!_initialized)
+        if (!_browserDetected && _timeZoneInfo is null)
         {
             return;
         }
@@ -112,7 +112,7 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
 
     private void EnsureInitialized()
     {
-        if (_initialized)
+        if (_browserDetected || _timeZoneInfo is not null)
         {
             return;
         }
@@ -131,7 +131,6 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
             _utcOffsetMinutes = 0;
         }
 
-        _initialized = true;
         ApplyOverrideIfNeeded();
     }
 
@@ -141,7 +140,7 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
     /// </summary>
     public async Task InitializeAsync()
     {
-        if (_initialized)
+        if (_browserDetected)
         {
             return;
         }
@@ -198,7 +197,7 @@ public sealed class UserTimeZoneService : IUserTimeZoneService
             _timeZoneId = _timeZoneInfo?.Id;
         }
 
-        _initialized = true;
+        _browserDetected = true;
         ApplyOverrideIfNeeded();
     }
 

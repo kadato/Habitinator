@@ -102,7 +102,7 @@
 
     private async Task LogoutAsync()
     {
-        // Navigate to the welcome page first so the main layout's session-change guard sees a
+        // Go to the welcome page first so the main layout's session-change guard sees a
         // public path. Clearing the session here fires the guard while the current path is still
         // /settings, which would redirect to the sign-in page instead of the welcome page.
         Nav.NavigateTo("/");

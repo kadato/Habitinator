@@ -164,7 +164,7 @@ public class DailyStreakCalculatorTests
         };
 
         var streak = DailyStreakCalculator.ComputeStreak(start, DailyRepeatType.Daily, 1, today, events, lastCompleted);
-        streak.Should().Be(2); // 13th (event) + 14th (lastCompleted)
+        streak.Should().Be(2); // 13th from the event, 14th from lastCompleted
     }
 
     [Fact]

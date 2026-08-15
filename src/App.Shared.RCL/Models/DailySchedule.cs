@@ -99,7 +99,7 @@ public static class DailySchedule
     }
 
     /// <summary>
-    ///     The latest date ≤ <paramref name="notAfter" /> from which the schedule pattern matches
+    ///     The latest date at or before <paramref name="notAfter" /> from which the schedule pattern matches
     ///     <paramref name="dailyStart" />'s phase and that is at least <paramref name="streakWindow" />
     ///     periods behind the walk end, so streak walks and backfill never run out of history.
     /// </summary>

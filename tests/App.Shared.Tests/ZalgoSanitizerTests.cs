@@ -20,8 +20,8 @@ public sealed class ZalgoSanitizerTests
     [Theory]
     [InlineData("Hello, World!")]
     [InlineData("Plain ASCII text 1234")]
-    [InlineData("café")]          // é = e + combining grave (1 combining mark)
-    [InlineData("naïve")]         // ï = i + combining diaeresis (1 combining mark)
+    [InlineData("café")]          // é = e + combining grave, 1 combining mark
+    [InlineData("naïve")]         // ï = i + combining diaeresis, 1 combining mark
     [InlineData("résumé")]
     public void IsZalgo_CleanText_ReturnsFalse(string input)
         => ZalgoSanitizer.IsZalgo(input).Should().BeFalse();

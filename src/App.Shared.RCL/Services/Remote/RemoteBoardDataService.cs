@@ -85,7 +85,7 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
         catch (HttpRequestException ex)
         {
             throw new InvalidOperationException(
-                "Could not reach the API. Start App.Web, then try again. On the Android emulator use base URL http://10.0.2.2:5033 (127.0.0.1 is the emulator itself).",
+                "Could not reach the API. Start App.Web, then try again. On the Android emulator use base URL http://10.0.2.2:5033 because 127.0.0.1 is the emulator itself.",
                 ex);
         }
     }

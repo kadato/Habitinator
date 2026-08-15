@@ -135,39 +135,7 @@ foreach (var (OutputPath, Content) in outputs)
     await Console.Out.WriteLineAsync($"Wrote {Path.GetRelativePath(repoRoot, OutputPath)}");
 }
 
-// Raster exports via BrandExporter, converting SVG to PNG.
-var pngExports = new (string Svg, string Png, int Width, int Height)[]
-{
-    (Path.Combine(repoRoot, "src", AppWeb, Wwwroot, "favicon.svg"),
-        Path.Combine(repoRoot, "src", AppWeb, Wwwroot, "favicon.png"), 192, 192),
-    (Path.Combine(repoRoot, "src", AppWeb, Wwwroot, Brand, "icon-app.svg"),
-        Path.Combine(repoRoot, "src", AppWeb, Wwwroot, "apple-touch-icon.png"), 180, 180),
-    (Path.Combine(repoRoot, "src", AppWeb, Wwwroot, Brand, "icon-maskable.svg"),
-        Path.Combine(repoRoot, "src", AppWeb, Wwwroot, "icons", "icon-maskable-512.png"), 512, 512),
-    (Path.Combine(repoRoot, "src", AppWeb, Wwwroot, Brand, "wordmark-og.svg"),
-        Path.Combine(repoRoot, "src", AppWeb, Wwwroot, "og-image.png"), 1200, 630),
-};
-
-var exporterProject = Path.Combine(repoRoot, "scripts", "BrandExporter", "BrandExporter.csproj");
-if (File.Exists(exporterProject))
-{
-    foreach (var (Svg, Png, Width, Height) in pngExports)
-    {
-        var result = await RunAsync("dotnet",
-            $"run --project \"{exporterProject}\" -- \"{Svg}\" \"{Png}\" {Width} {Height}");
-        if (result != 0)
-        {
-            await Console.Error.WriteLineAsync($"BrandExporter failed for {Svg} (exit {result}).");
-            return 1;
-        }
-    }
-}
-else
-{
-    await Console.Error.WriteLineAsync($"BrandExporter project not found at {exporterProject}; skipping raster exports.");
-}
-
-await Console.Out.WriteLineAsync("Brand assets regenerated.");
+await Console.Out.WriteLineAsync("Brand SVG assets regenerated. Run scripts/export-brand-assets.ps1 for raster assets.");
 return 0;
 
 static List<Bar> ParseBars(string svg) =>
@@ -195,22 +163,6 @@ static string? FindRepoRoot()
         dir = dir.Parent;
     }
     return null;
-}
-
-static async Task<int> RunAsync(string fileName, string arguments)
-{
-    using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-    {
-        FileName = fileName,
-        Arguments = arguments,
-        UseShellExecute = false,
-    });
-    if (process is null)
-    {
-        return -1;
-    }
-    await process.WaitForExitAsync();
-    return process.ExitCode;
 }
 
 namespace BrandGenerator

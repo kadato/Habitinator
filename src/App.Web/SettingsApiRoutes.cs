@@ -1,5 +1,3 @@
-using System.Security.Claims;
-
 using App.Shared.RCL;
 using App.Shared.RCL.Models;
 using App.Web.Auth;
@@ -53,15 +51,10 @@ internal static class SettingsApiRoutes
         Action<T>? sanitize = null)
     {
         settingsApi.MapGet("/" + segment,
-            async Task<Results<Ok<T>, UnauthorizedHttpResult, NotFound>> (
-                ClaimsPrincipal user, ApplicationDbContext db, CancellationToken cancellationToken) =>
+            async Task<Results<Ok<T>, NotFound>> (
+                CurrentUserId user, ApplicationDbContext db, CancellationToken cancellationToken) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId)
-                {
-                    return TypedResults.Unauthorized();
-                }
-
-                var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+                var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == user.Value, cancellationToken);
                 if (row is null)
                 {
                     return TypedResults.NotFound();
@@ -71,16 +64,11 @@ internal static class SettingsApiRoutes
             });
 
         settingsApi.MapPut("/" + segment,
-            async Task<Results<NoContent, UnauthorizedHttpResult, NotFound>> (
-                ClaimsPrincipal user, ApplicationDbContext db, IBoardChangeNotifier boardChangeNotifier,
+            async Task<Results<NoContent, NotFound>> (
+                CurrentUserId user, ApplicationDbContext db, IBoardChangeNotifier boardChangeNotifier,
                 T body, CancellationToken cancellationToken) =>
             {
-                if (AuthenticatedUserId.TryGet(user) is not { } userId)
-                {
-                    return TypedResults.Unauthorized();
-                }
-
-                var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+                var row = await db.Users.FirstOrDefaultAsync(u => u.Id == user.Value, cancellationToken);
                 if (row is null)
                 {
                     return TypedResults.NotFound();
@@ -89,7 +77,7 @@ internal static class SettingsApiRoutes
                 sanitize?.Invoke(body);
                 setter(row, body);
                 await db.SaveChangesAsync(cancellationToken);
-                await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+                await boardChangeNotifier.NotifyBoardChangedAsync(user.Value, cancellationToken);
                 return TypedResults.NoContent();
             });
     }

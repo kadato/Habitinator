@@ -243,17 +243,12 @@ internal static class AuthApiRoutes
     }
 
     private static async Task<IResult> ChangePasswordAsync(
-        ClaimsPrincipal user,
+        CurrentUserId user,
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         ChangePasswordRequest body)
     {
-        if (AuthenticatedUserId.TryGet(user) is not { } userId)
-        {
-            return Results.Unauthorized();
-        }
-
-        var appUser = await userManager.FindByIdAsync(userId.ToString());
+        var appUser = await userManager.FindByIdAsync(user.Value.ToString());
         if (appUser is null)
         {
             return Results.NotFound();
@@ -270,29 +265,19 @@ internal static class AuthApiRoutes
     }
 
     private static async Task<IResult> ExportDataAsync(
-        ClaimsPrincipal user,
+        CurrentUserId user,
         UserDataExportService exportService,
         CancellationToken cancellationToken)
     {
-        if (AuthenticatedUserId.TryGet(user) is not { } resolvedUserId)
-        {
-            return Results.Unauthorized();
-        }
-
-        return Results.Ok(await exportService.BuildAsync(resolvedUserId, cancellationToken));
+        return Results.Ok(await exportService.BuildAsync(user.Value, cancellationToken));
     }
 
     private static async Task<IResult> DeleteAccountAsync(
-        ClaimsPrincipal user,
+        CurrentUserId user,
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager)
     {
-        if (AuthenticatedUserId.TryGet(user) is not { } userId)
-        {
-            return Results.Unauthorized();
-        }
-
-        var appUser = await userManager.FindByIdAsync(userId.ToString());
+        var appUser = await userManager.FindByIdAsync(user.Value.ToString());
         if (appUser is null)
         {
             return Results.NotFound();

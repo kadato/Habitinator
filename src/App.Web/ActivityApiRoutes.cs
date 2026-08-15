@@ -1,5 +1,3 @@
-using System.Security.Claims;
-
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services.Remote;
 using App.Web.Auth;
@@ -24,7 +22,7 @@ internal static class ActivityApiRoutes
     }
 
     private static Task<IResult> GetHabitContributionsAsync(
-        ClaimsPrincipal user,
+        CurrentUserId user,
         ActivityStatisticsService stats,
         string? period,
         string? tag,
@@ -36,7 +34,7 @@ internal static class ActivityApiRoutes
             cancellationToken);
 
     private static Task<IResult> GetDashboardAsync(
-        ClaimsPrincipal user,
+        CurrentUserId user,
         ActivityStatisticsService stats,
         string? period,
         string? tag,
@@ -48,7 +46,7 @@ internal static class ActivityApiRoutes
             cancellationToken);
 
     private static Task<IResult> GetDailyContributionsAsync(
-        ClaimsPrincipal user,
+        CurrentUserId user,
         ActivityStatisticsService stats,
         string? period,
         string? tag,
@@ -60,7 +58,7 @@ internal static class ActivityApiRoutes
             cancellationToken);
 
     private static Task<IResult> GetActivityDayDetailAsync(
-        ClaimsPrincipal user,
+        CurrentUserId user,
         ActivityStatisticsService stats,
         DateOnly date,
         string? tag,
@@ -72,21 +70,16 @@ internal static class ActivityApiRoutes
             cancellationToken);
 
     private static async Task<IResult> RunStatsQueryAsync<T>(
-        ClaimsPrincipal user,
+        CurrentUserId user,
         Func<Guid, CancellationToken, Task<T>> query,
         Func<T, IResult> toResult,
         CancellationToken cancellationToken)
     {
-        if (AuthenticatedUserId.TryGet(user) is not { } userId)
-        {
-            return Results.Unauthorized();
-        }
-
-        return toResult(await query(userId, cancellationToken));
+        return toResult(await query(user.Value, cancellationToken));
     }
 
     private static async Task<IResult> LogActivityAsync(
-        ClaimsPrincipal user,
+        CurrentUserId user,
         BoardPersistenceService persistence,
         ActivityLogRequest body,
         CancellationToken cancellationToken)
@@ -96,15 +89,10 @@ internal static class ActivityApiRoutes
             return Results.BadRequest(new { detail = "Duration must be between 0 and 86,400 seconds (24 hours)." });
         }
 
-        if (AuthenticatedUserId.TryGet(user) is not { } resolvedUserId)
-        {
-            return Results.Unauthorized();
-        }
-
         if (body.EventType == ActivityEventType.TimerSession && body.DurationSeconds.HasValue)
         {
             await persistence.LogTimerSessionAsync(
-                resolvedUserId,
+                user.Value,
                 TimeSpan.FromSeconds(body.DurationSeconds.Value),
                 body.BoardItemId,
                 body.CustomLabel,
@@ -113,7 +101,7 @@ internal static class ActivityApiRoutes
         else
         {
             await persistence.LogActivityAsync(
-                resolvedUserId,
+                user.Value,
                 body.EventType,
                 body.BoardItemId,
                 body.DurationSeconds,

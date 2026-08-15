@@ -319,12 +319,9 @@ public static class DemoGuestSeeder
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        var existing = await db.UserActivityEvents.Where(e => e.UserId == userId).ToListAsync(cancellationToken);
-        if (existing.Count > 0)
-        {
-            db.UserActivityEvents.RemoveRange(existing);
-            await db.SaveChangesAsync(cancellationToken);
-        }
+        await db.UserActivityEvents
+            .Where(e => e.UserId == userId)
+            .ExecuteDeleteAsync(cancellationToken);
     }
 
     private static async Task SeedDemoActivityIfMissingAsync(

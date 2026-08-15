@@ -22,7 +22,22 @@ public static class BoardOrdering
         Func<T, Guid> id) =>
         items.OrderBy(x => completeForToday(x) ? 1 : 0).ThenBy(sortOrder).ThenBy(createdAt).ThenBy(id);
 
-    /// <summary>Incomplete first, then by due date in UTC with undated last, then the common sort keys.</summary>
+    /// <summary>Incomplete first, then undated first followed by earliest due date, then the common sort keys.</summary>
+    public static IOrderedEnumerable<T> SortTodos<T>(
+        IEnumerable<T> items,
+        Func<T, bool> isCompleted,
+        Func<T, DateOnly?> dueDate,
+        Func<T, double> sortOrder,
+        Func<T, DateTimeOffset> createdAt,
+        Func<T, Guid> id) =>
+        items
+            .OrderBy(x => isCompleted(x) ? 1 : 0)
+            .ThenBy(x => dueDate(x) is null ? 0 : 1)
+            .ThenBy(x => dueDate(x) ?? DateOnly.MaxValue)
+            .ThenBy(sortOrder)
+            .ThenBy(createdAt)
+            .ThenBy(id);
+
     public static IOrderedEnumerable<T> SortTodos<T>(
         IEnumerable<T> items,
         Func<T, bool> isCompleted,
@@ -30,11 +45,11 @@ public static class BoardOrdering
         Func<T, double> sortOrder,
         Func<T, DateTimeOffset> createdAt,
         Func<T, Guid> id) =>
-        items
-            .OrderBy(x => isCompleted(x) ? 1 : 0)
-            .ThenBy(x => dueDateUtc(x) is null ? 0 : 1)
-            .ThenBy(x => dueDateUtc(x) ?? DateTime.MaxValue)
-            .ThenBy(sortOrder)
-            .ThenBy(createdAt)
-            .ThenBy(id);
+        SortTodos(
+            items,
+            isCompleted,
+            x => dueDateUtc(x) is { } d ? DateOnly.FromDateTime(d) : null,
+            sortOrder,
+            createdAt,
+            id);
 }

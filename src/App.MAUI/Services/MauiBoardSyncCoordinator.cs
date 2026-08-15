@@ -1,3 +1,5 @@
+using System.Threading.Channels;
+
 using App.MAUI.Services.LocalBoard;
 using App.Shared.RCL.Services;
 
@@ -20,6 +22,10 @@ public sealed partial class MauiBoardSyncCoordinator
     private readonly SemaphoreSlim _run = new(1, 1);
     private readonly PeriodicTimer _timer = new(TimeSpan.FromSeconds(45));
     private readonly CancellationTokenSource _appStopping = new();
+    private readonly Channel<bool> _syncChannel = Channel.CreateBounded<bool>(new BoundedChannelOptions(1)
+    {
+        FullMode = BoundedChannelFullMode.DropOldest
+    });
 
     public MauiBoardSyncCoordinator(
         LocalFirstBoardDataService board,
@@ -39,9 +45,9 @@ public sealed partial class MauiBoardSyncCoordinator
     }
 
     /// <summary>Fire-and-forget sync on resume or after login.</summary>
-    public void RequestSync()
+    public void RequestSync(bool notifyOnProgress = true)
     {
-        _ = RunPullAndDrainAsync(notifyOnProgress: true, _appStopping.Token);
+        _syncChannel.Writer.TryWrite(notifyOnProgress);
     }
 
     public async Task RunPullAndDrainAsync(bool notifyOnProgress, CancellationToken cancellationToken)
@@ -66,8 +72,8 @@ public sealed partial class MauiBoardSyncCoordinator
 
     private async Task RunPullAndDrainCoreAsync(bool notifyOnProgress, CancellationToken cancellationToken)
     {
-        // Publish the flag before any I/O so concurrent readers (e.g. empty-board
-        // fetch-on-read) do not race a run that is about to touch the database.
+        // Publish the flag before any I/O so concurrent readers like empty-board
+        // fetch-on-read do not race a run that is about to touch the database.
         _status.IsSyncing = true;
         try
         {
@@ -146,11 +152,23 @@ public sealed partial class MauiBoardSyncCoordinator
                 }
             }
 
-            while (await _timer.WaitForNextTickAsync(cancellationToken))
+            while (!cancellationToken.IsCancellationRequested)
             {
+                var notifyOnProgress = true;
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                var channelTask = _syncChannel.Reader.ReadAsync(cts.Token).AsTask();
+                var timerTask = _timer.WaitForNextTickAsync(cts.Token).AsTask();
+                var completed = await Task.WhenAny(channelTask, timerTask).ConfigureAwait(false);
+                await cts.CancelAsync().ConfigureAwait(false);
+
+                if (completed == channelTask)
+                {
+                    notifyOnProgress = await channelTask.ConfigureAwait(false);
+                }
+
                 try
                 {
-                    await RunPullAndDrainAsync(notifyOnProgress: true, cancellationToken);
+                    await RunPullAndDrainAsync(notifyOnProgress, cancellationToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
@@ -158,7 +176,7 @@ public sealed partial class MauiBoardSyncCoordinator
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogTrace(ex, "Periodic board sync failed.");
+                    _logger.LogTrace(ex, "Periodic or requested board sync failed.");
                 }
             }
         }

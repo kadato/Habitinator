@@ -17,12 +17,6 @@ if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPIRE_ALLOW_UNSECU
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-// Explicitly set configuration fallbacks to prevent OTLP / ASPNETCORE_URLS dashboard startup failures
-builder.Configuration["ASPNETCORE_URLS"] ??= "http://localhost:15000";
-builder.Configuration["ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL"] ??= "http://localhost:19000";
-builder.Configuration["ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL"] ??= "http://localhost:20000";
-builder.Configuration["ASPIRE_ALLOW_UNSECURED_TRANSPORT"] ??= "true";
-
 var postgresUser = builder.AddParameter("postgres-user", "postgres");
 var postgresPassword = builder.AddParameter("postgres-password", "postgres", secret: true);
 

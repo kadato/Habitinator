@@ -800,12 +800,12 @@ public sealed class BoardPersistenceService(
         BoardItemEntity entity,
         CancellationToken cancellationToken = default)
     {
-        var (today, dayStart) = await TodayAndDayStartAsync(userId, cancellationToken);
         if (entity.Section != BoardSection.Daily)
         {
-            return ToModelWithToday(entity, today, EmptyDailyStreaks);
+            return ToModelWithToday(entity, DateOnly.MinValue, EmptyDailyStreaks);
         }
 
+        var (today, dayStart) = await TodayAndDayStartAsync(userId, cancellationToken);
         await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var singleDailyList = new List<BoardItemEntity> { entity };
         var streaks = await BuildDailyStreakMapAsync(userId, singleDailyList, today, timeZone, dayStart, readDb, cancellationToken);

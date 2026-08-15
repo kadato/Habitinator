@@ -8,7 +8,7 @@ public enum PomodoroState
     LongBreak
 }
 
-public sealed class GlobalTimerService(IClock clock)
+public sealed class GlobalTimerService(IClock clock) : IDisposable
 {
     private readonly IClock _clock = clock;
     private TimeSpan _accumulated = TimeSpan.Zero;
@@ -62,8 +62,8 @@ public sealed class GlobalTimerService(IClock clock)
     public bool IsRunning => _runningSince.HasValue;
 
     /// <summary>
-    ///     A "time's up" dialog is showing. The stopwatch keeps running. The user must log, pick not done, or (if
-    ///     misrouted) use <see cref="Start" /> which dismisses the prompt the same as not done.
+    ///     A "time's up" dialog is showing. The stopwatch keeps running. The user must log, pick not done, or, if
+    ///     misrouted, use <see cref="Start" /> which dismisses the prompt the same as not done.
     /// </summary>
     public bool AwaitingFocusTimeUpPrompt { get; private set; }
 
@@ -132,6 +132,47 @@ public sealed class GlobalTimerService(IClock clock)
         BoardItemId = null;
     }
 
+    public event Action? Ticked;
+    private CancellationTokenSource? _heartbeatCts;
+
+    private void StartHeartbeat()
+    {
+        if (_heartbeatCts is not null)
+        {
+            return;
+        }
+
+        _heartbeatCts = new CancellationTokenSource();
+        var token = _heartbeatCts.Token;
+        _ = Task.Run(async () =>
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+            try
+            {
+                while (!token.IsCancellationRequested && await timer.WaitForNextTickAsync(token).ConfigureAwait(false))
+                {
+                    Ticked?.Invoke();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Heartbeat cancelled normally when timer stopped or paused.
+            }
+        }, token);
+    }
+
+    private void StopHeartbeat()
+    {
+        if (_heartbeatCts is null)
+        {
+            return;
+        }
+
+        _heartbeatCts.Cancel();
+        _heartbeatCts.Dispose();
+        _heartbeatCts = null;
+    }
+
     public void Start()
     {
         if (IsRunning)
@@ -159,6 +200,8 @@ public sealed class GlobalTimerService(IClock clock)
         }
 
         _runningSince = _clock.UtcNow;
+        StartHeartbeat();
+        Ticked?.Invoke();
     }
 
     /// <summary>
@@ -178,7 +221,10 @@ public sealed class GlobalTimerService(IClock clock)
         if (!IsRunning)
         {
             _runningSince = _clock.UtcNow;
+            StartHeartbeat();
         }
+
+        Ticked?.Invoke();
     }
 
     /// <summary>
@@ -197,6 +243,7 @@ public sealed class GlobalTimerService(IClock clock)
 
     public void Pause()
     {
+        StopHeartbeat();
         if (_runningSince is not { } runningSince)
         {
             return;
@@ -204,16 +251,19 @@ public sealed class GlobalTimerService(IClock clock)
 
         _accumulated += _clock.UtcNow - runningSince;
         _runningSince = null;
+        Ticked?.Invoke();
     }
 
     public TimeSpan Stop()
     {
+        StopHeartbeat();
         AwaitingFocusTimeUpPrompt = false;
         Pause();
         var duration = _accumulated;
         _accumulated = TimeSpan.Zero;
         _runningSince = null;
         _nextFocusMilestoneAtElapsed = null;
+        Ticked?.Invoke();
         return duration;
     }
 
@@ -222,11 +272,13 @@ public sealed class GlobalTimerService(IClock clock)
     /// </summary>
     public void Reset()
     {
+        StopHeartbeat();
         AwaitingFocusTimeUpPrompt = false;
         Pause();
         _accumulated = TimeSpan.Zero;
         _runningSince = null;
         _nextFocusMilestoneAtElapsed = null;
+        Ticked?.Invoke();
     }
 
     /// <summary>
@@ -345,5 +397,10 @@ public sealed class GlobalTimerService(IClock clock)
             return ts.ToString(@"hh\:mm\:ss", System.Globalization.CultureInfo.InvariantCulture);
         }
         return ts.ToString(@"mm\:ss", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    public void Dispose()
+    {
+        StopHeartbeat();
     }
 }

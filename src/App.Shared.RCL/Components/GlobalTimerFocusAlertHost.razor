@@ -14,15 +14,11 @@
 }
 
 @code {
-    private PeriodicTimer? _focusTick;
-    private CancellationTokenSource? _focusTickCts;
     private bool _wasRunningForTitle;
 
     protected override void OnInitialized()
     {
-        _focusTickCts = new CancellationTokenSource();
-        _focusTick = new PeriodicTimer(TimeSpan.FromSeconds(1));
-        _ = RunFocusTickAsync(_focusTickCts.Token);
+        TimerService.Ticked += OnTimerTicked;
     }
 
     private string GetTabTitle()
@@ -38,35 +34,18 @@
         return $"{timeStr} {statusStr} - Habitinator";
     }
 
-    private async Task RunFocusTickAsync(CancellationToken cancellationToken)
+    private void OnTimerTicked()
     {
-        if (_focusTick is null)
+        _ = InvokeAsync(async () =>
         {
-            return;
-        }
+            bool isRunning = TimerService.IsRunning;
+            await UpdateTitleIfStateChangedAsync(isRunning);
 
-        try
-        {
-            while (await _focusTick.WaitForNextTickAsync(cancellationToken))
+            if (isRunning && TimerService.TryConsumeFocusDurationReached())
             {
-                // The PeriodicTimer continuation runs on a thread-pool thread. All
-                // GlobalTimerService state access must happen on the renderer thread.
-                await InvokeAsync(async () =>
-                {
-                    bool isRunning = TimerService.IsRunning;
-                    await UpdateTitleIfStateChangedAsync(isRunning);
-
-                    if (isRunning && TimerService.TryConsumeFocusDurationReached())
-                    {
-                        HandleFocusDurationReached(cancellationToken);
-                    }
-                });
+                HandleFocusDurationReached(CancellationToken.None);
             }
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected during disposal.
-        }
+        });
     }
 
     private async Task UpdateTitleIfStateChangedAsync(bool isRunning)
@@ -285,9 +264,7 @@
 
     public void Dispose()
     {
-        _focusTickCts?.Cancel();
-        _focusTick?.Dispose();
-        _focusTickCts?.Dispose();
+        TimerService.Ticked -= OnTimerTicked;
         AppWindowProgress.ClearTaskbarBadge();
         AppWindowProgress.SetTitle("Habitinator");
     }

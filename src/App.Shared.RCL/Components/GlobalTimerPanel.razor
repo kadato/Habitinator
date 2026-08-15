@@ -183,8 +183,6 @@
 
     [Parameter] public IReadOnlyList<BoardItem> Todos { get; set; } = [];
 
-    private PeriodicTimer? _uiTick;
-    private CancellationTokenSource? _uiTickCts;
     private string _sessionTargetText = string.Empty;
     private bool _sessionTargetFieldInitialized;
     private (string? TargetId, string? TargetType, Guid? BoardItemId) _lastSyncedSessionTarget;
@@ -370,10 +368,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _uiTickCts = new CancellationTokenSource();
-        _uiTick = new PeriodicTimer(TimeSpan.FromSeconds(1));
         _expanded = IsSessionActive;
-        _ = RunUiTickAsync(_uiTickCts.Token);
+        TimerService.Ticked += OnTimerTicked;
 
         try
         {
@@ -467,34 +463,16 @@
         _lastSyncedFocusAlertAfter = parsed;
     }
 
-    private async Task RunUiTickAsync(CancellationToken cancellationToken)
+    private void OnTimerTicked()
     {
-        if (_uiTick is null)
+        _ = InvokeAsync(() =>
         {
-            return;
-        }
-
-        try
-        {
-            while (await _uiTick.WaitForNextTickAsync(cancellationToken))
+            SyncTimerFieldsFromServiceIfNeeded();
+            if (TimerService.IsRunning)
             {
-                // The PeriodicTimer continuation runs on a thread-pool thread. Field writes and
-                // timer reads must happen on the renderer thread, or they race with user input.
-                await InvokeAsync(() =>
-                {
-                    SyncTimerFieldsFromServiceIfNeeded();
-                    if (TimerService.IsRunning)
-                    {
-                        // Elapsed only changes while running skip re-renders while idle or paused.
-                        StateHasChanged();
-                    }
-                });
+                StateHasChanged();
             }
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected during disposal.
-        }
+        });
     }
 
     private void RebuildSessionTargetOptions()
@@ -764,8 +742,6 @@
 
     public void Dispose()
     {
-        _uiTickCts?.Cancel();
-        _uiTick?.Dispose();
-        _uiTickCts?.Dispose();
+        TimerService.Ticked -= OnTimerTicked;
     }
 }

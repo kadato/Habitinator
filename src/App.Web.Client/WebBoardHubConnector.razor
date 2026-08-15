@@ -9,15 +9,18 @@
     private DotNetObjectReference<BoardRemoteNotifyBridge>? _dotNetRef;
     private bool _hubStarted;
 
-    protected override void OnInitialized()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (InitialBoardLoad.IsComplete)
+        if (firstRender)
         {
-            _ = StartHubAsync();
-        }
-        else
-        {
-            InitialBoardLoad.Completed += OnInitialBoardLoadCompleted;
+            if (InitialBoardLoad.IsComplete)
+            {
+                await StartHubAsync();
+            }
+            else
+            {
+                InitialBoardLoad.Completed += OnInitialBoardLoadCompleted;
+            }
         }
     }
 
@@ -25,14 +28,6 @@
     {
         InitialBoardLoad.Completed -= OnInitialBoardLoadCompleted;
         _ = InvokeAsync(StartHubAsync);
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && InitialBoardLoad.IsComplete && !_hubStarted)
-        {
-            await StartHubAsync();
-        }
     }
 
     private async Task StartHubAsync()

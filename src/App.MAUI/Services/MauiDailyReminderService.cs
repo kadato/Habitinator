@@ -13,7 +13,7 @@ namespace App.MAUI.Services;
 ///     the current board. Reschedules when settings change or the app is foregrounded so the message stays
 ///     up to date.
 /// </summary>
-public sealed partial class MauiDailyReminderService
+public sealed partial class MauiDailyReminderService : IDisposable
 {
     private const int NotificationId = 42_001;
 
@@ -23,6 +23,7 @@ public sealed partial class MauiDailyReminderService
 
     private readonly INotificationSettingsService _notificationSettings;
     private readonly IUserDateFormatService _dateFormatService;
+    private readonly SemaphoreSlim _syncGate = new(1, 1);
 
     public MauiDailyReminderService(
         INotificationSettingsService notificationSettings,
@@ -39,19 +40,17 @@ public sealed partial class MauiDailyReminderService
 
     private void OnSettingsChanged(object? sender, EventArgs e)
     {
-        _ = RescheduleAfterSettingsChangeAsync();
-    }
-
-    private async Task RescheduleAfterSettingsChangeAsync()
-    {
-        try
+        _ = Task.Run(async () =>
         {
-            await MainThread.InvokeOnMainThreadAsync(() => SynchronizeAsync()).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to reschedule daily reminder after settings change.");
-        }
+            try
+            {
+                await SynchronizeAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to reschedule daily reminder after settings change.");
+            }
+        });
     }
 
     public async Task SynchronizeAsync(CancellationToken cancellationToken = default)
@@ -61,6 +60,7 @@ public sealed partial class MauiDailyReminderService
             return;
         }
 
+        await _syncGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             var center = LocalNotificationCenter.Current;
@@ -115,6 +115,10 @@ public sealed partial class MauiDailyReminderService
         {
             _logger.LogWarning(ex, "Failed to update daily reminder notification.");
         }
+        finally
+        {
+            _syncGate.Release();
+        }
     }
 
     /// <summary>Next <paramref name="timeOfDay" /> on the device clock, today if still ahead, else tomorrow.</summary>
@@ -129,5 +133,11 @@ public sealed partial class MauiDailyReminderService
         var today = now.Date;
         var candidate = today + timeOfDay;
         return candidate > now ? candidate : candidate.AddDays(1);
+    }
+
+    public void Dispose()
+    {
+        _notificationSettings.Changed -= OnSettingsChanged;
+        _syncGate.Dispose();
     }
 }

@@ -54,7 +54,7 @@ public static class MauiProgram
         builder.Services.AddSingleton(_ => new MauiApiEndpointOptions(apiBase));
         builder.Services.AddSingleton<IAuthTokenStore, AuthTokenStore>();
         builder.Services.AddSingleton<ILocalSettingsStore, MauiLocalSettingsStore>();
-        builder.Services.AddSingleton<IClientSessionProvider, MauiClientSessionProvider>();
+        builder.Services.AddSingleton<IClientSessionProvider>(sp => sp.GetRequiredService<IApiSession>());
         var localBoardDbPath = Path.Combine(FileSystem.AppDataDirectory, "habitinator-board-local.db");
         builder.Services.AddDbContextFactory<LocalBoardDbContext>(o =>
             o.UseSqlite($"Data Source={localBoardDbPath}"));
@@ -111,7 +111,6 @@ public static class MauiProgram
         });
         builder.Services.AddSingleton<IActivityStatisticsReader, RemoteActivityStatisticsReader>();
         builder.Services.AddSingleton<INotificationSettingsService, RemoteNotificationSettingsService>();
-        builder.Services.AddSingleton<IUserPreferencesLocalStore, MauiUserPreferencesLocalStore>();
         builder.Services.AddSingleton<IUserPreferencesService, LocalFirstUserPreferencesService>();
         builder.Services.AddSingleton<MauiDailyReminderService>();
         // Scoped: UserNotifier feeds ISnackbar, which uses NavigationManager. NavigationManager is only valid inside the Blazor WebView scope, not root or singleton.

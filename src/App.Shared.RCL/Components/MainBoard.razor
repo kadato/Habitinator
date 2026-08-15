@@ -518,9 +518,6 @@
             await JS.InvokeVoidAsync(
                 "habitinatorLoadScript",
                 "_content/App.Shared.RCL/js/boardVisibility.js");
-            await JS.InvokeVoidAsync(
-                "habitinatorLoadScript",
-                "_content/App.Shared.RCL/js/dailyRetroSession.js");
 
             _visibilityRef = DotNetObjectReference.Create(BoardNotifyBridge);
             await JS.InvokeVoidAsync("HabitinatorBoardVisibility.start", _visibilityRef);

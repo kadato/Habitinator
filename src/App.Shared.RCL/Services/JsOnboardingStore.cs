@@ -1,41 +1,29 @@
-using Microsoft.JSInterop;
-
 namespace App.Shared.RCL.Services;
 
 /// <summary>Remembers whether the first-run onboarding dialog was shown for the signed-in account.</summary>
-public sealed class JsOnboardingStore : JsPerUserStoreBase, IOnboardingStore
+public sealed class JsOnboardingStore : IOnboardingStore
 {
-    private readonly IJSRuntime _js;
+    private const string BaseKey = "habitinator.onboarding.v1";
+    private readonly ILocalSettingsStore _localStore;
+    private readonly IClientSessionProvider _sessionProvider;
 
-    public JsOnboardingStore(IJSRuntime js, IClientSessionProvider sessionProvider)
-        : base(js, sessionProvider)
+    public JsOnboardingStore(ILocalSettingsStore localStore, IClientSessionProvider sessionProvider)
     {
-        _js = js;
+        _localStore = localStore;
+        _sessionProvider = sessionProvider;
     }
 
-    protected override string BaseKey => "habitinator.onboarding.v1";
+    private string GetKey() => LocalFirstRemoteStore.KeyFor(_sessionProvider.Email, BaseKey);
 
-    public async Task<bool> IsCompletedAsync(CancellationToken cancellationToken = default)
+    public Task<bool> IsCompletedAsync(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            await EnsureScriptLoadedAsync();
-            return await _js.InvokeAsync<bool>("habitinatorGetOnboardingDone", GetKey()).ConfigureAwait(false);
-        }
-        catch (JSDisconnectedException)
-        {
-            // Safe default: treat onboarding as completed, fail closed. Never throw on JS failure.
-            return true;
-        }
-        catch (JSException)
-        {
-            // Safe default: treat onboarding as completed, fail closed. Never throw on JS failure.
-            return true;
-        }
+        var val = _localStore.Read(GetKey());
+        return Task.FromResult(val is "1" or "true");
     }
 
     public Task MarkCompletedAsync(CancellationToken cancellationToken = default)
     {
-        return JsInvokeSafe.InvokeVoidAsync(_js, "habitinatorSetOnboardingDone", GetKey(), true);
+        _localStore.Write(GetKey(), "1");
+        return Task.CompletedTask;
     }
 }

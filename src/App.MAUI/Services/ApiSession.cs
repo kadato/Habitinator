@@ -1,21 +1,14 @@
 using App.MAUI.Services.LocalBoard;
 using App.Shared.RCL.Models;
+using App.Shared.RCL.Services;
 
 using Microsoft.Extensions.Logging;
 
 namespace App.MAUI.Services;
 
-public interface IApiSession
+public interface IApiSession : IClientSessionProvider
 {
     bool IsReady { get; }
-    bool IsLoggedIn { get; }
-    string? Email { get; }
-
-    /// <summary>
-    ///     Raised when login state, email, or readiness changes. Blazor should refresh UI. Injected session properties
-    ///     are not parameters.
-    /// </summary>
-    event EventHandler? Changed;
 
     Task LoadAsync(CancellationToken cancellationToken = default);
     Task SetSessionAsync(LoginResponse response, CancellationToken cancellationToken = default);

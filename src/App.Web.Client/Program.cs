@@ -61,7 +61,6 @@ builder.Services.AddScoped<IBoardDataService>(sp =>
 builder.Services.AddScoped<IActivityStatisticsReader, RemoteActivityStatisticsReader>();
 builder.Services.AddScoped<IUserActivityLogService, RemoteUserActivityLogService>();
 builder.Services.AddScoped<INotificationSettingsService, RemoteNotificationSettingsService>();
-builder.Services.AddScoped<IUserPreferencesLocalStore, WasmUserPreferencesLocalStore>();
 builder.Services.AddScoped<IUserPreferencesService, LocalFirstUserPreferencesService>();
 builder.Services.AddScoped<IUserNotifier, UserNotifier>();
 builder.Services.AddScoped<IFocusTimerClientAlerts, FocusTimerClientAlerts>();

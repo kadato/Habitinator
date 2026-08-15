@@ -13,10 +13,12 @@ namespace App.Shared.RCL.Services;
 /// </summary>
 public sealed class LocalFirstUserPreferencesService : IUserPreferencesService, IDisposable
 {
+    private const string PreferencesKey = "user_preferences_v1";
+
     private static readonly JsonSerializerOptions Serializer = JsonDefaults.Api;
 
     private readonly IHttpClientFactory _http;
-    private readonly IUserPreferencesLocalStore _store;
+    private readonly IClientSessionProvider _sessionProvider;
     private readonly ILogger<LocalFirstUserPreferencesService> _logger;
     private readonly LocalFirstRemoteStore<UserPreferences> _remoteStore;
 
@@ -24,29 +26,31 @@ public sealed class LocalFirstUserPreferencesService : IUserPreferencesService, 
 
     public LocalFirstUserPreferencesService(
         IHttpClientFactory http,
-        IUserPreferencesLocalStore store,
+        IClientSessionProvider sessionProvider,
+        ILocalSettingsStore localStore,
         ILogger<LocalFirstUserPreferencesService> logger)
     {
         _http = http;
-        _store = store;
+        _sessionProvider = sessionProvider;
         _logger = logger;
         _remoteStore = new LocalFirstRemoteStore<UserPreferences>(
-            store.ReadLocal,
-            store.WriteLocal,
+            key => UserPreferencesJson.DeserializeOrDefault(localStore.Read(key)),
+            (key, prefs) => localStore.Write(key, UserPreferencesJson.Serialize(prefs)),
             UserPreferencesJson.Serialize,
             logger);
-        store.SessionChanged += () => Changed?.Invoke(this, EventArgs.Empty);
+        _sessionProvider.Changed += OnSessionChanged;
     }
 
     private HttpClient Client => _http.CreateClient("api");
 
-    public async Task<UserPreferences> GetAsync(CancellationToken cancellationToken = default)
-    {
-        await _store.EnsureReadyAsync(cancellationToken).ConfigureAwait(false);
-        var key = await _store.GetKeyAsync(cancellationToken).ConfigureAwait(false);
-        var localPrefs = _store.ReadLocal(key);
+    private string GetKey() => LocalFirstRemoteStore.KeyFor(_sessionProvider.Email, PreferencesKey);
 
-        if (_store.IsLoggedIn)
+    public Task<UserPreferences> GetAsync(CancellationToken cancellationToken = default)
+    {
+        var key = GetKey();
+        var localPrefs = _remoteStore.GetLocal(key);
+
+        if (_sessionProvider.IsLoggedIn)
         {
             _remoteStore.RefreshInBackground(
                 key,
@@ -56,16 +60,15 @@ public sealed class LocalFirstUserPreferencesService : IUserPreferencesService, 
                 cancellationToken);
         }
 
-        return localPrefs;
+        return Task.FromResult(localPrefs);
     }
 
     public async Task SaveAsync(UserPreferences preferences, CancellationToken cancellationToken = default)
     {
-        await _store.EnsureReadyAsync(cancellationToken).ConfigureAwait(false);
-        var key = await _store.GetKeyAsync(cancellationToken).ConfigureAwait(false);
+        var key = GetKey();
         await _remoteStore.WriteLocalAsync(key, preferences, cancellationToken).ConfigureAwait(false);
 
-        if (_store.IsLoggedIn)
+        if (_sessionProvider.IsLoggedIn)
         {
             await LocalFirstSaves.PutBestEffortAsync(
                 Client,
@@ -81,7 +84,7 @@ public sealed class LocalFirstUserPreferencesService : IUserPreferencesService, 
 
     private async Task<UserPreferences?> FetchRemoteAsync(CancellationToken cancellationToken)
     {
-        if (!_store.IsLoggedIn)
+        if (!_sessionProvider.IsLoggedIn)
         {
             return null;
         }
@@ -97,6 +100,12 @@ public sealed class LocalFirstUserPreferencesService : IUserPreferencesService, 
 
     public void Dispose()
     {
+        _sessionProvider.Changed -= OnSessionChanged;
         _remoteStore.Dispose();
+    }
+
+    private void OnSessionChanged(object? sender, EventArgs e)
+    {
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 }

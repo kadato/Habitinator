@@ -1,39 +1,47 @@
-using Microsoft.JSInterop;
+using System.Text.Json;
 
 namespace App.Shared.RCL.Services;
 
 /// <summary>
-///     Persists per-column board filters in localStorage so the filters survive navigation
+///     Persists per-column board filters in local settings store so the filters survive navigation
 ///     and reloads. Keyed per account.
 /// </summary>
-public sealed class JsBoardColumnStateStore : JsPerUserStoreBase, IBoardColumnStateStore
+public sealed class JsBoardColumnStateStore : IBoardColumnStateStore
 {
-    private readonly IJSRuntime _js;
+    private const string BaseKey = "habitinator.columnFilters.v1";
+    private readonly ILocalSettingsStore _localStore;
+    private readonly IClientSessionProvider _sessionProvider;
 
-    public JsBoardColumnStateStore(IJSRuntime js, IClientSessionProvider sessionProvider)
-        : base(js, sessionProvider)
+    public JsBoardColumnStateStore(ILocalSettingsStore localStore, IClientSessionProvider sessionProvider)
     {
-        _js = js;
+        _localStore = localStore;
+        _sessionProvider = sessionProvider;
     }
 
-    protected override string BaseKey => "habitinator.columnFilters.v1";
+    private string GetKey() => LocalFirstRemoteStore.KeyFor(_sessionProvider.Email, BaseKey);
 
-    public Task<BoardColumnFilterState?> GetAsync(CancellationToken cancellationToken = default) =>
-        ReadAsync();
-
-    public Task SetAsync(BoardColumnFilterState state, CancellationToken cancellationToken = default) =>
-        WriteAsync(state);
-
-    private async Task<BoardColumnFilterState?> ReadAsync()
+    public Task<BoardColumnFilterState?> GetAsync(CancellationToken cancellationToken = default)
     {
-        // Safe default: no persisted state, fail open. Never throw on JS failure.
-        return await JsInvokeSafe.InvokeAsync<BoardColumnFilterState?>(
-            _js, "habitinatorGetColumnFilterState", GetKey()).ConfigureAwait(false);
+        var raw = _localStore.Read(GetKey());
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return Task.FromResult<BoardColumnFilterState?>(null);
+        }
+
+        try
+        {
+            return Task.FromResult(JsonSerializer.Deserialize<BoardColumnFilterState>(raw, JsonDefaults.Api));
+        }
+        catch
+        {
+            return Task.FromResult<BoardColumnFilterState?>(null);
+        }
     }
 
-    private async Task WriteAsync(BoardColumnFilterState state)
+    public Task SetAsync(BoardColumnFilterState state, CancellationToken cancellationToken = default)
     {
-        await EnsureScriptLoadedAsync();
-        await JsInvokeSafe.InvokeVoidAsync(_js, "habitinatorSetColumnFilterState", GetKey(), state);
+        var json = JsonSerializer.Serialize(state, JsonDefaults.Api);
+        _localStore.Write(GetKey(), json);
+        return Task.CompletedTask;
     }
 }

@@ -723,7 +723,7 @@ public static class ActivityStatisticsCalculator
         IUserTimeZoneService? timeZone = null,
         TimeSpan? dayStartLocalTime = null)
     {
-        var byKey = new Dictionary<(Guid id, DateOnly d), List<UserActivityEventRecord>>();
+        var result = new Dictionary<(Guid id, DateOnly d), UserActivityEventRecord>();
         foreach (var r in rows)
         {
             if (r.BoardItemId is not { } id)
@@ -738,19 +738,10 @@ public static class ActivityStatisticsCalculator
 
             var d = DailySchedule.LocalDay(r.OccurredAtUtc, timeZone, dayStartLocalTime);
             var key = (id, d);
-            if (!byKey.TryGetValue(key, out var list))
+            if (!result.TryGetValue(key, out var existing) || r.OccurredAtUtc >= existing.OccurredAtUtc)
             {
-                list = [];
-                byKey[key] = list;
+                result[key] = r;
             }
-
-            list.Add(r);
-        }
-
-        var result = new Dictionary<(Guid id, DateOnly d), UserActivityEventRecord>(byKey.Count);
-        foreach (var (key, list) in byKey)
-        {
-            result[key] = list.OrderBy(x => x.OccurredAtUtc).Last();
         }
 
         return result;

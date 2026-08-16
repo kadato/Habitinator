@@ -14,25 +14,17 @@ public static class LocalFirstRemoteStore
 ///     source. Serializes local writes so a stale background fetch can never overwrite
 ///     a newer local edit, and observes background failures instead of swallowing them.
 /// </summary>
-public sealed class LocalFirstRemoteStore<T> : IDisposable
+public sealed class LocalFirstRemoteStore<T>(
+    Func<string, T> readLocal,
+    Action<string, T> writeLocal,
+    Func<T, string> serialize,
+    ILogger logger) : IDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly Func<string, T> _readLocal;
-    private readonly Action<string, T> _writeLocal;
-    private readonly Func<T, string> _serialize;
-    private readonly ILogger _logger;
-
-    public LocalFirstRemoteStore(
-        Func<string, T> readLocal,
-        Action<string, T> writeLocal,
-        Func<T, string> serialize,
-        ILogger logger)
-    {
-        _readLocal = readLocal;
-        _writeLocal = writeLocal;
-        _serialize = serialize;
-        _logger = logger;
-    }
+    private readonly Func<string, T> _readLocal = readLocal;
+    private readonly Action<string, T> _writeLocal = writeLocal;
+    private readonly Func<T, string> _serialize = serialize;
+    private readonly ILogger _logger = logger;
 
     public T GetLocal(string key)
     {

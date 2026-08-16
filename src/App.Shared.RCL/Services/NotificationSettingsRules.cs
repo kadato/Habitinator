@@ -12,14 +12,9 @@ public interface INotificationSettingsRules
     bool IsInQuietHours(NotificationSettings settings, DateTime utcNow);
 }
 
-public sealed class NotificationSettingsRules : INotificationSettingsRules
+public sealed class NotificationSettingsRules(IUserTimeZoneService timeZoneService) : INotificationSettingsRules
 {
-    private readonly IUserTimeZoneService _timeZoneService;
-
-    public NotificationSettingsRules(IUserTimeZoneService timeZoneService)
-    {
-        _timeZoneService = timeZoneService;
-    }
+    private readonly IUserTimeZoneService _timeZoneService = timeZoneService;
 
     /// <summary>Whether a MudSnackbar with the given severity should be shown.</summary>
     public bool ShouldShowToast(NotificationSettings settings, Severity severity, DateTime utcNow)

@@ -2,21 +2,15 @@ using Microsoft.JSInterop;
 
 namespace App.Shared.RCL.Services;
 
-public sealed class UserTimeZoneService : IUserTimeZoneService
+public sealed class UserTimeZoneService(IJSRuntime jsRuntime, IClock clock) : IUserTimeZoneService
 {
-    private readonly IJSRuntime _jsRuntime;
-    private readonly IClock _clock;
+    private readonly IJSRuntime _jsRuntime = jsRuntime;
+    private readonly IClock _clock = clock;
     private string? _timeZoneId;
     private string? _overrideTimeZoneId;
     private int _utcOffsetMinutes;
     private TimeZoneInfo? _timeZoneInfo;
     private bool _browserDetected;
-
-    public UserTimeZoneService(IJSRuntime jsRuntime, IClock clock)
-    {
-        _jsRuntime = jsRuntime;
-        _clock = clock;
-    }
 
     public string? TimeZoneId => _timeZoneId;
     public bool IsDetected => _browserDetected && _timeZoneInfo is not null;

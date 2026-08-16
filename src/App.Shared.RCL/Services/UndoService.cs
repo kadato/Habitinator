@@ -6,15 +6,19 @@ using MudBlazor;
 
 namespace App.Shared.RCL.Services;
 
-public sealed class UndoService : IUndoService, IDisposable
+public sealed class UndoService(
+    ISnackbar snackbar,
+    INotificationSettingsService settingsService,
+    INotificationSettingsRules notificationRules,
+    ILogger<UndoService> logger) : IUndoService, IDisposable
 {
     private const string UndoSnackbarKeyPrefix = "habitinator-undo";
 
     private readonly List<UndoAction> _undoStack = [];
-    private readonly ISnackbar _snackbar;
-    private readonly INotificationSettingsService _settingsService;
-    private readonly INotificationSettingsRules _notificationRules;
-    private readonly ILogger<UndoService> _logger;
+    private readonly ISnackbar _snackbar = snackbar;
+    private readonly INotificationSettingsService _settingsService = settingsService;
+    private readonly INotificationSettingsRules _notificationRules = notificationRules;
+    private readonly ILogger<UndoService> _logger = logger;
 
     private List<Func<Task>>? _currentBatch;
     private List<string>? _currentBatchKeys;
@@ -28,18 +32,6 @@ public sealed class UndoService : IUndoService, IDisposable
 
     public event EventHandler? OnStateChanged;
     public event EventHandler? OnUndoPerformed;
-
-    public UndoService(
-        ISnackbar snackbar,
-        INotificationSettingsService settingsService,
-        INotificationSettingsRules notificationRules,
-        ILogger<UndoService> logger)
-    {
-        _snackbar = snackbar;
-        _settingsService = settingsService;
-        _notificationRules = notificationRules;
-        _logger = logger;
-    }
 
     public Guid RegisterUndo(string description, Func<Task> undoFunc)
     {
@@ -290,20 +282,13 @@ public sealed class UndoService : IUndoService, IDisposable
         }
     }
 
-    private sealed class UndoAction
+    private sealed class UndoAction(string description, Func<Task> undoFunc, IReadOnlyCollection<string> conflictKeys)
     {
         public Guid Id { get; } = Guid.NewGuid();
-        public string Description { get; }
-        public Func<Task> UndoFunc { get; }
-        public IReadOnlyCollection<string> ConflictKeys { get; }
+        public string Description => description;
+        public Func<Task> UndoFunc => undoFunc;
+        public IReadOnlyCollection<string> ConflictKeys => conflictKeys;
         public string? SnackbarKey { get; set; }
-
-        public UndoAction(string description, Func<Task> undoFunc, IReadOnlyCollection<string> conflictKeys)
-        {
-            Description = description;
-            UndoFunc = undoFunc;
-            ConflictKeys = conflictKeys;
-        }
     }
 
     public void Dispose()
@@ -321,9 +306,6 @@ public sealed class UndoService : IUndoService, IDisposable
             _service.StartBatch(description);
         }
 
-        public void Dispose()
-        {
-            _service.EndBatch();
-        }
+        public void Dispose() => _service.EndBatch();
     }
 }

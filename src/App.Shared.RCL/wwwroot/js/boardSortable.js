@@ -23,7 +23,10 @@ globalThis.HabitinatorSortable = {
             fallbackClass: 'board-sortable-fallback-drag',
             filter: '.board-sq, .board-check, .board-card__delete, .board-subtask-pill, .board-subtask-cb, [data-no-drag]',
             preventOnFilter: false,
+            delay: 150,
+            delayOnTouchOnly: true,
             touchStartThreshold: 5,
+            fallbackTolerance: 3,
             onEnd: function (evt) {
                 const oldIndex = evt.oldIndex;
                 const newIndex = evt.newIndex;

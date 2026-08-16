@@ -86,22 +86,8 @@ public static class ZalgoSanitizer
 
     // -- helpers --
 
-    private static int CountCombining(string cluster)
-    {
-        var count = 0;
-        var index = 0;
-        while (index < cluster.Length)
-        {
-            var codepoint = char.ConvertToUtf32(cluster, index);
-            index += char.IsSurrogatePair(cluster, index) ? 2 : 1;
-            if (IsCombining(codepoint))
-            {
-                count++;
-            }
-        }
-
-        return count;
-    }
+    private static int CountCombining(string cluster) =>
+        cluster.EnumerateRunes().Count(IsCombining);
 
     private static string TrimCombining(string cluster)
     {
@@ -112,32 +98,21 @@ public static class ZalgoSanitizer
 
         // If the cluster is identified as Zalgo, strip ALL combining marks from it.
         var sb = new StringBuilder(cluster.Length);
-        var index = 0;
-
-        while (index < cluster.Length)
+        foreach (var rune in cluster.EnumerateRunes().Where(r => !IsCombining(r)))
         {
-            var isSurrogate = index + 1 < cluster.Length && char.IsSurrogatePair(cluster, index);
-            var codepoint = char.ConvertToUtf32(cluster, index);
-            var charLen = isSurrogate ? 2 : 1;
-
-            if (!IsCombining(codepoint))
-            {
-                sb.Append(cluster, index, charLen);
-            }
-
-            index += charLen;
+            sb.Append(rune);
         }
 
         return sb.ToString();
     }
 
     /// <summary>
-    /// Returns <see langword="true"/> when the Unicode codepoint belongs to one of the
+    /// Returns <see langword="true"/> when the Unicode rune belongs to one of the
     /// three mark categories used to create Zalgo stacking effects.
     /// </summary>
-    private static bool IsCombining(int codepoint)
+    private static bool IsCombining(Rune rune)
     {
-        var category = CharUnicodeInfo.GetUnicodeCategory(char.ConvertFromUtf32(codepoint), 0);
+        var category = Rune.GetUnicodeCategory(rune);
         return category is UnicodeCategory.NonSpacingMark
             or UnicodeCategory.SpacingCombiningMark
             or UnicodeCategory.EnclosingMark;

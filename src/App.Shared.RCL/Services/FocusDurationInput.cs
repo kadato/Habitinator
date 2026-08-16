@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 namespace App.Shared.RCL.Services;
 
 /// <summary>Parses and formats the "Time's up after" field, the optional focus or alert length.</summary>
-public static class FocusDurationInput
+public static partial class FocusDurationInput
 {
     /// <summary>Help copy for the UI tooltip. Plain text, can include line breaks.</summary>
     public const string HelpTooltip =
@@ -16,7 +16,7 @@ public static class FocusDurationInput
 
     public static TimeSpan MaxFocusDuration { get; } = new(23, 59, 59);
 
-    private static readonly Regex FocusDurationRegex = new(
+    [GeneratedRegex(
         @"^((?<secSuffix>\d+)\s*s"
         + @"|(?<minSecMin>\d+)\s*m\s*(?<minSecSec>\d+)\s*s"
         + @"|(?<threeH>\d+):(?<threeM>\d+):(?<threeS>\d+)"
@@ -28,7 +28,8 @@ public static class FocusDurationInput
         + @"|(?<sufH>\d{1,2})\s*h(?:\s*(?<sufM>\d{1,2})\s*m?)?"
         + @"|(?<plain>\d{1,4}))$",
         RegexOptions.IgnoreCase,
-        TimeSpan.FromMilliseconds(250));
+        matchTimeoutMilliseconds: 250)]
+    private static partial Regex GetFocusDurationRegex();
 
     public static string FormatForAlertLabel(TimeSpan t)
     {
@@ -123,7 +124,7 @@ public static class FocusDurationInput
         }
 
         var input = raw.Trim();
-        var m = FocusDurationRegex.Match(input);
+        var m = GetFocusDurationRegex().Match(input);
         if (!m.Success)
         {
             return false;

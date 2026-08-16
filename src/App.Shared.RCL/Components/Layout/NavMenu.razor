@@ -66,7 +66,7 @@ else
         var itemClass = active ? "app-mobile-nav__item app-mobile-nav__item--active" : "app-mobile-nav__item";
         <a href="@href"
            class="@itemClass"
-           aria-current="@(active ? "page" : null)"
+           @attributes="NavCurrentAttributes(active)"
            data-enhance-nav="false">
             <MudIcon Icon="@icon" Class="app-mobile-nav__icon" />
             <span class="app-mobile-nav__label">@label</span>
@@ -84,10 +84,21 @@ else
                        Size="Size.Medium"
                        StartIcon="@icon"
                        Class="app-header-nav-btn text-transform-none"
-                       aria-current="@(active ? "page" : null)"
+                       @attributes="NavCurrentAttributes(active)"
                        data-enhance-nav="false">
                 @label
             </MudButton>
         </span>
     };
+
+    private static Dictionary<string, object> NavCurrentAttributes(bool active)
+    {
+        var attributes = new Dictionary<string, object>();
+        if (active)
+        {
+            attributes["aria-current"] = "page";
+        }
+
+        return attributes;
+    }
 }

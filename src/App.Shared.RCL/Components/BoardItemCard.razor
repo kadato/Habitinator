@@ -30,7 +30,7 @@
                     draggable="false"
                     @onclick="OnToggle"
                     @onclick:stopPropagation="true"
-                    @attributes="ToggleAria"
+                    @attributes="CheckButtonAttributes"
                     role="checkbox">
                 @if (Item.IsCompleted)
                 {
@@ -134,7 +134,8 @@
                         class="board-subtask-pill"
                         @onclick="ToggleSubtasksExpand"
                         @onclick:stopPropagation="true"
-                        @attributes="SubtasksAria">
+                        @attributes="SubtasksToggleAttributes"
+                        aria-label="@($"Subtasks: {SubDone} completed out of {SubTotal}")">
                     <MudIcon Icon="@Icons.Material.Filled.List" Size="Size.Small" Class="me-1" aria-hidden="true"/>
                     <span class="board-subtask-pill__count">@SubDone / @SubTotal</span>
                     <MudIcon Icon="@(_subtasksExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small" Class="ms-1" aria-hidden="true"/>

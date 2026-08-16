@@ -51,6 +51,17 @@ public partial class BoardItemCard
     private string RowClass => GetRowClass(Section, Item);
     private string CheckClass => GetCheckClass(Section, Item);
 
+    private Dictionary<string, object> CheckButtonAttributes => new()
+    {
+        ["aria-pressed"] = Item.IsCompleted ? "true" : "false",
+        ["aria-checked"] = Item.IsCompleted ? "true" : "false",
+    };
+
+    private Dictionary<string, object> SubtasksToggleAttributes => new()
+    {
+        ["aria-expanded"] = _subtasksExpanded ? "true" : "false",
+    };
+
     private void ToggleSubtasksExpand()
     {
         _subtasksExpanded = !_subtasksExpanded;
@@ -144,18 +155,6 @@ public partial class BoardItemCard
             _ => false
         };
     }
-
-    private Dictionary<string, object> ToggleAria => new()
-    {
-        { "aria-pressed", Item.IsCompleted ? "true" : "false" },
-        { "aria-checked", Item.IsCompleted ? "true" : "false" }
-    };
-
-    private Dictionary<string, object> SubtasksAria => new()
-    {
-        { "aria-expanded", _subtasksExpanded ? "true" : "false" },
-        { "aria-label", $"Subtasks: {SubDone} completed out of {SubTotal}" }
-    };
 
     private async Task OnTitleKeyDown(KeyboardEventArgs e)
     {

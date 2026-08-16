@@ -156,7 +156,7 @@
                     <button type="button"
                             role="tab"
                             id="board-tab-0"
-                            @attributes="GetTabAria(0)"
+                            @attributes="GetTabAttributes(0)"
                             aria-controls="board-tab-panel-0"
                             class="@GetSectionSwitcherClass(0)"
                             @onclick="() => _mobileSectionIndex = 0"
@@ -167,7 +167,7 @@
                     <button type="button"
                             role="tab"
                             id="board-tab-1"
-                            @attributes="GetTabAria(1)"
+                            @attributes="GetTabAttributes(1)"
                             aria-controls="board-tab-panel-1"
                             class="@GetSectionSwitcherClass(1)"
                             @onclick="() => _mobileSectionIndex = 1"
@@ -178,7 +178,7 @@
                     <button type="button"
                             role="tab"
                             id="board-tab-2"
-                            @attributes="GetTabAria(2)"
+                            @attributes="GetTabAttributes(2)"
                             aria-controls="board-tab-panel-2"
                             class="@GetSectionSwitcherClass(2)"
                             @onclick="() => _mobileSectionIndex = 2"
@@ -309,16 +309,16 @@
             ? "board-section-switcher__btn board-section-switcher__btn--active"
             : "board-section-switcher__btn";
 
+    private Dictionary<string, object> GetTabAttributes(int index) => new()
+    {
+        ["aria-selected"] = _mobileSectionIndex == index ? "true" : "false",
+        ["tabindex"] = _mobileSectionIndex == index ? 0 : -1,
+    };
+
     private string GetTagsTriggerClass() =>
         SelectedFilterTagCount > 0
             ? "board-trigger-btn board-trigger-btn--active"
             : "board-trigger-btn";
-
-    private Dictionary<string, object> GetTabAria(int index) => new()
-    {
-        { "aria-selected", index == _mobileSectionIndex ? "true" : "false" },
-        { "tabindex", index == _mobileSectionIndex ? 0 : -1 }
-    };
 
     private void OnMobileSectionKeyDown(KeyboardEventArgs e)
     {

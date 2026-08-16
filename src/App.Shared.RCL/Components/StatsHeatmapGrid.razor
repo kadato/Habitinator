@@ -26,14 +26,12 @@
                             var cellClass = GetCellClass(row, col);
                             var cellTitle = GetCellTitle(row, col);
                             var cellAria = GetCellAriaLabel(row, col);
-                            var cellIsToday = IsToday(row, col);
                             if (OnCellClick is not null)
                             {
                                 <button type="button"
                                         class="@cellClass"
                                         title="@cellTitle"
                                         aria-label="@cellAria"
-                                        aria-current="@(cellIsToday ? "date" : null)"
                                         @attributes="RovingAttributes(row, col)"
                                         @onclick="() => OnCellClickAsync(row, col)">
                                 </button>
@@ -43,7 +41,7 @@
                                 <div class="@cellClass"
                                      title="@cellTitle"
                                      aria-label="@cellAria"
-                                     aria-current="@(cellIsToday ? "date" : null)"></div>
+                                     @attributes="CellAriaCurrentAttributes(row, col)"></div>
                             }
                         }
                         else
@@ -74,17 +72,31 @@
 
     private Dictionary<string, object> RovingAttributes(int r, int c)
     {
-        if (!IncludeRovingTabindex)
+        var attributes = new Dictionary<string, object>();
+        if (IsToday(r, c))
         {
-            return [];
+            attributes["aria-current"] = "date";
         }
 
-        return new Dictionary<string, object>
+        if (IncludeRovingTabindex)
         {
-            { "data-row", r },
-            { "data-col", c },
-            { "tabindex", 0 }
-        };
+            attributes["data-row"] = r;
+            attributes["data-col"] = c;
+            attributes["tabindex"] = 0;
+        }
+
+        return attributes;
+    }
+
+    private Dictionary<string, object> CellAriaCurrentAttributes(int r, int c)
+    {
+        var attributes = new Dictionary<string, object>();
+        if (IsToday(r, c))
+        {
+            attributes["aria-current"] = "date";
+        }
+
+        return attributes;
     }
 
     private Task OnCellClickAsync(int r, int c)

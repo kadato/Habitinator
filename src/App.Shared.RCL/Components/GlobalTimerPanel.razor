@@ -565,11 +565,6 @@
         return BoardSectionVisuals.GetMudIconForTargetType(TimerService.TargetType);
     }
 
-    private Task<IEnumerable<string>> SearchSessionTargetsAsync(string value, CancellationToken cancellationToken)
-    {
-        return Task.FromResult(SearchSessionTargets(value));
-    }
-
     private IEnumerable<string> SearchSessionTargets(string value)
     {
         if (_sessionTargetOptions.Count == 0)

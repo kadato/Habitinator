@@ -45,12 +45,7 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 <br>
 
 <p align="center">
-<strong>Edit habit</strong> | <strong>Edit daily</strong> | <strong>Activity day detail</strong><br><br>
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./docs/automation/screenshots/edit-habit-dark.png">
-  <img alt="Edit a habit" src="./docs/automation/screenshots/edit-habit-light.png" width="220">
-</picture>
-&nbsp;&nbsp;
+<strong>Edit daily</strong> | <strong>Activity day detail</strong> | <strong>Settings</strong><br><br>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/automation/screenshots/edit-daily-dark.png">
   <img alt="Edit a daily" src="./docs/automation/screenshots/edit-daily-light.png" width="220">
@@ -59,21 +54,6 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/automation/screenshots/activity-day-detail-dark.png">
   <img alt="Activity detail for one day" src="./docs/automation/screenshots/activity-day-detail-light.png" width="220">
-</picture>
-</p>
-
-<br>
-
-<p align="center">
-<strong>Welcome</strong> | <strong>Sign in</strong> | <strong>Settings</strong><br><br>
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./docs/automation/screenshots/welcome-dark.png">
-  <img alt="Welcome page" src="./docs/automation/screenshots/welcome-light.png" width="220">
-</picture>
-&nbsp;&nbsp;
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./docs/automation/screenshots/login-dark.png">
-  <img alt="Sign in page" src="./docs/automation/screenshots/login-light.png" width="220">
 </picture>
 &nbsp;&nbsp;
 <picture>

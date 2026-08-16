@@ -664,6 +664,19 @@ public partial class BoardColumn : IAsyncDisposable
         });
     }
 
+    private async Task HandleEditResultAsync(BoardItem item, EditDialogAction? action)
+    {
+        switch (action)
+        {
+            case EditDialogAction.Archive:
+                await ArchiveItemAsync(item);
+                break;
+            case EditDialogAction.Delete:
+                await DeleteItemAsync(item);
+                break;
+        }
+    }
+
     private async Task OpenEditHabitAsync(BoardItem item)
     {
         DialogParameters<EditHabitDialog> parameters = new() { { x => x.Item, item } };
@@ -671,23 +684,9 @@ public partial class BoardColumn : IAsyncDisposable
         var result = await dialog.Result;
         if (result is { Canceled: false, Data: EditHabitDialogResult r })
         {
-            switch (r.Action)
-            {
-                case EditDialogAction.Archive:
-                    await ArchiveHabitAsync(item);
-                    break;
-                case EditDialogAction.Delete:
-                    await DeleteHabitAsync(item);
-                    break;
-            }
+            await HandleEditResultAsync(item, r.Action);
         }
     }
-
-    private Task ArchiveHabitAsync(BoardItem item) =>
-        ApplyDeletionAsync(item.Id, () => BoardData.ArchiveItemAsync(BoardSection.Habit, item.Id));
-
-    private Task DeleteHabitAsync(BoardItem item) =>
-        ApplyDeletionAsync(item.Id, () => BoardData.DeleteItemAsync(BoardSection.Habit, item.Id));
 
     private async Task OpenEditDailyAsync(BoardItem item)
     {
@@ -696,23 +695,9 @@ public partial class BoardColumn : IAsyncDisposable
         var result = await dialog.Result;
         if (result is { Canceled: false, Data: EditDailyDialogResult r })
         {
-            switch (r.Action)
-            {
-                case EditDialogAction.Archive:
-                    await ArchiveDailyAsync(item);
-                    break;
-                case EditDialogAction.Delete:
-                    await DeleteDailyAsync(item);
-                    break;
-            }
+            await HandleEditResultAsync(item, r.Action);
         }
     }
-
-    private Task ArchiveDailyAsync(BoardItem item) =>
-        ApplyDeletionAsync(item.Id, () => BoardData.ArchiveItemAsync(BoardSection.Daily, item.Id));
-
-    private Task DeleteDailyAsync(BoardItem item) =>
-        ApplyDeletionAsync(item.Id, () => BoardData.DeleteItemAsync(BoardSection.Daily, item.Id));
 
     private async Task OpenEditTodoAsync(BoardItem item)
     {
@@ -721,23 +706,14 @@ public partial class BoardColumn : IAsyncDisposable
         var result = await dialog.Result;
         if (result is { Canceled: false, Data: EditTodoDialogResult r })
         {
-            switch (r.Action)
-            {
-                case EditDialogAction.Archive:
-                    await ArchiveTodoAsync(item);
-                    break;
-                case EditDialogAction.Delete:
-                    await DeleteTodoAsync(item);
-                    break;
-            }
+            await HandleEditResultAsync(item, r.Action);
         }
     }
 
-    private Task ArchiveTodoAsync(BoardItem item) =>
-        ApplyDeletionAsync(item.Id, () => BoardData.ArchiveItemAsync(BoardSection.Todo, item.Id));
+    private Task ArchiveItemAsync(BoardItem item) =>
+        ApplyDeletionAsync(item.Id, () => BoardData.ArchiveItemAsync(Section, item.Id));
 
-    private Task DeleteTodoAsync(BoardItem item) =>
-        ApplyDeletionAsync(item.Id, () => BoardData.DeleteItemAsync(BoardSection.Todo, item.Id));
+    private Task DeleteItemAsync(BoardItem item) => DeleteAsync(item.Id);
 
     private Task OpenItemEditorAsync(BoardItem item)
     {

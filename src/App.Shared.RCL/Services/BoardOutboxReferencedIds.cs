@@ -7,25 +7,11 @@ namespace App.Shared.RCL.Services;
 /// <summary>Item ids touched by pending outbox operations. For merge, do not apply remote upsert/delete for these ids.</summary>
 public static class BoardOutboxReferencedIds
 {
-    public static HashSet<Guid> CollectFromPayloads(IEnumerable<(BoardOutboxOperationKind Kind, string PayloadJson)> rows)
-    {
-        var set = new HashSet<Guid>();
-        foreach (var (kind, json) in rows)
-        {
-            CollectOne(kind, json, set);
-        }
-
-        return set;
-    }
-
-    private static void CollectOne(BoardOutboxOperationKind kind, string json, HashSet<Guid> set)
-    {
-        var itemId = ExtractItemId(kind, json);
-        if (itemId.HasValue)
-        {
-            set.Add(itemId.Value);
-        }
-    }
+    public static HashSet<Guid> CollectFromPayloads(IEnumerable<(BoardOutboxOperationKind Kind, string PayloadJson)> rows) =>
+        rows.Select(r => ExtractItemId(r.Kind, r.PayloadJson))
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .ToHashSet();
 
     private static Guid? ExtractItemId(BoardOutboxOperationKind kind, string json)
     {

@@ -90,13 +90,13 @@ public static class BoardOutboxPayloadMapper
         return kind switch
         {
             BoardOutboxOperationKind.Create => payloadJson,
-            BoardOutboxOperationKind.Rename => RemapRenameClientId(payloadJson, clientId, serverId),
-            BoardOutboxOperationKind.Delete or BoardOutboxOperationKind.Toggle or BoardOutboxOperationKind.Archive or BoardOutboxOperationKind.Unarchive => RemapSectionItemClientId(payloadJson, clientId, serverId),
-            BoardOutboxOperationKind.CompleteDailyForDate => RemapCompleteDailyClientId(payloadJson, clientId, serverId),
-            BoardOutboxOperationKind.HabitIncrement or BoardOutboxOperationKind.HabitDecrement => RemapItemIdClientId(payloadJson, clientId, serverId),
-            BoardOutboxOperationKind.UpdateHabit => RemapUpdateHabitClientId(payloadJson, clientId, serverId),
-            BoardOutboxOperationKind.UpdateTodo => RemapUpdateTodoClientId(payloadJson, clientId, serverId),
-            BoardOutboxOperationKind.UpdateDaily => RemapUpdateDailyClientId(payloadJson, clientId, serverId),
+            BoardOutboxOperationKind.Rename => RemapItemId(payloadJson, clientId, serverId, (RenameOutboxPayload p, Guid id) => p with { ItemId = id }),
+            BoardOutboxOperationKind.Delete or BoardOutboxOperationKind.Toggle or BoardOutboxOperationKind.Archive or BoardOutboxOperationKind.Unarchive => RemapItemId(payloadJson, clientId, serverId, (SectionItemOutboxPayload p, Guid id) => p with { ItemId = id }),
+            BoardOutboxOperationKind.CompleteDailyForDate => RemapItemId(payloadJson, clientId, serverId, (CompleteDailyOutboxPayload p, Guid id) => p with { ItemId = id }),
+            BoardOutboxOperationKind.HabitIncrement or BoardOutboxOperationKind.HabitDecrement => RemapItemId(payloadJson, clientId, serverId, (ItemIdOutboxPayload p, Guid id) => p with { ItemId = id }),
+            BoardOutboxOperationKind.UpdateHabit => RemapItemId(payloadJson, clientId, serverId, (UpdateHabitOutboxPayload p, Guid id) => p with { ItemId = id }),
+            BoardOutboxOperationKind.UpdateTodo => RemapItemId(payloadJson, clientId, serverId, (UpdateTodoOutboxPayload p, Guid id) => p with { ItemId = id }),
+            BoardOutboxOperationKind.UpdateDaily => RemapItemId(payloadJson, clientId, serverId, (UpdateDailyOutboxPayload p, Guid id) => p with { ItemId = id }),
             _ => payloadJson
         };
     }
@@ -109,60 +109,18 @@ public static class BoardOutboxPayloadMapper
     {
         return kind switch
         {
-            BoardOutboxOperationKind.Rename => RemapRenameVersion(payloadJson, newVersion),
-            BoardOutboxOperationKind.Delete or BoardOutboxOperationKind.Toggle or BoardOutboxOperationKind.Archive or BoardOutboxOperationKind.Unarchive => RemapSectionItemVersion(payloadJson, newVersion),
-            BoardOutboxOperationKind.CompleteDailyForDate => RemapCompleteDailyVersion(payloadJson, newVersion),
-            BoardOutboxOperationKind.HabitIncrement or BoardOutboxOperationKind.HabitDecrement => RemapItemIdVersion(payloadJson, newVersion),
-            BoardOutboxOperationKind.UpdateHabit => RemapUpdateHabitVersion(payloadJson, newVersion),
-            BoardOutboxOperationKind.UpdateTodo => RemapUpdateTodoVersion(payloadJson, newVersion),
-            BoardOutboxOperationKind.UpdateDaily => RemapUpdateDailyVersion(payloadJson, newVersion),
+            BoardOutboxOperationKind.Rename => RemapExpectedVersion(payloadJson, newVersion, (RenameOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v }),
+            BoardOutboxOperationKind.Delete or BoardOutboxOperationKind.Toggle or BoardOutboxOperationKind.Archive or BoardOutboxOperationKind.Unarchive => RemapExpectedVersion(payloadJson, newVersion, (SectionItemOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v }),
+            BoardOutboxOperationKind.CompleteDailyForDate => RemapExpectedVersion(payloadJson, newVersion, (CompleteDailyOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v }),
+            BoardOutboxOperationKind.HabitIncrement or BoardOutboxOperationKind.HabitDecrement => RemapExpectedVersion(payloadJson, newVersion, (ItemIdOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v }),
+            BoardOutboxOperationKind.UpdateHabit => RemapExpectedVersion(payloadJson, newVersion, (UpdateHabitOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v }),
+            BoardOutboxOperationKind.UpdateTodo => RemapExpectedVersion(payloadJson, newVersion, (UpdateTodoOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v }),
+            BoardOutboxOperationKind.UpdateDaily => RemapExpectedVersion(payloadJson, newVersion, (UpdateDailyOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v }),
             _ => payloadJson
         };
     }
 
     private static Guid MapId(Guid id, Guid clientId, Guid serverId) => id == clientId ? serverId : id;
-
-    private static string RemapRenameClientId(string json, Guid clientId, Guid serverId) =>
-        RemapItemId(json, clientId, serverId, (RenameOutboxPayload p, Guid id) => p with { ItemId = id });
-
-    private static string RemapSectionItemClientId(string json, Guid clientId, Guid serverId) =>
-        RemapItemId(json, clientId, serverId, (SectionItemOutboxPayload p, Guid id) => p with { ItemId = id });
-
-    private static string RemapCompleteDailyClientId(string json, Guid clientId, Guid serverId) =>
-        RemapItemId(json, clientId, serverId, (CompleteDailyOutboxPayload p, Guid id) => p with { ItemId = id });
-
-    private static string RemapItemIdClientId(string json, Guid clientId, Guid serverId) =>
-        RemapItemId(json, clientId, serverId, (ItemIdOutboxPayload p, Guid id) => p with { ItemId = id });
-
-    private static string RemapUpdateHabitClientId(string json, Guid clientId, Guid serverId) =>
-        RemapItemId(json, clientId, serverId, (UpdateHabitOutboxPayload p, Guid id) => p with { ItemId = id });
-
-    private static string RemapUpdateTodoClientId(string json, Guid clientId, Guid serverId) =>
-        RemapItemId(json, clientId, serverId, (UpdateTodoOutboxPayload p, Guid id) => p with { ItemId = id });
-
-    private static string RemapUpdateDailyClientId(string json, Guid clientId, Guid serverId) =>
-        RemapItemId(json, clientId, serverId, (UpdateDailyOutboxPayload p, Guid id) => p with { ItemId = id });
-
-    private static string RemapRenameVersion(string json, DateTimeOffset newVersion) =>
-        RemapExpectedVersion(json, newVersion, (RenameOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v });
-
-    private static string RemapSectionItemVersion(string json, DateTimeOffset newVersion) =>
-        RemapExpectedVersion(json, newVersion, (SectionItemOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v });
-
-    private static string RemapCompleteDailyVersion(string json, DateTimeOffset newVersion) =>
-        RemapExpectedVersion(json, newVersion, (CompleteDailyOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v });
-
-    private static string RemapItemIdVersion(string json, DateTimeOffset newVersion) =>
-        RemapExpectedVersion(json, newVersion, (ItemIdOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v });
-
-    private static string RemapUpdateHabitVersion(string json, DateTimeOffset newVersion) =>
-        RemapExpectedVersion(json, newVersion, (UpdateHabitOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v });
-
-    private static string RemapUpdateTodoVersion(string json, DateTimeOffset newVersion) =>
-        RemapExpectedVersion(json, newVersion, (UpdateTodoOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v });
-
-    private static string RemapUpdateDailyVersion(string json, DateTimeOffset newVersion) =>
-        RemapExpectedVersion(json, newVersion, (UpdateDailyOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v });
 
     private static string RemapItemId<T>(string json, Guid clientId, Guid serverId, Func<T, Guid, T> withItemId)
         where T : class, IOutboxItemIdPayload

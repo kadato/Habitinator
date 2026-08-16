@@ -21,62 +21,37 @@ internal static class ActivityApiRoutes
         activityApi.MapPost("log", LogActivityAsync);
     }
 
-    private static Task<IResult> GetHabitContributionsAsync(
+    private static async Task<IResult> GetHabitContributionsAsync(
         CurrentUserId user,
         ActivityStatisticsService stats,
         string? period,
         string? tag,
         CancellationToken cancellationToken) =>
-        RunStatsQueryAsync(
-            user,
-            (userId, ct) => stats.GetHabitContributionsAsync(userId, period, tag, ct),
-            x => Results.Ok(x),
-            cancellationToken);
+        Results.Ok(await stats.GetHabitContributionsAsync(user.Value, period, tag, cancellationToken));
 
-    private static Task<IResult> GetDashboardAsync(
+    private static async Task<IResult> GetDashboardAsync(
         CurrentUserId user,
         ActivityStatisticsService stats,
         string? period,
         string? tag,
         CancellationToken cancellationToken) =>
-        RunStatsQueryAsync(
-            user,
-            (userId, ct) => stats.GetDashboardAsync(userId, period, tag, ct),
-            x => Results.Ok(x),
-            cancellationToken);
+        Results.Ok(await stats.GetDashboardAsync(user.Value, period, tag, cancellationToken));
 
-    private static Task<IResult> GetDailyContributionsAsync(
+    private static async Task<IResult> GetDailyContributionsAsync(
         CurrentUserId user,
         ActivityStatisticsService stats,
         string? period,
         string? tag,
         CancellationToken cancellationToken) =>
-        RunStatsQueryAsync(
-            user,
-            (userId, ct) => stats.GetDailyContributionsAsync(userId, period, tag, ct),
-            x => Results.Ok(x),
-            cancellationToken);
+        Results.Ok(await stats.GetDailyContributionsAsync(user.Value, period, tag, cancellationToken));
 
-    private static Task<IResult> GetActivityDayDetailAsync(
+    private static async Task<IResult> GetActivityDayDetailAsync(
         CurrentUserId user,
         ActivityStatisticsService stats,
         DateOnly date,
         string? tag,
         CancellationToken cancellationToken) =>
-        RunStatsQueryAsync(
-            user,
-            (userId, ct) => stats.GetActivityDayDetailAsync(userId, date, tag, ct),
-            x => Results.Ok(x),
-            cancellationToken);
-
-    private static async Task<IResult> RunStatsQueryAsync<T>(
-        CurrentUserId user,
-        Func<Guid, CancellationToken, Task<T>> query,
-        Func<T, IResult> toResult,
-        CancellationToken cancellationToken)
-    {
-        return toResult(await query(user.Value, cancellationToken));
-    }
+        Results.Ok(await stats.GetActivityDayDetailAsync(user.Value, date, tag, cancellationToken));
 
     private static async Task<IResult> LogActivityAsync(
         CurrentUserId user,

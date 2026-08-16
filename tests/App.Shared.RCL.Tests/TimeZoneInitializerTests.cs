@@ -39,7 +39,7 @@ public sealed class TimeZoneInitializerTests : IAsyncDisposable
         await WaitForInitializationAsync();
 
         await _preferencesService.Received(1).SaveAsync(
-            Arg.Is<UserPreferences>(p => p!.TimeZoneOverrideId == "Europe/Budapest"),
+            Arg.Is<UserPreferences>(p => p.TimeZoneOverrideId == "Europe/Budapest"),
             Arg.Any<CancellationToken>());
     }
 

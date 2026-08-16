@@ -218,7 +218,7 @@
                             <MudGrid Spacing="3" Class="stats-dailies-grid">
                                 @foreach (var daily in _dailyView.Graphs)
                                 {
-                                    var cellIx = daily.Heatmap.ToDictionary(x => (x.DayRow, x.WeekCol));
+                                    var cellIx = GetDailyCellIndex(daily);
                                     <MudItem xs="12" md="6">
                                         <div class="stats-daily-block pa-3 border rounded mud-border-lines-default stats-block-bg">
                                             <MudText Typo="Typo.subtitle2" Class="font-weight-bold stats-daily-title ma-0 mb-2">@daily.Title</MudText>
@@ -276,7 +276,7 @@
                             <MudGrid Spacing="3" Class="stats-habits-grid">
                                 @foreach (var habit in _habitView.Graphs)
                                 {
-                                    var cellIx = habit.Heatmap.ToDictionary(x => (x.DayRow, x.WeekCol));
+                                    var cellIx = GetHabitCellIndex(habit);
                                     <MudItem xs="12" md="6">
                                         <div class="stats-habit-block pa-3 border rounded mud-border-lines-default stats-block-bg">
                                             <div class="d-flex align-center justify-space-between gap-2 mb-2">
@@ -443,6 +443,7 @@
     private ActivityDashboardDto? _data;
     private IReadOnlyList<DailyGraphPeriodOption>? _periodOptions;
     private Dictionary<(int R, int C), ActivityHeatmapCellDto> _cellIndex = [];
+
     private int _weekBarMax;
     private bool _loading = true;
     private bool _periodBusy;
@@ -585,6 +586,8 @@
 
             _periodOptions = _dailyView.PeriodOptions;
             _cellIndex = _data.Heatmap.ToDictionary(x => (x.DayRow, x.WeekCol));
+            _dailyCellIndices.Clear();
+            _habitCellIndices.Clear();
             _weekBarMax = _data.WeekBars.Count == 0
                 ? 0
                 : _data.WeekBars.Max(x => x.EventCount);
@@ -602,12 +605,38 @@
             _habitView = null;
             _periodOptions = null;
             _cellIndex = [];
+            _dailyCellIndices.Clear();
+            _habitCellIndices.Clear();
         }
         finally
         {
             _loadingDailies = false;
             _loadingHabits = false;
         }
+    }
+
+    private Dictionary<(int Row, int Col), ActivityHeatmapCellDto> GetDailyCellIndex(DailyContributionGraphDto daily)
+    {
+        if (_dailyCellIndices.TryGetValue(daily.BoardItemId, out var map))
+        {
+            return map;
+        }
+
+        map = daily.Heatmap.ToDictionary(x => (x.DayRow, x.WeekCol));
+        _dailyCellIndices[daily.BoardItemId] = map;
+        return map;
+    }
+
+    private Dictionary<(int Row, int Col), ActivityHeatmapCellDto> GetHabitCellIndex(HabitContributionGraphDto habit)
+    {
+        if (_habitCellIndices.TryGetValue(habit.BoardItemId, out var map))
+        {
+            return map;
+        }
+
+        map = habit.Heatmap.ToDictionary(x => (x.DayRow, x.WeekCol));
+        _habitCellIndices[habit.BoardItemId] = map;
+        return map;
     }
 
     private void ComputeWeeklyReview()

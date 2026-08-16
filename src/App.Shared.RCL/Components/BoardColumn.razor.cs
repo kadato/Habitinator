@@ -126,6 +126,7 @@ public partial class BoardColumn : IAsyncDisposable
         }
     }
 
+    private readonly string _columnInstanceId = Guid.NewGuid().ToString("N");
     private ElementReference _containerRef;
     private DotNetObjectReference<BoardColumn>? _selfRef;
     private bool _needRefresh;
@@ -170,7 +171,7 @@ public partial class BoardColumn : IAsyncDisposable
             await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/sortable.min.js");
             await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardSortable.js");
             _selfRef ??= DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("HabitinatorSortable.init", Section.ToString(), _containerRef, _selfRef);
+            await JS.InvokeVoidAsync("HabitinatorSortable.init", _columnInstanceId, _containerRef, _selfRef);
         }
         catch (JSDisconnectedException)
         {
@@ -498,10 +499,7 @@ public partial class BoardColumn : IAsyncDisposable
     {
         try
         {
-            if (IsItemDraggable())
-            {
-                await JS.InvokeVoidAsync("HabitinatorSortable.destroy", Section.ToString());
-            }
+            await JS.InvokeVoidAsync("HabitinatorSortable.destroy", _columnInstanceId);
         }
         catch (JSDisconnectedException)
         {

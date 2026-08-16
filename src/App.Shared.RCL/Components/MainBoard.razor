@@ -338,35 +338,12 @@
         StateHasChanged();
     }
 
-    private IReadOnlyList<string> GetAllTagNamesForMenu()
-    {
-        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var item in Habits)
-        {
-            foreach (var t in BoardTagUtil.ParseTags(item.Tags))
-            {
-                set.Add(t);
-            }
-        }
-
-        foreach (var item in Dailies)
-        {
-            foreach (var t in BoardTagUtil.ParseTags(item.Tags))
-            {
-                set.Add(t);
-            }
-        }
-
-        foreach (var item in Todos)
-        {
-            foreach (var t in BoardTagUtil.ParseTags(item.Tags))
-            {
-                set.Add(t);
-            }
-        }
-
-        return set.OrderBy(t => t, StringComparer.OrdinalIgnoreCase).ToList();
-    }
+    private IReadOnlyList<string> GetAllTagNamesForMenu() =>
+        Habits.Concat(Dailies).Concat(Todos)
+            .SelectMany(i => BoardTagUtil.ParseTags(i.Tags))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
     private int SelectedFilterTagCount => _selectedFilterTags.Count;
 

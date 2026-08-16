@@ -241,7 +241,24 @@
 
     private static string AriaSelected(bool condition) => condition ? "true" : "false";
 
-    private async Task UnarchiveAsync(BoardSection section, BoardItem item)
+    private delegate Task<bool> AsyncPredicate();
+
+    private Task UnarchiveAsync(BoardSection section, BoardItem item) =>
+        ExecuteWithOptimisticRemovalAsync(
+            item,
+            async () => (await BoardData.UnarchiveItemAsync(section, item.Id)) is not null,
+            "restore");
+
+    private Task DeletePermanentlyAsync(BoardSection section, BoardItem item) =>
+        ExecuteWithOptimisticRemovalAsync(
+            item,
+            () => BoardData.DeleteItemAsync(section, item.Id),
+            "delete");
+
+    private Task ExecuteWithOptimisticRemovalAsync(
+        BoardItem item,
+        AsyncPredicate operation,
+        string failureActionName)
     {
         var index = _allEntries.FindIndex(x => x.Item.Id == item.Id);
         ArchivedItemEntry? entry = null;
@@ -252,88 +269,40 @@
             StateHasChanged();
         }
 
-        var task = DoUnarchiveAsync(section, item, entry);
+        var task = RunOperationAsync();
         _inFlightTasks[item.Id] = task;
-    }
+        return task;
 
-    private async Task DoUnarchiveAsync(BoardSection section, BoardItem item, ArchivedItemEntry? entry)
-    {
-        try
+        async Task RunOperationAsync()
         {
-            var res = await BoardData.UnarchiveItemAsync(section, item.Id);
-            // Success is covered by the "Unarchive" undo toast.
-            if (res is null)
+            try
             {
-                await Notifier.NotifyAsync($"Failed to restore \"{item.Title}\".", Severity.Error);
-                if (entry is not null)
+                var success = await operation();
+                if (!success)
                 {
-                    _allEntries.Add(entry.Value);
-                    SortEntries();
-                    StateHasChanged();
+                    await Notifier.NotifyAsync($"Failed to {failureActionName} \"{item.Title}\".", Severity.Error);
+                    RestoreEntry(entry);
                 }
             }
-        }
-        catch (Exception)
-        {
-            await Notifier.NotifyAsync("Could not complete request. Check connection and try again.", Severity.Error);
-            if (entry is not null)
+            catch (Exception)
             {
-                _allEntries.Add(entry.Value);
-                SortEntries();
-                StateHasChanged();
+                await Notifier.NotifyAsync("Could not complete request. Check connection and try again.", Severity.Error);
+                RestoreEntry(entry);
             }
-        }
-        finally
-        {
-            _inFlightTasks.Remove(item.Id);
+            finally
+            {
+                _inFlightTasks.Remove(item.Id);
+            }
         }
     }
 
-    private async Task DeletePermanentlyAsync(BoardSection section, BoardItem item)
+    private void RestoreEntry(ArchivedItemEntry? entry)
     {
-        var index = _allEntries.FindIndex(x => x.Item.Id == item.Id);
-        ArchivedItemEntry? entry = null;
-        if (index >= 0)
+        if (entry is not null)
         {
-            entry = _allEntries[index];
-            _allEntries.RemoveAt(index);
+            _allEntries.Add(entry.Value);
+            SortEntries();
             StateHasChanged();
-        }
-
-        var task = DoDeleteAsync(section, item, entry);
-        _inFlightTasks[item.Id] = task;
-    }
-
-    private async Task DoDeleteAsync(BoardSection section, BoardItem item, ArchivedItemEntry? entry)
-    {
-        try
-        {
-            var success = await BoardData.DeleteItemAsync(section, item.Id);
-            // Success is covered by the "Delete" undo toast.
-            if (!success)
-            {
-                await Notifier.NotifyAsync($"Failed to delete \"{item.Title}\".", Severity.Error);
-                if (entry is not null)
-                {
-                    _allEntries.Add(entry.Value);
-                    SortEntries();
-                    StateHasChanged();
-                }
-            }
-        }
-        catch (Exception)
-        {
-            await Notifier.NotifyAsync("Could not complete request. Check connection and try again.", Severity.Error);
-            if (entry is not null)
-            {
-                _allEntries.Add(entry.Value);
-                SortEntries();
-                StateHasChanged();
-            }
-        }
-        finally
-        {
-            _inFlightTasks.Remove(item.Id);
         }
     }
 

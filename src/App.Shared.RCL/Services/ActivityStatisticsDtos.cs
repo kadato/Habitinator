@@ -90,3 +90,8 @@ public sealed record ActivityDashboardDto(
     DateOnly WeekBarsRangeStart,
     DateOnly WeekBarsRangeEnd,
     IReadOnlyList<string> AvailableTags);
+
+public sealed record ActivityOverviewDto(
+    ActivityDashboardDto Dashboard,
+    DailyContributionsViewDto DailyContributions,
+    HabitContributionsViewDto HabitContributions);

@@ -11,6 +11,9 @@ public interface IActivityStatisticsReader
     Task<HabitContributionsViewDto> GetHabitContributionsAsync(string? periodKey, string? tag = null,
         CancellationToken cancellationToken = default);
 
+    Task<ActivityOverviewDto> GetOverviewAsync(string? periodKey, string? tag = null,
+        CancellationToken cancellationToken = default);
+
     Task<ActivityDayDetailDto> GetActivityDayDetailAsync(DateOnly day, string? tag = null,
         CancellationToken cancellationToken = default);
 }

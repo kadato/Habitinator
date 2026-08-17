@@ -16,5 +16,6 @@ public sealed class OpenApiDocumentTests(PostgresWebAppFactory factory)
         var json = await res.Content.ReadAsStringAsync();
         json.Should().Contain("\"openapi\"");
         json.Should().Contain("/api/board");
+        json.Should().Contain("/api/activity/overview");
     }
 }

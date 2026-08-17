@@ -18,6 +18,13 @@ public sealed class WebActivityStatisticsReader : IActivityStatisticsReader
         _statisticsService = statisticsService;
     }
 
+    public async Task<ActivityOverviewDto> GetOverviewAsync(string? periodKey, string? tag = null,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = await RequireUserIdAsync();
+        return await _statisticsService.GetOverviewAsync(userId, periodKey, tag, cancellationToken);
+    }
+
     public async Task<ActivityDashboardDto> GetDashboardAsync(string? periodKey, string? tag = null,
         CancellationToken cancellationToken = default)
     {

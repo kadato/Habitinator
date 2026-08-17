@@ -66,6 +66,100 @@ public sealed class ActivityStatisticsService(
         return result;
     }
 
+    public async Task<ActivityOverviewDto> GetOverviewAsync(
+        Guid userId,
+        string? periodKey,
+        string? tag,
+        CancellationToken cancellationToken = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var (utcToday, dayStart) = await TodayAndDayStartAsync(db, userId, cancellationToken);
+        var userCache = cache.GetOrCreate(userId);
+        (string?, string?, DateOnly) cacheKey = (periodKey, tag, utcToday);
+        if (userCache.Overview.TryGetValue(cacheKey, out var cached))
+        {
+            return cached;
+        }
+
+        var periodOptions = await BuildDailyPeriodOptionsAsync(db, userId, utcToday, dayStart, cancellationToken);
+        (var key, var rangeStart, var rangeEnd) =
+            ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, utcToday, periodOptions);
+
+        var fromUtc = rangeStart.AddDays(-1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var toUtc = rangeEnd.AddDays(2).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+        var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, tag, cancellationToken);
+        var availableTags = await GetDistinctTagsForUserAsync(db, userId, cancellationToken);
+
+        var eventRows = await EventsInRange(db, userId, fromUtc, toUtc, allowedIds)
+            .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
+            .ToListAsync(cancellationToken);
+
+        var itemQ = db.BoardItems.AsNoTracking()
+            .Where(b => b.UserId == userId && b.DeletedAtUtc == null &&
+                        (b.Section == BoardSection.Daily || b.Section == BoardSection.Habit));
+        if (allowedIds is not null)
+        {
+            itemQ = itemQ.Where(b => allowedIds.Contains(b.Id));
+        }
+
+        var allItems = await itemQ
+            .OrderBy(b => b.Title)
+            .Select(b => new { b.Id, b.Title, b.Section, b.DailyStartDate, b.CreatedAtUtc })
+            .ToListAsync(cancellationToken);
+
+        var builtDashboard = ActivityStatisticsCalculator.BuildDashboard(
+            eventRows, key, rangeStart, rangeEnd, utcToday, timeZone, dayStart);
+        var dashboardResult = builtDashboard with { AvailableTags = availableTags };
+
+        List<DailyItemStatsDto> dailyItemRows = [.. allItems
+            .Where(b => b.Section == BoardSection.Daily)
+            .Select(b => new DailyItemStatsDto(
+                b.Id,
+                b.Title,
+                b.DailyStartDate != null ? DateOnly.FromDateTime(b.DailyStartDate.Value) : null,
+                DateOnly.FromDateTime(timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime)))];
+
+        var dailyResult = ActivityStatisticsCalculator.BuildDailyContributions(
+            eventRows,
+            dailyItemRows,
+            new ContributionsRangeContext(
+                key,
+                periodOptions,
+                rangeStart,
+                rangeEnd,
+                utcToday,
+                timeZone,
+                dayStart));
+
+        List<HabitItemStatsDto> habitItemRows = [.. allItems
+            .Where(b => b.Section == BoardSection.Habit)
+            .Select(b => new HabitItemStatsDto(
+                b.Id,
+                b.Title,
+                DateOnly.FromDateTime(timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime)))];
+
+        var habitResult = ActivityStatisticsCalculator.BuildHabitContributions(
+            eventRows,
+            habitItemRows,
+            new ContributionsRangeContext(
+                key,
+                periodOptions,
+                rangeStart,
+                rangeEnd,
+                utcToday,
+                timeZone,
+                dayStart));
+
+        var overview = new ActivityOverviewDto(dashboardResult, dailyResult, habitResult);
+        userCache.Overview.Set(cacheKey, overview);
+        userCache.Dashboard.Set(cacheKey, dashboardResult);
+        userCache.DailyContributions.Set(cacheKey, dailyResult);
+        userCache.HabitContributions.Set(cacheKey, habitResult);
+
+        return overview;
+    }
+
     public async Task<ActivityDashboardDto> GetDashboardAsync(
         Guid userId,
         string? periodKey,
@@ -329,20 +423,22 @@ public sealed class ActivityStatisticsService(
         TimeSpan? dayStartLocalTime,
         CancellationToken cancellationToken)
     {
-        var firstEvent = await db.UserActivityEvents.AsNoTracking()
+        var firstOccurred = await db.UserActivityEvents.AsNoTracking()
             .Where(e => e.UserId == userId && e.EventType == ActivityEventType.DailyComplete)
-            .MinByAsync(e => e.OccurredAtUtc, cancellationToken);
+            .OrderBy(e => e.OccurredAtUtc)
+            .Select(e => (DateTimeOffset?)e.OccurredAtUtc)
+            .FirstOrDefaultAsync(cancellationToken);
 
-        var firstRows = firstEvent is null
+        var firstRows = firstOccurred is null
             ? []
             : new[]
             {
                 new UserActivityEventRecord(
-                    firstEvent.OccurredAtUtc,
-                    firstEvent.EventType,
-                    firstEvent.BoardItemId,
-                    firstEvent.DurationSeconds,
-                    firstEvent.CustomLabel)
+                    firstOccurred.Value,
+                    ActivityEventType.DailyComplete,
+                    null,
+                    null,
+                    null)
             };
 
         return ActivityStatisticsCalculator.BuildPeriodOptions(utcToday, firstRows, timeZone, dayStartLocalTime);

@@ -22,6 +22,8 @@ public sealed class ActivityStatisticsCache
     {
         private const int MaxEntriesPerUser = 64;
 
+        public BoundedCache<(string? Period, string? Tag, DateOnly Today), ActivityOverviewDto> Overview { get; } = new(MaxEntriesPerUser);
+
         public BoundedCache<(string? Period, string? Tag, DateOnly Today), ActivityDashboardDto> Dashboard { get; } = new(MaxEntriesPerUser);
 
         public BoundedCache<(string? Period, string? Tag, DateOnly Today), DailyContributionsViewDto> DailyContributions { get; } = new(MaxEntriesPerUser);

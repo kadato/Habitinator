@@ -14,12 +14,21 @@ internal static class ActivityApiRoutes
             .RequireAuthorization("BoardOrJwt")
             .RequireRateLimiting("api");
 
+        activityApi.MapGet("overview", GetOverviewAsync);
         activityApi.MapGet("dashboard", GetDashboardAsync);
         activityApi.MapGet("daily-contributions", GetDailyContributionsAsync);
         activityApi.MapGet("habit-contributions", GetHabitContributionsAsync);
         activityApi.MapGet("day", GetActivityDayDetailAsync);
         activityApi.MapPost("log", LogActivityAsync);
     }
+
+    private static async Task<IResult> GetOverviewAsync(
+        CurrentUserId user,
+        ActivityStatisticsService stats,
+        string? period,
+        string? tag,
+        CancellationToken cancellationToken) =>
+        Results.Ok(await stats.GetOverviewAsync(user.Value, period, tag, cancellationToken));
 
     private static async Task<IResult> GetHabitContributionsAsync(
         CurrentUserId user,

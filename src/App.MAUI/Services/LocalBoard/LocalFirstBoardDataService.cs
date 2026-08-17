@@ -377,7 +377,8 @@ public sealed partial class LocalFirstBoardDataService(
                 row =>
                 {
                     row.DailyLastCompletedOn = completedOn;
-                    row.IsCompleted = true;
+                    row.IsCompleted = false;
+                    row.Counter = Math.Max(1, row.Counter + 1);
                     return Task.CompletedTask;
                 },
                 cancellationToken,

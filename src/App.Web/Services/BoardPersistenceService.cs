@@ -426,7 +426,7 @@ public sealed class BoardPersistenceService(
         }
 
         entity.DailyLastCompletedOn = completedOn.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        entity.IsCompleted = true;
+        entity.IsCompleted = false;
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
         AddActivityEvent(userId, ActivityEventType.DailyComplete, itemId, null, entity.Title,
             DailyStreakCalculator.BackdatedDailyEventOccurredAt(completedOn));

@@ -511,17 +511,10 @@
 
     private Task PersistStatisticsData()
     {
-        if (_data is not null)
+        if (_data is not null && _dailyView is not null && _habitView is not null)
         {
-            ApplicationState.PersistAsJson("stats_dashboard_data", _data);
-        }
-        if (_dailyView is not null)
-        {
-            ApplicationState.PersistAsJson("stats_daily_view_data", _dailyView);
-        }
-        if (_habitView is not null)
-        {
-            ApplicationState.PersistAsJson("stats_habit_view_data", _habitView);
+            var overview = new ActivityOverviewDto(_data, _dailyView, _habitView);
+            ApplicationState.PersistAsJson("stats_overview_data", overview);
         }
         return Task.CompletedTask;
     }
@@ -541,32 +534,27 @@
         try
         {
             var tag = string.IsNullOrEmpty(_tagFilter) ? null : _tagFilter;
-            if (ApplicationState.TryTakeFromJson<ActivityDashboardDto>("stats_dashboard_data", out var restoredDashboard) && restoredDashboard is not null)
+            ActivityOverviewDto overview;
+
+            if (ApplicationState.TryTakeFromJson<ActivityOverviewDto>("stats_overview_data", out var restoredOverview) && restoredOverview is not null)
             {
-                _data = restoredDashboard;
+                overview = restoredOverview;
+            }
+            else if (ApplicationState.TryTakeFromJson<ActivityDashboardDto>("stats_dashboard_data", out var d) &&
+                     ApplicationState.TryTakeFromJson<DailyContributionsViewDto>("stats_daily_view_data", out var dv) &&
+                     ApplicationState.TryTakeFromJson<HabitContributionsViewDto>("stats_habit_view_data", out var hv) &&
+                     d is not null && dv is not null && hv is not null)
+            {
+                overview = new ActivityOverviewDto(d, dv, hv);
             }
             else
             {
-                _data = await Stats.GetDashboardAsync(periodKey, tag);
+                overview = await Stats.GetOverviewAsync(periodKey, tag);
             }
 
-            if (ApplicationState.TryTakeFromJson<DailyContributionsViewDto>("stats_daily_view_data", out var restoredDailyView) && restoredDailyView is not null)
-            {
-                _dailyView = restoredDailyView;
-            }
-            else
-            {
-                _dailyView = await Stats.GetDailyContributionsAsync(periodKey, tag);
-            }
-
-            if (ApplicationState.TryTakeFromJson<HabitContributionsViewDto>("stats_habit_view_data", out var restoredHabitView) && restoredHabitView is not null)
-            {
-                _habitView = restoredHabitView;
-            }
-            else
-            {
-                _habitView = await Stats.GetHabitContributionsAsync(periodKey, tag);
-            }
+            _data = overview.Dashboard;
+            _dailyView = overview.DailyContributions;
+            _habitView = overview.HabitContributions;
 
             _selectedPeriodKey = _data.PeriodKey;
             var tagList = _data.AvailableTags ?? [];

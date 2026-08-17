@@ -1,4 +1,7 @@
 @inject IUserDateFormatService DateFormatService
+@inject IBoardDataService BoardDataService
+@inject IUserNotifier Notifier
+@implements IAsyncDisposable
 
 <MudDialog Class="daily-yesterday-dialog"
            ContentClass="daily-yesterday-dialog__content"
@@ -74,6 +77,16 @@
                     }
                 </div>
             </div>
+
+            <div class="daily-yesterday-footer">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           FullWidth="true"
+                           Class="daily-yesterday-footer__close-btn"
+                           OnClick="CloseAsync">
+                    Done
+                </MudButton>
+            </div>
         </div>
     </DialogContent>
 </MudDialog>
@@ -88,7 +101,9 @@
     private string _dueOnFormatted = string.Empty;
     private List<BoardItem> _pending = [];
     private readonly Dictionary<Guid, bool> _completedById = new();
-    private bool _anyChanged;
+    private readonly HashSet<Guid> _committedIds = [];
+    private bool _isCommitting;
+    private bool _sessionEnded;
 
     protected override void OnParametersSet()
     {
@@ -107,7 +122,6 @@
     {
         var nextVal = !_completedById.GetValueOrDefault(item.Id);
         _completedById[item.Id] = nextVal;
-        _anyChanged = true;
         StateHasChanged();
     }
 
@@ -119,17 +133,73 @@
         }
     }
 
-    private void CloseAsync()
+    private async Task CommitCompletionsAsync()
     {
-        if (_anyChanged)
+        if (_isCommitting)
         {
-            var completedIds = _completedById.Where(kvp => kvp.Value).Select(kvp => kvp.Key).ToList();
-            MudDialog.Close(DialogResult.Ok(completedIds));
+            return;
+        }
+
+        _isCommitting = true;
+        try
+        {
+            var toComplete = _completedById
+                .Where(kvp => kvp.Value && !_committedIds.Contains(kvp.Key))
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            foreach (var id in toComplete)
+            {
+                try
+                {
+                    var updated = await BoardDataService.CompleteDailyForDateAsync(id, DueOn);
+                    if (updated is not null)
+                    {
+                        _committedIds.Add(id);
+                    }
+                }
+                catch (Exception)
+                {
+                    var item = _pending.FirstOrDefault(d => d.Id == id);
+                    var title = item?.Title ?? "a daily";
+                    await Notifier.NotifyAsync($"Failed to save retroactive completion for '{title}'.", Severity.Error);
+                }
+            }
+        }
+        finally
+        {
+            _isCommitting = false;
+        }
+    }
+
+    private async Task CloseAsync()
+    {
+        if (_sessionEnded)
+        {
+            return;
+        }
+
+        _sessionEnded = true;
+        await CommitCompletionsAsync();
+        if (_committedIds.Count > 0)
+        {
+            MudDialog.Close(DialogResult.Ok(_committedIds.ToList()));
         }
         else
         {
             MudDialog.Close(DialogResult.Cancel());
         }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_sessionEnded)
+        {
+            return;
+        }
+
+        _sessionEnded = true;
+        await CommitCompletionsAsync();
     }
 
     private static Dictionary<string, object> GetRowAria(bool isCompleted) => new()

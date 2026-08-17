@@ -746,11 +746,12 @@
 
             if (result is { Canceled: false, Data: List<Guid> ids } && ids.Count > 0)
             {
-                _ = CompleteDailiesInBackgroundAsync(ids, yesterdayDate);
+                await CompleteDailiesInBackgroundAsync(ids, yesterdayDate);
             }
             else
             {
                 await RefreshStreaksAsync();
+                await LoadBoardAsync();
             }
         }
         catch (Exception)
@@ -801,11 +802,19 @@
     {
         try
         {
-            var tasks = completedIds.Select(async id =>
+            foreach (var id in completedIds)
             {
                 try
                 {
-                    await BoardDataService.CompleteDailyForDateAsync(id, dueOn);
+                    var updated = await BoardDataService.CompleteDailyForDateAsync(id, dueOn);
+                    if (updated is not null)
+                    {
+                        var idx = Dailies.FindIndex(d => d.Id == id);
+                        if (idx >= 0)
+                        {
+                            Dailies[idx] = updated;
+                        }
+                    }
                 }
                 catch (Exception)
                 {
@@ -813,13 +822,7 @@
                     var title = item?.Title ?? "a daily";
                     await Notifier.NotifyAsync($"Failed to save retroactive completion for '{title}'.", Severity.Error);
                 }
-            }).ToList();
-
-            await Task.WhenAll(tasks);
-        }
-        catch (Exception)
-        {
-            // Handled individually inside Tasks
+            }
         }
         finally
         {

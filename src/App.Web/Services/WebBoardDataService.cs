@@ -8,26 +8,51 @@ namespace App.Web.Services;
 
 public sealed class WebBoardDataService(
     AuthenticationStateProvider authenticationStateProvider,
-    BoardPersistenceService boardPersistenceService) : IBoardDataService
+    BoardPersistenceService boardPersistenceService) : IBoardDataService, IDisposable
 {
+    private readonly SemaphoreSlim _gate = new(1, 1);
 
     public async Task<BoardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
     {
-        var userId = await GetCurrentUserIdAsync(cancellationToken);
-        return await boardPersistenceService.GetSnapshotAsync(userId, cancellationToken);
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var userId = await GetCurrentUserIdAsync(cancellationToken);
+            return await boardPersistenceService.GetSnapshotAsync(userId, cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     public async Task<BoardItem?> GetItemAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
-        var userId = await GetCurrentUserIdAsync(cancellationToken);
-        return await boardPersistenceService.GetItemAsync(userId, itemId, cancellationToken);
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var userId = await GetCurrentUserIdAsync(cancellationToken);
+            return await boardPersistenceService.GetItemAsync(userId, itemId, cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     public async Task<BoardItem> CreateItemAsync(BoardSection section, string title, Guid? itemId = null,
         CancellationToken cancellationToken = default)
     {
-        var userId = await GetCurrentUserIdAsync(cancellationToken);
-        return await boardPersistenceService.CreateItemAsync(userId, section, title, itemId, cancellationToken);
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var userId = await GetCurrentUserIdAsync(cancellationToken);
+            return await boardPersistenceService.CreateItemAsync(userId, section, title, itemId, cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     public Task<BoardItem?> RenameItemAsync(BoardSection section, Guid itemId, string title,
@@ -52,8 +77,16 @@ public sealed class WebBoardDataService(
 
     public async Task<BoardSnapshot> GetArchivedSnapshotAsync(CancellationToken cancellationToken = default)
     {
-        var userId = await GetCurrentUserIdAsync(cancellationToken);
-        return await boardPersistenceService.GetArchivedSnapshotAsync(userId, cancellationToken);
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var userId = await GetCurrentUserIdAsync(cancellationToken);
+            return await boardPersistenceService.GetArchivedSnapshotAsync(userId, cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     public Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId,
@@ -97,8 +130,16 @@ public sealed class WebBoardDataService(
 
     public async Task<Dictionary<Guid, int>> GetStreakMapAsync(CancellationToken cancellationToken = default)
     {
-        var userId = await GetCurrentUserIdAsync(cancellationToken);
-        return await boardPersistenceService.GetDailyStreakMapAsync(userId, cancellationToken);
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var userId = await GetCurrentUserIdAsync(cancellationToken);
+            return await boardPersistenceService.GetDailyStreakMapAsync(userId, cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     private async Task<Guid> GetCurrentUserIdAsync(CancellationToken cancellationToken)
@@ -111,16 +152,37 @@ public sealed class WebBoardDataService(
     private async Task<BoardItem?> MutateAsync(Func<Guid, CancellationToken, Task<BoardMutationResult>> op,
         CancellationToken cancellationToken)
     {
-        var userId = await GetCurrentUserIdAsync(cancellationToken);
-        var r = await op(userId, cancellationToken);
-        return r.Status == BoardMutationStatus.Ok ? r.Item : null;
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var userId = await GetCurrentUserIdAsync(cancellationToken);
+            var r = await op(userId, cancellationToken);
+            return r.Status == BoardMutationStatus.Ok ? r.Item : null;
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     private async Task<bool> MutateStatusAsync(Func<Guid, CancellationToken, Task<BoardMutationResult>> op,
         CancellationToken cancellationToken)
     {
-        var userId = await GetCurrentUserIdAsync(cancellationToken);
-        var r = await op(userId, cancellationToken);
-        return r.Status == BoardMutationStatus.Ok;
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var userId = await GetCurrentUserIdAsync(cancellationToken);
+            var r = await op(userId, cancellationToken);
+            return r.Status == BoardMutationStatus.Ok;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public void Dispose()
+    {
+        _gate.Dispose();
     }
 }

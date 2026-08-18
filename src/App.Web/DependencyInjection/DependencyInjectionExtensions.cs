@@ -128,6 +128,7 @@ public static class DependencyInjectionExtensions
             TimeSpan.FromSeconds(30)));
         services.AddSingleton<ActivityStatisticsCache>();
         services.AddSingleton<IBoardChangeNotifier, BoardChangeNotifier>();
+        services.AddScoped<DailyStreakCalculationService>();
         services.AddScoped<BoardPersistenceService>();
         services.AddScoped<IInitialBoardLoadGate, InitialBoardLoadGate>();
         services.AddScoped<BoardIdempotencyService>();

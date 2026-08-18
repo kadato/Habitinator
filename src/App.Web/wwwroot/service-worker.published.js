@@ -64,20 +64,20 @@ globalThis.addEventListener('fetch', event => {
         return;
     }
 
-    // -- Framework assets: cache-first with network update. They are immutable and fingerprinted. --
+    // -- Framework assets: cache-first. They are immutable and fingerprinted. --
     if (FRAMEWORK_ASSET_PATTERN.test(url.pathname) || CONTENT_ASSET_PATTERN.test(url.pathname)) {
         event.respondWith(
             caches.open(FRAMEWORK_CACHE).then(cache =>
                 cache.match(event.request).then(cached => {
-                    const networkFetch = fetch(event.request).then(response => {
+                    if (cached) {
+                        return cached;
+                    }
+                    return fetch(event.request).then(response => {
                         if (response?.status === 200) {
                             cache.put(event.request, response.clone());
                         }
                         return response;
-                    }).catch(() => cached);
-
-                    // Return cached immediately, update cache in background
-                    return cached || networkFetch;
+                    });
                 })
             )
         );

@@ -9,8 +9,8 @@
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>partial</TrimMode>
     <HybridGlobalization>true</HybridGlobalization>
-    <!-- AOT: compile C# to native WebAssembly for roughly 10-20x faster runtime execution. Release only. -->
-    <RunAOTCompilation Condition="'$(Configuration)' == 'Release'">true</RunAOTCompilation>
+    <!-- Fast WASM load: disable full AOT to reduce initial download payload by ~50-65%, relying on .NET tiered Jiterpreter -->
+    <RunAOTCompilation>false</RunAOTCompilation>
     <!-- Webcil: repackage DLLs as .wasm for better CDN and proxy compatibility -->
     <WasmEnableWebcil>true</WasmEnableWebcil>
 

@@ -143,9 +143,10 @@
             }
         })();
     </script>
-    <link rel="prefetch" href=@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Regular.woff2"] as="font" crossorigin="anonymous"/>
-    <link rel="prefetch" href=@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Medium.woff2"] as="font" crossorigin="anonymous"/>
-    <link rel="prefetch" href=@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2"] as="font" crossorigin="anonymous"/>
+    <link rel="preload" href=@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Regular.woff2"] as="font" type="font/woff2" crossorigin="anonymous"/>
+    <link rel="preload" href=@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Medium.woff2"] as="font" type="font/woff2" crossorigin="anonymous"/>
+    <link rel="prefetch" href=@Assets["_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2"] as="font" type="font/woff2" crossorigin="anonymous"/>
+    <link rel="preload" href=@Assets["_content/App.Shared.RCL/fonts/JetBrainsMono.woff2"] as="font" type="font/woff2" crossorigin="anonymous"/>
     <link rel="preload" href=@Assets["_framework/blazor.web.js"] as="script" crossorigin="anonymous"/>
     <link rel="preload" href=@Assets["_content/MudBlazor/MudBlazor.min.js"] as="script" crossorigin="anonymous"/>
 
@@ -178,103 +179,23 @@
     <link rel="icon" type="image/png" href="/favicon.png"/>
     <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
     <link rel="manifest" href="/manifest.webmanifest"/>
-    @* Fallback until the interactive circuit updates head; must match Routes render mode. *@
+    @* Fallback until the interactive circuit updates head. Must match Routes render mode. *@
     <title>@SeoDefaults.DefaultTitle</title>
     <HeadOutlet @rendermode="GetRoutesRenderMode()"/>
 </head>
 
 <body>
 
-<!-- WASM Loading Splash. Only shown when Interactive WebAssembly will load. -->
 @if (HttpContext?.User?.Identity?.IsAuthenticated == true)
 {
-<div id="habitinator-wasm-splash" aria-label="Loading application" role="status">
+<div id="habitinator-wasm-splash" class="wasm-splash--hidden" aria-label="Loading application" role="status" style="display: none;">
     <div class="wasm-splash__inner">
         <div class="wasm-splash__logo" aria-hidden="true">
             <img src="_content/App.Shared.RCL/brand/mark-tile.svg" width="48" height="48" alt=""/>
         </div>
         <p class="wasm-splash__title">Habitinator</p>
-        <div class="wasm-splash__progress" aria-hidden="true">
-            <div class="wasm-splash__progress-bar"></div>
-        </div>
-        <p class="wasm-splash__hint" id="wasm-splash-hint">Starting&hellip;</p>
     </div>
 </div>
-
-<script>
-(function() {
-    'use strict';
-    var splash = document.getElementById('habitinator-wasm-splash');
-    if (!splash) return;
-
-    // -- Progress stage definitions, time-based fallback --
-    var stages = [
-        { afterMs: 0,    text: 'Starting\u2026',                  pct: 5  },
-        { afterMs: 600,  text: 'Loading Blazor runtime\u2026',     pct: 15 },
-        { afterMs: 1500, text: 'Initializing WebAssembly\u2026',    pct: 30 },
-        { afterMs: 2800, text: 'Loading assemblies\u2026',         pct: 50 },
-        { afterMs: 4500, text: 'Configuring services\u2026',       pct: 65 },
-        { afterMs: 6000, text: 'Preparing your workspace\u2026',   pct: 80 },
-    ];
-
-    var currentIdx = 0;
-    var closed = false;
-
-    function setProgress(text, percent) {
-        if (closed) return;
-        var hint = document.getElementById('wasm-splash-hint');
-        if (hint) hint.textContent = text;
-        var bar = splash.querySelector('.wasm-splash__progress-bar');
-        if (bar) {
-            bar.style.width = percent + '%';
-            bar.style.animation = 'none';
-        }
-    }
-
-    // Advance through time-based stages
-    function scheduleNext() {
-        if (closed) return;
-        if (currentIdx < stages.length) {
-            var now = stages[currentIdx];
-            setProgress(now.text, now.pct);
-            currentIdx++;
-            if (currentIdx < stages.length) {
-                var next = stages[currentIdx];
-                setTimeout(scheduleNext, next.afterMs - now.afterMs);
-            }
-        }
-    }
-    // Start the first stage immediately, schedule the rest
-    scheduleNext();
-
-    // -- Hook: blazor.web.js finished loading --
-    var blazorScript = document.querySelector('script[src*="blazor.web"]');
-    if (blazorScript) {
-        blazorScript.addEventListener('load', function() {
-            setProgress('Runtime loaded, starting app\u2026', 60);
-        });
-    }
-
-    // -- Hook: progress update from Program.cs via JSInvokable --
-    window.habUpdateProgress = function(text, pct) {
-        setProgress(text, pct);
-    };
-
-    // -- Hook: remove splash. Called from MainLayout via JSInvokable or habitinatorRemoveLoadingBar. --
-    window.habRemoveSplash = function() {
-        if (closed) return;
-        closed = true;
-        setProgress('Ready!', 100);
-        splash.classList.add('wasm-splash--hidden');
-        splash.addEventListener('transitionend', function() {
-            if (splash.parentNode) splash.remove();
-        }, { once: true });
-        setTimeout(function() {
-            if (splash.parentNode) splash.remove();
-        }, 600);
-    };
-})();
-</script>
 }
 
 <CascadingValue Value="@IsDarkTheme()" Name="IsDarkMode">

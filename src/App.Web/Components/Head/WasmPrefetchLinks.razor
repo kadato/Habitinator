@@ -21,32 +21,47 @@
 }
 
 @code {
-    private IReadOnlyList<string> GetFrameworkAssetUrls()
+    private static readonly object SyncLock = new();
+    private static IReadOnlyList<string>? _cachedFrameworkUrls;
+
+    private IReadOnlyList<string> GetFrameworkAssetUrls() =>
+        GetOrLoadFrameworkAssetUrls(HostEnvironment.WebRootFileProvider);
+
+    private static IReadOnlyList<string> GetOrLoadFrameworkAssetUrls(IFileProvider fileProvider)
     {
-        var urls = new List<string>();
+        if (_cachedFrameworkUrls is { } cached)
+            return cached;
 
-        try
+        lock (SyncLock)
         {
-            var fileProvider = HostEnvironment.WebRootFileProvider;
-            var frameworkDir = fileProvider.GetDirectoryContents("_framework");
+            if (_cachedFrameworkUrls is { } doubleChecked)
+                return doubleChecked;
 
-            if (!frameworkDir.Exists)
-                return urls;
+            var urls = new List<string>();
 
-            foreach (var file in frameworkDir)
+            try
             {
-                if (!file.IsDirectory && ShouldPrefetch(file.Name))
+                var frameworkDir = fileProvider.GetDirectoryContents("_framework");
+
+                if (frameworkDir.Exists)
                 {
-                    urls.Add($"_framework/{file.Name}");
+                    foreach (var file in frameworkDir)
+                    {
+                        if (!file.IsDirectory && ShouldPrefetch(file.Name))
+                        {
+                            urls.Add($"_framework/{file.Name}");
+                        }
+                    }
                 }
             }
-        }
-        catch
-        {
-            // Best-effort: if enumeration fails, render nothing
-        }
+            catch
+            {
+                // Best-effort: if enumeration fails, render nothing
+            }
 
-        return urls;
+            _cachedFrameworkUrls = urls;
+            return urls;
+        }
     }
 
     private static bool ShouldPrefetch(string name)

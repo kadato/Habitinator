@@ -3,6 +3,9 @@
 @inject IClientSessionProvider Session
 @using Microsoft.AspNetCore.Components.Routing
 
+@inject IActivityStatisticsReader StatsReader
+@inject IBoardDataService BoardData
+
 @{
     var navClass = MobileTopBar ? "app-mobile-nav" : "app-header-nav d-flex flex-wrap align-center";
 }
@@ -60,14 +63,27 @@ else
         return NavMenuPaths.IsActivePath(Nav.ToBaseRelativePath(Nav.Uri), path, match);
     }
 
+    private void Prefetch(string path)
+    {
+        if (path == "stats")
+        {
+            _ = StatsReader.GetOverviewAsync(null, null);
+        }
+        else if (string.IsNullOrEmpty(path))
+        {
+            _ = BoardData.GetSnapshotAsync();
+        }
+    }
+
     private RenderFragment MobileNavItem(string href, string path, NavLinkMatch match, string icon, string label) => __builder =>
     {
         var active = IsActivePath(path, match);
         var itemClass = active ? "app-mobile-nav__item app-mobile-nav__item--active" : "app-mobile-nav__item";
         <a href="@href"
            class="@itemClass"
-           @attributes="NavCurrentAttributes(active)"
-           data-enhance-nav="false">
+           aria-current="@(active ? "page" : null)"
+           @onpointerenter="() => Prefetch(path)"
+           @ontouchstart="() => Prefetch(path)">
             <MudIcon Icon="@icon" Class="app-mobile-nav__icon" />
             <span class="app-mobile-nav__label">@label</span>
         </a>
@@ -77,28 +93,18 @@ else
     {
         var active = IsActivePath(path, match);
         var slotClass = active ? "app-header-nav-slot app-header-nav-slot--active" : "app-header-nav-slot";
-        <span class="@slotClass">
+        <span class="@slotClass"
+              @onpointerenter="() => Prefetch(path)"
+              @ontouchstart="() => Prefetch(path)">
             <MudButton Href="@href"
                        Variant="@(active ? Variant.Filled : Variant.Text)"
                        Color="@(active ? Color.Primary : Color.Default)"
                        Size="Size.Medium"
                        StartIcon="@icon"
                        Class="app-header-nav-btn text-transform-none"
-                       @attributes="NavCurrentAttributes(active)"
-                       data-enhance-nav="false">
+                       aria-current="@(active ? "page" : null)">
                 @label
             </MudButton>
         </span>
     };
-
-    private static Dictionary<string, object> NavCurrentAttributes(bool active)
-    {
-        var attributes = new Dictionary<string, object>();
-        if (active)
-        {
-            attributes["aria-current"] = "page";
-        }
-
-        return attributes;
-    }
 }

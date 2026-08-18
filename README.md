@@ -8,7 +8,7 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17.6-4169E1?logo=postgresql)
 ![SQLite](https://img.shields.io/badge/SQLite-Local--First-003B57?logo=sqlite)
 ![Platforms](https://img.shields.io/badge/Platforms-Android%20%7C%20Windows%20%7C%20iOS%20%7C%20macOS-blue)
-[![GitHub Release](https://img.shields.io/github/v/release/tothKarolyDavid/Habitinator)](https://github.com/tothKarolyDavid/Habitinator/releases/latest)
+[![GitHub Release](https://img.shields.io/github/v/release/kadato/Habitinator)](https://github.com/kadato/Habitinator/releases/latest)
 
 A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits, dailies, and to-dos with a focus timer, analytics, and reliable sync across web and mobile.
 
@@ -70,13 +70,13 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 
 ## Download and install
 
-Download the latest build from the [releases page](https://github.com/tothKarolyDavid/Habitinator/releases/latest), or use the direct links below. Every package ships with a SHA256 checksum file.
+Download the latest build from the [releases page](https://github.com/kadato/Habitinator/releases/latest), or use the direct links below. Every package ships with a SHA256 checksum file.
 
 | Platform | Package | Size | Notes |
 |----------|---------|------|-------|
-| Android | [![APK](https://img.shields.io/badge/APK-3ddc84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/tothKarolyDavid/Habitinator/releases/latest/download/Habitinator-android.apk) | 41 MB | Install on device. Enable unknown sources first |
-| Windows | [![Installer](https://img.shields.io/badge/Installer-0078d6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/tothKarolyDavid/Habitinator/releases/latest/download/Habitinator-windows-x64-setup.exe) | 53 MB | Installer with auto-updates. Recommended |
-| Windows | [![Portable ZIP](https://img.shields.io/badge/Portable%20ZIP-1f6feb?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/tothKarolyDavid/Habitinator/releases/latest/download/Habitinator-windows-x64.zip) | 78 MB | Portable. Extract and run |
+| Android | [![APK](https://img.shields.io/badge/APK-3ddc84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/kadato/Habitinator/releases/latest/download/Habitinator-android.apk) | 41 MB | Install on device. Enable unknown sources first |
+| Windows | [![Installer](https://img.shields.io/badge/Installer-0078d6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/kadato/Habitinator/releases/latest/download/Habitinator-windows-x64-setup.exe) | 53 MB | Installer with auto-updates. Recommended |
+| Windows | [![Portable ZIP](https://img.shields.io/badge/Portable%20ZIP-1f6feb?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/kadato/Habitinator/releases/latest/download/Habitinator-windows-x64.zip) | 78 MB | Portable. Extract and run |
 | iOS / macOS | *Source only* | - | Build from source using the .NET MAUI workload |
 | Web | [![Web App](https://img.shields.io/badge/Web%20App-6b46c1?style=for-the-badge&logo=web&logoColor=white)](https://habitinator.app) | - | Live demo, no install needed |
 

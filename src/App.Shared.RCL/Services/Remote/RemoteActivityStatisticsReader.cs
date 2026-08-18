@@ -7,25 +7,59 @@ namespace App.Shared.RCL.Services.Remote;
 
 public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
 {
+    private const string StatsOverviewCacheKeyPrefix = "habitinator_stats_overview_cache_v1";
     private static readonly JsonSerializerOptions Serializer = JsonDefaults.Api;
 
     private readonly IHttpClientFactory _http;
+    private readonly ILocalSettingsStore? _localStore;
+    private readonly ConcurrentDictionary<string, (object Value, DateTime ExpiresAtUtc)> _cache = new();
+    private static readonly TimeSpan DefaultCacheTtl = TimeSpan.FromSeconds(60);
 
-    public RemoteActivityStatisticsReader(IHttpClientFactory http)
+    public RemoteActivityStatisticsReader(IHttpClientFactory http, ILocalSettingsStore? localStore = null)
     {
         _http = http;
+        _localStore = localStore;
+        if (_localStore != null)
+        {
+            var raw = _localStore.Read(StatsOverviewCacheKeyPrefix);
+            if (!string.IsNullOrEmpty(raw))
+            {
+                try
+                {
+                    var cached = JsonSerializer.Deserialize<ActivityOverviewDto>(raw, Serializer);
+                    if (cached != null)
+                    {
+                        var defaultPath = "api/activity/overview";
+                        _cache[defaultPath] = (cached, DateTime.UtcNow.AddMinutes(15));
+                    }
+                }
+                catch
+                {
+                    // Ignore corrupted local cache
+                }
+            }
+        }
     }
 
     private HttpClient Client => _http.CreateClient("api");
-
-    private readonly ConcurrentDictionary<string, (object Value, DateTime ExpiresAtUtc)> _cache = new();
-    private static readonly TimeSpan DefaultCacheTtl = TimeSpan.FromSeconds(60);
 
     public async Task<ActivityOverviewDto> GetOverviewAsync(string? periodKey, string? tag = null,
         CancellationToken cancellationToken = default)
     {
         var path = "api/activity/overview" + BuildActivityQuery(periodKey, tag);
-        return await GetJsonCachedOrThrowAsync<ActivityOverviewDto>(path, DefaultCacheTtl, cancellationToken);
+        var result = await GetJsonCachedOrThrowAsync<ActivityOverviewDto>(path, DefaultCacheTtl, cancellationToken);
+        if (_localStore != null && string.IsNullOrEmpty(periodKey) && string.IsNullOrEmpty(tag))
+        {
+            try
+            {
+                _localStore.Write(StatsOverviewCacheKeyPrefix, JsonSerializer.Serialize(result, Serializer));
+            }
+            catch
+            {
+                // Ignore storage write errors
+            }
+        }
+        return result;
     }
 
     public async Task<ActivityDashboardDto> GetDashboardAsync(string? periodKey, string? tag = null,
@@ -64,6 +98,52 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
     public void InvalidateCache()
     {
         _cache.Clear();
+        if (_localStore != null)
+        {
+            try
+            {
+                _localStore.Write(StatsOverviewCacheKeyPrefix, "");
+            }
+            catch
+            {
+                // Ignore storage write errors
+            }
+        }
+    }
+
+    public bool TryGetCachedOverview(string? periodKey, string? tag, out ActivityOverviewDto? overview)
+    {
+        var path = "api/activity/overview" + BuildActivityQuery(periodKey, tag);
+        if (_cache.TryGetValue(path, out var entry) && entry.ExpiresAtUtc > DateTime.UtcNow && entry.Value is ActivityOverviewDto cached)
+        {
+            overview = cached;
+            return true;
+        }
+
+        if (_localStore != null && string.IsNullOrEmpty(periodKey) && string.IsNullOrEmpty(tag))
+        {
+            var raw = _localStore.Read(StatsOverviewCacheKeyPrefix);
+            if (!string.IsNullOrEmpty(raw))
+            {
+                try
+                {
+                    var local = JsonSerializer.Deserialize<ActivityOverviewDto>(raw, Serializer);
+                    if (local != null)
+                    {
+                        overview = local;
+                        _cache[path] = (local, DateTime.UtcNow.AddMinutes(15));
+                        return true;
+                    }
+                }
+                catch
+                {
+                    // Ignore corrupted local cache
+                }
+            }
+        }
+
+        overview = null;
+        return false;
     }
 
     private static string BuildActivityQuery(string? periodKey, string? tag)

@@ -12,6 +12,11 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         return _inner.GetSnapshotAsync(cancellationToken);
     }
 
+    public bool TryGetCachedSnapshot(out BoardSnapshot? snapshot)
+    {
+        return _inner.TryGetCachedSnapshot(out snapshot);
+    }
+
     public Task<BoardItem?> GetItemAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
         return _inner.GetItemAsync(itemId, cancellationToken);

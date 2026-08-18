@@ -16,4 +16,14 @@ public interface IActivityStatisticsReader
 
     Task<ActivityDayDetailDto> GetActivityDayDetailAsync(DateOnly day, string? tag = null,
         CancellationToken cancellationToken = default);
+
+    bool TryGetCachedOverview(string? periodKey, string? tag, out ActivityOverviewDto? overview)
+    {
+        overview = null;
+        return false;
+    }
+
+    void InvalidateCache()
+    {
+    }
 }

@@ -5,10 +5,12 @@ namespace App.Shared.RCL.Services.Remote;
 public sealed class RemoteUserActivityLogService : IUserActivityLogService
 {
     private readonly IHttpClientFactory _http;
+    private readonly IActivityStatisticsReader? _statsReader;
 
-    public RemoteUserActivityLogService(IHttpClientFactory http)
+    public RemoteUserActivityLogService(IHttpClientFactory http, IActivityStatisticsReader? statsReader = null)
     {
         _http = http;
+        _statsReader = statsReader;
     }
 
     private HttpClient Client => _http.CreateClient("api");
@@ -48,6 +50,7 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService
         {
             using var res = await Client.PostAsJsonAsync("api/activity/log", req, cancellationToken);
             res.EnsureSuccessStatusCode();
+            _statsReader?.InvalidateCache();
         }
         catch
         {

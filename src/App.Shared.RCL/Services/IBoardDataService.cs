@@ -76,6 +76,12 @@ public interface IBoardDataService
 {
     Task<BoardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default);
 
+    bool TryGetCachedSnapshot(out BoardSnapshot? snapshot)
+    {
+        snapshot = null;
+        return false;
+    }
+
     /// <summary>Fetches a single active board item by id, or null when not found.</summary>
     Task<BoardItem?> GetItemAsync(Guid itemId, CancellationToken cancellationToken = default);
 

@@ -8,7 +8,8 @@ public sealed class TimerSessionLogService(
     IUserActivityLogService userActivityLog,
     IUserTimeZoneService timeZoneService,
     IRemoteBoardRefreshService remoteBoardRefresh,
-    IClock clock) : ITimerSessionLogService
+    IClock clock,
+    IActivityStatisticsReader? statsReader = null) : ITimerSessionLogService
 {
     public async Task<TimerSessionLogResult> LogStoppedSessionAsync(
         TimeSpan duration,
@@ -44,6 +45,7 @@ public sealed class TimerSessionLogService(
             await userActivityLog
                 .LogTimerSessionAsync(duration, boardId, customLabel, cancellationToken)
                 .ConfigureAwait(false);
+            statsReader?.InvalidateCache();
         }
         catch (Exception)
         {

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace App.Shared.RCL.Services;
 
@@ -9,7 +10,8 @@ public static class JsonDefaults
     /// <summary>Web/API conventions: camelCase, case-insensitive reads, nulls omitted on write.</summary>
     public static readonly JsonSerializerOptions Api = new(JsonSerializerDefaults.Web)
     {
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        TypeInfoResolver = JsonTypeInfoResolver.Combine(SharedJsonSerializerContext.Default, new DefaultJsonTypeInfoResolver())
     };
 
     /// <summary>CamelCase for local persistence.</summary>

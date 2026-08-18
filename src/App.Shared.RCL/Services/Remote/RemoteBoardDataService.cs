@@ -5,11 +5,40 @@ using App.Shared.RCL.Models;
 
 namespace App.Shared.RCL.Services.Remote;
 
-public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardDataService
+public sealed class RemoteBoardDataService : IBoardDataService
 {
+    private const string BoardCacheKey = "habitinator_board_cache_v1";
     private static readonly JsonSerializerOptions Serializer = JsonDefaults.Api;
 
-    private readonly IHttpClientFactory _http = http;
+    private readonly IHttpClientFactory _http;
+    private readonly ILocalSettingsStore? _localStore;
+    private readonly IActivityStatisticsReader? _statsReader;
+    private BoardSnapshot? _cachedSnapshot;
+
+    public RemoteBoardDataService(
+        IHttpClientFactory http,
+        ILocalSettingsStore? localStore = null,
+        IActivityStatisticsReader? statsReader = null)
+    {
+        _http = http;
+        _localStore = localStore;
+        _statsReader = statsReader;
+        if (_localStore != null)
+        {
+            var raw = _localStore.Read(BoardCacheKey);
+            if (!string.IsNullOrEmpty(raw))
+            {
+                try
+                {
+                    _cachedSnapshot = JsonSerializer.Deserialize<BoardSnapshot>(raw, Serializer);
+                }
+                catch
+                {
+                    // Ignore deserialization errors
+                }
+            }
+        }
+    }
 
     private HttpClient Client => _http.CreateClient("api");
 
@@ -56,6 +85,12 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
         return await res.Content.ReadFromJsonAsync<BoardSyncDelta>(Serializer, cancellationToken);
     }
 
+    public bool TryGetCachedSnapshot(out BoardSnapshot? snapshot)
+    {
+        snapshot = _cachedSnapshot;
+        return snapshot is not null;
+    }
+
     public async Task<BoardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -80,7 +115,19 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
                     "Board response was not valid JSON. Check Api:BaseUrl / HABITINATOR_API_BASE_URL points at the Habitinator API host.");
             }
 
-            return s ?? throw new InvalidOperationException("Empty board response.");
+            _cachedSnapshot = s ?? throw new InvalidOperationException("Empty board response.");
+            if (_localStore != null)
+            {
+                try
+                {
+                    _localStore.Write(BoardCacheKey, JsonSerializer.Serialize(_cachedSnapshot, Serializer));
+                }
+                catch
+                {
+                    // Ignore storage writing errors
+                }
+            }
+            return _cachedSnapshot;
         }
         catch (HttpRequestException ex)
         {
@@ -125,8 +172,10 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
         using var res = await Client.SendAsync(req, cancellationToken);
         await ThrowIfConflictAsync(res, cancellationToken);
         res.EnsureSuccessStatusCode();
-        return await res.Content.ReadFromJsonAsync<BoardItem>(Serializer, cancellationToken)
+        var item = await res.Content.ReadFromJsonAsync<BoardItem>(Serializer, cancellationToken)
                ?? throw new InvalidOperationException("Server returned an empty create response.");
+        _statsReader?.InvalidateCache();
+        return item;
     }
 
     public Task<BoardItem?> RenameItemAsync(BoardSection section, Guid itemId, string title,
@@ -171,6 +220,7 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
 
         await ThrowIfConflictAsync(res, cancellationToken);
         res.EnsureSuccessStatusCode();
+        _statsReader?.InvalidateCache();
         return true;
     }
 
@@ -391,7 +441,7 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
 
-    private static async Task<BoardItem?> ReadBoardItemOrNullAsync(HttpResponseMessage res,
+    private async Task<BoardItem?> ReadBoardItemOrNullAsync(HttpResponseMessage res,
         CancellationToken cancellationToken)
     {
         if (res.StatusCode == HttpStatusCode.NotFound)
@@ -401,6 +451,11 @@ public sealed class RemoteBoardDataService(IHttpClientFactory http) : IBoardData
 
         await ThrowIfConflictAsync(res, cancellationToken);
         res.EnsureSuccessStatusCode();
-        return await res.Content.ReadFromJsonAsync<BoardItem>(Serializer, cancellationToken);
+        var item = await res.Content.ReadFromJsonAsync<BoardItem>(Serializer, cancellationToken);
+        if (item is not null)
+        {
+            _statsReader?.InvalidateCache();
+        }
+        return item;
     }
 }

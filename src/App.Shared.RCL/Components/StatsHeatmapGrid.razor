@@ -29,29 +29,34 @@
                             if (OnCellClick is not null)
                             {
                                 <button type="button"
+                                        @key="(row, col)"
                                         class="@cellClass"
                                         title="@cellTitle"
                                         aria-label="@cellAria"
-                                        @attributes="RovingAttributes(row, col)"
+                                        aria-current="@(IsToday(row, col) ? "date" : null)"
+                                        data-row="@(IncludeRovingTabindex ? row : null)"
+                                        data-col="@(IncludeRovingTabindex ? col : null)"
+                                        tabindex="@(IncludeRovingTabindex ? "0" : null)"
                                         @onclick="() => OnCellClickAsync(row, col)">
                                 </button>
                             }
                             else
                             {
-                                <div class="@cellClass"
+                                <div @key="(row, col)"
+                                     class="@cellClass"
                                      title="@cellTitle"
                                      aria-label="@cellAria"
-                                     @attributes="CellAriaCurrentAttributes(row, col)"></div>
+                                     aria-current="@(IsToday(row, col) ? "date" : null)"></div>
                             }
                         }
                         else
                         {
-                            <div class="stats-cell stats-lvl-na" title=""></div>
+                            <div @key="(row, col)" class="stats-cell stats-lvl-na" title=""></div>
                         }
                     }
                     else
                     {
-                        <div class="stats-cell stats-lvl-na" title=""></div>
+                        <div @key="(row, col)" class="stats-cell stats-lvl-na" title=""></div>
                     }
                 }
             }
@@ -69,35 +74,6 @@
     [Parameter] public Func<int, int, string?> GetCellTitle { get; set; } = (_, _) => null;
     [Parameter] public Func<int, int, string?> GetCellAriaLabel { get; set; } = (_, _) => null;
     [Parameter] public Func<int, int, Task>? OnCellClick { get; set; }
-
-    private Dictionary<string, object> RovingAttributes(int r, int c)
-    {
-        var attributes = new Dictionary<string, object>();
-        if (IsToday(r, c))
-        {
-            attributes["aria-current"] = "date";
-        }
-
-        if (IncludeRovingTabindex)
-        {
-            attributes["data-row"] = r;
-            attributes["data-col"] = c;
-            attributes["tabindex"] = 0;
-        }
-
-        return attributes;
-    }
-
-    private Dictionary<string, object> CellAriaCurrentAttributes(int r, int c)
-    {
-        var attributes = new Dictionary<string, object>();
-        if (IsToday(r, c))
-        {
-            attributes["aria-current"] = "date";
-        }
-
-        return attributes;
-    }
 
     private Task OnCellClickAsync(int r, int c)
     {

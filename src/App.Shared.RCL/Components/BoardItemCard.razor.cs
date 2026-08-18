@@ -50,17 +50,27 @@ public partial class BoardItemCard
     private string CardClass => $"board-card {RowClass}";
     private string RowClass => GetRowClass(Section, Item);
     private string CheckClass => GetCheckClass(Section, Item);
+    private static string AriaBool(bool condition) => condition ? "true" : "false";
+    private BoardItem? _lastRenderedItem;
+    private BoardSection? _lastRenderedSection;
+    private bool? _lastRenderedCanReorder;
+    private bool? _lastRenderedSubtasksExpanded;
 
-    private Dictionary<string, object> CheckButtonAttributes => new()
+    protected override bool ShouldRender()
     {
-        ["aria-pressed"] = Item.IsCompleted ? "true" : "false",
-        ["aria-checked"] = Item.IsCompleted ? "true" : "false",
-    };
+        return !Equals(_lastRenderedItem, Item)
+               || _lastRenderedSection != Section
+               || _lastRenderedCanReorder != CanReorder
+               || _lastRenderedSubtasksExpanded != _subtasksExpanded;
+    }
 
-    private Dictionary<string, object> SubtasksToggleAttributes => new()
+    protected override void OnAfterRender(bool firstRender)
     {
-        ["aria-expanded"] = _subtasksExpanded ? "true" : "false",
-    };
+        _lastRenderedItem = Item;
+        _lastRenderedSection = Section;
+        _lastRenderedCanReorder = CanReorder;
+        _lastRenderedSubtasksExpanded = _subtasksExpanded;
+    }
 
     private void ToggleSubtasksExpand()
     {

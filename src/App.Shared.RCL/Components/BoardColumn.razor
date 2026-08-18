@@ -162,7 +162,9 @@
             {
                 @foreach (var item in visibleItems)
                 {
-                    @ItemCard(item)
+                    <div @key="item.Id">
+                        @ItemCard(item)
+                    </div>
                 }
             }
         </div>

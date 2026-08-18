@@ -581,25 +581,65 @@ public sealed class BoardPersistenceService(
                 args.ExpectedUpdatedAtUtc,
                 async entity =>
                 {
-                    var trackPlus = args.TrackPlus;
-                    var trackMinus = args.TrackMinus;
-                    if (!trackPlus && !trackMinus)
-                    {
-                        trackPlus = true;
-                        trackMinus = true;
-                    }
+                    var (trackPlus, trackMinus) = ResolveHabitTracks(args.TrackPlus, args.TrackMinus);
 
-                    await ApplyCommonEditsAsync(entity, new CommonItemEditFields(args.Title, args.Notes, args.Tags, args.ChecklistJson, args.SortOrder),
+                    var newCounter = Math.Max(0, args.Counter);
+                    var newNegativeCounter = Math.Max(0, args.NegativeCounter);
+                    var title = args.Title ?? entity.Title;
+
+                    await SyncHabitEventsAsync(userId, itemId, ActivityEventType.HabitPlus, entity.Counter, newCounter, title, cancellationToken);
+                    await SyncHabitEventsAsync(userId, itemId, ActivityEventType.HabitMinus, entity.NegativeCounter, newNegativeCounter, title, cancellationToken);
+
+                    await ApplyCommonEditsAsync(entity, new CommonItemEditFields(title, args.Notes, args.Tags, args.ChecklistJson, args.SortOrder),
                         userId, BoardSection.Habit, cancellationToken);
                     entity.TrackPlus = trackPlus;
                     entity.TrackMinus = trackMinus;
                     entity.ResetPeriod = (int)args.ResetPeriod;
-                    entity.Counter = Math.Max(0, args.Counter);
-                    entity.NegativeCounter = Math.Max(0, args.NegativeCounter);
+                    entity.Counter = newCounter;
+                    entity.NegativeCounter = newNegativeCounter;
                     return true;
                 },
                 entity => ToModelWithDailyStreaksAsync(userId, entity, cancellationToken),
                 cancellationToken);
+
+    private static (bool TrackPlus, bool TrackMinus) ResolveHabitTracks(bool trackPlus, bool trackMinus)
+    {
+        if (!trackPlus && !trackMinus)
+        {
+            return (true, true);
+        }
+
+        return (trackPlus, trackMinus);
+    }
+
+    private async Task SyncHabitEventsAsync(
+        Guid userId,
+        Guid itemId,
+        ActivityEventType eventType,
+        int currentCount,
+        int newCount,
+        string title,
+        CancellationToken cancellationToken)
+    {
+        if (newCount < currentCount)
+        {
+            var removeCount = currentCount - newCount;
+            var recentEvents = await dbContext.UserActivityEvents
+                .Where(e => e.UserId == userId && e.BoardItemId == itemId && e.EventType == eventType)
+                .OrderByDescending(e => e.OccurredAtUtc)
+                .Take(removeCount)
+                .ToListAsync(cancellationToken);
+            dbContext.UserActivityEvents.RemoveRange(recentEvents);
+        }
+        else if (newCount > currentCount)
+        {
+            var addCount = newCount - currentCount;
+            for (var i = 0; i < addCount; i++)
+            {
+                AddActivityEvent(userId, eventType, itemId, customLabel: title);
+            }
+        }
+    }
 
     public Task<BoardMutationResult> UpdateTodoAsync(
         Guid userId,

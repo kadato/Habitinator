@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 using App.Shared.RCL.Services;
 
 namespace App.Web.Services;
@@ -45,11 +47,11 @@ public sealed class ActivityStatisticsCache
             _capacity = Math.Max(1, capacity);
         }
 
-        public bool TryGetValue(TKey key, out TValue value)
+        public bool TryGetValue(TKey key, [MaybeNullWhen(false)] out TValue value)
         {
             lock (_items)
             {
-                return _items.TryGetValue(key, out value!);
+                return _items.TryGetValue(key, out value);
             }
         }
 

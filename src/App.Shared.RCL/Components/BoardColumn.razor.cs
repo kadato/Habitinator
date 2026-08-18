@@ -646,7 +646,12 @@ public partial class BoardColumn : IAsyncDisposable
 
     private Task ToggleRecurringTodoAsync(BoardItem item)
     {
-        var interval = item.TodoRepeatIntervalDays!.Value;
+        // The > 0 guard in ToggleAsync guarantees a non-null interval here.
+        if (item.TodoRepeatIntervalDays is not int interval)
+        {
+            return Task.CompletedTask;
+        }
+
         var nextDue = (item.TodoDueDate ?? BoardToday()).AddDays(interval);
         while (nextDue <= BoardToday())
         {

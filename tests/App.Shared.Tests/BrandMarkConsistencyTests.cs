@@ -13,8 +13,14 @@ namespace App.Shared.Tests;
 /// deviates from the canonical bar geometry,
 /// this suite fails so the drift is caught in CI instead of on a device.
 /// </summary>
-public sealed class BrandMarkConsistencyTests
+public sealed partial class BrandMarkConsistencyTests
 {
+    [GeneratedRegex(@"translate((-?[d.]+) (-?[d.]+))")]
+    private static partial Regex TranslatePattern();
+
+    [GeneratedRegex(@"scale((-?[d.]+))")]
+    private static partial Regex ScalePattern();
+
     private static readonly string[] DerivedMarkFiles =
     [
         Path.Combine("src", "App.Shared.RCL", "wwwroot", "brand", "mark-tile.svg"),
@@ -106,14 +112,14 @@ public sealed class BrandMarkConsistencyTests
         double tx = 0, ty = 0, s = 1;
         foreach (var transform in transforms)
         {
-            var translate = Regex.Match(transform, @"translate\((-?[\d.]+) (-?[\d.]+)\)");
+            var translate = TranslatePattern().Match(transform);
             if (translate.Success)
             {
                 tx += s * double.Parse(translate.Groups[1].Value, CultureInfo.InvariantCulture);
                 ty += s * double.Parse(translate.Groups[2].Value, CultureInfo.InvariantCulture);
             }
 
-            var scale = Regex.Match(transform, @"scale\((-?[\d.]+)\)");
+            var scale = ScalePattern().Match(transform);
             if (scale.Success)
             {
                 s *= double.Parse(scale.Groups[1].Value, CultureInfo.InvariantCulture);

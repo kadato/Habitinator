@@ -1,4 +1,3 @@
-#pragma warning disable S3881 // Dispose is implemented in the generated Razor part
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 
@@ -8,10 +7,15 @@ using MudBlazor;
 
 namespace App.Shared.RCL.Components;
 
-public partial class GlobalTimerPanel
+public partial class GlobalTimerPanel : IDisposable
 {
     private Task<IEnumerable<string>> SearchSessionTargetsAsync(string value, CancellationToken cancellationToken)
     {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return Task.FromResult(Enumerable.Empty<string>());
+        }
+
         return Task.FromResult(SearchSessionTargets(value));
     }
 
@@ -127,7 +131,6 @@ public partial class GlobalTimerPanel
     private void RebuildSessionTargetOptions()
     {
         _sessionLabelToTarget.Clear();
-        _sessionTargetOptions.Clear();
 
         var all = new List<(BoardSection Section, BoardItem Item)>();
         foreach (var h in Habits)
@@ -165,7 +168,6 @@ public partial class GlobalTimerPanel
                 }
 
                 _sessionLabelToTarget[key] = (st, item.Title, item.Id);
-                _sessionTargetOptions.Add(key);
             }
         }
     }
@@ -184,7 +186,7 @@ public partial class GlobalTimerPanel
 
         if (timer.TargetType is "Habit" or "Daily" or "Todo")
         {
-            foreach (var k in _sessionTargetOptions)
+            foreach (var k in _sessionLabelToTarget.Keys)
             {
                 if (_sessionLabelToTarget.TryGetValue(
                         k,
@@ -218,7 +220,7 @@ public partial class GlobalTimerPanel
 
     private IEnumerable<string> SearchSessionTargets(string value)
     {
-        if (_sessionTargetOptions.Count == 0)
+        if (_sessionLabelToTarget.Count == 0)
         {
             return Array.Empty<string>();
         }
@@ -226,10 +228,10 @@ public partial class GlobalTimerPanel
         var v = value.Trim();
         if (v.Length == 0)
         {
-            return _sessionTargetOptions;
+            return _sessionLabelToTarget.Keys;
         }
 
-        return _sessionTargetOptions.Where(s =>
+        return _sessionLabelToTarget.Keys.Where(s =>
         {
             if (s.Contains(v, StringComparison.OrdinalIgnoreCase))
             {
@@ -390,7 +392,17 @@ public partial class GlobalTimerPanel
 
     public void Dispose()
     {
-        TimerService.Ticked -= OnTimerTicked;
+        Dispose(disposing: true);
         GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing)
+        {
+            return;
+        }
+
+        TimerService.Ticked -= OnTimerTicked;
     }
 }

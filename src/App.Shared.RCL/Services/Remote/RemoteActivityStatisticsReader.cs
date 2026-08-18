@@ -12,7 +12,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
 
     private readonly IHttpClientFactory _http;
     private readonly ILocalSettingsStore? _localStore;
-    private readonly ConcurrentDictionary<string, (object Value, DateTime ExpiresAtUtc)> _cache = new();
+    private readonly ConcurrentDictionary<string, (object? Value, DateTime ExpiresAtUtc)> _cache = new();
     private static readonly TimeSpan DefaultCacheTtl = TimeSpan.FromSeconds(60);
 
     public RemoteActivityStatisticsReader(IHttpClientFactory http, ILocalSettingsStore? localStore = null)
@@ -171,7 +171,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         }
 
         var result = await GetJsonOrThrowAsync<T>(requestUri, cancellationToken);
-        _cache[requestUri] = (result!, now.Add(ttl));
+        _cache[requestUri] = (result, now.Add(ttl));
         return result;
     }
 

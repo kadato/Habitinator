@@ -11,7 +11,7 @@
     </NotAuthorized>
     <Authorized>
         <div class="settings-page-wrapper">
-            <SettingsSectionSwitcher @bind-ActiveIndex="_settingsIndex"/>
+            <SettingsSectionSwitcher ActiveIndex="_settingsIndex" ActiveIndexChanged="OnSettingsIndexChanged"/>
 
             <div class="settings-section-content">
                 @if (_settingsIndex == 0)
@@ -33,6 +33,11 @@
 
 @code {
     private int _settingsIndex;
+
+    private void OnSettingsIndexChanged(int value)
+    {
+        _settingsIndex = value;
+    }
 
     private Task HandleAccountDeleted()
     {

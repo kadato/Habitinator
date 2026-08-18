@@ -15,27 +15,27 @@ public class MainActivity : MauiAppCompatActivity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-        EnableEdgeToEdge();
+        EnableEdgeToEdge(Window, Resources);
     }
 
-    private void EnableEdgeToEdge()
+    private static void EnableEdgeToEdge(Android.Views.Window? window, Resources? resources)
     {
-        if (Window == null)
+        if (window == null)
         {
             return;
         }
 
         // Allow content to draw behind system bars, the status bar and navigation bar.
-        WindowCompat.SetDecorFitsSystemWindows(Window, false);
+        WindowCompat.SetDecorFitsSystemWindows(window, false);
 
         // Make status bar and navigation bar transparent so the app background shows through
         if (!OperatingSystem.IsAndroidVersionAtLeast(35))
         {
-            Window.SetStatusBarColor(Android.Graphics.Color.Transparent);
-            Window.SetNavigationBarColor(Android.Graphics.Color.Transparent);
+            window.SetStatusBarColor(Android.Graphics.Color.Transparent);
+            window.SetNavigationBarColor(Android.Graphics.Color.Transparent);
         }
 
-        UpdateStatusBarAppearance(Window, Resources);
+        UpdateStatusBarAppearance(window, resources);
     }
 
     public override void OnConfigurationChanged(Configuration newConfig)

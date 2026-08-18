@@ -1,6 +1,5 @@
 @inject GlobalTimerService TimerService
 @inject IUserPreferencesService PreferencesService
-@implements IDisposable
 
 <div class="timer-panel w-100">
     <div class="@MobileHeaderClass"
@@ -253,7 +252,6 @@
             || (TimerService.PomodoroModeEnabled && TimerService.CurrentPomodoroState != PomodoroState.Idle)
         );
 
-    private readonly List<string> _sessionTargetOptions = [];
     private readonly Dictionary<string, (string TargetType, string TargetTitle, Guid ItemId)> _sessionLabelToTarget = new(StringComparer.Ordinal);
 
     private string GetRunningTargetLabel()

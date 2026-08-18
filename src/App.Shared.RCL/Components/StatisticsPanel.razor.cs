@@ -581,18 +581,19 @@ public partial class StatisticsPanel : IDisposable
 
     private KpiDescriptor CreatePeakKpi(ActivityDashboardDto data)
     {
-        var hasPeak = data.BusiestDay is not null && data.MaxDayCount > 0;
+        var busiestDay = data.BusiestDay.GetValueOrDefault();
+        var hasPeak = data.BusiestDay.HasValue && data.MaxDayCount > 0;
         return new KpiDescriptor(
             "stats-kpi-strip__item--peak",
             "stats-kpi-card--peak",
             Icons.Material.Filled.TrendingUp,
             "Busiest",
             "Busiest day",
-            () => hasPeak ? FormatBusiestDayDetail(data.BusiestDay!.Value, data.MaxDayCount) : null,
-            () => hasPeak ? FormatBusiestDayShort(data.BusiestDay!.Value) : "-",
+            () => hasPeak ? FormatBusiestDayDetail(busiestDay, data.MaxDayCount) : null,
+            () => hasPeak ? FormatBusiestDayShort(busiestDay) : "-",
             "stats-kpi-strip__value--date",
-            () => hasPeak ? DateFormatService.Format(data.BusiestDay!.Value) : "-",
-            () => hasPeak ? FormatBusiestDayDetail(data.BusiestDay!.Value, data.MaxDayCount) : "No activity in range");
+            () => hasPeak ? DateFormatService.Format(busiestDay) : "-",
+            () => hasPeak ? FormatBusiestDayDetail(busiestDay, data.MaxDayCount) : "No activity in range");
     }
 
     private KpiDescriptor CreateStreakKpi()

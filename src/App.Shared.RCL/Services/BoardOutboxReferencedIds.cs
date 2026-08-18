@@ -10,7 +10,7 @@ public static class BoardOutboxReferencedIds
     public static HashSet<Guid> CollectFromPayloads(IEnumerable<(BoardOutboxOperationKind Kind, string PayloadJson)> rows) =>
         rows.Select(r => ExtractItemId(r.Kind, r.PayloadJson))
             .Where(id => id.HasValue)
-            .Select(id => id!.Value)
+            .Select(id => id.GetValueOrDefault())
             .ToHashSet();
 
     private static Guid? ExtractItemId(BoardOutboxOperationKind kind, string json)

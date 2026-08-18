@@ -6,5 +6,5 @@ public sealed class MauiAppUpdaterOptions
     public const string SectionName = "AppUpdater";
 
     /// <summary>GitHub API endpoint used to read the latest release.</summary>
-    public Uri ReleasesApiUrl { get; set; } = new("https://api.github.com/repos/tothKarolyDavid/Habitinator/releases/latest");
+    public Uri ReleasesApiUrl { get; set; } = new("https://api.github.com/repos/kadato/Habitinator/releases/latest");
 }

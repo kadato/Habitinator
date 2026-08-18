@@ -7,8 +7,8 @@ Habitinator is a Blazor web and .NET MAUI productivity app. User board data is p
 ## Product
 
 - [Live app](https://habitinator.app/)
-- [Source](https://github.com/tothKarolyDavid/Habitinator)
-- [README](https://github.com/tothKarolyDavid/Habitinator#readme)
+- [Source](https://github.com/kadato/Habitinator)
+- [README](https://github.com/kadato/Habitinator#readme)
 
 ## Public pages
 

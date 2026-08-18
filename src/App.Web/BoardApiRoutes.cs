@@ -90,6 +90,23 @@ internal static class BoardApiRoutes
         BoardIdempotencyService Idem,
         CancellationToken CancellationToken);
 
+    private static async Task<IResult> ExecuteBoardMutationAsync(
+        BoardMutationContext ctx,
+        CurrentUserId user,
+        string method,
+        object? requestBody,
+        Func<DateTimeOffset?, CancellationToken, Task<BoardMutationResult>> execute,
+        int okStatus = StatusCodes.Status200OK)
+    {
+        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
+        var bodyJson = requestBody is null ? "" : (requestBody as string ?? JsonSerializer.Serialize(requestBody, Json));
+        return await RunIdempotentAsync(ctx.Http, ctx.Idem, user.Value, method, bodyJson, async ct =>
+        {
+            var r = await execute(expected, ct);
+            return MutationToOutcome(r, okStatus);
+        }, ctx.CancellationToken);
+    }
+
     private static async Task<IResult> HandleCreateItemAsync(
         [AsParameters] BoardMutationContext ctx,
         CurrentUserId user,
@@ -100,81 +117,50 @@ internal static class BoardApiRoutes
         {
             var item = await ctx.Board.CreateItemAsync(
                 user.Value, section, ZalgoSanitizer.SanitizeAndTrim(request.Title), request.ItemId, ct);
-            return (200, JsonSerializer.Serialize(item, Json), JsonContentType);
+            return (StatusCodes.Status200OK, JsonSerializer.Serialize(item, Json), JsonContentType);
         }, ctx.CancellationToken);
     }
 
-    private static async Task<IResult> HandleRenameItemAsync(
+    private static Task<IResult> HandleRenameItemAsync(
         [AsParameters] BoardMutationContext ctx,
         CurrentUserId user,
         BoardSection section,
         Guid itemId,
-        ItemTitleRequest request)
-    {
-        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
-        return await RunIdempotentAsync(ctx.Http, ctx.Idem, user.Value, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
-        {
-            var r = await ctx.Board.RenameItemAsync(
-                user.Value, section, itemId, ZalgoSanitizer.SanitizeAndTrim(request.Title), expected, ct);
-            return MutationToOutcome(r);
-        }, ctx.CancellationToken);
-    }
+        ItemTitleRequest request) =>
+        ExecuteBoardMutationAsync(ctx, user, "PUT", request, (expected, ct) =>
+            ctx.Board.RenameItemAsync(user.Value, section, itemId, ZalgoSanitizer.SanitizeAndTrim(request.Title), expected, ct));
 
-    private static async Task<IResult> HandleArchiveItemAsync(
+    private static Task<IResult> HandleArchiveItemAsync(
         [AsParameters] BoardMutationContext ctx,
         CurrentUserId user,
         BoardSection section,
-        Guid itemId)
-    {
-        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
-        return await RunIdempotentAsync(ctx.Http, ctx.Idem, user.Value, "POST", "", async ct =>
-        {
-            var r = await ctx.Board.ArchiveItemAsync(user.Value, section, itemId, expected, ct);
-            return MutationToOutcome(r);
-        }, ctx.CancellationToken);
-    }
+        Guid itemId) =>
+        ExecuteBoardMutationAsync(ctx, user, "POST", null, (expected, ct) =>
+            ctx.Board.ArchiveItemAsync(user.Value, section, itemId, expected, ct));
 
-    private static async Task<IResult> HandleUnarchiveItemAsync(
+    private static Task<IResult> HandleUnarchiveItemAsync(
         [AsParameters] BoardMutationContext ctx,
         CurrentUserId user,
         BoardSection section,
-        Guid itemId)
-    {
-        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
-        return await RunIdempotentAsync(ctx.Http, ctx.Idem, user.Value, "POST", "", async ct =>
-        {
-            var r = await ctx.Board.UnarchiveItemAsync(user.Value, section, itemId, expected, ct);
-            return MutationToOutcome(r);
-        }, ctx.CancellationToken);
-    }
+        Guid itemId) =>
+        ExecuteBoardMutationAsync(ctx, user, "POST", null, (expected, ct) =>
+            ctx.Board.UnarchiveItemAsync(user.Value, section, itemId, expected, ct));
 
-    private static async Task<IResult> HandleDeleteItemAsync(
+    private static Task<IResult> HandleDeleteItemAsync(
         [AsParameters] BoardMutationContext ctx,
         CurrentUserId user,
         BoardSection section,
-        Guid itemId)
-    {
-        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
-        return await RunIdempotentAsync(ctx.Http, ctx.Idem, user.Value, "DELETE", "", async ct =>
-        {
-            var r = await ctx.Board.DeleteItemAsync(user.Value, section, itemId, expected, ct);
-            return MutationToOutcome(r, okStatus: StatusCodes.Status204NoContent);
-        }, ctx.CancellationToken);
-    }
+        Guid itemId) =>
+        ExecuteBoardMutationAsync(ctx, user, "DELETE", null, (expected, ct) =>
+            ctx.Board.DeleteItemAsync(user.Value, section, itemId, expected, ct), okStatus: StatusCodes.Status204NoContent);
 
-    private static async Task<IResult> HandleToggleItemAsync(
+    private static Task<IResult> HandleToggleItemAsync(
         [AsParameters] BoardMutationContext ctx,
         CurrentUserId user,
         BoardSection section,
-        Guid itemId)
-    {
-        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
-        return await RunIdempotentAsync(ctx.Http, ctx.Idem, user.Value, "POST", "", async ct =>
-        {
-            var r = await ctx.Board.ToggleItemAsync(user.Value, section, itemId, expected, ct);
-            return MutationToOutcome(r);
-        }, ctx.CancellationToken);
-    }
+        Guid itemId) =>
+        ExecuteBoardMutationAsync(ctx, user, "POST", null, (expected, ct) =>
+            ctx.Board.ToggleItemAsync(user.Value, section, itemId, expected, ct));
 
     private static void MapHabitRoutes(RouteGroupBuilder boardApi)
     {
@@ -183,91 +169,59 @@ internal static class BoardApiRoutes
         boardApi.MapPut("/habits/{itemId:guid}", HandleUpdateHabitAsync);
     }
 
-    private static async Task<IResult> HandleIncrementHabitAsync(
+    private static Task<IResult> HandleIncrementHabitAsync(
         [AsParameters] BoardMutationContext ctx,
         CurrentUserId user,
-        Guid itemId)
-    {
-        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
-        return await RunIdempotentAsync(ctx.Http, ctx.Idem, user.Value, "POST", "", async ct =>
-        {
-            var r = await ctx.Board.IncrementHabitPlusAsync(user.Value, itemId, expected, ct);
-            return MutationToOutcome(r);
-        }, ctx.CancellationToken);
-    }
+        Guid itemId) =>
+        ExecuteBoardMutationAsync(ctx, user, "POST", null, (expected, ct) =>
+            ctx.Board.IncrementHabitPlusAsync(user.Value, itemId, expected, ct));
 
-    private static async Task<IResult> HandleDecrementHabitAsync(
+    private static Task<IResult> HandleDecrementHabitAsync(
         [AsParameters] BoardMutationContext ctx,
         CurrentUserId user,
-        Guid itemId)
-    {
-        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
-        return await RunIdempotentAsync(ctx.Http, ctx.Idem, user.Value, "POST", "", async ct =>
-        {
-            var r = await ctx.Board.IncrementHabitMinusAsync(user.Value, itemId, expected, ct);
-            return MutationToOutcome(r);
-        }, ctx.CancellationToken);
-    }
+        Guid itemId) =>
+        ExecuteBoardMutationAsync(ctx, user, "POST", null, (expected, ct) =>
+            ctx.Board.IncrementHabitMinusAsync(user.Value, itemId, expected, ct));
 
-    private static async Task<IResult> HandleUpdateHabitAsync(
+    private static Task<IResult> HandleUpdateHabitAsync(
         [AsParameters] BoardMutationContext ctx,
         CurrentUserId user,
         Guid itemId,
-        HabitUpdateRequest request)
-    {
-        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
-        return await RunIdempotentAsync(ctx.Http, ctx.Idem, user.Value, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
-        {
-            var r = await ctx.Board.UpdateHabitAsync(
-                user.Value,
-                itemId,
-                new UpdateHabitArgs(
-                    request.Title,
-                    request.Notes,
-                    request.Tags,
-                    request.TrackPlus,
-                    request.TrackMinus,
-                    request.ResetPeriod,
-                    request.Counter,
-                    request.NegativeCounter,
-                    DailyChecklistJson.Normalize(request.ChecklistJson),
-                    request.SortOrder,
-                    expected),
-                ct);
-            return MutationToOutcome(r);
-        }, ctx.CancellationToken);
-    }
+        HabitUpdateRequest request) =>
+        ExecuteBoardMutationAsync(ctx, user, "PUT", request, (expected, ct) =>
+            ctx.Board.UpdateHabitAsync(user.Value, itemId, new UpdateHabitArgs(
+                request.Title,
+                request.Notes,
+                request.Tags,
+                request.TrackPlus,
+                request.TrackMinus,
+                request.ResetPeriod,
+                request.Counter,
+                request.NegativeCounter,
+                DailyChecklistJson.Normalize(request.ChecklistJson),
+                request.SortOrder,
+                expected), ct));
 
     private static void MapTodoRoutes(RouteGroupBuilder boardApi)
     {
         boardApi.MapPut("/todos/{itemId:guid}", HandleUpdateTodoAsync);
     }
 
-    private static async Task<IResult> HandleUpdateTodoAsync(
+    private static Task<IResult> HandleUpdateTodoAsync(
         [AsParameters] BoardMutationContext ctx,
         CurrentUserId user,
         Guid itemId,
-        TodoUpdateRequest request)
-    {
-        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
-        return await RunIdempotentAsync(ctx.Http, ctx.Idem, user.Value, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
-        {
-            var r = await ctx.Board.UpdateTodoAsync(
-                user.Value,
-                itemId,
-                new UpdateTodoArgs(
-                    request.Title,
-                    request.Notes,
-                    request.Tags,
-                    DailyChecklistJson.Normalize(request.ChecklistJson),
-                    request.DueDate,
-                    request.SortOrder,
-                    request.TodoRepeatIntervalDays,
-                    expected),
-                ct);
-            return MutationToOutcome(r);
-        }, ctx.CancellationToken);
-    }
+        TodoUpdateRequest request) =>
+        ExecuteBoardMutationAsync(ctx, user, "PUT", request, (expected, ct) =>
+            ctx.Board.UpdateTodoAsync(user.Value, itemId, new UpdateTodoArgs(
+                request.Title,
+                request.Notes,
+                request.Tags,
+                DailyChecklistJson.Normalize(request.ChecklistJson),
+                request.DueDate,
+                request.SortOrder,
+                request.TodoRepeatIntervalDays,
+                expected), ct));
 
     private static void MapDailyRoutes(RouteGroupBuilder boardApi)
     {
@@ -275,48 +229,31 @@ internal static class BoardApiRoutes
         boardApi.MapPost("/dailies/{itemId:guid}/complete-for-date", HandleCompleteDailyForDateAsync);
     }
 
-    private static async Task<IResult> HandleUpdateDailyAsync(
+    private static Task<IResult> HandleUpdateDailyAsync(
         [AsParameters] BoardMutationContext ctx,
         CurrentUserId user,
         Guid itemId,
-        DailyUpdateRequest request)
-    {
-        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
-        return await RunIdempotentAsync(ctx.Http, ctx.Idem, user.Value, "PUT", JsonSerializer.Serialize(request, Json), async ct =>
-        {
-            var r = await ctx.Board.UpdateDailyAsync(
-                user.Value,
-                itemId,
-                new UpdateDailyArgs(
-                    request.Title,
-                    request.Notes,
-                    request.Tags,
-                    request.StartDate,
-                    request.Repeat,
-                    request.RepeatInterval,
-                    DailyChecklistJson.Normalize(request.ChecklistJson),
-                    request.Counter,
-                    request.SortOrder,
-                    expected),
-                ct);
-            return MutationToOutcome(r);
-        }, ctx.CancellationToken);
-    }
+        DailyUpdateRequest request) =>
+        ExecuteBoardMutationAsync(ctx, user, "PUT", request, (expected, ct) =>
+            ctx.Board.UpdateDailyAsync(user.Value, itemId, new UpdateDailyArgs(
+                request.Title,
+                request.Notes,
+                request.Tags,
+                request.StartDate,
+                request.Repeat,
+                request.RepeatInterval,
+                DailyChecklistJson.Normalize(request.ChecklistJson),
+                request.Counter,
+                request.SortOrder,
+                expected), ct));
 
-    private static async Task<IResult> HandleCompleteDailyForDateAsync(
+    private static Task<IResult> HandleCompleteDailyForDateAsync(
         [AsParameters] BoardMutationContext ctx,
         CurrentUserId user,
         Guid itemId,
-        DailyCompleteForDateRequest request)
-    {
-        var expected = ReadExpectedUpdatedAtUtc(ctx.Http.Request);
-        return await RunIdempotentAsync(ctx.Http, ctx.Idem, user.Value, "POST", JsonSerializer.Serialize(request, Json), async ct =>
-        {
-            var r = await ctx.Board.CompleteDailyForDateAsync(
-                user.Value, itemId, request.CompletedOn, expected, ct);
-            return MutationToOutcome(r);
-        }, ctx.CancellationToken);
-    }
+        DailyCompleteForDateRequest request) =>
+        ExecuteBoardMutationAsync(ctx, user, "POST", request, (expected, ct) =>
+            ctx.Board.CompleteDailyForDateAsync(user.Value, itemId, request.CompletedOn, expected, ct));
 
     /// <summary>Runs a board mutation with the shared idempotency + optimistic-concurrency envelope.</summary>
     private static async Task<IResult> RunIdempotentAsync(

@@ -78,7 +78,7 @@ public sealed class RemoteActivityStatisticsReaderTests
         result1.Dashboard.TotalEvents.Should().Be(10);
         handler.CallCount.Should().Be(1);
 
-        // Second call with same parameters - should be served from memory cache (CallCount stays 1)
+        // Second call with same parameters. Served from memory cache so call count stays 1.
         var result2 = await reader.GetOverviewAsync(DailyGraphPeriods.Rolling370Days);
         result2.Should().NotBeNull();
         result2.Dashboard.TotalEvents.Should().Be(10);

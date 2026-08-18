@@ -106,9 +106,9 @@ public sealed class NotificationSettingsSectionTests : IAsyncDisposable
 
         var timePickers = cut.FindComponents<MudTimePicker>();
         timePickers.Should().HaveCount(3);
-        timePickers[0].Instance.Time.Should().Be(TimeSpan.FromHours(8)); // Daily Reminder Time
-        timePickers[1].Instance.Time.Should().Be(TimeSpan.FromHours(22)); // Quiet Start
-        timePickers[2].Instance.Time.Should().Be(TimeSpan.FromHours(6)); // Quiet End
+        timePickers[0].Instance.Time.Should().Be(TimeSpan.FromHours(8)); // Daily reminder time
+        timePickers[1].Instance.Time.Should().Be(TimeSpan.FromHours(22)); // Quiet start
+        timePickers[2].Instance.Time.Should().Be(TimeSpan.FromHours(6)); // Quiet end
     }
 
     [Fact]
@@ -168,18 +168,18 @@ public sealed class NotificationSettingsSectionTests : IAsyncDisposable
         var cut = _ctx.Render<NotificationSettingsSection>();
         var timePickers = cut.FindComponents<MudTimePicker>();
 
-        // Act - Change Daily Reminder Time
+        // Act - change daily reminder time
         await cut.InvokeAsync(() => timePickers[0].Instance.TimeChanged.InvokeAsync(TimeSpan.FromHours(9)));
 
         // Assert
         await _settingsService.Received().SaveAsync(Arg.Is<NotificationSettings>(s => s != null && s.DailyReminderTime == TimeSpan.FromHours(9)));
 
-        // Act - Disable Daily Reminder
+        // Act - disable daily reminder
         _settingsService.ClearReceivedCalls();
         var switches = cut.FindComponents<MudSwitch<bool>>();
         await cut.InvokeAsync(() => switches[4].Instance.ValueChanged.InvokeAsync(false));
 
-        // Assert - Save should be called with null DailyReminderTime when disabled
+        // Assert - Save should be called with null dailyreminder time when disabled
         await _settingsService.Received().SaveAsync(Arg.Is<NotificationSettings>(s => s != null && !s.DailyReminderEnabled && s.DailyReminderTime == null));
     }
 

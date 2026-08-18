@@ -39,7 +39,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         _boardSync.IsOffline = false;
         var cut = _ctx.Render<GlobalSyncAlertHost>();
 
-        // Act - Transition to Offline
+        // Act - transition to offline
         _boardSync.IsOffline = true;
         await cut.InvokeAsync(_boardSync.RaiseChanged);
 
@@ -57,7 +57,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         _boardSync.IsOffline = true;
         var cut = _ctx.Render<GlobalSyncAlertHost>();
 
-        // Act - Transition to Online
+        // Act - transition to online
         _boardSync.IsOffline = false;
         await cut.InvokeAsync(_boardSync.RaiseChanged);
 
@@ -75,7 +75,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         _boardSync.SyncProblemMessage = null;
         var cut = _ctx.Render<GlobalSyncAlertHost>();
 
-        // Act - Transition to Sync Problem
+        // Act - transition to sync problem
         _boardSync.SyncProblemMessage = "Stuck outbox item.";
         await cut.InvokeAsync(_boardSync.RaiseChanged);
 
@@ -93,7 +93,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         _boardSync.SyncProblemMessage = "Stuck outbox item.";
         var cut = _ctx.Render<GlobalSyncAlertHost>();
 
-        // Act - Transition to null, meaning resolved
+        // Act - transition to null, meaning resolved
         _boardSync.SyncProblemMessage = null;
         await cut.InvokeAsync(_boardSync.RaiseChanged);
 
@@ -112,7 +112,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         _boardSync.SyncProblemMessage = null;
         var cut = _ctx.Render<GlobalSyncAlertHost>();
 
-        // Act - Transition to Offline and Offline problem message simultaneously
+        // Act - transition to offline and offline problem message simultaneously
         _boardSync.IsOffline = true;
         _boardSync.SyncProblemMessage = "Offline - board changes stay on this device until you reconnect.";
         await cut.InvokeAsync(_boardSync.RaiseChanged);
@@ -134,7 +134,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         _boardSync.IsOffline = false;
         var cut = _ctx.Render<GlobalSyncAlertHost>();
 
-        // Act - Transition to Offline
+        // Act - transition to offline
         _boardSync.IsOffline = true;
         await cut.InvokeAsync(_boardSync.RaiseChanged);
 

@@ -93,7 +93,7 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => inputs[1].Instance.ValueChanged.InvokeAsync("newPass123"));
         await cut.InvokeAsync(() => inputs[2].Instance.ValueChanged.InvokeAsync("newPassMismatch"));
 
-        // Act - Click Change Password
+        // Act - click change password
         await cut.InvokeAsync(() => buttons[0].Instance.OnClick.InvokeAsync(null));
 
         // Assert
@@ -114,7 +114,7 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => inputs[1].Instance.ValueChanged.InvokeAsync("newPass123"));
         await cut.InvokeAsync(() => inputs[2].Instance.ValueChanged.InvokeAsync("newPass123"));
 
-        // Act - Click Change Password
+        // Act - click change password
         await cut.InvokeAsync(() => buttons[0].Instance.OnClick.InvokeAsync(null));
 
         // Assert
@@ -143,7 +143,7 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => inputs[1].Instance.ValueChanged.InvokeAsync("newPass123"));
         await cut.InvokeAsync(() => inputs[2].Instance.ValueChanged.InvokeAsync("newPass123"));
 
-        // Act - Click Change Password
+        // Act - click change password
         await cut.InvokeAsync(() => buttons[0].Instance.OnClick.InvokeAsync(null));
 
         // Assert

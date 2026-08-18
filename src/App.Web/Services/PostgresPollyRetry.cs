@@ -5,7 +5,7 @@ namespace App.Web.Services;
 
 /// <summary>
 /// Polly-based retries for operations that should not nest EF Core's execution strategy.
-/// Migrations run with a fresh <see cref="DbContext" /> on each attempt.
+/// Migrations run with a fresh <see cref="DbContext" /> on each try.
 /// </summary>
 public static class PostgresPollyRetry
 {
@@ -42,7 +42,7 @@ public static class PostgresPollyRetry
             .Build();
     }
 
-    /// <summary>Runs <paramref name="action" /> with exponential backoff, jitter, transient-error filtering, and per-attempt logging.</summary>
+    /// <summary>Runs <paramref name="action" /> with exponential backoff, jitter, transient-error filtering, and per-try logging.</summary>
     public static ValueTask ExecuteAsync(Func<CancellationToken, Task> action, ILogger logForRetries,
         CancellationToken cancellationToken = default) =>
         CreatePipeline(logForRetries).ExecuteAsync(

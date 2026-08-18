@@ -297,7 +297,7 @@ public sealed class GlobalTimerServiceTests
         clock.Advance(TimeSpan.FromSeconds(10));
         Assert.Equal("24:50", timer.GetDisplayTime());
 
-        // Transition to Short Break
+        // Transition to short break
         timer.IncrementCompletedIntervals();
         timer.TransitionToBreak();
         Assert.Equal("Short Break", timer.StatusLabel);

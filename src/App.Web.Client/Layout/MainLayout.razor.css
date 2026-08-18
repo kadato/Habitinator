@@ -101,7 +101,7 @@
     text-transform: none !important;
 }
 
-/* Profile Menu Dropdown Popover */
+/* Profile menu dropdown popover */
 ::deep .app-profile-menu-popover {
     margin-top: 8px;
     border-radius: var(--radius-xl) !important;

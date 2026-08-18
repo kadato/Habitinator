@@ -39,7 +39,7 @@ public sealed class NotificationSettingsJsonFuzzTests
             ShowSuccessToasts = showSuccessToasts,
             ShowWarningToasts = showWarningToasts,
             ShowErrorToasts = showErrorToasts,
-            ToastDuration = (NotificationToastDuration)(Math.Abs(toastDurationVal) % 3), // Normal, Short, Long
+            ToastDuration = (NotificationToastDuration)(Math.Abs(toastDurationVal) % 3), // normal, short, long
             DailyReminderEnabled = dailyReminderEnabled,
             DailyReminderTime = dailyReminderTime,
             FocusTimerAlertsEnabled = focusTimerAlertsEnabled,

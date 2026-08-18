@@ -9,7 +9,7 @@ public interface IBoardSyncStatus
 
     DateTimeOffset? LastSyncedUtc { get; }
 
-    /// <summary>Non-null when the last sync attempt failed or operations are stuck after retries.</summary>
+    /// <summary>Non-null when the last sync try failed or operations are stuck after retries.</summary>
     string? SyncProblemMessage { get; }
 
     event EventHandler? Changed;

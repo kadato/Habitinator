@@ -105,7 +105,7 @@ public abstract class AutosaveEditDialogBase<TResult> : ComponentBase, IAsyncDis
         }
         catch
         {
-            // A previous save failed. Still attempt the latest state.
+            // A previous save failed. Still try the latest state.
         }
 
         try

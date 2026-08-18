@@ -89,7 +89,7 @@ public sealed class FocusDurationInputTests
     [InlineData("1:2:")]
     [InlineData(":1:2")]
     [InlineData("hms")]
-    // Overflow attempts
+    // Overflow tries
     [InlineData("9999999999")]
     [InlineData("9999999999s")]
     [InlineData("9999999999m")]

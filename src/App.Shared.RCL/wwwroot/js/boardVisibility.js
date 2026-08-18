@@ -30,7 +30,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
   let isAltHeld = false;
   let isShiftHeld = false;
 
-  // Shift Shortcut Overlay State
+  // Shift shortcut overlay state
   let shortcutModeActive = false;
   let shiftLock = false;
   let currentSequence = "";
@@ -684,6 +684,77 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     }
   }
 
+  function focusSearchInput(e) {
+    const searchInput = document.querySelector('.board-search-field input, #board-search') ||
+                        Array.from(document.querySelectorAll('input[placeholder*="Search" i]'))
+                        .find(el => {
+                          const ph = el.placeholder.toLowerCase();
+                          return !ph.includes("session") && !ph.includes("type a custom");
+                        });
+    if (searchInput) {
+      e.preventDefault();
+      searchInput.focus();
+      if (typeof searchInput.select === 'function') {
+        searchInput.select();
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function focusAddInput(e) {
+    const addInput = document.querySelector('.board-column--habit .board-add-wrap input, .board-column--todo .board-add-wrap input, input[placeholder*="Add" i]');
+    if (addInput) {
+      e.preventDefault();
+      addInput.focus();
+      return true;
+    }
+    return false;
+  }
+
+  function toggleShortcutOverlayMode(e) {
+    e.preventDefault();
+    shiftLock = !shiftLock;
+    if (shiftLock) {
+      activateShortcutMode();
+    } else {
+      deactivateShortcutMode();
+    }
+    updateShortcutOverlay();
+    return true;
+  }
+
+  function switchBoardTab(e) {
+    const idx = Number.parseInt(e.key, 10) - 1;
+    const tabBtn = document.getElementById('board-tab-' + idx);
+    if (tabBtn) {
+      e.preventDefault();
+      tabBtn.click();
+      return true;
+    }
+    return false;
+  }
+
+  function handleDirectShortcuts(e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) {
+      return false;
+    }
+
+    if (e.key === '/') {
+      return focusSearchInput(e);
+    }
+    if (['c', 'C', 'n', 'N'].includes(e.key)) {
+      return focusAddInput(e);
+    }
+    if (e.key === '?') {
+      return toggleShortcutOverlayMode(e);
+    }
+    if (['1', '2', '3'].includes(e.key)) {
+      return switchBoardTab(e);
+    }
+    return false;
+  }
+
   function onKeyDown(e) {
     if (preventPopoverScroll(e)) return;
 
@@ -695,8 +766,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
       return;
     }
 
-    if (handleShiftKey(e, isEdit)) return;
-    if (handleAltKey(e)) return;
+    if (handleShiftKey(e, isEdit) || handleAltKey(e)) return;
 
     // Capture keystrokes in shortcut overlay mode
     if (shortcutModeActive) {
@@ -707,13 +777,13 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     const dotNetHelper = boardHelper || layoutHelper;
     if (!dotNetHelper) return;
 
-    // 1. Global shortcut: Ctrl+Z / Cmd+Z, undo
-    const isUndo = (e.ctrlKey || e.metaKey) && e.code === 'KeyZ';
-
     if (isEdit) {
       handleEditModeScrolling(e, activeElement);
       return;
     }
+
+    // Direct power-user keyboard shortcuts when not typing in an input
+    if (handleDirectShortcuts(e)) return;
 
     // Keyboard scrolling when not editing
     const scrollKeys = ['ArrowDown', 'ArrowUp', 'Space', ' ', 'PageDown', 'PageUp', 'Home', 'End', 'j', 'J', 'k', 'K'];
@@ -722,6 +792,8 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
       return;
     }
 
+    // 1. Global shortcut: Ctrl+Z / Cmd+Z, undo
+    const isUndo = (e.ctrlKey || e.metaKey) && e.code === 'KeyZ';
     if (isUndo) {
       e.preventDefault();
       dotNetHelper.invokeMethodAsync("OnCtrlZPressed").catch(function () {});

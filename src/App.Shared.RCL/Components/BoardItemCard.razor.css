@@ -175,6 +175,7 @@
     align-items: center;
     margin: 0.1rem 0 0.1rem 0;
     padding: 0.1rem var(--space-3) 0.1rem 0.3rem;
+    font-family: var(--hab-font-mono);
     font-size: 0.7rem;
     color: var(--mud-palette-text-secondary);
     background: var(--mud-palette-background-gray);
@@ -182,6 +183,7 @@
     border-radius: var(--radius-pill);
     cursor: pointer;
     font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
 }
 
 .board-subtask-pill__count {
@@ -257,7 +259,9 @@
 
 .board-todo-due__date,
 .board-todo-due__relative {
+    font-family: var(--hab-font-mono);
     font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
 }
 
 .board-todo-due__sep {
@@ -273,9 +277,11 @@
     display: inline-flex;
     flex-direction: row;
     align-items: center;
+    font-family: var(--hab-font-mono);
     font-size: 0.75rem;
     color: var(--mud-palette-text-secondary);
     font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
     margin-left: auto;
 }
 
@@ -388,7 +394,7 @@
     }
 }
 
-/* Gamified Streak and Habit Badges */
+/* Gamified streak and habit badges */
 .board-streak--active {
     color: #f97316 !important; /* amber/orange active flame */
 }
@@ -418,10 +424,12 @@
     align-items: center;
     padding: 0.15rem var(--space-3);
     border-radius: var(--radius-sm);
+    font-family: var(--hab-font-mono);
     font-size: 0.72rem;
     font-weight: 700;
     line-height: 1;
     font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
 }
 
 .board-habit-badge--plus {
@@ -441,7 +449,7 @@
     text-transform: capitalize;
 }
 
-/* Habit Right-Aligned Layout and Button Improvements */
+/* Habit right-aligned layout and button improvements */
 .board-card.board-row--habit {
     grid-template-columns: minmax(0, 1fr) auto;
     column-gap: 0.2rem;

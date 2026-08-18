@@ -107,7 +107,25 @@
     font-style: normal;
     font-weight: 100 800;
     font-display: swap;
-    src: url("_content/App.Shared.RCL/fonts/JetBrainsMono.woff2") format("woff2");
+    src: local("JetBrainsMono Nerd Font Mono"),
+         local("JetBrainsMono Nerd Font"),
+         local("JetBrainsMono NFM"),
+         local("JetBrainsMono NF"),
+         local("JetBrains Mono"),
+         url("_content/App.Shared.RCL/fonts/JetBrainsMono.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "JetBrainsMono Nerd Font Mono";
+    font-style: normal;
+    font-weight: 100 800;
+    font-display: swap;
+    src: local("JetBrainsMono Nerd Font Mono"),
+         local("JetBrainsMono Nerd Font"),
+         local("JetBrainsMono NFM"),
+         local("JetBrainsMono NF"),
+         local("JetBrains Mono"),
+         url("_content/App.Shared.RCL/fonts/JetBrainsMono.woff2") format("woff2");
 }
 
 @font-face {
@@ -314,7 +332,7 @@
     text-transform: none !important;
 }
 
-/* Profile Menu Dropdown Popover */
+/* Profile menu dropdown popover */
 .app-profile-menu-popover {
     margin-top: 8px;
     border-radius: var(--radius-xl) !important;

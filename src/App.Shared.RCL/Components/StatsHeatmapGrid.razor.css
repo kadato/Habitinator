@@ -49,9 +49,12 @@
     grid-template-rows: repeat(7, var(--stats-cell));
     gap: var(--stats-grid-gap);
     align-items: center;
+    font-family: var(--hab-font-mono);
     font-size: 0.58rem;
     font-weight: 600;
     line-height: 1;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
     letter-spacing: -0.02em;
     color: var(--mud-palette-text-secondary);
     text-align: right;

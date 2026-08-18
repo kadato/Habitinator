@@ -16,7 +16,7 @@
 .update-dialog,
 .daily-yesterday-shell,
 .daily-heatmap-dialog {
-    animation: modal-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    animation: modal-pop 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .edit-daily-dialog .edit-daily-dialog__content {
@@ -38,7 +38,7 @@
         0 24px 38px 3px rgba(0, 0, 0, 0.08), 
         0 9px 46px 8px rgba(0, 0, 0, 0.06), 
         0 11px 15px -7px rgba(0, 0, 0, 0.1);
-    animation: modal-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    animation: modal-pop 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* -- Header Toolbar -- */
@@ -360,7 +360,7 @@
     font-size: 0.8rem;
 }
 
-/* -- Tag Picker Widget -- */
+/* Tag picker widget */
 .habit-tag-picker {
     position: relative;
     width: 100%;
@@ -493,7 +493,7 @@
         0 -12px 32px -4px rgba(0, 0, 0, 0.12),
         0 -4px 12px -2px rgba(0, 0, 0, 0.08);
     
-    /* Smooth CSS Entry and Exit Transition */
+    /* Smooth CSS entry and exit transition */
     opacity: 0;
     transform: translateY(8px) scale(0.97);
     pointer-events: none;
@@ -601,7 +601,7 @@
     width: 100%;
 }
 
-/* -- Habit Track Option Buttons (+ / -) -- */
+/* Habit track option buttons + / - */
 .habit-track {
     display: flex;
     justify-content: center;

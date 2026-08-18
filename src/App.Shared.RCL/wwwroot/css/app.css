@@ -5,7 +5,7 @@
     --hab-bg-dark: var(--mud-palette-background, #0b0f19);
 }
 
-/* -- WASM Loading Splash Screen -- */
+/* WASM loading splash screen */
 
 #habitinator-wasm-splash {
     position: fixed;
@@ -314,6 +314,15 @@ a {
 /* Soften outlined input borders app-wide. Error, focus, hover, and disabled states keep MudBlazor's colors. */
 .mud-input-outlined .mud-input-outlined-border {
     border-color: light-dark(rgba(15, 23, 42, 0.14), rgba(255, 255, 255, 0.12));
+}
+
+/* Numeric input fields use tabular JetBrains Mono */
+.mud-input-numeric input,
+.mud-input-control input[type="number"],
+input[type="number"].mud-input-slot {
+    font-family: var(--hab-font-mono) !important;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
 }
 
 /* App bar: MudToolBar can shrink-wrap. Force full width + flex spacer so user/logout stay on the right edge */
@@ -756,9 +765,9 @@ a {
     transform: scale(0.97);
 }
 
-/* -- Premium Dialog Styling Overrides -- */
+/* Premium dialog styling overrides */
 
-/* Upgraded Backdrop blur on all dialog overlays */
+/* Upgraded backdrop blur on all dialog overlays */
 .mud-dialog-container {
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
@@ -778,7 +787,7 @@ a {
     overflow: hidden !important;
 }
 
-/* Consistent Title Bar */
+/* Consistent title bar */
 .mud-dialog .mud-dialog-title {
     background: var(--mud-palette-surface) !important;
     border-bottom: 1px solid var(--mud-palette-divider) !important;
@@ -797,7 +806,7 @@ a {
     letter-spacing: -0.015em;
 }
 
-/* Consistent Dialog Actions, the Footer */
+/* Consistent dialog actions, the footer */
 .mud-dialog .mud-dialog-actions {
     border-top: 1px solid var(--mud-palette-divider) !important;
     padding: var(--space-6) 1.25rem !important;
@@ -811,7 +820,7 @@ a {
     border-radius: var(--radius-md) !important;
 }
 
-/* Consistent Close Button style on base dialogs */
+/* Consistent close button style on base dialogs */
 .mud-dialog-title .mud-button-close {
     color: var(--mud-palette-text-secondary) !important;
     margin-top: -0.15rem;
@@ -819,14 +828,14 @@ a {
     border-radius: var(--radius-md) !important;
 }
 
-/* -- Activity Day Detail Dialog, Heatmap Details, Redesign -- */
+/* Activity day detail dialog, heatmap details, redesign */
 
 /* Dialog content container custom spacing */
 .activity-day-detail-dialog .activity-day-detail-dialog__content {
     padding: 1.25rem !important;
 }
 
-/* Modern Timeline/List Table Layout */
+/* Modern timeline and list table layout */
 .activity-day-detail-table.mud-table {
     background: transparent !important;
 }
@@ -870,7 +879,7 @@ a {
     border-bottom: none !important;
 }
 
-/* Time Badge Column */
+/* Time badge column */
 .activity-time-cell {
     width: 70px;
     min-width: 60px;
@@ -881,15 +890,17 @@ a {
 }
 
 .activity-time-text {
-    font-family: monospace;
+    font-family: var(--hab-font-mono);
     font-size: 0.8rem;
     letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
     background: color-mix(in srgb, var(--mud-palette-text-secondary) 10%, transparent);
     padding: 0.15rem var(--space-3);
     border-radius: var(--radius-sm);
 }
 
-/* -- Small-screen optimizations -- */
+/* Small-screen optimizations */
 @media (max-width: 480px) {
     .activity-day-detail-dialog .activity-day-detail-dialog__content {
         padding: var(--space-5) !important;
@@ -920,10 +931,13 @@ a {
     }
 
     .activity-time-text {
+        font-family: var(--hab-font-mono);
         font-size: 0.72rem;
         padding: 0;
         background: none;
         letter-spacing: 0.01em;
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: "tnum" 1, "zero" 1;
         color: var(--mud-palette-text-secondary);
     }
 
@@ -943,7 +957,7 @@ a {
     }
 }
 
-/* Details Description and Status Indicator */
+/* Details description and status indicator */
 .activity-desc-wrap {
     display: inline-flex;
     align-items: center;

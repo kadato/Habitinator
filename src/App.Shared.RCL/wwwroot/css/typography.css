@@ -3,7 +3,25 @@
     font-style: normal;
     font-weight: 100 800;
     font-display: swap;
-    src: url("../fonts/JetBrainsMono.woff2") format("woff2");
+    src: local("JetBrainsMono Nerd Font Mono"),
+         local("JetBrainsMono Nerd Font"),
+         local("JetBrainsMono NFM"),
+         local("JetBrainsMono NF"),
+         local("JetBrains Mono"),
+         url("../fonts/JetBrainsMono.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "JetBrainsMono Nerd Font Mono";
+    font-style: normal;
+    font-weight: 100 800;
+    font-display: swap;
+    src: local("JetBrainsMono Nerd Font Mono"),
+         local("JetBrainsMono Nerd Font"),
+         local("JetBrainsMono NFM"),
+         local("JetBrainsMono NF"),
+         local("JetBrains Mono"),
+         url("../fonts/JetBrainsMono.woff2") format("woff2");
 }
 
 @font-face {
@@ -32,9 +50,10 @@
 
 :root {
     --hab-font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --hab-font-mono: "JetBrains Mono", ui-monospace, Consolas, "Cascadia Code", "Segoe UI Mono", monospace;
+    --hab-font-mono: "JetBrainsMono Nerd Font Mono", "JetBrainsMono Nerd Font", "JetBrainsMono NF", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Cascadia Code", "Segoe UI Mono", monospace;
     --bs-body-font-family: var(--hab-font-sans);
     --bs-font-sans-serif: var(--hab-font-sans);
+    --bs-font-monospace: var(--hab-font-mono);
 }
 
 html,
@@ -56,6 +75,29 @@ body {
     font-family: var(--hab-font-sans);
 }
 
+/* Monospace and tabular numeric utility classes */
+.font-mono,
+.hab-font-mono,
+.text-mono,
+.numeric-mono {
+    font-family: var(--hab-font-mono) !important;
+    font-feature-settings: "tnum" 1, "zero" 1;
+}
+
+.tabular-nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+}
+
+code,
+kbd,
+samp,
+pre,
+var {
+    font-family: var(--hab-font-mono);
+    font-feature-settings: "tnum" 1, "zero" 1;
+}
+
 /* Orphan prevention and wrapping optimization */
 h1, h2, h3, h4, h5, h6, .edit-daily-header__title {
     text-wrap: balance;
@@ -72,7 +114,7 @@ p, .auth-form-hint, .edit-daily-label-body, .habit-tag-picker__empty {
     text-wrap: pretty;
 }
 
-/* Keyboard Shortcuts Hint Overlay and HUD Overlay */
+/* Keyboard shortcuts hint overlay and HUD overlay */
 .hab-shortcut-hint {
     position: absolute;
     z-index: 100000;
@@ -80,7 +122,7 @@ p, .auth-form-hint, .edit-daily-label-body, .habit-tag-picker__empty {
     align-items: center;
     justify-content: center;
     padding: 4px 8px;
-    font-family: var(--hab-font-sans);
+    font-family: var(--hab-font-mono);
     font-size: 11px;
     font-weight: 700;
     line-height: 1;
@@ -96,6 +138,7 @@ p, .auth-form-hint, .edit-daily-label-body, .habit-tag-picker__empty {
     transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.18s ease;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    font-feature-settings: "tnum" 1, "zero" 1;
 }
 .hab-shortcut-hint--visible {
     transform: translate(-50%, -50%) scale(1);

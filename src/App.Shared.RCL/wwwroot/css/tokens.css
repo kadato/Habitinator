@@ -39,9 +39,9 @@
     --radius-pill: 999px;
 
     /* Motion durations */
-    --dur-fast: 0.15s;
-    --dur-normal: 0.2s;
-    --dur-slow: 0.25s;
+    --dur-fast: 0.1s;
+    --dur-normal: 0.15s;
+    --dur-slow: 0.2s;
 
     /* App shell sizing */
     --topbar-height: 56px;

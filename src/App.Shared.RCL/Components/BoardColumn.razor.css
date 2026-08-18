@@ -40,10 +40,12 @@
     height: var(--space-7);
     padding: 0 0.45rem;
     border-radius: var(--space-4);
+    font-family: var(--hab-font-mono);
     font-size: 0.75rem;
     font-weight: 700;
     line-height: 1;
     font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
 }
 
 .board-column--habit .board-count-badge {

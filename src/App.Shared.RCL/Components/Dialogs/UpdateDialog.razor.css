@@ -24,8 +24,11 @@
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 30%, transparent);
     border-radius: 6px;
     padding: 4px 8px;
+    font-family: var(--hab-font-mono);
     font-size: 0.85rem;
     font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
     color: var(--mud-palette-primary);
 }
 

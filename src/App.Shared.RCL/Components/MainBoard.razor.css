@@ -94,9 +94,12 @@
     height: 1.4rem;
     padding: 0 var(--space-2);
     border-radius: var(--radius-pill);
+    font-family: var(--hab-font-mono);
     font-size: 0.7rem;
     font-weight: 700;
     line-height: 1;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
     background: color-mix(in srgb, var(--mud-palette-text-secondary) 15%, transparent);
     color: var(--mud-palette-text-secondary);
 }
@@ -286,7 +289,7 @@
     display: none !important;
 }
 
-/* Tags and Archive Buttons */
+/* Tags and archive buttons */
 .board-tags-menu-activator {
     display: inline-flex !important;
     align-items: center !important;
@@ -481,7 +484,7 @@
 
     /* Hide column card header and chrome completely in mobile tabbed view so the
        filter toolbar, add-field, item cards and footer span the same full width
-       as the section switcher above them (edges align perfectly). */
+       as the section switcher above them so edges align cleanly. */
     .board-columns-mobile ::deep .board-column {
         background: transparent !important;
         border: none !important;
@@ -544,8 +547,9 @@
     border: 1px solid var(--mud-palette-divider);
     border-radius: 4px;
     padding: 1px 4px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-family: var(--hab-font-mono);
     font-size: 0.65rem;
+    font-feature-settings: "tnum" 1, "zero" 1;
     box-shadow: 0 1px 0 color-mix(in srgb, var(--mud-palette-text-primary) 12%, transparent);
     margin: 0 2px;
 }

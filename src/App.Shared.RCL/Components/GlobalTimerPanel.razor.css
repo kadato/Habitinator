@@ -78,7 +78,7 @@
     font-size: 3.5rem !important;
     line-height: 1 !important;
     font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum" 1;
+    font-feature-settings: "tnum" 1, "zero" 1;
     font-weight: 700 !important;
     letter-spacing: 0.02em;
     -webkit-font-smoothing: antialiased;
@@ -241,7 +241,7 @@
     }
 }
 
-/* Collapsible Timer Panel Styles */
+/* Collapsible timer panel styles */
 .timer-mobile-header {
     display: none;
     cursor: pointer;
@@ -337,7 +337,9 @@
 .timer-target-field ::deep .mud-input-slot input,
 .timer-focus-field ::deep .mud-input > input.mud-input-root,
 .timer-focus-field ::deep .mud-input-slot input {
+    font-family: var(--hab-font-mono);
     font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
     height: 100% !important;
 }
 
@@ -417,10 +419,13 @@
 }
 
 .timer-pomodoro-status-badge {
+    font-family: var(--hab-font-mono);
     font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
     color: var(--mud-palette-primary);
     background-color: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
     padding: 3px 8px;
@@ -542,7 +547,10 @@
 }
 
 .timer-pomodoro-field-control ::deep .timer-pomodoro-info-item .info-value {
+    font-family: var(--hab-font-mono);
     font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
     color: var(--mud-palette-text-primary);
 }
 

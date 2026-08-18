@@ -34,6 +34,7 @@
 }
 
 .archived-title-count {
+    font-family: var(--hab-font-mono);
     font-size: 0.75rem;
     font-weight: 600;
     background: color-mix(in srgb, var(--mud-palette-text-secondary) 12%, transparent);
@@ -41,6 +42,7 @@
     padding: 0.1rem 0.5rem;
     border-radius: var(--radius-pill);
     font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
 }
 
 .dialog-body {
@@ -118,10 +120,12 @@
 }
 
 .filter-tab-count {
+    font-family: var(--hab-font-mono);
     font-size: 0.7rem;
     font-weight: 600;
     color: var(--mud-palette-text-disabled);
     font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
 }
 
 .filter-tab.active .filter-tab-count {

@@ -6,6 +6,10 @@ using App.Shared.RCL.Services.Remote;
 
 namespace App.Web.Services;
 
+[JsonSourceGenerationOptions(
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    PropertyNameCaseInsensitive = true,
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(ItemTitleRequest))]
 [JsonSerializable(typeof(HabitUpdateRequest))]
 [JsonSerializable(typeof(DailyUpdateRequest))]
@@ -28,6 +32,12 @@ namespace App.Web.Services;
 [JsonSerializable(typeof(DailyContributionsViewDto))]
 [JsonSerializable(typeof(HabitContributionsViewDto))]
 [JsonSerializable(typeof(ActivityDayDetailDto))]
+[JsonSerializable(typeof(AuthStatusDto))]
+[JsonSerializable(typeof(UserDataExportDto))]
+[JsonSerializable(typeof(BoardColumnFilterState))]
+[JsonSerializable(typeof(Dictionary<Guid, int>))]
+[JsonSerializable(typeof(string[]))]
+[JsonSerializable(typeof(List<string>))]
 public partial class AppJsonSerializerContext : JsonSerializerContext
 {
 }

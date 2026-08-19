@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 
 using App.Shared.RCL.Models;
+using App.Shared.RCL.Services;
 using App.Shared.RCL.Services.Remote;
 
 using FluentAssertions;
@@ -164,6 +165,39 @@ public sealed class BoardApiIsolationTests(PostgresWebAppFactory factory)
 
         var logRes = await client.SendAsync(requestLog);
         logRes.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task CompleteDailyForDate_WithValidRequest_ReturnsOkOrExpectedStatus()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var email = $"daily-user-{suffix}@integration.test";
+        const string password = "TestUser1!Aa";
+
+        (await client.PostAsJsonAsync("/api/auth/register",
+            new RegisterRequest(email, password))).IsSuccessStatusCode.Should().BeTrue();
+
+        var login = await client.PostAsJsonAsync("/api/auth/login",
+            new LoginRequest(email, password, RememberMe: false));
+        login.EnsureSuccessStatusCode();
+        var token = (await login.Content.ReadFromJsonAsync<LoginResponse>(s_json))!.AccessToken;
+
+        using var requestCreate = new HttpRequestMessage(HttpMethod.Post, "/api/board/Daily");
+        requestCreate.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        requestCreate.Content = JsonContent.Create(new ItemTitleRequest("Daily Test"));
+        var createRes = await client.SendAsync(requestCreate);
+        createRes.EnsureSuccessStatusCode();
+        var created = await createRes.Content.ReadFromJsonAsync<BoardItem>(s_json);
+        created.Should().NotBeNull();
+
+        using var requestComplete = new HttpRequestMessage(HttpMethod.Post, $"/api/board/dailies/{created.Id}/complete-for-date");
+        requestComplete.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        requestComplete.Content = JsonContent.Create(new DailyCompleteForDateRequest(DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1))), options: JsonDefaults.Api);
+        var completeRes = await client.SendAsync(requestComplete);
+        var body = await completeRes.Content.ReadAsStringAsync();
+        completeRes.StatusCode.Should().Be(HttpStatusCode.OK, $"response body was: {body}");
     }
 }
 

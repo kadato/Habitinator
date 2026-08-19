@@ -514,7 +514,7 @@ public partial class MainBoard : IAsyncDisposable
 
             var dialog = await DialogService.ShowAsync<DailyYesterdayRetroDialog>(
                 string.Empty, parameters, DialogDefaults.SmallEditor);
-            var result = await dialog.Result;
+            await dialog.Result;
 
             try
             {
@@ -525,15 +525,8 @@ public partial class MainBoard : IAsyncDisposable
                 // Ignore error when saving daily retro status as it's non-critical local UI state
             }
 
-            if (result is { Canceled: false, Data: List<Guid> ids } && ids.Count > 0)
-            {
-                await CompleteDailiesInBackgroundAsync(ids, yesterdayDate);
-            }
-            else
-            {
-                await RefreshStreaksAsync();
-                await LoadBoardAsync();
-            }
+            await RefreshStreaksAsync();
+            await LoadBoardAsync();
         }
         catch (Exception)
         {
@@ -576,46 +569,6 @@ public partial class MainBoard : IAsyncDisposable
         catch (Exception)
         {
             _onboardingOffered = false;
-        }
-    }
-
-    private async Task CompleteDailiesInBackgroundAsync(List<Guid> completedIds, DateOnly dueOn)
-    {
-        try
-        {
-            foreach (var id in completedIds)
-            {
-                try
-                {
-                    var updated = await BoardDataService.CompleteDailyForDateAsync(id, dueOn);
-                    if (updated is not null)
-                    {
-                        var idx = Dailies.FindIndex(d => d.Id == id);
-                        if (idx >= 0)
-                        {
-                            Dailies[idx] = updated;
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-                    var item = Dailies.FirstOrDefault(d => d.Id == id);
-                    var title = item?.Title ?? "a daily";
-                    await Notifier.NotifyAsync($"Failed to save retroactive completion for '{title}'.", Severity.Error);
-                }
-            }
-        }
-        finally
-        {
-            try
-            {
-                await RefreshStreaksAsync();
-            }
-            catch (Exception)
-            {
-                // Ignore load errors in background cleanup
-            }
-            await InvokeAsync(StateHasChanged);
         }
     }
 

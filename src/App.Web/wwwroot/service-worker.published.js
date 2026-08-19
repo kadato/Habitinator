@@ -1,7 +1,7 @@
-const CACHE_NAME = 'habitinator-v3';
-const FRAMEWORK_CACHE = 'habitinator-framework-v3';
+const CACHE_NAME = 'habitinator-v4';
+const FRAMEWORK_CACHE = 'habitinator-framework-v4';
 
-// Shell assets: always pre-cached for instant offline rendering
+// Shell assets are always precached for offline rendering.
 const SHELL_ASSETS = [
     '/',
     '/manifest.webmanifest',
@@ -9,8 +9,10 @@ const SHELL_ASSETS = [
     '/favicon.png',
     '/favicon.svg',
     '/apple-touch-icon.png',
-    '/app.css',
+    '/_content/App.Shared.RCL/css/tokens.css',
     '/_content/App.Shared.RCL/css/typography.css',
+    '/_content/App.Shared.RCL/css/app.css',
+    '/_content/App.Shared.RCL/css/dialogs.css',
     '/_content/App.Shared.RCL/css/auth-pages.css',
     '/_content/MudBlazor/MudBlazor.min.css',
     '/_content/MudBlazor/MudBlazor.min.js',
@@ -20,14 +22,27 @@ const SHELL_ASSETS = [
     '/_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2'
 ];
 
-// Framework assets pattern: match all .wasm and .js files under _framework/
+// Match all wasm and js files under the framework directory.
 const FRAMEWORK_ASSET_PATTERN = /^\/_framework\/(.+\.(wasm|js))$/i;
 const CONTENT_ASSET_PATTERN = /^\/_content\/(.+\.(wasm|js|css|woff2?))$/i;
 
 globalThis.addEventListener('install', event => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => {
-            return cache.addAll(SHELL_ASSETS);
+        caches.open(CACHE_NAME).then(async cache => {
+            await Promise.allSettled(
+                SHELL_ASSETS.map(async url => {
+                    try {
+                        const response = await fetch(url, { cache: 'reload' });
+                        if (response.ok) {
+                            await cache.put(url, response);
+                        } else {
+                            console.warn(`Habitinator SW: Failed to precache ${url} (status: ${response.status})`);
+                        }
+                    } catch (err) {
+                        console.warn(`Habitinator SW: Network error precaching ${url}:`, err);
+                    }
+                })
+            );
         }).then(() => globalThis.skipWaiting())
     );
 });
@@ -64,7 +79,13 @@ globalThis.addEventListener('fetch', event => {
         return;
     }
 
-    // -- Framework assets: cache-first. They are immutable and fingerprinted. --
+    // Allow the browser to fulfill dotnet runtime scripts directly from the document link preload cache
+    // to avoid Chromium cross-world service worker resource mismatch warnings.
+    if (/^\/_framework\/dotnet\..*\.js$/i.test(url.pathname)) {
+        return;
+    }
+
+    // Framework assets are cache-first because they are immutable and fingerprinted.
     if (FRAMEWORK_ASSET_PATTERN.test(url.pathname) || CONTENT_ASSET_PATTERN.test(url.pathname)) {
         event.respondWith(
             caches.open(FRAMEWORK_CACHE).then(cache =>
@@ -84,7 +105,7 @@ globalThis.addEventListener('fetch', event => {
         return;
     }
 
-    // -- Navigation requests: network-first, fall back to cached shell --
+    // Navigation requests are network-first and fall back to the cached shell.
     if (event.request.mode === 'navigate') {
         event.respondWith(
             fetch(event.request).catch(() => {
@@ -94,7 +115,7 @@ globalThis.addEventListener('fetch', event => {
         return;
     }
 
-    // -- Other assets: cache-first --
+    // Other assets use cache-first.
     event.respondWith(
         caches.match(event.request).then(cachedResponse => {
             if (cachedResponse) {

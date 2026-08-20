@@ -42,7 +42,7 @@ internal static class AuthApiRoutes
         endpoints.MapGet("/api/account/export", ExportDataAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery().RequireRateLimiting("api");
     }
 
-    // --- Endpoint Handlers ---
+    // Endpoint handlers
 
     private static async Task<IResult> RegisterAsync(
         RegisterRequest request,
@@ -293,7 +293,7 @@ internal static class AuthApiRoutes
         return Results.NoContent();
     }
 
-    // --- Helpers ---
+    // Helpers
 
     private static readonly PasswordHasher<ApplicationUser> DummyHasher = new();
 

@@ -29,7 +29,7 @@ var postgres = builder
 var habitinatorDb = postgres.AddDatabase("habitinatordb");
 
 // Port 5033 comes from App.Web Properties/launchSettings.json profile "http". Kestrel binds there when the proxy is off.
-// Aspire defaults to a DCP reverse proxy in front of project endpoints. That breaks Blazor/SignalR WebSockets for many setups.
+// Aspire defaults to a DCP reverse proxy in front of project endpoints. That breaks Blazor and SignalR WebSockets for many setups.
 // Turn off the proxy so the browser and MAUI talk to Kestrel directly. See /health for orchestration.
 var appWeb = builder.AddProject("app-web", "../App.Web/App.Web.csproj", options => options.LaunchProfileName = "http")
     .WithReference(habitinatorDb)

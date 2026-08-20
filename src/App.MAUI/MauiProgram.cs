@@ -103,7 +103,7 @@ public static class MauiProgram
         builder.Services.AddScoped<IBoardDataService>(sp =>
         {
             // Board mutations are replayed to the server via the outbox, and the server records
-            // activity events itself. No logging decorator here: it would write a second event per
+            // activity events itself. No logging decorator here. It would write a second event per
             // action, skewing the activity feed and the daily streak on the same table.
             var inner = sp.GetRequiredService<LocalFirstBoardDataService>();
             var undoService = sp.GetRequiredService<IUndoService>();
@@ -113,7 +113,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<INotificationSettingsService, RemoteNotificationSettingsService>();
         builder.Services.AddSingleton<IUserPreferencesService, LocalFirstUserPreferencesService>();
         builder.Services.AddSingleton<MauiDailyReminderService>();
-        // Scoped: UserNotifier feeds ISnackbar, which uses NavigationManager. NavigationManager is only valid inside the Blazor WebView scope, not root or singleton.
+        // Scoped. UserNotifier feeds ISnackbar, which uses NavigationManager. NavigationManager is only valid inside the Blazor WebView scope, not root or singleton.
         builder.Services.AddScoped<IUserNotifier, UserNotifier>();
         builder.Services.AddScoped<IFocusTimerClientAlerts, FocusTimerClientAlerts>();
         builder.Services.AddScoped<IDailyRetroPromptStore, JsDailyRetroPromptStore>();

@@ -17,7 +17,7 @@ public static class ZalgoSanitizer
 {
     /// <summary>
     /// Maximum number of combining codepoints allowed per grapheme cluster.
-    /// Value of 2 preserves common double-accented characters, e.g. Vietnamese tonal marks,
+    /// Value of 2 preserves common double-accented characters, for example Vietnamese tonal marks,
     /// while eliminating all practical Zalgo stacking.
     /// </summary>
     public const int MaxCombiningPerBase = 2;
@@ -79,7 +79,7 @@ public static class ZalgoSanitizer
     /// <summary>
     /// Sanitizes Zalgo text and trims whitespace in one step.
     /// Returns <see cref="string.Empty"/> when <paramref name="input"/> is <see langword="null"/>.
-    /// This is the recommended overload for non-nullable contexts, e.g. API request fields.
+    /// This is the recommended overload for non-nullable contexts, for example API request fields.
     /// </summary>
     public static string SanitizeAndTrim(string? input)
         => string.IsNullOrWhiteSpace(input) ? string.Empty : (Sanitize(input.Trim()) ?? string.Empty);

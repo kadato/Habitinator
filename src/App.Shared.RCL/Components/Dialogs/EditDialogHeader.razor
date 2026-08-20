@@ -1,42 +1,47 @@
-<div class="edit-daily-header">
-    <div class="edit-daily-header__toolbar">
-        <MudText Typo="Typo.subtitle1" Class="edit-daily-header__title">@TitleText</MudText>
-        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+@using App.Shared.RCL.Models
+
+<div class="hab-modal__header">
+    <div class="hab-modal__topbar hab-modal__topbar--minimal">
+        <span class="hab-modal__actions" style="margin-left:auto;">
             @if (!string.IsNullOrEmpty(SaveStatus))
             {
-                <span class="edit-daily-header__status @SaveStatusClass">@SaveStatusText</span>
+                <span class="hab-modal__save @SaveStatusClass" aria-live="polite">
+                    @SaveStatusText
+                </span>
             }
-            <MudIconButton Icon="@Icons.Material.Filled.Close"
-                           Class="edit-daily-header__close"
-                           aria-label="Close"
-                           Size="Size.Small"
-                           title="Close"
-                           OnClick="OnClose"/>
-        </MudStack>
+            <button type="button" class="hab-modal__close" aria-label="Close" title="Close" @onclick="OnClose">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </span>
     </div>
 
-    <MudStack Spacing="0">
-        <MudText Typo="Typo.caption" Class="edit-daily-label-header">Title*</MudText>
+    <div class="hab-modal__title-field">
+        <MudText Typo="Typo.caption" Class="edit-daily-label-header">Title</MudText>
         <MudTextField Value="@_title"
                       ValueChanged="@((string value) => OnTitleValueChanged(value))"
                       Variant="Variant.Outlined"
-                      Class="edit-daily-field-header"
+                      Class="hab-modal__title-input edit-daily-field-header"
                       Placeholder="@TitlePlaceholder"
                       Immediate="true"
-                      Margin="Margin.Dense"/>
+                      Margin="Margin.Dense"
+                      aria-label="Title"/>
+    </div>
 
-        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mt-2 mb-1">
-            <MudText Typo="Typo.caption" Class="edit-daily-label-header">Notes</MudText>
-        </MudStack>
+    <div class="hab-modal__title-field mt-2">
+        <MudText Typo="Typo.caption" Class="edit-daily-label-header">Notes</MudText>
         <MudTextField Value="@_notes"
                       ValueChanged="@((string value) => OnNotesValueChanged(value))"
                       Variant="Variant.Outlined"
-                      Class="edit-daily-field-header"
-                      Placeholder="Add notes"
+                      Class="hab-modal__notes-field edit-daily-field-header"
+                      Placeholder="Add notes, context, or why this matters"
                       Lines="3"
                       Immediate="true"
-                      Margin="Margin.Dense"/>
-    </MudStack>
+                      Margin="Margin.Dense"
+                      aria-label="Notes"/>
+    </div>
 </div>
 
 @code {
@@ -48,6 +53,7 @@
     [Parameter] public EventCallback<string?> NotesChanged { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public string SaveStatus { get; set; } = string.Empty;
+    [Parameter] public BoardSection? Section { get; set; }
 
     private string _title = string.Empty;
     private string? _notes;
@@ -68,9 +74,9 @@
 
     private string SaveStatusClass => SaveStatus switch
     {
-        "saving" => "edit-daily-header__status--saving",
-        "error" => "edit-daily-header__status--error",
-        "saved" => "edit-daily-header__status--saved",
+        "saving" => "hab-modal__save--saving",
+        "error" => "hab-modal__save--error",
+        "saved" => "hab-modal__save--saved",
         _ => string.Empty
     };
 

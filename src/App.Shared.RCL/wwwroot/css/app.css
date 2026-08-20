@@ -217,10 +217,13 @@ a {
     margin: 0 0 var(--space-5) 0;
 }
 
+/* Edit modals use the hab-modal inner shell so MudDialog itself must be transparent */
 .mud-dialog.edit-habit-dialog,
 .mud-dialog:has(.edit-habit-shell),
 .mud-dialog.edit-daily-dialog,
-.mud-dialog:has(.edit-daily-shell) {
+.mud-dialog:has(.edit-daily-shell),
+.mud-dialog.hab-modal-dialog,
+.mud-dialog:has(.hab-modal) {
     background: transparent !important;
     box-shadow: none !important;
     border: none !important;
@@ -228,15 +231,19 @@ a {
     overflow: visible !important;
     overflow-y: visible !important;
     max-height: none !important;
-    width: min(24rem, calc(100vw - var(--space-8))) !important;
+    width: min(26rem, calc(100vw - 1rem)) !important;
 }
 
 .mud-dialog.edit-habit-dialog .mud-dialog-content,
 .mud-dialog:has(.edit-habit-shell) .mud-dialog-content,
 .mud-dialog.edit-daily-dialog .mud-dialog-content,
-.mud-dialog:has(.edit-daily-shell) .mud-dialog-content {
+.mud-dialog:has(.edit-daily-shell) .mud-dialog-content,
+.mud-dialog:has(.hab-modal) .mud-dialog-content {
     padding: 0 !important;
-    overflow: visible !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: inherit !important;
 }
 
 /* Retroactive Yesterday Dailies Dialog: hide default MudDialog paper so only the inner card is visible */
@@ -249,7 +256,7 @@ a {
     overflow: visible !important;
     overflow-y: visible !important;
     max-height: none !important;
-    width: min(34rem, calc(100vw - var(--space-8))) !important;
+    width: min(34rem, calc(100vw - 1rem)) !important;
 }
 
 .mud-dialog.daily-yesterday-dialog .mud-dialog-content,
@@ -781,23 +788,32 @@ input[type="number"].mud-input-slot {
 
 /* Premium dialog styling overrides */
 
-/* Upgraded backdrop blur on all dialog overlays */
+/* Premium backdrop: subtle mesh + soft blur, board-aligned elevation */
 .mud-dialog-container {
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    background-color: rgba(10, 15, 30, 0.45) !important;
+    backdrop-filter: blur(18px) saturate(1.08);
+    -webkit-backdrop-filter: blur(18px) saturate(1.08);
+    background:
+        radial-gradient(1200px 500px at 50% -10%, color-mix(in srgb, var(--mud-palette-primary) 10%, transparent), transparent 60%),
+        radial-gradient(900px 400px at 90% 100%, color-mix(in srgb, var(--hab-type-habit) 7%, transparent), transparent 55%),
+        rgba(8, 12, 24, 0.48) !important;
     transition: background-color var(--dur-slow) ease, backdrop-filter var(--dur-slow) ease;
 }
+.mud-dialog-container.mud-dialog-container--with-backdrop {
+    background:
+        radial-gradient(1200px 500px at 50% -10%, color-mix(in srgb, var(--mud-palette-primary) 10%, transparent), transparent 60%),
+        radial-gradient(900px 400px at 90% 100%, color-mix(in srgb, var(--hab-type-habit) 7%, transparent), transparent 55%),
+        rgba(8, 12, 24, 0.48) !important;
+}
 
-/* Base dialog style. All dialogs except those with custom outer shells. */
-.mud-dialog:not(.edit-daily-dialog):not(.edit-habit-dialog):not(.daily-yesterday-dialog) {
-    border-radius: var(--space-6) !important;
+/* Base dialog style. All dialogs except those with custom outer shells (hab-modal family). */
+.mud-dialog:not(.edit-daily-dialog):not(.edit-habit-dialog):not(.daily-yesterday-dialog):not(.hab-modal-dialog):not(:has(.hab-modal)):not(:has(.edit-daily-shell)):not(:has(.daily-yesterday-shell)) {
+    border-radius: var(--hab-modal-radius) !important;
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent) !important;
     background: var(--mud-palette-surface) !important;
-    box-shadow: 
-        0 24px 38px 3px rgba(0, 0, 0, 0.08), 
-        0 9px 46px 8px rgba(0, 0, 0, 0.06), 
-        0 11px 15px -7px rgba(0, 0, 0, 0.1) !important;
+    box-shadow:
+        0 1px 0 rgba(15,23,42,0.04),
+        0 12px 24px rgba(15,23,42,0.08),
+        0 32px 64px rgba(15,23,42,0.14) !important;
     overflow: hidden !important;
 }
 
@@ -988,8 +1004,48 @@ input[type="number"].mud-input-slot {
     min-width: 0;
 }
 
-.activity-day-detail-dialog .mud-progress-linear {
-    border-radius: var(--space-1);
+.activity-day-detail-dialog .mud-progress-linear { border-radius: var(--space-1); }
+
+/* New timeline for day detail, board aligned */
+.stats-day-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: var(--space-4);
+    padding: 0.4rem 0.7rem;
+    background: color-mix(in srgb, var(--mud-palette-primary) 7%, var(--mud-palette-surface));
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
+    border-radius: var(--radius-pill);
+    font-family: var(--hab-font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--mud-palette-text-secondary);
+}
+.stats-day-summary__count { color: var(--mud-palette-text-primary); }
+.stats-day-summary__dot { width: 3px; height: 3px; border-radius: 50%; background: var(--mud-palette-text-disabled); flex-shrink: 0; }
+.stats-day-timeline { display: flex; flex-direction: column; gap: 0; border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 55%, transparent); border-radius: var(--radius-lg); overflow: hidden; background: var(--mud-palette-surface); }
+.stats-day-event { display: grid; grid-template-columns: 64px 24px 1fr; gap: 0.65rem; align-items: center; padding: 0.75rem 0.85rem; border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 35%, transparent); background: var(--mud-palette-surface); }
+.stats-day-event:last-child { border-bottom: none; }
+.stats-day-event:nth-child(even) { background: color-mix(in srgb, var(--mud-palette-background-gray) 92%, var(--mud-palette-divider) 8%); }
+.stats-day-event:nth-child(odd) { background: var(--mud-palette-surface); }
+.stats-day-event__time { font-family: var(--hab-font-mono); font-size: 0.78rem; font-weight: 650; letter-spacing: 0.01em; color: var(--mud-palette-text-secondary); font-variant-numeric: tabular-nums; text-align: right; }
+.stats-day-event__icon { font-size: 1.15rem !important; line-height: 1; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.stats-day-event__icon--daily { color: var(--mud-palette-primary); }
+.stats-day-event__icon--todo { color: #b45309; }
+.stats-day-event__icon--plus { color: var(--hab-type-habit); }
+.stats-day-event__icon--minus { color: var(--hab-type-habit-bad); }
+.stats-day-event__icon--timer { color: var(--mud-palette-text-secondary); }
+.stats-day-event__icon--default { color: var(--mud-palette-text-disabled); }
+.stats-day-event__body { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.stats-day-event__title { font-size: 0.875rem; font-weight: 650; letter-spacing: -0.01em; color: var(--mud-palette-text-primary); overflow-wrap: break-word; line-height: 1.3; }
+.stats-day-event__meta { font-size: 0.72rem; color: var(--mud-palette-text-secondary); line-height: 1.3; }
+.stats-day-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem 1.5rem; border: 1px dashed color-mix(in srgb, var(--mud-palette-divider) 65%, transparent); border-radius: var(--radius-xl); background: color-mix(in srgb, var(--mud-palette-background-gray) 22%, transparent); }
+.stats-day-empty__icon { color: var(--mud-palette-text-disabled); opacity: 0.7; margin-bottom: 0.5rem; }
+@media (max-width: 480px) {
+    .stats-day-event { grid-template-columns: 56px 24px 1fr; padding: 0.6rem 0.7rem; gap: 0.5rem; }
+    .stats-day-event__time { font-size: 0.72rem; }
+    .stats-day-event__title { font-size: 0.82rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

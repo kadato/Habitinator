@@ -1,87 +1,72 @@
-<MudExpansionPanels Class="edit-daily-checklist-panels" Elevation="0">
-    <MudExpansionPanel @bind-Expanded="_checklistOpen">
-        <TitleContent>
-            <MudText Typo="Typo.body2" Class="edit-daily-label-body">Checklist</MudText>
-        </TitleContent>
-        <ChildContent>
-            <div class="edit-daily-checklist">
-                @for (var i = 0; i < Value.Count; i++)
-                {
-                    var idx = i;
-                    var row = Value[idx];
-                    <div class="edit-daily-checklist__row" @key="row.Key">
-                        <MudCheckBox T="bool"
-                                     Value="row.IsDone"
-                                     ValueChanged="@((bool v) => SetChecklistDone(idx, v))"
-                                     Class="ma-0"
-                                     Color="Color.Primary"/>
-                        <MudTextField Value="row.Text"
-                                      ValueChanged="@((string v) => SetChecklistText(idx, v))"
-                                      Variant="Variant.Text"
-                                      Class="edit-daily-checklist__input flex-grow-1"
-                                      Placeholder="Checklist item"
-                                      Margin="Margin.Dense"
-                                      Immediate="true"/>
-                        <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline"
-                                       Size="Size.Small"
-                                       title="Remove checklist item"
-                                       Class="ma-0 edit-daily-checklist__remove"
-                                       OnClick="@(() => RemoveChecklistLine(idx))"/>
-                    </div>
-                }
-                <button type="button" class="edit-daily-checklist__add" @onclick="AddChecklistLine">
-                    <svg class="edit-daily-checklist__add-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: block;">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                    <span class="edit-daily-checklist__add-text">New checklist item</span>
-                </button>
-            </div>
-        </ChildContent>
-    </MudExpansionPanel>
-</MudExpansionPanels>
+<div class="edit-daily-checklist">
+    @for (var i = 0; i < Value.Count; i++)
+    {
+        var idx = i;
+        var row = Value[idx];
+        <div class="edit-daily-checklist__row" @key="row.Key">
+            <MudCheckBox T="bool"
+                         Value="row.IsDone"
+                         ValueChanged="@((bool v) => SetChecklistDone(idx, v))"
+                         Class="ma-0"
+                         Color="Color.Primary"
+                         Dense="true"/>
+            <MudTextField Value="row.Text"
+                          ValueChanged="@((string v) => SetChecklistText(idx, v))"
+                          Variant="Variant.Text"
+                          Class="edit-daily-checklist__input flex-grow-1"
+                          Placeholder="Checklist item"
+                          Margin="Margin.Dense"
+                          Immediate="true"/>
+            <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline"
+                           Size="Size.Small"
+                           title="Remove checklist item"
+                           Class="ma-0 edit-daily-checklist__remove"
+                           OnClick="@(() => RemoveChecklistLine(idx))"/>
+        </div>
+    }
+    @if (Value.Count == 0)
+    {
+        <div style="padding:0.7rem 0.85rem; font-size:0.8rem; color:var(--mud-palette-text-secondary); text-align:center;">No steps yet. Add a checklist to break work into pieces.</div>
+    }
+    <button type="button" class="edit-daily-checklist__add" @onclick="AddChecklistLine">
+        <svg class="edit-daily-checklist__add-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: block;">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span class="edit-daily-checklist__add-text">New checklist item</span>
+    </button>
+</div>
 
 @code {
     [Parameter] public List<ChecklistRow> Value { get; set; } = [];
 
-    private bool _checklistOpen = true;
-
     private void AddChecklistLine()
     {
-        Value.Add(new ChecklistRow { Id = Guid.NewGuid() });
+        var next = new List<ChecklistRow>(Value) { new ChecklistRow { Id = Guid.NewGuid() } };
+        Value = next;
         _ = ValueChanged.InvokeAsync(Value);
     }
 
     private void SetChecklistDone(int index, bool done)
     {
-        if (index < 0 || index >= Value.Count || Value[index].IsDone == done)
-        {
-            return;
-        }
-
+        if (index < 0 || index >= Value.Count || Value[index].IsDone == done) return;
         Value[index].IsDone = done;
         _ = ValueChanged.InvokeAsync(Value);
     }
 
     private void SetChecklistText(int index, string text)
     {
-        if (index < 0 || index >= Value.Count)
-        {
-            return;
-        }
-
+        if (index < 0 || index >= Value.Count) return;
         Value[index].Text = text ?? string.Empty;
         _ = ValueChanged.InvokeAsync(Value);
     }
 
     private void RemoveChecklistLine(int index)
     {
-        if (index < 0 || index >= Value.Count)
-        {
-            return;
-        }
-
-        Value.RemoveAt(index);
+        if (index < 0 || index >= Value.Count) return;
+        var next = new List<ChecklistRow>(Value);
+        next.RemoveAt(index);
+        Value = next;
         _ = ValueChanged.InvokeAsync(Value);
     }
 }

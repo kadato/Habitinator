@@ -1,10 +1,10 @@
 @inherits AutosaveEditDialogBase<EditHabitDialogResult>
 
-<MudDialog Class="edit-daily-dialog"
+<MudDialog Class="edit-daily-dialog hab-modal-dialog"
            ContentClass="edit-daily-dialog__content"
-           Style="width: min(24rem, calc(100vw - 2rem));">
+           Style="width: min(26rem, calc(100vw - 1rem));">
 <DialogContent>
-<div class="edit-daily-shell" @onclick="OnShellClick">
+<div class="hab-modal hab-modal--habit edit-daily-shell edit-daily-shell--habit" @onclick="OnShellClick">
     <EditDialogHeader TitleText="Edit habit"
                       TitlePlaceholder="Habit title"
                       @bind-Title="_title"
@@ -12,14 +12,32 @@
                       @bind-Notes="_notes"
                       @bind-Notes:after="OnNotesEdited"
                       OnClose="CloseAsync"
-                      SaveStatus="SaveStatus"/>
+                      SaveStatus="SaveStatus"
+                      Section="BoardSection.Habit"/>
 
-    <div class="edit-daily-body">
-        <ChecklistEditor @bind-Value="_checklistRows"
-                         @bind-Value:after="OnChecklistEdited"/>
+    <div class="hab-modal__body edit-daily-body">
+        <div class="hab-checklist">
+            <div class="hab-checklist__head">
+                <span class="hab-checklist__head-title">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                    Checklist
+                </span>
+                @if (_checklistRows.Count > 0)
+                {
+                    <span class="hab-checklist__count">@_checklistRows.Count(x => x.IsDone) / @_checklistRows.Count</span>
+                }
+            </div>
+            <div class="hab-checklist__list">
+                <ChecklistEditor @bind-Value="_checklistRows"
+                                 @bind-Value:after="OnChecklistEdited"/>
+            </div>
+        </div>
 
-        <fieldset class="mb-3" style="border: none; padding: 0; margin: 0;">
-            <legend class="edit-daily-label-body d-block mb-2" style="font-size: 0.75rem;">Which counters to show</legend>
+        <div class="hab-modal__section">
+            <span class="hab-modal__section-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path><path d="M12 8v8"></path></svg>
+                Track which counters
+            </span>
             <div class="habit-track">
                 <button type="button"
                         class="habit-track__option @(_trackPlus ? "habit-track__option--on-good" : string.Empty)"
@@ -45,23 +63,26 @@
                     <span class="habit-track__label">Minus</span>
                 </button>
             </div>
-            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1 mb-0">Turn on one or both. At least one stays on.</MudText>
-        </fieldset>
+            <span style="font-size:0.72rem; color:var(--mud-palette-text-secondary); margin-top:0.1rem;">At least one counter stays on. Counters appear as board badges.</span>
+        </div>
 
-        <fieldset class="mb-3" style="border: none; padding: 0; margin: 0;">
-            <legend class="edit-daily-label-body d-block mb-1" style="font-size: 0.75rem;">Tags</legend>
+        <div class="hab-modal__section">
+            <span class="hab-modal__section-label">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                Tags
+            </span>
             <TagPicker @bind-Tags="_tags"
                        @bind-Tags:after="OnTagsEdited"
                        TriggerId="edit-habit-tags-trigger" @ref="_tagPicker"/>
-        </fieldset>
+        </div>
 
-        <fieldset class="mb-3" style="border: none; padding: 0; margin: 0;">
-            <legend class="edit-daily-label-body d-block mb-1 mt-2" style="font-size: 0.75rem;">Reset counter</legend>
+        <div class="hab-modal__section hab-modal__section--plain">
+            <MudText Typo="Typo.caption" Class="edit-daily-label-body" Style="margin-bottom:0.35rem;">Reset counter</MudText>
             <MudSelect T="HabitResetPeriod"
                        @bind-Value="_resetPeriod"
                        @bind-Value:after="OnDiscreteEdited"
                        Variant="Variant.Outlined"
-                       Class="edit-daily-field-body edit-habit-select"
+                       Class="hab-modal__field edit-habit-select"
                        Margin="Margin.Dense"
                        AnchorOrigin="Origin.BottomLeft"
                        TransformOrigin="Origin.TopLeft"
@@ -70,73 +91,42 @@
                 <MudSelectItem T="HabitResetPeriod" Value="HabitResetPeriod.Weekly">Weekly</MudSelectItem>
                 <MudSelectItem T="HabitResetPeriod" Value="HabitResetPeriod.Monthly">Monthly</MudSelectItem>
             </MudSelect>
-        </fieldset>
+        </div>
 
-        <MudExpansionPanels Class="edit-daily-advanced mt-2" Elevation="0">
-            <MudExpansionPanel @bind-Expanded="_advancedOpen">
-                <TitleContent>
-                    <MudText Typo="Typo.body2" Class="edit-daily-label-body">Advanced settings</MudText>
-                </TitleContent>
-                <ChildContent>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">Adjust + count</MudText>
-                    <div class="counter-adjust mb-3">
-                        <button type="button"
-                                class="counter-adjust__btn counter-adjust__btn--bad"
-                                aria-label="Decrease + count"
-                                @onclick="DecrementPlusLocal"
-                                disabled="@(_counter < 1)">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
-                        </button>
-                        <MudNumericField @bind-Value="_counter"
-                                         @bind-Value:after="OnCounterEdited"
-                                         Variant="Variant.Outlined"
-                                         Class="counter-adjust__field"
-                                         Min="0"
-                                         HideSpinButtons="true"
-                                         Margin="Margin.Dense"/>
-                        <button type="button"
-                                class="counter-adjust__btn counter-adjust__btn--good"
-                                aria-label="Increase + count"
-                                @onclick="IncrementPlusLocal">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
-                        </button>
+        <div class="hab-advanced @(_advancedOpen ? "hab-advanced--open" : string.Empty)">
+            <button type="button" class="hab-advanced__trigger" @onclick="() => _advancedOpen = !_advancedOpen">
+                <span>Advanced tuning</span>
+                <svg class="hab-advanced__chevron" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            @if (_advancedOpen)
+            {
+                <div class="hab-advanced__body">
+                    <span style="font-size:0.78rem; color:var(--mud-palette-text-secondary);">Adjust logged totals. Values are stored as mono badges.</span>
+                    <div style="display:flex; flex-direction:column; gap:0.7rem;">
+                        <span class="edit-daily-label-body" style="margin:0;">Adjust + count</span>
+                        <div class="counter-adjust">
+                            <button type="button" class="counter-adjust__btn counter-adjust__btn--bad" aria-label="Decrease + count" @onclick="DecrementPlusLocal" disabled="@(_counter < 1)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </button>
+                            <MudNumericField @bind-Value="_counter" @bind-Value:after="OnCounterEdited" Variant="Variant.Outlined" Class="counter-adjust__field" Min="0" HideSpinButtons="true" Margin="Margin.Dense"/>
+                            <button type="button" class="counter-adjust__btn counter-adjust__btn--good" aria-label="Increase + count" @onclick="IncrementPlusLocal">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </button>
+                        </div>
+                        <span class="edit-daily-label-body" style="margin:0;">Adjust − count</span>
+                        <div class="counter-adjust">
+                            <button type="button" class="counter-adjust__btn counter-adjust__btn--bad" aria-label="Decrease − count" @onclick="DecrementMinusLocal" disabled="@(_negativeCounter < 1)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </button>
+                            <MudNumericField @bind-Value="_negativeCounter" @bind-Value:after="OnCounterEdited" Variant="Variant.Outlined" Class="counter-adjust__field" Min="0" HideSpinButtons="true" Margin="Margin.Dense"/>
+                            <button type="button" class="counter-adjust__btn counter-adjust__btn--good" aria-label="Increase − count" @onclick="IncrementMinusLocal">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </button>
+                        </div>
                     </div>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">Adjust − count</MudText>
-                    <div class="counter-adjust">
-                        <button type="button"
-                                class="counter-adjust__btn counter-adjust__btn--bad"
-                                aria-label="Decrease − count"
-                                @onclick="DecrementMinusLocal"
-                                disabled="@(_negativeCounter < 1)">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
-                        </button>
-                        <MudNumericField @bind-Value="_negativeCounter"
-                                         @bind-Value:after="OnCounterEdited"
-                                         Variant="Variant.Outlined"
-                                         Class="counter-adjust__field"
-                                         Min="0"
-                                         HideSpinButtons="true"
-                                         Margin="Margin.Dense"/>
-                        <button type="button"
-                                class="counter-adjust__btn counter-adjust__btn--good"
-                                aria-label="Increase − count"
-                                @onclick="IncrementMinusLocal">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
-                        </button>
-                    </div>
-                </ChildContent>
-            </MudExpansionPanel>
-        </MudExpansionPanels>
+                </div>
+            }
+        </div>
 
         <EditDialogFooterActions OnArchive="ArchiveAsync" OnDelete="DeleteAsync"/>
     </div>
@@ -176,60 +166,24 @@
         _checklistRows = EditDialogHelpers.ParseChecklistRows(Item.ChecklistJson);
     }
 
-    private void OnShellClick()
-    {
-        _tagPicker?.Dismiss();
-    }
-
-    private void OnTitleEdited()
-    {
-        ScheduleSave();
-    }
-
-    private void OnNotesEdited()
-    {
-        ScheduleSave();
-    }
-
-    private Task OnTagsEdited()
-    {
-        return SaveNowAsync();
-    }
-
-    private void OnChecklistEdited()
-    {
-        ScheduleSave(300);
-    }
-
-    private void OnDiscreteEdited()
-    {
-        _ = SaveNowAsync();
-    }
-
-    private void OnCounterEdited()
-    {
-        ScheduleSave(400);
-    }
+    private void OnShellClick() => _tagPicker?.Dismiss();
+    private void OnTitleEdited() => ScheduleSave();
+    private void OnNotesEdited() => ScheduleSave();
+    private Task OnTagsEdited() => SaveNowAsync();
+    private void OnChecklistEdited() => ScheduleSave(300);
+    private void OnDiscreteEdited() => _ = SaveNowAsync();
+    private void OnCounterEdited() => ScheduleSave(400);
 
     private void ToggleTrackPlus()
     {
         _trackPlus = !_trackPlus;
-        if (!_trackPlus && !_trackMinus)
-        {
-            _trackMinus = true;
-        }
-
+        if (!_trackPlus && !_trackMinus) _trackMinus = true;
         _ = SaveNowAsync();
     }
-
     private void ToggleTrackMinus()
     {
         _trackMinus = !_trackMinus;
-        if (!_trackPlus && !_trackMinus)
-        {
-            _trackPlus = true;
-        }
-
+        if (!_trackPlus && !_trackMinus) _trackPlus = true;
         _ = SaveNowAsync();
     }
 
@@ -238,34 +192,12 @@
         var title = string.IsNullOrWhiteSpace(_title) ? Item.Title : _title.Trim();
         var tagsPayload = EditDialogHelpers.CleanStringPayload(_tags);
         var checklistPayload = EditDialogHelpers.SerializeChecklistRows(_checklistRows);
-        await BoardData.UpdateHabitAsync(
-            Item.Id,
-            new UpdateHabitArgs(
-                title,
-                EditDialogHelpers.CleanStringPayload(_notes),
-                tagsPayload,
-                _trackPlus,
-                _trackMinus,
-                _resetPeriod,
-                _counter,
-                _negativeCounter,
-                checklistPayload),
-            cancellationToken);
+        await BoardData.UpdateHabitAsync(Item.Id, new UpdateHabitArgs(title, EditDialogHelpers.CleanStringPayload(_notes), tagsPayload, _trackPlus, _trackMinus, _resetPeriod, _counter, _negativeCounter, checklistPayload), cancellationToken);
     }
 
     protected override EditHabitDialogResult BuildResult(EditDialogAction action)
     {
-        return new EditHabitDialogResult(
-            action,
-            _title.Trim(),
-            EditDialogHelpers.CleanStringPayload(_notes),
-            EditDialogHelpers.CleanStringPayload(_tags),
-            _trackPlus,
-            _trackMinus,
-            _resetPeriod,
-            _counter,
-            _negativeCounter,
-            EditDialogHelpers.SerializeChecklistRows(_checklistRows));
+        return new EditHabitDialogResult(action, _title.Trim(), EditDialogHelpers.CleanStringPayload(_notes), EditDialogHelpers.CleanStringPayload(_tags), _trackPlus, _trackMinus, _resetPeriod, _counter, _negativeCounter, EditDialogHelpers.SerializeChecklistRows(_checklistRows));
     }
 
     private void IncrementPlusLocal()
@@ -299,17 +231,8 @@
 
         _ = SaveNowAsync();
     }
-
-    private void ArchiveAsync()
-    {
-        CloseWithAction(EditDialogAction.Archive);
-    }
-
-    private void DeleteAsync()
-    {
-        CloseWithAction(EditDialogAction.Delete);
-    }
-
+    private void ArchiveAsync() => CloseWithAction(EditDialogAction.Archive);
+    private void DeleteAsync() => CloseWithAction(EditDialogAction.Delete);
     private Dictionary<string, object> PlusAria => new() { { "aria-pressed", _trackPlus ? "true" : "false" } };
     private Dictionary<string, object> MinusAria => new() { { "aria-pressed", _trackMinus ? "true" : "false" } };
 }

@@ -72,4 +72,10 @@
 
     /* Brand gradient, used for splash bars and loaders */
     --hab-brand-gradient: linear-gradient(90deg, #3b82f6, #8b5cf6);
+
+    /* Modal shell */
+    --hab-modal-max-w: 26rem;
+    --hab-modal-wide-max-w: 34rem;
+    --hab-modal-radius: 16px;
+    --hab-modal-header-h: 56px;
 }

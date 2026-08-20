@@ -1,20 +1,12 @@
-<div class="edit-daily-delete-wrap">
-    <MudStack Row="true" Justify="Justify.SpaceBetween" Style="width: 100%;">
-        <MudButton Variant="Variant.Text"
-                   Color="Color.Warning"
-                   Size="Size.Small"
-                   StartIcon="@Icons.Material.Outlined.Archive"
-                   OnClick="OnArchive">
-            Archive
-        </MudButton>
-        <MudButton Variant="Variant.Text"
-                   Color="Color.Error"
-                   Size="Size.Small"
-                   StartIcon="@Icons.Material.Outlined.DeleteOutline"
-                   OnClick="OnDelete">
-            Delete
-        </MudButton>
-    </MudStack>
+<div class="hab-modal__footer">
+    <button type="button" class="mud-button-root mud-button mud-button-text mud-button-text-warning mud-button-text-size-small" @onclick="OnArchive" style="text-transform:none; font-weight:650; border-radius:8px; padding:6px 10px; display:inline-flex; align-items:center; gap:6px; color:var(--mud-palette-text-secondary); border:1px solid transparent;">
+        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
+        Archive
+    </button>
+    <button type="button" class="mud-button-root mud-button mud-button-text mud-button-text-error mud-button-text-size-small" @onclick="OnDelete" style="text-transform:none; font-weight:700; border-radius:8px; padding:6px 10px; display:inline-flex; align-items:center; gap:6px; color:var(--mud-palette-error); border:1px solid color-mix(in srgb, var(--mud-palette-error) 18%, transparent); background: color-mix(in srgb, var(--mud-palette-error) 7%, transparent);">
+        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
+        Delete
+    </button>
 </div>
 
 @code {

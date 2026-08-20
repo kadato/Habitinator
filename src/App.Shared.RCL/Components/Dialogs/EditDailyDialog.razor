@@ -2,11 +2,11 @@
 @inject IUserDateFormatService DateFormatService
 @inject IDialogService DialogService
 
-<MudDialog Class="edit-daily-dialog"
+<MudDialog Class="edit-daily-dialog hab-modal-dialog"
            ContentClass="edit-daily-dialog__content"
-           Style="width: min(24rem, calc(100vw - 2rem));">
+           Style="width: min(26rem, calc(100vw - 1rem));">
 <DialogContent>
-    <div class="edit-daily-shell" @onclick="OnShellClick">
+    <div class="hab-modal hab-modal--daily edit-daily-shell edit-daily-shell--daily" @onclick="OnShellClick">
         <EditDialogHeader TitleText="Edit daily"
                           TitlePlaceholder="Daily title"
                           @bind-Title="_title"
@@ -14,87 +14,84 @@
                           @bind-Notes="_notes"
                           @bind-Notes:after="OnNotesEdited"
                           OnClose="CloseAsync"
-                          SaveStatus="SaveStatus"/>
+                          SaveStatus="SaveStatus"
+                          Section="BoardSection.Daily"/>
 
-        <div class="edit-daily-body">
+        <div class="hab-modal__body edit-daily-body">
             <button type="button" class="edit-daily-heatmap-btn" @onclick="OpenHeatmapDialogAsync">
                 <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" Class="edit-daily-heatmap-btn__icon" />
                 <span>View Heatmap</span>
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none" style="margin-left:auto; opacity:0.55;"><polyline points="9 18 15 12 9 6"></polyline></svg>
             </button>
 
-            <ChecklistEditor @bind-Value="_checklistRows"
-                             @bind-Value:after="OnChecklistEdited"/>
-
-            <MudText Typo="Typo.caption" Class="edit-daily-label-body d-block mb-1 mt-2">Start date</MudText>
-            <MudDatePicker @bind-Date="_startDate"
-                           @bind-Date:after="OnDiscreteEdited"
-                           Variant="Variant.Outlined"
-                           Editable="true"
-                           Class="edit-daily-field-body edit-daily-date"
-                           DateFormat="@DateFormatService.DateFormat"
-                           Margin="Margin.Dense"/>
-
-            <MudText Typo="Typo.caption" Class="edit-daily-label-body d-block mb-1 mt-2">Repeats</MudText>
-            <MudSelect T="DailyRepeatType"
-                       @bind-Value="_repeat"
-                       @bind-Value:after="OnDiscreteEdited"
-                       Variant="Variant.Outlined"
-                       Class="edit-daily-field-body edit-daily-repeat-select"
-                       Margin="Margin.Dense"
-                       Dense="true"
-                       AnchorOrigin="Origin.BottomLeft"
-                       TransformOrigin="Origin.TopLeft">
-                <MudSelectItem T="DailyRepeatType" Value="DailyRepeatType.Daily">Daily</MudSelectItem>
-                <MudSelectItem T="DailyRepeatType" Value="DailyRepeatType.Weekly">Weekly</MudSelectItem>
-                <MudSelectItem T="DailyRepeatType" Value="DailyRepeatType.Monthly">Monthly</MudSelectItem>
-                <MudSelectItem T="DailyRepeatType" Value="DailyRepeatType.Yearly">Yearly</MudSelectItem>
-            </MudSelect>
-
-            <MudText Typo="Typo.caption" Class="edit-daily-label-body d-block mb-1 mt-2">Repeat every</MudText>
-            <div class="edit-daily-repeat-every">
-                <MudNumericField @bind-Value="_repeatInterval"
-                                 @bind-Value:after="OnIntervalEdited"
-                                 Variant="Variant.Outlined"
-                                 Class="edit-daily-repeat-every__n"
-                                 Min="1"
-                                 Max="999"
-                                 HideSpinButtons="true"
-                                 Margin="Margin.Dense"/>
-                <MudText Typo="Typo.body2" Class="edit-daily-repeat-every__unit">@RepeatUnitLabel()</MudText>
+            <div class="hab-checklist">
+                <div class="hab-checklist__head">
+                    <span class="hab-checklist__head-title">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                        Checklist
+                    </span>
+                    @if (_checklistRows.Count > 0)
+                    {
+                        <span class="hab-checklist__count">@_checklistRows.Count(x => x.IsDone) / @_checklistRows.Count</span>
+                    }
+                </div>
+                <div class="hab-checklist__list">
+                    <ChecklistEditor @bind-Value="_checklistRows" @bind-Value:after="OnChecklistEdited"/>
+                </div>
             </div>
 
-            <fieldset class="mb-3" style="border: none; padding: 0; margin: 0;">
-                <legend class="edit-daily-label-body d-block mb-1 mt-2" style="font-size: 0.75rem;">Tags</legend>
-                <TagPicker @bind-Tags="_tags"
-                           @bind-Tags:after="OnTagsEdited"
-                           TriggerId="edit-daily-tags-trigger" @ref="_tagPicker"/>
-            </fieldset>
+            <div class="hab-modal__section" style="padding:0.7rem 0.75rem;">
+                <span class="hab-modal__section-label">
+                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    Start date
+                </span>
+                <MudDatePicker @bind-Date="_startDate" @bind-Date:after="OnDiscreteEdited" Variant="Variant.Outlined" Editable="true" Class="hab-modal__field" DateFormat="@DateFormatService.DateFormat" Margin="Margin.Dense"/>
+            </div>
 
-            <MudExpansionPanels Class="edit-daily-advanced mt-2" Elevation="0">
-                <MudExpansionPanel @bind-Expanded="_advancedOpen">
-                    <TitleContent>
-                        <MudText Typo="Typo.body2" Class="edit-daily-label-body">Advanced settings</MudText>
-                    </TitleContent>
-                    <ChildContent>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">
-                            Backfill past days to match this streak. Today is left unchanged.
-                        </MudText>
+            <div class="hab-modal__section" style="padding:0.7rem 0.75rem;">
+                <span class="hab-modal__section-label">Repeats</span>
+                <MudSelect T="DailyRepeatType" @bind-Value="_repeat" @bind-Value:after="OnDiscreteEdited" Variant="Variant.Outlined" Class="hab-modal__field" Margin="Margin.Dense" Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+                    <MudSelectItem T="DailyRepeatType" Value="DailyRepeatType.Daily">Daily</MudSelectItem>
+                    <MudSelectItem T="DailyRepeatType" Value="DailyRepeatType.Weekly">Weekly</MudSelectItem>
+                    <MudSelectItem T="DailyRepeatType" Value="DailyRepeatType.Monthly">Monthly</MudSelectItem>
+                    <MudSelectItem T="DailyRepeatType" Value="DailyRepeatType.Yearly">Yearly</MudSelectItem>
+                </MudSelect>
+            </div>
+
+            <div class="hab-modal__section">
+                <span class="hab-modal__section-label">Repeat every</span>
+                <div class="edit-daily-repeat-every">
+                    <MudNumericField @bind-Value="_repeatInterval" @bind-Value:after="OnIntervalEdited" Variant="Variant.Outlined" Class="edit-daily-repeat-every__n" Min="1" Max="999" HideSpinButtons="true" Margin="Margin.Dense"/>
+                    <span class="edit-daily-repeat-every__unit">@RepeatUnitLabel()</span>
+                </div>
+            </div>
+
+            <div class="hab-modal__section">
+                <span class="hab-modal__section-label">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path></svg>
+                    Tags
+                </span>
+                <TagPicker @bind-Tags="_tags" @bind-Tags:after="OnTagsEdited" TriggerId="edit-daily-tags-trigger" @ref="_tagPicker"/>
+            </div>
+
+            <div class="hab-advanced @(_advancedOpen ? "hab-advanced--open" : string.Empty)">
+                <button type="button" class="hab-advanced__trigger" @onclick="() => _advancedOpen = !_advancedOpen">
+                    <span>Scheduled streak tuning</span>
+                    <svg class="hab-advanced__chevron" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                @if (_advancedOpen)
+                {
+                    <div class="hab-advanced__body">
+                        <span style="font-size:0.78rem; color:var(--mud-palette-text-secondary);">Backfill past days to match this streak. Today is left unchanged.</span>
                         <div class="edit-daily-streak-input">
                             <span class="edit-daily-streak-input__icon" aria-hidden="true">
-                                <MudIcon Icon="@Icons.Material.Filled.KeyboardDoubleArrowRight" Size="Size.Small"/>
+                                <MudIcon Icon="@Icons.Material.Filled.Whatshot" Size="Size.Small" Style="color:var(--hab-accent-streak)"/>
                             </span>
-                            <MudNumericField @bind-Value="_counter"
-                                             @bind-Value:after="OnCounterEdited"
-                                             Variant="Variant.Outlined"
-                                             Class="edit-daily-streak-input__field"
-                                             Min="0"
-                                             Max="9999"
-                                             HideSpinButtons="true"
-                                             Margin="Margin.Dense"/>
+                            <MudNumericField @bind-Value="_counter" @bind-Value:after="OnCounterEdited" Variant="Variant.Outlined" Class="edit-daily-streak-input__field" Min="0" Max="9999" HideSpinButtons="true" Margin="Margin.Dense"/>
                         </div>
-                    </ChildContent>
-                </MudExpansionPanel>
-            </MudExpansionPanels>
+                    </div>
+                }
+            </div>
 
             <EditDialogFooterActions OnArchive="ArchiveAsync" OnDelete="DeleteAsync"/>
         </div>
@@ -131,122 +128,45 @@
         _checklistRows = EditDialogHelpers.ParseChecklistRows(Item.ChecklistJson);
     }
 
-    private void OnShellClick()
+    private void OnShellClick() => _tagPicker?.Dismiss();
+    private string RepeatUnitLabel() => _repeat switch
     {
-        _tagPicker?.Dismiss();
-    }
-
-    private string RepeatUnitLabel()
-    {
-        return _repeat switch
-        {
-            DailyRepeatType.Daily => _repeatInterval == 1 ? "day" : "days",
-            DailyRepeatType.Weekly => _repeatInterval == 1 ? "week" : "weeks",
-            DailyRepeatType.Monthly => _repeatInterval == 1 ? "month" : "months",
-            DailyRepeatType.Yearly => _repeatInterval == 1 ? "year" : "years",
-            _ => "days"
-        };
-    }
-
-    private void OnTitleEdited()
-    {
-        ScheduleSave();
-    }
-
-    private void OnNotesEdited()
-    {
-        ScheduleSave();
-    }
-
-    private Task OnTagsEdited()
-    {
-        return SaveNowAsync();
-    }
-
-    private void OnChecklistEdited()
-    {
-        ScheduleSave(300);
-    }
-
-    private void OnDiscreteEdited()
-    {
-        _ = SaveNowAsync();
-    }
-
-    private void OnIntervalEdited()
-    {
-        ScheduleSave(400);
-    }
-
-    private void OnCounterEdited()
-    {
-        ScheduleSave(400);
-    }
+        DailyRepeatType.Daily => _repeatInterval == 1 ? "day" : "days",
+        DailyRepeatType.Weekly => _repeatInterval == 1 ? "week" : "weeks",
+        DailyRepeatType.Monthly => _repeatInterval == 1 ? "month" : "months",
+        DailyRepeatType.Yearly => _repeatInterval == 1 ? "year" : "years",
+        _ => "days"
+    };
+    private void OnTitleEdited() => ScheduleSave();
+    private void OnNotesEdited() => ScheduleSave();
+    private Task OnTagsEdited() => SaveNowAsync();
+    private void OnChecklistEdited() => ScheduleSave(300);
+    private void OnDiscreteEdited() => _ = SaveNowAsync();
+    private void OnIntervalEdited() => ScheduleSave(400);
+    private void OnCounterEdited() => ScheduleSave(400);
 
     protected override async Task SaveValuesAsync(CancellationToken cancellationToken = default)
     {
         var title = string.IsNullOrWhiteSpace(_title) ? Item.Title : _title.Trim();
         var tagsPayload = EditDialogHelpers.CleanStringPayload(_tags);
         var checklistPayload = EditDialogHelpers.SerializeChecklistRows(_checklistRows);
-        var start = _startDate is { } d
-            ? DateOnly.FromDateTime(d.Date)
-            : Item.DailyStartDate ?? DateOnly.FromDateTime(DateTime.Today);
+        var start = _startDate is { } d ? DateOnly.FromDateTime(d.Date) : Item.DailyStartDate ?? DateOnly.FromDateTime(DateTime.Today);
         var interval = _repeatInterval < 1 ? 1 : _repeatInterval;
-        await BoardData.UpdateDailyAsync(
-            Item.Id,
-            new UpdateDailyArgs(
-                title,
-                EditDialogHelpers.CleanStringPayload(_notes),
-                tagsPayload,
-                start,
-                _repeat,
-                interval,
-                checklistPayload,
-                _counter),
-            cancellationToken);
+        await BoardData.UpdateDailyAsync(Item.Id, new UpdateDailyArgs(title, EditDialogHelpers.CleanStringPayload(_notes), tagsPayload, start, _repeat, interval, checklistPayload, _counter), cancellationToken);
     }
 
     protected override EditDailyDialogResult BuildResult(EditDialogAction action)
     {
-        var start = _startDate is { } d
-            ? DateOnly.FromDateTime(d.Date)
-            : Item.DailyStartDate ?? DateOnly.FromDateTime(DateTime.Today);
-        return new EditDailyDialogResult(
-            action,
-            _title.Trim(),
-            EditDialogHelpers.CleanStringPayload(_notes),
-            EditDialogHelpers.CleanStringPayload(_tags),
-            start,
-            _repeat,
-            _repeatInterval < 1 ? 1 : _repeatInterval,
-            EditDialogHelpers.SerializeChecklistRows(_checklistRows),
-            _counter);
+        var start = _startDate is { } d ? DateOnly.FromDateTime(d.Date) : Item.DailyStartDate ?? DateOnly.FromDateTime(DateTime.Today);
+        return new EditDailyDialogResult(action, _title.Trim(), EditDialogHelpers.CleanStringPayload(_notes), EditDialogHelpers.CleanStringPayload(_tags), start, _repeat, _repeatInterval < 1 ? 1 : _repeatInterval, EditDialogHelpers.SerializeChecklistRows(_checklistRows), _counter);
     }
 
-    private void ArchiveAsync()
-    {
-        CloseWithAction(EditDialogAction.Archive);
-    }
-
-    private void DeleteAsync()
-    {
-        CloseWithAction(EditDialogAction.Delete);
-    }
-
+    private void ArchiveAsync() => CloseWithAction(EditDialogAction.Archive);
+    private void DeleteAsync() => CloseWithAction(EditDialogAction.Delete);
     private async Task OpenHeatmapDialogAsync()
     {
-        var options = new DialogOptions
-        {
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true,
-            CloseOnEscapeKey = true,
-            CloseButton = true
-        };
-        var parameters = new DialogParameters<DailyHeatmapDialog>
-        {
-            { x => x.BoardItemId, Item.Id },
-            { x => x.Title, string.IsNullOrWhiteSpace(_title) ? Item.Title : _title }
-        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = true, CloseButton = false, NoHeader = true };
+        var parameters = new DialogParameters<DailyHeatmapDialog> { { x => x.BoardItemId, Item.Id }, { x => x.Title, string.IsNullOrWhiteSpace(_title) ? Item.Title : _title } };
         await DialogService.ShowAsync<DailyHeatmapDialog>(string.Empty, parameters, options);
     }
 }

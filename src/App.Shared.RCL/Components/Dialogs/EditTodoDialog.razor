@@ -1,11 +1,11 @@
 @inherits AutosaveEditDialogBase<EditTodoDialogResult>
 @inject IUserDateFormatService DateFormatService
 
-<MudDialog Class="edit-daily-dialog"
+<MudDialog Class="edit-daily-dialog hab-modal-dialog"
            ContentClass="edit-daily-dialog__content"
-           Style="width: min(24rem, calc(100vw - 2rem));">
+           Style="width: min(26rem, calc(100vw - 1rem));">
     <DialogContent>
-        <div class="edit-daily-shell" @onclick="OnShellClick">
+        <div class="hab-modal hab-modal--todo edit-daily-shell edit-daily-shell--todo" @onclick="OnShellClick">
             <EditDialogHeader TitleText="Edit todo"
                               TitlePlaceholder="To-do title"
                               @bind-Title="_title"
@@ -13,45 +13,52 @@
                               @bind-Notes="_notes"
                               @bind-Notes:after="OnNotesEdited"
                               OnClose="CloseAsync"
-                              SaveStatus="SaveStatus"/>
+                              SaveStatus="SaveStatus"
+                              Section="BoardSection.Todo"/>
 
-            <div class="edit-daily-body">
-                <ChecklistEditor @bind-Value="_checklistRows"
-                                 @bind-Value:after="OnChecklistEdited"/>
+            <div class="hab-modal__body edit-daily-body">
+                <div class="hab-checklist">
+                    <div class="hab-checklist__head">
+                        <span class="hab-checklist__head-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                            Checklist
+                        </span>
+                        @if (_checklistRows.Count > 0)
+                        {
+                            <span class="hab-checklist__count">@_checklistRows.Count(x => x.IsDone) / @_checklistRows.Count</span>
+                        }
+                    </div>
+                    <div class="hab-checklist__list">
+                        <ChecklistEditor @bind-Value="_checklistRows" @bind-Value:after="OnChecklistEdited"/>
+                    </div>
+                </div>
 
-                <MudText Typo="Typo.caption" Class="edit-daily-label-body d-block mb-1 mt-2">Due date</MudText>
-                <MudDatePicker @bind-Date="_dueDate"
-                               @bind-Date:after="OnDiscreteEdited"
-                               Variant="Variant.Outlined"
-                               Editable="true"
-                               Class="edit-daily-field-body edit-daily-date"
-                               DateFormat="@DateFormatService.DateFormat"
-                               Placeholder="No due date"
-                               Clearable="true"
-                               Margin="Margin.Dense"/>
+                <div class="hab-modal__section" style="padding:0.7rem 0.75rem;">
+                    <span class="hab-modal__section-label">
+                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        Due date
+                    </span>
+                    <MudDatePicker @bind-Date="_dueDate" @bind-Date:after="OnDiscreteEdited" Variant="Variant.Outlined" Editable="true" Class="hab-modal__field" DateFormat="@DateFormatService.DateFormat" Placeholder="No due date" Clearable="true" Margin="Margin.Dense"/>
+                </div>
 
-                <MudText Typo="Typo.caption" Class="edit-daily-label-body d-block mb-1 mt-2">Repeat interval</MudText>
-                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
-                    <MudNumericField T="int"
-                                     @bind-Value="_repeatIntervalDays"
-                                     @bind-Value:after="OnIntervalEdited"
-                                     Variant="Variant.Outlined"
-                                     Class="edit-todo-repeat-field"
-                                     Min="0"
-                                     Max="365"
-                                     Margin="Margin.Dense"
-                                     Immediate="true"/>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="edit-todo-repeat-hint">
-                        days. Set 0 for one-off tasks.
-                    </MudText>
-                </MudStack>
+                <div class="hab-modal__section">
+                    <span class="hab-modal__section-label">
+                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                        Repeat every
+                    </span>
+                    <div class="edit-daily-repeat-every">
+                        <MudNumericField T="int" @bind-Value="_repeatIntervalDays" @bind-Value:after="OnIntervalEdited" Variant="Variant.Outlined" Class="edit-daily-repeat-every__n hab-modal__field" Min="0" Max="365" HideSpinButtons="true" Margin="Margin.Dense"/>
+                        <span class="edit-daily-repeat-every__unit">days</span>
+                    </div>
+                </div>
 
-                <fieldset class="mb-3" style="border: none; padding: 0; margin: 0;">
-                    <legend class="edit-daily-label-body d-block mb-1 mt-2" style="font-size: 0.75rem;">Tags</legend>
-                    <TagPicker @bind-Tags="_tags"
-                               @bind-Tags:after="OnTagsEdited"
-                               TriggerId="edit-todo-tags-trigger" @ref="_tagPicker"/>
-                </fieldset>
+                <div class="hab-modal__section">
+                    <span class="hab-modal__section-label">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path></svg>
+                        Tags
+                    </span>
+                    <TagPicker @bind-Tags="_tags" @bind-Tags:after="OnTagsEdited" TriggerId="edit-todo-tags-trigger" @ref="_tagPicker"/>
+                </div>
 
                 <EditDialogFooterActions OnArchive="ArchiveAsync" OnDelete="DeleteAsync"/>
             </div>
@@ -83,40 +90,13 @@
         _checklistRows = EditDialogHelpers.ParseChecklistRows(Item.ChecklistJson);
     }
 
-    private void OnShellClick()
-    {
-        _tagPicker?.Dismiss();
-    }
-
-    private void OnTitleEdited()
-    {
-        ScheduleSave();
-    }
-
-    private void OnNotesEdited()
-    {
-        ScheduleSave();
-    }
-
-    private Task OnTagsEdited()
-    {
-        return SaveNowAsync();
-    }
-
-    private void OnChecklistEdited()
-    {
-        ScheduleSave(300);
-    }
-
-    private void OnDiscreteEdited()
-    {
-        _ = SaveNowAsync();
-    }
-
-    private void OnIntervalEdited()
-    {
-        ScheduleSave(400);
-    }
+    private void OnShellClick() => _tagPicker?.Dismiss();
+    private void OnTitleEdited() => ScheduleSave();
+    private void OnNotesEdited() => ScheduleSave();
+    private Task OnTagsEdited() => SaveNowAsync();
+    private void OnChecklistEdited() => ScheduleSave(300);
+    private void OnDiscreteEdited() => _ = SaveNowAsync();
+    private void OnIntervalEdited() => ScheduleSave(400);
 
     protected override async Task SaveValuesAsync(CancellationToken cancellationToken = default)
     {
@@ -124,38 +104,15 @@
         var tagsPayload = EditDialogHelpers.CleanStringPayload(_tags);
         var checklistPayload = EditDialogHelpers.SerializeChecklistRows(_checklistRows);
         DateOnly? due = _dueDate is { } d ? DateOnly.FromDateTime(d.Date) : null;
-        await BoardData.UpdateTodoAsync(
-            Item.Id,
-            new UpdateTodoArgs(
-                title,
-                EditDialogHelpers.CleanStringPayload(_notes),
-                tagsPayload,
-                checklistPayload,
-                due,
-                TodoRepeatIntervalDays: _repeatIntervalDays > 0 ? _repeatIntervalDays : null),
-            cancellationToken);
+        await BoardData.UpdateTodoAsync(Item.Id, new UpdateTodoArgs(title, EditDialogHelpers.CleanStringPayload(_notes), tagsPayload, checklistPayload, due, TodoRepeatIntervalDays: _repeatIntervalDays > 0 ? _repeatIntervalDays : null), cancellationToken);
     }
 
     protected override EditTodoDialogResult BuildResult(EditDialogAction action)
     {
         DateOnly? due = _dueDate is { } d ? DateOnly.FromDateTime(d.Date) : null;
-        return new EditTodoDialogResult(
-            action,
-            _title.Trim(),
-            EditDialogHelpers.CleanStringPayload(_notes),
-            EditDialogHelpers.CleanStringPayload(_tags),
-            EditDialogHelpers.SerializeChecklistRows(_checklistRows),
-            due,
-            _repeatIntervalDays > 0 ? _repeatIntervalDays : null);
+        return new EditTodoDialogResult(action, _title.Trim(), EditDialogHelpers.CleanStringPayload(_notes), EditDialogHelpers.CleanStringPayload(_tags), EditDialogHelpers.SerializeChecklistRows(_checklistRows), due, _repeatIntervalDays > 0 ? _repeatIntervalDays : null);
     }
 
-    private void ArchiveAsync()
-    {
-        CloseWithAction(EditDialogAction.Archive);
-    }
-
-    private void DeleteAsync()
-    {
-        CloseWithAction(EditDialogAction.Delete);
-    }
+    private void ArchiveAsync() => CloseWithAction(EditDialogAction.Archive);
+    private void DeleteAsync() => CloseWithAction(EditDialogAction.Delete);
 }

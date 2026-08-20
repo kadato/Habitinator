@@ -43,7 +43,23 @@
 @font-face {
     font-family: "Plus Jakarta Sans";
     font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url("../fonts/PlusJakartaSans-Medium.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Plus Jakarta Sans";
+    font-style: normal;
     font-weight: 700;
+    font-display: swap;
+    src: url("../fonts/PlusJakartaSans-Bold.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Plus Jakarta Sans";
+    font-style: normal;
+    font-weight: 800;
     font-display: swap;
     src: url("../fonts/PlusJakartaSans-Bold.woff2") format("woff2");
 }
@@ -54,14 +70,26 @@
     --bs-body-font-family: var(--hab-font-sans);
     --bs-font-sans-serif: var(--hab-font-sans);
     --bs-font-monospace: var(--hab-font-mono);
+    --hab-text-xs: 0.68rem;
+    --hab-text-sm: 0.775rem;
+    --hab-text-base: 0.875rem;
+    --hab-leading-tight: 1.2;
+    --hab-leading-normal: 1.45;
+    --hab-tracking-tight: -0.02em;
+    --hab-tracking-wide: 0.04em;
 }
 
 html,
 body {
     font-family: var(--hab-font-sans);
+    font-size: 16px;
+    line-height: var(--hab-leading-normal);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    font-optical-sizing: auto;
+    font-variant-ligatures: common-ligatures;
+    -webkit-text-size-adjust: 100%;
 }
 
 .mud-typography,
@@ -73,6 +101,25 @@ body {
 .mud-list,
 .mud-chip {
     font-family: var(--hab-font-sans);
+    font-optical-sizing: auto;
+}
+
+h1 {
+    font-size: clamp(1.5rem, 4vw, 1.9rem);
+    line-height: 1.15;
+    letter-spacing: var(--hab-tracking-tight);
+    font-weight: 800;
+}
+
+h2 {
+    font-size: 1.15rem;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+    font-weight: 700;
+}
+
+.mud-typography-h6 {
+    letter-spacing: -0.015em;
 }
 
 /* Monospace and tabular numeric utility classes */
@@ -135,7 +182,7 @@ p, .auth-form-hint, .edit-daily-label-body, .habit-tag-picker__empty {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
     pointer-events: none;
     transform: translate(-50%, -50%) scale(0);
-    transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.18s ease;
+    transition: transform 0.18s var(--ease-out), opacity 0.18s ease;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-feature-settings: "tnum" 1, "zero" 1;

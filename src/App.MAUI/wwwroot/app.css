@@ -147,7 +147,23 @@
 @font-face {
     font-family: "Plus Jakarta Sans";
     font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url("_content/App.Shared.RCL/fonts/PlusJakartaSans-Medium.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Plus Jakarta Sans";
+    font-style: normal;
     font-weight: 700;
+    font-display: swap;
+    src: url("_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Plus Jakarta Sans";
+    font-style: normal;
+    font-weight: 800;
     font-display: swap;
     src: url("_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2") format("woff2");
 }
@@ -284,16 +300,12 @@
 }
 
 .app-top-bar__title {
-    --logo-clip: text;
     margin: 0;
     margin-right: 0.9rem;
     flex-shrink: 0;
     font-weight: 850 !important;
     letter-spacing: -0.03em;
-    background: linear-gradient(135deg, var(--mud-palette-primary) 0%, var(--mud-palette-tertiary) 100%);
-    background-clip: var(--logo-clip);
-    -webkit-background-clip: var(--logo-clip);
-    -webkit-text-fill-color: transparent;
+    color: var(--mud-palette-primary);
     line-height: 1.15 !important;
 }
 
@@ -347,21 +359,22 @@
 }
 
 .status-bar-safe-area {
-    display: none;
+    display: flex;
+    position: sticky;
+    top: 0;
+    height: env(safe-area-inset-top, 0px);
+    background-color: var(--mud-palette-surface);
+    width: 100%;
+    z-index: 1;
 }
 
-@supports (-webkit-touch-callout: none) {
-    .status-bar-safe-area {
-        display: flex;
-        position: sticky;
-        top: 0;
-        height: env(safe-area-inset-top);
-        background-color: var(--mud-palette-surface);
-        width: 100%;
-        z-index: 1;
-    }
+.flex-column {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+}
 
-    .flex-column {
-        padding-left: env(safe-area-inset-left);
+@supports not (height: env(safe-area-inset-top)) {
+    .status-bar-safe-area {
+        display: none;
     }
 }

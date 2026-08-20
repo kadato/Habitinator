@@ -43,6 +43,11 @@
     --dur-normal: 0.15s;
     --dur-slow: 0.2s;
 
+    /* Motion easing, exponential out for natural deceleration */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
     /* App shell sizing */
     --topbar-height: 56px;
     --mobile-nav-height: 44px;
@@ -57,6 +62,10 @@
     --hab-type-habit: #0d9488; /* teal-600 */
     --hab-type-daily: var(--mud-palette-primary);
     --hab-type-todo: #f59e0b; /* amber-500 */
+    --hab-type-habit-bad: #dc2626; /* red-600 */
+    --hab-type-habit-bad-dark: #b91c1c; /* red-700 */
+    --hab-accent-streak: #f97316; /* orange-500 */
+    --hab-accent-success: #16a34a; /* green-600 */
 
     /* Card container borders. Softer than the divider line, theme-aware. */
     --hab-border-card: light-dark(rgba(15, 23, 42, 0.10), rgba(255, 255, 255, 0.06));

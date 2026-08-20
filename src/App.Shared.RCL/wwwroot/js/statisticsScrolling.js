@@ -1,10 +1,14 @@
-// JavaScript helper to scroll heatmap wrapper elements to the end, the rightmost edge, on load and filter changes
+// JavaScript helper to scroll heatmap and week bar wrappers to the end, the rightmost edge, on load and filter changes
 globalThis.scrollHeatmapsToEnd = function () {
     requestAnimationFrame(() => {
         setTimeout(() => {
             const wraps = document.querySelectorAll('.stats-heatmap-wrap');
             wraps.forEach(wrap => {
                 wrap.scrollLeft = wrap.scrollWidth;
+            });
+            const weekBars = document.querySelectorAll('.stats-week-bars');
+            weekBars.forEach(bar => {
+                bar.scrollLeft = bar.scrollWidth;
             });
         }, 50);
     });

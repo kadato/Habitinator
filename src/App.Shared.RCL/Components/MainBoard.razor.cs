@@ -556,15 +556,7 @@ public partial class MainBoard : IAsyncDisposable
             }
 
             var options = DialogDefaults.SmallEditor;
-            var parameters = new DialogParameters<OnboardingDialog>
-            {
-                {
-                    x => x.OnCreateFirstHabit,
-                    EventCallback.Factory.Create(this, () => CreateItemPublicAsync(BoardSection.Habit))
-                }
-            };
-
-            await DialogService.ShowAsync<OnboardingDialog>(string.Empty, parameters, options);
+            await DialogService.ShowAsync<OnboardingDialog>(string.Empty, options);
         }
         catch (Exception)
         {

@@ -8,64 +8,75 @@
 @inject IJSRuntime JSRuntime
 @inject IUserDateFormatService DateFormatService
 
-<MudDialog Class="daily-heatmap-dialog"
-           Style="width: min(36rem, calc(100vw - 2rem));">
+<MudDialog Class="daily-heatmap-dialog hab-modal-dialog" ContentClass="daily-heatmap-dialog__content" Style="width: min(36rem, calc(100vw - 1rem));">
     <DialogContent>
-        @if (_loading)
-        {
-            <div class="pa-4 text-center">
-                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-3" />
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Loading heatmap data...</MudText>
-            </div>
-        }
-        else if (_error is not null)
-        {
-            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@_error</MudAlert>
-        }
-        else if (_graph is not null)
-        {
-            @if (_periodOptions.Count > 0)
-            {
-                <MudSelect T="string"
-                           Value="_selectedPeriodKey"
-                           ValueChanged="OnPeriodChangedAsync"
-                           Variant="Variant.Text"
-                           Margin="Margin.Dense"
-                           Dense="true"
-                           Class="daily-heatmap-period-select mb-3"
-                           AnchorOrigin="Origin.BottomLeft"
-                           TransformOrigin="Origin.TopLeft">
-                    @foreach (var opt in _periodOptions)
+        <div class="hab-modal hab-modal--daily" @onclick:stopPropagation="true">
+            <div class="hab-modal__header">
+                <div class="hab-modal__topbar hab-modal__topbar--minimal">
+                    <button type="button" class="hab-modal__close" aria-label="Close" title="Close" @onclick="() => MudDialog.Close()">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <div class="d-flex align-center gap-2 flex-wrap">
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold" Style="letter-spacing:-0.02em;">@DisplayTitle</MudText>
+                    @if (_graph is not null)
                     {
-                        <MudSelectItem Value="@opt.Key">@opt.Label</MudSelectItem>
+                        <span class="stats-habit-ratio" title="@RatioTooltip">@RatioLabel</span>
                     }
-                </MudSelect>
-            }
-
-            <div class="daily-heatmap-grid-container">
-                <StatsHeatmapGrid Columns="_graph.GridWeekColumns"
-                                  Cells="_cellIndex"
-                                  IsToday="@((r, c) => _cellIndex.TryGetValue((r, c), out var cell) && IsHeatmapToday(cell.Date))"
-                                  GetCellClass="@((r, c) => DailyHeatmapCellClass(_cellIndex[(r, c)]))"
-                                  GetCellTitle="@((r, c) => DailyHeatmapDayTitle(_cellIndex[(r, c)].Date, _cellIndex[(r, c)].Count))"
-                                  GetCellAriaLabel="@((r, c) => DailyHeatmapDayTitle(_cellIndex[(r, c)].Date, _cellIndex[(r, c)].Count))"
-                                  OnCellClick="OnCellClickAsync"/>
+                </div>
+                @if (_periodOptions.Count > 1)
+                {
+                    <div class="stats-segment mt-3" role="tablist" aria-label="Period">
+                        @foreach (var opt in _periodOptions)
+                        {
+                            <button type="button" role="tab" aria-selected="@(_selectedPeriodKey == opt.Key ? "true" : "false")" class="stats-segment__btn @(_selectedPeriodKey == opt.Key ? "stats-segment__btn--active" : string.Empty)" @onclick="() => OnPeriodChangedAsync(opt.Key)">@opt.Label</button>
+                        }
+                    </div>
+                }
             </div>
-        }
-        else
-        {
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                No heatmap history recorded for this daily yet.
-            </MudText>
-        }
+
+            <div class="hab-modal__body" style="padding-top:0.9rem;">
+                @if (_loading)
+                {
+                    <div class="pa-2">
+                        <MudSkeleton Width="100%" Height="110px" SkeletonType="SkeletonType.Rectangle" />
+                        <MudSkeleton Width="60%" Height="14px" Class="mt-3" />
+                    </div>
+                }
+                else if (_error is not null)
+                {
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@_error</MudAlert>
+                }
+                else if (_graph is not null)
+                {
+                    <div class="daily-heatmap-grid-container">
+                        <StatsHeatmapGrid Columns="_graph.GridWeekColumns"
+                                           ContainerClass="stats-heatmap-container--large"
+                                           ShowMonthLabels="false"
+                                           Cells="_cellIndex"
+                                           IsToday="@((r, c) => _cellIndex.TryGetValue((r, c), out var cell) && IsHeatmapToday(cell.Date))"
+                                           GetCellClass="@((r, c) => DailyHeatmapCellClass(_cellIndex[(r, c)]))"
+                                           GetCellTitle="@((r, c) => DailyHeatmapDayTitle(_cellIndex[(r, c)].Date, _cellIndex[(r, c)].Count))"
+                                           GetCellAriaLabel="@((r, c) => DailyHeatmapDayTitle(_cellIndex[(r, c)].Date, _cellIndex[(r, c)].Count))"
+                                           OnCellClick="OnCellClickAsync"/>
+                    </div>
+                }
+                else
+                {
+                    <div class="stats-empty">
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" Class="stats-empty__icon" />
+                        <MudText Typo="Typo.subtitle2" Class="font-weight-bold">No heatmap yet</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Complete this daily to build its history.</MudText>
+                    </div>
+                }
+            </div>
+        </div>
     </DialogContent>
 </MudDialog>
 
 @code {
     [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
-
     [Parameter] [EditorRequired] public Guid BoardItemId { get; set; }
-
     [Parameter] public string Title { get; set; } = "Daily";
 
     private string _selectedPeriodKey = DailyGraphPeriods.Rolling370Days;
@@ -75,33 +86,35 @@
     private bool _loading = true;
     private string? _error;
     private DateOnly _heatmapToday;
-    private int _completedCount;
+
+    private string DisplayTitle => string.IsNullOrWhiteSpace(Title) ? "Daily" : Title;
+    private string RatioLabel
+    {
+        get
+        {
+            if (_graph is null) return string.Empty;
+            var active = _graph.Heatmap.Count(x => x.InDataRange && x.Count > 0);
+            var total = _graph.Heatmap.Count(x => x.InDataRange);
+            var pct = total == 0 ? 0 : (int)Math.Round(100.0 * active / total);
+            return $"{active} of {total} · {pct}%";
+        }
+    }
+    private string RatioTooltip
+    {
+        get
+        {
+            if (_graph is null) return string.Empty;
+            var active = _graph.Heatmap.Count(x => x.InDataRange && x.Count > 0);
+            var total = _graph.Heatmap.Count(x => x.InDataRange);
+            return $"{active} active of {total} in this period";
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
         await DateFormatService.InitializeAsync();
         _heatmapToday = DailySchedule.LocalToday(TimeZoneService);
-        await SetTitleAsync(string.IsNullOrWhiteSpace(Title) ? "Daily" : Title);
         await LoadDataAsync();
-        await SetTitleAsync(GetTitleText());
-    }
-
-    private string GetTitleText()
-    {
-        var title = string.IsNullOrWhiteSpace(Title) ? "Daily" : Title;
-        return _graph is null ? title : $"{title} · {_completedCount} completed";
-    }
-
-    private async Task SetTitleAsync(string title)
-    {
-        try
-        {
-            await MudDialog.SetTitleAsync(title);
-        }
-        catch
-        {
-            // Dialog may already be closed. The title stays as provided by the caller.
-        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -127,55 +140,37 @@
         {
             var data = await Stats.GetDailyContributionsAsync(_selectedPeriodKey);
             _periodOptions = data.PeriodOptions;
-            if (!string.IsNullOrEmpty(data.PeriodKey))
-            {
-                _selectedPeriodKey = data.PeriodKey;
-            }
-
+            if (!string.IsNullOrEmpty(data.PeriodKey)) _selectedPeriodKey = data.PeriodKey;
             _graph = data.Graphs.FirstOrDefault(g => g.BoardItemId == BoardItemId);
             if (_graph is null && !string.IsNullOrWhiteSpace(Title))
-            {
                 _graph = data.Graphs.FirstOrDefault(g => string.Equals(g.Title, Title, StringComparison.OrdinalIgnoreCase));
-            }
-
             if (_graph is not null)
             {
                 _cellIndex = _graph.Heatmap.ToDictionary(x => (x.DayRow, x.WeekCol));
-                _completedCount = _graph.Heatmap.Count(x => x.InDataRange && x.Count > 0);
-                _periodOptions = _periodOptions
-                    .Where(o => _graph.AvailablePeriodKeys.Contains(o.Key))
-                    .ToList();
+                _periodOptions = _periodOptions.Where(o => _graph.AvailablePeriodKeys.Contains(o.Key)).ToList();
             }
-            else
-            {
-                _cellIndex = [];
-                _completedCount = 0;
-            }
+            else { _cellIndex = []; }
         }
-        catch (Exception ex)
-        {
-            _error = ex.Message;
-        }
-        finally
-        {
-            _loading = false;
-        }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _loading = false; }
     }
 
     private async Task OnPeriodChangedAsync(string newPeriod)
     {
         _selectedPeriodKey = newPeriod;
         await LoadDataAsync();
-        await SetTitleAsync(GetTitleText());
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("scrollHeatmapsToEnd");
+        }
+        catch
+        {
+            // Ignore JS invocation failures in non-browser context
+        }
     }
 
     private bool IsHeatmapToday(DateOnly date) => date == _heatmapToday;
-
-    private string DailyHeatmapCellClass(ActivityHeatmapCellDto cell)
-    {
-        return $"stats-cell {(cell.Count > 0 ? "stats-daily-done" : "stats-daily-missed")}{(IsHeatmapToday(cell.Date) ? " stats-heatmap-day--today" : "")}";
-    }
-
+    private string DailyHeatmapCellClass(ActivityHeatmapCellDto cell) => $"stats-cell stats-lvl-{cell.Intensity}{(IsHeatmapToday(cell.Date) ? " stats-heatmap-day--today" : "")}";
     private string DailyHeatmapDayTitle(DateOnly date, int count)
     {
         var status = count > 0 ? "Done" : "Not done";
@@ -183,22 +178,12 @@
         var baseTitle = $"{dateStr} · {status}";
         return IsHeatmapToday(date) ? $"Today · {baseTitle}" : baseTitle;
     }
-
     private async Task OnCellClickAsync(int row, int col)
     {
         if (_cellIndex.TryGetValue((row, col), out var cell) && cell.InDataRange)
         {
-            var options = new DialogOptions
-            {
-                MaxWidth = MaxWidth.Medium,
-                FullWidth = true,
-                CloseOnEscapeKey = true,
-                CloseButton = true
-            };
-            var parameters = new DialogParameters<ActivityDayDetailDialog>
-            {
-                { x => x.Date, cell.Date }
-            };
+            var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = true, CloseButton = true };
+            var parameters = new DialogParameters<ActivityDayDetailDialog> { { x => x.Date, cell.Date } };
             var dateStr = DateFormatService.Format(cell.Date);
             await DialogService.ShowAsync<ActivityDayDetailDialog>($"{cell.Date.DayOfWeek} · {dateStr}", parameters, options);
         }

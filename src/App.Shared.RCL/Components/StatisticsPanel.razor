@@ -20,279 +20,210 @@
     }
     else if (_loading)
     {
-        <!-- Main dashboard layout skeleton -->
-        <div class="stats-dashboard-layout">
-            <div class="stats-dashboard-main">
-                <MudPaper Class="pa-4 stats-dashboard-card" Elevation="0" Outlined="true">
-                    <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-4">
-                        <div>
-                            <MudSkeleton Width="140px" Height="24px" Class="mb-1" />
-                            <MudSkeleton Width="280px" Height="16px" />
-                        </div>
-                        <MudSkeleton Width="150px" Height="16px" />
+        <div class="stats-hero-skeleton">
+            <MudPaper Class="pa-4 stats-dashboard-card stats-hero-card" Elevation="0" Outlined="true">
+                <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-3">
+                    <div>
+                        <MudSkeleton Width="120px" Height="14px" Class="mb-1" />
+                        <MudSkeleton Width="180px" Height="22px" Class="mb-1" />
+                        <MudSkeleton Width="260px" Height="14px" />
                     </div>
-                    <MudSkeleton Width="100%" Height="120px" SkeletonType="SkeletonType.Rectangle" />
-                </MudPaper>
-
-                <MudPaper Class="pa-4 stats-dashboard-card mt-4" Elevation="0" Outlined="true">
-                    <MudSkeleton Width="180px" Height="24px" Class="mb-1" />
-                    <MudSkeleton Width="220px" Height="16px" Class="mb-4" />
-                    <MudSkeleton Width="100%" Height="100px" SkeletonType="SkeletonType.Rectangle" />
-                </MudPaper>
-
-                <MudPaper Class="pa-4 stats-dashboard-card mt-4" Elevation="0" Outlined="true">
-                    <MudSkeleton Width="150px" Height="24px" Class="mb-4" />
-                    <MudGrid Spacing="3">
-                        @for (int i = 0; i < 2; i++)
-                        {
-                            <MudItem xs="12" md="6">
-                                <div class="pa-3 border rounded mud-border-lines-default stats-block-bg">
-                                    <div class="d-flex align-center justify-space-between mb-3">
-                                        <MudSkeleton Width="120px" Height="20px" />
-                                        <MudSkeleton Width="100px" Height="16px" />
-                                    </div>
-                                    <MudSkeleton Width="100%" Height="60px" SkeletonType="SkeletonType.Rectangle" />
-                                </div>
-                            </MudItem>
-                        }
-                    </MudGrid>
-                </MudPaper>
-            </div>
-
-            <div class="stats-dashboard-sidebar">
-                <div class="stats-sidebar-column">
-                    <MudPaper Class="pa-4 stats-dashboard-card stats-filter-card" Elevation="0" Outlined="true">
-                        <MudStack Spacing="2">
-                            <MudSkeleton Width="80px" Height="20px" />
-                            <MudSkeleton Width="100%" Height="36px" />
-                            <MudSkeleton Width="100%" Height="36px" />
-                        </MudStack>
-                    </MudPaper>
-                    <div class="stats-kpi-strip stats-kpi-strip--mobile">
-                        <div class="stats-kpi-strip__grid">
-                            @for (int i = 0; i < 3; i++)
-                            {
-                                <div class="stats-kpi-strip__item">
-                                    <div class="stats-kpi-strip__head">
-                                        <MudSkeleton Width="40px" Height="10px" />
-                                    </div>
-                                    <MudSkeleton Width="32px" Height="16px" Class="mt-1" />
-                                </div>
-                            }
-                        </div>
-                    </div>
-                    <div class="stats-kpi-cards stats-kpi-cards--desktop">
-                        @for (int i = 0; i < 3; i++)
-                        {
-                            <MudPaper Class="stats-kpi-card stats-kpi-card--sidebar" Elevation="0" Outlined="false">
-                                <MudSkeleton Width="100px" Height="14px" />
-                                <MudSkeleton Width="72px" Height="24px" Class="mt-1" />
-                                <MudSkeleton Width="120px" Height="12px" Class="mt-1" />
-                            </MudPaper>
-                        }
-                    </div>
+                    <MudSkeleton Width="160px" Height="24px" />
                 </div>
+                <MudSkeleton Width="100%" Height="140px" SkeletonType="SkeletonType.Rectangle" />
+                <div class="stats-weekly-grid mt-3">
+                    @for (int i = 0; i < 3; i++) { <MudSkeleton Height="72px" /> }
+                </div>
+            </MudPaper>
+        </div>
+        <div class="stats-kpi-strip stats-kpi-strip--mobile mt-2">
+            <div class="stats-kpi-strip__grid">
+                @for (int i = 0; i < 4; i++) {
+                    <div class="stats-kpi-strip__item"><MudSkeleton Width="72px" Height="18px" /></div>
+                }
             </div>
         </div>
     }
     else if (_data is null)
     {
-        <MudText>No data.</MudText>
+        <MudPaper Class="pa-6 stats-dashboard-card text-center" Elevation="0" Outlined="true">
+            <MudIcon Icon="@Icons.Material.Filled.BarChart" Size="Size.Large" Class="mb-2" Color="Color.Secondary" />
+            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">No activity yet</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">Complete a habit, daily or focus session and your heatmap will appear here.</MudText>
+        </MudPaper>
     }
     else
     {
-        <!-- Main dashboard layout -->
+        <!-- Hero heatmap -->
+        <MudPaper Class="pa-4 stats-dashboard-card stats-hero-card" Elevation="0" Outlined="true">
+            <div class="stats-hero-head">
+                <div class="stats-hero-head__titles">
+                    <MudText Typo="Typo.h6" Class="stats-hero-title">Activity heatmap</MudText>
+                </div>
+            </div>
+
+            <StatsHeatmapGrid Columns="_data.GridWeekColumns"
+                               ContainerClass="stats-heatmap-container--large"
+                               IncludeRovingTabindex="true"
+                               ShowMonthLabels="false"
+                               Cells="_cellIndex"
+                               IsToday="@((r, c) => _cellIndex.TryGetValue((r, c), out var cell) && IsHeatmapToday(cell.Date))"
+                               GetCellClass="@((r, c) => ActivityHeatmapCellClass(_cellIndex[(r, c)]))"
+                               GetCellTitle="@((r, c) => HeatmapDayTitle(_cellIndex[(r, c)].Date, _cellIndex[(r, c)].Count))"
+                               OnCellClick="@((r, c) => OpenDayDetailAsync(_cellIndex[(r, c)].Date))"/>
+
+
+        </MudPaper>
+
+        <!-- KPI strip shows on all widths now, sidebar keeps desktop cards as well for density -->
+        <div class="stats-kpi-strip">
+            <div class="stats-kpi-strip__grid">
+                @foreach (var kpi in Kpis(_data))
+                {
+                    <div class="stats-kpi-strip__item @kpi.StripAccent">
+                        <div class="stats-kpi-strip__head">
+                            <span class="stats-kpi-strip__label">@kpi.StripLabel</span>
+                            <MudIcon Icon="@kpi.Icon" Class="stats-kpi-strip__icon" Size="Size.Small" aria-hidden="true"/>
+                        </div>
+                        <span class="@($"stats-kpi-strip__value {kpi.StripValueClass}".Trim())" title="@kpi.StripTitle()">@kpi.StripValue()</span>
+                    </div>
+                }
+            </div>
+        </div>
+
         <div class="stats-dashboard-layout">
             <div class="stats-dashboard-main">
-                @if (_weeklyReview is { } week)
-                {
-                    <!-- Weekly review card -->
-                    <MudPaper Class="pa-4 stats-dashboard-card stats-weekly-card mb-4" Elevation="0" Outlined="true">
-                        <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-2">
-                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">This week</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                @FormatRange(week.WeekStart, week.WeekEnd)
-                            </MudText>
-                        </div>
-                        <div class="stats-weekly-grid">
-                            <div class="stats-weekly-tile">
-                                <span class="stats-weekly-tile__label">Events</span>
-                                <span class="stats-weekly-tile__value">@week.Events</span>
-                                <span class="@GetWeeklyDeltaClass(week.PercentChange)">
-                                    @(week.PercentChange >= 0 ? "▲" : "▼") @Math.Abs(week.PercentChange)% vs last week
-                                </span>
-                            </div>
-                            <div class="stats-weekly-tile">
-                                <span class="stats-weekly-tile__label">Focus</span>
-                                <span class="stats-weekly-tile__value">@FormatFocus(week.FocusMinutes)</span>
-                                <span class="stats-weekly-tile__delta stats-weekly-tile__delta--flat">timer sessions</span>
-                            </div>
-                            <div class="stats-weekly-tile">
-                                <span class="stats-weekly-tile__label">Dailies completed</span>
-                                <span class="stats-weekly-tile__value">@week.DailiesCompleted</span>
-                                <span class="stats-weekly-tile__delta stats-weekly-tile__delta--flat">check-ins logged</span>
-                            </div>
-                        </div>
-                    </MudPaper>
-                }
 
-                <!-- Activity heatmap card -->
+                <!-- Weekly sparkline -->
                 <MudPaper Class="pa-4 stats-dashboard-card" Elevation="0" Outlined="true">
-                    <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-2">
+                    <div class="stats-section-head">
                         <div>
-                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Activity heatmap</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">Click a day to see all logged events for that day.</MudText>
-                        </div>
-                        <div class="stats-heatmap-legend-inline d-flex align-center gap-1">
-                            <span class="text-secondary-caption mr-1" style="font-size: 0.72rem; color: var(--mud-palette-text-secondary);">Less</span>
-                            <div class="stats-cell stats-legend-swatch stats-lvl-0"></div>
-                            <div class="stats-cell stats-legend-swatch stats-lvl-1"></div>
-                            <div class="stats-cell stats-legend-swatch stats-lvl-2"></div>
-                            <div class="stats-cell stats-legend-swatch stats-lvl-3"></div>
-                            <div class="stats-cell stats-legend-swatch stats-lvl-4"></div>
-                            <span class="text-secondary-caption ml-1" style="font-size: 0.72rem; color: var(--mud-palette-text-secondary);">More</span>
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Activity by week</MudText>
                         </div>
                     </div>
-
-                    <StatsHeatmapGrid Columns="_data.GridWeekColumns"
-                                      ContainerClass="stats-heatmap-container--large"
-                                      IncludeRovingTabindex="true"
-                                      Cells="_cellIndex"
-                                      IsToday="@((r, c) => _cellIndex.TryGetValue((r, c), out var cell) && IsHeatmapToday(cell.Date))"
-                                      GetCellClass="@((r, c) => ActivityHeatmapCellClass(_cellIndex[(r, c)]))"
-                                      GetCellTitle="@((r, c) => HeatmapDayTitle(_cellIndex[(r, c)].Date, _cellIndex[(r, c)].Count))"
-                                      OnCellClick="@((r, c) => OpenDayDetailAsync(_cellIndex[(r, c)].Date))"/>
-                </MudPaper>
-
-                <!-- Weekly activity card -->
-                <MudPaper Class="pa-4 stats-dashboard-card mt-4" Elevation="0" Outlined="true">
-                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold mb-1">All activity by week</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-3">
-                        @FormatRange(_data.WeekBarsRangeStart, _data.WeekBarsRangeEnd) · @(_data.WeekBars.Count) @(_data.WeekBars.Count == 1 ? "week" : "weeks")
-                    </MudText>
-                    
                     <div class="stats-week-bars" style="--stats-week-bar-max: @(_weekBarMax == 0 ? 1 : _weekBarMax);">
                         @foreach (var w in _data.WeekBars)
                         {
                             var h = _weekBarMax == 0 ? 0 : (int)Math.Round(100.0 * w.EventCount / _weekBarMax);
-                            var scale = (h / 100.0).ToString(System.Globalization.CultureInfo.InvariantCulture);
-                            <div class="stats-week-bar-wrap" title="@FormatWeekBarTooltip(w)">
+                            var scale = (h / 100.0).ToString(CultureInfo.InvariantCulture);
+                            <div class="stats-week-bar-wrap" title="@FormatWeekBarTooltip(w)" tabindex="0" role="img" aria-label="@FormatWeekBarTooltip(w)">
                                 <div class="stats-week-bar" style="--bar-scale: @scale"></div>
+                                @if (w.FocusMinutes > 0)
+                                {
+                                    <div class="stats-week-bar__focus" style="--bar-scale: @scale" title="@w.FocusMinutes min focus"></div>
+                                }
                             </div>
                         }
                     </div>
                 </MudPaper>
 
-                <!-- Dailies performance Card -->
+                <!-- Unified consistency -->
                 <MudPaper Class="pa-4 stats-dashboard-card mt-4" Elevation="0" Outlined="true">
-                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold mb-3">Dailies graphs</MudText>
+                    <div class="stats-section-head">
+                        <div>
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Consistency by item</MudText>
+                        </div>
+                        <div class="stats-segment" role="tablist" aria-label="Filter consistency graphs">
+                            <button type="button" role="tab" aria-selected="@(_consistencyTab == "all" ? "true" : "false")" class="stats-segment__btn @(_consistencyTab == "all" ? "stats-segment__btn--active" : string.Empty)" @onclick='() => _consistencyTab = "all"'>All</button>
+                            <button type="button" role="tab" aria-selected="@(_consistencyTab == "daily" ? "true" : "false")" class="stats-segment__btn @(_consistencyTab == "daily" ? "stats-segment__btn--active" : string.Empty)" @onclick='() => _consistencyTab = "daily"'>Dailies</button>
+                            <button type="button" role="tab" aria-selected="@(_consistencyTab == "habit" ? "true" : "false")" class="stats-segment__btn @(_consistencyTab == "habit" ? "stats-segment__btn--active" : string.Empty)" @onclick='() => _consistencyTab = "habit"'>Habits</button>
+                        </div>
+                    </div>
 
-                    @if (_loadingDailies)
+                    @if (_loadingDailies || _loadingHabits)
                     {
-                        <MudGrid Spacing="3" Class="stats-dailies-grid">
+                        <MudGrid Spacing="3" Class="mt-3">
                             @for (int i = 0; i < 2; i++)
                             {
                                 <MudItem xs="12" md="6">
-                                    <div class="pa-3 border rounded mud-border-lines-default stats-block-bg">
-                                        <div class="d-flex align-center justify-space-between mb-3">
-                                            <MudSkeleton Width="120px" Height="20px" />
-                                            <MudSkeleton Width="100px" Height="16px" />
-                                        </div>
-                                        <MudSkeleton Width="100%" Height="60px" SkeletonType="SkeletonType.Rectangle" />
+                                    <div class="pa-3 border rounded stats-block-bg">
+                                        <MudSkeleton Width="120px" Height="20px" Class="mb-2" />
+                                        <MudSkeleton Width="100%" Height="70px" SkeletonType="SkeletonType.Rectangle" />
                                     </div>
                                 </MudItem>
                             }
                         </MudGrid>
                     }
-                    else if (_dailyError is not null)
+                    else if (_dailyError is not null || _habitError is not null)
                     {
-                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-2">@_dailyError</MudAlert>
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-3">@(_dailyError ?? _habitError)</MudAlert>
                     }
-                    else if (_dailyView is not null)
+                    else
                     {
-                        @if (_dailyView.Graphs.Count == 0)
+                        var showHabits = _consistencyTab is "all" or "habit";
+                        var showDailies = _consistencyTab is "all" or "daily";
+                        var habitCount = _habitView?.Graphs.Count ?? 0;
+                        var dailyCount = _dailyView?.Graphs.Count ?? 0;
+                        var totalVisible = (showHabits ? habitCount : 0) + (showDailies ? dailyCount : 0);
+
+                        @if (totalVisible == 0)
                         {
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">No daily activities on your board yet.</MudText>
+                            <div class="stats-empty">
+                                <MudIcon Icon="@Icons.Material.Filled.Inbox" Size="Size.Large" Class="stats-empty__icon" />
+                                <MudText Typo="Typo.subtitle2" Class="font-weight-bold">No graphs for this filter</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">Try All or add a @(_consistencyTab == "daily" ? "daily" : "habit") to your board.</MudText>
+                            </div>
                         }
                         else
                         {
-                            <MudGrid Spacing="3" Class="stats-dailies-grid">
-                                @foreach (var daily in _dailyView.Graphs)
+                            <MudGrid Spacing="3" Class="mt-3 stats-consistency-grid">
+                                @if (showDailies && _dailyView is not null)
                                 {
-                                    var cellIx = GetDailyCellIndex(daily);
+                                    @foreach (var daily in _dailyView.Graphs)
+                                    {
+                                        var cellIx = GetDailyCellIndex(daily);
+                                        <MudItem xs="12" md="6">
+                                            <div class="stats-daily-block pa-3 border rounded stats-block-bg">
+                                                <div class="d-flex align-center justify-space-between gap-2 mb-2">
+                                                    <span class="stats-daily-title">@daily.Title</span>
+                                                    <span class="stats-habit-ratio" title="@DailyActiveRatioTooltip(daily)">@DailyActiveRatioLabel(daily)</span>
+                                                </div>
+                                                <StatsHeatmapGrid Columns="daily.GridWeekColumns"
+                                                                   Cells="cellIx"
+                                                                   ShowMonthLabels="false"
+                                                                   IsToday="@((r, c) => cellIx.TryGetValue((r, c), out var cell) && IsHeatmapToday(cell.Date))"
+                                                                   GetCellClass="@((r, c) => DailyHeatmapCellClass(cellIx[(r, c)]))"
+                                                                   GetCellTitle="@((r, c) => DailyHeatmapDayTitle(cellIx[(r, c)].Date, cellIx[(r, c)].Count))"
+                                                                   GetCellAriaLabel="@((r, c) => DailyHeatmapDayTitle(cellIx[(r, c)].Date, cellIx[(r, c)].Count))"/>
+                                            </div>
+                                        </MudItem>
+                                    }
+                                }
+                                @if (showHabits && _habitView is not null)
+                                {
+                                    @foreach (var habit in _habitView.Graphs)
+                                    {
+                                        var cellIx = GetHabitCellIndex(habit);
+                                        <MudItem xs="12" md="6">
+                                            <div class="stats-habit-block pa-3 border rounded stats-block-bg">
+                                                <div class="d-flex align-center justify-space-between gap-2 mb-2">
+                                                    <span class="stats-habit-title">@habit.Title</span>
+                                                    <span class="stats-habit-ratio" title="@FormatHabitRatioTooltip(habit.ActiveDayCount, habit.PeriodDayCount)">@HabitActiveRatioLabel(habit.ActiveDayCount, habit.PeriodDayCount)</span>
+                                                </div>
+                                                <StatsHeatmapGrid Columns="habit.GridWeekColumns"
+                                                                   Cells="cellIx"
+                                                                   ShowMonthLabels="false"
+                                                                   IsToday="@((r, c) => cellIx.TryGetValue((r, c), out var cell) && IsHeatmapToday(cell.Date))"
+                                                                   GetCellClass="@((r, c) => HabitHeatmapCellClass(cellIx[(r, c)]))"
+                                                                   GetCellTitle="@((r, c) => HabitHeatmapDayTitle(cellIx[(r, c)].Date, cellIx[(r, c)].Count))"
+                                                                   GetCellAriaLabel="@((r, c) => HabitHeatmapDayTitle(cellIx[(r, c)].Date, cellIx[(r, c)].Count))"/>
+                                            </div>
+                                        </MudItem>
+                                    }
+                                }
+                                @if (showHabits && habitCount == 0 && _consistencyTab == "all")
+                                {
                                     <MudItem xs="12" md="6">
-                                        <div class="stats-daily-block pa-3 border rounded mud-border-lines-default stats-block-bg">
-                                            <MudText Typo="Typo.subtitle2" Class="font-weight-bold stats-daily-title ma-0 mb-2">@daily.Title</MudText>
-
-                                            <StatsHeatmapGrid Columns="daily.GridWeekColumns"
-                                                              Cells="cellIx"
-                                                              IsToday="@((r, c) => cellIx.TryGetValue((r, c), out var cell) && IsHeatmapToday(cell.Date))"
-                                                              GetCellClass="@((r, c) => DailyHeatmapCellClass(cellIx[(r, c)]))"
-                                                              GetCellTitle="@((r, c) => DailyHeatmapDayTitle(cellIx[(r, c)].Date, cellIx[(r, c)].Count))"
-                                                              GetCellAriaLabel="@((r, c) => DailyHeatmapDayTitle(cellIx[(r, c)].Date, cellIx[(r, c)].Count))"/>
+                                        <div class="stats-empty stats-empty--inline">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">No habits yet — add one to see active day ratio.</MudText>
                                         </div>
                                     </MudItem>
                                 }
-                            </MudGrid>
-                        }
-                    }
-                </MudPaper>
-
-                <!-- Habits performance Card -->
-                <MudPaper Class="pa-4 stats-dashboard-card mt-4" Elevation="0" Outlined="true">
-                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold mb-3">Habits graphs</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-3">
-                        Days with at least one +/− log, with the share of days you were active.
-                    </MudText>
-
-                    @if (_loadingHabits)
-                    {
-                        <MudGrid Spacing="3" Class="stats-habits-grid">
-                            @for (int i = 0; i < 2; i++)
-                            {
-                                <MudItem xs="12" md="6">
-                                    <div class="pa-3 border rounded mud-border-lines-default stats-block-bg">
-                                        <div class="d-flex align-center justify-space-between mb-3">
-                                            <MudSkeleton Width="120px" Height="20px" />
-                                            <MudSkeleton Width="100px" Height="16px" />
-                                        </div>
-                                        <MudSkeleton Width="100%" Height="60px" SkeletonType="SkeletonType.Rectangle" />
-                                    </div>
-                                </MudItem>
-                            }
-                        </MudGrid>
-                    }
-                    else if (_habitError is not null)
-                    {
-                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-2">@_habitError</MudAlert>
-                    }
-                    else if (_habitView is not null)
-                    {
-                        @if (_habitView.Graphs.Count == 0)
-                        {
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">No habits on your board yet.</MudText>
-                        }
-                        else
-                        {
-                            <MudGrid Spacing="3" Class="stats-habits-grid">
-                                @foreach (var habit in _habitView.Graphs)
+                                @if (showDailies && dailyCount == 0 && _consistencyTab == "all")
                                 {
-                                    var cellIx = GetHabitCellIndex(habit);
                                     <MudItem xs="12" md="6">
-                                        <div class="stats-habit-block pa-3 border rounded mud-border-lines-default stats-block-bg">
-                                            <div class="d-flex align-center justify-space-between gap-2 mb-2">
-                                                <MudText Typo="Typo.subtitle2" Class="font-weight-bold stats-habit-title ma-0">@habit.Title</MudText>
-                                                <span class="stats-habit-ratio" title="@FormatHabitRatioTooltip(habit.ActiveDayCount, habit.PeriodDayCount)">
-                                                    @HabitActiveRatioLabel(habit.ActiveDayCount, habit.PeriodDayCount)
-                                                </span>
-                                            </div>
-
-                                            <StatsHeatmapGrid Columns="habit.GridWeekColumns"
-                                                              Cells="cellIx"
-                                                              IsToday="@((r, c) => cellIx.TryGetValue((r, c), out var cell) && IsHeatmapToday(cell.Date))"
-                                                              GetCellClass="@((r, c) => HabitHeatmapCellClass(cellIx[(r, c)]))"
-                                                              GetCellTitle="@((r, c) => HabitHeatmapDayTitle(cellIx[(r, c)].Date, cellIx[(r, c)].Count))"
-                                                              GetCellAriaLabel="@((r, c) => HabitHeatmapDayTitle(cellIx[(r, c)].Date, cellIx[(r, c)].Count))"/>
+                                        <div class="stats-empty stats-empty--inline">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">No dailies yet — add one to track streaks.</MudText>
                                         </div>
                                     </MudItem>
                                 }
@@ -307,7 +238,7 @@
                     <MudPaper Class="pa-4 stats-dashboard-card stats-filter-card" Elevation="0" Outlined="true">
                         <MudStack Spacing="2">
                             <div class="stats-filter-card__header">
-                                <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Filters</MudText>
+                                <MudText Typo="Typo.subtitle2" Class="font-weight-bold">Filters</MudText>
                             </div>
                             <div class="stats-filter-row">
                                 <MudSelect T="string"
@@ -372,24 +303,11 @@
                                 <div class="d-flex flex-wrap align-center gap-1 mt-1">
                                     @foreach (var tag in _selectedTags)
                                     {
-                                        <MudChip T="string"
-                                                 Color="Color.Primary"
-                                                 Variant="Variant.Outlined"
-                                                 Size="Size.Small"
-                                                 OnClose="() => OnRemoveTagFilterAsync(tag)"
-                                                 Class="ma-0">
-                                            @tag
-                                        </MudChip>
+                                        <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small" OnClose="() => OnRemoveTagFilterAsync(tag)" Class="ma-0">@tag</MudChip>
                                     }
                                     @if (_selectedTags.Count > 1)
                                     {
-                                        <MudButton Variant="Variant.Text"
-                                                   Color="Color.Secondary"
-                                                   Size="Size.Small"
-                                                   OnClick="OnClearTagFiltersAsync"
-                                                   Class="pa-0 min-w-0 font-size-xs ms-1">
-                                            Clear all
-                                        </MudButton>
+                                        <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small" OnClick="OnClearTagFiltersAsync" Class="pa-0 min-w-0 font-size-xs ms-1">Clear all</MudButton>
                                     }
                                 </div>
                             }
@@ -399,26 +317,12 @@
                                 <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-0"/>
                             }
 
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="stats-sidebar-range">
-                                @FormatRange(_data.RangeStart, _data.RangeEnd)
-                            </MudText>
+                            <div class="stats-sidebar-range">
+                                <span class="stats-sidebar-range__label">Range</span>
+                                <span class="stats-sidebar-range__value">@FormatRange(_data.RangeStart, _data.RangeEnd)</span>
+                            </div>
                         </MudStack>
                     </MudPaper>
-
-                    <div class="stats-kpi-strip stats-kpi-strip--mobile">
-                        <div class="stats-kpi-strip__grid">
-                            @foreach (var kpi in Kpis(_data))
-                            {
-                                <div class="stats-kpi-strip__item @kpi.StripAccent">
-                                    <div class="stats-kpi-strip__head">
-                                        <span class="stats-kpi-strip__label">@kpi.StripLabel</span>
-                                        <MudIcon Icon="@kpi.Icon" Class="stats-kpi-strip__icon" Size="Size.Small" aria-hidden="true"/>
-                                    </div>
-                                    <span class="@($"stats-kpi-strip__value {kpi.StripValueClass}".Trim())" title="@kpi.StripTitle()">@kpi.StripValue()</span>
-                                </div>
-                            }
-                        </div>
-                    </div>
 
                     <div class="stats-kpi-cards stats-kpi-cards--desktop">
                         @foreach (var kpi in Kpis(_data))
@@ -429,7 +333,6 @@
                                     <MudIcon Icon="@kpi.Icon" Class="stats-kpi-card__icon" Size="Size.Small" aria-hidden="true"/>
                                 </div>
                                 <MudText Typo="Typo.h6" Class="stats-kpi-card__value">@kpi.CardValue()</MudText>
-                                <MudText Typo="Typo.caption" Class="stats-kpi-card__detail">@kpi.CardDetail()</MudText>
                             </MudPaper>
                         }
                     </div>
@@ -438,3 +341,7 @@
         </div>
     }
 </MudStack>
+
+@code {
+    private string _consistencyTab = "all";
+}

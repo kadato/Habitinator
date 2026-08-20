@@ -1,4 +1,5 @@
 #pragma warning disable S3881 // Dispose is implemented in the generated Razor part
+#pragma warning disable S1144, S4487, IDE0051, IDE0052
 using System.Globalization;
 
 using App.Shared.RCL.Components.Dialogs;
@@ -342,6 +343,22 @@ public partial class StatisticsPanel : IDisposable
         return $"{activeDays} of {periodDays} days · {percent}%";
     }
 
+    private static string DailyActiveRatioLabel(DailyContributionGraphDto daily)
+    {
+        var active = daily.Heatmap.Count(c => c.InDataRange && c.Count > 0);
+        var total = daily.Heatmap.Count(c => c.InDataRange);
+        var percent = total <= 0 ? 0 : (int)Math.Round(100.0 * active / total);
+        return $"{active} of {total} days · {percent}%";
+    }
+
+    private static string DailyActiveRatioTooltip(DailyContributionGraphDto daily)
+    {
+        var active = daily.Heatmap.Count(c => c.InDataRange && c.Count > 0);
+        var total = daily.Heatmap.Count(c => c.InDataRange);
+        var label = active == 1 ? "day" : "days";
+        return $"{active} active {label} of {total} in this period";
+    }
+
     private string ActivityHeatmapCellClass(ActivityHeatmapCellDto cell)
     {
         return $"stats-heatmap-day-btn stats-cell stats-lvl-{cell.Intensity}{(IsHeatmapToday(cell.Date) ? " stats-heatmap-day--today" : "")}";
@@ -349,7 +366,7 @@ public partial class StatisticsPanel : IDisposable
 
     private string DailyHeatmapCellClass(ActivityHeatmapCellDto cell)
     {
-        return $"stats-cell {(cell.Count > 0 ? "stats-daily-done" : "stats-daily-missed")}{(IsHeatmapToday(cell.Date) ? " stats-heatmap-day--today" : "")}";
+        return $"stats-cell stats-lvl-{cell.Intensity}{(IsHeatmapToday(cell.Date) ? " stats-heatmap-day--today" : "")}";
     }
 
     private string HabitHeatmapCellClass(ActivityHeatmapCellDto cell)

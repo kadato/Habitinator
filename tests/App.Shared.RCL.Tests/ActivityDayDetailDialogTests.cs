@@ -108,9 +108,14 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         provider.Render();
 
         // Assert
-        provider.Markup.Should().Contain("mud-table-striped");
-        provider.FindAll("tr.mud-table-row").Count.Should().Be(5);
+        provider.Markup.Should().Contain("stats-day-timeline");
+        provider.FindAll(".stats-day-event").Count.Should().Be(5);
         provider.FindAll("svg").Count.Should().BeGreaterThanOrEqualTo(5);
+        provider.Markup.Should().Contain("stats-day-event__icon--plus");
+        provider.Markup.Should().Contain("stats-day-event__icon--minus");
+        provider.Markup.Should().Contain("stats-day-event__icon--daily");
+        provider.Markup.Should().Contain("stats-day-event__icon--todo");
+        provider.Markup.Should().Contain("stats-day-event__icon--timer");
         provider.Markup.Should().Contain("Focus");
     }
 }

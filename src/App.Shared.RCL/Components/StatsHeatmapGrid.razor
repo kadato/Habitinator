@@ -12,6 +12,16 @@
         <span>S</span>
     </div>
     <div class="stats-heatmap-wrap">
+        @if (ShowMonthLabels)
+        {
+            <div class="stats-heatmap-months" aria-hidden="true" style="--stats-cols: @Columns;">
+                @for (var c = 0; c < Columns; c++)
+                {
+                    var label = GetMonthLabel(c);
+                    <span class="stats-heatmap-month @(string.IsNullOrEmpty(label) ? "stats-heatmap-month--empty" : string.Empty)">@label</span>
+                }
+            </div>
+        }
         <div class="stats-heatmap-grid" style="--stats-cols: @Columns;">
             @for (var r = 0; r < 7; r++)
             {
@@ -68,6 +78,7 @@
     [Parameter] public int Columns { get; set; }
     [Parameter] public string ContainerClass { get; set; } = string.Empty;
     [Parameter] public bool IncludeRovingTabindex { get; set; }
+    [Parameter] public bool ShowMonthLabels { get; set; } = true;
     [Parameter] public IReadOnlyDictionary<(int R, int C), ActivityHeatmapCellDto> Cells { get; set; } = new Dictionary<(int, int), ActivityHeatmapCellDto>();
     [Parameter] public Func<int, int, bool> IsToday { get; set; } = (_, _) => false;
     [Parameter] public Func<int, int, string> GetCellClass { get; set; } = (_, _) => string.Empty;
@@ -75,8 +86,80 @@
     [Parameter] public Func<int, int, string?> GetCellAriaLabel { get; set; } = (_, _) => null;
     [Parameter] public Func<int, int, Task>? OnCellClick { get; set; }
 
-    private Task OnCellClickAsync(int r, int c)
+    private Task OnCellClickAsync(int r, int c) => OnCellClick is null ? Task.CompletedTask : OnCellClick(r, c);
+
+    private string GetMonthLabel(int col)
     {
-        return OnCellClick is null ? Task.CompletedTask : OnCellClick(r, c);
+        ActivityHeatmapCellDto? firstInCol = null;
+        for (var r = 0; r < 7; r++)
+        {
+            if (!Cells.TryGetValue((r, col), out var cell))
+            {
+                continue;
+            }
+
+            if (!cell.InDataRange)
+            {
+                continue;
+            }
+
+            if (firstInCol is null || cell.Date < firstInCol.Date)
+            {
+                firstInCol = cell;
+            }
+        }
+
+        if (firstInCol is null)
+        {
+            return string.Empty;
+        }
+
+        if (firstInCol.Date.Day > 7)
+        {
+            return string.Empty;
+        }
+
+        if (col > 0)
+        {
+            for (var prev = col - 1; prev >= 0 && prev >= col - 2; prev--)
+            {
+                var prevLabel = GetMonthLabelNoRecursion(prev);
+                if (prevLabel == firstInCol.Date.ToString("MMM"))
+                {
+                    return string.Empty;
+                }
+            }
+        }
+
+        return firstInCol.Date.ToString("MMM");
+    }
+
+    private string GetMonthLabelNoRecursion(int col)
+    {
+        ActivityHeatmapCellDto? firstInCol = null;
+        for (var r = 0; r < 7; r++)
+        {
+            if (!Cells.TryGetValue((r, col), out var cell))
+            {
+                continue;
+            }
+
+            if (!cell.InDataRange)
+            {
+                continue;
+            }
+
+            if (firstInCol is null || cell.Date < firstInCol.Date)
+            {
+                firstInCol = cell;
+            }
+        }
+
+        if (firstInCol is null || firstInCol.Date.Day > 7)
+        {
+            return string.Empty;
+        }
+
+        return firstInCol.Date.ToString("MMM");
     }
 }

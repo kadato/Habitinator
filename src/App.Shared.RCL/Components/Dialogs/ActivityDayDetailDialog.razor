@@ -2,30 +2,20 @@
 @inject IUserTimeZoneService TimeZoneService
 @inject IUserDateFormatService DateFormatService
 
-<MudDialog Class="activity-day-detail-dialog"
-           ContentClass="activity-day-detail-dialog__content">
+<MudDialog Class="activity-day-detail-dialog" ContentClass="activity-day-detail-dialog__content">
     <DialogContent>
         @if (_loading)
         {
-            <MudTable Items="new byte[4]"
-                      Dense="true"
-                      Hover="false"
-                      Bordered="false"
-                      Striped="true"
-                      Elevation="0"
-                      Class="activity-day-detail-table">
-                <RowTemplate>
-                    <MudTd Class="activity-time-cell">
-                        <span class="activity-time-text"><MudSkeleton Width="35px" Height="14px" /></span>
-                    </MudTd>
-                    <MudTd Class="activity-desc-cell">
-                        <div class="activity-desc-wrap">
-                            <MudSkeleton SkeletonType="SkeletonType.Circle" Width="20px" Height="20px" />
-                            <MudSkeleton Width="160px" Height="16px" />
-                        </div>
-                    </MudTd>
-                </RowTemplate>
-            </MudTable>
+            <div class="stats-day-timeline">
+                @for (int i = 0; i < 4; i++)
+                {
+                    <div class="stats-day-event stats-day-event--skeleton">
+                        <span class="stats-day-event__time"><MudSkeleton Width="44px" Height="14px" /></span>
+                        <span class="stats-day-event__icon"><MudSkeleton Width="18px" Height="18px" /></span>
+                        <div class="stats-day-event__body"><MudSkeleton Width="160px" Height="16px" /></div>
+                    </div>
+                }
+            </div>
         }
         else if (_error is not null)
         {
@@ -35,59 +25,50 @@
         {
             @if (!string.IsNullOrWhiteSpace(TagFilter))
             {
-                <div class="d-flex align-center gap-1 flex-wrap mb-2">
+                <div class="d-flex align-center gap-1 flex-wrap mb-3">
                     @foreach (var t in TagFilter.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                     {
                         <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small" Class="ma-0">@t</MudChip>
                     }
                 </div>
             }
-            <MudText Color="Color.Secondary">No activity counted for this day.</MudText>
+            <div class="stats-day-empty">
+                <MudIcon Icon="@Icons.Material.Filled.EventBusy" Size="Size.Large" Class="stats-day-empty__icon" />
+                <MudText Typo="Typo.subtitle2" Class="font-weight-bold">No activity this day</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Logs for habits, dailies, todos and focus sessions appear here.</MudText>
+            </div>
         }
         else if (_detail is not null)
         {
             @if (!string.IsNullOrWhiteSpace(TagFilter))
             {
-                <div class="d-flex align-center gap-1 flex-wrap mb-2">
+                <div class="d-flex align-center gap-1 flex-wrap mb-3">
                     @foreach (var t in TagFilter.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                     {
                         <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small" Class="ma-0">@t</MudChip>
                     }
                 </div>
             }
-            <MudTable Items="_detail.Events"
-                      Dense="true"
-                      Hover="false"
-                      Bordered="false"
-                      Striped="true"
-                      Elevation="0"
-                      Class="activity-day-detail-table">
-                <RowTemplate>
-                    <MudTd Class="activity-time-cell">
-                        <span class="activity-time-text">@FormatLocalTime(context.OccurredAtUtc)</span>
-                    </MudTd>
-                    <MudTd Class="activity-desc-cell">
-                        <div class="activity-desc-wrap">
-                            <MudIcon Icon="@GetEventIcon(context.EventType)"
-                                     Color="@GetEventColor(context.EventType)"
-                                     Size="Size.Medium"
-                                     Class="activity-detail-icon" />
-                            <span class="activity-text">
-                                @GetEventTitle(context)@FormatTimerSuffix(context)
-                            </span>
+            <div class="stats-day-timeline">
+                @foreach (var ev in _detail.Events)
+                {
+                    <div class="stats-day-event">
+                        <span class="stats-day-event__time">@FormatLocalTime(ev.OccurredAtUtc)</span>
+                        <MudIcon Icon="@GetEventIcon(ev.EventType)" Size="Size.Small" Class="@($"stats-day-event__icon {GetIconClass(ev.EventType)}")" aria-hidden="true" />
+                        <div class="stats-day-event__body">
+                            <span class="stats-day-event__title">@GetEventTitle(ev)@FormatTimerSuffix(ev)</span>
+                            <span class="stats-day-event__meta">@GetEventMeta(ev)</span>
                         </div>
-                    </MudTd>
-                </RowTemplate>
-            </MudTable>
+                    </div>
+                }
+            </div>
         }
     </DialogContent>
 </MudDialog>
 
 @code {
     [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
-
     [Parameter] [EditorRequired] public DateOnly Date { get; set; }
-
     [Parameter] public string? TagFilter { get; set; }
 
     private ActivityDayDetailDto? _detail;
@@ -103,15 +84,8 @@
             var tag = string.IsNullOrWhiteSpace(TagFilter) ? null : TagFilter;
             _detail = await Stats.GetActivityDayDetailAsync(Date, tag);
         }
-        catch (Exception ex)
-        {
-            _error = ex.Message;
-        }
-        finally
-        {
-            _loading = false;
-        }
-
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _loading = false; }
         await UpdateTitleAsync();
     }
 
@@ -133,58 +107,52 @@
     {
         var count = detail.Events.Count;
         var label = count == 1 ? "1 activity" : $"{count} activities";
-        return detail.FocusMinutesTotal > 0
-            ? $"{label} · {detail.FocusMinutesTotal} min focus"
-            : label;
+        return detail.FocusMinutesTotal > 0 ? $"{label} · {detail.FocusMinutesTotal} min focus" : label;
     }
 
-    private string FormatLocalTime(DateTimeOffset utcTime)
-    {
-        var localTime = TimeZoneService.ConvertToLocal(utcTime);
-        return localTime.ToString("HH:mm");
-    }
+    private string FormatLocalTime(DateTimeOffset utcTime) => TimeZoneService.ConvertToLocal(utcTime).ToString("HH:mm");
 
     private static string FormatTimerSuffix(ActivityDayEventDto e)
     {
-        if (e.EventType != ActivityEventType.TimerSession || e.DurationSeconds is not int s || s <= 0)
-        {
-            return string.Empty;
-        }
-
+        if (e.EventType != ActivityEventType.TimerSession || e.DurationSeconds is not int s || s <= 0) return string.Empty;
         var m = (s + 30) / 60;
-        return m < 1 ? " under 1 min" : $" {m} min";
+        return m < 1 ? " · under 1 min" : $" · {m} min";
     }
 
-    private static string GetEventIcon(ActivityEventType eventType) =>
-        eventType switch
-        {
-            ActivityEventType.DailyComplete => Icons.Material.Filled.CheckCircle,
-            ActivityEventType.TodoComplete => Icons.Material.Filled.CheckBox,
-            ActivityEventType.HabitPlus => Icons.Material.Filled.Add,
-            ActivityEventType.HabitMinus => Icons.Material.Filled.Remove,
-            ActivityEventType.TimerSession => Icons.Material.Filled.Timer,
-            _ => Icons.Material.Filled.Label
-        };
+    private static string GetEventIcon(ActivityEventType t) => t switch
+    {
+        ActivityEventType.DailyComplete => Icons.Material.Filled.CheckCircle,
+        ActivityEventType.TodoComplete => Icons.Material.Filled.CheckBox,
+        ActivityEventType.HabitPlus => Icons.Material.Filled.Add,
+        ActivityEventType.HabitMinus => Icons.Material.Filled.Remove,
+        ActivityEventType.TimerSession => Icons.Material.Filled.Timer,
+        _ => Icons.Material.Filled.Label
+    };
 
-    private static Color GetEventColor(ActivityEventType eventType) =>
-        eventType switch
-        {
-            ActivityEventType.DailyComplete => Color.Primary,
-            ActivityEventType.TodoComplete => Color.Warning,
-            ActivityEventType.HabitPlus => Color.Success,
-            ActivityEventType.HabitMinus => Color.Error,
-            ActivityEventType.TimerSession => Color.Secondary,
-            _ => Color.Default
-        };
+    private static string GetIconClass(ActivityEventType t) => t switch
+    {
+        ActivityEventType.DailyComplete => "stats-day-event__icon--daily",
+        ActivityEventType.TodoComplete => "stats-day-event__icon--todo",
+        ActivityEventType.HabitPlus => "stats-day-event__icon--plus",
+        ActivityEventType.HabitMinus => "stats-day-event__icon--minus",
+        ActivityEventType.TimerSession => "stats-day-event__icon--timer",
+        _ => "stats-day-event__icon--default"
+    };
+
+    private static string GetEventMeta(ActivityDayEventDto e) => e.EventType switch
+    {
+        ActivityEventType.DailyComplete => "Daily completed",
+        ActivityEventType.TodoComplete => "To-do completed",
+        ActivityEventType.HabitPlus => "Habit plus",
+        ActivityEventType.HabitMinus => "Habit minus",
+        ActivityEventType.TimerSession => "Focus session",
+        _ => e.EventType.ToString()
+    };
 
     private static string GetEventTitle(ActivityDayEventDto e)
     {
         var name = e.BoardItemTitle ?? e.CustomLabel;
-        if (!string.IsNullOrWhiteSpace(name))
-        {
-            return name;
-        }
-
+        if (!string.IsNullOrWhiteSpace(name)) return name;
         return e.EventType switch
         {
             ActivityEventType.DailyComplete => "Daily task completed",
@@ -195,5 +163,4 @@
             _ => e.EventType.ToString()
         };
     }
-
 }

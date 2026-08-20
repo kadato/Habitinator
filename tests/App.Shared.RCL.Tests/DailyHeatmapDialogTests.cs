@@ -77,13 +77,13 @@ public sealed class DailyHeatmapDialogTests : IAsyncDisposable
 
         // Act
         await provider.InvokeAsync(async () => await dialogService.ShowAsync<DailyHeatmapDialog>(string.Empty, parameters));
-        await provider.WaitForStateAsync(() => provider.Markup.Contains("1 completed"), TimeSpan.FromSeconds(5));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("1 of 1"), TimeSpan.FromSeconds(5));
 
         // Assert
-        provider.Markup.Should().Contain("Morning Run · 1 completed");
+        provider.Markup.Should().Contain("Morning Run");
+        provider.Markup.Should().Contain("1 of 1");
         provider.Markup.Should().Contain("stats-cell");
         provider.Markup.Should().NotContain("daily-heatmap-shell");
-        provider.Markup.Should().NotContain("completed in this period");
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public sealed class DailyHeatmapDialogTests : IAsyncDisposable
 
         // Act
         await provider.InvokeAsync(async () => await dialogService.ShowAsync<DailyHeatmapDialog>(string.Empty, parameters));
-        await provider.WaitForStateAsync(() => provider.Markup.Contains("Morning Run · 1 completed"), TimeSpan.FromSeconds(5));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("2026"), TimeSpan.FromSeconds(5));
 
         // Assert
         provider.Markup.Should().Contain("2026");

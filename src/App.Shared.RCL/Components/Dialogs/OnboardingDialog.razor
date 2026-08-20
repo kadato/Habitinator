@@ -62,9 +62,8 @@
                            Color="Color.Primary"
                            FullWidth="true"
                            Size="Size.Medium"
-                           StartIcon="@Icons.Material.Filled.Add"
-                           OnClick="CreateFirstHabitAsync">
-                    Create your first habit
+                           OnClick="DismissAsync">
+                    Get started
                 </MudButton>
             </div>
         </div>
@@ -75,25 +74,6 @@
     [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
 
     [Parameter] public EventCallback OnCreateFirstHabit { get; set; }
-
-    private async Task CreateFirstHabitAsync()
-    {
-        try
-        {
-            await OnboardingStore.MarkCompletedAsync();
-        }
-        catch (Exception)
-        {
-            // Ignored. Onboarding may show again on the next visit
-        }
-
-        if (OnCreateFirstHabit.HasDelegate)
-        {
-            await OnCreateFirstHabit.InvokeAsync();
-        }
-
-        MudDialog.Close(DialogResult.Ok(true));
-    }
 
     private async Task DismissAsync()
     {

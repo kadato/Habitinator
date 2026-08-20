@@ -1,36 +1,59 @@
 .stats-week-bars {
     display: flex;
     align-items: flex-end;
-    gap: 4px;
-    height: 120px;
+    gap: 5px;
+    height: 92px;
     max-width: 100%;
-    overflow-x: scroll;
+    overflow-x: auto;
     overflow-y: hidden;
-    padding-bottom: 8px;
-    padding-right: 12px;
+    padding: 12px 12px 8px;
+    background: color-mix(in srgb, var(--mud-palette-background-gray) 45%, var(--mud-palette-surface));
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 45%, transparent);
+    border-radius: var(--radius-lg);
+    scrollbar-width: thin;
 }
 
 .stats-week-bar-wrap {
     flex: 1;
-    min-width: var(--space-3);
-    max-width: var(--space-8);
+    min-width: 8px;
+    max-width: 22px;
     height: 100%;
     display: flex;
     align-items: flex-end;
-    background: var(--mud-palette-table-hover);
-    border-radius: 2px 2px 0 0;
+    justify-content: center;
+    background: transparent;
+    border-radius: 0;
+    position: relative;
+    cursor: pointer;
+    outline: none;
 }
+.stats-week-bar-wrap:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: 2px; border-radius: 3px; }
 
 .stats-week-bar {
     width: 100%;
     height: 100%;
-    min-height: 0;
+    min-height: 2px;
     background: var(--mud-palette-primary);
-    border-radius: 2px 2px 0 0;
+    border-radius: 3px 3px 2px 2px;
     transform: scaleY(var(--bar-scale, 0));
     transform-origin: bottom;
-    transition: transform var(--dur-normal) var(--ease-out);
+    transition: transform var(--dur-normal) var(--ease-out), filter var(--dur-fast) ease;
     will-change: transform;
+}
+.stats-week-bar-wrap:hover .stats-week-bar { filter: brightness(1.08); }
+.stats-week-bar__focus {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    border-radius: 3px 3px 2px 2px;
+    background: color-mix(in srgb, var(--hab-accent-streak) 55%, transparent);
+    transform: scaleY(var(--bar-scale, 0));
+    transform-origin: bottom;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+    opacity: 0.9;
 }
 
 /* Heatmap cells are styled by StatsHeatmapGrid.razor.css. Only the legend swatches and week bars keep rules here. */
@@ -102,9 +125,32 @@
     min-width: 0;
 }
 
+/* Filters first on small screens, KPIs directly under filters */
 @media (max-width: 959.98px) {
+    .stats-panel {
+        display: flex;
+        flex-direction: column;
+    }
+    .stats-dashboard-layout {
+        order: 1;
+    }
+    .stats-hero-card {
+        order: 3;
+    }
+    .stats-kpi-strip {
+        display: none;
+    }
+    .stats-kpi-cards--desktop {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-3);
+    }
     .stats-dashboard-sidebar {
         order: -1;
+    }
+    .stats-sidebar-column {
+        position: static;
+        gap: var(--space-4);
     }
 }
 
@@ -142,18 +188,21 @@
 
 @media (max-width: 959.98px) {
     .stats-filter-card__header {
-        display: none;
+        display: block;
+        padding-bottom: var(--space-1);
     }
 }
 
 .stats-filter-row {
     display: flex;
+    flex-direction: column;
     gap: var(--space-4);
-    align-items: flex-start;
+    align-items: stretch;
 }
 
 .stats-filter-row > * {
-    flex: 1 1 50%;
+    flex: none;
+    width: 100%;
     min-width: 0;
 }
 
@@ -230,7 +279,11 @@
     }
 }
 
-/* Mobile: compact KPI cards */
+/* KPI strip now visible on all widths as primary KPIs, sidebar duplicates for desktop density */
+.stats-kpi-strip {
+    display: block;
+    padding: 0.15rem 0;
+}
 .stats-kpi-strip--mobile {
     display: block;
     padding: 0.15rem 0;
@@ -244,9 +297,12 @@
 
 .stats-kpi-strip__grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-4);
     align-items: stretch;
+}
+@media (min-width: 600px) {
+    .stats-kpi-strip__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 .stats-kpi-strip__item {
@@ -338,8 +394,9 @@
 }
 
 @media (min-width: 960px) {
+    /* keep both visible: strip under hero for quick scan, sidebar cards for persistent reference */
     .stats-kpi-strip--mobile {
-        display: none;
+        display: block;
     }
 
     .stats-kpi-cards--desktop {
@@ -575,14 +632,18 @@
     }
 }
 
-/* Habits graphs blocks */
-.stats-habit-block {
+/* Consistency blocks - similar styling for habits and dailies */
+.stats-habit-block,
+.stats-daily-block {
     border-radius: var(--radius-lg);
-    border: 1px solid color-mix(in srgb, var(--hab-type-habit) 22%, var(--hab-border-card));
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 55%, transparent);
+    background: var(--mud-palette-surface);
 }
 
-.stats-habit-title {
-    color: var(--hab-type-habit);
+.stats-habit-title,
+.stats-daily-title {
+    color: var(--mud-palette-text-primary);
+    font-weight: 700;
 }
 
 .stats-habit-ratio {
@@ -599,3 +660,125 @@
     border: 1px solid color-mix(in srgb, var(--hab-type-habit) 24%, transparent);
     white-space: nowrap;
 }
+
+/* Hero and new section chrome */
+.stats-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--hab-font-mono);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: var(--mud-palette-text-secondary);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: var(--space-3);
+}
+.stats-eyebrow__range {
+    color: var(--mud-palette-text-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
+    padding: 0.15rem 0.45rem;
+    border-radius: var(--radius-pill);
+}
+.stats-eyebrow__dot { width: 3px; height: 3px; border-radius: 50%; background: var(--mud-palette-text-disabled); flex-shrink: 0; }
+
+.stats-hero-card {
+    position: relative;
+    overflow: visible;
+    border-radius: var(--radius-xl) !important;
+    width: 100%;
+    background: var(--mud-palette-surface) !important;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 55%, transparent) !important;
+}
+.stats-hero-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: var(--hab-brand-gradient);
+    opacity: 0.9;
+}
+.stats-hero-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-4);
+}
+.stats-hero-head__titles { min-width: 0; }
+.stats-hero-title { letter-spacing: -0.02em; line-height: 1.15; }
+.stats-hero-subtitle { margin-top: 0.15rem; line-height: 1.4; }
+.stats-heatmap-legend-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: 1px solid var(--mud-palette-divider);
+    padding: 6px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--mud-palette-background-gray);
+    font-family: var(--hab-font-mono);
+    font-size: 0.68rem;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+}
+.stats-hero-weekly { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent); }
+.stats-hero-weekly__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-3); }
+.stats-hero-weekly__label { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--mud-palette-text-secondary); }
+.stats-hero-weekly__range { font-family: var(--hab-font-mono); font-size: 0.7rem; color: var(--mud-palette-text-secondary); font-variant-numeric: tabular-nums; }
+
+.stats-section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    margin-bottom: 0.15rem;
+}
+.stats-segment {
+    display: inline-flex;
+    gap: 0.2rem;
+    padding: 0.2rem;
+    background: var(--mud-palette-background-gray);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
+    border-radius: var(--radius-pill);
+}
+.stats-segment__btn {
+    appearance: none;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.78rem;
+    font-weight: 650;
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: background var(--dur-fast) ease, color var(--dur-fast) ease, border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+.stats-segment__btn--active {
+    background: var(--mud-palette-surface);
+    color: var(--mud-palette-primary);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 18%, transparent);
+    box-shadow: 0 1px 6px rgba(15,23,42,0.08);
+}
+.stats-segment__btn:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: 2px; }
+
+.stats-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem 1.5rem;
+    border: 1px dashed color-mix(in srgb, var(--mud-palette-divider) 65%, transparent);
+    border-radius: var(--radius-xl);
+    background: color-mix(in srgb, var(--mud-palette-background-gray) 22%, transparent);
+}
+.stats-empty__icon { color: var(--mud-palette-text-disabled); opacity: 0.7; margin-bottom: 0.5rem; }
+.stats-empty--inline { padding: 1rem; }
+.stats-kpi-strip__detail { display: block; font-family: var(--hab-font-mono); font-size: 0.66rem; color: var(--mud-palette-text-secondary); line-height: 1.35; margin-top: 0.15rem; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.stats-sidebar-range { display: flex; flex-direction: column; gap: 0.15rem; align-items: center; text-align: center; }
+.stats-sidebar-range__label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mud-palette-text-secondary); }
+.stats-sidebar-range__value { font-family: var(--hab-font-mono); font-size: 0.78rem; font-weight: 650; color: var(--mud-palette-text-primary); font-variant-numeric: tabular-nums; }

@@ -1,47 +1,39 @@
 /* Container holds rowlabels outside and the scrollable wrap inside, so labels stay visible when scrolled. */
 .stats-heatmap-container {
-    --stats-cell: 11px;
-    --stats-grid-gap: 2px;
+    --stats-cell: 12px;
+    --stats-grid-gap: 3px;
     display: flex;
     align-items: flex-start;
-    gap: 0.2rem;
+    gap: 0.35rem;
     width: 100%;
     max-width: 100%;
 }
 
 .stats-heatmap-container--large {
-    --stats-cell: 16px;
+    --stats-cell: 15px;
     --stats-grid-gap: 3px;
 }
 
-/* Custom scrollbar styling to make scrollbars always visible and elegant */
 .stats-heatmap-wrap {
-    overflow-x: scroll;
+    overflow-x: auto;
     overflow-y: hidden;
     flex: 1 1 auto;
     min-width: 0;
-    padding-top: 4px;
+    padding-top: 2px;
     padding-bottom: 10px;
-    --scrollbar-thumb: color-mix(in srgb, var(--mud-palette-primary) 30%, var(--mud-palette-text-secondary) 25%);
-    --scrollbar-track: var(--mud-palette-background-gray);
+    --scrollbar-thumb: color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-text-secondary) 30%);
+    --scrollbar-track: color-mix(in srgb, var(--mud-palette-background-gray) 85%, transparent);
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
 }
 
 @supports not (scrollbar-color: auto) {
-    .stats-heatmap-wrap::-webkit-scrollbar {
-        height: 6px;
-    }
-
-    .stats-heatmap-wrap::-webkit-scrollbar-track {
-        background: var(--scrollbar-track);
-        border-radius: 3px;
-    }
-
-    .stats-heatmap-wrap::-webkit-scrollbar-thumb {
-        background: var(--scrollbar-thumb);
-        border-radius: 3px;
-    }
+    .stats-heatmap-wrap::-webkit-scrollbar { height: 6px; }
+    .stats-heatmap-wrap::-webkit-scrollbar-track { background: var(--scrollbar-track); border-radius: 3px; }
+    .stats-heatmap-wrap::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
 }
 
 .stats-heatmap-rowlabels {
@@ -51,22 +43,38 @@
     align-items: center;
     font-family: var(--hab-font-mono);
     font-size: 0.58rem;
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1;
     font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum" 1, "zero" 1;
     letter-spacing: -0.02em;
     color: var(--mud-palette-text-secondary);
     text-align: right;
     flex: 0 0 0.7rem;
     box-sizing: border-box;
-    padding-top: 4px;
+    padding-top: 2px;
 }
+.stats-heatmap-container--large .stats-heatmap-rowlabels { font-size: 0.62rem; flex: 0 0 var(--space-5); }
 
-.stats-heatmap-container--large .stats-heatmap-rowlabels {
-    font-size: 0.62rem;
-    flex: 0 0 var(--space-5);
+.stats-heatmap-months {
+    display: grid;
+    grid-template-columns: repeat(var(--stats-cols, 1), var(--stats-cell));
+    gap: var(--stats-grid-gap);
+    padding-left: 4px;
+    padding-right: 12px;
+    margin-bottom: 4px;
+    min-width: max-content;
 }
+.stats-heatmap-month {
+    font-family: var(--hab-font-sans);
+    font-size: 0.6rem;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+    color: var(--mud-palette-text-secondary);
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+}
+.stats-heatmap-month--empty { visibility: hidden; }
 
 .stats-heatmap-grid {
     display: grid;
@@ -82,10 +90,10 @@
 .stats-cell {
     width: var(--stats-cell);
     height: var(--stats-cell);
-    border-radius: 2px;
+    border-radius: 3px;
     box-sizing: border-box;
+    transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) ease, filter var(--dur-fast) ease;
 }
-
 button.stats-cell {
     display: block;
     padding: 0;
@@ -94,9 +102,9 @@ button.stats-cell {
     line-height: 0;
     cursor: pointer;
 }
-
-button.stats-cell:focus-visible,
-button.stats-cell:focus {
+button.stats-cell:hover { transform: scale(1.12); filter: brightness(1.05); }
+button.stats-cell:active { transform: scale(0.96); }
+button.stats-cell:focus-visible, button.stats-cell:focus {
     outline: 2px solid var(--mud-palette-primary) !important;
     outline-offset: 1px !important;
     position: relative !important;
@@ -108,42 +116,27 @@ button.stats-cell:focus {
     z-index: 2;
     box-shadow:
         0 0 0 1px var(--mud-palette-surface),
-        0 0 0 3px var(--mud-palette-primary);
+        0 0 0 2.5px var(--mud-palette-primary);
 }
 
-.stats-lvl-0 {
-    background: var(--mud-palette-table-hover);
-}
-
-.stats-lvl-1 {
-    background: color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-surface) 65%);
-}
-
-.stats-lvl-2 {
-    background: color-mix(in srgb, var(--mud-palette-primary) 55%, var(--mud-palette-surface) 45%);
-}
-
-.stats-lvl-3 {
-    background: color-mix(in srgb, var(--mud-palette-primary) 80%, var(--mud-palette-surface) 20%);
-}
-
-.stats-lvl-4 {
-    background: var(--mud-palette-primary);
-}
-
-.stats-lvl-na {
-    background: transparent;
-    opacity: 0.25;
-    border: 1px dashed var(--mud-palette-table-lines);
-}
+.stats-lvl-0 { background: color-mix(in srgb, var(--mud-palette-background-gray) 85%, var(--mud-palette-surface)); border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 50%, transparent); }
+.stats-lvl-1 { background: color-mix(in srgb, var(--mud-palette-primary) 28%, var(--mud-palette-surface) 72%); }
+.stats-lvl-2 { background: color-mix(in srgb, var(--mud-palette-primary) 48%, var(--mud-palette-surface) 52%); }
+.stats-lvl-3 { background: color-mix(in srgb, var(--mud-palette-primary) 74%, var(--mud-palette-surface) 26%); }
+.stats-lvl-4 { background: var(--mud-palette-primary); }
+.stats-lvl-na { background: transparent; opacity: 0.18; border: 1px dashed color-mix(in srgb, var(--mud-palette-divider) 60%, transparent); }
 
 .stats-daily-missed {
     background: var(--mud-palette-background-gray);
-    border: 1px solid var(--mud-palette-table-lines);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mud-palette-text-primary) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 70%, transparent);
 }
-
 .stats-daily-done {
     background: var(--mud-palette-primary);
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary) 30%);
+}
+
+@media (max-width: 599.98px) {
+    .stats-heatmap-container { --stats-cell: 13px; }
+    .stats-heatmap-container--large { --stats-cell: 15px; }
+    button.stats-cell:hover { transform: none; }
 }

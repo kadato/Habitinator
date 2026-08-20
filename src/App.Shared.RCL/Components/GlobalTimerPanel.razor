@@ -13,11 +13,11 @@
             <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="min-w-0 flex-grow-1">
                 @if (TimerService.PomodoroModeEnabled)
                 {
-                    <PomodoroIcon Size="Size.Medium"/>
+                    <PomodoroIcon Size="Size.Medium" Plain="true" />
                 }
                 else
                 {
-                    <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Primary" Size="Size.Medium"/>
+                    <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Default" Size="Size.Medium"/>
                 }
                 @if (IsSessionActive)
                 {
@@ -79,7 +79,7 @@
                                 @onclick="() => OnPomodoroModeToggleChanged(true)"
                                 @attributes="GetModeToggleAttributes(true)"
                                 aria-label="Pomodoro mode">
-                            <PomodoroIcon Size="Size.Medium"/>
+                            <PomodoroIcon Size="Size.Medium" Plain="true" />
                             <span class="toggle-btn-label">Pomodoro</span>
                         </button>
                     </div>
@@ -87,6 +87,8 @@
             </div>
 
             <div class="timer-toolbar__main">
+                @RenderTimerInputs
+
                 @if (TimerService.PomodoroModeEnabled)
                 {
                     <div class="timer-pomodoro-status-strip">
@@ -119,8 +121,6 @@
                         </span>
                     </div>
                 }
-
-                @RenderTimerInputs
             </div>
 
             <div class="timer-toolbar__actions">

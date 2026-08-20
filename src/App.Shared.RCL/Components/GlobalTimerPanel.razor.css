@@ -46,7 +46,8 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    min-height: 52px;
+    min-height: 56px;
+    box-sizing: border-box;
 }
 
 .timer-toolbar__clock {
@@ -138,16 +139,19 @@
         flex-direction: row;
         flex-wrap: wrap;
         justify-content: center;
-        align-items: center;
+        align-items: flex-start;
         gap: var(--space-6) var(--space-7);
     }
 
     .timer-toolbar__left {
         flex: 0 0 auto;
+        min-width: 280px;
         width: auto;
-        min-height: 56px;
+        min-height: 60px;
         padding-right: var(--space-7);
         border-right: 1px solid color-mix(in srgb, var(--mud-palette-divider) 15%, transparent);
+        align-self: flex-start;
+        margin-top: 2px;
     }
 
     .timer-toolbar__main {
@@ -156,12 +160,15 @@
         min-width: 300px;
         max-width: 800px;
         align-items: stretch;
+        align-self: flex-start;
     }
 
     .timer-toolbar__actions {
         justify-content: center;
         width: auto;
         flex: 0 0 auto;
+        align-self: flex-start;
+        margin-top: 6px;
     }
 }
 
@@ -391,7 +398,7 @@
     height: 42px;
     color: var(--mud-palette-text-secondary);
     cursor: pointer;
-    transition: all var(--dur-normal) cubic-bezier(0.4, 0, 0.2, 1);
+    transition: color var(--dur-normal) ease, background-color var(--dur-normal) ease, box-shadow var(--dur-normal) ease, transform var(--dur-normal) var(--ease-standard);
     outline: none;
     display: inline-flex;
     align-items: center;
@@ -418,6 +425,14 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
+.custom-timer-toggle .toggle-btn .pomodoro-icon,
+.custom-timer-toggle .toggle-btn .mud-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    font-size: 1.25rem !important;
+    flex-shrink: 0;
+}
+
 .timer-pomodoro-status-badge {
     font-family: var(--hab-font-mono);
     font-size: 0.7rem;
@@ -434,6 +449,7 @@
     align-items: center;
     line-height: 1.2;
     flex-shrink: 0;
+    min-height: 22px;
 }
 
 .timer-pomodoro-progress-bar {
@@ -461,9 +477,25 @@
 .timer-pomodoro-status-strip {
     display: inline-flex;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 8px;
     flex-shrink: 0;
+    min-height: 28px;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    transition: min-height var(--dur-normal) var(--ease-out), opacity var(--dur-normal) ease;
+}
+
+.timer-pomodoro-status-strip--empty {
+    min-height: 14px;
+    opacity: 0.6;
+}
+
+.timer-pomodoro-status-strip::-webkit-scrollbar {
+    display: none;
 }
 
 /* Rounded square Icon Buttons */

@@ -1,32 +1,32 @@
-# Sync Conflict Resolution Strategy
+# Sync conflict resolution strategy
 
-Habitinator uses a local-first architecture with an outbound SQLite outbox queue. Syncing is coordinated in the background. If the server returns a version conflict, HTTP 409, the system automatically resolves it without blocking or prompting the user.
+Habitinator uses a local-first architecture with an outbound SQLite outbox queue. The system coordinates syncing in the background. If the server returns a version conflict, HTTP 409, the system resolves it without blocking or prompting you.
 
-The conflict resolution algorithm runs in the background and applies two stages of automatic resolution:
+The conflict resolution algorithm runs in the background and applies two stages of resolution:
 
-## 1. Content-Aware Verification
+## 1. Content-aware verification
 
-Before performing timestamp comparison, the system checks if the local version's contents match the server's version exactly. We compare the following fields:
+Before comparing timestamps, the system checks if the local version's contents match the server's version exactly. The system compares the following fields:
 
 * Title
 * Completion status, `IsCompleted`
 * Habit counter, `Counter` and `NegativeCounter`
 * Notes and Tags
 * Checklist items, `ChecklistJson`
-* Section-specific configurations, e.g. reset periods, due dates, and start dates
+* Section-specific configurations, for example reset periods, due dates, and start dates
 * Drag-and-drop ordering, `SortOrder`
 * Archive status, `IsArchived`
 
-If all user-facing content fields match exactly, the conflict is considered a trivial metadata collision. The system automatically selects the **Server Version**, which updates the local database tracking timestamp to align with the server, and discards the duplicate outbox operation silently.
+If all user-facing content fields match exactly, the system treats the conflict as a trivial metadata collision. The system selects the server version. This updates the local database tracking timestamp to align with the server and discards the duplicate outbox operation.
 
-## 2. Last-Write-Wins, LWW
+## 2. Last-write-wins, LWW
 
-If there are content differences, the system applies **Last-Write-Wins, LWW**, using the most accurate timestamps:
+If content differs, the system applies Last-Write-Wins, LWW, using the most accurate timestamps:
 
-* **Local Timestamp**: The time when the edit was enqueued in the local outbox, `BoardOutboxRow.CreatedAtUtc`.
-* **Server Timestamp**: The time when the item was last updated on the server, `BoardItem.ServerUpdatedAtUtc`.
+* **Local timestamp.** The time when the edit was enqueued in the local outbox, `BoardOutboxRow.CreatedAtUtc`.
+* **Server timestamp.** The time when the item was last updated on the server, `BoardItem.ServerUpdatedAtUtc`.
 
-### Resolution Paths
+### Resolution paths
 
-* **Local edit is newer, `LocalTime >= ServerTime`**: The local device version is kept. The outbox entry is updated with the server's newer concurrency version, the expected version header, and retried. The server accepts it on the next attempt.
-* **Server edit is newer, `LocalTime < ServerTime`**: The server's version is kept. The conflicting local outbox operation is deleted, and the local SQLite database is updated with the server's newer properties.
+* **Local edit is newer, `LocalTime >= ServerTime`.** The system keeps the local device version. The system updates the outbox entry with the server's newer concurrency version and the expected version header and retries it. The server accepts it on the next attempt.
+* **Server edit is newer, `LocalTime < ServerTime`.** The system keeps the server version. The system deletes the conflicting local outbox operation and updates the local SQLite database with the server's newer properties.

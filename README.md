@@ -12,7 +12,7 @@
 
 A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits, dailies, and to-dos with a focus timer, analytics, and reliable sync across web and mobile.
 
-**Live Demo:** [habitinator.app](https://habitinator.app)
+**Live Demo.** [habitinator.app](https://habitinator.app)
 
 [Demo](https://habitinator.app) | [Preview](#preview) | [Download](#download-and-install) | [Features](#key-features) | [Tech stack](#technology-stack) | [Getting Started](#getting-started)
 
@@ -64,7 +64,7 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 
 </div>
 
-> Screenshots are regenerated with `tools/Habitinator.Screenshots/run.ps1`. It uses Playwright with a mobile viewport in light and dark themes.
+> Regenerate screenshots with `tools/Habitinator.Screenshots/run.ps1`. The script uses Playwright with a mobile viewport in light and dark themes.
 
 ---
 
@@ -77,18 +77,18 @@ Download the latest build from the [releases page](https://github.com/kadato/Hab
 | Android | [![APK](https://img.shields.io/badge/APK-3ddc84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/kadato/Habitinator/releases/latest/download/Habitinator-android.apk) | 41 MB | Install on device. Enable unknown sources first |
 | Windows | [![Installer](https://img.shields.io/badge/Installer-0078d6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/kadato/Habitinator/releases/latest/download/Habitinator-windows-x64-setup.exe) | 53 MB | Installer with auto-updates. Recommended |
 | Windows | [![Portable ZIP](https://img.shields.io/badge/Portable%20ZIP-1f6feb?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/kadato/Habitinator/releases/latest/download/Habitinator-windows-x64.zip) | 78 MB | Portable. Extract and run |
-| iOS / macOS | *Source only* | - | Build from source using the .NET MAUI workload |
+| iOS and macOS | *Source only* | - | Build from source using the .NET MAUI workload |
 | Web | [![Web App](https://img.shields.io/badge/Web%20App-6b46c1?style=for-the-badge&logo=web&logoColor=white)](https://habitinator.app) | - | Live demo, no install needed |
 
-**Windows runtime note:** if your release is framework-dependent, install [.NET Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/11.0) once.
+**Windows runtime note.** If your release is framework-dependent, install [.NET Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/11.0) once.
 
-#### Option 1: prebuilt packages, recommended
+#### Option 1: Prebuilt packages, recommended
 
 1. Pick your platform from the table above
 2. Download the package and its `.sha256` file
 3. Verify the checksum, then follow the platform steps below
 
-#### Option 2: build from source
+#### Option 2: Build from source
 
 ```powershell
 # Windows
@@ -108,18 +108,18 @@ dotnet build -t:Run -f net11.0-android
 
 #### Windows
 
-**Installer:** run `Habitinator-windows-x64-setup.exe` and follow the setup wizard. It keeps the app updated.
+**Installer.** Run `Habitinator-windows-x64-setup.exe` and follow the setup wizard. It keeps the app updated.
 
-**Portable:** extract the ZIP file, then run `Habitinator.exe`. If prompted, install .NET Desktop Runtime.
+**Portable.** Extract the ZIP file, then run `Habitinator.exe`. If prompted, install .NET Desktop Runtime.
 
 ---
 
 ## Key features
 
-- **Core planner**: Track habits, dailies, and to-dos. Organize them with tags, notes, and checklists.
-- **Global session timer**: A stopwatch with target logging to trace time spent on specific items.
-- **Statistics and heatmap**: Interactive heatmap dashboard to monitor your progress over time.
-- **Local-first and sync**: The mobile/desktop clients run on SQLite for offline support and sync changes automatically to a server-side PostgreSQL backend.
+- **Core planner.** Track habits, dailies, and to-dos. Organize them with tags, notes, and checklists.
+- **Global session timer.** A stopwatch with target logging to trace time spent on specific items.
+- **Statistics and heatmap.** Interactive heatmap dashboard to monitor your progress over time.
+- **Local-first and sync.** The mobile and desktop clients run on SQLite for offline support and sync changes to a server-side PostgreSQL backend.
 
 ---
 
@@ -130,7 +130,7 @@ dotnet build -t:Run -f net11.0-android
 | **Runtime** | .NET 11 |
 | **Web UI** | Blazor Web App with Interactive WebAssembly, MudBlazor |
 | **Native Apps** | .NET MAUI + Blazor Hybrid for Android, iOS, macOS, Windows |
-| **Database, Server** | Neon Serverless PostgreSQL / any PostgreSQL via EF Core |
+| **Database, Server** | Neon Serverless PostgreSQL or any PostgreSQL via EF Core |
 | **Database, Client** | SQLite via EF Core |
 | **Orchestration** | .NET Aspire AppHost |
 
@@ -142,18 +142,18 @@ dotnet build -t:Run -f net11.0-android
 Make sure you have Docker installed and running for the local PostgreSQL container.
 
 ### Run and debug via Aspire
-Run the following command to start PostgreSQL, the web backend, and the native client host environment:
+To start PostgreSQL, the web backend, and the native client host environment, run:
 ```powershell
 dotnet run --project src/AppHost/AppHost.csproj
 ```
 
 ### Seeded demo user
-The application will automatically seed a guest account on startup:
-- **Email:** `guest@habitinator.local`
-- **Password:** `Guest123!`
+The application seeds a guest account on startup:
+- **Email.** `guest@habitinator.local`
+- **Password.** `Guest123!`
 
-### Regenerating screenshots
-To regenerate the mobile screenshots in the [Preview](#preview) section, the web app must be running, for example via AppHost:
+### Regenerate screenshots
+To regenerate the mobile screenshots in the [Preview](#preview) section, first start the web app via AppHost, then run:
 ```powershell
 pwsh ./tools/Habitinator.Screenshots/run.ps1 -BaseUrl "http://127.0.0.1:5033"
 ```

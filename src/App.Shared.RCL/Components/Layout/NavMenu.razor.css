@@ -56,7 +56,7 @@
     line-height: 1.2;
     text-decoration: none;
     touch-action: manipulation;
-    transition: all var(--dur-fast) ease;
+    transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease, border-color var(--dur-fast) ease;
     overflow: visible;
 }
 

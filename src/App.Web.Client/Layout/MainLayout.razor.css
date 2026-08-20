@@ -74,10 +74,7 @@
     flex-shrink: 0;
     font-weight: 850 !important;
     letter-spacing: -0.03em;
-    background: linear-gradient(135deg, var(--mud-palette-primary) 0%, var(--mud-palette-tertiary) 100%);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--mud-palette-primary);
     line-height: 1.15 !important;
 }
 

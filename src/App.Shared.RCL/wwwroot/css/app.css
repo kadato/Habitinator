@@ -87,12 +87,15 @@ html.light-theme .wasm-splash__progress {
 
 .wasm-splash__progress-bar {
     height: 100%;
-    width: 5%;
+    width: 100%;
     min-width: 4%;
     max-width: 100%;
     background: var(--hab-brand-gradient);
     border-radius: var(--radius-pill);
-    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    transform: scaleX(var(--progress, 0.05));
+    transform-origin: left;
+    transition: transform 0.6s var(--ease-out-expo);
+    will-change: transform;
 }
 
 .wasm-splash__hint {
@@ -171,6 +174,17 @@ html, body {
     color: var(--mud-palette-text-primary);
     -webkit-tap-highlight-color: transparent;
     accent-color: light-dark(#2563eb, #60a5fa);
+    caret-color: var(--mud-palette-primary);
+}
+
+::selection {
+    background: color-mix(in srgb, var(--mud-palette-primary) 22%, var(--mud-palette-surface));
+    color: var(--mud-palette-text-primary);
+}
+
+::-moz-selection {
+    background: color-mix(in srgb, var(--mud-palette-primary) 22%, var(--mud-palette-surface));
+    color: var(--mud-palette-text-primary);
 }
 
 html.dark-theme, html.dark-theme body {
@@ -276,7 +290,7 @@ a {
     cursor: pointer;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    transition: all var(--dur-fast) ease;
+    transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease, border-color var(--dur-fast) ease;
 }
 
 .settings-section-switcher__btn:active {
@@ -984,7 +998,8 @@ input[type="number"].mud-input-slot {
     *::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+    }
+    html {
         scroll-behavior: auto !important;
     }
 }

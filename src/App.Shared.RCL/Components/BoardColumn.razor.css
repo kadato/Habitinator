@@ -98,7 +98,7 @@
     text-overflow: ellipsis !important;
     touch-action: manipulation !important;
     -webkit-tap-highlight-color: transparent !important;
-    transition: all var(--dur-fast) ease !important;
+    transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease !important;
 }
 
 .board-filter-btn:focus,

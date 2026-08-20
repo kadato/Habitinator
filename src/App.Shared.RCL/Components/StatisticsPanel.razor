@@ -175,8 +175,9 @@
                         @foreach (var w in _data.WeekBars)
                         {
                             var h = _weekBarMax == 0 ? 0 : (int)Math.Round(100.0 * w.EventCount / _weekBarMax);
+                            var scale = (h / 100.0).ToString(System.Globalization.CultureInfo.InvariantCulture);
                             <div class="stats-week-bar-wrap" title="@FormatWeekBarTooltip(w)">
-                                <div class="stats-week-bar" style="height: @(h)%"></div>
+                                <div class="stats-week-bar" style="--bar-scale: @scale"></div>
                             </div>
                         }
                     </div>

@@ -72,7 +72,7 @@
 }
 
 .edit-daily-header__status--saved {
-    color: #16a34a;
+    color: var(--hab-accent-success);
 }
 
 .edit-daily-header__status--error {
@@ -499,8 +499,8 @@
     pointer-events: none;
     visibility: hidden;
     transition: 
-        opacity var(--dur-normal) cubic-bezier(0.34, 1.56, 0.64, 1),
-        transform var(--dur-normal) cubic-bezier(0.34, 1.56, 0.64, 1),
+        opacity var(--dur-normal) var(--ease-out),
+        transform var(--dur-normal) var(--ease-out),
         visibility var(--dur-normal);
 }
 
@@ -635,7 +635,7 @@
     justify-content: center;
     flex-shrink: 0;
     color: #fff;
-    transition: transform var(--dur-fast) cubic-bezier(0.34, 1.56, 0.64, 1),
+    transition: transform var(--dur-fast) var(--ease-out),
                 background-color var(--dur-fast) ease;
 }
 
@@ -644,7 +644,7 @@
 }
 
 .habit-track__circle--bad {
-    background: #dc2626;
+    background: var(--hab-type-habit-bad);
 }
 
 .habit-track__circle svg {
@@ -661,14 +661,14 @@
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--mud-palette-text-secondary);
-    transition: all var(--dur-normal) ease;
+    transition: color var(--dur-normal) ease, font-weight var(--dur-normal) ease;
 }
 
 /* Option selected states */
 .habit-track__option--on-good {
-    background-color: color-mix(in srgb, #22c55e 6%, var(--mud-palette-surface)) !important;
-    border-color: #22c55e !important;
-    box-shadow: 0 4px 12px color-mix(in srgb, #22c55e 12%, transparent) !important;
+    background-color: color-mix(in srgb, var(--hab-accent-success) 6%, var(--mud-palette-surface)) !important;
+    border-color: var(--hab-accent-success) !important;
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--hab-accent-success) 12%, transparent) !important;
 }
 
 .habit-track__option--on-good .habit-track__label {
@@ -677,9 +677,9 @@
 }
 
 .habit-track__option--on-bad {
-    background-color: color-mix(in srgb, #dc2626 6%, var(--mud-palette-surface)) !important;
-    border-color: #dc2626 !important;
-    box-shadow: 0 4px 12px color-mix(in srgb, #dc2626 12%, transparent) !important;
+    background-color: color-mix(in srgb, var(--hab-type-habit-bad) 6%, var(--mud-palette-surface)) !important;
+    border-color: var(--hab-type-habit-bad) !important;
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--hab-type-habit-bad) 12%, transparent) !important;
 }
 
 .habit-track__option--on-bad .habit-track__label {
@@ -689,8 +689,8 @@
 
 @media (max-width: 599.98px) {
     .habit-track__circle {
-        width: 2.65rem;
-        height: 2.65rem;
+        width: 2.75rem;
+        height: 2.75rem;
     }
 }
 
@@ -714,7 +714,7 @@
     cursor: pointer;
     flex-shrink: 0;
     color: #fff;
-    transition: transform var(--dur-fast) cubic-bezier(0.34, 1.56, 0.64, 1),
+    transition: transform var(--dur-fast) var(--ease-out),
                 background-color var(--dur-fast) ease;
 }
 
@@ -728,7 +728,7 @@
 }
 
 .counter-adjust__btn--bad {
-    background: #dc2626;
+    background: var(--hab-type-habit-bad);
 }
 
 .counter-adjust__btn:active:not(:disabled) {
@@ -748,8 +748,8 @@
 
 @media (max-width: 599.98px) {
     .counter-adjust__btn {
-        width: 2.65rem;
-        height: 2.65rem;
+        width: 2.75rem;
+        height: 2.75rem;
     }
 }
 

@@ -16,7 +16,12 @@
 
     @if (_error is not null)
     {
-        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
+        <div class="stats-load-fallback">
+            <MudIcon Icon="@Icons.Material.Filled.BarChart" Size="Size.Large" Class="stats-load-fallback__icon" />
+            <MudText Typo="Typo.subtitle2" Class="stats-load-fallback__title">We couldn't load your stats</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">Check your connection and try again, or change the filters.</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="@(() => RefreshAsync(() => LoadStatisticsAsync(_selectedPeriodKey)))">Retry</MudButton>
+        </div>
     }
     else if (_loading)
     {
@@ -124,9 +129,9 @@
                             <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Consistency by item</MudText>
                         </div>
                         <div class="stats-segment" role="tablist" aria-label="Filter consistency graphs">
-                            <button type="button" role="tab" aria-selected="@(_consistencyTab == "all" ? "true" : "false")" class="stats-segment__btn @(_consistencyTab == "all" ? "stats-segment__btn--active" : string.Empty)" @onclick='() => _consistencyTab = "all"'>All</button>
-                            <button type="button" role="tab" aria-selected="@(_consistencyTab == "daily" ? "true" : "false")" class="stats-segment__btn @(_consistencyTab == "daily" ? "stats-segment__btn--active" : string.Empty)" @onclick='() => _consistencyTab = "daily"'>Dailies</button>
-                            <button type="button" role="tab" aria-selected="@(_consistencyTab == "habit" ? "true" : "false")" class="stats-segment__btn @(_consistencyTab == "habit" ? "stats-segment__btn--active" : string.Empty)" @onclick='() => _consistencyTab = "habit"'>Habits</button>
+                            <button type="button" role="tab" @attributes='GetConsistencyTabAttrs("all")' class="stats-segment__btn @(_consistencyTab == "all" ? "stats-segment__btn--active" : string.Empty)" @onclick='() => _consistencyTab = "all"'>All</button>
+                            <button type="button" role="tab" @attributes='GetConsistencyTabAttrs("daily")' class="stats-segment__btn @(_consistencyTab == "daily" ? "stats-segment__btn--active" : string.Empty)" @onclick='() => _consistencyTab = "daily"'>Dailies</button>
+                            <button type="button" role="tab" @attributes='GetConsistencyTabAttrs("habit")' class="stats-segment__btn @(_consistencyTab == "habit" ? "stats-segment__btn--active" : string.Empty)" @onclick='() => _consistencyTab = "habit"'>Habits</button>
                         </div>
                     </div>
 
@@ -146,7 +151,10 @@
                     }
                     else if (_dailyError is not null || _habitError is not null)
                     {
-                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-3">@(_dailyError ?? _habitError)</MudAlert>
+                        <div class="stats-inline-fallback">
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="stats-inline-fallback__icon" />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Some graphs couldn't load. Try again or change the period.</MudText>
+                        </div>
                     }
                     else
                     {

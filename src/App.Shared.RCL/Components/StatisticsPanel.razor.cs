@@ -7,6 +7,7 @@ using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 
 using MudBlazor;
@@ -43,6 +44,10 @@ public partial class StatisticsPanel : IDisposable
     private bool _shouldScrollToEnd;
     private DateOnly _heatmapToday;
 
+    [Inject] public IServiceProvider ServiceProvider { get; set; } = default!;
+
+    private OfflineActivityStatisticsProvider? OfflineStats => ServiceProvider.GetService<OfflineActivityStatisticsProvider>();
+
     private sealed record WeeklyReview(
         DateOnly WeekStart,
         DateOnly WeekEnd,
@@ -72,16 +77,8 @@ public partial class StatisticsPanel : IDisposable
     {
         _subscription = ApplicationState.RegisterOnPersisting(PersistStatisticsData);
         _heatmapToday = DailySchedule.LocalToday(TimeZoneService);
-        if (ApplicationState.TryTakeFromJson<ActivityOverviewDto>("stats_overview_data", out var restoredOverview) && restoredOverview is not null)
+        if (TryRestoreInitialOverview())
         {
-            ApplyOverview(restoredOverview);
-            _loading = false;
-            _loadingDailies = false;
-            _loadingHabits = false;
-        }
-        else if (Stats.TryGetCachedOverview(_selectedPeriodKey, string.IsNullOrEmpty(_tagFilter) ? null : _tagFilter, out var cached) && cached is not null)
-        {
-            ApplyOverview(cached);
             _loading = false;
             _loadingDailies = false;
             _loadingHabits = false;
@@ -94,13 +91,85 @@ public partial class StatisticsPanel : IDisposable
         }
         catch (Exception ex)
         {
-            _error = ex.Message;
+            await HandleInitErrorAsync(ex);
         }
         finally
         {
             _loadingDailies = false;
             _loadingHabits = false;
             _loading = false;
+        }
+    }
+
+    private bool TryRestoreInitialOverview()
+    {
+        if (ApplicationState.TryTakeFromJson<ActivityOverviewDto>("stats_overview_data", out var restoredOverview) && restoredOverview is not null)
+        {
+            ApplyOverview(restoredOverview);
+            return true;
+        }
+
+        if (Stats.TryGetCachedOverview(_selectedPeriodKey, string.IsNullOrEmpty(_tagFilter) ? null : _tagFilter, out var cached) && cached is not null)
+        {
+            ApplyOverview(cached);
+            return true;
+        }
+
+        return false;
+    }
+
+    private async Task HandleInitErrorAsync(Exception ex)
+    {
+        if (_data != null)
+        {
+            await SafeNotifyAsync("Offline: showing last available stats.", Severity.Warning);
+            return;
+        }
+
+        if (await TryApplyOfflineOverviewAsync(_selectedPeriodKey, _tagFilter))
+        {
+            await SafeNotifyAsync("Offline: showing locally computed stats.", Severity.Warning);
+            return;
+        }
+
+        _error = ex.Message;
+        await SafeNotifyAsync("Could not load statistics. Please try again.", Severity.Error);
+    }
+
+    private async Task<bool> TryApplyOfflineOverviewAsync(string periodKey, string? tagFilter, Task<Dictionary<Guid, int>>? streaksTask = null)
+    {
+        if (OfflineStats == null)
+        {
+            return false;
+        }
+
+        try
+        {
+            var tag = string.IsNullOrEmpty(tagFilter) ? null : tagFilter;
+            var fallback = await OfflineStats.BuildOverviewAsync(periodKey, tag);
+            ApplyOverview(fallback);
+            if (streaksTask != null)
+            {
+                await ApplyBestStreakAsync(streaksTask);
+            }
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    private async Task SafeNotifyAsync(string message, Severity severity)
+    {
+        try
+        {
+            await Notifier.NotifyAsync(message, severity);
+        }
+        catch (Exception notifyEx)
+        {
+            // Ignore - best effort toast, fallback already rendered
+            _ = notifyEx;
         }
     }
 
@@ -160,49 +229,68 @@ public partial class StatisticsPanel : IDisposable
         _dailyError = null;
         _loadingHabits = true;
         _habitError = null;
+        var tag = string.IsNullOrEmpty(_tagFilter) ? null : _tagFilter;
+        var streaksTask = BoardData.GetStreakMapAsync();
         try
         {
-            var tag = string.IsNullOrEmpty(_tagFilter) ? null : _tagFilter;
-            var streaksTask = BoardData.GetStreakMapAsync();
-            ActivityOverviewDto overview;
-
-            if (ApplicationState.TryTakeFromJson<ActivityOverviewDto>("stats_overview_data", out var restoredOverview) && restoredOverview is not null)
-            {
-                overview = restoredOverview;
-            }
-            else if (ApplicationState.TryTakeFromJson<ActivityDashboardDto>("stats_dashboard_data", out var d) &&
-                     ApplicationState.TryTakeFromJson<DailyContributionsViewDto>("stats_daily_view_data", out var dv) &&
-                     ApplicationState.TryTakeFromJson<HabitContributionsViewDto>("stats_habit_view_data", out var hv) &&
-                     d is not null && dv is not null && hv is not null)
-            {
-                overview = new ActivityOverviewDto(d, dv, hv);
-            }
-            else
-            {
-                overview = await Stats.GetOverviewAsync(periodKey, tag);
-            }
-
+            var overview = await ResolveOverviewAsync(periodKey, tag);
             ApplyOverview(overview);
             await ApplyBestStreakAsync(streaksTask);
         }
         catch (Exception dex)
         {
-            _error = dex.Message;
-            _dailyError = dex.Message;
-            _habitError = dex.Message;
-            _data = null;
-            _dailyView = null;
-            _habitView = null;
-            _periodOptions = null;
-            _cellIndex = [];
-            _dailyCellIndices.Clear();
-            _habitCellIndices.Clear();
+            await HandleLoadErrorAsync(dex, periodKey, tag, streaksTask);
         }
         finally
         {
             _loadingDailies = false;
             _loadingHabits = false;
         }
+    }
+
+    private async Task<ActivityOverviewDto> ResolveOverviewAsync(string periodKey, string? tag)
+    {
+        if (ApplicationState.TryTakeFromJson<ActivityOverviewDto>("stats_overview_data", out var restoredOverview) && restoredOverview is not null)
+        {
+            return restoredOverview;
+        }
+
+        if (ApplicationState.TryTakeFromJson<ActivityDashboardDto>("stats_dashboard_data", out var d) &&
+            ApplicationState.TryTakeFromJson<DailyContributionsViewDto>("stats_daily_view_data", out var dv) &&
+            ApplicationState.TryTakeFromJson<HabitContributionsViewDto>("stats_habit_view_data", out var hv) &&
+            d is not null && dv is not null && hv is not null)
+        {
+            return new ActivityOverviewDto(d, dv, hv);
+        }
+
+        return await Stats.GetOverviewAsync(periodKey, tag);
+    }
+
+    private async Task HandleLoadErrorAsync(Exception dex, string periodKey, string? tag, Task<Dictionary<Guid, int>> streaksTask)
+    {
+        if (await TryApplyOfflineOverviewAsync(periodKey, tag, streaksTask))
+        {
+            await SafeNotifyAsync("Offline: showing locally computed stats.", Severity.Warning);
+            return;
+        }
+
+        if (_data != null)
+        {
+            await SafeNotifyAsync("Could not refresh statistics. Showing last available data.", Severity.Warning);
+            return;
+        }
+
+        _error = dex.Message;
+        _dailyError = dex.Message;
+        _habitError = dex.Message;
+        _data = null;
+        _dailyView = null;
+        _habitView = null;
+        _periodOptions = null;
+        _cellIndex = [];
+        _dailyCellIndices.Clear();
+        _habitCellIndices.Clear();
+        await SafeNotifyAsync("Could not load statistics. Please try again.", Severity.Error);
     }
 
     private Dictionary<(int Row, int Col), ActivityHeatmapCellDto> GetDailyCellIndex(DailyContributionGraphDto daily)
@@ -337,6 +425,11 @@ public partial class StatisticsPanel : IDisposable
         }
     }
 
+    private Dictionary<string, object> GetConsistencyTabAttrs(string tab) => new()
+    {
+        ["aria-selected"] = _consistencyTab == tab ? "true" : "false"
+    };
+
     private static string HabitActiveRatioLabel(int activeDays, int periodDays)
     {
         var percent = periodDays <= 0 ? 0 : (int)Math.Round(100.0 * activeDays / periodDays);
@@ -461,6 +554,15 @@ public partial class StatisticsPanel : IDisposable
         catch (Exception ex)
         {
             _error = ex.Message;
+            try
+            {
+                await Notifier.NotifyAsync("Could not refresh statistics. Please try again.", Severity.Error);
+            }
+            catch (Exception notifyEx)
+            {
+                // Ignore - best effort toast, fallback already rendered
+                _ = notifyEx;
+            }
         }
         finally
         {

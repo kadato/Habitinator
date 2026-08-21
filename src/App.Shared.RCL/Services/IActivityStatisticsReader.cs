@@ -1,3 +1,5 @@
+using App.Shared.RCL.Models;
+
 namespace App.Shared.RCL.Services;
 
 public interface IActivityStatisticsReader
@@ -25,5 +27,15 @@ public interface IActivityStatisticsReader
 
     void InvalidateCache()
     {
+    }
+
+    void InvalidateForTags(IEnumerable<string>? tags)
+    {
+        InvalidateCache();
+    }
+
+    void InvalidateForItem(BoardItem item)
+    {
+        InvalidateForTags(BoardTagUtil.ParseTags(item.Tags));
     }
 }

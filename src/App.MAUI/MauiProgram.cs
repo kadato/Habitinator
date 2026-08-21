@@ -54,6 +54,8 @@ public static class MauiProgram
         builder.Services.AddSingleton(_ => new MauiApiEndpointOptions(apiBase));
         builder.Services.AddSingleton<IAuthTokenStore, AuthTokenStore>();
         builder.Services.AddSingleton<ILocalSettingsStore, MauiLocalSettingsStore>();
+        builder.Services.AddSingleton<IActivityEventStore, SettingsActivityEventStore>();
+        builder.Services.AddSingleton<OfflineActivityStatisticsProvider>();
         builder.Services.AddSingleton<IClientSessionProvider>(sp => sp.GetRequiredService<IApiSession>());
         var localBoardDbPath = Path.Combine(FileSystem.AppDataDirectory, "habitinator-board-local.db");
         builder.Services.AddDbContextFactory<LocalBoardDbContext>(o =>

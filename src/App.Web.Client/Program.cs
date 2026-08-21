@@ -30,6 +30,8 @@ builder.Services.AddHttpClient("api", client => client.BaseAddress = baseUri);
 
 // Register platform abstractions
 builder.Services.AddSingleton<ILocalSettingsStore, WasmLocalSettingsStore>();
+builder.Services.AddSingleton<IActivityEventStore, SettingsActivityEventStore>();
+builder.Services.AddSingleton<OfflineActivityStatisticsProvider>();
 builder.Services.AddScoped<IClientSessionProvider, ClientSessionProvider>();
 
 // Register authentication state providers

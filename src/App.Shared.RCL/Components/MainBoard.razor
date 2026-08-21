@@ -25,19 +25,19 @@
 
     @if (_loadError is not null)
     {
-        <MudAlert Severity="Severity.Error"
-                  Variant="Variant.Outlined"
-                  ShowCloseIcon="false">
-            <MudStack Spacing="2">
-                <MudText Typo="Typo.body2">@_loadError</MudText>
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           Disabled="@_isLoading"
-                           OnClick="RetryLoadAsync">
-                    Retry
-                </MudButton>
-            </MudStack>
-        </MudAlert>
+        <div class="board-load-fallback">
+            <MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Large" Class="board-load-fallback__icon" />
+            <MudText Typo="Typo.subtitle2" Class="board-load-fallback__title">We couldn't load your board</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="board-load-fallback__hint">Check your connection and try again.</MudText>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Disabled="@_isLoading"
+                       OnClick="RetryLoadAsync"
+                       Size="Size.Small"
+                       Class="mt-2">
+                Retry
+            </MudButton>
+        </div>
     }
 
 

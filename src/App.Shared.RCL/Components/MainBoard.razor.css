@@ -559,3 +559,29 @@
         display: none !important;
     }
 }
+
+.board-load-fallback {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.35rem;
+    padding: 2.4rem 1.5rem 2.2rem;
+    margin: 0.5rem 0;
+    background: color-mix(in srgb, var(--mud-palette-background-gray) 42%, var(--mud-palette-surface));
+    border: 1px dashed color-mix(in srgb, var(--mud-palette-divider) 62%, transparent);
+    border-radius: var(--radius-xl);
+}
+.board-load-fallback__icon {
+    color: var(--mud-palette-text-disabled) !important;
+    opacity: 0.55;
+    margin-bottom: 0.25rem;
+}
+.board-load-fallback__title {
+    font-weight: 700;
+    letter-spacing: -0.015em;
+}
+.board-load-fallback__hint {
+    max-width: 28ch;
+}

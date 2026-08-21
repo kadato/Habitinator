@@ -7,13 +7,19 @@
      role="button"
      tabindex="0"
      aria-label="Dismiss notification">
-    <span class="toast-content-icon">
-        <MudIcon Icon="@SeverityIcon" Size="Size.Small"/>
-    </span>
-    <span class="toast-content-message">@Message</span>
+    <div class="toast-content__main">
+        <span class="toast-content-icon" aria-hidden="true">
+            <MudIcon Icon="@SeverityIcon" Size="Size.Small"/>
+        </span>
+        <div class="toast-content__body">
+            <span class="toast-content__eyebrow">@SeverityLabel</span>
+            <span class="toast-content-message">@Message</span>
+        </div>
+    </div>
     <button class="toast-content-dismiss" type="button" aria-label="Dismiss" @onclick="HandleDismiss" @onclick:stopPropagation="true">
         <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small"/>
     </button>
+    <span class="toast-progress" aria-hidden="true"></span>
 </div>
 
 @code {
@@ -32,11 +38,21 @@
         _ => "info"
     };
 
+    private string SeverityLabel => Severity switch
+    {
+        Severity.Success => "Done",
+        Severity.Warning => "Heads up",
+        Severity.Error => "Not saved",
+        Severity.Info => "Note",
+        Severity.Normal => "Note",
+        _ => "Note"
+    };
+
     private string SeverityIcon => Severity switch
     {
-        Severity.Success => Icons.Material.Filled.CheckCircle,
-        Severity.Warning => Icons.Material.Filled.WarningAmber,
-        Severity.Error => Icons.Material.Filled.ErrorOutline,
+        Severity.Success => Icons.Material.Filled.Check,
+        Severity.Warning => Icons.Material.Filled.PriorityHigh,
+        Severity.Error => Icons.Material.Filled.Close,
         _ => Icons.Material.Filled.Info
     };
 

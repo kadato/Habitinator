@@ -341,6 +341,7 @@ public partial class MainBoard : IAsyncDisposable
             _loadError = ex is InvalidOperationException
                 ? ex.Message
                 : "Could not load your board. Please try again.";
+            await Notifier.NotifyAsync(_loadError, MudBlazor.Severity.Error);
         }
         finally
         {

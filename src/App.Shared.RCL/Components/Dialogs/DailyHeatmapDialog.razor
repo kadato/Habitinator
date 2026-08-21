@@ -2,11 +2,14 @@
 @using App.Shared.RCL.Models
 @using App.Shared.RCL.Services
 @using Microsoft.JSInterop
+@using Microsoft.Extensions.DependencyInjection
 @inject IActivityStatisticsReader Stats
 @inject IUserTimeZoneService TimeZoneService
 @inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
 @inject IUserDateFormatService DateFormatService
+@inject IUserNotifier Notifier
+@inject IServiceProvider ServiceProvider
 
 <MudDialog Class="daily-heatmap-dialog hab-modal-dialog" ContentClass="daily-heatmap-dialog__content" Style="width: min(36rem, calc(100vw - 1rem));">
     <DialogContent>
@@ -29,7 +32,7 @@
                     <div class="stats-segment mt-3" role="tablist" aria-label="Period">
                         @foreach (var opt in _periodOptions)
                         {
-                            <button type="button" role="tab" aria-selected="@(_selectedPeriodKey == opt.Key ? "true" : "false")" class="stats-segment__btn @(_selectedPeriodKey == opt.Key ? "stats-segment__btn--active" : string.Empty)" @onclick="() => OnPeriodChangedAsync(opt.Key)">@opt.Label</button>
+                            <button type="button" role="tab" @attributes="GetPeriodTabAttrs(opt.Key)" class="stats-segment__btn @(_selectedPeriodKey == opt.Key ? "stats-segment__btn--active" : string.Empty)" @onclick="() => OnPeriodChangedAsync(opt.Key)">@opt.Label</button>
                         }
                     </div>
                 }
@@ -45,7 +48,12 @@
                 }
                 else if (_error is not null)
                 {
-                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@_error</MudAlert>
+                    <div class="dialog-inline-fallback">
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" Class="dialog-inline-fallback__icon" />
+                        <MudText Typo="Typo.subtitle2" Class="dialog-inline-fallback__title">Could not load heatmap</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Try again or pick a different period.</MudText>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="LoadDataAsync">Retry</MudButton>
+                    </div>
                 }
                 else if (_graph is not null)
                 {
@@ -125,9 +133,10 @@
             {
                 await JSRuntime.InvokeVoidAsync("scrollHeatmapsToEnd");
             }
-            catch
+            catch (Exception ex)
             {
                 // Ignore JS invocation failures in non-browser context
+                _ = ex;
             }
         }
     }
@@ -151,7 +160,67 @@
             }
             else { _cellIndex = []; }
         }
-        catch (Exception ex) { _error = ex.Message; }
+        catch (Exception ex)
+        {
+            var offline = ServiceProvider.GetService<OfflineActivityStatisticsProvider>();
+            if (offline != null)
+            {
+                try
+                {
+                    var data = await offline.BuildDailyContributionsAsync(_selectedPeriodKey, null);
+                    _periodOptions = data.PeriodOptions;
+                    if (!string.IsNullOrEmpty(data.PeriodKey))
+                    {
+                        _selectedPeriodKey = data.PeriodKey;
+                    }
+
+                    _graph = data.Graphs.FirstOrDefault(g => g.BoardItemId == BoardItemId);
+                    if (_graph is null && !string.IsNullOrWhiteSpace(Title))
+                    {
+                        _graph = data.Graphs.FirstOrDefault(g => string.Equals(g.Title, Title, StringComparison.OrdinalIgnoreCase));
+                    }
+
+                    if (_graph is not null)
+                    {
+                        _cellIndex = _graph.Heatmap.ToDictionary(x => (x.DayRow, x.WeekCol));
+                        _periodOptions = _periodOptions.Where(o => _graph.AvailablePeriodKeys.Contains(o.Key)).ToList();
+                    }
+                    else
+                    {
+                        _cellIndex = [];
+                    }
+
+                    _error = null;
+                    try
+                    {
+                        await Notifier.NotifyAsync("Offline: showing locally computed heatmap.", MudBlazor.Severity.Warning);
+                    }
+                    catch (Exception notifyEx)
+                    {
+                        // Ignore - best effort toast, fallback already rendered
+                        _ = notifyEx;
+                    }
+
+                    return;
+                }
+                catch (Exception fallbackEx)
+                {
+                    // Ignore - offline fallback failed, main error handling below
+                    _ = fallbackEx;
+                }
+            }
+
+            _error = ex.Message;
+            try
+            {
+                await Notifier.NotifyAsync("Could not load daily history. Please try again.", MudBlazor.Severity.Error);
+            }
+            catch (Exception notifyEx)
+            {
+                // Ignore - best effort toast, fallback already rendered
+                _ = notifyEx;
+            }
+        }
         finally { _loading = false; }
     }
 
@@ -163,12 +232,17 @@
         {
             await JSRuntime.InvokeVoidAsync("scrollHeatmapsToEnd");
         }
-        catch
+        catch (Exception ex)
         {
             // Ignore JS invocation failures in non-browser context
+            _ = ex;
         }
     }
 
+    private Dictionary<string, object> GetPeriodTabAttrs(string key) => new()
+    {
+        { "aria-selected", _selectedPeriodKey == key ? "true" : "false" }
+    };
     private bool IsHeatmapToday(DateOnly date) => date == _heatmapToday;
     private string DailyHeatmapCellClass(ActivityHeatmapCellDto cell) => $"stats-cell stats-lvl-{cell.Intensity}{(IsHeatmapToday(cell.Date) ? " stats-heatmap-day--today" : "")}";
     private string DailyHeatmapDayTitle(DateOnly date, int count)

@@ -31,6 +31,28 @@ public partial class NotificationSettingsSection : IDisposable
         catch (Exception ex)
         {
             _loadError = ex.Message;
+            try { await Notifier.NotifyAsync("Could not load notification settings. Please try again.", Severity.Error); } catch (Exception) { /* Best-effort toast. Fallback UI already indicates the failure. */ }
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task RetryLoadAsync()
+    {
+        _loading = true;
+        _loadError = null;
+        StateHasChanged();
+        try
+        {
+            var loaded = await NotificationSettingsService.GetAsync();
+            ApplyModel(loaded);
+        }
+        catch (Exception ex)
+        {
+            _loadError = ex.Message;
+            try { await Notifier.NotifyAsync("Could not load notification settings. Please try again.", Severity.Error); } catch (Exception) { /* Best-effort toast. Fallback UI already indicates the failure. */ }
         }
         finally
         {
@@ -55,6 +77,7 @@ public partial class NotificationSettingsSection : IDisposable
         catch (Exception ex)
         {
             _loadError = ex.Message;
+            try { await Notifier.NotifyAsync("Could not refresh notification settings.", Severity.Error); } catch (Exception) { /* Best-effort toast. Fallback already rendered. */ }
         }
 
         await InvokeAsync(StateHasChanged);

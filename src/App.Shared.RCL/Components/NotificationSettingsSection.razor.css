@@ -4,3 +4,18 @@
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 10%, var(--mud-palette-table-lines) 75%);
     box-shadow: 0 1px 3px color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
 }
+
+.settings-load-fallback {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.35rem;
+    padding: 2rem 1.25rem;
+    background: color-mix(in srgb, var(--mud-palette-background-gray) 38%, var(--mud-palette-surface));
+    border: 1px dashed color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
+    border-radius: var(--radius-xl);
+}
+.settings-load-fallback__icon { color: var(--mud-palette-text-disabled) !important; opacity: 0.5; margin-bottom: 0.2rem; }
+.settings-load-fallback__title { font-weight: 700; letter-spacing: -0.015em; }

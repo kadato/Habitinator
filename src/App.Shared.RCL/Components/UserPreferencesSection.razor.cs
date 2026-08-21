@@ -45,6 +45,29 @@ public partial class UserPreferencesSection
         catch (Exception ex)
         {
             _loadError = ex.Message;
+            try { await Notifier.NotifyAsync("Could not load preferences. Please try again.", Severity.Error); } catch (Exception) { /* Best-effort toast. Fallback UI already indicates the failure. */ }
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task RetryLoadAsync()
+    {
+        _loading = true;
+        _loadError = null;
+        StateHasChanged();
+        try
+        {
+            var loaded = await PreferencesService.GetAsync();
+            ApplyModel(loaded);
+            ApplyTimeZoneOverride();
+        }
+        catch (Exception ex)
+        {
+            _loadError = ex.Message;
+            try { await Notifier.NotifyAsync("Could not load preferences. Please try again.", Severity.Error); } catch (Exception) { /* Best-effort toast. Fallback UI already indicates the failure. */ }
         }
         finally
         {

@@ -431,10 +431,11 @@ public sealed class UserPreferencesSectionTests : IAsyncDisposable
         // Act
         var cut = _ctx.Render<UserPreferencesSection>();
 
-        // Assert
-        var alert = cut.FindComponent<MudAlert>();
-        alert.Instance.Severity.Should().Be(Severity.Error);
-        cut.Markup.Should().Contain("Network failure");
+        // Assert - inline MudAlert is replaced by minimal fallback and toast. Fallback is shown, toast is sent.
+        cut.Markup.Should().Contain("Preferences unavailable");
+        cut.FindComponents<MudAlert>().Should().BeEmpty("inline alert is replaced by toast + minimal fallback");
+        // Verify the fallback contains retry.
+        cut.Markup.Should().Contain("Retry");
     }
 
     [Fact]

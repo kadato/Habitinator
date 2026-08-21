@@ -12,7 +12,12 @@
 
     @if (_loadError is not null)
     {
-        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_loadError</MudAlert>
+        <div class="settings-load-fallback">
+            <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Large" Class="settings-load-fallback__icon" />
+            <MudText Typo="Typo.subtitle2" Class="settings-load-fallback__title">Preferences unavailable</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">We couldn't load your preferences. Check your connection and try again.</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="RetryLoadAsync">Retry</MudButton>
+        </div>
     }
     else if (_loading)
     {

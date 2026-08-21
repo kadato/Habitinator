@@ -24,6 +24,7 @@ public sealed class DailyHeatmapDialogTests : IAsyncDisposable
     private readonly IActivityStatisticsReader _stats = Substitute.For<IActivityStatisticsReader>();
     private readonly IUserTimeZoneService _timeZoneService = Substitute.For<IUserTimeZoneService>();
     private readonly IUserDateFormatService _dateFormatService = Substitute.For<IUserDateFormatService>();
+    private readonly IUserNotifier _notifier = Substitute.For<IUserNotifier>();
 
     public DailyHeatmapDialogTests()
     {
@@ -32,6 +33,7 @@ public sealed class DailyHeatmapDialogTests : IAsyncDisposable
         _ctx.Services.AddSingleton(_stats);
         _ctx.Services.AddSingleton(_timeZoneService);
         _ctx.Services.AddSingleton(_dateFormatService);
+        _ctx.Services.AddSingleton<IUserNotifier>(_notifier);
 
         _timeZoneService.LocalToday.Returns(new DateOnly(2026, 8, 12));
         _dateFormatService.DateFormat.Returns("yyyy-MM-dd");

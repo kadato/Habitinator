@@ -23,6 +23,7 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
     private readonly IActivityStatisticsReader _stats = Substitute.For<IActivityStatisticsReader>();
     private readonly IUserTimeZoneService _timeZoneService = Substitute.For<IUserTimeZoneService>();
     private readonly IUserDateFormatService _dateFormatService = Substitute.For<IUserDateFormatService>();
+    private readonly IUserNotifier _notifier = Substitute.For<IUserNotifier>();
 
     public ActivityDayDetailDialogTests()
     {
@@ -31,6 +32,7 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         _ctx.Services.AddSingleton(_stats);
         _ctx.Services.AddSingleton(_timeZoneService);
         _ctx.Services.AddSingleton(_dateFormatService);
+        _ctx.Services.AddSingleton<IUserNotifier>(_notifier);
 
         _timeZoneService.ConvertToLocal(Arg.Any<DateTimeOffset>())
             .Returns(x => ((DateTimeOffset)x[0]!).ToLocalTime());

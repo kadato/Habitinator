@@ -218,10 +218,10 @@ public sealed class NotificationSettingsSectionTests : IAsyncDisposable
         // Act
         var cut = _ctx.Render<NotificationSettingsSection>();
 
-        // Assert
-        var alert = cut.FindComponent<MudAlert>();
-        alert.Instance.Severity.Should().Be(Severity.Error);
-        cut.Markup.Should().Contain("Database error");
+        // Assert - inline MudAlert replaced by minimal fallback and toast
+        cut.Markup.Should().Contain("Notifications unavailable");
+        cut.FindComponents<MudAlert>().Should().BeEmpty("inline alert is replaced by toast + minimal fallback");
+        cut.Markup.Should().Contain("Retry");
     }
 
     [Fact]

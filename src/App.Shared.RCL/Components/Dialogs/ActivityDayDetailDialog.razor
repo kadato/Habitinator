@@ -1,6 +1,9 @@
+@using Microsoft.Extensions.DependencyInjection
 @inject IActivityStatisticsReader Stats
 @inject IUserTimeZoneService TimeZoneService
 @inject IUserDateFormatService DateFormatService
+@inject IUserNotifier Notifier
+@inject IServiceProvider ServiceProvider
 
 <MudDialog Class="activity-day-detail-dialog" ContentClass="activity-day-detail-dialog__content">
     <DialogContent>
@@ -19,7 +22,12 @@
         }
         else if (_error is not null)
         {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
+            <div class="dialog-inline-fallback">
+                <MudIcon Icon="@Icons.Material.Filled.EventBusy" Size="Size.Large" Class="dialog-inline-fallback__icon" />
+                <MudText Typo="Typo.subtitle2" Class="dialog-inline-fallback__title">Could not load details</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Check your connection and try again.</MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="ReloadAsync">Retry</MudButton>
+            </div>
         }
         else if (_detail is { Events.Count: 0 })
         {
@@ -77,6 +85,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadAsync();
+        await UpdateTitleAsync();
+    }
+
+    private async Task LoadAsync()
+    {
         _loading = true;
         _error = null;
         try
@@ -84,9 +98,53 @@
             var tag = string.IsNullOrWhiteSpace(TagFilter) ? null : TagFilter;
             _detail = await Stats.GetActivityDayDetailAsync(Date, tag);
         }
-        catch (Exception ex) { _error = ex.Message; }
+        catch (Exception ex)
+        {
+            var offline = ServiceProvider.GetService<OfflineActivityStatisticsProvider>();
+            if (offline != null)
+            {
+                try
+                {
+                    var tag2 = string.IsNullOrWhiteSpace(TagFilter) ? null : TagFilter;
+                    _detail = await offline.BuildDayDetailAsync(Date, tag2);
+                    try
+                    {
+                        await Notifier.NotifyAsync("Offline: showing locally computed details.", MudBlazor.Severity.Warning);
+                    }
+                    catch (Exception notifyEx)
+                    {
+                        // Ignore - best effort toast, fallback already rendered
+                        _ = notifyEx;
+                    }
+
+                    return;
+                }
+                catch (Exception fallbackEx)
+                {
+                    // Ignore - offline fallback failed, main error handling below
+                    _ = fallbackEx;
+                }
+            }
+
+            _error = ex.Message;
+            try
+            {
+                await Notifier.NotifyAsync("Could not load day details. Please try again.", MudBlazor.Severity.Error);
+            }
+            catch (Exception notifyEx)
+            {
+                // Ignore - best effort toast, fallback already rendered
+                _ = notifyEx;
+            }
+        }
         finally { _loading = false; }
+    }
+
+    private async Task ReloadAsync()
+    {
+        await LoadAsync();
         await UpdateTitleAsync();
+        StateHasChanged();
     }
 
     private async Task UpdateTitleAsync()
@@ -97,9 +155,10 @@
             var title = _detail is null ? date : $"{date} · {BuildSummary(_detail)}";
             await MudDialog.SetTitleAsync(title);
         }
-        catch
+        catch (Exception ex)
         {
             // Dialog may already be closed. The title stays as provided by the caller.
+            _ = ex;
         }
     }
 

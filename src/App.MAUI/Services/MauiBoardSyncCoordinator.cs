@@ -2,7 +2,11 @@ using System.Threading.Channels;
 
 using App.MAUI.Services.LocalBoard;
 using App.Shared.RCL.Services;
+using App.Shared.RCL.Services.Remote;
 
+#pragma warning disable IDE0005 // Using is required for IServiceProvider.CreateScope extension method, analyzer incorrectly reports as unnecessary
+using Microsoft.Extensions.DependencyInjection;
+#pragma warning restore IDE0005
 using Microsoft.Extensions.Logging;
 
 namespace App.MAUI.Services;
@@ -19,6 +23,7 @@ public sealed partial class MauiBoardSyncCoordinator
     private readonly MauiInitialBoardLoadSignal _initialLoad;
     private readonly RemoteBoardRefreshService _refresh;
     private readonly ILogger<MauiBoardSyncCoordinator> _logger;
+    private readonly IServiceProvider _services;
     private readonly SemaphoreSlim _run = new(1, 1);
     private readonly PeriodicTimer _timer = new(TimeSpan.FromSeconds(45));
     private readonly CancellationTokenSource _appStopping = new();
@@ -33,7 +38,8 @@ public sealed partial class MauiBoardSyncCoordinator
         MauiBoardSyncStatus status,
         MauiInitialBoardLoadSignal initialLoad,
         RemoteBoardRefreshService refresh,
-        ILogger<MauiBoardSyncCoordinator> logger)
+        ILogger<MauiBoardSyncCoordinator> logger,
+        IServiceProvider services)
     {
         _board = board;
         _tokens = tokens;
@@ -41,6 +47,7 @@ public sealed partial class MauiBoardSyncCoordinator
         _initialLoad = initialLoad;
         _refresh = refresh;
         _logger = logger;
+        _services = services;
         _ = Task.Run(() => PeriodicLoopAsync(_appStopping.Token), _appStopping.Token);
     }
 
@@ -89,8 +96,6 @@ public sealed partial class MauiBoardSyncCoordinator
                 return;
             }
 
-            _status.SyncProblemMessage = null;
-
             var progressed = false;
             while (await _board.TryDrainOneOutboxOperationAsync(cancellationToken))
             {
@@ -114,6 +119,34 @@ public sealed partial class MauiBoardSyncCoordinator
 
             var stuck = await _board.TryGetStuckOutboxHintAsync(StuckAfterAttempts, cancellationToken);
             _status.SyncProblemMessage = stuck;
+
+            if (progressed)
+            {
+                try
+                {
+                    using var scope = _services.CreateScope();
+                    var stats = scope.ServiceProvider.GetService<IActivityStatisticsReader>();
+                    stats?.InvalidateCache();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogTrace(ex, "Could not invalidate stats cache after sync.");
+                }
+            }
+
+            // Flush pending activity logs via outbox pattern when online
+            try
+            {
+                using var scope = _services.CreateScope();
+                if (scope.ServiceProvider.GetService<IUserActivityLogService>() is RemoteUserActivityLogService remoteLog)
+                {
+                    await remoteLog.TryFlushPendingAsync(cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogTrace(ex, "Activity pending flush failed.");
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

@@ -632,11 +632,58 @@ public sealed partial class LocalFirstBoardDataService
     {
         try
         {
-            return await MutateAsync(action, cancellationToken);
+            var result = await MutateAsync(action, cancellationToken);
+            // Granular stats invalidation: only affected tag caches, not all
+            if (result is BoardItem bi)
+            {
+                InvalidateStatsCache(bi);
+            }
+            else if (result is not null)
+            {
+                // For operations without a direct BoardItem result like Delete which returns bool, fall back to full invalidation
+                InvalidateStatsCache();
+            }
+            return result;
         }
         finally
         {
             RequestSyncSoon();
+        }
+    }
+
+    private void InvalidateStatsCache(BoardItem? item = null)
+    {
+        try
+        {
+            var stats = services.GetService<IActivityStatisticsReader>();
+            if (stats != null)
+            {
+                if (item != null)
+                {
+                    stats.InvalidateForItem(item);
+                }
+                else
+                {
+                    stats.InvalidateCache();
+                }
+            }
+
+            var offline = services.GetService<OfflineActivityStatisticsProvider>();
+            if (offline != null)
+            {
+                if (item != null)
+                {
+                    offline.InvalidateForTags(BoardTagUtil.ParseTags(item.Tags));
+                }
+                else
+                {
+                    offline.InvalidateForTags(null);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogTrace(ex, "Could not invalidate stats cache.");
         }
     }
 

@@ -127,35 +127,64 @@ public sealed partial class LocalFirstBoardDataService
     public Task<BoardItem?> ToggleItemAsync(BoardSection section, Guid itemId,
         CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
-            async (db, userKey) => await UpdateRowAsync(
-                db,
-                userKey,
-                new RowUpdateOp(itemId, null, BoardOutboxOperationKind.Toggle, (row, expected) => new SectionItemOutboxPayload(section, itemId, expected)),
-                async row =>
+            async (db, userKey) =>
+            {
+                var today = await TodayAsync(cancellationToken);
+                var result = await UpdateRowAsync(
+                    db,
+                    userKey,
+                    new RowUpdateOp(itemId, null, BoardOutboxOperationKind.Toggle, (row, expected) => new SectionItemOutboxPayload(section, itemId, expected)),
+                    row =>
+                    {
+                        ApplyLocalToggle(section, row, today);
+                        return Task.CompletedTask;
+                    },
+                    cancellationToken);
+
+                if (result != null && ResolveToggleActivityEvent(section, result, today) is { } evt)
                 {
-                    ApplyLocalToggle(section, row, await TodayAsync(cancellationToken));
-                },
-                cancellationToken),
+                    await AppendLocalActivityAsync(evt, itemId, result.Title, cancellationToken);
+                }
+
+                return result;
+            },
             cancellationToken);
+
+    private static ActivityEventType? ResolveToggleActivityEvent(BoardSection section, BoardItem result, DateOnly today) =>
+        section switch
+        {
+            BoardSection.Daily => result.DailyLastCompletedOn == today ? ActivityEventType.DailyComplete : ActivityEventType.DailyUncomplete,
+            BoardSection.Todo => result.IsCompleted ? ActivityEventType.TodoComplete : ActivityEventType.TodoUncomplete,
+            _ => null
+        };
 
     public async Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn,
         CancellationToken cancellationToken = default)
     {
         var today = await TodayAsync(cancellationToken);
         return await MutateWithSyncAsync(
-            async (db, userKey) => await UpdateRowAsync(
-                db,
-                userKey,
-                new RowUpdateOp(itemId, BoardSection.Daily, BoardOutboxOperationKind.CompleteDailyForDate, (row, expected) => new CompleteDailyOutboxPayload(itemId, completedOn, expected)),
-                row =>
+            async (db, userKey) =>
+            {
+                var result = await UpdateRowAsync(
+                    db,
+                    userKey,
+                    new RowUpdateOp(itemId, BoardSection.Daily, BoardOutboxOperationKind.CompleteDailyForDate, (row, expected) => new CompleteDailyOutboxPayload(itemId, completedOn, expected)),
+                    row =>
+                    {
+                        row.DailyLastCompletedOn = completedOn;
+                        row.IsCompleted = false;
+                        row.Counter = Math.Max(1, row.Counter + 1);
+                        return Task.CompletedTask;
+                    },
+                    cancellationToken,
+                    row => CanCompleteDailyForDate(row, completedOn, today));
+
+                if (result != null)
                 {
-                    row.DailyLastCompletedOn = completedOn;
-                    row.IsCompleted = false;
-                    row.Counter = Math.Max(1, row.Counter + 1);
-                    return Task.CompletedTask;
-                },
-                cancellationToken,
-                row => CanCompleteDailyForDate(row, completedOn, today)),
+                    await AppendLocalActivityAsync(ActivityEventType.DailyComplete, itemId, result.Title, cancellationToken);
+                }
+                return result;
+            },
             cancellationToken);
     }
 
@@ -166,38 +195,56 @@ public sealed partial class LocalFirstBoardDataService
 
     public Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
-            async (db, userKey) => await UpdateRowAsync(
-                db,
-                userKey,
-                new RowUpdateOp(itemId, BoardSection.Habit, BoardOutboxOperationKind.HabitIncrement, (row, expected) => new ItemIdOutboxPayload(itemId, expected)),
-                row =>
-                {
-                    if (row.TrackPlus)
+            async (db, userKey) =>
+            {
+                var result = await UpdateRowAsync(
+                    db,
+                    userKey,
+                    new RowUpdateOp(itemId, BoardSection.Habit, BoardOutboxOperationKind.HabitIncrement, (row, expected) => new ItemIdOutboxPayload(itemId, expected)),
+                    row =>
                     {
-                        row.Counter++;
-                    }
+                        if (row.TrackPlus)
+                        {
+                            row.Counter++;
+                        }
 
-                    return Task.CompletedTask;
-                },
-                cancellationToken),
+                        return Task.CompletedTask;
+                    },
+                    cancellationToken);
+
+                if (result != null && result.TrackPlus)
+                {
+                    await AppendLocalActivityAsync(ActivityEventType.HabitPlus, itemId, result.Title, cancellationToken);
+                }
+                return result;
+            },
             cancellationToken);
 
     public Task<BoardItem?> IncrementHabitMinusAsync(Guid itemId, CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
-            async (db, userKey) => await UpdateRowAsync(
-                db,
-                userKey,
-                new RowUpdateOp(itemId, BoardSection.Habit, BoardOutboxOperationKind.HabitDecrement, (row, expected) => new ItemIdOutboxPayload(itemId, expected)),
-                row =>
-                {
-                    if (row.TrackMinus)
+            async (db, userKey) =>
+            {
+                var result = await UpdateRowAsync(
+                    db,
+                    userKey,
+                    new RowUpdateOp(itemId, BoardSection.Habit, BoardOutboxOperationKind.HabitDecrement, (row, expected) => new ItemIdOutboxPayload(itemId, expected)),
+                    row =>
                     {
-                        row.NegativeCounter++;
-                    }
+                        if (row.TrackMinus)
+                        {
+                            row.NegativeCounter++;
+                        }
 
-                    return Task.CompletedTask;
-                },
-                cancellationToken),
+                        return Task.CompletedTask;
+                    },
+                    cancellationToken);
+
+                if (result != null && result.TrackMinus)
+                {
+                    await AppendLocalActivityAsync(ActivityEventType.HabitMinus, itemId, result.Title, cancellationToken);
+                }
+                return result;
+            },
             cancellationToken);
 
     private readonly record struct RowUpdateOp(
@@ -397,6 +444,26 @@ public sealed partial class LocalFirstBoardDataService
         {
             item.SortOrder = seq;
             seq += 1.0;
+        }
+    }
+
+    private async Task AppendLocalActivityAsync(ActivityEventType type, Guid? boardItemId, string? titleSnapshot, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var store = services.GetService<IActivityEventStore>();
+            var clock = services.GetService<IClock>();
+            if (store == null || clock == null)
+            {
+                return;
+            }
+
+            var rec = new UserActivityEventRecord(clock.UtcNow, type, boardItemId, null, titleSnapshot);
+            await store.AppendAsync(rec, cancellationToken);
+        }
+        catch
+        {
+            // Best-effort local activity log for offline stats
         }
     }
 

@@ -17,11 +17,7 @@ public sealed class WebSmokeTests
     {
         if (_isBaseUrlReachable.HasValue)
         {
-            if (!_isBaseUrlReachable.Value)
-            {
-                throw Xunit.Sdk.SkipException.ForSkip(
-                    $"E2E_BASE_URL '{BaseUrl}' is not reachable (cached check).");
-            }
+            Skip.If(!_isBaseUrlReachable.Value, $"E2E_BASE_URL '{BaseUrl}' is not reachable (cached check).");
             return;
         }
 
@@ -42,11 +38,10 @@ public sealed class WebSmokeTests
         }
 
         _isBaseUrlReachable = false;
-        throw Xunit.Sdk.SkipException.ForSkip(
-            $"E2E_BASE_URL '{BaseUrl}' is not reachable. Start App.Web before running Playwright tests.");
+        Skip.If(true, $"E2E_BASE_URL '{BaseUrl}' is not reachable. Start App.Web before running Playwright tests.");
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task Home_loads_without_server_error()
     {
         await EnsureBaseUrlReachableAsync();
@@ -60,7 +55,7 @@ public sealed class WebSmokeTests
         (await page.ContentAsync()).Should().NotBeNullOrWhiteSpace();
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task Login_page_reachable()
     {
         await EnsureBaseUrlReachableAsync();
@@ -74,7 +69,7 @@ public sealed class WebSmokeTests
         await Assertions.Expect(page.Locator("body")).ToContainTextAsync("login", new() { IgnoreCase = true });
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task Register_page_reachable()
     {
         await EnsureBaseUrlReachableAsync();

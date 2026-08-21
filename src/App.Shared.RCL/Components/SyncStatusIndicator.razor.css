@@ -1,16 +1,90 @@
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+@keyframes sync-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.85; }
+    50% { transform: scale(1.18); opacity: 1; }
+}
+@keyframes sync-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
-::deep .animate-spin {
-    animation: spin 2s linear infinite;
+/* Header dot: 7px, quiet, tactile like a board pin */
+.sync-dot-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+.sync-dot {
+    --dot-color: var(--mud-palette-text-disabled);
+    position: relative;
+    width: 7px;
+    height: 7px;
+    border-radius: var(--radius-pill);
+    background: var(--dot-color);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--dot-color) 12%, transparent);
+    transition: background var(--dur-normal) ease, box-shadow var(--dur-normal) ease, opacity var(--dur-normal) ease;
+}
+.sync-dot::after {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border-radius: var(--radius-pill);
+    border: 1px solid transparent;
+    opacity: 0;
+    transition: opacity var(--dur-normal) ease;
+}
+.sync-dot--offline {
+    --dot-color: #f59e0b;
+    animation: sync-pulse 2.2s var(--ease-out) infinite;
+}
+.sync-dot--offline::after {
+    border-color: color-mix(in srgb, #f59e0b 28%, transparent);
+    opacity: 1;
+}
+.sync-dot--error {
+    --dot-color: #dc2626;
+    box-shadow: 0 0 0 4px color-mix(in srgb, #dc2626 14%, transparent);
+}
+.sync-dot--syncing {
+    --dot-color: var(--mud-palette-primary);
+    animation: sync-pulse 1.4s ease infinite;
+}
+.sync-dot--syncing::after {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 26%, transparent);
+    opacity: 1;
+}
+.sync-dot--ok {
+    --dot-color: #16a34a;
+    opacity: 0.72;
+    box-shadow: 0 0 0 3px color-mix(in srgb, #16a34a 10%, transparent);
+}
+.sync-dot--idle {
+    --dot-color: var(--mud-palette-text-disabled);
+    opacity: 0.5;
 }
 
-::deep .opacity-60 {
-    opacity: 0.6;
+/* Expanded row inside profile menu */
+.sync-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.65rem 1rem;
+}
+.sync-row__label {
+    font-family: var(--hab-font-sans);
+    font-size: 0.78rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    color: var(--mud-palette-text-primary);
+}
+.sync-row__meta {
+    margin-left: auto;
+    font-family: var(--hab-font-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--mud-palette-text-secondary);
+    font-variant-numeric: tabular-nums;
 }

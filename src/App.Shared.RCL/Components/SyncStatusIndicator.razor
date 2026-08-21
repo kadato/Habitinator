@@ -2,27 +2,31 @@
 @inject IUserDateFormatService DateFormatService
 @implements IDisposable
 
-@if (BoardSync.LastSyncedUtc is not null || BoardSync.IsOffline || BoardSync.IsSyncing || !string.IsNullOrEmpty(BoardSync.SyncProblemMessage))
+@{
+    var hasState = BoardSync.LastSyncedUtc is not null || BoardSync.IsOffline || BoardSync.IsSyncing || !string.IsNullOrEmpty(BoardSync.SyncProblemMessage);
+    var state = GetState();
+    var dotClass = GetDotClass(state);
+    var label = GetSyncStatusText();
+    var tooltip = GetSyncStatusTooltip();
+}
+
+@if (hasState)
 {
     @if (IconOnly)
     {
-        <div class="sync-status-indicator d-flex align-center justify-center me-2" title="@GetSyncStatusTooltip()">
-            <MudIcon Icon="@GetSyncIcon()"
-                     Color="@GetSyncIconColor()"
-                     Size="Size.Medium"
-                     Class="@GetSyncIconClass()" />
-        </div>
+        <span class="sync-dot-wrap me-2" title="@tooltip" aria-label="@label" role="status">
+            <span class="sync-dot @dotClass" aria-hidden="true"></span>
+        </span>
     }
     else
     {
-        <div class="d-flex align-center gap-2 py-2 px-4">
-            <MudIcon Icon="@GetSyncIcon()"
-                     Color="@GetSyncIconColor()"
-                     Size="Size.Small"
-                     Class="@GetSyncIconClass()" />
-            <MudText Typo="Typo.caption" Class="mud-text-secondary font-weight-medium">
-                @GetSyncStatusText()
-            </MudText>
+        <div class="sync-row">
+            <span class="sync-dot @dotClass" aria-hidden="true"></span>
+            <span class="sync-row__label">@label</span>
+            @if (BoardSync.LastSyncedUtc is { } syncedAt && state == SyncState.Synced)
+            {
+                <span class="sync-row__meta">@DateFormatService.Format(syncedAt.LocalDateTime)</span>
+            }
         </div>
         <MudDivider Class="my-1"/>
     }
@@ -30,6 +34,8 @@
 
 @code {
     [Parameter] public bool IconOnly { get; set; }
+
+    private enum SyncState { Offline, Error, Syncing, Synced, Idle }
 
     protected override void OnInitialized()
     {
@@ -46,48 +52,30 @@
         BoardSync.Changed -= OnBoardSyncChanged;
     }
 
-    private string GetSyncIcon()
+    private SyncState GetState()
     {
-        if (BoardSync.IsOffline)
-            return Icons.Material.Filled.CloudOff;
-        if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage))
-            return Icons.Material.Filled.CloudQueue;
-        if (BoardSync.IsSyncing)
-            return Icons.Material.Filled.CloudSync;
-        return Icons.Material.Filled.CloudDone;
+        if (BoardSync.IsOffline) return SyncState.Offline;
+        if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage)) return SyncState.Error;
+        if (BoardSync.IsSyncing) return SyncState.Syncing;
+        if (BoardSync.LastSyncedUtc is not null) return SyncState.Synced;
+        return SyncState.Idle;
     }
 
-    private Color GetSyncIconColor()
+    private static string GetDotClass(SyncState state) => state switch
     {
-        if (BoardSync.IsOffline)
-            return Color.Warning;
-        if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage))
-            return Color.Error;
-        if (BoardSync.IsSyncing)
-            return Color.Info;
-        return Color.Success;
-    }
-
-    private string GetSyncIconClass()
-    {
-        var classes = "";
-        if (BoardSync.IsSyncing && !BoardSync.IsOffline)
-        {
-            classes += " animate-spin";
-        }
-        else if (BoardSync.LastSyncedUtc is not null && !BoardSync.IsOffline && string.IsNullOrEmpty(BoardSync.SyncProblemMessage))
-        {
-            classes += " opacity-60";
-        }
-        return classes;
-    }
+        SyncState.Offline => "sync-dot--offline",
+        SyncState.Error => "sync-dot--error",
+        SyncState.Syncing => "sync-dot--syncing",
+        SyncState.Synced => "sync-dot--ok",
+        _ => "sync-dot--idle"
+    };
 
     private string GetSyncStatusTooltip()
     {
         if (BoardSync.IsOffline)
             return "Working offline. Changes will sync when you reconnect.";
         if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage))
-            return $"Sync problem: {BoardSync.SyncProblemMessage}";
+            return $"Sync issue: {BoardSync.SyncProblemMessage}";
         if (BoardSync.IsSyncing)
             return "Syncing with server...";
         if (BoardSync.LastSyncedUtc is { } syncedAt)
@@ -98,13 +86,13 @@
     private string GetSyncStatusText()
     {
         if (BoardSync.IsOffline)
-            return "Offline mode";
+            return "Offline";
         if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage))
-            return "Sync error";
+            return "Sync issue";
         if (BoardSync.IsSyncing)
-            return "Syncing...";
-        if (BoardSync.LastSyncedUtc is { } syncedAt)
-            return $"Synced at {DateFormatService.Format(syncedAt.LocalDateTime)}";
+            return "Syncing";
+        if (BoardSync.LastSyncedUtc is not null)
+            return "Synced";
         return "Not synced";
     }
 }

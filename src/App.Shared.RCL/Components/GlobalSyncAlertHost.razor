@@ -4,8 +4,10 @@
 @implements IDisposable
 
 @code {
-    private bool? _wasOffline;
-    private string? _prevSyncProblemMessage;
+    // Sync status is now surfaced only via the minimal SyncStatusIndicator.
+    // Toast spam for transient offline or sync problem states is suppressed to keep the
+    // app calm when the server is unreachable. The indicator shows the small dot,
+    // toasts are reserved for explicit user actions and real errors.
     private NotificationSettings? _settings;
 
     protected override async Task OnInitializedAsync()
@@ -13,10 +15,6 @@
         BoardSync.Changed += OnBoardSyncChanged;
         SettingsService.Changed += OnSettingsChanged;
         await LoadSettingsAsync();
-
-        // Initialize tracking variables so we only alert on transitions, not initial load
-        _wasOffline = BoardSync.IsOffline;
-        _prevSyncProblemMessage = BoardSync.SyncProblemMessage;
     }
 
     private async Task LoadSettingsAsync()
@@ -52,52 +50,9 @@
             await LoadSettingsAsync();
         }
 
-        if (_settings is null || !_settings.SyncFailureAlertsEnabled)
-        {
-            // Update tracking to avoid queuing old transitions if alerts are toggled back on
-            _wasOffline = BoardSync.IsOffline;
-            _prevSyncProblemMessage = BoardSync.SyncProblemMessage;
-            return;
-        }
-
-        var currentOffline = BoardSync.IsOffline;
-        var currentProblem = BoardSync.SyncProblemMessage;
-
-        // 1. Connection/Offline transition
-        if (_wasOffline.HasValue && _wasOffline != currentOffline)
-        {
-            if (currentOffline)
-            {
-                await UserNotifier.NotifyAsync(
-                    "Working offline. Changes will save locally and sync when you reconnect.",
-                    MudBlazor.Severity.Warning);
-            }
-            else
-            {
-                await UserNotifier.NotifyAsync(
-                    "Back online. Server connection restored.",
-                    MudBlazor.Severity.Success);
-            }
-        }
-
-        // 2. Sync problem message transition
-        if (_prevSyncProblemMessage != currentProblem)
-        {
-            if (!string.IsNullOrEmpty(currentProblem)
-                && !(currentOffline && currentProblem.Contains("Offline", StringComparison.OrdinalIgnoreCase)))
-            {
-                await UserNotifier.NotifyAsync(currentProblem, MudBlazor.Severity.Error);
-            }
-            else if (!string.IsNullOrEmpty(_prevSyncProblemMessage)
-                && !currentOffline
-                && !_prevSyncProblemMessage.Contains("Offline", StringComparison.OrdinalIgnoreCase))
-            {
-                await UserNotifier.NotifyAsync("Sync issues resolved. All changes synced.", MudBlazor.Severity.Success);
-            }
-        }
-
-        _wasOffline = currentOffline;
-        _prevSyncProblemMessage = currentProblem;
+        // No toasts are emitted here. The small SyncStatusIndicator dot is the single source
+        // of truth for sync health, and it never shows a false resolved state.
+        await Task.CompletedTask;
     }
 
     public void Dispose()

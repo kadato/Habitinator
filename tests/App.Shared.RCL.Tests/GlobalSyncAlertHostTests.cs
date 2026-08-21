@@ -34,7 +34,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
     [Fact]
     public async Task Alerts_On_Offline_Transition_When_Enabled()
     {
-        // Arrange
+        // Arrange - offline transitions are now surfaced only via the minimal sync dot indicator, not toasts
         _settingsService.Settings = new NotificationSettings { SyncFailureAlertsEnabled = true };
         _boardSync.IsOffline = false;
         var cut = _ctx.Render<GlobalSyncAlertHost>();
@@ -43,16 +43,14 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         _boardSync.IsOffline = true;
         await cut.InvokeAsync(_boardSync.RaiseChanged);
 
-        // Assert
-        await _notifier.Received(1).NotifyAsync(
-            "Working offline. Changes will save locally and sync when you reconnect.",
-            Severity.Warning);
+        // Assert - no toast, only the SyncStatusIndicator dot updates
+        await _notifier.DidNotReceive().NotifyAsync(Arg.Any<string>(), Arg.Any<Severity>());
     }
 
     [Fact]
     public async Task Alerts_On_Online_Transition_When_Enabled()
     {
-        // Arrange
+        // Arrange - online transitions are now dot-only
         _settingsService.Settings = new NotificationSettings { SyncFailureAlertsEnabled = true };
         _boardSync.IsOffline = true;
         var cut = _ctx.Render<GlobalSyncAlertHost>();
@@ -61,16 +59,14 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         _boardSync.IsOffline = false;
         await cut.InvokeAsync(_boardSync.RaiseChanged);
 
-        // Assert
-        await _notifier.Received(1).NotifyAsync(
-            "Back online. Server connection restored.",
-            Severity.Success);
+        // Assert - no toast
+        await _notifier.DidNotReceive().NotifyAsync(Arg.Any<string>(), Arg.Any<Severity>());
     }
 
     [Fact]
     public async Task Alerts_On_Sync_Problem_Transition_When_Enabled()
     {
-        // Arrange
+        // Arrange - sync problems are now dot-only, not toasts, to avoid spam when server is down
         _settingsService.Settings = new NotificationSettings { SyncFailureAlertsEnabled = true };
         _boardSync.SyncProblemMessage = null;
         var cut = _ctx.Render<GlobalSyncAlertHost>();
@@ -79,16 +75,14 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         _boardSync.SyncProblemMessage = "Stuck outbox item.";
         await cut.InvokeAsync(_boardSync.RaiseChanged);
 
-        // Assert
-        await _notifier.Received(1).NotifyAsync(
-            "Stuck outbox item.",
-            Severity.Error);
+        // Assert - no error toast, indicator shows the small error dot
+        await _notifier.DidNotReceive().NotifyAsync(Arg.Any<string>(), Arg.Any<Severity>());
     }
 
     [Fact]
     public async Task Alerts_On_Sync_Problem_Resolved_Transition_When_Enabled()
     {
-        // Arrange
+        // Arrange - resolved transitions no longer toast; false resolved when server is still down is suppressed
         _settingsService.Settings = new NotificationSettings { SyncFailureAlertsEnabled = true };
         _boardSync.SyncProblemMessage = "Stuck outbox item.";
         var cut = _ctx.Render<GlobalSyncAlertHost>();
@@ -97,16 +91,14 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         _boardSync.SyncProblemMessage = null;
         await cut.InvokeAsync(_boardSync.RaiseChanged);
 
-        // Assert
-        await _notifier.Received(1).NotifyAsync(
-            "Sync issues resolved. All changes synced.",
-            Severity.Success);
+        // Assert - no success toast; dot simply returns to ok/idle
+        await _notifier.DidNotReceive().NotifyAsync(Arg.Any<string>(), Arg.Any<Severity>());
     }
 
     [Fact]
     public async Task Suppress_Problem_Toast_If_Offline_Reporting()
     {
-        // Arrange
+        // Arrange - neither offline nor sync problem toasts; both are dot-only now
         _settingsService.Settings = new NotificationSettings { SyncFailureAlertsEnabled = true };
         _boardSync.IsOffline = false;
         _boardSync.SyncProblemMessage = null;
@@ -117,13 +109,8 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         _boardSync.SyncProblemMessage = "Offline - board changes stay on this device until you reconnect.";
         await cut.InvokeAsync(_boardSync.RaiseChanged);
 
-        // Assert - Warn was sent, Error was suppressed
-        await _notifier.Received(1).NotifyAsync(
-            "Working offline. Changes will save locally and sync when you reconnect.",
-            Severity.Warning);
-        await _notifier.DidNotReceive().NotifyAsync(
-            Arg.Is<string>(s => s != null && s.Contains("Offline")),
-            Severity.Error);
+        // Assert - no toasts at all
+        await _notifier.DidNotReceive().NotifyAsync(Arg.Any<string>(), Arg.Any<Severity>());
     }
 
     [Fact]

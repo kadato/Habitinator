@@ -1,12 +1,49 @@
 @using Microsoft.Extensions.DependencyInjection
+@using Microsoft.JSInterop
 @inject IActivityStatisticsReader Stats
 @inject IUserTimeZoneService TimeZoneService
 @inject IUserDateFormatService DateFormatService
 @inject IUserNotifier Notifier
 @inject IServiceProvider ServiceProvider
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
-<MudDialog Class="activity-day-detail-dialog" ContentClass="activity-day-detail-dialog__content">
+<MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content">
     <DialogContent>
+        <div class="hab-modal hab-modal--neutral hab-modal--wide" data-dialog-label="Day details">
+            <div class="hab-modal__grabber" aria-hidden="true"></div>
+            <div class="hab-modal__header" @ref="_headerRef">
+                <div class="hab-modal__topbar hab-modal__topbar--minimal">
+                    <DialogCloseButton OnClose="() => MudDialog.Close()" />
+                </div>
+                <MudText Typo="Typo.h6" Class="font-weight-bold">Day details</MudText>
+                @if (!string.IsNullOrWhiteSpace(_headerLine))
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@_headerLine</MudText>
+                }
+                <div class="day-stepper" role="group" aria-label="Change day">
+                    <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                                   aria-label="Previous day"
+                                   OnClick="() => StepDayAsync(-1)"
+                                   Class="day-stepper__btn" />
+                    <div class="day-stepper__date" aria-live="polite" aria-atomic="true">@_shownDateLabel</div>
+                    <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+                                   aria-label="Next day"
+                                   Disabled="@IsNextDisabled"
+                                   OnClick="() => StepDayAsync(1)"
+                                   Class="day-stepper__btn" />
+                </div>
+                <div class="day-stepper__today-row">
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Primary"
+                               OnClick="GoTodayAsync"
+                               Disabled="@IsTodayShown"
+                               Class="day-stepper__today text-transform-none">
+                        Today
+                    </MudButton>
+                </div>
+            </div>
+            <div class="hab-modal__body" @ref="_bodyRef">
         @if (_loading)
         {
             <div class="stats-day-timeline">
@@ -71,6 +108,8 @@
                 }
             </div>
         }
+            </div>
+        </div>
     </DialogContent>
 </MudDialog>
 
@@ -82,12 +121,117 @@
     private ActivityDayDetailDto? _detail;
     private bool _loading = true;
     private string? _error;
+    private DateOnly _shownDate;
+    private string? _headerLine;
+    private string _shownDateLabel = string.Empty;
+    private ElementReference _headerRef;
+    private ElementReference _bodyRef;
+    private DotNetObjectReference<ActivityDayDetailDialog>? _swipeRef;
+    private bool _swipeStarted;
 
     protected override async Task OnInitializedAsync()
     {
+        _shownDate = Date;
+        try
+        {
+            await DateFormatService.InitializeAsync();
+        }
+        catch
+        {
+            // Format falls back to default when preferences fail to load.
+        }
+
+        UpdateShownDateLabel();
         await LoadAsync();
         await UpdateTitleAsync();
     }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_swipeStarted)
+        {
+            _swipeStarted = true;
+            try
+            {
+                _swipeRef = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/modalSwipe.js");
+                await JS.InvokeVoidAsync("HabitinatorModalSwipe.init", _headerRef, _swipeRef,
+                    new { horizontal = false, dismissDown = true });
+                await JS.InvokeVoidAsync("HabitinatorModalSwipe.init", _bodyRef, _swipeRef,
+                    new { horizontal = true, dismissDown = false });
+            }
+            catch
+            {
+                // Swipe gestures are a touch enhancement. Buttons always work.
+            }
+        }
+    }
+
+    /// <summary>Called from touch gestures. Swipe left for next day, right for previous.</summary>
+    [JSInvokable]
+    public Task OnModalSwipeAsync(int direction)
+    {
+        if (direction > 0 && IsNextDisabled)
+        {
+            return Task.CompletedTask;
+        }
+
+        return StepDayAsync(direction > 0 ? 1 : -1);
+    }
+
+    /// <summary>Called from touch gestures. Swipe down on the header closes the dialog.</summary>
+    [JSInvokable]
+    public Task OnModalSwipeDownAsync()
+    {
+        try
+        {
+            MudDialog.Close();
+        }
+        catch
+        {
+            // Dialog already closed.
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("HabitinatorModalSwipe.destroy", _headerRef);
+            await JS.InvokeVoidAsync("HabitinatorModalSwipe.destroy", _bodyRef);
+        }
+        catch
+        {
+            // Ignored during disposal.
+        }
+
+        _swipeRef?.Dispose();
+        _swipeRef = null;
+    }
+
+    private async Task StepDayAsync(int offset)
+    {
+        _shownDate = _shownDate.AddDays(offset);
+        UpdateShownDateLabel();
+        await LoadAsync();
+        await UpdateTitleAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task GoTodayAsync()
+    {
+        _shownDate = DailySchedule.LocalToday(TimeZoneService);
+        UpdateShownDateLabel();
+        await LoadAsync();
+        await UpdateTitleAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private bool IsTodayShown => _shownDate == DailySchedule.LocalToday(TimeZoneService);
+
+    private bool IsNextDisabled => _shownDate >= DailySchedule.LocalToday(TimeZoneService);
 
     private async Task LoadAsync()
     {
@@ -96,7 +240,7 @@
         try
         {
             var tag = string.IsNullOrWhiteSpace(TagFilter) ? null : TagFilter;
-            _detail = await Stats.GetActivityDayDetailAsync(Date, tag);
+            _detail = await Stats.GetActivityDayDetailAsync(_shownDate, tag);
         }
         catch (Exception ex)
         {
@@ -106,7 +250,7 @@
                 try
                 {
                     var tag2 = string.IsNullOrWhiteSpace(TagFilter) ? null : TagFilter;
-                    _detail = await offline.BuildDayDetailAsync(Date, tag2);
+                    _detail = await offline.BuildDayDetailAsync(_shownDate, tag2);
                     try
                     {
                         await Notifier.NotifyAsync("Offline: showing locally computed details.", MudBlazor.Severity.Warning);
@@ -143,16 +287,31 @@
     private async Task ReloadAsync()
     {
         await LoadAsync();
+        UpdateShownDateLabel();
         await UpdateTitleAsync();
         StateHasChanged();
+    }
+
+    private void UpdateShownDateLabel()
+    {
+        try
+        {
+            _shownDateLabel = DateFormatService.Format(_shownDate);
+        }
+        catch
+        {
+            _shownDateLabel = _shownDate.ToString("yyyy-MM-dd");
+        }
     }
 
     private async Task UpdateTitleAsync()
     {
         try
         {
-            var date = DateFormatService.Format(Date);
+            UpdateShownDateLabel();
+            var date = _shownDateLabel;
             var title = _detail is null ? date : $"{date} · {BuildSummary(_detail)}";
+            _headerLine = title;
             await MudDialog.SetTitleAsync(title);
         }
         catch (Exception ex)

@@ -22,7 +22,10 @@
     align-items: flex-end;
     justify-content: center;
     background: transparent;
+    border: 0;
     border-radius: 0;
+    padding: 0;
+    font: inherit;
     position: relative;
     cursor: pointer;
     outline: none;
@@ -37,10 +40,7 @@
     border-radius: 3px 3px 2px 2px;
     transform: scaleY(var(--bar-scale, 0));
     transform-origin: bottom;
-    transition: transform var(--dur-normal) var(--ease-out), filter var(--dur-fast) ease;
-    will-change: transform;
 }
-.stats-week-bar-wrap:hover .stats-week-bar { filter: brightness(1.08); }
 .stats-week-bar__focus {
     position: absolute;
     bottom: 0;
@@ -125,7 +125,7 @@
     min-width: 0;
 }
 
-/* Filters first on small screens, KPIs directly under filters */
+/* Filters first on small screens, KPI cards directly under filters */
 @media (max-width: 959.98px) {
     .stats-panel {
         display: flex;
@@ -136,9 +136,6 @@
     }
     .stats-hero-card {
         order: 3;
-    }
-    .stats-kpi-strip {
-        display: none;
     }
     .stats-kpi-cards--desktop {
         display: grid;
@@ -283,129 +280,11 @@
     }
 }
 
-/* KPI strip now visible on all widths as primary KPIs, sidebar duplicates for desktop density */
-.stats-kpi-strip {
-    display: block;
-    padding: 0.15rem 0;
-}
-.stats-kpi-strip--mobile {
-    display: block;
-    padding: 0.15rem 0;
-}
-
+/* KPI cards are the single KPI surface: 2-column grid on phones, sidebar column on desktop. */
 .stats-kpi-cards--desktop {
-    display: none;
+    display: flex;
     flex-direction: column;
     gap: 0.65rem;
-}
-
-.stats-kpi-strip__grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-4);
-    align-items: stretch;
-}
-@media (min-width: 600px) {
-    .stats-kpi-strip__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-
-.stats-kpi-strip__item {
-    --kpi-accent: var(--mud-palette-primary);
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    min-width: 0;
-    padding: 0.65rem 0.6rem 0.7rem;
-    border-radius: var(--radius-xl);
-    border: 1px solid color-mix(in srgb, var(--kpi-accent) 20%, var(--hab-border-card));
-    background: color-mix(in srgb, var(--mud-palette-surface) 90%, var(--kpi-accent) 5%);
-    box-shadow: 0 1px 2px color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
-}
-
-.stats-kpi-strip__item--events {
-    --kpi-accent: var(--mud-palette-primary);
-}
-
-.stats-kpi-strip__item--focus {
-    --kpi-accent: color-mix(in srgb, var(--mud-palette-info) 85%, var(--mud-palette-primary) 15%);
-}
-
-.stats-kpi-strip__item--peak {
-    --kpi-accent: color-mix(in srgb, var(--mud-palette-success) 70%, var(--mud-palette-primary) 30%);
-}
-
-.stats-kpi-strip__item--streak {
-    --kpi-accent: var(--hab-accent-streak);
-}
-
-.stats-kpi-strip__head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-2);
-    min-width: 0;
-}
-
-::deep .stats-kpi-strip__icon {
-    flex-shrink: 0;
-    color: color-mix(in srgb, var(--kpi-accent) 65%, var(--mud-palette-text-secondary) 35%);
-}
-
-.stats-kpi-strip__label {
-    font-size: 0.6rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    line-height: 1.2;
-    color: var(--mud-palette-text-secondary);
-    overflow-wrap: break-word;
-    min-width: 0;
-}
-
-.stats-kpi-strip__value {
-    font-family: var(--hab-font-mono);
-    font-size: 0.92rem;
-    font-weight: 600;
-    line-height: 1.2;
-    font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum" 1, "zero" 1;
-    color: var(--mud-palette-text-primary);
-    overflow-wrap: break-word;
-}
-
-.stats-kpi-strip__value--date {
-    font-size: 0.72rem;
-}
-
-@media (max-width: 399.98px) {
-    .stats-kpi-strip__grid {
-        gap: var(--space-3);
-    }
-
-    .stats-kpi-strip__item {
-        padding: 0.55rem var(--space-4) 0.6rem;
-        border-radius: var(--radius-lg);
-    }
-
-    .stats-kpi-strip__value {
-        font-size: 0.85rem;
-    }
-
-    .stats-kpi-strip__value--date {
-        font-size: 0.66rem;
-    }
-}
-
-@media (min-width: 960px) {
-    /* keep both visible: strip under hero for quick scan, sidebar cards for persistent reference */
-    .stats-kpi-strip--mobile {
-        display: block;
-    }
-
-    .stats-kpi-cards--desktop {
-        display: flex;
-    }
 }
 
 /* Summary KPI cards - use ::deep because classes are merged onto MudBlazor's root. */
@@ -607,6 +486,10 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: var(--space-3);
     }
+
+    .stats-week-bar-wrap {
+        min-width: 12px;
+    }
 }
 
 /* Consistency blocks - similar styling for habits and dailies */
@@ -621,6 +504,16 @@
 .stats-daily-title {
     color: var(--mud-palette-text-primary);
     font-weight: 700;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 959.98px) {
+    .stats-filter-row .mud-input-root-outlined {
+        min-height: 44px;
+    }
 }
 
 .stats-habit-ratio {
@@ -724,13 +617,11 @@
     padding: 0.35rem 0.75rem;
     border-radius: var(--radius-pill);
     cursor: pointer;
-    transition: background var(--dur-fast) ease, color var(--dur-fast) ease, border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .stats-segment__btn--active {
-    background: var(--mud-palette-surface);
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
     color: var(--mud-palette-primary);
-    border-color: color-mix(in srgb, var(--mud-palette-primary) 18%, transparent);
-    box-shadow: 0 1px 6px rgba(15,23,42,0.08);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, transparent);
 }
 .stats-segment__btn:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: 2px; }
 

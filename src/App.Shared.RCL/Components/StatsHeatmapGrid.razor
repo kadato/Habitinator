@@ -11,7 +11,7 @@
         <span></span>
         <span>S</span>
     </div>
-    <div class="stats-heatmap-wrap">
+    <div class="stats-heatmap-wrap" tabindex="0" role="region" aria-label="@RegionLabel">
         @if (ShowMonthLabels)
         {
             <div class="stats-heatmap-months" aria-hidden="true" style="--stats-cols: @Columns;">
@@ -54,6 +54,7 @@
                             {
                                 <div @key="(row, col)"
                                      class="@cellClass"
+                                     role="img"
                                      title="@cellTitle"
                                      aria-label="@cellAria"
                                      aria-current="@(IsToday(row, col) ? "date" : null)"></div>
@@ -85,6 +86,9 @@
     [Parameter] public Func<int, int, string?> GetCellTitle { get; set; } = (_, _) => null;
     [Parameter] public Func<int, int, string?> GetCellAriaLabel { get; set; } = (_, _) => null;
     [Parameter] public Func<int, int, Task>? OnCellClick { get; set; }
+
+    /// <summary>Accessible name for the scrollable heatmap region. Pass a unique label per grid.</summary>
+    [Parameter] public string RegionLabel { get; set; } = "Activity heatmap";
 
     private Task OnCellClickAsync(int r, int c) => OnCellClick is null ? Task.CompletedTask : OnCellClick(r, c);
 

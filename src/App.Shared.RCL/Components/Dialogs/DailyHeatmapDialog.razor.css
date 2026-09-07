@@ -19,3 +19,17 @@
     width: 0 !important;
     height: 0 !important;
 }
+
+/* Phones: show a thin scroll cue so the sideways grid is discoverable. */
+@media (max-width: 599.98px) {
+    .daily-heatmap-grid-container ::deep .stats-heatmap-wrap {
+        scrollbar-width: thin !important;
+        padding-bottom: 10px !important;
+    }
+
+    .daily-heatmap-grid-container ::deep .stats-heatmap-wrap::-webkit-scrollbar {
+        display: block !important;
+        width: auto !important;
+        height: 6px !important;
+    }
+}

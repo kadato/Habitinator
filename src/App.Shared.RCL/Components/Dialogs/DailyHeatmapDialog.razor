@@ -11,14 +11,12 @@
 @inject IUserNotifier Notifier
 @inject IServiceProvider ServiceProvider
 
-<MudDialog Class="daily-heatmap-dialog hab-modal-dialog" ContentClass="daily-heatmap-dialog__content" Style="width: min(36rem, calc(100vw - 1rem));">
+<MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content">
     <DialogContent>
-        <div class="hab-modal hab-modal--daily" @onclick:stopPropagation="true">
+        <div class="hab-modal hab-modal--daily hab-modal--wide" data-dialog-label="Daily heatmap" @onclick:stopPropagation="true">
             <div class="hab-modal__header">
                 <div class="hab-modal__topbar hab-modal__topbar--minimal">
-                    <button type="button" class="hab-modal__close" aria-label="Close" title="Close" @onclick="() => MudDialog.Close()">
-                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
+                    <DialogCloseButton OnClose="() => MudDialog.Close()" />
                 </div>
                 <div class="d-flex align-center gap-2 flex-wrap">
                     <MudText Typo="Typo.subtitle1" Class="font-weight-bold" Style="letter-spacing:-0.02em;">@DisplayTitle</MudText>
@@ -38,7 +36,7 @@
                 }
             </div>
 
-            <div class="hab-modal__body" style="padding-top:0.9rem;">
+            <div class="hab-modal__body">
                 @if (_loading)
                 {
                     <div class="pa-2">
@@ -59,6 +57,7 @@
                 {
                     <div class="daily-heatmap-grid-container">
                         <StatsHeatmapGrid Columns="_graph.GridWeekColumns"
+                                           RegionLabel="@($"Activity heatmap for {DisplayTitle}")"
                                            ContainerClass="stats-heatmap-container--large"
                                            ShowMonthLabels="false"
                                            Cells="_cellIndex"
@@ -220,7 +219,7 @@
         }
         catch
         {
-            // Best-effort toast
+            // Shows a best-effort toast. The dialog still shows the data.
         }
     }
 
@@ -256,7 +255,7 @@
     {
         if (_cellIndex.TryGetValue((row, col), out var cell) && cell.InDataRange)
         {
-            var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = true, CloseButton = true };
+            var options = DialogDefaults.Wide;
             var parameters = new DialogParameters<ActivityDayDetailDialog> { { x => x.Date, cell.Date } };
             var dateStr = DateFormatService.Format(cell.Date);
             await DialogService.ShowAsync<ActivityDayDetailDialog>($"{cell.Date.DayOfWeek} · {dateStr}", parameters, options);

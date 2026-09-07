@@ -63,11 +63,12 @@
         <MudPaper Class="pa-4 stats-dashboard-card stats-hero-card" Elevation="0" Outlined="true">
             <div class="stats-hero-head">
                 <div class="stats-hero-head__titles">
-                    <MudText Typo="Typo.h6" Class="stats-hero-title">Activity heatmap</MudText>
+                    <MudText Typo="Typo.h6" HtmlTag="h2" Class="stats-hero-title">Activity heatmap</MudText>
                 </div>
             </div>
 
             <StatsHeatmapGrid Columns="_data.GridWeekColumns"
+                               RegionLabel="Activity heatmap"
                                ContainerClass="stats-heatmap-container--large"
                                IncludeRovingTabindex="true"
                                ShowMonthLabels="false"
@@ -79,22 +80,6 @@
 
 
         </MudPaper>
-
-        <!-- KPI strip shows on all widths now, sidebar keeps desktop cards as well for density -->
-        <div class="stats-kpi-strip">
-            <div class="stats-kpi-strip__grid">
-                @foreach (var kpi in Kpis(_data))
-                {
-                    <div class="stats-kpi-strip__item @kpi.StripAccent">
-                        <div class="stats-kpi-strip__head">
-                            <span class="stats-kpi-strip__label">@kpi.StripLabel</span>
-                            <MudIcon Icon="@kpi.Icon" Class="stats-kpi-strip__icon" Size="Size.Small" aria-hidden="true"/>
-                        </div>
-                        <span class="@($"stats-kpi-strip__value {kpi.StripValueClass}".Trim())" title="@kpi.StripTitle()">@kpi.StripValue()</span>
-                    </div>
-                }
-            </div>
-        </div>
 
         <div class="stats-dashboard-layout">
             <div class="stats-dashboard-main">
@@ -111,13 +96,13 @@
                         {
                             var h = _weekBarMax == 0 ? 0 : (int)Math.Round(100.0 * w.EventCount / _weekBarMax);
                             var scale = (h / 100.0).ToString(CultureInfo.InvariantCulture);
-                            <div class="stats-week-bar-wrap" title="@FormatWeekBarTooltip(w)" tabindex="0" role="img" aria-label="@FormatWeekBarTooltip(w)">
+                            <button type="button" class="stats-week-bar-wrap" title="@FormatWeekBarTooltip(w)" aria-label="@FormatWeekBarTooltip(w)" @onclick="() => ShowWeekBarValueAsync(w)">
                                 <div class="stats-week-bar" style="--bar-scale: @scale"></div>
                                 @if (w.FocusMinutes > 0)
                                 {
                                     <div class="stats-week-bar__focus" style="--bar-scale: @scale" title="@w.FocusMinutes min focus"></div>
                                 }
-                            </div>
+                            </button>
                         }
                     </div>
                 </MudPaper>
@@ -187,6 +172,7 @@
                                                     <span class="stats-habit-ratio" title="@DailyActiveRatioTooltip(daily)">@DailyActiveRatioLabel(daily)</span>
                                                 </div>
                                                 <StatsHeatmapGrid Columns="daily.GridWeekColumns"
+                                                                   RegionLabel="@($"Activity heatmap for {daily.Title}")"
                                                                    Cells="cellIx"
                                                                    ShowMonthLabels="false"
                                                                    IsToday="@((r, c) => cellIx.TryGetValue((r, c), out var cell) && IsHeatmapToday(cell.Date))"
@@ -209,6 +195,7 @@
                                                     <span class="stats-habit-ratio" title="@FormatHabitRatioTooltip(habit.ActiveDayCount, habit.PeriodDayCount)">@HabitActiveRatioLabel(habit.ActiveDayCount, habit.PeriodDayCount)</span>
                                                 </div>
                                                 <StatsHeatmapGrid Columns="habit.GridWeekColumns"
+                                                                   RegionLabel="@($"Activity heatmap for {habit.Title}")"
                                                                    Cells="cellIx"
                                                                    ShowMonthLabels="false"
                                                                    IsToday="@((r, c) => cellIx.TryGetValue((r, c), out var cell) && IsHeatmapToday(cell.Date))"
@@ -340,7 +327,7 @@
                                     <MudText Typo="Typo.caption" Class="stats-kpi-card__label">@kpi.CardLabel</MudText>
                                     <MudIcon Icon="@kpi.Icon" Class="stats-kpi-card__icon" Size="Size.Small" aria-hidden="true"/>
                                 </div>
-                                <MudText Typo="Typo.h6" Class="stats-kpi-card__value">@kpi.CardValue()</MudText>
+                                <MudText Typo="Typo.h6" HtmlTag="h3" Class="stats-kpi-card__value" title="@kpi.CardDetail()">@kpi.CardValue()</MudText>
                             </MudPaper>
                         }
                     </div>

@@ -40,21 +40,12 @@ public partial class StatisticsPanel : IDisposable
     private string? _habitError;
     private int _bestStreakDays;
     private string? _bestStreakTitle;
-    private WeeklyReview? _weeklyReview;
     private bool _shouldScrollToEnd;
     private DateOnly _heatmapToday;
 
     [Inject] public IServiceProvider ServiceProvider { get; set; } = default!;
 
     private OfflineActivityStatisticsProvider? OfflineStats => ServiceProvider.GetService<OfflineActivityStatisticsProvider>();
-
-    private sealed record WeeklyReview(
-        DateOnly WeekStart,
-        DateOnly WeekEnd,
-        int Events,
-        int FocusMinutes,
-        int DailiesCompleted,
-        int PercentChange);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -219,7 +210,6 @@ public partial class StatisticsPanel : IDisposable
             ? 0
             : _data.WeekBars.Max(x => x.EventCount);
         _shouldScrollToEnd = true;
-        ComputeWeeklyReview();
     }
 
     private async Task LoadStatisticsAsync(string periodKey)
@@ -317,89 +307,6 @@ public partial class StatisticsPanel : IDisposable
         return map;
     }
 
-    private void ComputeWeeklyReview()
-    {
-        if (_data is null)
-        {
-            _weeklyReview = null;
-            return;
-        }
-
-        var weekStart = _heatmapToday.AddDays(-(((int)_heatmapToday.DayOfWeek + 6) % 7));
-        var weekEnd = _heatmapToday;
-
-        var (events, prevEvents) = CountHeatmapEvents(_data.Heatmap, weekStart, weekEnd);
-
-        var focusMinutes = _data.WeekBars
-            .Where(w => w.WeekStart == weekStart)
-            .Select(w => w.FocusMinutes)
-            .DefaultIfEmpty(0)
-            .Sum();
-
-        var dailiesCompleted = CountCompletedDailies(_dailyView, weekStart, weekEnd);
-        var percentChange = CalculatePercentChange(events, prevEvents);
-
-        _weeklyReview = new WeeklyReview(weekStart, weekEnd, events, focusMinutes, dailiesCompleted, percentChange);
-    }
-
-    private static (int Events, int PrevEvents) CountHeatmapEvents(IEnumerable<ActivityHeatmapCellDto> cells, DateOnly weekStart, DateOnly weekEnd)
-    {
-        var events = 0;
-        var prevEvents = 0;
-        var prevWeekStart = weekStart.AddDays(-7);
-
-        foreach (var cell in cells)
-        {
-            if (!cell.InDataRange)
-            {
-                continue;
-            }
-
-            if (cell.Date >= weekStart && cell.Date <= weekEnd)
-            {
-                events += cell.Count;
-            }
-            else if (cell.Date >= prevWeekStart && cell.Date < weekStart)
-            {
-                prevEvents += cell.Count;
-            }
-        }
-
-        return (events, prevEvents);
-    }
-
-    private static int CountCompletedDailies(DailyContributionsViewDto? dailyView, DateOnly weekStart, DateOnly weekEnd)
-    {
-        if (dailyView is null)
-        {
-            return 0;
-        }
-
-        var dailiesCompleted = 0;
-        foreach (var graph in dailyView.Graphs)
-        {
-            foreach (var cell in graph.Heatmap)
-            {
-                if (cell.InDataRange && cell.Count > 0 && cell.Date >= weekStart && cell.Date <= weekEnd)
-                {
-                    dailiesCompleted++;
-                }
-            }
-        }
-
-        return dailiesCompleted;
-    }
-
-    private static int CalculatePercentChange(int events, int prevEvents)
-    {
-        if (prevEvents > 0)
-        {
-            return (int)Math.Round(100.0 * (events - prevEvents) / prevEvents);
-        }
-
-        return events > 0 ? 100 : 0;
-    }
-
     private async Task ApplyBestStreakAsync(Task<Dictionary<Guid, int>> streaksTask)
     {
         try
@@ -491,7 +398,6 @@ public partial class StatisticsPanel : IDisposable
         await RefreshAsync(() => LoadStatisticsAsync(_selectedPeriodKey));
     }
 
-    private string FormatBusiestDayShort(DateOnly day) => DateFormatService.Format(day);
 
     private static string GetMultiSelectionText(IReadOnlyList<string> selectedValues)
     {
@@ -572,13 +478,7 @@ public partial class StatisticsPanel : IDisposable
 
     private async Task OpenDayDetailAsync(DateOnly date)
     {
-        var options = new DialogOptions
-        {
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true,
-            CloseOnEscapeKey = true,
-            CloseButton = true
-        };
+        var options = DialogDefaults.Wide;
         var filterTag = string.IsNullOrEmpty(_tagFilter) ? null : _tagFilter;
         var parameters = new DialogParameters<ActivityDayDetailDialog>
         {
@@ -618,6 +518,18 @@ public partial class StatisticsPanel : IDisposable
     private string FormatWeekBarTooltip(ActivityWeekBarDto w) =>
         $"{DateFormatService.Format(w.WeekStart)} week: {w.EventCount} events, {w.FocusMinutes} min focus";
 
+    private async Task ShowWeekBarValueAsync(ActivityWeekBarDto w)
+    {
+        try
+        {
+            await Notifier.NotifyAsync(FormatWeekBarTooltip(w), Severity.Info);
+        }
+        catch
+        {
+            // Shows a best-effort toast. The chart still shows the value.
+        }
+    }
+
     private static string FormatHabitRatioTooltip(int activeDayCount, int periodDayCount)
     {
         var label = activeDayCount == 1 ? "day" : "days";
@@ -647,14 +559,9 @@ public partial class StatisticsPanel : IDisposable
     }
 
     private sealed record KpiDescriptor(
-        string StripAccent,
         string CardAccent,
         string Icon,
-        string StripLabel,
         string CardLabel,
-        Func<string?> StripTitle,
-        Func<string> StripValue,
-        string StripValueClass,
         Func<string> CardValue,
         Func<string> CardDetail);
 
@@ -670,14 +577,9 @@ public partial class StatisticsPanel : IDisposable
     {
         var count = data.TotalEvents.ToString(CultureInfo.InvariantCulture);
         return new KpiDescriptor(
-            "stats-kpi-strip__item--events",
             "stats-kpi-card--events",
             Icons.Material.Filled.ViewTimeline,
-            "Events",
             "Total events",
-            () => null,
-            () => count,
-            "",
             () => count,
             () => "Logged in this period");
     }
@@ -686,14 +588,9 @@ public partial class StatisticsPanel : IDisposable
     {
         var formatted = FormatFocus(data.TotalFocusMinutes);
         return new KpiDescriptor(
-            "stats-kpi-strip__item--focus",
             "stats-kpi-card--focus",
             Icons.Material.Filled.Timer,
-            "Focus",
             "Focus time",
-            () => null,
-            () => formatted,
-            "",
             () => formatted,
             () => "From focus timer sessions");
     }
@@ -703,14 +600,9 @@ public partial class StatisticsPanel : IDisposable
         var busiestDay = data.BusiestDay.GetValueOrDefault();
         var hasPeak = data.BusiestDay.HasValue && data.MaxDayCount > 0;
         return new KpiDescriptor(
-            "stats-kpi-strip__item--peak",
             "stats-kpi-card--peak",
             Icons.Material.Filled.TrendingUp,
-            "Busiest",
             "Busiest day",
-            () => hasPeak ? FormatBusiestDayDetail(busiestDay, data.MaxDayCount) : null,
-            () => hasPeak ? FormatBusiestDayShort(busiestDay) : "-",
-            "stats-kpi-strip__value--date",
             () => hasPeak ? DateFormatService.Format(busiestDay) : "-",
             () => hasPeak ? FormatBusiestDayDetail(busiestDay, data.MaxDayCount) : "No activity in range");
     }
@@ -722,14 +614,9 @@ public partial class StatisticsPanel : IDisposable
         var streakTitle = _bestStreakTitle;
 
         return new KpiDescriptor(
-            "stats-kpi-strip__item--streak",
             "stats-kpi-card--streak",
             Icons.Material.Filled.Whatshot,
-            "Streak",
             "Longest streak",
-            () => hasStreak ? streakTitle : null,
-            () => hasStreak ? $"{streakDays} d" : "-",
-            "",
             () => hasStreak ? $"{streakDays} days" : "-",
             () => hasStreak ? streakTitle ?? "" : "No active streaks yet");
     }

@@ -42,7 +42,7 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task Renders_Yesterday_Dailies_And_Done_Footer_Button()
+    public async Task Renders_Yesterday_Dailies_And_Save_Footer_Button()
     {
         // Arrange
         var daily1 = new BoardItem(Guid.NewGuid(), "Drink 2L Water", false, 0);
@@ -61,14 +61,14 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
         await provider.InvokeAsync(async () => await dialogService.ShowAsync<DailyYesterdayRetroDialog>(string.Empty, parameters));
 
         // Assert
-        provider.Markup.Should().Contain("Yesterday's Dailies");
+        provider.Markup.Should().Contain("Yesterday's dailies");
         provider.Markup.Should().Contain("Drink 2L Water");
         provider.Markup.Should().Contain("Read 20 pages");
-        provider.Markup.Should().Contain("Done");
+        provider.Markup.Should().Contain("Save");
     }
 
     [Fact]
-    public async Task Checking_Item_And_Clicking_Done_Completes_Daily_For_Yesterday()
+    public async Task Checking_Item_And_Clicking_Save_Completes_Daily_For_Yesterday()
     {
         // Arrange
         var daily1Id = Guid.NewGuid();
@@ -96,8 +96,8 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
         var row = provider.Find(".daily-yesterday-row");
         await provider.InvokeAsync(() => row.Click());
 
-        var doneBtn = provider.Find(".daily-yesterday-footer__close-btn");
-        await provider.InvokeAsync(() => doneBtn.Click());
+        var saveBtn = provider.Find(".hab-modal__footer button");
+        await provider.InvokeAsync(() => saveBtn.Click());
 
         var reference = dialogRef ?? throw new InvalidOperationException("DialogRef was null");
         var result = await reference.Result;
@@ -137,7 +137,7 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
         var row = provider.Find(".daily-yesterday-row");
         await provider.InvokeAsync(() => row.Click());
 
-        var closeBtn = provider.Find(".daily-yesterday-header__close-btn");
+        var closeBtn = provider.Find(".hab-modal__close");
         await provider.InvokeAsync(() => closeBtn.Click());
 
         var reference = dialogRef ?? throw new InvalidOperationException("DialogRef was null");

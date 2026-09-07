@@ -1,34 +1,28 @@
 @inject IUserDateFormatService DateFormatService
 @inject IBoardDataService BoardDataService
 @inject IUserNotifier Notifier
+@inject IJSRuntime JS
 @implements IAsyncDisposable
 
-<MudDialog Class="daily-yesterday-dialog"
-           ContentClass="daily-yesterday-dialog__content"
-           Style="width: min(28rem, calc(100vw - 2rem));">
+<MudDialog Class="hab-modal-dialog"
+           ContentClass="hab-modal-content">
     <DialogContent>
-        <div class="daily-yesterday-shell">
-            <div class="daily-yesterday-header">
-                <div class="daily-yesterday-header__toolbar">
-                    <div class="daily-yesterday-header__title-wrap">
-                        <MudIcon Icon="@Icons.Material.Filled.History" Class="daily-yesterday-header__icon me-2" Color="Color.Primary" Size="Size.Medium" />
-                        <MudText Typo="Typo.subtitle1" Class="daily-yesterday-header__title">Yesterday's Dailies</MudText>
-                    </div>
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" 
-                                   Class="daily-yesterday-header__close-btn" 
-                                   OnClick="CloseAsync" 
-                                   Size="Size.Small"
-                                   aria-label="Close"
-                                   title="Close" />
+        <div class="hab-modal hab-modal--daily" data-dialog-label="Yesterday's dailies">
+            <div class="hab-modal__grabber" aria-hidden="true"></div>
+            <div class="hab-modal__header" @ref="_headerRef">
+                <div class="hab-modal__topbar hab-modal__topbar--minimal">
+                    <DialogCloseButton OnClose="CloseAsync" />
                 </div>
-                <div class="daily-yesterday-header__subtitle-wrap mt-1">
-                    <MudText Typo="Typo.body2" Class="daily-yesterday-header__subtitle">
-                        Dailies not done on <strong class="daily-yesterday-date">@_dueOnFormatted</strong>. Check off any you completed that day.
-                    </MudText>
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@Icons.Material.Filled.History" Color="Color.Primary" Size="Size.Medium" />
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold" Style="letter-spacing:-0.02em;">Yesterday's dailies</MudText>
                 </div>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
+                    You did not finish these dailies on <strong class="daily-yesterday-date">@_dueOnFormatted</strong>. Check off each daily you completed that day.
+                </MudText>
             </div>
 
-            <div class="daily-yesterday-body">
+            <div class="hab-modal__body">
                 <div class="daily-yesterday-list">
                     @foreach (var item in _pending)
                     {
@@ -78,13 +72,15 @@
                 </div>
             </div>
 
-            <div class="daily-yesterday-footer">
+            <div class="hab-modal__footer">
                 <MudButton Variant="Variant.Filled"
                            Color="Color.Primary"
                            FullWidth="true"
-                           Class="daily-yesterday-footer__close-btn"
+                           Size="Size.Medium"
+                           StartIcon="@Icons.Material.Filled.Check"
+                           Class="hab-primary-btn"
                            OnClick="CloseAsync">
-                    Done
+                    Save
                 </MudButton>
             </div>
         </div>
@@ -104,6 +100,32 @@
     private readonly HashSet<Guid> _committedIds = [];
     private bool _isCommitting;
     private bool _sessionEnded;
+    private ElementReference _headerRef;
+    private DotNetObjectReference<DailyYesterdayRetroDialog>? _swipeRef;
+    private bool _swipeStarted;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_swipeStarted)
+        {
+            _swipeStarted = true;
+            try
+            {
+                _swipeRef = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/modalSwipe.js");
+                await JS.InvokeVoidAsync("HabitinatorModalSwipe.init", _headerRef, _swipeRef,
+                    new { horizontal = false, dismissDown = true });
+            }
+            catch
+            {
+                // Swipe gestures are a touch enhancement. Save and close buttons always work.
+            }
+        }
+    }
+
+    /// <summary>Called from touch gestures. Swipe down on the header saves and closes.</summary>
+    [JSInvokable]
+    public Task OnModalSwipeDownAsync() => CloseAsync();
 
     protected override void OnParametersSet()
     {
@@ -193,6 +215,18 @@
 
     public async ValueTask DisposeAsync()
     {
+        try
+        {
+            await JS.InvokeVoidAsync("HabitinatorModalSwipe.destroy", _headerRef);
+        }
+        catch
+        {
+            // Ignored during disposal.
+        }
+
+        _swipeRef?.Dispose();
+        _swipeRef = null;
+
         if (_sessionEnded)
         {
             return;

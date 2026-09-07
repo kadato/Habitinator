@@ -1,5 +1,6 @@
 @inject IBoardSyncStatus BoardSync
 @inject IUserDateFormatService DateFormatService
+@inject IUserNotifier Notifier
 @implements IDisposable
 
 @{
@@ -14,9 +15,9 @@
 {
     @if (IconOnly)
     {
-        <span class="sync-dot-wrap me-2" title="@tooltip" aria-label="@label" role="status">
+        <button type="button" class="sync-dot-wrap me-2" title="@tooltip" aria-label="@label. Show sync details." @onclick="ShowDetailsAsync">
             <span class="sync-dot @dotClass" aria-hidden="true"></span>
-        </span>
+        </button>
     }
     else
     {
@@ -50,6 +51,25 @@
     public void Dispose()
     {
         BoardSync.Changed -= OnBoardSyncChanged;
+    }
+
+    private async Task ShowDetailsAsync()
+    {
+        var severity = GetState() switch
+        {
+            SyncState.Error => MudBlazor.Severity.Error,
+            SyncState.Offline => MudBlazor.Severity.Warning,
+            SyncState.Syncing => MudBlazor.Severity.Info,
+            _ => MudBlazor.Severity.Normal
+        };
+        try
+        {
+            await Notifier.NotifyAsync(GetSyncStatusTooltip(), severity);
+        }
+        catch
+        {
+            // Shows a best-effort toast. The indicator still shows the state.
+        }
     }
 
     private SyncState GetState()

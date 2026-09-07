@@ -1,13 +1,4 @@
-@keyframes sync-pulse {
-    0%, 100% { transform: scale(1); opacity: 0.85; }
-    50% { transform: scale(1.18); opacity: 1; }
-}
-@keyframes sync-spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-/* Header dot: 7px, quiet, tactile like a board pin */
+/* Header dot: 7px, flat, no motion */
 .sync-dot-wrap {
     display: inline-flex;
     align-items: center;
@@ -15,6 +6,26 @@
     width: 20px;
     height: 20px;
     flex-shrink: 0;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-md);
+    background: transparent;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.sync-dot-wrap:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 1px;
+}
+
+@media (max-width: 959.98px) {
+    .sync-dot-wrap {
+        width: 44px;
+        height: 44px;
+        margin-right: 0 !important;
+    }
 }
 .sync-dot {
     --dot-color: var(--mud-palette-text-disabled);
@@ -23,8 +34,6 @@
     height: 7px;
     border-radius: var(--radius-pill);
     background: var(--dot-color);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--dot-color) 12%, transparent);
-    transition: background var(--dur-normal) ease, box-shadow var(--dur-normal) ease, opacity var(--dur-normal) ease;
 }
 .sync-dot::after {
     content: "";
@@ -33,23 +42,19 @@
     border-radius: var(--radius-pill);
     border: 1px solid transparent;
     opacity: 0;
-    transition: opacity var(--dur-normal) ease;
 }
 .sync-dot--offline {
-    --dot-color: #f59e0b;
-    animation: sync-pulse 2.2s var(--ease-out) infinite;
+    --dot-color: var(--hab-type-todo);
 }
 .sync-dot--offline::after {
-    border-color: color-mix(in srgb, #f59e0b 28%, transparent);
+    border-color: color-mix(in srgb, var(--hab-type-todo) 28%, transparent);
     opacity: 1;
 }
 .sync-dot--error {
-    --dot-color: #dc2626;
-    box-shadow: 0 0 0 4px color-mix(in srgb, #dc2626 14%, transparent);
+    --dot-color: var(--hab-type-habit-bad);
 }
 .sync-dot--syncing {
     --dot-color: var(--mud-palette-primary);
-    animation: sync-pulse 1.4s ease infinite;
 }
 .sync-dot--syncing::after {
     border-color: color-mix(in srgb, var(--mud-palette-primary) 26%, transparent);
@@ -58,7 +63,6 @@
 .sync-dot--ok {
     --dot-color: #16a34a;
     opacity: 0.72;
-    box-shadow: 0 0 0 3px color-mix(in srgb, #16a34a 10%, transparent);
 }
 .sync-dot--idle {
     --dot-color: var(--mud-palette-text-disabled);
@@ -71,6 +75,7 @@
     align-items: center;
     gap: 0.6rem;
     padding: 0.65rem 1rem;
+    flex-wrap: wrap;
 }
 .sync-row__label {
     font-family: var(--hab-font-sans);
@@ -87,4 +92,7 @@
     letter-spacing: 0.01em;
     color: var(--mud-palette-text-secondary);
     font-variant-numeric: tabular-nums;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }

@@ -4,11 +4,11 @@
 @implements IDisposable
 
 @code {
-    // Sync status is now surfaced only via the minimal SyncStatusIndicator.
-    // Toast spam for transient offline or sync problem states is suppressed to keep the
-    // app calm when the server is unreachable. The indicator shows the small dot,
-    // toasts are reserved for explicit user actions and real errors.
+    // Sync health lives in `SyncStatusIndicator`, a dot plus text with `role=status`.
+    // Toasts fire only when sync goes offline or into error. They never fire on recovery.
     private NotificationSettings? _settings;
+    private bool _wasOffline;
+    private string? _lastProblem;
 
     protected override async Task OnInitializedAsync()
     {
@@ -50,9 +50,30 @@
             await LoadSettingsAsync();
         }
 
-        // No toasts are emitted here. The small SyncStatusIndicator dot is the single source
-        // of truth for sync health, and it never shows a false resolved state.
-        await Task.CompletedTask;
+        var isOffline = BoardSync.IsOffline;
+        var problem = BoardSync.SyncProblemMessage;
+        var alertsEnabled = _settings is null || _settings.SyncFailureAlertsEnabled;
+
+        try
+        {
+            if (alertsEnabled && isOffline && !_wasOffline)
+            {
+                await UserNotifier.NotifyAsync("Working offline. Changes will sync when you reconnect.", Severity.Warning);
+            }
+            else if (alertsEnabled && !isOffline && !string.IsNullOrEmpty(problem) && !string.Equals(problem, _lastProblem, StringComparison.Ordinal))
+            {
+                await UserNotifier.NotifyAsync($"Sync issue: {problem}", Severity.Error);
+            }
+        }
+        catch
+        {
+            // Best-effort toast. The SyncStatusIndicator still shows the state.
+        }
+        finally
+        {
+            _wasOffline = isOffline;
+            _lastProblem = problem;
+        }
     }
 
     public void Dispose()

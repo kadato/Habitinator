@@ -191,17 +191,19 @@
                 <MudText Typo="Typo.caption" Color="Color.Secondary">
                     In this window, in-app success and warning messages are hidden so the app stays calmer. Error messages are still shown so you do not miss real problems. Times are in your local timezone (@GetTimeZoneDisplay()).
                 </MudText>
-                <MudStack Row="true" Spacing="2" Style="flex-wrap: wrap;">
+                <MudStack Row="true" Spacing="2" Class="quiet-hours-row">
                     <MudTimePicker Label="Quiet start"
                                    Time="_quietStart"
                                    TimeChanged="OnQuietStartChanged"
                                    Disabled="!_model.QuietHoursEnabled"
-                                   TimeEditMode="TimeEditMode.Normal"/>
+                                   TimeEditMode="TimeEditMode.Normal"
+                                   Class="quiet-time-picker"/>
                     <MudTimePicker Label="Quiet end"
                                    Time="_quietEnd"
                                    TimeChanged="OnQuietEndChanged"
                                    Disabled="!_model.QuietHoursEnabled"
-                                   TimeEditMode="TimeEditMode.Normal"/>
+                                   TimeEditMode="TimeEditMode.Normal"
+                                   Class="quiet-time-picker"/>
                 </MudStack>
             </MudStack>
         </MudPaper>

@@ -68,8 +68,8 @@ public sealed class DailyStreakCalculationService(IUserTimeZoneService timeZone)
             args.DailyStart, args.Repeat, args.Interval, args.Streak, notAfter));
 
         // Only synthetic backfill markers, the fixed UTC hour, can be reconciled away. Real toggles
-        // are never removed. Filtering by the marker hour keeps the loaded set bounded by the
-        // backfill history instead of the full activity log for the item.
+        // are never removed. The marker hour filters the loaded set, so the query scans
+        // the backfill history instead of the full activity log for the item.
         var toRemove = await dbContext.UserActivityEvents
             .Where(e => e.UserId == userId
                         && e.BoardItemId == itemId

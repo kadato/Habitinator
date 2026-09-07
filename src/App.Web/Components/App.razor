@@ -11,17 +11,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta name="color-scheme" content="light dark"/>
     <base href="/"/>
-    <!-- DNS preconnect: warm up external origins before they're needed -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin="anonymous"/>
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
-    <link rel="dns-prefetch" href="https://fonts.googleapis.com"/>
-    <link rel="dns-prefetch" href="https://fonts.gstatic.com"/>
     <ResourcePreloader />
-    @if (HttpContext?.User?.Identity?.IsAuthenticated != true)
-    {
-        <!-- Prefetch WASM framework resources in the background for faster post-login startup -->
-        <WasmPrefetchLinks />
-    }
     <SiteHead/>
     <script>
         (function () {
@@ -143,16 +133,26 @@
             }
         })();
     </script>
-    <link rel="preload" href=@Assets["_framework/blazor.web.js"] as="script" crossorigin="anonymous"/>
-    <link rel="preload" href=@Assets["_content/MudBlazor/MudBlazor.min.js"] as="script" crossorigin="anonymous"/>
+    @if (HttpContext?.User?.Identity?.IsAuthenticated == true)
+    {
+        <link rel="preload" href=@Assets["_framework/blazor.web.js"] as="script" crossorigin="anonymous"/>
+        <link rel="preload" href=@Assets["_content/MudBlazor/MudBlazor.min.js"] as="script" crossorigin="anonymous"/>
+    }
 
     <script>
+        // CSP-safe theme readers for Blazor JS interop. Call these instead of eval.
+        window.habitinatorTheme = {
+            isDark: function () { return document.documentElement.classList.contains('dark-theme'); },
+            isLight: function () { return document.documentElement.classList.contains('light-theme'); },
+            systemDark: function () { return window.matchMedia('(prefers-color-scheme: dark)').matches; }
+        };
         window.habitinatorAssets = {
             "lib/microsoft-signalr/signalr.min.js": "@Assets["lib/microsoft-signalr/signalr.min.js"]",
             "js/boardHub.js": "@Assets["js/boardHub.js"]",
             "_content/App.Shared.RCL/js/sortable.min.js": "@Assets["_content/App.Shared.RCL/js/sortable.min.js"]",
             "_content/App.Shared.RCL/js/boardSortable.js": "@Assets["_content/App.Shared.RCL/js/boardSortable.js"]",
             "_content/App.Shared.RCL/js/boardVisibility.js": "@Assets["_content/App.Shared.RCL/js/boardVisibility.js"]",
+            "_content/App.Shared.RCL/js/dialogLabel.js": "@Assets["_content/App.Shared.RCL/js/dialogLabel.js"]",
             "_content/App.Shared.RCL/js/statisticsScrolling.js": "@Assets["_content/App.Shared.RCL/js/statisticsScrolling.js"]",
             "_content/App.Shared.RCL/js/focusTimerAlert.js": "@Assets["_content/App.Shared.RCL/js/focusTimerAlert.js"]",
             "_content/App.Shared.RCL/js/userTimezone.js": "@Assets["_content/App.Shared.RCL/js/userTimezone.js"]"

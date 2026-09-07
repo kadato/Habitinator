@@ -1,11 +1,13 @@
 .timer-panel {
     margin: 0.15rem auto var(--space-2);
     border-radius: var(--radius-xl);
-    border: 1px solid var(--hab-border-card);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 55%, transparent);
+    background: var(--mud-palette-surface);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--mud-palette-text-primary) 5%, transparent);
     position: relative;
-    overflow: visible;
+    overflow: hidden;
     width: 100%;
-    max-width: 1160px;
+    max-width: none;
     box-sizing: border-box;
     padding-bottom: env(safe-area-inset-bottom, 0);
 }
@@ -15,79 +17,53 @@
     max-width: 100%;
     min-width: 0;
     box-sizing: border-box;
-    padding: 8px 12px !important;
+    padding: 14px 18px !important;
 }
 
 @media (min-width: 600px) {
     .timer-panel__content {
-        padding: 12px 18px !important;
+        padding: 16px 20px !important;
     }
 }
 
-/*
- * Unified toolbar: one layout whether the timer is idle, paused, or running.
- * The left slot always has the same size. It shows the mode toggle when idle
- * and the fixed-size clock while a session is active, so nothing shifts.
- */
-.timer-toolbar {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-4);
+/* The main view splits the clock from the controls on desktop. It stacks the clock above the controls on mobile. */
+.timer-main {
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
     min-width: 0;
     width: 100%;
-    max-width: 100%;
     box-sizing: border-box;
 }
 
-.timer-toolbar__left {
+.timer-clock-block {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    min-height: 56px;
-    box-sizing: border-box;
-}
-
-.timer-toolbar__clock {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    align-items: stretch;
+    gap: 0.5rem;
     min-width: 0;
-}
-
-.timer-toolbar__main {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-3);
-    min-width: 0;
-    width: 100%;
 }
 
 .timer-clock-header {
     min-width: 0;
-    flex-shrink: 0;
-    align-self: center;
-    width: max-content;
+    width: 100%;
 }
 
 ::deep .timer-value {
     font-family: var(--hab-font-mono) !important;
-    font-size: 3.5rem !important;
+    font-size: 2.5rem !important;
     line-height: 1 !important;
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1, "zero" 1;
-    font-weight: 700 !important;
-    letter-spacing: 0.02em;
+    font-weight: 800 !important;
+    letter-spacing: -0.03em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    flex: 0 0 auto;
     margin: 0 !important;
     padding: 0;
+    color: var(--mud-palette-text-primary);
 }
 
 .timer-clock-header ::deep .timer-value {
@@ -95,24 +71,19 @@
     margin-bottom: 0 !important;
 }
 
-.timer-toolbar__actions {
+.timer-controls {
     display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-2);
-    align-self: center;
-    min-height: 2.875rem;
-    box-sizing: border-box;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
     width: 100%;
 }
 
 .timer-inputs-pair {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: var(--space-4);
-    align-items: end;
+    gap: 0.75rem;
+    align-items: start;
     width: 100%;
     min-width: 0;
 }
@@ -123,155 +94,309 @@
 }
 
 .timer-target-input-row {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
 }
 
 .timer-focus-field {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    column-gap: 0.3rem;
-    align-items: end;
+    display: block;
+    min-width: 0;
 }
 
-@media (min-width: 960px) {
-    /* One centered row: toggle or clock, inputs, and actions */
-    .timer-toolbar {
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: center;
-        align-items: flex-start;
-        gap: var(--space-6) var(--space-7);
-    }
-
-    .timer-toolbar__left {
-        flex: 0 0 auto;
-        min-width: 280px;
-        width: auto;
-        min-height: 60px;
-        padding-right: var(--space-7);
-        border-right: 1px solid color-mix(in srgb, var(--mud-palette-divider) 15%, transparent);
-        align-self: flex-start;
-        margin-top: 2px;
-    }
-
-    .timer-toolbar__main {
-        flex: 1 1 520px;
-        width: auto;
-        min-width: 300px;
-        max-width: 800px;
-        align-items: stretch;
-        align-self: flex-start;
-    }
-
-    .timer-toolbar__actions {
-        justify-content: center;
-        width: auto;
-        flex: 0 0 auto;
-        align-self: flex-start;
-        margin-top: 6px;
-    }
+.timer-field-sub {
+    margin-top: 0.25rem;
+    min-height: 1.35rem;
 }
 
-@media (min-width: 1280px) {
-    /* Wide screens: wider spacing */
-    .timer-toolbar {
-        gap: var(--space-6) var(--space-8);
-    }
+.timer-field-sub ::deep .mud-typography {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.35 !important;
 }
 
-@media (max-width: 959.98px) {
-    /* Tighter gap between the app bar nav and the timer card on small screens */
-    .timer-panel {
-        margin-top: 0;
-    }
-
-    .timer-toolbar__left {
-        order: 1;
-        width: 100%;
-        display: flex;
-        justify-content: center;
-    }
-
-    .custom-timer-toggle {
-        width: 100%;
-        max-width: 100%;
-        display: flex;
-    }
-
-    .custom-timer-toggle .toggle-btn {
-        flex: 1 1 50%;
-        width: 50%;
-        min-height: 44px;
-        padding: 8px 16px;
-    }
-
-    .timer-toolbar__main {
-        order: 2;
-        align-items: center;
-    }
-
-    .timer-toolbar__actions {
-        order: 3;
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--space-5);
-        width: 100%;
-    }
-
-    ::deep .timer-value {
-        font-size: 3rem !important;
-    }
+/* Keep the MudBlazor outlined rendering, with the label notch and adornment rhythm.
+   Only tint the fieldset edge and set app fonts. Fixed heights here break
+   the floating label, so inputs size themselves. */
+.timer-target-field,
+.timer-focus-textfield {
+    width: 100%;
+    min-width: 0;
 }
 
-@media (max-width: 399.98px) {
-    ::deep .timer-value {
-        font-size: 2.5rem !important;
-    }
-
-    .timer-mobile-header-text {
-        font-size: 0.95rem;
-    }
-
-    .timer-toolbar__actions {
-        gap: var(--space-3);
-    }
-
-    ::deep .timer-icon-btn {
-        width: 2.5rem !important;
-        height: 2.5rem !important;
-        min-width: 2.5rem !important;
-        min-height: 2.5rem !important;
-    }
-
-    .timer-inputs-pair {
-        gap: var(--space-2);
-    }
+.timer-target-input-row ::deep .mud-input-control,
+.timer-target-input-row ::deep .mud-input,
+.timer-focus-field ::deep .mud-input-control,
+.timer-focus-field ::deep .mud-input,
+.timer-focus-field ::deep .mud-input-outlined {
+    width: 100%;
+    min-width: 0;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
-/* Collapsible timer panel styles */
+.timer-target-input-row ::deep .mud-input-outlined-border,
+.timer-focus-field ::deep .mud-input-outlined-border {
+    border-radius: var(--radius-lg) !important;
+}
+
+.timer-target-input-row ::deep .mud-input-adornment-start {
+    opacity: 0.85;
+}
+
+/* The help adornment needs a real hitbox. MudBlazor collapses it. */
+.timer-focus-field ::deep .mud-input-adornment-end {
+    align-self: center !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 2.75rem !important;
+    min-height: 2.75rem !important;
+    margin: 0 !important;
+    cursor: pointer;
+}
+
+.timer-target-input-row ::deep .mud-input-slot input,
+.timer-focus-field ::deep .mud-input > input.mud-input-root,
+.timer-focus-field ::deep .mud-input-slot input {
+    font-family: var(--hab-font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
+}
+
+.timer-focus-field {
+    display: block;
+    min-width: 0;
+}
+
+/* Segmented mode toggle. Even padding all around, roomy pills. */
+.custom-timer-toggle {
+    display: flex;
+    width: 100%;
+    background-color: var(--mud-palette-background-gray);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
+    border-radius: var(--radius-pill);
+    padding: 0.25rem;
+    gap: 0.25rem;
+    position: relative;
+    user-select: none;
+    box-sizing: border-box;
+}
+
+.custom-timer-toggle .toggle-btn {
+    flex: 1 1 50%;
+    width: 50%;
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: var(--radius-pill);
+    padding: 10px 14px;
+    min-height: 44px;
+    height: 44px;
+    color: var(--mud-palette-text-secondary);
+    cursor: pointer;
+    outline: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    font-weight: 650;
+}
+
+.custom-timer-toggle .toggle-btn-label {
+    font-size: 0.78rem;
+    font-weight: 650;
+    white-space: nowrap;
+    letter-spacing: -0.01em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.custom-timer-toggle .toggle-btn.active {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
+    color: var(--mud-palette-primary);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, transparent);
+}
+
+.custom-timer-toggle .toggle-btn:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.custom-timer-toggle .toggle-btn .pomodoro-icon,
+.custom-timer-toggle .toggle-btn .mud-icon {
+    width: 1rem;
+    height: 1rem;
+    font-size: 1rem !important;
+    flex-shrink: 0;
+}
+
+/* Actions share one shape and one accent. Primary grows, the rest hold still. */
+.timer-toolbar__actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 2.75rem;
+}
+
+::deep .timer-primary-action.mud-button-root {
+    flex: 1 1 auto;
+    min-width: 7.5rem !important;
+    min-height: 2.75rem !important;
+    height: 2.75rem !important;
+    padding: 0 1.25rem !important;
+    border-radius: var(--radius-lg) !important;
+    font-size: 0.9rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.01em !important;
+    text-transform: none !important;
+    box-shadow: none !important;
+}
+
+::deep .timer-primary-action.mud-button-root:hover {
+    filter: brightness(0.96);
+}
+
+::deep .timer-secondary-action.mud-button-root {
+    flex: 0 0 auto;
+    min-height: 2.75rem !important;
+    height: 2.75rem !important;
+    padding: 0 1rem !important;
+    border-radius: var(--radius-lg) !important;
+    font-size: 0.88rem !important;
+    font-weight: 650 !important;
+    letter-spacing: -0.01em !important;
+    text-transform: none !important;
+    box-shadow: none !important;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 70%, transparent) !important;
+    color: var(--mud-palette-text-primary) !important;
+    background: var(--mud-palette-surface) !important;
+}
+
+::deep .timer-secondary-action.mud-button-root:hover {
+    border-color: color-mix(in srgb, var(--mud-palette-text-primary) 30%, var(--mud-palette-divider)) !important;
+    background: color-mix(in srgb, var(--mud-palette-background-gray) 50%, var(--mud-palette-surface)) !important;
+}
+
+::deep .timer-primary-action.mud-disabled,
+::deep .timer-secondary-action.mud-disabled {
+    opacity: 0.45 !important;
+}
+
+/* Start and Pause render as text on stacked layouts, icon-only in the desktop row. */
+::deep .timer-start--icon.mud-icon-button {
+    display: none !important;
+}
+
+/* Stop renders as text on stacked layouts, icon-only in the desktop row. */
+::deep .timer-stop--icon.mud-icon-button {
+    display: none !important;
+}
+
+::deep .timer-icon-btn {
+    border-radius: var(--radius-lg) !important;
+    width: 2.75rem !important;
+    height: 2.75rem !important;
+    min-width: 2.75rem !important;
+    min-height: 2.75rem !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 70%, transparent) !important;
+    color: var(--mud-palette-text-secondary) !important;
+    background: var(--mud-palette-surface) !important;
+    flex-shrink: 0;
+}
+
+::deep .timer-icon-btn:hover {
+    color: var(--mud-palette-text-primary) !important;
+    border-color: color-mix(in srgb, var(--mud-palette-text-primary) 25%, var(--mud-palette-divider)) !important;
+}
+
+.timer-pomodoro-info-field {
+    min-width: 0;
+    width: 100%;
+}
+
+.timer-pomodoro-info-field ::deep .mud-input-control {
+    width: 100%;
+    min-width: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.timer-pomodoro-info-field ::deep .mud-input-outlined {
+    align-items: center !important;
+    padding: 0 0.75rem !important;
+}
+
+.timer-pomodoro-info-field ::deep .timer-pomodoro-info-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    gap: 0.5rem;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.timer-pomodoro-info-field ::deep .timer-pomodoro-info-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+    min-width: 0;
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.timer-pomodoro-info-field ::deep .timer-pomodoro-info-item .mud-icon {
+    margin-right: 0 !important;
+    font-size: 1rem !important;
+}
+
+.timer-pomodoro-info-field ::deep .timer-pomodoro-info-item .info-value {
+    font-family: var(--hab-font-mono);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
+    color: var(--mud-palette-text-primary);
+}
+
+.timer-pomodoro-info-field ::deep .timer-pomodoro-info-divider {
+    height: 16px;
+    width: 1px;
+    background-color: color-mix(in srgb, var(--mud-palette-divider) 40%, transparent);
+}
+
+/* Slim collapse bar shares the card border instead of drawing its own. */
 .timer-mobile-header {
     display: none;
     cursor: pointer;
     user-select: none;
-    background: color-mix(in srgb, var(--mud-palette-surface) 60%, transparent);
-    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
-    border-radius: var(--radius-xl);
-}
-
-@media (max-width: 959.98px) {
-    .timer-mobile-header {
-        display: block;
-    }
-
-    .timer-mobile-header:active {
-        background-color: color-mix(in srgb, var(--mud-palette-action-default) 14%, transparent);
-    }
+    min-height: 52px;
+    align-content: center;
+    box-sizing: border-box;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid transparent;
 }
 
 .timer-mobile-header--expanded {
-    border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 50%, transparent);
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
+    border-bottom-color: color-mix(in srgb, var(--mud-palette-divider) 50%, transparent);
 }
 
 .timer-mobile-header-text {
@@ -292,7 +417,8 @@
 }
 
 @media (min-width: 960px) {
-    .timer-collapse-outer ::deep .timer-collapse-wrapper {
+    .timer-collapse-outer ::deep .timer-collapse-wrapper,
+    .timer-collapse-outer ::deep .mud-collapse-wrapper {
         height: auto !important;
         max-height: none !important;
         display: block !important;
@@ -300,311 +426,209 @@
         opacity: 1 !important;
     }
 
-    .timer-collapse-outer ::deep .mud-collapse-wrapper {
-        height: auto !important;
-        max-height: none !important;
-        display: block !important;
-        visibility: visible !important;
+    ::deep .timer-value {
+        font-size: 1.8rem !important;
+        white-space: nowrap;
+    }
+
+    /* True single row: clock, toggle, inputs, status, and actions side by side. */
+    .timer-main {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .timer-clock-block {
+        flex: 0 0 auto;
+        min-width: 0;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .timer-clock-header {
+        width: auto;
+    }
+
+    .custom-timer-toggle {
+        width: 272px;
+        min-width: 272px;
+    }
+
+    .custom-timer-toggle .toggle-btn {
+        min-width: 0;
+    }
+
+    .timer-controls {
+        display: contents;
+    }
+
+    .timer-inputs-pair {
+        flex: 1 1 320px;
+        min-width: min(100%, 280px);
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+    }
+
+    /* Pomodoro box hugs its content instead of stretching the column. */
+    .timer-pomodoro-info-field {
+        width: auto;
+        max-width: 100%;
+    }
+
+    /* Helper lines live on stacked layouts only, so the row stays one line.
+       Error text keeps showing. */
+    .timer-inputs-pair ::deep .mud-input-control:not(.mud-input-error) .mud-input-helper-text {
+        display: none !important;
+    }
+
+    .timer-field-sub {
+        display: none;
+    }
+
+    .timer-toolbar__actions {
+        flex: 0 0 auto;
+        width: auto;
+        min-height: 0;
+    }
+
+    ::deep .timer-primary-action.mud-button-root {
+        flex: 0 0 auto;
+        min-width: 7.5rem !important;
+    }
+
+    ::deep .timer-stop--text.mud-button-root {
+        display: none !important;
+    }
+
+    ::deep .timer-stop--icon.mud-icon-button {
+        display: inline-flex !important;
+    }
+
+    ::deep .timer-start--text.mud-button-root {
+        display: none !important;
+    }
+
+    ::deep .timer-start--icon.mud-icon-button {
+        display: inline-flex !important;
+    }
+
+    ::deep .timer-icon-btn--primary.mud-icon-button {
+        background: var(--mud-palette-primary) !important;
+        border-color: transparent !important;
+        color: #fff !important;
+    }
+
+    ::deep .timer-icon-btn--primary.mud-icon-button:hover {
+        border-color: transparent !important;
+        color: #fff !important;
+        filter: brightness(0.94);
+    }
+
+    ::deep .timer-icon-btn--primary.mud-disabled {
+        opacity: 0.45 !important;
     }
 }
 
-.timer-target-field,
-.timer-focus-textfield {
-    width: 100%;
-    min-width: 0;
-}
-
-.timer-target-field ::deep .mud-input-control,
-.timer-target-field ::deep .mud-input,
-.timer-focus-textfield ::deep .mud-input-control,
-.timer-focus-textfield ::deep .mud-input,
-.timer-focus-textfield ::deep .mud-input-outlined {
-    width: 100%;
-    min-width: 0;
-    margin-top: 0;
-    margin-bottom: 0;
-}
-
-.timer-target-field ::deep .mud-input-outlined,
-.timer-focus-textfield ::deep .mud-input-outlined {
-    height: 2.5rem !important;
-    align-items: center !important;
-}
-
-.timer-target-field ::deep .mud-input-helper {
-    margin: 0;
-    min-height: 0;
-}
-
-.timer-target-field ::deep .mud-input-adornment-start {
-    margin-right: var(--space-2);
-    opacity: 0.85;
-}
-
-.timer-target-field ::deep .mud-input-slot input,
-.timer-focus-field ::deep .mud-input > input.mud-input-root,
-.timer-focus-field ::deep .mud-input-slot input {
-    font-family: var(--hab-font-mono);
-    font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum" 1, "zero" 1;
-    height: 100% !important;
-}
-
-.timer-focus-input-row {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    align-items: end !important;
-}
-
-.timer-focus-info-icon {
-    align-self: end;
-    margin-bottom: 0.15rem;
-    min-width: 1.85rem !important;
-    min-height: 1.85rem !important;
-    padding: 0 !important;
-}
-
-.focus-duration-help-text {
-    max-width: 20rem;
-    white-space: pre-line;
-    line-height: 1.4;
-    display: block;
-}
-
-/* Custom Segmented Control styling */
-.custom-timer-toggle {
-    display: flex;
-    width: 100%;
-    background-color: var(--mud-palette-background-gray);
-    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 35%, transparent);
-    border-radius: var(--radius-md);
-    padding: 4px;
-    gap: 4px;
-    position: relative;
-    user-select: none;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
-    box-sizing: border-box;
-}
-
-.custom-timer-toggle .toggle-btn {
-    flex: 1 1 50%;
-    width: 50%;
-    border: none;
-    background: transparent;
-    border-radius: var(--radius-md);
-    padding: 6px 14px;
-    min-height: 42px;
-    height: 42px;
-    color: var(--mud-palette-text-secondary);
-    cursor: pointer;
-    transition: color var(--dur-normal) ease, background-color var(--dur-normal) ease, box-shadow var(--dur-normal) ease, transform var(--dur-normal) var(--ease-standard);
-    outline: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.custom-timer-toggle .toggle-btn-label {
-    font-size: 0.85rem;
-    font-weight: 600;
-    margin-left: 6px;
-    white-space: nowrap;
-    letter-spacing: 0.01em;
-}
-
-.custom-timer-toggle .toggle-btn:active {
-    transform: scale(0.97);
-}
-
-.custom-timer-toggle .toggle-btn.active {
-    background-color: var(--mud-palette-surface);
-    color: var(--mud-palette-primary);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.06);
-}
-
-.custom-timer-toggle .toggle-btn .pomodoro-icon,
-.custom-timer-toggle .toggle-btn .mud-icon {
-    width: 1.25rem;
-    height: 1.25rem;
-    font-size: 1.25rem !important;
-    flex-shrink: 0;
-}
-
-.timer-pomodoro-status-badge {
-    font-family: var(--hab-font-mono);
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum" 1, "zero" 1;
-    color: var(--mud-palette-primary);
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
-    padding: 3px 8px;
-    border-radius: var(--radius-sm);
-    display: inline-flex;
-    align-items: center;
-    line-height: 1.2;
-    flex-shrink: 0;
-    min-height: 22px;
-}
-
-.timer-pomodoro-progress-bar {
-    display: inline-flex;
-    gap: 4px;
-    height: 7px;
-    width: 64px;
-    align-items: center;
-    flex-shrink: 0;
-}
-
-.progress-segment {
-    flex: 1;
-    height: 100%;
-    background-color: color-mix(in srgb, var(--mud-palette-divider) 35%, transparent);
-    border-radius: 3px;
-    transition: background-color 0.3s ease;
-}
-
-.progress-segment.completed {
-    background-color: var(--mud-palette-secondary);
-}
-
-/* Pomodoro status styling */
-.timer-pomodoro-status-strip {
-    display: inline-flex;
-    align-items: center;
-    flex-wrap: nowrap;
-    gap: 8px;
-    flex-shrink: 0;
-    min-height: 28px;
-    width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-    transition: opacity var(--dur-normal) ease, transform var(--dur-normal) var(--ease-out);
-}
-
-.timer-pomodoro-status-strip--empty {
-    opacity: 0.6;
-}
-
-.timer-pomodoro-status-strip::-webkit-scrollbar {
-    display: none;
-}
-
-/* Rounded square Icon Buttons */
-::deep .timer-icon-btn {
-    border-radius: var(--radius-md) !important; /* rounded square buttons */
-    width: 2.25rem !important;
-    height: 2.25rem !important;
-    min-width: 2.25rem !important;
-    padding: 0 !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
-}
-
-::deep .timer-icon-btn:active:not(:disabled) {
-    transform: translateY(0);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
-}
-
-::deep .timer-icon-btn--start:not(:disabled) {
-    box-shadow: 0 3px 12px color-mix(in srgb, var(--mud-palette-success) 35%, transparent) !important;
-}
-
-::deep .timer-icon-btn--pause:not(:disabled) {
-    box-shadow: 0 3px 12px color-mix(in srgb, var(--mud-palette-warning) 30%, transparent) !important;
-}
-
-::deep .timer-icon-btn--stop:not(:disabled) {
-    box-shadow: 0 3px 12px color-mix(in srgb, var(--mud-palette-primary) 25%, transparent) !important;
+@media (min-width: 960px) and (max-width: 1220px) {
+    .timer-pomodoro-info-field ::deep .timer-pomodoro-info-container {
+        justify-content: space-between;
+        padding: 0 2px;
+    }
 }
 
 @media (max-width: 959.98px) {
-    ::deep .timer-icon-btn {
-        width: 2.75rem !important;
-        height: 2.75rem !important;
-        min-width: 2.75rem !important;
+    .timer-panel {
+        margin-top: 0;
+    }
+
+    .timer-mobile-header {
+        display: block;
+    }
+
+    .timer-mobile-header:active {
+        background-color: color-mix(in srgb, var(--mud-palette-action-default) 14%, transparent);
+    }
+
+    .timer-main {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.85rem;
+    }
+
+    .timer-clock-block {
+        align-items: center;
+        text-align: center;
+    }
+
+    .timer-clock-header {
+        text-align: center;
+    }
+
+    ::deep .timer-value {
+        font-size: 2.25rem !important;
+        text-align: center;
+    }
+
+    .custom-timer-toggle {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .timer-inputs-pair {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.65rem;
+    }
+
+    .timer-toolbar__actions {
+        gap: 0.5rem;
     }
 }
 
-.timer-pomodoro-status-badge.timer-pomodoro-next-badge {
-    color: var(--mud-palette-text-secondary);
-    background-color: color-mix(in srgb, var(--mud-palette-divider) 15%, transparent);
+@media (max-width: 599.98px) {
+    .timer-panel__content {
+        padding: 14px !important;
+    }
+
+    .timer-pomodoro-info-field ::deep .timer-pomodoro-info-container {
+        flex-wrap: nowrap;
+        height: auto;
+        row-gap: 2px;
+        overflow: hidden;
+    }
+
+    .timer-pomodoro-info-field ::deep .timer-pomodoro-info-item {
+        white-space: nowrap;
+        font-size: 0.78rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 }
 
-.timer-pomodoro-info-field {
-    min-width: 0;
-    width: 100%;
+@media (max-width: 399.98px) {
+    ::deep .timer-value {
+        font-size: 2rem !important;
+    }
+
+    .timer-mobile-header-text {
+        font-size: 0.95rem;
+    }
+
+    ::deep .timer-primary-action.mud-button-root {
+        min-width: 0 !important;
+    }
+
+    .timer-inputs-pair {
+        gap: 0.65rem;
+    }
 }
 
-.timer-pomodoro-field-control ::deep .mud-input-control {
-    width: 100%;
-    min-width: 0;
-    margin-top: 0;
-    margin-bottom: 0;
-}
+@media (max-width: 959.98px) and (orientation: landscape) {
+    ::deep .timer-value {
+        font-size: 2rem !important;
+    }
 
-.timer-pomodoro-field-control ::deep .mud-input-outlined {
-    height: 2.5rem !important;
-    align-items: center !important;
-    padding: 0 var(--space-4) !important;
-}
-
-.timer-pomodoro-field-control ::deep .timer-pomodoro-info-container {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    height: 100%;
-    gap: var(--space-4);
-}
-
-.timer-pomodoro-field-control ::deep .timer-pomodoro-info-item {
-    display: inline-flex;
-    align-items: center;
-    font-size: 0.825rem;
-    font-weight: 500;
-    color: var(--mud-palette-text-secondary);
-    white-space: nowrap;
-    min-width: 0;
-}
-
-.timer-pomodoro-field-control ::deep .timer-pomodoro-info-item .info-value {
-    font-family: var(--hab-font-mono);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum" 1, "zero" 1;
-    color: var(--mud-palette-text-primary);
-}
-
-.timer-pomodoro-field-control ::deep .timer-pomodoro-info-divider {
-    height: 16px;
-    width: 1px;
-    background-color: color-mix(in srgb, var(--mud-palette-divider) 40%, transparent);
-}
-
-.timer-pomodoro-status-badge.timer-pomodoro-done-badge {
-    color: var(--mud-palette-success);
-    background-color: color-mix(in srgb, var(--mud-palette-success) 8%, transparent);
-}
-
-.timer-pomodoro-status-badge.timer-pomodoro-cycle-badge {
-    color: var(--mud-palette-secondary);
-    background-color: color-mix(in srgb, var(--mud-palette-secondary) 8%, transparent);
-}
-
-/* Responsive styles for Pomodoro info box */
-@media (min-width: 960px) and (max-width: 1220px) {
-    .timer-pomodoro-field-control ::deep .timer-pomodoro-info-container {
-        justify-content: space-between;
-        padding: 0 2px;
+    .timer-main {
+        gap: 0.65rem;
     }
 }

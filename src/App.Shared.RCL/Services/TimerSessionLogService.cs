@@ -57,13 +57,21 @@ public sealed class TimerSessionLogService(
             return new TimerSessionLogResult(
                 true,
                 boardProgressed,
-                $"Timer stopped ({duration:hh\\:mm\\:ss}), but the board could not be updated. Check your connection and try again.");
+                $"Timer stopped ({duration:hh\\:mm\\:ss}), but Habitinator could not update the board. Check your connection. Try again.");
+        }
+
+        if (string.IsNullOrWhiteSpace(targetId))
+        {
+            return new TimerSessionLogResult(
+                false,
+                false,
+                $"The timer logged {duration:hh\\:mm\\:ss} of focus time. You picked no board target.");
         }
 
         return new TimerSessionLogResult(
             false,
             boardProgressed,
-            $"Timer log saved for {targetType ?? "Unassigned"} '{targetId ?? "-"}' with duration {duration:hh\\:mm\\:ss}.");
+            $"The timer saved {targetType ?? "Unassigned"} '{targetId}' with duration {duration:hh\\:mm\\:ss}.");
     }
 
     private async Task<bool> UpdateBoardItemProgressAsync(Guid id, string targetType, CancellationToken cancellationToken)

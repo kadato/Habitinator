@@ -1,3 +1,5 @@
+using System.Globalization;
+
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 
@@ -160,11 +162,20 @@ public partial class GlobalTimerPanel : IDisposable
             {
                 var st = section.ToString();
                 var key = disambiguate
-                    ? item.Title + " · " + item.Id.ToString("N")[..4]
+                    ? item.Title + " · " + st
                     : item.Title;
                 if (_sessionLabelToTarget.ContainsKey(key))
                 {
-                    key = item.Title + " · " + item.Id.ToString("N");
+                    var detail = DuplicateDetail(section, item);
+                    var candidate = detail is null ? key : key + " · " + detail;
+                    var n = 2;
+                    while (_sessionLabelToTarget.ContainsKey(candidate))
+                    {
+                        candidate = key + " · " + n;
+                        n++;
+                    }
+
+                    key = candidate;
                 }
 
                 _sessionLabelToTarget[key] = (st, item.Title, item.Id);
@@ -217,6 +228,14 @@ public partial class GlobalTimerPanel : IDisposable
 
         return BoardSectionVisuals.GetMudIconForTargetType(TimerService.TargetType);
     }
+
+    private static string? DuplicateDetail(BoardSection section, BoardItem item) => section switch
+    {
+        BoardSection.Todo when item.TodoDueDate is { } due => "due " + due.ToString("d", CultureInfo.InvariantCulture),
+        BoardSection.Habit => "×" + item.Counter.ToString(CultureInfo.InvariantCulture),
+        BoardSection.Daily => "streak " + item.Counter.ToString(CultureInfo.InvariantCulture),
+        _ => null
+    };
 
     private IEnumerable<string> SearchSessionTargets(string value)
     {
@@ -339,7 +358,12 @@ public partial class GlobalTimerPanel : IDisposable
         return $"{nextState}: {GlobalTimerService.FormatTimeSpan(nextDuration)}";
     }
 
-    private string GetPomodoroStatusLabel() => TimerService.StatusLabel;
+    private string GetPomodoroCycleTitle() =>
+        $"Work lasts {GlobalTimerService.FormatTimeSpan(TimerService.WorkDuration)}. " +
+        $"Short break lasts {GlobalTimerService.FormatTimeSpan(TimerService.ShortBreakDuration)}. " +
+        $"Long break lasts {GlobalTimerService.FormatTimeSpan(TimerService.LongBreakDuration)} " +
+        $"every {TimerService.IntervalsBeforeLongBreak}. " +
+        "If you stop a work session, the timer logs the session to the board target.";
 
     private int GetCompletedInCurrentCycle()
     {
@@ -384,8 +408,6 @@ public partial class GlobalTimerPanel : IDisposable
             ToggleExpanded();
         }
     }
-
-    private string GetNextPomodoroTitle() => $"Next Pomodoro: {GetNextPomodoroLabelAndDuration()}";
 
     private string GetCompletedPomodoroTitle() =>
         $"Completed: {TimerService.CompletedWorkIntervalsCount} total, {GetCompletedInCurrentCycle()} of {TimerService.IntervalsBeforeLongBreak} in current cycle";

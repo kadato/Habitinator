@@ -174,49 +174,16 @@ p, .auth-form-hint, .edit-daily-label-body, .habit-tag-picker__empty {
     font-weight: 700;
     line-height: 1;
     color: #ffffff !important;
-    background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    background: rgba(15, 23, 42, 0.92);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: var(--radius-sm);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
     pointer-events: none;
-    transform: translate(-50%, -50%) scale(0);
-    transition: transform 0.18s var(--ease-out), opacity 0.18s ease;
+    display: none;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-feature-settings: "tnum" 1, "zero" 1;
 }
 .hab-shortcut-hint--visible {
-    transform: translate(-50%, -50%) scale(1);
-}
-.hab-shortcut-hint--dimmed {
-    opacity: 0.22;
-    transform: translate(-50%, -50%) scale(0.85);
-}
-.hab-shortcut-hint--matched {
-    background: rgba(16, 185, 129, 0.95) !important;
-    border-color: rgba(52, 211, 153, 0.6) !important;
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.6) !important;
-    transform: translate(-50%, -50%) scale(1.2) !important;
-}
-.hab-shortcut-hint--input {
-    border-color: rgba(56, 189, 248, 0.6);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), 0 0 8px rgba(56, 189, 248, 0.2);
-}
-.hab-shortcut-hint--nav {
-    border-color: rgba(139, 92, 246, 0.6);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), 0 0 8px rgba(139, 92, 246, 0.2);
-}
-.hab-shortcut-hint .key-char {
-    color: rgba(255, 255, 255, 0.5);
-}
-.hab-shortcut-hint .key-char--typed {
-    color: #38bdf8;
-    font-weight: 800;
-    text-shadow: 0 0 4px rgba(56, 189, 248, 0.6);
-}
-.hab-shortcut-hint .key-char--untyped {
-    color: #ffffff;
+    display: inline-flex;
 }
 

@@ -94,11 +94,12 @@
     </AuthorizeView>
     <MudMainContent Class="app-shell-main">
         <main id="main-content">
-            <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pt-1 pb-3 px-4 px-sm-5 board-main-container">
+            <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pt-1 pb-3 px-3 px-sm-5 board-main-container">
                 @Body
             </MudContainer>
         </main>
     </MudMainContent>
+    <NavMenu BottomBar="true" />
 </MudLayout>
 
 <AuthorizeView>
@@ -195,10 +196,10 @@
         {
             try
             {
-                var isDarkClass = jsInProcess.Invoke<bool>("eval", "document.documentElement.classList.contains('dark-theme')");
+                var isDarkClass = jsInProcess.Invoke<bool>("habitinatorTheme.isDark");
                 if (isDarkClass) return true;
 
-                var isLightClass = jsInProcess.Invoke<bool>("eval", "document.documentElement.classList.contains('light-theme')");
+                var isLightClass = jsInProcess.Invoke<bool>("habitinatorTheme.isLight");
                 if (isLightClass) return false;
             }
             catch
@@ -215,7 +216,7 @@
         {
             try
             {
-                return jsInProcess.Invoke<bool>("eval", "window.matchMedia('(prefers-color-scheme: dark)').matches");
+                return jsInProcess.Invoke<bool>("habitinatorTheme.systemDark");
             }
             catch
             {

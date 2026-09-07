@@ -21,6 +21,14 @@
         }
     </nav>
 }
+else if (BottomBar)
+{
+    <nav class="app-bottom-nav" role="navigation" aria-label="Main navigation">
+        @BottomNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
+        @BottomNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Stats")
+        @BottomNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Settings, "Settings")
+    </nav>
+}
 else
 {
     <div class="@navClass">
@@ -35,6 +43,8 @@ else
 
 @code {
     [Parameter] public bool MobileTopBar { get; set; }
+
+    [Parameter] public bool BottomBar { get; set; }
 
     protected override void OnInitialized()
     {
@@ -86,6 +96,22 @@ else
            @ontouchstart="() => Prefetch(path)">
             <MudIcon Icon="@icon" Class="app-mobile-nav__icon" />
             <span class="app-mobile-nav__label">@label</span>
+        </a>
+    };
+
+    private RenderFragment BottomNavItem(string href, string path, NavLinkMatch match, string icon, string label) => __builder =>
+    {
+        var active = IsActivePath(path, match);
+        var itemClass = active ? "app-bottom-nav__item app-bottom-nav__item--active" : "app-bottom-nav__item";
+        <a href="@href"
+           class="@itemClass"
+           aria-current="@(active ? "page" : null)"
+           @onpointerenter="() => Prefetch(path)"
+           @ontouchstart="() => Prefetch(path)">
+            <span class="app-bottom-nav__icon-wrap" aria-hidden="true">
+                <MudIcon Icon="@icon" Class="app-bottom-nav__icon" />
+            </span>
+            <span class="app-bottom-nav__label">@label</span>
         </a>
     };
 

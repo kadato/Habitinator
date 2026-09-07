@@ -62,6 +62,8 @@
     --hab-type-habit: #0d9488; /* teal-600 */
     --hab-type-daily: var(--mud-palette-primary);
     --hab-type-todo: #f59e0b; /* amber-500 */
+    /* Readable todo text on tinted surfaces, light and dark */
+    --hab-type-todo-ink: light-dark(#b45309, #fbbf24); /* amber-700, amber-400 */
     --hab-type-habit-bad: #dc2626; /* red-600 */
     --hab-type-habit-bad-dark: #b91c1c; /* red-700 */
     --hab-accent-streak: #f97316; /* orange-500 */
@@ -70,8 +72,14 @@
     /* Card container borders. Softer than the divider line, theme-aware. */
     --hab-border-card: light-dark(rgba(15, 23, 42, 0.10), rgba(255, 255, 255, 0.06));
 
-    /* Brand gradient, used for splash bars and loaders */
-    --hab-brand-gradient: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    /* Splash ink that survives pre-theme rendering, light and dark */
+    --hab-ink-inverse: light-dark(#1e293b, #f1f5f9);
+    --hab-ink-faint: light-dark(rgba(0, 0, 0, 0.35), rgba(255, 255, 255, 0.45));
+    --hab-track-subtle: light-dark(rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.12));
+    --hab-accent-focus: light-dark(#2563eb, #60a5fa);
+
+    /* Brand color, solid. No gradients in app surfaces. */
+    --hab-brand: #3b82f6;
 
     /* Modal shell */
     --hab-modal-max-w: 26rem;

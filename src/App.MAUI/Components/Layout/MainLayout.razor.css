@@ -1,11 +1,8 @@
 ::deep .app-top-bar.mud-appbar,
 ::deep .app-top-bar {
     padding: var(--space-2) var(--space-4) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    background-color: color-mix(in srgb, var(--mud-palette-surface) 82%, transparent) !important;
+    background-color: var(--mud-palette-surface) !important;
     border-bottom: 1px solid var(--mud-palette-divider) !important;
-    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05) !important;
     overflow: visible !important;
 }
 
@@ -70,5 +67,17 @@
     ::deep .board-main-container.mud-container {
         padding-left: var(--space-8) !important;
         padding-right: var(--space-8) !important;
+    }
+}
+
+/* Phones use the fixed bottom tab bar. The MAUI top bar carries only
+   tabs, so it hides entirely (scoped rules win over global CSS). */
+@media (max-width: 767.98px) {
+    ::deep .app-top-bar.mud-appbar {
+        display: none !important;
+    }
+
+    ::deep .app-mobile-nav {
+        display: none !important;
     }
 }

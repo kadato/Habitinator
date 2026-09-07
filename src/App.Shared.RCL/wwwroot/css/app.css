@@ -15,7 +15,6 @@
     align-items: center;
     justify-content: center;
     background: var(--hab-bg-dark);
-    transition: opacity 0.35s ease, visibility 0.35s ease;
 }
 
 /* Light-mode variant */
@@ -41,12 +40,7 @@ html.light-theme #habitinator-wasm-splash {
 }
 
 .wasm-splash__logo {
-    animation: splash-pulse 2s ease-in-out infinite;
-}
-
-@keyframes splash-pulse {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.08); opacity: 0.85; }
+    display: block;
 }
 
 .wasm-splash__title {
@@ -54,35 +48,17 @@ html.light-theme #habitinator-wasm-splash {
     font-size: 1.5rem;
     font-weight: 800;
     letter-spacing: -0.03em;
-    color: #f1f5f9;
+    color: var(--hab-ink-inverse);
     margin: 0;
-}
-
-html.light-theme .wasm-splash__title {
-    color: #1e293b;
-}
-@media (prefers-color-scheme: light) {
-    html:not(.dark-theme) .wasm-splash__title {
-        color: #1e293b;
-    }
 }
 
 /* Indeterminate progress bar */
 .wasm-splash__progress {
     width: 180px;
     height: 3px;
-    background: rgba(255, 255, 255, 0.12);
+    background: var(--hab-track-subtle);
     border-radius: var(--radius-pill);
     overflow: hidden;
-}
-
-html.light-theme .wasm-splash__progress {
-    background: rgba(0, 0, 0, 0.08);
-}
-@media (prefers-color-scheme: light) {
-    html:not(.dark-theme) .wasm-splash__progress {
-        background: rgba(0, 0, 0, 0.08);
-    }
 }
 
 .wasm-splash__progress-bar {
@@ -90,60 +66,37 @@ html.light-theme .wasm-splash__progress {
     width: 100%;
     min-width: 4%;
     max-width: 100%;
-    background: var(--hab-brand-gradient);
+    background: var(--hab-brand, #3b82f6);
     border-radius: var(--radius-pill);
     transform: scaleX(var(--progress, 0.05));
     transform-origin: left;
-    transition: transform 0.6s var(--ease-out-expo);
-    will-change: transform;
 }
 
 .wasm-splash__hint {
     font-family: var(--hab-font-sans, system-ui, -apple-system, sans-serif);
     font-size: 0.875rem;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--hab-ink-faint);
     margin: 0;
-}
-
-html.light-theme .wasm-splash__hint {
-    color: rgba(0, 0, 0, 0.35);
-}
-@media (prefers-color-scheme: light) {
-    html:not(.dark-theme) .wasm-splash__hint {
-        color: rgba(0, 0, 0, 0.35);
-    }
 }
 
 /* Reduce motion */
 @media (prefers-reduced-motion: reduce) {
-    .wasm-splash__logo,
     .wasm-splash__progress-bar {
         animation: none;
     }
 }
 
-/* -- Top Loading Bar, legacy, inside the WASM-rendered layout -- */
+/* -- Top Loading Bar, shown immediately while navigating -- */
 #habitinator-loading-bar {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     height: 2px;
-    background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 50%, #3b82f6 100%);
-    background-size: 200% 100%;
+    background: var(--mud-palette-primary);
     opacity: 0;
-    animation: habLoading 1.5s infinite linear, habFadeIn 0.3s forwards;
-    animation-delay: 0s, 0.8s;
     z-index: 20000;
-    transition: opacity var(--dur-slow) ease, visibility var(--dur-slow) ease;
-}
-@keyframes habLoading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
-@keyframes habFadeIn {
-    to { opacity: 1; }
 }
 
 html {
@@ -173,7 +126,7 @@ html, body {
     background-color: var(--hab-bg-light);
     color: var(--mud-palette-text-primary);
     -webkit-tap-highlight-color: transparent;
-    accent-color: light-dark(#2563eb, #60a5fa);
+    accent-color: var(--hab-accent-focus);
     caret-color: var(--mud-palette-primary);
 }
 
@@ -198,6 +151,66 @@ html.dark-theme, html.dark-theme body {
 
 a {
     color: var(--mud-palette-primary);
+}
+
+/* Dark theme: primary blue #2563eb fails contrast on dark surfaces (3.9:1).
+   Use lighter blue for text, links, and outlined controls. Filled buttons
+   keep the dark primary background with white text, which passes. */
+.dark-theme a {
+    color: #60a5fa;
+}
+
+.dark-theme .mud-button-outlined-primary {
+    color: #38bdf8 !important;
+    border-color: rgba(56, 189, 248, 0.4) !important;
+}
+
+.dark-theme .mud-button-text-primary {
+    color: #60a5fa !important;
+}
+
+.dark-theme .app-bottom-nav__item--active,
+.dark-theme .app-mobile-nav__item--active,
+.dark-theme .app-mobile-nav__item--active .app-mobile-nav__icon {
+    color: #60a5fa !important;
+}
+
+.dark-theme .undo-toast-btn {
+    color: #60a5fa;
+    border-color: #60a5fa;
+}
+
+/* Dark theme: tinted active pills and badges use theme colors that are too
+   dark on dark surfaces. Brighten the text while keeping the hue, so the
+   active state stays recognizable. html prefix outranks scoped !important. */
+html.dark-theme .board-section-switcher__btn--active,
+html.dark-theme .board-section-switcher__btn--active .board-section-switcher__label,
+html.dark-theme .board-section-switcher__btn--active .board-section-switcher__count,
+html.dark-theme .board-filter-btn--active,
+html.dark-theme .stats-segment__btn--active,
+html.dark-theme .habit-tag-chip,
+html.dark-theme .edit-daily-shell--daily .edit-daily-checklist__add {
+    color: #60a5fa !important;
+}
+
+html.dark-theme .stats-habit-ratio,
+html.dark-theme .hab-modal--habit .habit-tag-chip,
+html.dark-theme .edit-daily-shell--habit .habit-tag-chip,
+html.dark-theme .edit-daily-shell--habit .edit-daily-checklist__add {
+    color: #2dd4bf !important;
+}
+
+/* Visually hidden headings keep page structure for assistive technology. */
+.hab-visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: -1px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
 }
 
 /* Focus ring for auth-page checkboxes. Form and button styling lives in auth-pages.css. */
@@ -285,7 +298,7 @@ a {
     justify-content: center;
     text-align: center;
     gap: var(--space-2);
-    min-height: var(--control-height);
+    min-height: 44px;
     padding: var(--space-2) var(--space-3);
     border: none;
     border-radius: var(--radius-md);
@@ -297,17 +310,11 @@ a {
     cursor: pointer;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease, border-color var(--dur-fast) ease;
-}
-
-.settings-section-switcher__btn:active {
-    transform: scale(0.97);
 }
 
 .settings-section-switcher__btn--active {
     color: #fff;
     background-color: var(--mud-palette-primary);
-    box-shadow: 0 2px 8px color-mix(in srgb, var(--mud-palette-primary) 35%, transparent);
 }
 
 .settings-section-switcher__label {
@@ -324,6 +331,12 @@ a {
 @media (max-width: 959.98px) {
     .settings-section-content {
         padding-top: var(--space-5);
+    }
+
+    .settings-section-switcher {
+        position: sticky;
+        top: calc(var(--app-top-bar-offset, 4.25rem) + var(--space-2));
+        z-index: 100;
     }
 }
 
@@ -521,7 +534,6 @@ input[type="number"].mud-input-slot {
 .app-header-nav .app-header-nav-slot--active .app-header-nav-btn.mud-button-filled.mud-button-filled-primary {
     background-color: var(--mud-palette-primary) !important;
     border-color: transparent !important;
-    box-shadow: 0 2px 6px color-mix(in srgb, var(--mud-palette-primary) 30%, transparent) !important;
 }
 
 /* Mobile nav tabs inside the app bar, always rendered by MudAppBar */
@@ -542,7 +554,7 @@ input[type="number"].mud-input-slot {
 .app-mobile-nav__item {
     flex: 1 1 0;
     min-width: 0;
-    min-height: var(--mobile-nav-height);
+    min-height: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -557,11 +569,6 @@ input[type="number"].mud-input-slot {
     font-size: 0.82rem;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    transition: color var(--dur-normal) ease, background-color var(--dur-normal) ease, border-color var(--dur-normal) ease;
-}
-
-.app-mobile-nav__item:active {
-    transform: scale(0.98);
 }
 
 .app-mobile-nav__icon {
@@ -592,7 +599,7 @@ input[type="number"].mud-input-slot {
     border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, transparent);
 }
 
-@media (max-width: 959.98px) {
+@media (min-width: 768px) and (max-width: 959.98px) {
     .app-mobile-nav {
         display: flex;
     }
@@ -608,6 +615,33 @@ input[type="number"].mud-input-slot {
         align-items: center !important;
         padding-top: var(--space-3) !important;
         padding-bottom: var(--space-3) !important;
+    }
+}
+
+/* Phones use the fixed bottom tab bar, so the top tabs stay hidden
+   and the main content clears the bar plus the home indicator. */
+@media (max-width: 767.98px) {
+    .app-mobile-nav {
+        display: none !important;
+    }
+
+    /* The bottom bar owns navigation on phones. The top bar keeps only the
+       sync dot. Brand and profile menu live on wider screens and in Settings. */
+    .app-branding--header {
+        display: none !important;
+    }
+
+    .app-shell-layout {
+        --app-bottom-nav-offset: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .app-shell-layout .app-shell-main.mud-main-content {
+        padding-bottom: var(--app-bottom-nav-offset) !important;
+    }
+
+    .board-main-container.mud-container {
+        padding-left: max(var(--space-5), env(safe-area-inset-left, 0px)) !important;
+        padding-right: max(var(--space-5), env(safe-area-inset-right, 0px)) !important;
     }
 }
 
@@ -637,31 +671,21 @@ input[type="number"].mud-input-slot {
     }
 }
 
-/* -- App toasts: clean, tactile card matching Habitinator surfaces -- */
+/* -- App toasts: flat card, no motion, bottom-left on desktop and full-width bottom on phones -- */
 .habitinator-toast {
     position: relative;
     overflow: hidden;
     padding: 0 !important;
     background: var(--mud-palette-surface) !important;
     color: var(--mud-palette-text-primary) !important;
-    border-radius: var(--radius-xl) !important;
-    border: 1px solid var(--hab-border-card) !important;
-    box-shadow:
-        0 1px 3px light-dark(rgba(15, 23, 42, 0.08), rgba(0, 0, 0, 0.45)),
-        0 8px 24px light-dark(rgba(15, 23, 42, 0.10), rgba(0, 0, 0, 0.55)) !important;
+    border-radius: var(--radius-lg) !important;
+    border: 1px solid var(--mud-palette-divider) !important;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.16) !important;
     cursor: pointer;
-    animation: toast-enter 0.28s var(--ease-out-expo);
     align-self: flex-start !important;
     width: fit-content !important;
     min-width: 280px !important;
     max-width: min(24rem, calc(100vw - 1.5rem)) !important;
-    transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) ease;
-}
-
-.habitinator-toast:hover {
-    box-shadow:
-        0 2px 6px light-dark(rgba(15, 23, 42, 0.10), rgba(0, 0, 0, 0.5)),
-        0 12px 32px light-dark(rgba(15, 23, 42, 0.14), rgba(0, 0, 0, 0.65)) !important;
 }
 
 .habitinator-toast:focus-visible {
@@ -671,27 +695,10 @@ input[type="number"].mud-input-slot {
 
 .habitinator-toast.severity-info    { --toast-accent: var(--mud-palette-primary); }
 .habitinator-toast.severity-success { --toast-accent: var(--hab-accent-success, #16a34a); }
-.habitinator-toast.severity-warning { --toast-accent: #f59e0b; }
+.habitinator-toast.severity-warning { --toast-accent: #d97706; }
 .habitinator-toast.severity-error   { --toast-accent: var(--hab-type-habit-bad, #dc2626); }
 
 .habitinator-toast.undo-toast { --toast-accent: var(--mud-palette-primary); }
-
-@keyframes toast-enter {
-    from {
-        opacity: 0;
-        transform: translateY(12px) scale(0.97);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .habitinator-toast {
-        animation: none !important;
-    }
-}
 
 .habitinator-toast .mud-snackbar-icon,
 .habitinator-toast .mud-snackbar-action,
@@ -757,23 +764,12 @@ input[type="number"].mud-input-slot {
     width: 1.75rem;
     height: 1.75rem;
     margin-left: 0.25rem;
-    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
+    border: 1px solid transparent;
     border-radius: var(--radius-md);
-    background: color-mix(in srgb, var(--mud-palette-surface) 90%, transparent);
+    background: transparent;
     color: var(--mud-palette-text-secondary);
     cursor: pointer;
     padding: 0;
-    transition: background var(--dur-fast) ease, color var(--dur-fast) ease, border-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out);
-}
-
-.toast-content-dismiss:hover {
-    background: color-mix(in srgb, var(--mud-palette-text-primary) 8%, var(--mud-palette-surface));
-    border-color: color-mix(in srgb, var(--mud-palette-divider) 90%, transparent);
-    color: var(--mud-palette-text-primary);
-}
-
-.toast-content-dismiss:active {
-    transform: scale(0.94);
 }
 
 .toast-content-dismiss:focus-visible {
@@ -824,9 +820,9 @@ input[type="number"].mud-input-slot {
     align-items: center;
     justify-content: center;
     gap: 0.35rem;
-    background: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
+    background: transparent;
     color: var(--mud-palette-primary);
-    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 28%, transparent);
+    border: 1px solid var(--mud-palette-primary);
     border-radius: var(--radius-pill);
     padding: 0.35rem 0.75rem;
     font-family: var(--hab-font-sans);
@@ -835,17 +831,6 @@ input[type="number"].mud-input-slot {
     letter-spacing: -0.01em;
     text-transform: none;
     cursor: pointer;
-    transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out), color var(--dur-fast) ease;
-}
-
-.undo-toast-btn:hover {
-    background: var(--mud-palette-primary);
-    color: var(--mud-palette-primary-contrast-text, #ffffff);
-    border-color: var(--mud-palette-primary);
-}
-
-.undo-toast-btn:active {
-    transform: scale(0.95);
 }
 
 .undo-toast-btn:focus-visible {
@@ -857,9 +842,15 @@ input[type="number"].mud-input-slot {
     font-size: 0.95rem !important;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 599.98px) {
+    /* Toasts dock below the app bar on phones so they never cover the add field. */
+    .mud-snackbar-provider.mud-snackbar-provider-bottom-left {
+        top: calc(var(--app-top-bar-offset, 3.5rem) + var(--space-2)) !important;
+        bottom: auto !important;
+    }
     .habitinator-toast {
         min-width: 0 !important;
+        width: calc(100vw - 1rem) !important;
         max-width: calc(100vw - 1rem) !important;
     }
     .toast-content {
@@ -869,6 +860,14 @@ input[type="number"].mud-input-slot {
     .undo-toast-body {
         padding: 0.65rem 0.75rem;
         gap: var(--space-3);
+    }
+    .toast-content-dismiss {
+        width: 44px;
+        height: 44px;
+    }
+    .undo-toast-btn {
+        min-height: 44px;
+        padding: 0.5rem 0.9rem;
     }
 }
 
@@ -899,23 +898,12 @@ input[type="number"].mud-input-slot {
     border-color: color-mix(in srgb, var(--mud-palette-error) 16%, var(--mud-palette-divider)) !important;
 }
 
-/* Premium dialog styling overrides */
-
-/* Premium backdrop: subtle mesh + soft blur, board-aligned elevation */
+/* Dialog backdrop: flat dim, no blur and no gradients for speed */
 .mud-dialog-container {
-    backdrop-filter: blur(18px) saturate(1.08);
-    -webkit-backdrop-filter: blur(18px) saturate(1.08);
-    background:
-        radial-gradient(1200px 500px at 50% -10%, color-mix(in srgb, var(--mud-palette-primary) 10%, transparent), transparent 60%),
-        radial-gradient(900px 400px at 90% 100%, color-mix(in srgb, var(--hab-type-habit) 7%, transparent), transparent 55%),
-        rgba(8, 12, 24, 0.48) !important;
-    transition: background-color var(--dur-slow) ease, backdrop-filter var(--dur-slow) ease;
+    background: rgba(8, 12, 24, 0.5) !important;
 }
 .mud-dialog-container.mud-dialog-container--with-backdrop {
-    background:
-        radial-gradient(1200px 500px at 50% -10%, color-mix(in srgb, var(--mud-palette-primary) 10%, transparent), transparent 60%),
-        radial-gradient(900px 400px at 90% 100%, color-mix(in srgb, var(--hab-type-habit) 7%, transparent), transparent 55%),
-        rgba(8, 12, 24, 0.48) !important;
+    background: rgba(8, 12, 24, 0.5) !important;
 }
 
 /* Base dialog style. All dialogs except those with custom outer shells (hab-modal family). */
@@ -998,7 +986,6 @@ input[type="number"].mud-input-slot {
 
 .activity-day-detail-table .mud-table-body .mud-table-row {
     background: var(--mud-palette-surface) !important;
-    transition: background-color var(--dur-fast) ease;
     display: table-row !important;
 }
 
@@ -1144,7 +1131,7 @@ input[type="number"].mud-input-slot {
 .stats-day-event__time { font-family: var(--hab-font-mono); font-size: 0.78rem; font-weight: 650; letter-spacing: 0.01em; color: var(--mud-palette-text-secondary); font-variant-numeric: tabular-nums; text-align: right; }
 .stats-day-event__icon { font-size: 1.15rem !important; line-height: 1; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .stats-day-event__icon--daily { color: var(--mud-palette-primary); }
-.stats-day-event__icon--todo { color: #b45309; }
+.stats-day-event__icon--todo { color: var(--hab-type-todo-ink); }
 .stats-day-event__icon--plus { color: var(--hab-type-habit); }
 .stats-day-event__icon--minus { color: var(--hab-type-habit-bad); }
 .stats-day-event__icon--timer { color: var(--mud-palette-text-secondary); }
@@ -1169,5 +1156,63 @@ input[type="number"].mud-input-slot {
     }
     html {
         scroll-behavior: auto !important;
+    }
+}
+
+/* Phone safe area: keep last content clear of the home indicator. */
+@media (max-width: 959.98px) {
+    .app-shell-main.mud-main-content {
+        padding-bottom: max(var(--space-5), env(safe-area-inset-bottom, 0px)) !important;
+    }
+
+    .stats-segment__btn {
+        min-height: 44px;
+        padding: 0.5rem 0.85rem;
+    }
+
+    .stats-weekly-tile__label,
+    .stats-weekly-tile__delta {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        line-height: 1.3;
+    }
+
+    .mud-dialog .mud-dialog-actions .mud-button {
+        min-height: 44px;
+    }
+
+    .dialog-inline-fallback .mud-button-root { min-height: 44px; }
+
+    .settings-page-wrapper .mud-button-root:not(.mud-icon-button) { min-height: 44px; }
+
+    .settings-page-wrapper input.mud-input-slot,
+    .settings-page-wrapper textarea.mud-input-slot,
+    .stats-filter-row input.mud-input-slot {
+        font-size: 16px !important;
+    }
+
+    .quiet-time-picker {
+        flex: 1 1 150px !important;
+        min-width: 150px !important;
+    }
+}
+
+/* Quiet hours pickers share the row and wrap on narrow screens. */
+.quiet-hours-row {
+    flex-wrap: wrap;
+}
+
+.quiet-time-picker {
+    flex: 1 1 160px;
+    min-width: 160px;
+}
+
+/* Stop iOS focus zoom on phone text entry. */
+@media (pointer: coarse) {
+    .board-add-field input,
+    .timer-target-field input,
+    .timer-focus-textfield input {
+        font-size: 16px !important;
     }
 }

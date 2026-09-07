@@ -40,6 +40,10 @@
             }
         </MudContainer>
     </MudMainContent>
+    @if (Session.IsLoggedIn)
+    {
+        <NavMenu BottomBar="true" />
+    }
 </MudLayout>
 
 @if (Session.IsLoggedIn)

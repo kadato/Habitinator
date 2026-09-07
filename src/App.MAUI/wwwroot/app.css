@@ -26,12 +26,7 @@
 }
 
 .maui-splash__logo {
-    animation: maui-splash-pulse 2s ease-in-out infinite;
-}
-
-@keyframes maui-splash-pulse {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.08); opacity: 0.85; }
+    display: block;
 }
 
 .maui-splash__title {
@@ -40,42 +35,24 @@
     font-size: 1.5rem;
     font-weight: 800;
     letter-spacing: -0.03em;
-    color: #f1f5f9;
+    color: var(--hab-ink-inverse);
     margin: 0;
-}
-
-@media (prefers-color-scheme: light) {
-    .maui-splash__title {
-        color: #1e293b;
-    }
 }
 
 .maui-splash__loader {
     display: block;
     width: 180px;
     height: 3px;
-    background: rgba(255, 255, 255, 0.12);
+    background: var(--hab-track-subtle);
     border-radius: var(--radius-pill);
     overflow: hidden;
-}
-
-@media (prefers-color-scheme: light) {
-    .maui-splash__loader {
-        background: rgba(0, 0, 0, 0.08);
-    }
 }
 
 .maui-splash__loader-bar {
     height: 100%;
     width: 35%;
-    background: var(--hab-brand-gradient);
+    background: #3b82f6;
     border-radius: var(--radius-pill);
-    animation: maui-loader-slide 1.5s ease-in-out infinite;
-}
-
-@keyframes maui-loader-slide {
-    0%   { transform: translateX(-100%); }
-    100% { transform: translateX(380%); }
 }
 
 .maui-splash__hint {
@@ -83,18 +60,11 @@
     font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
     font-size: 0.875rem;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--hab-ink-faint);
     margin: 0;
 }
 
-@media (prefers-color-scheme: light) {
-    .maui-splash__hint {
-        color: rgba(0, 0, 0, 0.35);
-    }
-}
-
 @media (prefers-reduced-motion: reduce) {
-    .maui-splash__logo,
     .maui-splash__loader-bar {
         animation: none;
     }
@@ -202,11 +172,8 @@
     column-gap: var(--space-6);
     min-height: var(--topbar-height) !important;
     height: auto !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    background-color: color-mix(in srgb, var(--mud-palette-surface) 82%, transparent) !important;
+    background-color: var(--mud-palette-surface) !important;
     border-bottom: 1px solid var(--mud-palette-divider) !important;
-    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05) !important;
     overflow: visible !important;
 }
 
@@ -258,6 +225,7 @@
         padding-left: var(--space-5) !important;
         padding-right: var(--space-5) !important;
         padding-top: var(--space-2) !important;
+        padding-bottom: max(var(--space-5), env(safe-area-inset-bottom, 0px)) !important;
     }
 }
 
@@ -311,7 +279,7 @@
 
 /* On small screens the app bar is a single row, the desktop-only row wrapper
    must not claim flex space, and the mobile nav must span the full remaining width with equal tabs. */
-@media (max-width: 959.98px) {
+@media (min-width: 768px) and (max-width: 959.98px) {
     .mud-appbar.app-top-bar .app-top-bar__row {
         display: none !important;
     }
@@ -319,6 +287,27 @@
     .mud-appbar.app-top-bar .app-top-bar__stack .app-mobile-nav {
         flex: 1 1 0% !important;
         min-width: 0 !important;
+    }
+}
+
+/* Phones use the fixed bottom tab bar. The MAUI top bar carries only tabs,
+   so it hides entirely and the content clears the bottom bar instead. */
+@media (max-width: 767.98px) {
+    .mud-appbar.app-top-bar {
+        display: none !important;
+    }
+
+    .mud-appbar.app-top-bar .app-mobile-nav {
+        display: none !important;
+    }
+
+    .app-shell-layout {
+        --app-top-bar-offset: 0rem;
+    }
+
+    .app-shell-layout .app-shell-main.mud-main-content {
+        padding-top: max(var(--space-2), env(safe-area-inset-top, 0px)) !important;
+        padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)) !important;
     }
 }
 

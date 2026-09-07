@@ -1,9 +1,12 @@
 @page "/settings"
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <PageMeta Title="@PageTitles.Page("Settings")"
           Description="Notification preferences, account, and app settings."
           CanonicalPath="/settings"/>
+
+<h1 class="hab-visually-hidden">Settings</h1>
 
 <AuthorizeView>
     <NotAuthorized>
@@ -24,6 +27,19 @@
                 }
                 else
                 {
+                    <MudPaper Class="pa-4 mb-3" Elevation="0" Outlined="true">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.subtitle1" Class="mb-1">Session</MudText>
+                            <SyncStatusIndicator IconOnly="false" />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">
+                                Sign out of Habitinator on this device.
+                            </MudText>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Logout" OnClick="LogoutAsync">
+                                Log out
+                            </MudButton>
+                        </MudStack>
+                    </MudPaper>
+
                     <AccountActionsSection ShowTitle="false" OnAccountDeleted="HandleAccountDeleted"/>
                 }
             </div>
@@ -38,6 +54,9 @@
     {
         _settingsIndex = value;
     }
+
+    private Task LogoutAsync() =>
+        JS.InvokeVoidAsync("habitinatorSubmitForm", "globalLogoutForm").AsTask();
 
     private Task HandleAccountDeleted()
     {

@@ -7,11 +7,8 @@
     padding-left: var(--space-4);
     padding-right: var(--space-4);
     column-gap: var(--space-5);
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    background-color: color-mix(in srgb, var(--mud-palette-surface) 82%, transparent) !important;
+    background-color: var(--mud-palette-surface) !important;
     border-bottom: 1px solid var(--mud-palette-divider) !important;
-    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05) !important;
 }
 
 /* One row fills the app bar: MudToolBar defaults to shrink-wrapped width. Grow it so left/right split works. */
@@ -204,13 +201,13 @@
     ::deep .app-mobile-nav__item {
         flex: 1 1 0 !important;
         min-width: 0 !important;
-        height: 38px !important;
-        min-height: 38px !important;
+        height: 44px !important;
+        min-height: 44px !important;
     }
 
     ::deep .board-main-container.mud-container {
-        padding-left: var(--space-5) !important;
-        padding-right: var(--space-5) !important;
+        padding-left: max(var(--space-5), env(safe-area-inset-left, 0px)) !important;
+        padding-right: max(var(--space-5), env(safe-area-inset-right, 0px)) !important;
         padding-top: var(--space-2) !important;
     }
 
@@ -218,6 +215,40 @@
     ::deep .app-shell-layout {
         --app-top-bar-offset: 3.5rem;
         --board-sticky-top: 3.5rem;
+    }
+}
+
+/* Phones use the fixed bottom tab bar for navigation, so the authorized top
+   bar hides entirely. Brand, profile menu, and sync live on wider screens
+   and in Settings. The guest bar stays for sign-in. */
+@media (max-width: 767.98px) {
+    ::deep .app-top-bar.mud-appbar:not(.app-top-bar--guest) {
+        display: none !important;
+    }
+
+    ::deep .app-top-bar__left {
+        display: none !important;
+    }
+
+    ::deep .app-top-bar__flex-spacer {
+        display: none !important;
+    }
+
+    ::deep .app-header-profile-btn.mud-icon-button {
+        display: none !important;
+    }
+
+    ::deep .app-mobile-nav {
+        display: none !important;
+    }
+
+    ::deep .app-shell-layout {
+        --app-top-bar-offset: 0rem;
+        --board-sticky-top: 0rem;
+    }
+
+    ::deep .app-shell-layout .app-shell-main.mud-main-content {
+        padding-top: var(--space-2) !important;
     }
 }
 

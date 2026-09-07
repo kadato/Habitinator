@@ -1,40 +1,11 @@
 .onboarding-dialog__content { padding: 0 !important; }
 
-.onboarding-shell {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    overflow: hidden;
-    background: var(--mud-palette-surface);
-    border-radius: var(--hab-modal-radius);
-    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 55%, transparent);
-    box-shadow:
-        0 1px 3px light-dark(rgba(15, 23, 42, 0.08), rgba(0, 0, 0, 0.45)),
-        0 12px 32px light-dark(rgba(15, 23, 42, 0.12), rgba(0, 0, 0, 0.6));
-}
-
-.onboarding-header {
+.onboarding-header-text {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
-    padding: 1.1rem 1.1rem 0.9rem;
-    position: relative;
-    border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 65%, transparent);
 }
-
-.onboarding-header__close {
-    position: absolute;
-    top: 0.7rem;
-    right: 0.7rem;
-    width: 32px; height: 32px;
-    display: inline-flex; align-items: center; justify-content: center;
-    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
-    border-radius: var(--radius-md);
-    background: var(--mud-palette-surface);
-    color: var(--mud-palette-text-secondary) !important;
-}
-.onboarding-header__close:hover { color: var(--mud-palette-text-primary) !important; border-color: var(--mud-palette-divider) !important; }
 
 .onboarding-logo {
     display: inline-flex;
@@ -42,9 +13,8 @@
     justify-content: center;
     width: 2.6rem; height: 2.6rem;
     border-radius: var(--radius-lg);
-    background: var(--hab-brand-gradient);
+    background: var(--mud-palette-primary);
     color: #fff;
-    box-shadow: 0 6px 16px color-mix(in srgb, var(--mud-palette-primary) 30%, transparent);
     margin-top: 0.2rem;
 }
 
@@ -52,8 +22,6 @@
     display: flex;
     flex-direction: column;
     gap: 0;
-    padding: 0.85rem 1.1rem;
-    background: var(--mud-palette-surface);
 }
 
 .onboarding-step {
@@ -77,25 +45,8 @@
 }
 .onboarding-step__icon--board { background: color-mix(in srgb, var(--hab-type-habit) 13%, transparent); color: var(--hab-type-habit); border: 1px solid color-mix(in srgb, var(--hab-type-habit) 18%, transparent); }
 .onboarding-step__icon--timer { background: color-mix(in srgb, var(--mud-palette-primary) 13%, transparent); color: var(--mud-palette-primary); border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 18%, transparent); }
-.onboarding-step__icon--stats { background: color-mix(in srgb, var(--hab-type-todo) 13%, transparent); color: #b45309; border: 1px solid color-mix(in srgb, var(--hab-type-todo) 20%, transparent); }
+.onboarding-step__icon--stats { background: color-mix(in srgb, var(--hab-type-todo) 13%, transparent); color: var(--hab-type-todo-ink); border: 1px solid color-mix(in srgb, var(--hab-type-todo) 20%, transparent); }
 
 .onboarding-step__body { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
 .onboarding-step__body ::deep .mud-typography-subtitle2 { font-size: 0.875rem; letter-spacing: -0.01em; }
 .onboarding-step__body ::deep .mud-typography-caption { font-size: 0.78rem; line-height: 1.45; }
-
-.onboarding-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    padding: 0.9rem 1.1rem 1.1rem;
-    background: color-mix(in srgb, var(--mud-palette-background-gray) 18%, var(--mud-palette-surface));
-    border-top: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
-}
-.onboarding-actions ::deep .mud-button-root {
-    border-radius: var(--radius-lg) !important;
-    text-transform: none !important;
-    font-weight: 750 !important;
-    font-size: 0.9rem !important;
-    padding: 0.7rem 1rem !important;
-    box-shadow: 0 4px 14px color-mix(in srgb, var(--mud-palette-primary) 22%, transparent) !important;
-}

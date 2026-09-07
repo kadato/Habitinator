@@ -2,14 +2,19 @@
 @inject IAppUpdaterService UpdaterService
 @inject IUserNotifier Notifier
 
-<MudDialog Class="update-dialog">
-    <TitleContent>
-        <div class="update-title">
-            <MudIcon Icon="@Icons.Material.Filled.SystemUpdate" Color="Color.Primary" Size="Size.Medium" />
-            <MudText Typo="Typo.h6">Update Available</MudText>
-        </div>
-    </TitleContent>
+<MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content">
     <DialogContent>
+        <div class="hab-modal hab-modal--neutral" data-dialog-label="Update available">
+            <div class="hab-modal__header">
+                <div class="hab-modal__topbar hab-modal__topbar--minimal">
+                    <DialogCloseButton OnClose="() => MudDialog.Close()" />
+                </div>
+                <div class="update-title">
+                    <MudIcon Icon="@Icons.Material.Filled.SystemUpdate" Color="Color.Primary" Size="Size.Medium" />
+                    <MudText Typo="Typo.h6">Update available</MudText>
+                </div>
+            </div>
+            <div class="hab-modal__body">
         <MudStack Spacing="4">
             <div class="d-flex align-center gap-3">
                 <MudText Typo="Typo.body2" Color="Color.Secondary">A new version of Habitinator is ready to install.</MudText>
@@ -54,21 +59,23 @@
                 </div>
             }
         </MudStack>
-    </DialogContent>
-    <DialogActions>
+            </div>
+            <div class="hab-modal__footer">
         @if (!_isDownloading)
         {
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="StartUpdate" StartIcon="@Icons.Material.Filled.Download">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Medium" Class="hab-primary-btn" OnClick="StartUpdate" StartIcon="@Icons.Material.Filled.Download">
                 Update Now
             </MudButton>
         }
         else if (!string.IsNullOrEmpty(_errorMessage))
         {
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="StartUpdate" StartIcon="@Icons.Material.Filled.Refresh">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Medium" Class="hab-primary-btn" OnClick="StartUpdate" StartIcon="@Icons.Material.Filled.Refresh">
                 Retry
             </MudButton>
         }
-    </DialogActions>
+            </div>
+        </div>
+    </DialogContent>
 </MudDialog>
 
 @code {

@@ -1,21 +1,6 @@
 /* Habitinator modal system -- product-specific, board-aligned
    Single source for Habit / Daily / To Do editors and related shells.
-   Craft intent: modals feel like expanded board cards, not generic forms.
-   Type identity is carried by a hairline accent and washed header, shared
-   with the column badges and card counters. */
-
-@keyframes modal-pop {
-    from { opacity: 0; transform: scale(0.97) translateY(10px); }
-    to   { opacity: 1; transform: scale(1) translateY(0); }
-}
-@keyframes modal-fade {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-}
-@keyframes save-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.6; transform: scale(0.85); }
-}
+   Modals appear instantly with no entrance motion. */
 
 /* -- Shell -- unified outer card that MudDialog renders transparent around */
 .hab-modal,
@@ -34,7 +19,6 @@
         0 1px 0 rgba(15,23,42,0.04),
         0 12px 24px rgba(15,23,42,0.08),
         0 32px 64px rgba(15,23,42,0.14);
-    animation: modal-pop 0.22s var(--ease-out-expo) forwards;
     position: relative;
     overscroll-behavior: contain;
 }
@@ -112,17 +96,7 @@
     color: var(--mud-palette-text-secondary) !important;
     border-radius: var(--radius-md);
     cursor: pointer;
-    transition: background var(--dur-fast) ease, color var(--dur-fast) ease, border-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out);
-    backdrop-filter: blur(6px);
 }
-.hab-modal__close:hover,
-.edit-daily-header__close:hover {
-    background: var(--mud-palette-surface) !important;
-    border-color: var(--mud-palette-divider) !important;
-    color: var(--mud-palette-text-primary) !important;
-}
-.hab-modal__close:active,
-.edit-daily-header__close:active { transform: scale(0.96); }
 .hab-modal__close--danger:hover,
 .edit-daily-header__close:hover { /* keep neutral, footer carries danger */ }
 
@@ -138,7 +112,6 @@
     border-radius: var(--radius-lg) !important;
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 70%, transparent) !important;
     box-shadow: 0 1px 2px rgba(15,23,42,0.04);
-    transition: border-color var(--dur-normal) ease, box-shadow var(--dur-normal) ease, background var(--dur-normal) ease !important;
 }
 .hab-modal__title-input .mud-input-root-outlined:focus-within,
 .edit-daily-field-header .mud-input-root-outlined:focus-within {
@@ -308,11 +281,6 @@
     font-weight: 700;
     cursor: pointer;
     align-self: flex-start;
-    transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease;
-}
-.edit-daily-checklist__add:hover {
-    background: color-mix(in srgb, var(--hab-modal-accent) 10%, var(--mud-palette-surface));
-    border-color: color-mix(in srgb, var(--hab-modal-accent) 40%, transparent);
 }
 .edit-daily-checklist__add-icon { flex-shrink: 0; }
 
@@ -337,7 +305,6 @@
     text-align: left;
     color: var(--mud-palette-text-primary);
     outline: none;
-    transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .habit-tag-picker__control:focus-visible {
     border-color: var(--mud-palette-primary);
@@ -387,7 +354,7 @@
 .hab-modal--todo .habit-tag-chip {
     background: color-mix(in srgb, var(--hab-type-todo) 12%, transparent);
     border-color: color-mix(in srgb, var(--hab-type-todo) 22%, transparent);
-    color: #b45309;
+    color: var(--hab-type-todo-ink);
 }
 .habit-tag-chip__text { margin-right: 0.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 8.5rem; }
 .habit-tag-chip__remove {
@@ -417,17 +384,10 @@
     box-shadow:
         0 -12px 28px rgba(15,23,42,0.12),
         0 -4px 10px rgba(15,23,42,0.08);
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
-    pointer-events: none;
-    visibility: hidden;
-    transition: opacity var(--dur-normal) var(--ease-out), transform var(--dur-normal) var(--ease-out), visibility var(--dur-normal);
+    display: none;
 }
 .habit-tag-picker__dropdown--open {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    pointer-events: auto;
-    visibility: visible;
+    display: block;
 }
 .habit-tag-picker__search {
     display: block;
@@ -467,11 +427,6 @@
     border-radius: var(--radius-md);
     cursor: pointer;
 }
-.habit-tag-picker__option:hover,
-.habit-tag-picker__option:focus-visible {
-    background: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
-    outline: none;
-}
 .habit-tag-picker__option--add {
     color: var(--hab-modal-accent);
     font-weight: 700;
@@ -506,13 +461,11 @@
     font-size: 0.82rem;
     font-weight: 650;
     cursor: pointer;
-    transition: background var(--dur-fast) ease, color var(--dur-fast) ease, border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .hab-segment__btn--active {
-    background: var(--mud-palette-surface);
+    background: color-mix(in srgb, var(--hab-modal-accent) 14%, transparent);
     color: var(--hab-modal-accent);
-    border-color: color-mix(in srgb, var(--hab-modal-accent) 18%, var(--mud-palette-divider));
-    box-shadow: 0 1px 6px rgba(15,23,42,0.08);
+    border-color: color-mix(in srgb, var(--hab-modal-accent) 28%, transparent);
 }
 .hab-segment__btn svg { width: 14px; height: 14px; stroke-width: 2.6; }
 
@@ -537,7 +490,6 @@
     cursor: pointer;
     color: var(--mud-palette-text-secondary);
     font-weight: 650;
-    transition: border-color var(--dur-fast) ease, background var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .habit-track__circle {
     width: 1.9rem; height: 1.9rem;
@@ -552,13 +504,11 @@
 .habit-track__option--on-good {
     background: color-mix(in srgb, var(--hab-type-habit) 8%, var(--mud-palette-surface)) !important;
     border-color: var(--hab-type-habit) !important;
-    box-shadow: 0 2px 10px color-mix(in srgb, var(--hab-type-habit) 14%, transparent) !important;
     color: var(--mud-palette-text-primary) !important;
 }
 .habit-track__option--on-bad {
     background: color-mix(in srgb, var(--hab-type-habit-bad) 7%, var(--mud-palette-surface)) !important;
     border-color: var(--hab-type-habit-bad) !important;
-    box-shadow: 0 2px 10px color-mix(in srgb, var(--hab-type-habit-bad) 12%, transparent) !important;
     color: var(--mud-palette-text-primary) !important;
 }
 
@@ -585,12 +535,10 @@
     border-radius: var(--radius-md);
     display: inline-flex; align-items: center; justify-content: center;
     cursor: pointer; flex-shrink: 0; color: #fff;
-    transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast) ease, opacity var(--dur-fast) ease;
 }
 .counter-adjust__btn:disabled { opacity: 0.35; cursor: not-allowed; }
 .counter-adjust__btn--good { background: var(--hab-type-habit); }
 .counter-adjust__btn--bad  { background: var(--hab-type-habit-bad); }
-.counter-adjust__btn:active:not(:disabled) { transform: scale(0.94); }
 .counter-adjust__btn svg { width: 1.05rem; height: 1.05rem; stroke-width: 3.2; }
 .counter-adjust__field { width: 4.8rem; flex-shrink: 0; }
 .counter-adjust__field .mud-input-root { font-family: var(--hab-font-mono) !important; }
@@ -642,12 +590,6 @@
     font-size: 0.85rem;
     font-weight: 650;
     cursor: pointer;
-    transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease;
-}
-.edit-daily-heatmap-btn:hover {
-    background: color-mix(in srgb, var(--mud-palette-primary) 6%, var(--mud-palette-surface));
-    border-color: color-mix(in srgb, var(--mud-palette-primary) 22%, var(--mud-palette-divider));
-    color: var(--mud-palette-primary);
 }
 .edit-daily-heatmap-btn__icon { flex-shrink: 0; color: var(--mud-palette-primary); }
 
@@ -682,6 +624,45 @@
     color: var(--mud-palette-warning) !important;
 }
 
+/* Quiet danger row at the bottom of edit dialogs. Plain buttons in normal
+   flow, no sticky pinning, no floating treatment. */
+.hab-modal__footer--danger {
+    position: static;
+    justify-content: space-between;
+    margin-top: 0.25rem;
+    padding-bottom: 0.15rem;
+}
+.hab-danger-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 2.5rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 650;
+    cursor: pointer;
+    background: transparent;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+.hab-danger-btn--archive {
+    border: 1px solid transparent;
+    color: var(--mud-palette-text-secondary);
+}
+.hab-danger-btn--archive:hover {
+    background: color-mix(in srgb, var(--mud-palette-warning) 10%, transparent);
+    color: var(--mud-palette-warning);
+}
+.hab-danger-btn--delete {
+    border: 1px solid color-mix(in srgb, var(--mud-palette-error) 18%, transparent);
+    background: color-mix(in srgb, var(--mud-palette-error) 7%, transparent);
+    color: var(--mud-palette-error);
+    font-weight: 700;
+}
+
 /* -- Advanced collapsible -- subtle, no Mud panel chrome */
 .hab-advanced {
     border: 1px dashed color-mix(in srgb, var(--mud-palette-divider) 70%, transparent);
@@ -704,8 +685,7 @@
     text-transform: uppercase;
     color: var(--mud-palette-text-secondary);
 }
-.hab-advanced__trigger:hover { color: var(--mud-palette-text-primary); }
-.hab-advanced__chevron { transition: transform var(--dur-normal) var(--ease-out); }
+.hab-advanced__chevron { display: inline-flex; }
 .hab-advanced--open .hab-advanced__chevron { transform: rotate(180deg); }
 .hab-advanced__body {
     padding: 0.85rem;
@@ -735,13 +715,11 @@
     padding: 0.35rem 0.75rem;
     border-radius: var(--radius-pill);
     cursor: pointer;
-    transition: background var(--dur-fast) ease, color var(--dur-fast) ease, border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .stats-segment__btn--active {
-    background: var(--mud-palette-surface);
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
     color: var(--mud-palette-primary);
-    border-color: color-mix(in srgb, var(--mud-palette-primary) 18%, transparent);
-    box-shadow: 0 1px 6px rgba(15,23,42,0.08);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, transparent);
 }
 .stats-habit-ratio {
     flex-shrink: 0;
@@ -770,15 +748,13 @@
     white-space: nowrap;
 }
 
-/* Shared premium dialogs: heatmap, archive, onboarding, yesterday, export reuse tokens */
+/* Shared dialogs reuse hab-modal tokens. No entrance motion. */
 .archived-dialog,
 .update-dialog,
 .daily-heatmap-dialog,
 .activity-day-detail-dialog,
 .export-dialog {
-    animation: modal-pop 0.22s var(--ease-out-expo) forwards;
 }
-.daily-yesterday-shell { animation: modal-pop 0.22s var(--ease-out-expo) forwards; }
 
 /* Selects -- align with board */
 .edit-habit-select,
@@ -792,10 +768,150 @@
 /* Responsive */
 @media (max-width: 599.98px) {
     .hab-modal,
-    .edit-daily-shell { max-width: min(100vw - 1rem, 26rem); max-height: min(92dvh, calc(100dvh - 1rem)); }
+    .edit-daily-shell { max-width: calc(100vw - 1rem); max-height: calc(100dvh - 1rem); }
     .hab-modal__header, .edit-daily-header { padding: 0.9rem 0.9rem 0.75rem; }
     .hab-modal__body, .edit-daily-body { padding: 0.85rem 0.9rem 0.9rem; gap: 0.85rem; }
-    .hab-segment__btn { min-height: 40px; font-size: 0.8rem; }
+    .hab-segment__btn { min-height: 44px; font-size: 0.8rem; }
+    .hab-modal__close,
+    .edit-daily-header__close { width: 44px; height: 44px; }
+    .counter-adjust__btn { width: 44px; height: 44px; }
+    .edit-daily-checklist__row { min-height: 44px; }
+    .edit-daily-checklist__remove.mud-icon-button {
+        width: 44px !important;
+        height: 44px !important;
+    }
+    .hab-modal__body .mud-button-root:not(.mud-icon-button) { min-height: 44px; }
+    .hab-modal__footer .mud-button-root {
+        min-height: 44px !important;
+        padding-top: 0.65rem !important;
+        padding-bottom: 0.65rem !important;
+    }
+    .hab-modal__footer--danger .hab-danger-btn {
+        flex: 1 1 0;
+        min-height: 48px;
+    }
+    .hab-advanced__trigger { min-height: 44px; }
+    .edit-daily-checklist__add,
+    .edit-daily-heatmap-btn { min-height: 44px; }
+    .edit-daily-checklist__row .mud-checkbox { padding: 10px !important; }
+    .habit-tag-picker__control { min-height: 44px; }
+    .habit-tag-picker__option { min-height: 44px; }
+    .habit-tag-picker__chips { overscroll-behavior-x: contain; }
+    .habit-tag-chip__remove {
+        width: 2rem !important;
+        height: 2rem !important;
+    }
+    .habit-tag-chip__remove svg { width: 12px !important; height: 12px !important; }
+    .day-stepper__btn.mud-icon-button {
+        width: 44px !important;
+        height: 44px !important;
+    }
+    .day-stepper__today.mud-button-root { min-height: 44px; }
+}
+
+/* Bottom-sheet grabber. Phones only, signals swipe-down to close. */
+.hab-modal__grabber {
+    display: none;
+}
+
+@media (max-width: 599.98px) {
+    .hab-modal__grabber {
+        display: block;
+        position: absolute;
+        top: 6px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 4px;
+        border-radius: var(--radius-pill);
+        background: color-mix(in srgb, var(--mud-palette-text-primary) 22%, transparent);
+        z-index: 4;
+        pointer-events: none;
+    }
+}
+.day-stepper {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: var(--space-2);
+    margin-top: var(--space-2);
+    min-height: 2.5rem;
+}
+.day-stepper__btn.mud-icon-button {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    justify-self: center;
+}
+.day-stepper__date {
+    min-width: 0;
+    text-align: center;
+    font-family: var(--hab-font-mono);
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    color: var(--mud-palette-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 0.25rem;
+    line-height: 2.25rem;
+}
+.day-stepper__today-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 2.25rem;
+    margin-top: 2px;
+}
+.day-stepper__today.mud-button-root {
+    flex-shrink: 0;
+    font-weight: 700 !important;
+}
+.day-stepper__today.mud-button-root.mud-disabled {
+    opacity: 0.35;
+}
+
+/* Wide dialogs keep a stable height so tab and day switches do not jump. */
+.hab-modal--wide .hab-modal__body {
+    min-height: 22rem;
+}
+.hab-modal--wide .archived-list,
+.hab-modal--wide .stats-day-timeline,
+.hab-modal--wide .stats-day-empty,
+.hab-modal--wide .dialog-inline-fallback {
+    min-height: 14rem;
+}
+
+/* Shared primary action: single solid button for Save, Get started, Copy. */
+.hab-modal__footer .hab-primary-btn.mud-button-root {
+    min-height: 2.75rem !important;
+    padding: 0.7rem 1.1rem !important;
+    border-radius: var(--radius-lg) !important;
+    font-size: 0.9rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.01em !important;
+    text-transform: none !important;
+    box-shadow: none !important;
+    width: 100%;
+}
+.hab-modal__footer .hab-primary-btn.mud-button-root:hover {
+    filter: brightness(0.96);
+}
+.hab-modal__footer .hab-primary-btn.mud-button-root:active {
+    filter: brightness(0.93);
+}
+
+@media (pointer: coarse) {
+    .hab-modal__title-input .mud-input-slot,
+    .edit-daily-field-header .mud-input-slot,
+    .edit-daily-field-body .mud-input-slot,
+    .edit-daily-checklist__input input,
+    .habit-tag-picker__search {
+        font-size: 16px !important;
+    }
 }
 
 @media (max-width: 399.98px) {
@@ -803,9 +919,66 @@
     .habit-track__option { width: 100%; }
 }
 
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-    .hab-modal, .edit-daily-shell, .archived-dialog, .update-dialog, .daily-heatmap-dialog, .daily-yesterday-shell {
-        animation: none !important;
+/* Inputs at 16px or iOS zooms on focus and breaks the sheet.
+   Viewport-based so it also covers tablets with a mouse attached. */
+@media (max-width: 959.98px) {
+    .hab-modal input.mud-input-slot,
+    .hab-modal textarea.mud-input-slot,
+    .habit-tag-picker__search,
+    .search-container input {
+        font-size: 16px !important;
+    }
+}
+
+/* Phones: editors rise from the bottom as sheets, inside thumb reach,
+   with the footer clear of the home indicator. */
+@media (max-width: 599.98px) {
+    .mud-dialog-container {
+        align-items: flex-end !important;
+        padding: 0 !important;
+    }
+
+    .mud-dialog.edit-habit-dialog,
+    .mud-dialog:has(.edit-habit-shell),
+    .mud-dialog.edit-daily-dialog,
+    .mud-dialog:has(.edit-daily-shell),
+    .mud-dialog.hab-modal-dialog,
+    .mud-dialog:has(.hab-modal),
+    .mud-dialog.daily-yesterday-dialog,
+    .mud-dialog:has(.daily-yesterday-shell) {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+
+    .hab-modal,
+    .edit-daily-shell,
+    .daily-yesterday-shell {
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: calc(92dvh - env(safe-area-inset-bottom, 0px)) !important;
+        border-radius: var(--hab-modal-radius) var(--hab-modal-radius) 0 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+    }
+
+    .hab-modal__footer {
+        padding-bottom: max(0.85rem, env(safe-area-inset-bottom, 0px)) !important;
+    }
+
+    .hab-modal__footer > .mud-button-filled-primary {
+        flex: 1 1 auto;
+    }
+
+    .habit-tag-picker__dropdown {
+        top: calc(100% + 0.45rem);
+        bottom: auto;
+        max-height: min(30dvh, 16rem);
+        overflow-y: auto;
+    }
+
+    .export-textarea textarea {
+        max-height: 40dvh;
     }
 }

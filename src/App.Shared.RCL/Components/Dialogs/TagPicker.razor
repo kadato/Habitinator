@@ -3,11 +3,12 @@
 <div class="habit-tag-picker @(_tagPickerOpen ? "habit-tag-picker--open" : null)"
      @onclick:stopPropagation="true">
     <div class="habit-tag-picker__control"
-         role="button"
+         role="combobox"
          tabindex="0"
          @onclick="ToggleTagPicker"
          @onkeydown="OnControlKeydown"
          aria-haspopup="listbox"
+         aria-label="Tags"
          @attributes="TagTriggerAria"
          id="@TriggerId">
         <div class="habit-tag-picker__chips">
@@ -48,6 +49,7 @@
                @onkeydown="OnTagSearchKeydown"
                @onkeydown:stopPropagation="true"
                @ref="_tagSearchField"
+               aria-label="Search or add a tag"
                placeholder="Enter a tag"/>
         <div class="habit-tag-picker__list">
             @if (FilteredTagSuggestions().Count == 0 && !CanAddNewTagFromSearch())

@@ -98,13 +98,7 @@
             }
             else
             {
-                var options = new DialogOptions
-                {
-                    MaxWidth = MaxWidth.Medium,
-                    FullWidth = true,
-                    CloseButton = true,
-                    CloseOnEscapeKey = true
-                };
+                var options = DialogDefaults.Wide;
                 await DialogService.ShowAsync<ExportDataDialog>(
                     "Your data export",
                     new DialogParameters<ExportDataDialog> { { x => x.JsonText, json } },

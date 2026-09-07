@@ -7,7 +7,16 @@ public static class DialogDefaults
     public static DialogOptions SmallEditor { get; } = new()
     {
         MaxWidth = MaxWidth.Small,
-        FullWidth = false,
+        FullWidth = true,
+        CloseButton = false,
+        CloseOnEscapeKey = true,
+        NoHeader = true
+    };
+
+    public static DialogOptions Wide { get; } = new()
+    {
+        MaxWidth = MaxWidth.Medium,
+        FullWidth = true,
         CloseButton = false,
         CloseOnEscapeKey = true,
         NoHeader = true

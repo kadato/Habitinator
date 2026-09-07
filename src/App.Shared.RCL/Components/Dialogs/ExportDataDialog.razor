@@ -2,27 +2,39 @@
 @inject IUserNotifier Notifier
 @inject IJSRuntime JS
 
-<MudDialog Class="export-dialog"
-           ContentClass="export-dialog__content"
-           Style="width: min(34rem, calc(100vw - 2rem));">
+<MudDialog Class="hab-modal-dialog"
+           ContentClass="hab-modal-content">
     <DialogContent>
-        <div class="export-shell">
-            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3 d-block">
-                Your browser does not support file downloads here. Copy the JSON below to save it, or use a desktop browser.
-            </MudText>
+        <div class="hab-modal hab-modal--neutral" data-dialog-label="Export data">
+            <div class="hab-modal__header">
+                <div class="hab-modal__topbar hab-modal__topbar--minimal">
+                    <DialogCloseButton OnClose="() => MudDialog.Close()" />
+                </div>
+                <MudText Typo="Typo.h6" Class="font-weight-bold mb-1">Export data</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Copy the JSON below to save it, or use a desktop browser for file downloads.
+                </MudText>
+            </div>
+            <div class="hab-modal__body">
             <MudTextField T="string"
                           @bind-Value="JsonText"
                           Variant="Variant.Outlined"
                           Lines="16"
                           ReadOnly="true"
+                          aria-label="Exported data as JSON"
                           Class="export-textarea mb-3"/>
+            </div>
+            <div class="hab-modal__footer">
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
+                       Size="Size.Medium"
                        StartIcon="@Icons.Material.Filled.ContentCopy"
+                       Class="hab-primary-btn"
                        Disabled="_copying"
                        OnClick="CopyAsync">
                 Copy to clipboard
             </MudButton>
+            </div>
         </div>
     </DialogContent>
 </MudDialog>

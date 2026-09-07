@@ -71,6 +71,7 @@ public abstract class ThemeLayoutBase : LayoutComponentBase, IDisposable
         try
         {
             await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardVisibility.js");
+            await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/dialogLabel.js");
             LayoutSelfRef = DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.startGlobal", LayoutSelfRef);
             await SyncKeyboardShortcutsEnabledAsync();

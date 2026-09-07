@@ -4,7 +4,7 @@
            ContentClass="edit-daily-dialog__content"
            Style="width: min(26rem, calc(100vw - 1rem));">
 <DialogContent>
-<div class="hab-modal hab-modal--habit edit-daily-shell edit-daily-shell--habit" @onclick="OnShellClick">
+<div class="hab-modal hab-modal--habit edit-daily-shell edit-daily-shell--habit" data-dialog-label="Edit habit" @onclick="OnShellClick">
     <EditDialogHeader TitleText="Edit habit"
                       TitlePlaceholder="Habit title"
                       @bind-Title="_title"
@@ -63,7 +63,7 @@
                     <span class="habit-track__label">Minus</span>
                 </button>
             </div>
-            <span style="font-size:0.72rem; color:var(--mud-palette-text-secondary); margin-top:0.1rem;">At least one counter stays on. Counters appear as board badges.</span>
+            <span style="font-size:0.72rem; color:var(--mud-palette-text-secondary); margin-top:0.1rem;">At least one counter stays on. Counters show on the board card.</span>
         </div>
 
         <div class="hab-modal__section">
@@ -84,6 +84,7 @@
                        Variant="Variant.Outlined"
                        Class="hab-modal__field edit-habit-select"
                        Margin="Margin.Dense"
+                       aria-label="Reset counter"
                        AnchorOrigin="Origin.BottomLeft"
                        TransformOrigin="Origin.TopLeft"
                        Dense="true">
@@ -108,7 +109,7 @@
                             <button type="button" class="counter-adjust__btn counter-adjust__btn--bad" aria-label="Decrease + count" @onclick="DecrementPlusLocal" disabled="@(_counter < 1)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                             </button>
-                            <MudNumericField @bind-Value="_counter" @bind-Value:after="OnCounterEdited" Variant="Variant.Outlined" Class="counter-adjust__field" Min="0" HideSpinButtons="true" Margin="Margin.Dense"/>
+                            <MudNumericField @bind-Value="_counter" @bind-Value:after="OnCounterEdited" Variant="Variant.Outlined" Class="counter-adjust__field" Min="0" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Plus count"/>
                             <button type="button" class="counter-adjust__btn counter-adjust__btn--good" aria-label="Increase + count" @onclick="IncrementPlusLocal">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                             </button>
@@ -118,7 +119,7 @@
                             <button type="button" class="counter-adjust__btn counter-adjust__btn--bad" aria-label="Decrease − count" @onclick="DecrementMinusLocal" disabled="@(_negativeCounter < 1)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                             </button>
-                            <MudNumericField @bind-Value="_negativeCounter" @bind-Value:after="OnCounterEdited" Variant="Variant.Outlined" Class="counter-adjust__field" Min="0" HideSpinButtons="true" Margin="Margin.Dense"/>
+                            <MudNumericField @bind-Value="_negativeCounter" @bind-Value:after="OnCounterEdited" Variant="Variant.Outlined" Class="counter-adjust__field" Min="0" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Minus count"/>
                             <button type="button" class="counter-adjust__btn counter-adjust__btn--good" aria-label="Increase − count" @onclick="IncrementMinusLocal">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                             </button>

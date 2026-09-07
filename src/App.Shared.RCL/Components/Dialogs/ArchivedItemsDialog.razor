@@ -1,28 +1,32 @@
 @using App.Shared.RCL.Models
 @using App.Shared.RCL.Services
+@using Microsoft.JSInterop
 @inject IBoardDataService BoardData
 @inject IUserNotifier Notifier
+@inject IUserDateFormatService DateFormatService
+@inject IDialogService DialogService
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
-<MudDialog Class="archived-dialog" Style="width: min(34rem, calc(100vw - 2rem)); margin-top: 10vh;">
-    <TitleContent>
-        <div class="archived-title">
-            <div class="archived-title__label">
-                <span>Archive</span>
-                @if (!_loading && TotalCount > 0)
-                {
-                    <span class="archived-title-count">@TotalCount</span>
-                }
-            </div>
-            <MudIconButton Icon="@Icons.Material.Filled.Close"
-                           aria-label="Close"
-                           Size="Size.Small"
-                           title="Close"
-                           Class="archived-title__close"
-                           OnClick="Close"
-                           Disabled="_isClosing"/>
-        </div>
-    </TitleContent>
+<MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content">
     <DialogContent>
+        <div class="hab-modal hab-modal--neutral hab-modal--wide" data-dialog-label="Archive">
+            <div class="hab-modal__grabber" aria-hidden="true"></div>
+            <div class="hab-modal__header" @ref="_headerRef">
+                <div class="hab-modal__topbar hab-modal__topbar--minimal">
+                    <DialogCloseButton OnClose="Close" Disabled="_isClosing" />
+                </div>
+                <div class="archived-title">
+                    <div class="archived-title__label">
+                        <span>Archive</span>
+                        @if (!_loading && TotalCount > 0)
+                        {
+                            <span class="archived-title-count">@TotalCount</span>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="hab-modal__body">
         @if (_loading)
         {
             <div class="d-flex justify-center my-8">
@@ -37,6 +41,7 @@
                     <div class="search-container">
                         <MudTextField @bind-Value="_searchQuery"
                                       Placeholder="Search archived items..."
+                                      AdornmentAriaLabel="Search archived items"
                                       Adornment="Adornment.Start"
                                       AdornmentIcon="@Icons.Material.Filled.Search"
                                       Variant="Variant.Outlined"
@@ -61,7 +66,7 @@
                     </div>
                 }
 
-                <div class="archived-list">
+                <div class="archived-list" @ref="_listRef">
                     @if (GetFilteredItems().Count == 0)
                     {
                         <div class="empty-state">
@@ -94,7 +99,7 @@
                             {
                                 BoardSection.Habit => $"Resets {item.ResetPeriod} · {item.Counter} logged · -{item.NegativeCounter} missed",
                                 BoardSection.Daily => $"Streak {item.Counter} days",
-                                _ => item.TodoDueDate is { } due ? $"Due {due:yyyy-MM-dd}" : "No due date"
+                                _ => item.TodoDueDate is { } due ? $"Due {DateFormatService.Format(due)}" : "No due date"
                             };
 
                             <div class="archive-row" @key="item.Id">
@@ -127,6 +132,8 @@
                 </div>
             </div>
         }
+            </div>
+        </div>
     </DialogContent>
 </MudDialog>
 
@@ -153,6 +160,71 @@
     private List<ArchivedItemEntry> _allEntries = new();
     private readonly Dictionary<Guid, Task> _inFlightTasks = new();
     private bool _isClosing;
+    private ElementReference _headerRef;
+    private ElementReference _listRef;
+    private DotNetObjectReference<ArchivedItemsDialog>? _swipeRef;
+    private bool _swipeStarted;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_swipeStarted)
+        {
+            _swipeStarted = true;
+            try
+            {
+                _swipeRef = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/modalSwipe.js");
+                await JS.InvokeVoidAsync("HabitinatorModalSwipe.init", _headerRef, _swipeRef,
+                    new { horizontal = false, dismissDown = true });
+                await JS.InvokeVoidAsync("HabitinatorModalSwipe.init", _listRef, _swipeRef,
+                    new { horizontal = true, dismissDown = false });
+            }
+            catch
+            {
+                // Swipe gestures are a touch enhancement. Tabs and buttons always work.
+            }
+        }
+    }
+
+    /// <summary>Called from touch gestures. Swipe left or right to switch category tabs.</summary>
+    [JSInvokable]
+    public Task OnModalSwipeAsync(int direction)
+    {
+        BoardSection?[] order = [null, BoardSection.Habit, BoardSection.Daily, BoardSection.Todo];
+        var index = Array.IndexOf(order, _selectedSection);
+        if (index < 0)
+        {
+            index = 0;
+        }
+
+        index = (index + (direction > 0 ? 1 : order.Length - 1)) % order.Length;
+        _selectedSection = order[index];
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Called from touch gestures. Swipe down on the header closes the dialog.</summary>
+    [JSInvokable]
+    public Task OnModalSwipeDownAsync()
+    {
+        return Close();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("HabitinatorModalSwipe.destroy", _headerRef);
+            await JS.InvokeVoidAsync("HabitinatorModalSwipe.destroy", _listRef);
+        }
+        catch
+        {
+            // Ignored during disposal.
+        }
+
+        _swipeRef?.Dispose();
+        _swipeRef = null;
+    }
 
     private List<ArchivedItemEntry> GetFilteredItems()
     {
@@ -173,6 +245,7 @@
         _loading = true;
         try
         {
+            await DateFormatService.InitializeAsync();
             _snapshot = await BoardData.GetArchivedSnapshotAsync();
             BuildEntriesList();
         }
@@ -249,11 +322,24 @@
             async () => (await BoardData.UnarchiveItemAsync(section, item.Id)) is not null,
             "restore");
 
-    private Task DeletePermanentlyAsync(BoardSection section, BoardItem item) =>
-        ExecuteWithOptimisticRemovalAsync(
+    private async Task DeletePermanentlyAsync(BoardSection section, BoardItem item)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Delete permanently?",
+            $"Delete \"{item.Title}\" forever? You cannot undo the delete.",
+            "Delete",
+            null,
+            "Cancel");
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        await ExecuteWithOptimisticRemovalAsync(
             item,
             () => BoardData.DeleteItemAsync(section, item.Id),
             "delete");
+    }
 
     private Task ExecuteWithOptimisticRemovalAsync(
         BoardItem item,

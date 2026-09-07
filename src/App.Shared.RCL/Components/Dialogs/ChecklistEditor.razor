@@ -9,17 +9,20 @@
                          ValueChanged="@((bool v) => SetChecklistDone(idx, v))"
                          Class="ma-0"
                          Color="Color.Primary"
-                         Dense="true"/>
+                         Dense="true"
+                         aria-label="@(string.IsNullOrWhiteSpace(row.Text) ? "Mark checklist item done" : $"Mark \"{row.Text.Trim()}\" done")"/>
             <MudTextField Value="row.Text"
                           ValueChanged="@((string v) => SetChecklistText(idx, v))"
                           Variant="Variant.Text"
                           Class="edit-daily-checklist__input flex-grow-1"
                           Placeholder="Checklist item"
+                          aria-label="Checklist item"
                           Margin="Margin.Dense"
                           Immediate="true"/>
             <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline"
                            Size="Size.Small"
                            title="Remove checklist item"
+                           aria-label="Remove checklist item"
                            Class="ma-0 edit-daily-checklist__remove"
                            OnClick="@(() => RemoveChecklistLine(idx))"/>
         </div>

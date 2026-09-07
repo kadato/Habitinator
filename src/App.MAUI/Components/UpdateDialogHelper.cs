@@ -1,3 +1,4 @@
+using App.Shared.RCL.Components;
 using App.Shared.RCL.Components.Dialogs;
 
 using MudBlazor;
@@ -19,14 +20,6 @@ public static class UpdateDialogHelper
             { x => x.DownloadUrl, downloadUrl }
         };
 
-        var options = new DialogOptions
-        {
-            CloseButton = true,
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
-        };
-
-        return dialogService.ShowAsync<UpdateDialog>("New Update Available", parameters, options);
+        return dialogService.ShowAsync<UpdateDialog>(string.Empty, parameters, DialogDefaults.SmallEditor);
     }
 }

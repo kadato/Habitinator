@@ -6,7 +6,7 @@
            ContentClass="edit-daily-dialog__content"
            Style="width: min(26rem, calc(100vw - 1rem));">
 <DialogContent>
-    <div class="hab-modal hab-modal--daily edit-daily-shell edit-daily-shell--daily" @onclick="OnShellClick">
+    <div class="hab-modal hab-modal--daily edit-daily-shell edit-daily-shell--daily" data-dialog-label="Edit daily" @onclick="OnShellClick">
         <EditDialogHeader TitleText="Edit daily"
                           TitlePlaceholder="Daily title"
                           @bind-Title="_title"
@@ -45,12 +45,12 @@
                     <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                     Start date
                 </span>
-                <MudDatePicker @bind-Date="_startDate" @bind-Date:after="OnDiscreteEdited" Variant="Variant.Outlined" Editable="true" Class="hab-modal__field" DateFormat="@DateFormatService.DateFormat" Margin="Margin.Dense"/>
+                <MudDatePicker @bind-Date="_startDate" @bind-Date:after="OnDiscreteEdited" Variant="Variant.Outlined" Editable="true" Class="hab-modal__field" DateFormat="@DateFormatService.DateFormat" Margin="Margin.Dense" aria-label="Start date"/>
             </div>
 
             <div class="hab-modal__section" style="padding:0.7rem 0.75rem;">
                 <span class="hab-modal__section-label">Repeats</span>
-                <MudSelect T="DailyRepeatType" @bind-Value="_repeat" @bind-Value:after="OnDiscreteEdited" Variant="Variant.Outlined" Class="hab-modal__field" Margin="Margin.Dense" Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+                <MudSelect T="DailyRepeatType" @bind-Value="_repeat" @bind-Value:after="OnDiscreteEdited" Variant="Variant.Outlined" Class="hab-modal__field" Margin="Margin.Dense" Dense="true" aria-label="Repeats" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
                     <MudSelectItem T="DailyRepeatType" Value="DailyRepeatType.Daily">Daily</MudSelectItem>
                     <MudSelectItem T="DailyRepeatType" Value="DailyRepeatType.Weekly">Weekly</MudSelectItem>
                     <MudSelectItem T="DailyRepeatType" Value="DailyRepeatType.Monthly">Monthly</MudSelectItem>
@@ -61,7 +61,7 @@
             <div class="hab-modal__section">
                 <span class="hab-modal__section-label">Repeat every</span>
                 <div class="edit-daily-repeat-every">
-                    <MudNumericField @bind-Value="_repeatInterval" @bind-Value:after="OnIntervalEdited" Variant="Variant.Outlined" Class="edit-daily-repeat-every__n" Min="1" Max="999" HideSpinButtons="true" Margin="Margin.Dense"/>
+                    <MudNumericField @bind-Value="_repeatInterval" @bind-Value:after="OnIntervalEdited" Variant="Variant.Outlined" Class="edit-daily-repeat-every__n" Min="1" Max="999" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Repeat every"/>
                     <span class="edit-daily-repeat-every__unit">@RepeatUnitLabel()</span>
                 </div>
             </div>
@@ -87,7 +87,7 @@
                             <span class="edit-daily-streak-input__icon" aria-hidden="true">
                                 <MudIcon Icon="@Icons.Material.Filled.Whatshot" Size="Size.Small" Style="color:var(--hab-accent-streak)"/>
                             </span>
-                            <MudNumericField @bind-Value="_counter" @bind-Value:after="OnCounterEdited" Variant="Variant.Outlined" Class="edit-daily-streak-input__field" Min="0" Max="9999" HideSpinButtons="true" Margin="Margin.Dense"/>
+                            <MudNumericField @bind-Value="_counter" @bind-Value:after="OnCounterEdited" Variant="Variant.Outlined" Class="edit-daily-streak-input__field" Min="0" Max="9999" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Streak count"/>
                         </div>
                     </div>
                 }
@@ -165,8 +165,7 @@
     private void DeleteAsync() => CloseWithAction(EditDialogAction.Delete);
     private async Task OpenHeatmapDialogAsync()
     {
-        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = true, CloseButton = false, NoHeader = true };
         var parameters = new DialogParameters<DailyHeatmapDialog> { { x => x.BoardItemId, Item.Id }, { x => x.Title, string.IsNullOrWhiteSpace(_title) ? Item.Title : _title } };
-        await DialogService.ShowAsync<DailyHeatmapDialog>(string.Empty, parameters, options);
+        await DialogService.ShowAsync<DailyHeatmapDialog>(string.Empty, parameters, DialogDefaults.Wide);
     }
 }

@@ -1,6 +1,9 @@
 @using App.Shared.RCL.Models
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
-<div class="hab-modal__header">
+<div class="hab-modal__header" @ref="_headerRef">
+    <div class="hab-modal__grabber" aria-hidden="true"></div>
     <div class="hab-modal__topbar hab-modal__topbar--minimal">
         <span class="hab-modal__actions" style="margin-left:auto;">
             @if (!string.IsNullOrEmpty(SaveStatus))
@@ -9,16 +12,15 @@
                     @SaveStatusText
                 </span>
             }
-            <button type="button" class="hab-modal__close" aria-label="Close" title="Close" @onclick="OnClose">
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-            </button>
+            <DialogCloseButton OnClose="OnClose" />
         </span>
     </div>
 
     <div class="hab-modal__title-field">
+        @if (!string.IsNullOrWhiteSpace(TitleText))
+        {
+            <MudText Typo="Typo.subtitle1" Class="font-weight-bold mb-2" Style="letter-spacing:-0.02em;">@TitleText</MudText>
+        }
         <MudText Typo="Typo.caption" Class="edit-daily-label-header">Title</MudText>
         <MudTextField Value="@_title"
                       ValueChanged="@((string value) => OnTitleValueChanged(value))"
@@ -57,6 +59,47 @@
 
     private string _title = string.Empty;
     private string? _notes;
+    private DotNetObjectReference<EditDialogHeader>? _swipeRef;
+    private ElementReference _headerRef;
+    private bool _swipeStarted;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_swipeStarted)
+        {
+            _swipeStarted = true;
+            try
+            {
+                _swipeRef = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/modalSwipe.js");
+                await JS.InvokeVoidAsync("HabitinatorModalSwipe.init", _headerRef, _swipeRef,
+                    new { horizontal = false, dismissDown = true });
+            }
+            catch
+            {
+                // Swipe gestures are a touch enhancement. The close button always works.
+            }
+        }
+    }
+
+    /// <summary>Called from touch gestures. Swipe down on the header closes the dialog.</summary>
+    [JSInvokable]
+    public Task OnModalSwipeDownAsync() => OnClose.InvokeAsync();
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("HabitinatorModalSwipe.destroy", _headerRef);
+        }
+        catch
+        {
+            // Ignored during disposal.
+        }
+
+        _swipeRef?.Dispose();
+        _swipeRef = null;
+    }
 
     protected override void OnParametersSet()
     {

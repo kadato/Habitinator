@@ -42,16 +42,22 @@
             @if (Section == BoardSection.Habit)
             {
                 <button type="button"
+                        title="Show all"
+                        aria-pressed="@(_habitFilter == HabitListFilter.All)"
                         class="@GetFilterBtnClass(_habitFilter == HabitListFilter.All)"
                         @onclick="@(() => SetHabitFilter(HabitListFilter.All))">
                     All
                 </button>
                 <button type="button"
+                        title="Habits with fewer than 3 logs"
+                        aria-pressed="@(_habitFilter == HabitListFilter.Weak)"
                         class="@GetFilterBtnClass(_habitFilter == HabitListFilter.Weak)"
                         @onclick="@(() => SetHabitFilter(HabitListFilter.Weak))">
                     Weak
                 </button>
                 <button type="button"
+                        title="Habits with 3 or more logs"
+                        aria-pressed="@(_habitFilter == HabitListFilter.Strong)"
                         class="@GetFilterBtnClass(_habitFilter == HabitListFilter.Strong)"
                         @onclick="@(() => SetHabitFilter(HabitListFilter.Strong))">
                     Strong
@@ -60,16 +66,22 @@
             else if (Section == BoardSection.Daily)
             {
                 <button type="button"
+                        title="Show all"
+                        aria-pressed="@(_dailyFilter == DailyListFilter.All)"
                         class="@GetFilterBtnClass(_dailyFilter == DailyListFilter.All)"
                         @onclick="@(() => SetDailyFilter(DailyListFilter.All))">
                     All
                 </button>
                 <button type="button"
+                        title="Due in the current period"
+                        aria-pressed="@(_dailyFilter == DailyListFilter.Due)"
                         class="@GetFilterBtnClass(_dailyFilter == DailyListFilter.Due)"
                         @onclick="@(() => SetDailyFilter(DailyListFilter.Due))">
                     Due
                 </button>
                 <button type="button"
+                        title="Not due in the current period"
+                        aria-pressed="@(_dailyFilter == DailyListFilter.NotDue)"
                         class="@GetFilterBtnClass(_dailyFilter == DailyListFilter.NotDue)"
                         @onclick="@(() => SetDailyFilter(DailyListFilter.NotDue))">
                     Not due
@@ -78,16 +90,22 @@
             else
             {
                 <button type="button"
+                        title="Open to-dos"
+                        aria-pressed="@(_todoFilter == TodoListFilter.Active)"
                         class="@GetFilterBtnClass(_todoFilter == TodoListFilter.Active)"
                         @onclick="@(() => SetTodoFilter(TodoListFilter.Active))">
                     Active
                 </button>
                 <button type="button"
+                        title="Open to-dos with a due date"
+                        aria-pressed="@(_todoFilter == TodoListFilter.Scheduled)"
                         class="@GetFilterBtnClass(_todoFilter == TodoListFilter.Scheduled)"
                         @onclick="@(() => SetTodoFilter(TodoListFilter.Scheduled))">
                     Scheduled
                 </button>
                 <button type="button"
+                        title="Completed to-dos"
+                        aria-pressed="@(_todoFilter == TodoListFilter.Done)"
                         class="@GetFilterBtnClass(_todoFilter == TodoListFilter.Done)"
                         @onclick="@(() => SetTodoFilter(TodoListFilter.Done))">
                     Done
@@ -110,6 +128,7 @@
         }
         <div @onkeydown="OnDraftKeyAsync" class="board-add-wrap">
             <MudTextField @bind-Value="_draft"
+                          @bind-Value:after="ClearDraftError"
                           Class="board-add-field"
                           Placeholder="@GetAddPlaceholder()"
                           aria-label="@GetAddPlaceholder()"
@@ -117,7 +136,10 @@
                           Margin="Margin.Dense"
                           Adornment="Adornment.End"
                           AdornmentIcon="@Icons.Material.Filled.Add"
+                          AdornmentAriaLabel="@GetAddPlaceholder()"
                           OnAdornmentClick="AddFromDraftAsync"
+                          Error="@_draftError"
+                          ErrorText="Add a title first."
                           Immediate="true"/>
         </div>
 
@@ -136,6 +158,21 @@
                         </div>
                         <MudText Typo="Typo.subtitle2" Class="empty-state-title">No matches found</MudText>
                         <MudText Typo="Typo.caption" Class="empty-state-desc">Try adjusting your search text or removing selected tags.</MudText>
+                    }
+                    else if (IsColumnFilterHidingAll)
+                    {
+                        <div class="empty-state-icon-container empty-state-icon-container--filter">
+                            <MudIcon Icon="@Icons.Material.Outlined.FilterListOff" Class="empty-state-icon"/>
+                        </div>
+                        <MudText Typo="Typo.subtitle2" Class="empty-state-title">No matches for this filter</MudText>
+                        <MudText Typo="Typo.caption" Class="empty-state-desc">The "@GetColumnFilterName()" filter hides @EffectiveItems.Count() items.</MudText>
+                        <MudButton Size="Size.Small"
+                                   Variant="Variant.Text"
+                                   Color="Color.Primary"
+                                   Class="mt-2 text-transform-none"
+                                   OnClick="ResetColumnFilter">
+                            @ResetFilterLabel
+                        </MudButton>
                     }
                     else
                     {
@@ -187,7 +224,7 @@
                        OnOpenEditor="@(() => OpenItemEditorAsync(item))"
                        OnMoveToTop="@(() => MoveToTopAsync(item))"
                        OnMoveToBottom="@(() => MoveToBottomAsync(item))"
-                       OnDelete="@(() => DeleteAsync(item.Id))"
+                       OnDelete="@(() => DeleteAsync(item.Id, item.Title))"
                        OnSetChecklistItemDone="@(args => SetChecklistItemDoneAsync(item, args.ChecklistItemId, args.IsDone))"/>
     };
 }

@@ -29,6 +29,9 @@ public partial class BoardColumn : IAsyncDisposable
     [Parameter] public bool IsBoardFilterExcludingAll { get; set; }
 
     private string _draft = string.Empty;
+    private bool _draftError;
+
+    private void ClearDraftError() => _draftError = false;
 
     private HabitListFilter _habitFilter;
     private DailyListFilter _dailyFilter = DailyListFilter.Due;
@@ -106,6 +109,34 @@ public partial class BoardColumn : IAsyncDisposable
         _todoFilter = filter;
         _needRefresh = true;
         _ = PersistStateAsync();
+    }
+
+    private bool IsColumnFilterHidingAll =>
+        !IsBoardFilterExcludingAll && EffectiveItems.Any() && VisibleItems().Count == 0;
+
+    private string GetColumnFilterName() => Section switch
+    {
+        BoardSection.Habit => _habitFilter.ToString(),
+        BoardSection.Daily => _dailyFilter.ToString(),
+        _ => _todoFilter.ToString()
+    };
+
+    private const string ResetFilterLabel = "Show all";
+
+    private void ResetColumnFilter()
+    {
+        switch (Section)
+        {
+            case BoardSection.Habit:
+                SetHabitFilter(HabitListFilter.All);
+                break;
+            case BoardSection.Daily:
+                SetDailyFilter(DailyListFilter.All);
+                break;
+            default:
+                SetTodoFilter(TodoListFilter.Active);
+                break;
+        }
     }
 
     private readonly Dictionary<Guid, double> _sortOrderOverrides = [];
@@ -376,7 +407,7 @@ public partial class BoardColumn : IAsyncDisposable
         {
             BoardSection.Habit => "Habits",
             BoardSection.Daily => "Dailies",
-            BoardSection.Todo => "To Do's",
+            BoardSection.Todo => "To-dos",
             _ => "Board"
         };
     }
@@ -602,9 +633,11 @@ public partial class BoardColumn : IAsyncDisposable
     {
         if (string.IsNullOrWhiteSpace(_draft))
         {
+            _draftError = true;
             return;
         }
 
+        _draftError = false;
         var title = _draft.Trim();
         var newId = Guid.NewGuid();
         BoardItem tempItem = new(
@@ -716,9 +749,9 @@ public partial class BoardColumn : IAsyncDisposable
     }
 
     private Task ArchiveItemAsync(BoardItem item) =>
-        ApplyDeletionAsync(item.Id, () => BoardData.ArchiveItemAsync(Section, item.Id));
+        ApplyDeletionAsync(item.Id, () => BoardData.ArchiveItemAsync(Section, item.Id), item.Title);
 
-    private Task DeleteItemAsync(BoardItem item) => DeleteAsync(item.Id);
+    private Task DeleteItemAsync(BoardItem item) => DeleteAsync(item.Id, item.Title);
 
     private Task OpenItemEditorAsync(BoardItem item)
     {
@@ -731,8 +764,23 @@ public partial class BoardColumn : IAsyncDisposable
         };
     }
 
-    private Task DeleteAsync(Guid id) =>
-        ApplyDeletionAsync(id, () => BoardData.DeleteItemAsync(Section, id));
+    private async Task DeleteAsync(Guid id, string? title = null)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Delete this item?",
+            title is null
+                ? "Habitinator deletes the item. You can undo the delete from the toast."
+                : $"Habitinator deletes \"{title}\". You can undo the delete from the toast.",
+            "Delete",
+            null,
+            "Cancel");
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        await ApplyDeletionAsync(id, () => BoardData.DeleteItemAsync(Section, id), title);
+    }
 
     private Task MoveToTopAsync(BoardItem item) => MoveToIndexAsync(item, 0);
 
@@ -813,11 +861,11 @@ public partial class BoardColumn : IAsyncDisposable
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync("Something went wrong. Check your connection and try again.", Severity.Error);
+            await Notifier.NotifyAsync("Something went wrong. Check your connection. Try again.", Severity.Error);
         }
     }
 
-    private async Task<bool> TryMutateAsync(Func<Task> work)
+    private async Task<bool> TryMutateAsync(Func<Task> work, string action)
     {
         try
         {
@@ -827,7 +875,7 @@ public partial class BoardColumn : IAsyncDisposable
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync("Something went wrong. Check your connection and try again.", Severity.Error);
+            await Notifier.NotifyAsync($"Habitinator could not {action}. Check your connection. Try again.", Severity.Error);
             return false;
         }
     }
@@ -836,13 +884,13 @@ public partial class BoardColumn : IAsyncDisposable
     ///     Applies an optimistic UI change, awaits the server mutation, and rolls the optimistic change back
     ///     on failure. All board mutations should go through this so optimistic state stays consistent.
     /// </summary>
-    private async Task ApplyMutationAsync(Action apply, Action rollback, Func<Task> mutation)
+    private async Task ApplyMutationAsync(Action apply, Action rollback, Func<Task> mutation, string action)
     {
         apply();
         _needRefresh = true;
         StateHasChanged();
 
-        var ok = await TryMutateAsync(mutation);
+        var ok = await TryMutateAsync(mutation, action);
         if (!ok)
         {
             rollback();
@@ -855,23 +903,27 @@ public partial class BoardColumn : IAsyncDisposable
         ApplyMutationAsync(
             () => _optimisticOverrides[itemId] = optimistic,
             () => _optimisticOverrides.Remove(itemId),
-            mutation);
+            mutation,
+            "save");
 
-    private Task ApplyDeletionAsync(Guid itemId, Func<Task> mutation) =>
+    private Task ApplyDeletionAsync(Guid itemId, Func<Task> mutation, string? subject = null) =>
         ApplyMutationAsync(
             () => _optimisticDeletions.Add(itemId),
             () => _optimisticDeletions.Remove(itemId),
-            mutation);
+            mutation,
+            subject is null ? "delete" : $"delete \"{subject}\"");
 
     private Task ApplyCreationAsync(Guid itemId, BoardItem optimistic, Func<Task> mutation) =>
         ApplyMutationAsync(
             () => _optimisticCreations[itemId] = optimistic,
             () => _optimisticCreations.Remove(itemId),
-            mutation);
+            mutation,
+            "add");
 
     private Task ApplySortOrderAsync(Guid itemId, double sortOrder, Func<Task> mutation) =>
         ApplyMutationAsync(
             () => _sortOrderOverrides[itemId] = sortOrder,
             () => _sortOrderOverrides.Remove(itemId),
-            mutation);
+            mutation,
+            "reorder");
 }

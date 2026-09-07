@@ -18,6 +18,7 @@
 
 
 <MudStack Class="board-shell w-100" Spacing="1">
+    <h1 class="hab-visually-hidden">Board</h1>
     @if (_isLoading && _initialLoadComplete)
     {
         <MudProgressLinear Color="Color.Primary" Indeterminate="true"/>
@@ -57,6 +58,7 @@
                         <MudTextField @bind-Value="_searchText"
                                       @bind-Value:after="OnSearchTextChanged"
                                       Placeholder="Search"
+                                      AdornmentAriaLabel="Search"
                                       Variant="Variant.Outlined"
                                       Margin="Margin.Dense"
                                       Adornment="Adornment.Start"
@@ -78,6 +80,7 @@
                                 <button type="button"
                                         class="@GetTagsTriggerClass()"
                                         aria-haspopup="true"
+                                        title="@GetTagsTriggerTitle()"
                                         @onclick="@(e => tagMenu.ToggleAsync(e))">
                                     <MudIcon Icon="@Icons.Material.Filled.Tune" Class="board-trigger-icon"/>
                                     <span class="board-trigger-label">@(SelectedFilterTagCount > 0 ? $"Tags ({SelectedFilterTagCount})" : "Tags")</span>
@@ -127,7 +130,7 @@
                     </button>
                     @if (_shortcutsEnabled)
                     {
-                        <span class="board-shortcuts-hint mud-text-secondary">
+                        <span class="board-shortcuts-hint mud-text-secondary" title="Keyboard shortcuts: B for board, T for statistics, P for settings, F for search, H for habit, D for daily, O for to-do, 1, 2, and 3 for sections, slash for search, question mark for all shortcuts">
                             Press <kbd class="board-kbd">Shift</kbd> to toggle shortcuts
                         </span>
                     }
@@ -151,7 +154,7 @@
     @if (_initialLoadComplete && _loadError is null)
     {
         <div class="board-columns-stage">
-            <div class="board-columns-mobile">
+            <div class="board-columns-mobile" @ref="_swipeAreaRef">
                 <div class="board-section-switcher" role="tablist" aria-label="Board sections">
                     <button type="button"
                             role="tab"
@@ -162,7 +165,7 @@
                             @onclick="() => _mobileSectionIndex = 0"
                             @onkeydown="OnMobileSectionKeyDown">
                         <span class="board-section-switcher__label">Habits</span>
-                        <span class="board-section-switcher__count">@FilteredHabits.Count</span>
+                        <span class="board-section-switcher__count" title="@FilteredHabits.Count habits">@FilteredHabits.Count</span>
                     </button>
                     <button type="button"
                             role="tab"
@@ -173,7 +176,7 @@
                             @onclick="() => _mobileSectionIndex = 1"
                             @onkeydown="OnMobileSectionKeyDown">
                         <span class="board-section-switcher__label">Dailies</span>
-                        <span class="board-section-switcher__count">@DailiesDueOpenCount</span>
+                        <span class="board-section-switcher__count" title="@DailiesDueOpenCount due and open">@DailiesDueOpenCount</span>
                     </button>
                     <button type="button"
                             role="tab"
@@ -184,7 +187,7 @@
                             @onclick="() => _mobileSectionIndex = 2"
                             @onkeydown="OnMobileSectionKeyDown">
                         <span class="board-section-switcher__label">To-dos</span>
-                        <span class="board-section-switcher__count">@OpenTodoCount</span>
+                        <span class="board-section-switcher__count" title="@OpenTodoCount open">@OpenTodoCount</span>
                     </button>
                 </div>
 

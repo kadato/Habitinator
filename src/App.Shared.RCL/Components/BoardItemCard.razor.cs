@@ -95,7 +95,7 @@ public partial class BoardItemCard
     private static string TagBadgeStyle(string tag)
     {
         var hue = StableHash(tag) % 360;
-        return $"--tag-color: light-dark(hsl({hue} 60% 38%), hsl({hue} 70% 62%))";
+        return $"--tag-color: light-dark(hsl({hue} 60% 38%), hsl({hue} 75% 72%))";
     }
 
     private static int StableHash(string value)
@@ -131,6 +131,18 @@ public partial class BoardItemCard
             0 => "board-todo-due board-todo-due--today",
             _ => "board-todo-due board-todo-due--upcoming"
         };
+    }
+
+    private string? TodoDueTitle()
+    {
+        if (Item.TodoRepeatIntervalDays is not { } interval || interval <= 0)
+        {
+            return null;
+        }
+
+        return interval == 1
+            ? "Repeats daily. When you check it off, the due date moves forward."
+            : $"Repeats every {interval} days. When you check it off, the due date moves forward.";
     }
 
     private string TodoDueRelativeLabel(DateOnly due) =>

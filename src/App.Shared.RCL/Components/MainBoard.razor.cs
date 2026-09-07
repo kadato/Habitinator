@@ -30,6 +30,7 @@ public partial class MainBoard : IAsyncDisposable
     private bool _shortcutsEnabled = true;
     private DotNetObjectReference<BoardRemoteNotifyBridge>? _visibilityRef;
     private DotNetObjectReference<MainBoard>? _selfRef;
+    private ElementReference _swipeAreaRef;
     private DateTimeOffset _lastLocalMutationTime = DateTimeOffset.MinValue;
     private PersistingComponentStateSubscription _subscription;
 
@@ -76,6 +77,11 @@ public partial class MainBoard : IAsyncDisposable
         SelectedFilterTagCount > 0
             ? "board-trigger-btn board-trigger-btn--active"
             : "board-trigger-btn";
+
+    private string GetTagsTriggerTitle() =>
+        SelectedFilterTagCount == 0
+            ? "Filter by tags"
+            : $"Tags: {string.Join(", ", _selectedFilterTags.OrderBy(t => t, StringComparer.OrdinalIgnoreCase))}";
 
     private void OnMobileSectionKeyDown(KeyboardEventArgs e)
     {
@@ -218,6 +224,7 @@ public partial class MainBoard : IAsyncDisposable
         PreferencesService.Changed -= OnPreferencesChanged;
         if (_boardClientScriptsStarted)
         {
+            await SafeInvokeVoidAsync("HabitinatorBoardSwipe.destroy", _swipeAreaRef);
             await SafeInvokeVoidAsync("HabitinatorBoardVisibility.stop");
             await SafeInvokeVoidAsync("HabitinatorKeyboardShortcuts.stop");
         }
@@ -283,6 +290,11 @@ public partial class MainBoard : IAsyncDisposable
 
             _selfRef = DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.start", _selfRef);
+
+            await JS.InvokeVoidAsync(
+                "habitinatorLoadScript",
+                "_content/App.Shared.RCL/js/boardSwipe.js");
+            await JS.InvokeVoidAsync("HabitinatorBoardSwipe.init", _swipeAreaRef, _selfRef);
 
             _dailyRetroClientReady = true;
             _ = RefreshStreaksAsync();
@@ -518,7 +530,7 @@ public partial class MainBoard : IAsyncDisposable
 
             var dialog = await DialogService.ShowAsync<DailyYesterdayRetroDialog>(
                 string.Empty, parameters, DialogDefaults.SmallEditor);
-            await dialog.Result;
+            var result = await dialog.Result;
 
             try
             {
@@ -531,6 +543,12 @@ public partial class MainBoard : IAsyncDisposable
 
             await LoadBoardAsync();
             await RefreshStreaksAsync();
+
+            if (result is { Canceled: false, Data: List<Guid> committed } && committed.Count > 0)
+            {
+                var label = committed.Count == 1 ? "1 daily" : $"{committed.Count} dailies";
+                await Notifier.NotifyAsync($"You logged {label} for yesterday.", Severity.Success);
+            }
         }
         catch (Exception)
         {
@@ -617,6 +635,16 @@ public partial class MainBoard : IAsyncDisposable
     }
 
     [JSInvokable]
+    public Task OnSwipeSectionAsync(int direction)
+    {
+        _mobileSectionIndex = direction > 0
+            ? (_mobileSectionIndex + 1) % 3
+            : (_mobileSectionIndex + 2) % 3;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable]
     public async Task OnCtrlZPressed()
     {
         if (UndoService.CanUndo)
@@ -631,7 +659,7 @@ public partial class MainBoard : IAsyncDisposable
         {
             BoardSection.Habit => "New Habit",
             BoardSection.Daily => "New Daily",
-            BoardSection.Todo => "New To Do",
+            BoardSection.Todo => "New To-do",
             _ => "New Item"
         };
         try
@@ -702,15 +730,7 @@ public partial class MainBoard : IAsyncDisposable
 
     private async Task OpenArchivedItemsDialogAsync()
     {
-        var options = new DialogOptions
-        {
-            CloseButton = false,
-            CloseOnEscapeKey = true,
-            NoHeader = false,
-            Position = DialogPosition.TopCenter
-        };
-
-        var dialog = await DialogService.ShowAsync<ArchivedItemsDialog>(string.Empty, options);
+        var dialog = await DialogService.ShowAsync<ArchivedItemsDialog>(string.Empty, DialogDefaults.Wide);
         await dialog.Result;
 
         _lastLocalMutationTime = DateTimeOffset.UtcNow;

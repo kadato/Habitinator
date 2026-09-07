@@ -30,7 +30,6 @@
                     draggable="false"
                     @onclick="OnToggle"
                     @onclick:stopPropagation="true"
-                    aria-pressed="@AriaBool(Item.IsCompleted)"
                     aria-checked="@AriaBool(Item.IsCompleted)"
                     role="checkbox">
                 @if (Item.IsCompleted)
@@ -66,6 +65,7 @@
                                        Size="Size.Small"
                                        Class="ma-0 board-card__delete"
                                        title="Options"
+                                       aria-label="Options"
                                        OnClick="@(e => itemMenu.ToggleAsync(e))"/>
                     </span>
                 </ActivatorContent>
@@ -76,18 +76,21 @@
                             <MudText Typo="Typo.body2">Edit</MudText>
                         </div>
                     </MudMenuItem>
-                    <MudMenuItem OnClick="OnMoveToTop" Disabled="@(!CanReorder)">
-                        <div class="d-flex align-center gap-2">
-                            <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"/>
-                            <MudText Typo="Typo.body2">Move to Top</MudText>
-                        </div>
-                    </MudMenuItem>
-                    <MudMenuItem OnClick="OnMoveToBottom" Disabled="@(!CanReorder)">
-                        <div class="d-flex align-center gap-2">
-                            <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"/>
-                            <MudText Typo="Typo.body2">Move to Bottom</MudText>
-                        </div>
-                    </MudMenuItem>
+                    @if (CanReorder)
+                    {
+                        <MudMenuItem OnClick="OnMoveToTop">
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"/>
+                                <MudText Typo="Typo.body2">Move to top</MudText>
+                            </div>
+                        </MudMenuItem>
+                        <MudMenuItem OnClick="OnMoveToBottom">
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"/>
+                                <MudText Typo="Typo.body2">Move to bottom</MudText>
+                            </div>
+                        </MudMenuItem>
+                    }
                     <MudMenuItem OnClick="OnDelete">
                         <div class="d-flex align-center gap-2">
                             <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" Color="Color.Error"/>
@@ -167,7 +170,7 @@
             <div class="board-card__foot-left">
                 @if (Section == BoardSection.Todo && Item.TodoDueDate is { } due)
                 {
-                    <div class="@TodoDueCssClass(due)">
+                    <div class="@TodoDueCssClass(due)" title="@TodoDueTitle()">
                         <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Class="me-1" Size="Size.Small"/>
                         <span class="board-todo-due__date">@DateFormatService.Format(due)</span>
                         <span class="board-todo-due__sep" aria-hidden="true">·</span>

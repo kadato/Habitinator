@@ -21,10 +21,7 @@
     border-radius: var(--space-5);
     overflow: hidden;
     position: relative;
-    box-shadow:
-        0 1px 2px light-dark(rgba(15, 23, 42, 0.08), rgba(0, 0, 0, 0.6)),
-        0 4px 12px light-dark(rgba(15, 23, 42, 0.10), rgba(0, 0, 0, 0.4)),
-        0 10px 28px light-dark(rgba(15, 23, 42, 0.08), rgba(0, 0, 0, 0.3));
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 
 .board-card__head-actions {
@@ -342,7 +339,6 @@
     padding: 0;
     background-clip: padding-box;
     color: var(--mud-palette-success-text);
-    transition: border-color 0.12s ease, background-color 0.12s ease;
 }
 
 .board-check--daily {
@@ -379,6 +375,12 @@
         height: 2.75rem;
     }
 
+    .board-subtask-list__row {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+
     .board-card__delete.mud-icon-button {
         width: 2.75rem;
         height: 2.75rem;
@@ -391,6 +393,11 @@
         line-height: 1.35;
         padding-top: 0.15rem;
         padding-bottom: 0.15rem;
+    }
+
+    .board-card__notes {
+        font-size: 0.8125rem;
+        line-height: 1.45;
     }
 }
 
@@ -452,7 +459,7 @@
 /* Habit right-aligned layout and button improvements */
 .board-card.board-row--habit {
     grid-template-columns: minmax(0, 1fr) auto;
-    column-gap: 0.2rem;
+    column-gap: var(--space-4);
 }
 
 .board-row--habit .board-card__left {
@@ -487,8 +494,6 @@
     align-items: center;
     justify-content: center;
     padding: 0;
-    transition: transform var(--dur-fast) var(--ease-out),
-                background-color var(--dur-fast) ease;
 }
 
 .board-row--habit .board-sq--good {
@@ -497,10 +502,6 @@
 
 .board-row--habit .board-sq--bad {
     background: var(--hab-type-habit-bad);
-}
-
-.board-row--habit .board-sq:active:not(:disabled) {
-    transform: translateY(1px) scale(0.92);
 }
 
 .board-habit-icon {

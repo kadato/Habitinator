@@ -1,12 +1,11 @@
+@inherits ToastDismissBase
+
 <div class="toast-content severity-@SeverityCssClass"
      @onclick="HandleDismiss"
      @onclick:stopPropagation="true"
      @ontouchstart="HandleTouchStart"
      @ontouchend="HandleTouchEnd"
-     @onkeydown="HandleKeyDown"
-     role="button"
-     tabindex="0"
-     aria-label="Dismiss notification">
+     role="status">
     <div class="toast-content__main">
         <span class="toast-content-icon" aria-hidden="true">
             <MudIcon Icon="@SeverityIcon" Size="Size.Small"/>
@@ -23,9 +22,6 @@
 
     [Parameter] public Severity Severity { get; set; } = Severity.Normal;
 
-    /// <summary>Invoked when the toast body or dismiss button is clicked.</summary>
-    [Parameter] public Func<Task>? OnDismiss { get; set; }
-
     private string SeverityCssClass => Severity switch
     {
         Severity.Success => "success",
@@ -41,45 +37,4 @@
         Severity.Error => Icons.Material.Filled.ErrorOutline,
         _ => Icons.Material.Filled.Info
     };
-
-    private async Task HandleDismiss()
-    {
-        if (OnDismiss is not null)
-            await OnDismiss();
-    }
-
-    private double _touchStartX;
-    private double _touchStartY;
-
-    private void HandleTouchStart(TouchEventArgs e)
-    {
-        if (e.TargetTouches.Length > 0)
-        {
-            _touchStartX = e.TargetTouches[0].ClientX;
-            _touchStartY = e.TargetTouches[0].ClientY;
-        }
-    }
-
-    private async Task HandleTouchEnd(TouchEventArgs e)
-    {
-        if (e.ChangedTouches.Length == 0)
-        {
-            return;
-        }
-
-        var dx = e.ChangedTouches[0].ClientX - _touchStartX;
-        var dy = e.ChangedTouches[0].ClientY - _touchStartY;
-        if (Math.Abs(dx) > 50 && Math.Abs(dx) > Math.Abs(dy))
-        {
-            await HandleDismiss();
-        }
-    }
-
-    private async Task HandleKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key is " " or "Enter")
-        {
-            await HandleDismiss();
-        }
-    }
 }

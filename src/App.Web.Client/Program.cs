@@ -19,8 +19,8 @@ builder.Logging.AddFilter("Microsoft.AspNetCore.Authorization", LogLevel.Warning
 builder.Services.AddMudServices(config =>
 {
     config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomLeft;
-    config.SnackbarConfiguration.ShowTransitionDuration = 250;
-    config.SnackbarConfiguration.HideTransitionDuration = 200;
+    config.SnackbarConfiguration.ShowTransitionDuration = 100;
+    config.SnackbarConfiguration.HideTransitionDuration = 100;
     config.SnackbarConfiguration.NewestOnTop = true;
 });
 

@@ -1,12 +1,11 @@
+@inherits ToastDismissBase
+
 <div class="undo-toast-body"
      @onclick="HandleDismiss"
      @onclick:stopPropagation="true"
      @ontouchstart="HandleTouchStart"
      @ontouchend="HandleTouchEnd"
-     @onkeydown="HandleKeyDown"
-     role="button"
-     tabindex="0"
-     aria-label="Dismiss notification">
+     role="status">
     <span class="undo-toast-icon" aria-hidden="true">
         <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small"/>
     </span>
@@ -23,53 +22,9 @@
     /// <summary>Invoked when the Undo button is clicked.</summary>
     [Parameter] public Func<Task>? OnUndo { get; set; }
 
-    /// <summary>Invoked when the card body is clicked, to dismiss.</summary>
-    [Parameter] public Func<Task>? OnDismiss { get; set; }
-
     private async Task HandleUndo()
     {
         if (OnUndo is not null)
             await OnUndo();
-    }
-
-    private async Task HandleDismiss()
-    {
-        if (OnDismiss is not null)
-            await OnDismiss();
-    }
-
-    private double _touchStartX;
-    private double _touchStartY;
-
-    private void HandleTouchStart(TouchEventArgs e)
-    {
-        if (e.TargetTouches.Length > 0)
-        {
-            _touchStartX = e.TargetTouches[0].ClientX;
-            _touchStartY = e.TargetTouches[0].ClientY;
-        }
-    }
-
-    private async Task HandleTouchEnd(TouchEventArgs e)
-    {
-        if (e.ChangedTouches.Length == 0)
-        {
-            return;
-        }
-
-        var dx = e.ChangedTouches[0].ClientX - _touchStartX;
-        var dy = e.ChangedTouches[0].ClientY - _touchStartY;
-        if (Math.Abs(dx) > 50 && Math.Abs(dx) > Math.Abs(dy))
-        {
-            await HandleDismiss();
-        }
-    }
-
-    private async Task HandleKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key is " " or "Enter")
-        {
-            await HandleDismiss();
-        }
     }
 }

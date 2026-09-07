@@ -41,6 +41,12 @@ node_modules/
 report-*.json
 report-*.html
 
+# Lighthouse Chrome temp profiles accidentally created in repo root
+# Chrome-launcher sometimes drops its fallback user-data-dir in the repo root.
+*lighthouse.*/
+undefined:/
+\\\\wsl*/
+
 # SonarQube
 .sonar_token
 .sonar/

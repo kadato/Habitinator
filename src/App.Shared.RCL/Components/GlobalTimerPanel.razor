@@ -226,6 +226,8 @@
 
     private void ToggleFocusHelp() => _showFocusHelp = !_showFocusHelp;
 
+    private void CloseFocusHelp() => _showFocusHelp = false;
+
     private string GetPomodoroCycleHint() =>
         $"{GlobalTimerService.FormatTimeSpan(TimerService.WorkDuration)} work, " +
         $"{GlobalTimerService.FormatTimeSpan(TimerService.ShortBreakDuration)} short, " +
@@ -300,25 +302,43 @@
              </div>
              @if (!TimerService.PomodoroModeEnabled)
              {
-                 <div class="timer-focus-field" @onkeydown="OnFocusDurationKeyDown">
-                     <MudTextField T="string"
-                                   @bind-Text="FocusDurationText"
-                                   OnBlur="OnFocusDurationBlur"
-                                   Label="Time's up after"
-                                   Placeholder="25, 1:20, 90s, 0:0:30"
-                                   HelperText="@FocusHelperText"
-                                   Clearable="true"
-                                   Variant="Variant.Outlined"
-                                   Margin="Margin.Dense"
-                                   Class="timer-focus-textfield w-100 flex-grow-1"
-                                   Immediate="true"
-                                   Adornment="Adornment.End"
-                                   AdornmentIcon="@Icons.Material.Outlined.Info"
-                                   AdornmentAriaLabel="About time's up alerts"
-                                   OnAdornmentClick="ToggleFocusHelp"
-                                   Error="@_focusDurationParseError"
-                                   ErrorText="@_focusDurationErrorText"/>
-                 </div>
+                  <div class="timer-focus-field" @onkeydown="OnFocusDurationKeyDown">
+                      <MudTextField T="string"
+                                    @bind-Text="FocusDurationText"
+                                    OnBlur="OnFocusDurationBlur"
+                                    Label="Time's up after"
+                                    Placeholder="25, 1:20, 90s, 0:0:30"
+                                    HelperText="@FocusHelperText"
+                                    Clearable="true"
+                                    Variant="Variant.Outlined"
+                                    Margin="Margin.Dense"
+                                    Class="timer-focus-textfield w-100 flex-grow-1"
+                                    Immediate="true"
+                                    Adornment="Adornment.End"
+                                    AdornmentIcon="@Icons.Material.Outlined.Info"
+                                    AdornmentAriaLabel="About time's up alerts"
+                                    OnAdornmentClick="ToggleFocusHelp"
+                                    Error="@_focusDurationParseError"
+                                    ErrorText="@_focusDurationErrorText"/>
+                      <MudPopover Open="@_showFocusHelp"
+                                  AnchorOrigin="Origin.BottomRight"
+                                  TransformOrigin="Origin.TopRight"
+                                  Class="timer-focus-help-popover pa-3"
+                                  Elevation="4">
+                          <MudStack Spacing="1">
+                              <div class="d-flex justify-space-between align-center">
+                                  <MudText Typo="Typo.subtitle2" Class="font-weight-bold" Color="Color.Primary">Time's up alerts</MudText>
+                                  <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                 Size="Size.Small"
+                                                 OnClick="CloseFocusHelp"
+                                                 aria-label="Close help" />
+                              </div>
+                              <MudText Typo="Typo.body2" Class="timer-focus-help-text">
+                                  @FocusDurationInput.HelpTooltip
+                              </MudText>
+                          </MudStack>
+                      </MudPopover>
+                  </div>
              }
              else
              {

@@ -158,6 +158,21 @@
     cursor: pointer;
 }
 
+::deep .timer-focus-help-popover {
+    max-width: 320px;
+    z-index: 1400;
+    border-radius: var(--radius-lg);
+    background: var(--mud-palette-surface);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
+}
+
+::deep .timer-focus-help-text {
+    white-space: pre-line;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--mud-palette-text-secondary);
+}
+
 .timer-target-input-row ::deep .mud-input-slot input,
 .timer-focus-field ::deep .mud-input > input.mud-input-root,
 .timer-focus-field ::deep .mud-input-slot input {

@@ -87,6 +87,12 @@ public partial class GlobalTimerPanel : IDisposable
 
     private void OnFocusDurationKeyDown(KeyboardEventArgs e)
     {
+        if (e.Key == "Escape" && _showFocusHelp)
+        {
+            _showFocusHelp = false;
+            return;
+        }
+
         if (e.Key is "Enter" or "NumpadEnter")
         {
             ApplyFocusDurationFromText();

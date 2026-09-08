@@ -1,5 +1,3 @@
-.daily-yesterday-dialog ::deep .daily-yesterday-dialog__content { padding: 0 !important; overflow: visible; }
-
 /* Rows and footer live inside the shared hab-modal shell now. */
 .daily-yesterday-date { color: var(--mud-palette-primary); font-weight: 700; font-family: var(--hab-font-mono); font-variant-numeric: tabular-nums; font-size: 0.82rem; }
 

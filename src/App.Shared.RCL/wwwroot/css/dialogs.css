@@ -593,7 +593,7 @@
 }
 .edit-daily-heatmap-btn__icon { flex-shrink: 0; color: var(--mud-palette-primary); }
 
-/* -- Archive / danger zone footer -- sticky at bottom, no extra scroll beyond */
+/* -- Modal footer -- sticky at bottom, clean breathing room and divider */
 .hab-modal__footer {
     position: sticky;
     bottom: 0;
@@ -601,8 +601,8 @@
     justify-content: space-between;
     align-items: center;
     gap: var(--space-4);
-    margin-top: 0.5rem;
-    padding: 0.85rem 0 0.15rem;
+    margin-top: 0;
+    padding: 0.85rem 1.1rem 1rem;
     border-top: 1px solid color-mix(in srgb, var(--mud-palette-divider) 65%, transparent);
     background: var(--mud-palette-surface);
     z-index: 1;
@@ -630,7 +630,7 @@
     position: static;
     justify-content: space-between;
     margin-top: 0.25rem;
-    padding-bottom: 0.15rem;
+    padding: 0.85rem 0 0.15rem;
 }
 .hab-danger-btn {
     display: inline-flex;
@@ -894,14 +894,18 @@
     font-weight: 700 !important;
     letter-spacing: -0.01em !important;
     text-transform: none !important;
-    box-shadow: none !important;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--mud-palette-primary) 20%, transparent) !important;
     width: 100%;
+    transition: background-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease, filter var(--dur-fast) ease, transform var(--dur-fast) ease !important;
 }
 .hab-modal__footer .hab-primary-btn.mud-button-root:hover {
-    filter: brightness(0.96);
+    filter: brightness(1.04);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--mud-palette-primary) 32%, transparent) !important;
 }
 .hab-modal__footer .hab-primary-btn.mud-button-root:active {
-    filter: brightness(0.93);
+    filter: brightness(0.96);
+    transform: translateY(1px) scale(0.99);
+    box-shadow: 0 1px 4px color-mix(in srgb, var(--mud-palette-primary) 16%, transparent) !important;
 }
 
 @media (pointer: coarse) {
@@ -965,6 +969,10 @@
 
     .hab-modal__footer {
         padding-bottom: max(0.85rem, env(safe-area-inset-bottom, 0px)) !important;
+    }
+
+    .hab-modal__footer--danger {
+        padding: 0.85rem 0 0.15rem !important;
     }
 
     .hab-modal__footer > .mud-button-filled-primary {

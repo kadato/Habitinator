@@ -14,6 +14,7 @@
 @inject IUserNotifier Notifier
 @inject IOnboardingStore OnboardingStore
 @inject PersistentComponentState ApplicationState
+@inject BoardUiSessionState UiSessionState
 
 
 
@@ -162,7 +163,7 @@
                             @attributes="GetTabAttributes(0)"
                             aria-controls="board-tab-panel-0"
                             class="@GetSectionSwitcherClass(0)"
-                            @onclick="() => _mobileSectionIndex = 0"
+                            @onclick="() => SetMobileSectionIndex(0)"
                             @onkeydown="OnMobileSectionKeyDown">
                         <span class="board-section-switcher__label">Habits</span>
                         <span class="board-section-switcher__count" title="@FilteredHabits.Count habits">@FilteredHabits.Count</span>
@@ -173,7 +174,7 @@
                             @attributes="GetTabAttributes(1)"
                             aria-controls="board-tab-panel-1"
                             class="@GetSectionSwitcherClass(1)"
-                            @onclick="() => _mobileSectionIndex = 1"
+                            @onclick="() => SetMobileSectionIndex(1)"
                             @onkeydown="OnMobileSectionKeyDown">
                         <span class="board-section-switcher__label">Dailies</span>
                         <span class="board-section-switcher__count" title="@DailiesDueOpenCount due and open">@DailiesDueOpenCount</span>
@@ -184,7 +185,7 @@
                             @attributes="GetTabAttributes(2)"
                             aria-controls="board-tab-panel-2"
                             class="@GetSectionSwitcherClass(2)"
-                            @onclick="() => _mobileSectionIndex = 2"
+                            @onclick="() => SetMobileSectionIndex(2)"
                             @onkeydown="OnMobileSectionKeyDown">
                         <span class="board-section-switcher__label">To-dos</span>
                         <span class="board-section-switcher__count" title="@OpenTodoCount open">@OpenTodoCount</span>

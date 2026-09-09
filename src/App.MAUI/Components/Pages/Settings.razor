@@ -5,6 +5,7 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
+@inject BoardUiSessionState UiSessionState
 
 <PageTitle>@PageTitles.Page("Settings")</PageTitle>
 
@@ -12,7 +13,7 @@
 
 <div class="settings-page-wrapper">
 
-    <SettingsSectionSwitcher @bind-ActiveIndex="_settingsIndex"/>
+    <SettingsSectionSwitcher ActiveIndex="_settingsIndex" ActiveIndexChanged="OnSettingsIndexChanged"/>
 
 <div class="settings-section-content">
     @if (_settingsIndex == 0)
@@ -92,6 +93,7 @@
 
     protected override void OnInitialized()
     {
+        _settingsIndex = UiSessionState.SettingsSectionIndex;
         try
         {
             _currentVersion = Microsoft.Maui.ApplicationModel.AppInfo.Current.VersionString;
@@ -100,6 +102,12 @@
         {
             // Fallback for Web/tests
         }
+    }
+
+    private void OnSettingsIndexChanged(int val)
+    {
+        _settingsIndex = val;
+        UiSessionState.SettingsSectionIndex = val;
     }
 
     private async Task LogoutAsync()

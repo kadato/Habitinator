@@ -1,6 +1,7 @@
 @page "/settings"
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@inject BoardUiSessionState UiSessionState
 
 <PageMeta Title="@PageTitles.Page("Settings")"
           Description="Notification preferences, account, and app settings."
@@ -50,9 +51,15 @@
 @code {
     private int _settingsIndex;
 
+    protected override void OnInitialized()
+    {
+        _settingsIndex = UiSessionState.SettingsSectionIndex;
+    }
+
     private void OnSettingsIndexChanged(int value)
     {
         _settingsIndex = value;
+        UiSessionState.SettingsSectionIndex = value;
     }
 
     private Task LogoutAsync() =>

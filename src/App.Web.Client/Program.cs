@@ -74,6 +74,7 @@ builder.Services.AddScoped<IAccountActionsService, RemoteAccountActionsService>(
 builder.Services.AddScoped<IUserDataExportService, RemoteUserDataExportService>();
 builder.Services.AddScoped<IBoardColumnStateStore, JsBoardColumnStateStore>();
 builder.Services.AddScoped<IOnboardingStore, JsOnboardingStore>();
+builder.Services.AddScoped<BoardUiSessionState>();
 
 var host = builder.Build();
 try

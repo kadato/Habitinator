@@ -165,6 +165,7 @@ public static class DependencyInjectionExtensions
         services.AddScoped<IUserDataExportService, WebUserDataExportService>();
         services.AddScoped<IBoardColumnStateStore, JsBoardColumnStateStore>();
         services.AddScoped<IOnboardingStore, JsOnboardingStore>();
+        services.AddScoped<BoardUiSessionState>();
         services.AddHttpClient();
         services.AddValidation();
 

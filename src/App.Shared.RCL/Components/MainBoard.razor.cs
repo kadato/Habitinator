@@ -97,8 +97,14 @@ public partial class MainBoard : IAsyncDisposable
             "Home" => 0,
             _ => 2
         };
-        _mobileSectionIndex = next;
+        SetMobileSectionIndex(next);
         StateHasChanged();
+    }
+
+    private void SetMobileSectionIndex(int index)
+    {
+        _mobileSectionIndex = index;
+        UiSessionState.MobileSectionIndex = index;
     }
 
     private List<string> GetAllTagNamesForMenu() =>
@@ -113,6 +119,14 @@ public partial class MainBoard : IAsyncDisposable
     protected override async Task OnInitializedAsync()
     {
         _subscription = ApplicationState.RegisterOnPersisting(PersistBoardData);
+        _searchText = UiSessionState.SearchText;
+        _selectedFilterTags.Clear();
+        foreach (var tag in UiSessionState.SelectedFilterTags)
+        {
+            _selectedFilterTags.Add(tag);
+        }
+        _mobileSectionIndex = UiSessionState.MobileSectionIndex;
+
         if (ApplicationState.TryTakeFromJson<BoardSnapshot>("board_snapshot", out var restored) && restored is not null)
         {
             Habits = restored.Habits.ToList();
@@ -457,6 +471,12 @@ public partial class MainBoard : IAsyncDisposable
             _ = _selectedFilterTags.Remove(tag);
         }
 
+        UiSessionState.SelectedFilterTags.Clear();
+        foreach (var t in _selectedFilterTags)
+        {
+            UiSessionState.SelectedFilterTags.Add(t);
+        }
+
         RecomputeFilters();
     }
 
@@ -475,11 +495,14 @@ public partial class MainBoard : IAsyncDisposable
     {
         _searchText = string.Empty;
         _selectedFilterTags.Clear();
+        UiSessionState.SearchText = string.Empty;
+        UiSessionState.SelectedFilterTags.Clear();
         RecomputeFilters();
     }
 
     private void OnSearchTextChanged()
     {
+        UiSessionState.SearchText = _searchText;
         RecomputeFilters();
     }
 

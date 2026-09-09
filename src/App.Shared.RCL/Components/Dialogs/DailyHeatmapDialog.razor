@@ -257,8 +257,7 @@
         {
             var options = DialogDefaults.Wide;
             var parameters = new DialogParameters<ActivityDayDetailDialog> { { x => x.Date, cell.Date } };
-            var dateStr = DateFormatService.Format(cell.Date);
-            await DialogService.ShowAsync<ActivityDayDetailDialog>($"{cell.Date.DayOfWeek} · {dateStr}", parameters, options);
+            await DialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters, options);
         }
     }
 }

@@ -48,7 +48,7 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task Renders_Title_With_Date_And_Activity_Count()
+    public async Task Renders_Header_And_Date_Without_Subtitle()
     {
         // Arrange
         var dto = new ActivityDayDetailDto(
@@ -71,14 +71,16 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
 
         // Act
         await provider.InvokeAsync(async () => await dialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters));
-        await provider.WaitForStateAsync(() => provider.Markup.Contains("3 activities"), TimeSpan.FromSeconds(5));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Morning Run"), TimeSpan.FromSeconds(5));
 
         // Assert
+        provider.Markup.Should().Contain("Day details");
         provider.Markup.Should().Contain("2026-08-12");
-        provider.Markup.Should().Contain("2026-08-12 · 3 activities · 25 min focus");
-        provider.Markup.Should().Contain("3 activities");
+        provider.Markup.Should().NotContain("3 activities");
+        provider.Markup.Should().NotContain("25 min focus");
         provider.Markup.Should().NotContain("activity-day-detail-summary");
         provider.Markup.Should().NotContain("activity-day-detail-count");
+        provider.Markup.Should().NotContain("day-stepper__today");
     }
 
     [Fact]

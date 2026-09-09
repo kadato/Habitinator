@@ -17,10 +17,6 @@
                     <DialogCloseButton OnClose="() => MudDialog.Close()" />
                 </div>
                 <MudText Typo="Typo.h6" Class="font-weight-bold">Day details</MudText>
-                @if (!string.IsNullOrWhiteSpace(_headerLine))
-                {
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@_headerLine</MudText>
-                }
                 <div class="day-stepper" role="group" aria-label="Change day">
                     <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
                                    aria-label="Previous day"
@@ -32,15 +28,6 @@
                                    Disabled="@IsNextDisabled"
                                    OnClick="() => StepDayAsync(1)"
                                    Class="day-stepper__btn" />
-                </div>
-                <div class="day-stepper__today-row">
-                    <MudButton Variant="Variant.Text"
-                               Color="Color.Primary"
-                               OnClick="GoTodayAsync"
-                               Disabled="@IsTodayShown"
-                               Class="day-stepper__today text-transform-none">
-                        Today
-                    </MudButton>
                 </div>
             </div>
             <div class="hab-modal__body" @ref="_bodyRef">
@@ -122,7 +109,6 @@
     private bool _loading = true;
     private string? _error;
     private DateOnly _shownDate;
-    private string? _headerLine;
     private string _shownDateLabel = string.Empty;
     private ElementReference _headerRef;
     private ElementReference _bodyRef;
@@ -143,7 +129,6 @@
 
         UpdateShownDateLabel();
         await LoadAsync();
-        await UpdateTitleAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -216,20 +201,9 @@
         _shownDate = _shownDate.AddDays(offset);
         UpdateShownDateLabel();
         await LoadAsync();
-        await UpdateTitleAsync();
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task GoTodayAsync()
-    {
-        _shownDate = DailySchedule.LocalToday(TimeZoneService);
-        UpdateShownDateLabel();
-        await LoadAsync();
-        await UpdateTitleAsync();
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private bool IsTodayShown => _shownDate == DailySchedule.LocalToday(TimeZoneService);
 
     private bool IsNextDisabled => _shownDate >= DailySchedule.LocalToday(TimeZoneService);
 
@@ -288,7 +262,6 @@
     {
         await LoadAsync();
         UpdateShownDateLabel();
-        await UpdateTitleAsync();
         StateHasChanged();
     }
 
@@ -302,30 +275,6 @@
         {
             _shownDateLabel = _shownDate.ToString("yyyy-MM-dd");
         }
-    }
-
-    private async Task UpdateTitleAsync()
-    {
-        try
-        {
-            UpdateShownDateLabel();
-            var date = _shownDateLabel;
-            var title = _detail is null ? date : $"{date} · {BuildSummary(_detail)}";
-            _headerLine = title;
-            await MudDialog.SetTitleAsync(title);
-        }
-        catch (Exception ex)
-        {
-            // Dialog may already be closed. The title stays as provided by the caller.
-            _ = ex;
-        }
-    }
-
-    private static string BuildSummary(ActivityDayDetailDto detail)
-    {
-        var count = detail.Events.Count;
-        var label = count == 1 ? "1 activity" : $"{count} activities";
-        return detail.FocusMinutesTotal > 0 ? $"{label} · {detail.FocusMinutesTotal} min focus" : label;
     }
 
     private string FormatLocalTime(DateTimeOffset utcTime) => TimeZoneService.ConvertToLocal(utcTime).ToString("HH:mm");

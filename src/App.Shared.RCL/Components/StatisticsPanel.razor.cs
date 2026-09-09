@@ -215,9 +215,15 @@ public partial class StatisticsPanel : IDisposable
     private async Task LoadStatisticsAsync(string periodKey)
     {
         _heatmapToday = DailySchedule.LocalToday(TimeZoneService);
-        _loadingDailies = true;
+        if (_dailyView is null)
+        {
+            _loadingDailies = true;
+        }
         _dailyError = null;
-        _loadingHabits = true;
+        if (_habitView is null)
+        {
+            _loadingHabits = true;
+        }
         _habitError = null;
         var tag = string.IsNullOrEmpty(_tagFilter) ? null : _tagFilter;
         var streaksTask = BoardData.GetStreakMapAsync();
@@ -485,7 +491,7 @@ public partial class StatisticsPanel : IDisposable
             { x => x.Date, date },
             { x => x.TagFilter, filterTag }
         };
-        await DialogService.ShowAsync<ActivityDayDetailDialog>(FormatDateWithWeekday(date), parameters, options);
+        await DialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters, options);
     }
 
     private static string FormatBusiestDayDetail(DateOnly day, int eventCount)
@@ -534,13 +540,6 @@ public partial class StatisticsPanel : IDisposable
     {
         var label = activeDayCount == 1 ? "day" : "days";
         return $"{activeDayCount} active {label} of {periodDayCount} in this period";
-    }
-
-    private string FormatDateWithWeekday(DateOnly date)
-    {
-        var formatted = DateFormatService.Format(date);
-        var weekday = date.ToString("dddd", CultureInfo.InvariantCulture);
-        return $"{formatted} ({weekday})";
     }
 
     private bool IsHeatmapToday(DateOnly date) => date == _heatmapToday;

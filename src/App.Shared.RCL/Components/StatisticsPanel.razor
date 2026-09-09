@@ -23,7 +23,7 @@
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="@(() => RefreshAsync(() => LoadStatisticsAsync(_selectedPeriodKey)))">Retry</MudButton>
         </div>
     }
-    else if (_loading)
+    else if (_loading && _data is null)
     {
         <div class="stats-hero-skeleton">
             <MudPaper Class="pa-4 stats-dashboard-card stats-hero-card" Elevation="0" Outlined="true">
@@ -73,9 +73,9 @@
                                IncludeRovingTabindex="true"
                                ShowMonthLabels="false"
                                Cells="_cellIndex"
-                               IsToday="@((r, c) => _cellIndex.TryGetValue((r, c), out var cell) && IsHeatmapToday(cell.Date))"
-                               GetCellClass="@((r, c) => ActivityHeatmapCellClass(_cellIndex[(r, c)]))"
-                               GetCellTitle="@((r, c) => HeatmapDayTitle(_cellIndex[(r, c)].Date, _cellIndex[(r, c)].Count))"
+                               IsTodayFunc="IsHeatmapToday"
+                               CellClassFunc="ActivityHeatmapCellClass"
+                               CellTitleFunc="@(c => HeatmapDayTitle(c.Date, c.Count))"
                                OnCellClick="@((r, c) => OpenDayDetailAsync(_cellIndex[(r, c)].Date))"/>
 
 
@@ -120,7 +120,7 @@
                         </div>
                     </div>
 
-                    @if (_loadingDailies || _loadingHabits)
+                    @if ((_loadingDailies && _dailyView is null) || (_loadingHabits && _habitView is null))
                     {
                         <MudGrid Spacing="3" Class="mt-3">
                             @for (int i = 0; i < 2; i++)
@@ -175,10 +175,10 @@
                                                                    RegionLabel="@($"Activity heatmap for {daily.Title}")"
                                                                    Cells="cellIx"
                                                                    ShowMonthLabels="false"
-                                                                   IsToday="@((r, c) => cellIx.TryGetValue((r, c), out var cell) && IsHeatmapToday(cell.Date))"
-                                                                   GetCellClass="@((r, c) => DailyHeatmapCellClass(cellIx[(r, c)]))"
-                                                                   GetCellTitle="@((r, c) => DailyHeatmapDayTitle(cellIx[(r, c)].Date, cellIx[(r, c)].Count))"
-                                                                   GetCellAriaLabel="@((r, c) => DailyHeatmapDayTitle(cellIx[(r, c)].Date, cellIx[(r, c)].Count))"/>
+                                                                   IsTodayFunc="IsHeatmapToday"
+                                                                   CellClassFunc="DailyHeatmapCellClass"
+                                                                   CellTitleFunc="@(c => DailyHeatmapDayTitle(c.Date, c.Count))"
+                                                                   CellAriaLabelFunc="@(c => DailyHeatmapDayTitle(c.Date, c.Count))"/>
                                             </div>
                                         </MudItem>
                                     }
@@ -198,10 +198,10 @@
                                                                    RegionLabel="@($"Activity heatmap for {habit.Title}")"
                                                                    Cells="cellIx"
                                                                    ShowMonthLabels="false"
-                                                                   IsToday="@((r, c) => cellIx.TryGetValue((r, c), out var cell) && IsHeatmapToday(cell.Date))"
-                                                                   GetCellClass="@((r, c) => HabitHeatmapCellClass(cellIx[(r, c)]))"
-                                                                   GetCellTitle="@((r, c) => HabitHeatmapDayTitle(cellIx[(r, c)].Date, cellIx[(r, c)].Count))"
-                                                                   GetCellAriaLabel="@((r, c) => HabitHeatmapDayTitle(cellIx[(r, c)].Date, cellIx[(r, c)].Count))"/>
+                                                                   IsTodayFunc="IsHeatmapToday"
+                                                                   CellClassFunc="HabitHeatmapCellClass"
+                                                                   CellTitleFunc="@(c => HabitHeatmapDayTitle(c.Date, c.Count))"
+                                                                   CellAriaLabelFunc="@(c => HabitHeatmapDayTitle(c.Date, c.Count))"/>
                                             </div>
                                         </MudItem>
                                     }

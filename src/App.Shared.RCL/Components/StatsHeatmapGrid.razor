@@ -17,7 +17,7 @@
             <div class="stats-heatmap-months" aria-hidden="true" style="--stats-cols: @Columns;">
                 @for (var c = 0; c < Columns; c++)
                 {
-                    var label = GetMonthLabel(c);
+                    var label = _monthLabels != null && c < _monthLabels.Length ? _monthLabels[c] : GetMonthLabel(c);
                     <span class="stats-heatmap-month @(string.IsNullOrEmpty(label) ? "stats-heatmap-month--empty" : string.Empty)">@label</span>
                 }
             </div>
@@ -33,9 +33,10 @@
                     {
                         if (cell.InDataRange)
                         {
-                            var cellClass = GetCellClass(row, col);
-                            var cellTitle = GetCellTitle(row, col);
-                            var cellAria = GetCellAriaLabel(row, col);
+                            var cellClass = CellClassFunc is not null ? CellClassFunc(cell) : GetCellClass(row, col);
+                            var cellTitle = CellTitleFunc is not null ? CellTitleFunc(cell) : GetCellTitle(row, col);
+                            var cellAria = CellAriaLabelFunc is not null ? CellAriaLabelFunc(cell) : GetCellAriaLabel(row, col);
+                            var isToday = IsTodayFunc is not null ? IsTodayFunc(cell.Date) : IsToday(row, col);
                             if (OnCellClick is not null)
                             {
                                 <button type="button"
@@ -43,7 +44,7 @@
                                         class="@cellClass"
                                         title="@cellTitle"
                                         aria-label="@cellAria"
-                                        aria-current="@(IsToday(row, col) ? "date" : null)"
+                                        aria-current="@(isToday ? "date" : null)"
                                         data-row="@(IncludeRovingTabindex ? row : null)"
                                         data-col="@(IncludeRovingTabindex ? col : null)"
                                         tabindex="@(IncludeRovingTabindex ? "0" : null)"
@@ -57,7 +58,7 @@
                                      role="img"
                                      title="@cellTitle"
                                      aria-label="@cellAria"
-                                     aria-current="@(IsToday(row, col) ? "date" : null)"></div>
+                                     aria-current="@(isToday ? "date" : null)"></div>
                             }
                         }
                         else
@@ -85,10 +86,32 @@
     [Parameter] public Func<int, int, string> GetCellClass { get; set; } = (_, _) => string.Empty;
     [Parameter] public Func<int, int, string?> GetCellTitle { get; set; } = (_, _) => null;
     [Parameter] public Func<int, int, string?> GetCellAriaLabel { get; set; } = (_, _) => null;
+    [Parameter] public Func<ActivityHeatmapCellDto, string>? CellClassFunc { get; set; }
+    [Parameter] public Func<ActivityHeatmapCellDto, string?>? CellTitleFunc { get; set; }
+    [Parameter] public Func<ActivityHeatmapCellDto, string?>? CellAriaLabelFunc { get; set; }
+    [Parameter] public Func<DateOnly, bool>? IsTodayFunc { get; set; }
     [Parameter] public Func<int, int, Task>? OnCellClick { get; set; }
 
     /// <summary>Accessible name for the scrollable heatmap region. Pass a unique label per grid.</summary>
     [Parameter] public string RegionLabel { get; set; } = "Activity heatmap";
+
+    private string[]? _monthLabels;
+
+    protected override void OnParametersSet()
+    {
+        if (ShowMonthLabels && Columns > 0)
+        {
+            _monthLabels = new string[Columns];
+            for (var c = 0; c < Columns; c++)
+            {
+                _monthLabels[c] = GetMonthLabel(c);
+            }
+        }
+        else
+        {
+            _monthLabels = null;
+        }
+    }
 
     private Task OnCellClickAsync(int r, int c) => OnCellClick is null ? Task.CompletedTask : OnCellClick(r, c);
 

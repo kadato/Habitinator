@@ -748,13 +748,6 @@
     white-space: nowrap;
 }
 
-/* Shared dialogs reuse hab-modal tokens. No entrance motion. */
-.archived-dialog,
-.update-dialog,
-.daily-heatmap-dialog,
-.activity-day-detail-dialog,
-.export-dialog {
-}
 
 /* Selects -- align with board */
 .edit-habit-select,
@@ -806,7 +799,6 @@
         width: 44px !important;
         height: 44px !important;
     }
-    .day-stepper__today.mud-button-root { min-height: 44px; }
 }
 
 /* Bottom-sheet grabber. Phones only, signals swipe-down to close. */
@@ -858,20 +850,6 @@
     text-overflow: ellipsis;
     padding: 0 0.25rem;
     line-height: 2.25rem;
-}
-.day-stepper__today-row {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 2.25rem;
-    margin-top: 2px;
-}
-.day-stepper__today.mud-button-root {
-    flex-shrink: 0;
-    font-weight: 700 !important;
-}
-.day-stepper__today.mud-button-root.mud-disabled {
-    opacity: 0.35;
 }
 
 /* Wide dialogs keep a stable height so tab and day switches do not jump. */

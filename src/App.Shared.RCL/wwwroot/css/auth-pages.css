@@ -340,11 +340,6 @@
     border-color: color-mix(in srgb, var(--mud-palette-warning) 20%, var(--mud-palette-divider));
 }
 
-/* Accessibility overrides for Dark Theme */
-.dark-theme .mud-button-outlined-primary {
-    color: #38bdf8 !important; /* sky-400 has 8.6:1 contrast ratio against #111827 surface */
-    border-color: rgba(56, 189, 248, 0.4) !important;
-}
 
 @media (max-width: 599.98px) {
     .auth-page {

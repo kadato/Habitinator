@@ -180,7 +180,7 @@
     pointer-events: none !important;
 }
 
-.board-col-foot {
+.board-column ::deep .board-col-foot {
     border-top: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
     margin-top: var(--space-1);
     padding-top: var(--space-3) !important;
@@ -205,13 +205,6 @@
 }
 
 @media (max-width: 479.98px) {
-    .board-column ::deep .board-filter-btn.mud-button-root {
-        min-height: 44px !important;
-        padding-left: var(--space-2) !important;
-        padding-right: var(--space-2) !important;
-        font-size: 0.8rem !important;
-    }
-
     .board-column ::deep .mud-card-header {
         padding-left: 0.65rem !important;
         padding-right: 0.65rem !important;

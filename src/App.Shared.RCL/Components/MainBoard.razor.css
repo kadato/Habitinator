@@ -520,24 +520,6 @@
     /* Section tabs on mobile: equal-width buttons so all three fit and are easy to tap. */
 }
 
-@media (max-width: 479.98px) {
-    .board-stat-filters {
-        gap: var(--space-2) !important;
-    }
-
-    .board-trigger-btn,
-    .board-archive-trigger,
-    .board-tags-menu-activator,
-    .board-search-wrapper,
-    .board-search-pill,
-    .board-search-pill ::deep .mud-input-outlined {
-        height: 44px !important;
-        min-height: 44px !important;
-        max-height: 44px !important;
-        font-size: 0.85rem !important;
-    }
-}
-
 @media (pointer: coarse) {
     .board-search-pill ::deep .mud-input-slot input {
         font-size: 16px !important;

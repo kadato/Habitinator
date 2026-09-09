@@ -181,11 +181,6 @@
     font-feature-settings: "tnum" 1, "zero" 1;
 }
 
-.timer-focus-field {
-    display: block;
-    min-width: 0;
-}
-
 /* Segmented mode toggle. Even padding all around, roomy pills. */
 .custom-timer-toggle {
     display: flex;
@@ -631,10 +626,6 @@
 
     ::deep .timer-primary-action.mud-button-root {
         min-width: 0 !important;
-    }
-
-    .timer-inputs-pair {
-        gap: 0.65rem;
     }
 }
 

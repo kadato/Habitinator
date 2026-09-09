@@ -22,36 +22,10 @@ internal static class SettingsApiRoutes
         settingsApi.MapPreferencesSettingsEndpoints();
     }
 
-    private static void MapNotificationSettingsEndpoints(this IEndpointRouteBuilder settingsApi) =>
-        settingsApi.MapSettingsEndpoints(
-            "notifications",
-            static row => row.NotificationSettings,
-            static () => NotificationSettings.CreateDefault(),
-            static (row, value) => row.NotificationSettings = value);
-
-    private static void MapPreferencesSettingsEndpoints(this IEndpointRouteBuilder settingsApi) =>
-        settingsApi.MapSettingsEndpoints(
-            "preferences",
-            static row => row.UserPreferences,
-            static () => UserPreferences.CreateDefault(),
-            static (row, value) => row.UserPreferences = value,
-            static value =>
-            {
-                value.DisplayName = string.IsNullOrWhiteSpace(value.DisplayName)
-                    ? null
-                    : ZalgoSanitizer.Sanitize(value.DisplayName.Trim());
-            });
-
-    private static void MapSettingsEndpoints<T>(
-        this IEndpointRouteBuilder settingsApi,
-        string segment,
-        Func<ApplicationUser, T?> getter,
-        Func<T> defaultValue,
-        Action<ApplicationUser, T> setter,
-        Action<T>? sanitize = null)
+    private static void MapNotificationSettingsEndpoints(this IEndpointRouteBuilder settingsApi)
     {
-        settingsApi.MapGet("/" + segment,
-            async Task<Results<Ok<T>, NotFound>> (
+        settingsApi.MapGet("/notifications",
+            async Task<Results<Ok<NotificationSettings>, NotFound>> (
                 CurrentUserId user, ApplicationDbContext db, CancellationToken cancellationToken) =>
             {
                 var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == user.Value, cancellationToken);
@@ -60,13 +34,13 @@ internal static class SettingsApiRoutes
                     return TypedResults.NotFound();
                 }
 
-                return TypedResults.Ok(getter(row) ?? defaultValue());
+                return TypedResults.Ok(row.NotificationSettings ?? NotificationSettings.CreateDefault());
             });
 
-        settingsApi.MapPut("/" + segment,
+        settingsApi.MapPut("/notifications",
             async Task<Results<NoContent, NotFound>> (
                 CurrentUserId user, ApplicationDbContext db, IBoardChangeNotifier boardChangeNotifier,
-                T body, CancellationToken cancellationToken) =>
+                NotificationSettings body, CancellationToken cancellationToken) =>
             {
                 var row = await db.Users.FirstOrDefaultAsync(u => u.Id == user.Value, cancellationToken);
                 if (row is null)
@@ -74,8 +48,43 @@ internal static class SettingsApiRoutes
                     return TypedResults.NotFound();
                 }
 
-                sanitize?.Invoke(body);
-                setter(row, body);
+                row.NotificationSettings = body;
+                await db.SaveChangesAsync(cancellationToken);
+                await boardChangeNotifier.NotifyBoardChangedAsync(user.Value, cancellationToken);
+                return TypedResults.NoContent();
+            });
+    }
+
+    private static void MapPreferencesSettingsEndpoints(this IEndpointRouteBuilder settingsApi)
+    {
+        settingsApi.MapGet("/preferences",
+            async Task<Results<Ok<UserPreferences>, NotFound>> (
+                CurrentUserId user, ApplicationDbContext db, CancellationToken cancellationToken) =>
+            {
+                var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == user.Value, cancellationToken);
+                if (row is null)
+                {
+                    return TypedResults.NotFound();
+                }
+
+                return TypedResults.Ok(row.UserPreferences ?? UserPreferences.CreateDefault());
+            });
+
+        settingsApi.MapPut("/preferences",
+            async Task<Results<NoContent, NotFound>> (
+                CurrentUserId user, ApplicationDbContext db, IBoardChangeNotifier boardChangeNotifier,
+                UserPreferences body, CancellationToken cancellationToken) =>
+            {
+                var row = await db.Users.FirstOrDefaultAsync(u => u.Id == user.Value, cancellationToken);
+                if (row is null)
+                {
+                    return TypedResults.NotFound();
+                }
+
+                body.DisplayName = string.IsNullOrWhiteSpace(body.DisplayName)
+                    ? null
+                    : ZalgoSanitizer.Sanitize(body.DisplayName.Trim());
+                row.UserPreferences = body;
                 await db.SaveChangesAsync(cancellationToken);
                 await boardChangeNotifier.NotifyBoardChangedAsync(user.Value, cancellationToken);
                 return TypedResults.NoContent();

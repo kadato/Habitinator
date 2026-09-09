@@ -1,8 +1,12 @@
 @using System.Security.Claims
 @using global::App.Shared.RCL
+@using global::App.Shared.RCL.Services
 @using global::App.Shared.RCL.Themes
 @using Microsoft.AspNetCore.WebUtilities
 @inherits ThemeLayoutBase
+@inject IClientSessionProvider SessionProvider
+@inject IActivityStatisticsReader StatsReader
+@inject IBoardDataService BoardData
 
 <PageTitle>@SeoDefaults.DefaultTitle</PageTitle>
 
@@ -128,6 +132,20 @@
     [CascadingParameter(Name = "IsDarkMode")]
     private bool CascadedIsDarkMode { get; set; } = true;
 
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        SessionProvider.Changed += OnSessionChanged;
+    }
+
+    private void OnSessionChanged(object? sender, EventArgs e)
+    {
+        if (SessionProvider.IsLoggedIn)
+        {
+            _ = WarmUpCachesAsync();
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         IsDarkMode = GetInitialDarkMode();
@@ -160,6 +178,26 @@
         catch
         {
             // Ignore early JS interop failures
+        }
+
+        _ = WarmUpCachesAsync();
+    }
+
+    private async Task WarmUpCachesAsync()
+    {
+        try
+        {
+            if (SessionProvider.IsLoggedIn)
+            {
+                await Task.WhenAll(
+                    StatsReader.GetOverviewAsync(DailyGraphPeriods.Rolling370Days, null),
+                    BoardData.GetStreakMapAsync()
+                );
+            }
+        }
+        catch
+        {
+            // Background warmup is best-effort
         }
     }
 
@@ -224,6 +262,16 @@
             }
         }
         return CascadedIsDarkMode; // Fall back to the server-resolved cascading theme
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            SessionProvider.Changed -= OnSessionChanged;
+        }
+
+        base.Dispose(disposing);
     }
 
 }

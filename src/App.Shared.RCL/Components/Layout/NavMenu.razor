@@ -1,6 +1,7 @@
 @implements IDisposable
 @inject NavigationManager Nav
 @inject IClientSessionProvider Session
+@using App.Shared.RCL.Services
 @using Microsoft.AspNetCore.Components.Routing
 
 @inject IActivityStatisticsReader StatsReader
@@ -77,11 +78,13 @@ else
     {
         if (path == "stats")
         {
-            _ = StatsReader.GetOverviewAsync(null, null);
+            _ = StatsReader.GetOverviewAsync(DailyGraphPeriods.Rolling370Days, null);
+            _ = BoardData.GetStreakMapAsync();
         }
         else if (string.IsNullOrEmpty(path))
         {
             _ = BoardData.GetSnapshotAsync();
+            _ = BoardData.GetStreakMapAsync();
         }
     }
 

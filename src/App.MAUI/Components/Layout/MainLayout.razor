@@ -5,6 +5,8 @@
 @inject IAppUpdaterService UpdaterService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject IActivityStatisticsReader StatsReader
+@inject IBoardDataService BoardData
 
 <PageTitle>@PageTitles.Brand</PageTitle>
 
@@ -99,6 +101,11 @@
 
     protected override async Task OnAfterFirstRenderAsync()
     {
+        if (Session.IsLoggedIn)
+        {
+            _ = WarmUpCachesAsync();
+        }
+
         if (!Session.IsLoggedIn || !UpdaterService.IsSupported)
         {
             return;
@@ -121,9 +128,28 @@
         if (Session.IsLoggedIn)
         {
             await LoadPreferencesAsync();
+            _ = WarmUpCachesAsync();
         }
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task WarmUpCachesAsync()
+    {
+        try
+        {
+            if (Session.IsLoggedIn)
+            {
+                await Task.WhenAll(
+                    StatsReader.GetOverviewAsync(DailyGraphPeriods.Rolling370Days, null),
+                    BoardData.GetStreakMapAsync()
+                );
+            }
+        }
+        catch
+        {
+            // Background warmup is best-effort
+        }
     }
 
     protected override async Task SyncNativeThemeAsync(bool isDarkMode)

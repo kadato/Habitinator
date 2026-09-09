@@ -41,6 +41,7 @@ public sealed class ActivityStatisticsCache
         private readonly int _capacity;
         private readonly Dictionary<TKey, TValue> _items = [];
         private readonly Queue<TKey> _insertionOrder = new();
+        private readonly System.Threading.Lock _lock = new();
 
         public BoundedCache(int capacity)
         {
@@ -49,7 +50,7 @@ public sealed class ActivityStatisticsCache
 
         public bool TryGetValue(TKey key, [MaybeNullWhen(false)] out TValue value)
         {
-            lock (_items)
+            lock (_lock)
             {
                 return _items.TryGetValue(key, out value);
             }
@@ -57,7 +58,7 @@ public sealed class ActivityStatisticsCache
 
         public void Set(TKey key, TValue value)
         {
-            lock (_items)
+            lock (_lock)
             {
                 if (_items.ContainsKey(key))
                 {

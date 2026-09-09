@@ -75,7 +75,7 @@ public sealed class ActivityStatisticsService(
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var (utcToday, dayStart) = await TodayAndDayStartAsync(db, userId, cancellationToken);
         var userCache = cache.GetOrCreate(userId);
-        (string?, string?, DateOnly) cacheKey = (periodKey, tag, utcToday);
+        (string?, string?, DateOnly) cacheKey = (NormalizePeriodKey(periodKey), tag, utcToday);
         if (userCache.Overview.TryGetValue(cacheKey, out var cached))
         {
             return cached;
@@ -169,7 +169,7 @@ public sealed class ActivityStatisticsService(
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var (utcToday, dayStart) = await TodayAndDayStartAsync(db, userId, cancellationToken);
         var userCache = cache.GetOrCreate(userId);
-        (string?, string?, DateOnly) cacheKey = (periodKey, tag, utcToday);
+        (string?, string?, DateOnly) cacheKey = (NormalizePeriodKey(periodKey), tag, utcToday);
         if (userCache.Dashboard.TryGetValue(cacheKey, out var cached))
         {
             return cached;
@@ -204,7 +204,7 @@ public sealed class ActivityStatisticsService(
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var (utcToday, dayStart) = await TodayAndDayStartAsync(db, userId, cancellationToken);
         var userCache = cache.GetOrCreate(userId);
-        (string?, string?, DateOnly) cacheKey = (periodKey, tag, utcToday);
+        (string?, string?, DateOnly) cacheKey = (NormalizePeriodKey(periodKey), tag, utcToday);
         if (userCache.DailyContributions.TryGetValue(cacheKey, out var cached))
         {
             return cached;
@@ -248,7 +248,7 @@ public sealed class ActivityStatisticsService(
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var (utcToday, dayStart) = await TodayAndDayStartAsync(db, userId, cancellationToken);
         var userCache = cache.GetOrCreate(userId);
-        (string?, string?, DateOnly) cacheKey = (periodKey, tag, utcToday);
+        (string?, string?, DateOnly) cacheKey = (NormalizePeriodKey(periodKey), tag, utcToday);
         if (userCache.HabitContributions.TryGetValue(cacheKey, out var cached))
         {
             return cached;
@@ -443,4 +443,9 @@ public sealed class ActivityStatisticsService(
 
         return ActivityStatisticsCalculator.BuildPeriodOptions(utcToday, firstRows, timeZone, dayStartLocalTime);
     }
+
+    private static string? NormalizePeriodKey(string? periodKey) =>
+        string.IsNullOrWhiteSpace(periodKey) || string.Equals(periodKey, DailyGraphPeriods.Rolling370Days, StringComparison.Ordinal)
+            ? null
+            : periodKey;
 }

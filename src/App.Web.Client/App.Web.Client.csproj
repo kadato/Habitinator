@@ -25,6 +25,9 @@
 
     <!-- Runtime performance -->
     <BlazorWebAssemblyJiterpreter>true</BlazorWebAssemblyJiterpreter>
+    <WasmEnableSIMD>true</WasmEnableSIMD>
+    <WasmEnableExceptionHandling>true</WasmEnableExceptionHandling>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
 
     <!-- Trim safety -->
     <!-- JsonSerializerIsReflectionEnabledByDefault is NOT set here because

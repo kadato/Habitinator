@@ -84,7 +84,7 @@ internal static class BoardApiRoutes
         boardApi.MapPost("/{section}/{itemId:guid}/toggle", HandleToggleItemAsync);
     }
 
-    private sealed record BoardMutationContext(
+    internal sealed record BoardMutationContext(
         HttpContext Http,
         BoardPersistenceService Board,
         BoardIdempotencyService Idem,

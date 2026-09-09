@@ -14,6 +14,14 @@ public sealed class RemoteBoardDataService : IBoardDataService
     private readonly ILocalSettingsStore? _localStore;
     private readonly IActivityStatisticsReader? _statsReader;
     private BoardSnapshot? _cachedSnapshot;
+    private Dictionary<Guid, int>? _cachedStreaks;
+    private DateTime _streaksCachedAtUtc = DateTime.MinValue;
+    private static readonly TimeSpan StreaksCacheTtl = TimeSpan.FromSeconds(60);
+
+    public void InvalidateStreaksCache()
+    {
+        _cachedStreaks = null;
+    }
 
     public RemoteBoardDataService(
         IHttpClientFactory http,
@@ -147,10 +155,18 @@ public sealed class RemoteBoardDataService : IBoardDataService
 
     public async Task<Dictionary<Guid, int>> GetStreakMapAsync(CancellationToken cancellationToken = default)
     {
+        if (_cachedStreaks is not null && DateTime.UtcNow - _streaksCachedAtUtc < StreaksCacheTtl)
+        {
+            return _cachedStreaks;
+        }
+
         using var res = await Client.GetAsync("api/board/streaks", cancellationToken);
         res.EnsureSuccessStatusCode();
-        return (await res.Content.ReadFromJsonAsync<Dictionary<Guid, int>>(Serializer, cancellationToken))
+        var result = (await res.Content.ReadFromJsonAsync<Dictionary<Guid, int>>(Serializer, cancellationToken))
                ?? [];
+        _cachedStreaks = result;
+        _streaksCachedAtUtc = DateTime.UtcNow;
+        return result;
     }
 
     public Task<BoardItem> CreateItemAsync(BoardSection section, string title, Guid? itemId = null,
@@ -175,6 +191,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
         var item = await res.Content.ReadFromJsonAsync<BoardItem>(Serializer, cancellationToken)
                ?? throw new InvalidOperationException("Server returned an empty create response.");
         _statsReader?.InvalidateCache();
+        InvalidateStreaksCache();
         return item;
     }
 
@@ -221,6 +238,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
         await ThrowIfConflictAsync(res, cancellationToken);
         res.EnsureSuccessStatusCode();
         _statsReader?.InvalidateCache();
+        InvalidateStreaksCache();
         return true;
     }
 
@@ -455,6 +473,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
         if (item is not null)
         {
             _statsReader?.InvalidateCache();
+            InvalidateStreaksCache();
         }
         return item;
     }

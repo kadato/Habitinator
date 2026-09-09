@@ -35,6 +35,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
                     {
                         var defaultPath = "api/activity/overview";
                         _cache[defaultPath] = (cached, DateTime.UtcNow.AddMinutes(15));
+                        _cache[$"{defaultPath}?period={DailyGraphPeriods.Rolling370Days}"] = (cached, DateTime.UtcNow.AddMinutes(15));
                     }
                 }
                 catch
@@ -94,7 +95,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         var path = "api/activity/overview" + BuildActivityQuery(periodKey, tag);
         var result = await GetJsonCachedOrThrowAsync<ActivityOverviewDto>(path, DefaultCacheTtl, cancellationToken);
         WritePersistent(path, result);
-        if (_localStore != null && string.IsNullOrEmpty(periodKey) && string.IsNullOrEmpty(tag))
+        if (_localStore != null && (string.IsNullOrEmpty(periodKey) || string.Equals(periodKey, DailyGraphPeriods.Rolling370Days, StringComparison.Ordinal)) && string.IsNullOrEmpty(tag))
         {
             try
             {
@@ -334,6 +335,14 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
             return true;
         }
 
+        if ((string.IsNullOrEmpty(periodKey) || string.Equals(periodKey, DailyGraphPeriods.Rolling370Days, StringComparison.Ordinal)) &&
+            string.IsNullOrEmpty(tag) &&
+            _cache.TryGetValue("api/activity/overview", out var defaultEntry) && defaultEntry.Value is ActivityOverviewDto defaultCached)
+        {
+            overview = defaultCached;
+            return true;
+        }
+
         if (TryReadPersistent(path, out ActivityOverviewDto? persisted) && persisted != null)
         {
             overview = persisted;
@@ -354,7 +363,8 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
     private bool TryReadLegacyOverview(string? periodKey, string? tag, out ActivityOverviewDto? overview)
     {
         overview = null;
-        if (_localStore == null || !string.IsNullOrEmpty(periodKey) || !string.IsNullOrEmpty(tag))
+        var isDefault = string.IsNullOrEmpty(periodKey) || string.Equals(periodKey, DailyGraphPeriods.Rolling370Days, StringComparison.Ordinal);
+        if (_localStore == null || !isDefault || !string.IsNullOrEmpty(tag))
         {
             return false;
         }
@@ -469,7 +479,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
     private static string BuildActivityQuery(string? periodKey, string? tag)
     {
         var q = new List<string>();
-        if (!string.IsNullOrEmpty(periodKey))
+        if (!string.IsNullOrEmpty(periodKey) && !string.Equals(periodKey, DailyGraphPeriods.Rolling370Days, StringComparison.Ordinal))
         {
             q.Add("period=" + Uri.EscapeDataString(periodKey));
         }

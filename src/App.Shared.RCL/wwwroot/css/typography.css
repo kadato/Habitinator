@@ -165,7 +165,6 @@ p, .auth-form-hint, .edit-daily-label-body, .habit-tag-picker__empty {
 .hab-shortcut-hint {
     position: absolute;
     z-index: 100000;
-    display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: 4px 8px;

@@ -266,7 +266,7 @@
     border-radius: var(--radius-lg) !important;
     font-size: 0.9rem !important;
     font-weight: 700 !important;
-    letter-spacing: -0.01em !important;
+    letter-spacing: -0.01em;
     text-transform: none !important;
     box-shadow: none !important;
 }
@@ -283,7 +283,7 @@
     border-radius: var(--radius-lg) !important;
     font-size: 0.88rem !important;
     font-weight: 650 !important;
-    letter-spacing: -0.01em !important;
+    letter-spacing: -0.01em;
     text-transform: none !important;
     box-shadow: none !important;
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 70%, transparent) !important;

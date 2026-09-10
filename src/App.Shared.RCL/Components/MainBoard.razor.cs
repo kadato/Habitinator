@@ -12,6 +12,7 @@ namespace App.Shared.RCL.Components;
 
 public partial class MainBoard : IAsyncDisposable
 {
+    private const string HabitinatorLoadScriptFunction = "habitinatorLoadScript";
     private List<BoardItem> Habits { get; set; } = [];
     private List<BoardItem> Dailies { get; set; } = [];
     private List<BoardItem> Todos { get; set; } = [];
@@ -281,8 +282,8 @@ public partial class MainBoard : IAsyncDisposable
     {
         try
         {
-            await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/sortable.min.js");
-            await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardSortable.js");
+            await JS.InvokeVoidAsync(HabitinatorLoadScriptFunction, "_content/App.Shared.RCL/js/sortable.min.js");
+            await JS.InvokeVoidAsync(HabitinatorLoadScriptFunction, "_content/App.Shared.RCL/js/boardSortable.js");
         }
         catch (Exception)
         {
@@ -296,7 +297,7 @@ public partial class MainBoard : IAsyncDisposable
         try
         {
             await JS.InvokeVoidAsync(
-                "habitinatorLoadScript",
+                HabitinatorLoadScriptFunction,
                 "_content/App.Shared.RCL/js/boardVisibility.js");
 
             _visibilityRef = DotNetObjectReference.Create(BoardNotifyBridge);
@@ -306,7 +307,7 @@ public partial class MainBoard : IAsyncDisposable
             await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.start", _selfRef);
 
             await JS.InvokeVoidAsync(
-                "habitinatorLoadScript",
+                HabitinatorLoadScriptFunction,
                 "_content/App.Shared.RCL/js/boardSwipe.js");
             await JS.InvokeVoidAsync("HabitinatorBoardSwipe.init", _swipeAreaRef, _selfRef);
 

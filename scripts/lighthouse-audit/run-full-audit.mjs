@@ -27,7 +27,7 @@ async function runLighthouse(url, keepStorage, extraHeaders) {
     output: ['json', 'html'],
     port: DEBUG_PORT,
     onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
-    extraHeaders: { 'x-lighthouse': 'true', ...(extraHeaders ?? {}) },
+    extraHeaders: { 'x-lighthouse': 'true', ...extraHeaders },
   };
   if (keepStorage) {
     options.disableStorageReset = true;
@@ -71,13 +71,15 @@ async function run() {
   const results = [];
 
   // Anonymous pages use fresh storage each run.
-  results.push(await audit('landing', `${BASE_URL}/`, false));
-  results.push(await audit('login', `${BASE_URL}/auth/login`, false));
-  results.push(await audit('register', `${BASE_URL}/auth/register`, false));
-  results.push(await audit('not-found', `${BASE_URL}/not-found`, false));
-  results.push(await audit('error', `${BASE_URL}/Error`, false));
-  results.push(await audit('stats-anon', `${BASE_URL}/stats`, false));
-  results.push(await audit('settings-anon', `${BASE_URL}/settings`, false));
+  results.push(
+    await audit('landing', `${BASE_URL}/`, false),
+    await audit('login', `${BASE_URL}/auth/login`, false),
+    await audit('register', `${BASE_URL}/auth/register`, false),
+    await audit('not-found', `${BASE_URL}/not-found`, false),
+    await audit('error', `${BASE_URL}/Error`, false),
+    await audit('stats-anon', `${BASE_URL}/stats`, false),
+    await audit('settings-anon', `${BASE_URL}/settings`, false),
+  );
 
   // Login via guest-login
   console.log('Logging in via guest-login...');
@@ -89,9 +91,11 @@ async function run() {
 
   // Authenticated pages. The persistent profile shares cookies and cache
   // with the Lighthouse targets. disableStorageReset keeps them.
-  results.push(await audit('board', `${BASE_URL}/`, true));
-  results.push(await audit('statistics', `${BASE_URL}/stats`, true));
-  results.push(await audit('settings', `${BASE_URL}/settings`, true));
+  results.push(
+    await audit('board', `${BASE_URL}/`, true),
+    await audit('statistics', `${BASE_URL}/stats`, true),
+    await audit('settings', `${BASE_URL}/settings`, true),
+  );
 
   await context.close();
   fs.rmSync(userDataDir, { recursive: true, force: true });

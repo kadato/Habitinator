@@ -9,6 +9,13 @@ namespace App.Shared.RCL.Services;
 ///     instantly from the local platform store, writes persist locally and best-effort to the server,
 ///     and background refreshes keep local copies in sync when authenticated.
 /// </summary>
+public sealed record LocalFirstSettingsOptions<TSettings>(
+    string StorageKey,
+    string ApiEndpoint,
+    Func<string?, TSettings> Deserialize,
+    Func<TSettings, string> Serialize,
+    JsonSerializerOptions? SerializerOptions = null);
+
 public abstract class LocalFirstSettingsServiceBase<TSettings> : IDisposable
     where TSettings : class
 {
@@ -27,23 +34,19 @@ public abstract class LocalFirstSettingsServiceBase<TSettings> : IDisposable
         IClientSessionProvider sessionProvider,
         ILocalSettingsStore localStore,
         ILogger logger,
-        string storageKey,
-        string apiEndpoint,
-        Func<string?, TSettings> deserialize,
-        Func<TSettings, string> serialize,
-        JsonSerializerOptions? serializerOptions = null)
+        LocalFirstSettingsOptions<TSettings> options)
     {
         _http = http;
         _sessionProvider = sessionProvider;
         _logger = logger;
-        _storageKey = storageKey;
-        _apiEndpoint = apiEndpoint;
-        _serializerOptions = serializerOptions ?? JsonDefaults.Api;
+        _storageKey = options.StorageKey;
+        _apiEndpoint = options.ApiEndpoint;
+        _serializerOptions = options.SerializerOptions ?? JsonDefaults.Api;
 
         _store = new LocalFirstRemoteStore<TSettings>(
-            key => deserialize(localStore.Read(key)),
-            (key, settings) => localStore.Write(key, serialize(settings)),
-            serialize,
+            key => options.Deserialize(localStore.Read(key)),
+            (key, settings) => localStore.Write(key, options.Serialize(settings)),
+            options.Serialize,
             logger);
 
         _sessionProvider.Changed += OnSessionChanged;

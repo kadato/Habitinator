@@ -23,10 +23,11 @@ public sealed class LocalFirstUserPreferencesService : LocalFirstSettingsService
             sessionProvider,
             localStore,
             logger,
-            PreferencesKey,
-            "api/settings/preferences",
-            UserPreferencesJson.DeserializeOrDefault,
-            UserPreferencesJson.Serialize)
+            new LocalFirstSettingsOptions<UserPreferences>(
+                PreferencesKey,
+                "api/settings/preferences",
+                UserPreferencesJson.DeserializeOrDefault,
+                UserPreferencesJson.Serialize))
     {
     }
 }

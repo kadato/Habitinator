@@ -18,10 +18,11 @@ public sealed class RemoteNotificationSettingsService : LocalFirstSettingsServic
             sessionProvider,
             localStore,
             logger,
-            PreferencesKey,
-            "api/settings/notifications",
-            NotificationSettingsJson.DeserializeOrDefault,
-            NotificationSettingsJson.Serialize)
+            new LocalFirstSettingsOptions<NotificationSettings>(
+                PreferencesKey,
+                "api/settings/notifications",
+                NotificationSettingsJson.DeserializeOrDefault,
+                NotificationSettingsJson.Serialize))
     {
     }
 }

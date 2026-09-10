@@ -46,9 +46,17 @@ dotnet_diagnostic.CA1707.severity = none
 [**/Migrations/*.cs]
 dotnet_diagnostic.CA1861.severity = none
 
-# Suppress SonarQube rules that are false positives in Razor file parsing
-[*.razor]
+# Suppress SonarQube rules that are false positives in Razor file parsing and partial code-behind classes
+[**/*.razor]
 dotnet_diagnostic.S1199.severity = none
 dotnet_diagnostic.S1481.severity = none
 dotnet_diagnostic.S2325.severity = none
+dotnet_diagnostic.S2933.severity = none
+dotnet_diagnostic.S3459.severity = none
+dotnet_diagnostic.S4487.severity = none
+
+[**/*.razor.cs]
+dotnet_diagnostic.S2325.severity = none
+dotnet_diagnostic.S3459.severity = none
+dotnet_diagnostic.S4487.severity = none
 

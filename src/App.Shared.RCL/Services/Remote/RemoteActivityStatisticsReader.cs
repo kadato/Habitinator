@@ -12,6 +12,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
     private const string StatsOverviewCacheKeyPrefix = "habitinator_stats_overview_cache_v1";
     private const string StatsPersistentPrefix = "habitinator_stats_v2_";
     private const string StatsIndexKey = "habitinator_stats_index_v2";
+    private const string OverviewEndpoint = "api/activity/overview";
     private static readonly JsonSerializerOptions Serializer = JsonDefaults.Api;
 
     private readonly IHttpClientFactory _http;
@@ -33,7 +34,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
                     var cached = JsonSerializer.Deserialize<ActivityOverviewDto>(raw, Serializer);
                     if (cached != null)
                     {
-                        var defaultPath = "api/activity/overview";
+                        var defaultPath = OverviewEndpoint;
                         _cache[defaultPath] = (cached, DateTime.UtcNow.AddMinutes(15));
                         _cache[$"{defaultPath}?period={DailyGraphPeriods.Rolling370Days}"] = (cached, DateTime.UtcNow.AddMinutes(15));
                     }
@@ -92,7 +93,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
     public async Task<ActivityOverviewDto> GetOverviewAsync(string? periodKey, string? tag = null,
         CancellationToken cancellationToken = default)
     {
-        var path = "api/activity/overview" + BuildActivityQuery(periodKey, tag);
+        var path = OverviewEndpoint + BuildActivityQuery(periodKey, tag);
         var result = await GetJsonCachedOrThrowAsync<ActivityOverviewDto>(path, DefaultCacheTtl, cancellationToken);
         WritePersistent(path, result);
         if (_localStore != null && (string.IsNullOrEmpty(periodKey) || string.Equals(periodKey, DailyGraphPeriods.Rolling370Days, StringComparison.Ordinal)) && string.IsNullOrEmpty(tag))
@@ -327,7 +328,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
 
     public bool TryGetCachedOverview(string? periodKey, string? tag, out ActivityOverviewDto? overview)
     {
-        var path = "api/activity/overview" + BuildActivityQuery(periodKey, tag);
+        var path = OverviewEndpoint + BuildActivityQuery(periodKey, tag);
         if (_cache.TryGetValue(path, out var entry) && entry.Value is ActivityOverviewDto cached)
         {
             // Return even if expired as stale fallback for offline
@@ -337,7 +338,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
 
         if ((string.IsNullOrEmpty(periodKey) || string.Equals(periodKey, DailyGraphPeriods.Rolling370Days, StringComparison.Ordinal)) &&
             string.IsNullOrEmpty(tag) &&
-            _cache.TryGetValue("api/activity/overview", out var defaultEntry) && defaultEntry.Value is ActivityOverviewDto defaultCached)
+            _cache.TryGetValue(OverviewEndpoint, out var defaultEntry) && defaultEntry.Value is ActivityOverviewDto defaultCached)
         {
             overview = defaultCached;
             return true;

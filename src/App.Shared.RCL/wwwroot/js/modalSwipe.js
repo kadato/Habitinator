@@ -16,12 +16,12 @@ globalThis.HabitinatorModalSwipe = {
             "[contenteditable=\"true\"], .mud-popover, .mud-menu-item, .mud-input, .mud-input-slot";
 
         var onStart = function (e) {
-            if (!e.changedTouches || e.changedTouches.length !== 1) {
+            if (e.changedTouches?.length !== 1) {
                 tracking = false;
                 return;
             }
             var t = e.target;
-            if (t && t.closest && t.closest(ignoreSelector)) {
+            if (t?.closest?.(ignoreSelector)) {
                 tracking = false;
                 return;
             }
@@ -56,7 +56,7 @@ globalThis.HabitinatorModalSwipe = {
         };
     },
     destroy: function (element) {
-        if (element && element._habitinatorModalSwipeCleanup) {
+        if (element?._habitinatorModalSwipeCleanup) {
             element._habitinatorModalSwipeCleanup();
             delete element._habitinatorModalSwipeCleanup;
         }

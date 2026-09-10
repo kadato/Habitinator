@@ -13,15 +13,15 @@
             if (root.matches('.mud-dialog[role="dialog"]')) {
                 dialogs.push(root);
             }
-            dialogs.push.apply(dialogs, Array.prototype.slice.call(root.querySelectorAll('.mud-dialog[role="dialog"]')));
+            dialogs.push(...root.querySelectorAll('.mud-dialog[role="dialog"]'));
         }
         dialogs.forEach(function (dialog) {
             if (dialog.hasAttribute('aria-label') || dialog.hasAttribute('aria-labelledby')) {
                 return;
             }
             var inner = dialog.querySelector('[data-dialog-label]');
-            if (inner) {
-                dialog.setAttribute('aria-label', inner.getAttribute('data-dialog-label'));
+            if (inner && inner.dataset.dialogLabel) {
+                dialog.setAttribute('aria-label', inner.dataset.dialogLabel);
             }
         });
     }

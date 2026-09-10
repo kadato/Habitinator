@@ -10,12 +10,12 @@ globalThis.HabitinatorBoardSwipe = {
             "[contenteditable=\"true\"], .mud-popover, .mud-menu-item, .mud-input";
 
         var onStart = function (e) {
-            if (!e.changedTouches || e.changedTouches.length !== 1) {
+            if (e.changedTouches?.length !== 1) {
                 tracking = false;
                 return;
             }
             var t = e.target;
-            if (t && t.closest && t.closest(ignoreSelector)) {
+            if (t?.closest?.(ignoreSelector)) {
                 tracking = false;
                 return;
             }
@@ -46,7 +46,7 @@ globalThis.HabitinatorBoardSwipe = {
         };
     },
     destroy: function (element) {
-        if (element && element._habitinatorSwipeCleanup) {
+        if (element?._habitinatorSwipeCleanup) {
             element._habitinatorSwipeCleanup();
             delete element._habitinatorSwipeCleanup;
         }

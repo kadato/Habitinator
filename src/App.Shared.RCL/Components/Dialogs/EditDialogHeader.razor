@@ -31,19 +31,6 @@
                       Margin="Margin.Dense"
                       aria-label="Title"/>
     </div>
-
-    <div class="hab-modal__title-field mt-2">
-        <MudText Typo="Typo.caption" Class="edit-daily-label-header">Notes</MudText>
-        <MudTextField Value="@_notes"
-                      ValueChanged="@((string value) => OnNotesValueChanged(value))"
-                      Variant="Variant.Outlined"
-                      Class="hab-modal__notes-field edit-daily-field-header"
-                      Placeholder="Add notes, context, or why this matters"
-                      Lines="3"
-                      Immediate="true"
-                      Margin="Margin.Dense"
-                      aria-label="Notes"/>
-    </div>
 </div>
 
 @code {
@@ -51,14 +38,11 @@
     [Parameter] public string TitlePlaceholder { get; set; } = string.Empty;
     [Parameter] public string Title { get; set; } = string.Empty;
     [Parameter] public EventCallback<string> TitleChanged { get; set; }
-    [Parameter] public string? Notes { get; set; }
-    [Parameter] public EventCallback<string?> NotesChanged { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public string SaveStatus { get; set; } = string.Empty;
     [Parameter] public BoardSection? Section { get; set; }
 
     private string _title = string.Empty;
-    private string? _notes;
     private DotNetObjectReference<EditDialogHeader>? _swipeRef;
     private ElementReference _headerRef;
     private bool _swipeStarted;
@@ -104,7 +88,6 @@
     protected override void OnParametersSet()
     {
         _title = Title;
-        _notes = Notes;
     }
 
     private string SaveStatusText => SaveStatus switch
@@ -127,11 +110,5 @@
     {
         _title = value;
         _ = TitleChanged.InvokeAsync(value);
-    }
-
-    private void OnNotesValueChanged(string? value)
-    {
-        _notes = value;
-        _ = NotesChanged.InvokeAsync(value);
     }
 }

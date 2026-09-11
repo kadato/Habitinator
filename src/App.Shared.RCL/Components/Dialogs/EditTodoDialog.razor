@@ -10,13 +10,14 @@
                               TitlePlaceholder="To-do title"
                               @bind-Title="_title"
                               @bind-Title:after="OnTitleEdited"
-                              @bind-Notes="_notes"
-                              @bind-Notes:after="OnNotesEdited"
                               OnClose="CloseAsync"
                               SaveStatus="SaveStatus"
                               Section="BoardSection.Todo"/>
 
             <div class="hab-modal__body edit-daily-body">
+                <EditDialogNotes @bind-Notes="_notes"
+                                 @bind-Notes:after="OnNotesEdited"/>
+
                 <div class="hab-checklist">
                     <div class="hab-checklist__head">
                         <span class="hab-checklist__head-title">

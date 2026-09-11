@@ -102,6 +102,7 @@
 
 /* Hero title field -- large, editorial, like card title expanded */
 .hab-modal__title-field,
+.hab-modal__notes,
 .edit-daily-field-header {
     position: relative;
 }
@@ -134,12 +135,14 @@
 .hab-modal__title-input .mud-input-outlined-border { border: none !important; }
 
 .hab-modal__notes-field .mud-input-root-outlined,
+.hab-modal__notes-field textarea.mud-input-slot,
 .edit-daily-field-header textarea.mud-input-slot {
     font-size: 0.875rem !important;
     font-weight: 500 !important;
     letter-spacing: 0;
     line-height: 1.5 !important;
 }
+.hab-modal__notes-field textarea.mud-input-slot,
 .edit-daily-field-header textarea.mud-input-slot {
     field-sizing: content;
     min-height: 3lh;

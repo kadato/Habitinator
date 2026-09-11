@@ -11,13 +11,14 @@
                           TitlePlaceholder="Daily title"
                           @bind-Title="_title"
                           @bind-Title:after="OnTitleEdited"
-                          @bind-Notes="_notes"
-                          @bind-Notes:after="OnNotesEdited"
                           OnClose="CloseAsync"
                           SaveStatus="SaveStatus"
                           Section="BoardSection.Daily"/>
 
         <div class="hab-modal__body edit-daily-body">
+            <EditDialogNotes @bind-Notes="_notes"
+                             @bind-Notes:after="OnNotesEdited"/>
+
             <button type="button" class="edit-daily-heatmap-btn" @onclick="OpenHeatmapDialogAsync">
                 <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" Class="edit-daily-heatmap-btn__icon" />
                 <span>View Heatmap</span>

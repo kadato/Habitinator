@@ -1,0 +1,31 @@
+<div class="hab-modal__notes">
+    <MudText Typo="Typo.caption" Class="edit-daily-label-header">Notes</MudText>
+    <MudTextField Value="@_notes"
+                  ValueChanged="@((string? value) => OnNotesValueChanged(value))"
+                  Variant="Variant.Outlined"
+                  Class="hab-modal__notes-field edit-daily-field-header"
+                  Placeholder="@Placeholder"
+                  Lines="3"
+                  Immediate="true"
+                  Margin="Margin.Dense"
+                  aria-label="Notes"/>
+</div>
+
+@code {
+    [Parameter] public string? Notes { get; set; }
+    [Parameter] public EventCallback<string?> NotesChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Add notes, context, or why this matters";
+
+    private string? _notes;
+
+    protected override void OnParametersSet()
+    {
+        _notes = Notes;
+    }
+
+    private void OnNotesValueChanged(string? value)
+    {
+        _notes = value;
+        _ = NotesChanged.InvokeAsync(value);
+    }
+}

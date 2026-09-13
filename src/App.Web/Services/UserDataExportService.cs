@@ -55,7 +55,6 @@ public sealed class UserDataExportService(IDbContextFactory<ApplicationDbContext
             e.ChecklistJson,
             lastCompleted,
             e.Section == BoardSection.Todo ? start : null,
-            e.TodoRepeatIntervalDays,
             e.UpdatedAtUtc,
             e.CreatedAtUtc,
             e.SortOrder,

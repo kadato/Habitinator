@@ -133,16 +133,9 @@ public partial class BoardItemCard
         };
     }
 
-    private string? TodoDueTitle()
+    private static string? TodoDueTitle()
     {
-        if (Item.TodoRepeatIntervalDays is not { } interval || interval <= 0)
-        {
-            return null;
-        }
-
-        return interval == 1
-            ? "Repeats daily. When you check it off, the due date moves forward."
-            : $"Repeats every {interval} days. When you check it off, the due date moves forward.";
+        return null;
     }
 
     private string TodoDueRelativeLabel(DateOnly due) =>

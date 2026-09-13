@@ -372,10 +372,6 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         {
             diff["duedate"] = item.TodoDueDate;
         }
-        if (item.TodoRepeatIntervalDays != args.TodoRepeatIntervalDays)
-        {
-            diff["repeatdays"] = item.TodoRepeatIntervalDays;
-        }
         DiffChecklist(diff, item.ChecklistJson, args.ChecklistJson);
         return diff;
     }
@@ -510,8 +506,7 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
             Notes = diff.TryGetValue(FieldNotes, out var notes) ? (string?)notes : current.Notes,
             Tags = diff.TryGetValue(FieldTags, out var tags) ? (string?)tags : current.Tags,
             ChecklistJson = ApplyChecklistDiff(current.ChecklistJson, diff),
-            DueDate = diff.TryGetValue("duedate", out var dueDate) ? (DateOnly?)dueDate : current.TodoDueDate,
-            TodoRepeatIntervalDays = diff.TryGetValue("repeatdays", out var repeatDays) ? (int?)repeatDays : current.TodoRepeatIntervalDays
+            DueDate = diff.TryGetValue("duedate", out var dueDate) ? (DateOnly?)dueDate : current.TodoDueDate
         }, CancellationToken.None);
     }
 

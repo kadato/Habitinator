@@ -44,8 +44,6 @@ public sealed class LocalBoardItemRow
 
     public DateOnly? TodoDueDate { get; set; }
 
-    public int? TodoRepeatIntervalDays { get; set; }
-
     public bool IsArchived { get; set; }
 
     /// <summary>True until the server acknowledges a create for this client-generated id.</summary>
@@ -76,7 +74,6 @@ public sealed class LocalBoardItemRow
         ChecklistJson,
         DailyLastCompletedOn,
         TodoDueDate,
-        TodoRepeatIntervalDays,
         ServerUpdatedAtUtc,
         CreatedAtUtc,
         SortOrder,
@@ -104,7 +101,6 @@ public sealed class LocalBoardItemRow
             ChecklistJson = item.ChecklistJson,
             DailyLastCompletedOn = item.DailyLastCompletedOn,
             TodoDueDate = item.TodoDueDate,
-            TodoRepeatIntervalDays = item.TodoRepeatIntervalDays,
             AwaitingServerCreate = awaitingCreate,
             ServerUpdatedAtUtc = item.ServerUpdatedAtUtc,
             CreatedAtUtc = item.CreatedAtUtc,
@@ -131,7 +127,6 @@ public sealed class LocalBoardItemRow
         ChecklistJson = source.ChecklistJson;
         DailyLastCompletedOn = source.DailyLastCompletedOn;
         TodoDueDate = source.TodoDueDate;
-        TodoRepeatIntervalDays = source.TodoRepeatIntervalDays;
         ServerUpdatedAtUtc = source.ServerUpdatedAtUtc;
         CreatedAtUtc = source.CreatedAtUtc;
         SortOrder = source.SortOrder;

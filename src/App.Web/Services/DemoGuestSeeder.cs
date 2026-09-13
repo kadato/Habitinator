@@ -278,11 +278,10 @@ public static class DemoGuestSeeder
             UserId = guestUserId,
             Section = BoardSection.Todo,
             Title = "Weekly review",
-            Notes = "Recurring to-do - completing it moves the due date forward by a week.",
+            Notes = "Example to-do with a due date.",
             Tags = "work, planning",
             IsCompleted = false,
-            DailyStartDate = UtcDay(today.AddDays(1)),
-            TodoRepeatIntervalDays = 7
+            DailyStartDate = UtcDay(today.AddDays(1))
         });
 
         for (var i = 0; i < 3; i++)

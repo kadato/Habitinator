@@ -35,7 +35,6 @@ public sealed record UpdateTodoArgs(
     string? ChecklistJson,
     DateOnly? DueDate,
     double? SortOrder = null,
-    int? TodoRepeatIntervalDays = null,
     DateTimeOffset? ExpectedUpdatedAtUtc = null)
 {
     public static UpdateTodoArgs From(BoardItem item) => new(
@@ -44,8 +43,7 @@ public sealed record UpdateTodoArgs(
         item.Tags,
         item.ChecklistJson,
         item.TodoDueDate,
-        item.SortOrder,
-        item.TodoRepeatIntervalDays);
+        item.SortOrder);
 }
 
 public sealed record UpdateDailyArgs(

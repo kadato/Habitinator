@@ -55,8 +55,6 @@ public sealed record BoardItem(
     DateOnly? DailyLastCompletedOn = null,
     /// <summary>Due date for to-dos. Stored in the same DB column as daily start when section is to-do.</summary>
     DateOnly? TodoDueDate = null,
-    /// <summary>When set, completing the to-do advances its due date by this many days, a recurring to-do.</summary>
-    int? TodoRepeatIntervalDays = null,
     /// <summary>Server row version for optimistic concurrency and incremental sync. Maps to <c>UpdatedAtUtc</c> on the server.</summary>
     DateTimeOffset? ServerUpdatedAtUtc = null,
     /// <summary>Server creation time for display and audit only. Do not use for ordering.</summary>

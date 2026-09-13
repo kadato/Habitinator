@@ -57,8 +57,7 @@ public sealed record UpdateTodoOutboxPayload(
     string? ChecklistJson,
     DateOnly? DueDate,
     DateTimeOffset? ExpectedServerUpdatedAtUtc = null,
-    double? SortOrder = null,
-    int? TodoRepeatIntervalDays = null) : IOutboxItemIdPayload;
+    double? SortOrder = null) : IOutboxItemIdPayload;
 
 public sealed record UpdateDailyOutboxPayload(
     Guid ItemId,

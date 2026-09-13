@@ -273,8 +273,7 @@ public partial class BoardColumn : IAsyncDisposable
             else if (Section == BoardSection.Todo)
             {
                 match = match
-                    && serverItem.TodoDueDate == overrideItem.TodoDueDate
-                    && serverItem.TodoRepeatIntervalDays == overrideItem.TodoRepeatIntervalDays;
+                    && serverItem.TodoDueDate == overrideItem.TodoDueDate;
             }
 
             if (match)
@@ -665,41 +664,11 @@ public partial class BoardColumn : IAsyncDisposable
 
     private Task ToggleAsync(BoardItem item)
     {
-        if (Section == BoardSection.Todo && !item.IsCompleted && item.TodoRepeatIntervalDays is > 0)
-        {
-            return ToggleRecurringTodoAsync(item);
-        }
-
         var today = BoardToday();
         var (lastCompleted, isCompleted) = DailySchedule.ToggleForToday(
             item.DailyLastCompletedOn, item.IsCompleted, today);
         var optimistic = item with { IsCompleted = isCompleted, DailyLastCompletedOn = lastCompleted };
         return ApplyOverrideAsync(item.Id, optimistic, () => BoardData.ToggleItemAsync(Section, item.Id));
-    }
-
-    private Task ToggleRecurringTodoAsync(BoardItem item)
-    {
-        // The > 0 guard in ToggleAsync guarantees a non-null interval here.
-        if (item.TodoRepeatIntervalDays is not int interval)
-        {
-            return Task.CompletedTask;
-        }
-
-        var nextDue = (item.TodoDueDate ?? BoardToday()).AddDays(interval);
-        while (nextDue <= BoardToday())
-        {
-            nextDue = nextDue.AddDays(interval);
-        }
-
-        var optimistic = item with { IsCompleted = true, TodoDueDate = nextDue, DailyLastCompletedOn = BoardToday() };
-        return ApplyOverrideAsync(item.Id, optimistic, async () =>
-        {
-            await BoardData.UpdateTodoAsync(
-                item.Id,
-                UpdateTodoArgs.From(item) with { DueDate = nextDue });
-            // The undo toast for the toggle is the notification for this action.
-            await BoardData.ToggleItemAsync(BoardSection.Todo, item.Id);
-        });
     }
 
     private async Task HandleEditResultAsync(BoardItem item, EditDialogAction? action)

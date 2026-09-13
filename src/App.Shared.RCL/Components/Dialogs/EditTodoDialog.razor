@@ -44,17 +44,6 @@
 
                 <div class="hab-modal__section">
                     <span class="hab-modal__section-label">
-                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
-                        Repeat every
-                    </span>
-                    <div class="edit-daily-repeat-every">
-                        <MudNumericField T="int" @bind-Value="_repeatIntervalDays" @bind-Value:after="OnIntervalEdited" Variant="Variant.Outlined" Class="edit-daily-repeat-every__n hab-modal__field" Min="0" Max="365" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Repeat every days"/>
-                        <span class="edit-daily-repeat-every__unit">days</span>
-                    </div>
-                </div>
-
-                <div class="hab-modal__section">
-                    <span class="hab-modal__section-label">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path></svg>
                         Tags
                     </span>
@@ -76,7 +65,6 @@
     private TagPicker? _tagPicker;
     private List<ChecklistRow> _checklistRows = [];
     private DateTime? _dueDate;
-    private int _repeatIntervalDays;
 
     protected override string BatchDescription => $"Edit \"{Item.Title}\"";
 
@@ -87,7 +75,6 @@
         _notes = Item.Notes;
         _tags = EditDialogHelpers.FormatTags(Item.Tags);
         _dueDate = Item.TodoDueDate?.ToDateTime(TimeOnly.MinValue);
-        _repeatIntervalDays = Math.Clamp(Item.TodoRepeatIntervalDays ?? 0, 0, 365);
         _checklistRows = EditDialogHelpers.ParseChecklistRows(Item.ChecklistJson);
     }
 
@@ -97,7 +84,6 @@
     private Task OnTagsEdited() => SaveNowAsync();
     private void OnChecklistEdited() => ScheduleSave(300);
     private void OnDiscreteEdited() => _ = SaveNowAsync();
-    private void OnIntervalEdited() => ScheduleSave(400);
 
     protected override async Task SaveValuesAsync(CancellationToken cancellationToken = default)
     {
@@ -105,13 +91,13 @@
         var tagsPayload = EditDialogHelpers.CleanStringPayload(_tags);
         var checklistPayload = EditDialogHelpers.SerializeChecklistRows(_checklistRows);
         DateOnly? due = _dueDate is { } d ? DateOnly.FromDateTime(d.Date) : null;
-        await BoardData.UpdateTodoAsync(Item.Id, new UpdateTodoArgs(title, EditDialogHelpers.CleanStringPayload(_notes), tagsPayload, checklistPayload, due, TodoRepeatIntervalDays: _repeatIntervalDays > 0 ? _repeatIntervalDays : null), cancellationToken);
+        await BoardData.UpdateTodoAsync(Item.Id, new UpdateTodoArgs(title, EditDialogHelpers.CleanStringPayload(_notes), tagsPayload, checklistPayload, due), cancellationToken);
     }
 
     protected override EditTodoDialogResult BuildResult(EditDialogAction action)
     {
         DateOnly? due = _dueDate is { } d ? DateOnly.FromDateTime(d.Date) : null;
-        return new EditTodoDialogResult(action, _title.Trim(), EditDialogHelpers.CleanStringPayload(_notes), EditDialogHelpers.CleanStringPayload(_tags), EditDialogHelpers.SerializeChecklistRows(_checklistRows), due, _repeatIntervalDays > 0 ? _repeatIntervalDays : null);
+        return new EditTodoDialogResult(action, _title.Trim(), EditDialogHelpers.CleanStringPayload(_notes), EditDialogHelpers.CleanStringPayload(_tags), EditDialogHelpers.SerializeChecklistRows(_checklistRows), due);
     }
 
     private void ArchiveAsync() => CloseWithAction(EditDialogAction.Archive);

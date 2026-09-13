@@ -15,8 +15,7 @@ public sealed partial class LocalFirstBoardDataService
         [
             ("ServerUpdatedAtUtc", "ALTER TABLE BoardItems ADD COLUMN ServerUpdatedAtUtc TEXT NULL;"),
             ("CreatedAtUtc", "ALTER TABLE BoardItems ADD COLUMN CreatedAtUtc TEXT NULL;"),
-            ("IsArchived", "ALTER TABLE BoardItems ADD COLUMN IsArchived INTEGER NOT NULL DEFAULT 0;"),
-            ("TodoRepeatIntervalDays", "ALTER TABLE BoardItems ADD COLUMN TodoRepeatIntervalDays INTEGER NULL;")
+            ("IsArchived", "ALTER TABLE BoardItems ADD COLUMN IsArchived INTEGER NOT NULL DEFAULT 0;")
         ];
 
         foreach (var (column, ddl) in boardMigrations)

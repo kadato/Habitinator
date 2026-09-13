@@ -220,7 +220,6 @@ internal static class BoardApiRoutes
                 DailyChecklistJson.Normalize(request.ChecklistJson),
                 request.DueDate,
                 request.SortOrder,
-                request.TodoRepeatIntervalDays,
                 expected), ct));
 
     private static void MapDailyRoutes(RouteGroupBuilder boardApi)

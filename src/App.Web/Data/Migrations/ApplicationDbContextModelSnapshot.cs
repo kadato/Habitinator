@@ -127,9 +127,6 @@ namespace App.Web.Data.Migrations
                     b.Property<DateTimeOffset?>("DeletedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("TodoRepeatIntervalDays")
-                        .HasColumnType("integer");
-
                     b.Property<bool>("IsArchived")
                         .HasColumnType("boolean");
 

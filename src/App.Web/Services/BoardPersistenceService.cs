@@ -662,9 +662,6 @@ public sealed class BoardPersistenceService(
                     await ApplyCommonEditsAsync(entity, new CommonItemEditFields(args.Title, args.Notes, args.Tags, args.ChecklistJson, args.SortOrder),
                         userId, BoardSection.Todo, cancellationToken);
                     entity.DailyStartDate = dueUtc;
-                    entity.TodoRepeatIntervalDays = args.TodoRepeatIntervalDays is > 0
-                        ? Math.Min(365, args.TodoRepeatIntervalDays.Value)
-                        : null;
 
                     return true;
                 },
@@ -827,7 +824,6 @@ public sealed class BoardPersistenceService(
             entity.ChecklistJson,
             lastCompleted,
             todoDue,
-            entity.TodoRepeatIntervalDays,
             entity.UpdatedAtUtc,
             entity.CreatedAtUtc,
             entity.SortOrder,

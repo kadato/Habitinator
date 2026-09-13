@@ -35,8 +35,7 @@ public sealed record TodoUpdateRequest(
     [StringLength(500)] string? Tags,
     [StringLength(8000)] string? ChecklistJson,
     DateOnly? DueDate,
-    double? SortOrder = null,
-    int? TodoRepeatIntervalDays = null);
+    double? SortOrder = null);
 
 public sealed record DailyCompleteForDateRequest(DateOnly CompletedOn);
 

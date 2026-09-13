@@ -361,8 +361,7 @@ public sealed partial class LocalFirstBoardDataService
                     row.ChecklistJson,
                     args.DueDate,
                     expected,
-                    row.SortOrder,
-                    args.TodoRepeatIntervalDays)),
+                    row.SortOrder)),
                 async row =>
                 {
                     row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
@@ -370,7 +369,6 @@ public sealed partial class LocalFirstBoardDataService
                     row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
                     row.ChecklistJson = DailyChecklistJson.Normalize(args.ChecklistJson);
                     row.TodoDueDate = args.DueDate;
-                    row.TodoRepeatIntervalDays = args.TodoRepeatIntervalDays;
                     await HandleSortOrderUpdateAsync(db, userKey, BoardSection.Todo, itemId, args.SortOrder, row, cancellationToken);
                 },
                 cancellationToken),

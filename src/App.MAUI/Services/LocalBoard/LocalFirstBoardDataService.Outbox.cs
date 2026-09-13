@@ -431,8 +431,7 @@ public sealed partial class LocalFirstBoardDataService
                             p.Tags,
                             p.ChecklistJson,
                             p.DueDate,
-                            p.SortOrder,
-                            p.TodoRepeatIntervalDays),
+                            p.SortOrder),
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);

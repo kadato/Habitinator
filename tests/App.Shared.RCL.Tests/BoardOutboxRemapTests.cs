@@ -74,12 +74,12 @@ public sealed class BoardOutboxRemapTests
     }
 
     [Fact]
-    public void Update_todo_payload_round_trips_repeat_interval_days_through_id_remap()
+    public void Update_todo_payload_round_trips_due_date_through_id_remap()
     {
         var client = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var server = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         var json = JsonSerializer.Serialize(
-            new UpdateTodoOutboxPayload(client, "Walk", null, null, null, null, SortOrder: 5.5, TodoRepeatIntervalDays: 3),
+            new UpdateTodoOutboxPayload(client, "Walk", null, null, null, new DateOnly(2026, 9, 13), SortOrder: 5.5),
             BoardOutboxJson.Options);
 
         var remapped = BoardOutboxPayloadMapper.RemapClientToServerId(
@@ -93,16 +93,16 @@ public sealed class BoardOutboxRemapTests
         parsed.ItemId.Should().Be(server);
         parsed.Title.Should().Be("Walk");
         parsed.SortOrder.Should().Be(5.5);
-        parsed.TodoRepeatIntervalDays.Should().Be(3);
+        parsed.DueDate.Should().Be(new DateOnly(2026, 9, 13));
     }
 
     [Fact]
-    public void Update_todo_payload_round_trips_repeat_interval_days_through_version_remap()
+    public void Update_todo_payload_round_trips_due_date_through_version_remap()
     {
         var originalTime = DateTimeOffset.UtcNow.AddMinutes(-5);
         var newTime = DateTimeOffset.UtcNow;
         var json = JsonSerializer.Serialize(
-            new UpdateTodoOutboxPayload(Guid.NewGuid(), "Walk", null, null, null, null, originalTime, TodoRepeatIntervalDays: 7),
+            new UpdateTodoOutboxPayload(Guid.NewGuid(), "Walk", null, null, null, null, originalTime),
             BoardOutboxJson.Options);
 
         var remapped = BoardOutboxPayloadMapper.RemapExpectedVersion(
@@ -113,7 +113,6 @@ public sealed class BoardOutboxRemapTests
         var parsed = JsonSerializer.Deserialize<UpdateTodoOutboxPayload>(remapped, BoardOutboxJson.Options);
         parsed.Should().NotBeNull();
         parsed.ExpectedServerUpdatedAtUtc.Should().Be(newTime);
-        parsed.TodoRepeatIntervalDays.Should().Be(7);
     }
 
     [Theory]

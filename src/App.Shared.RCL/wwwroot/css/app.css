@@ -2,7 +2,7 @@
     color-scheme: light dark;
     /* Canvas backgrounds follow the MudBlazor theme. Fallbacks cover pre-theme rendering, the splash screens. */
     --hab-bg-light: var(--mud-palette-background, #f8fafc);
-    --hab-bg-dark: var(--mud-palette-background, #0b0f19);
+    --hab-bg-dark: var(--mud-palette-background, #030712);
 }
 
 /* WASM loading splash screen */
@@ -66,7 +66,7 @@ html.light-theme #habitinator-wasm-splash {
     width: 100%;
     min-width: 4%;
     max-width: 100%;
-    background: var(--hab-brand, #3b82f6);
+    background: var(--hab-brand, #2563eb);
     border-radius: var(--radius-pill);
     transform: scaleX(var(--progress, 0.05));
     transform-origin: left;

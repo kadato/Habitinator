@@ -98,8 +98,8 @@ public class WindowsAppWindowProgressService : MauiAppWindowProgressService
         graphics.TextRenderingHint = TextRenderingHint.SingleBitPerPixelGridFit;
         graphics.SmoothingMode = SmoothingMode.HighSpeed;
 
-        // Draw the background badge circle, colored blue to match MudBlazor Primary/Info #3b82f6
-        using (var brush = new SolidBrush(System.Drawing.Color.FromArgb(220, 59, 130, 246)))
+        // Draw the background badge circle, colored blue to match MudBlazor Primary #2563eb
+        using (var brush = new SolidBrush(System.Drawing.Color.FromArgb(220, 37, 99, 235)))
         {
             graphics.FillEllipse(brush, 0, 0, 16, 16);
         }

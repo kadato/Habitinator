@@ -699,6 +699,22 @@ input[type="number"].mud-input-slot {
     position: absolute;
     right: var(--space-5);
     top: var(--space-4);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 0.5rem;
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-size: inherit;
+    line-height: 1;
+}
+
+#blazor-error-ui .dismiss:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
 }
 
 .stats-page-wrapper {

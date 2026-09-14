@@ -1,13 +1,13 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <DotNetVersion>11.0.0-preview.6.26359.118</DotNetVersion>
+    <DotNetVersion>11.0.0-rc.1.26425.128</DotNetVersion>
     <WebAssemblyVersion>$(DotNetVersion)</WebAssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- Global / Shared tooling -->
-    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.33.0.1635" />
+    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.34.0.3385" />
 
     <!-- MAUI dependencies -->
     <PackageVersion Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
@@ -49,15 +49,15 @@
     <PackageVersion Include="MessagePack" Version="3.1.8" />
 
     <!-- Testing dependencies -->
-    <PackageVersion Include="Appium.WebDriver" Version="8.3.2" />
+    <PackageVersion Include="Appium.WebDriver" Version="8.4.0" />
     <PackageVersion Include="FluentAssertions" Version="8.10.0" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.0" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
     <PackageVersion Include="Xunit.SkippableFact" Version="1.5.85" />
-    <PackageVersion Include="AngleSharp" Version="1.8.0" />
-    <PackageVersion Include="bunit" Version="2.9.0" />
+    <PackageVersion Include="AngleSharp" Version="1.8.1" />
+    <PackageVersion Include="bunit" Version="2.11.3" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="FsCheck.Xunit" Version="3.4.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(DotNetVersion)" />

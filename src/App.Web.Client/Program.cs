@@ -1,4 +1,5 @@
 using App.Shared.RCL.Services;
+using App.Shared.RCL.Services.CommandPalette;
 using App.Shared.RCL.Services.Remote;
 using App.Web.Client.Services;
 
@@ -75,6 +76,7 @@ builder.Services.AddScoped<IUserDataExportService, RemoteUserDataExportService>(
 builder.Services.AddScoped<IBoardColumnStateStore, JsBoardColumnStateStore>();
 builder.Services.AddScoped<IOnboardingStore, JsOnboardingStore>();
 builder.Services.AddScoped<BoardUiSessionState>();
+builder.Services.AddScoped<ICommandPaletteService, CommandPaletteService>();
 
 var host = builder.Build();
 try

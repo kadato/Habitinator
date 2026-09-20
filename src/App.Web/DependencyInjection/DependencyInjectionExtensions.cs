@@ -2,6 +2,7 @@ using System.Text;
 
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+using App.Shared.RCL.Services.CommandPalette;
 using App.Web.Auth;
 using App.Web.Data;
 using App.Web.Services;
@@ -166,6 +167,7 @@ public static class DependencyInjectionExtensions
         services.AddScoped<IBoardColumnStateStore, JsBoardColumnStateStore>();
         services.AddScoped<IOnboardingStore, JsOnboardingStore>();
         services.AddScoped<BoardUiSessionState>();
+        services.AddScoped<ICommandPaletteService, CommandPaletteService>();
         services.AddHttpClient();
         services.AddValidation();
 

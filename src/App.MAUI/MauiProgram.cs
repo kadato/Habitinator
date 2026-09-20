@@ -2,6 +2,7 @@ using App.MAUI.Data;
 using App.MAUI.Services;
 using App.MAUI.Services.LocalBoard;
 using App.Shared.RCL.Services;
+using App.Shared.RCL.Services.CommandPalette;
 using App.Shared.RCL.Services.Remote;
 
 using Microsoft.EntityFrameworkCore;
@@ -131,6 +132,7 @@ public static class MauiProgram
         builder.Services.AddScoped<IBoardColumnStateStore, JsBoardColumnStateStore>();
         builder.Services.AddScoped<IOnboardingStore, JsOnboardingStore>();
         builder.Services.AddScoped<BoardUiSessionState>();
+        builder.Services.AddScoped<ICommandPaletteService, CommandPaletteService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

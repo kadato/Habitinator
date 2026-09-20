@@ -15,6 +15,7 @@
 @inject IOnboardingStore OnboardingStore
 @inject PersistentComponentState ApplicationState
 @inject BoardUiSessionState UiSessionState
+@inject ICommandPaletteService CommandPalette
 
 
 
@@ -131,9 +132,12 @@
                     </button>
                     @if (_shortcutsEnabled)
                     {
-                        <span class="board-shortcuts-hint mud-text-secondary" title="Keyboard shortcuts: B for board, T for statistics, P for settings, F for search, H for habit, D for daily, O for to-do, 1, 2, and 3 for sections, slash for search, question mark for all shortcuts">
-                            Press <kbd class="board-kbd">Shift</kbd> to toggle shortcuts
-                        </span>
+                        <button type="button"
+                                class="board-shortcuts-hint mud-text-secondary"
+                                title="Press Ctrl+K or Cmd+K to open command palette"
+                                @onclick="() => CommandPalette.Toggle()">
+                            Press <kbd class="board-kbd">Ctrl+K</kbd> for commands
+                        </button>
                     }
                 </div>
             </div>

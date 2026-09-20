@@ -1,5 +1,6 @@
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+using App.Shared.RCL.Services.CommandPalette;
 
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
@@ -21,6 +22,9 @@ public abstract class ThemeLayoutBase : LayoutComponentBase, IDisposable
     [Inject] protected IUserDateFormatService DateFormatService { get; set; } = default!;
     [Inject] protected IJSRuntime JS { get; set; } = default!;
     [Inject] protected NavigationManager Nav { get; set; } = default!;
+    [Inject] protected ICommandPaletteService CommandPalette { get; set; } = default!;
+    [Inject] protected GlobalTimerService TimerService { get; set; } = default!;
+    [Inject] protected IUndoService UndoService { get; set; } = default!;
 
     protected UserPreferences? Preferences { get; set; }
     protected bool IsDarkMode { get; set; } = true;
@@ -72,6 +76,7 @@ public abstract class ThemeLayoutBase : LayoutComponentBase, IDisposable
         {
             await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardVisibility.js");
             await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/dialogLabel.js");
+            await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/commandPalette.js");
             LayoutSelfRef = DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.startGlobal", LayoutSelfRef);
             await SyncKeyboardShortcutsEnabledAsync();
@@ -79,6 +84,72 @@ public abstract class ThemeLayoutBase : LayoutComponentBase, IDisposable
         catch
         {
             // Ignore JS/shortcut initialization errors, e.g. during prerendering or on test hosts.
+        }
+    }
+
+    [JSInvokable]
+    public void OnCmdKPressed()
+    {
+        CommandPalette.Toggle();
+    }
+
+    [JSInvokable]
+    public void OnEscapePressed()
+    {
+        if (CommandPalette.IsOpen)
+        {
+            CommandPalette.Close();
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnShortcutAction(string action)
+    {
+        switch (action)
+        {
+            case "create-habit":
+                await CommandPalette.CreateItemAsync(BoardSection.Habit);
+                break;
+            case "create-daily":
+                await CommandPalette.CreateItemAsync(BoardSection.Daily);
+                break;
+            case "create-todo":
+                await CommandPalette.CreateItemAsync(BoardSection.Todo);
+                break;
+            case "nav-board":
+                Nav.NavigateTo("/");
+                break;
+            case "nav-stats":
+                Nav.NavigateTo("/stats");
+                break;
+            case "nav-settings":
+                Nav.NavigateTo("/settings");
+                break;
+            case "toggle-timer":
+                if (TimerService.IsRunning)
+                {
+                    TimerService.Pause();
+                }
+                else
+                {
+                    TimerService.Start();
+                }
+                break;
+            case "undo":
+                if (UndoService.CanUndo)
+                {
+                    await UndoService.UndoAsync();
+                }
+                break;
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnCtrlZPressed()
+    {
+        if (UndoService.CanUndo)
+        {
+            await UndoService.UndoAsync();
         }
     }
 

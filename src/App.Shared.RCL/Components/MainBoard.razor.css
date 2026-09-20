@@ -533,6 +533,17 @@
     opacity: 0.8;
     font-size: 0.75rem;
     margin-left: var(--space-1);
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+    color: inherit;
+    transition: opacity 0.1s ease;
+}
+
+.board-shortcuts-hint:hover {
+    opacity: 1;
 }
 
 .board-kbd {

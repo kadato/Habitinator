@@ -677,8 +677,16 @@ public partial class MainBoard : IAsyncDisposable
         }
     }
 
+    private bool _isCreatingItem;
+
     public async Task CreateItemPublicAsync(BoardSection section)
     {
+        if (_isCreatingItem)
+        {
+            return;
+        }
+
+        _isCreatingItem = true;
         var defaultTitle = section switch
         {
             BoardSection.Habit => "New Habit",
@@ -712,6 +720,10 @@ public partial class MainBoard : IAsyncDisposable
         catch (Exception)
         {
             await Notifier.NotifyAsync("Could not create item.", Severity.Error);
+        }
+        finally
+        {
+            _isCreatingItem = false;
         }
     }
 

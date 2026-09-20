@@ -733,23 +733,8 @@ public partial class BoardColumn : IAsyncDisposable
         };
     }
 
-    private async Task DeleteAsync(Guid id, string? title = null)
-    {
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            "Delete this item?",
-            title is null
-                ? "Habitinator deletes the item. You can undo the delete from the toast."
-                : $"Habitinator deletes \"{title}\". You can undo the delete from the toast.",
-            "Delete",
-            null,
-            "Cancel");
-        if (confirmed != true)
-        {
-            return;
-        }
-
-        await ApplyDeletionAsync(id, () => BoardData.DeleteItemAsync(Section, id), title);
-    }
+    private Task DeleteAsync(Guid id, string? title = null) =>
+        ApplyDeletionAsync(id, () => BoardData.DeleteItemAsync(Section, id), title);
 
     private Task MoveToTopAsync(BoardItem item) => MoveToIndexAsync(item, 0);
 

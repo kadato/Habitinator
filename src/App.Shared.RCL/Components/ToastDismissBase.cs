@@ -11,6 +11,7 @@ public abstract class ToastDismissBase : ComponentBase
 
     private double _touchStartX;
     private double _touchStartY;
+    private bool _hasSwiped;
 
     protected Task HandleDismiss() => OnDismiss is null ? Task.CompletedTask : OnDismiss();
 
@@ -20,6 +21,7 @@ public abstract class ToastDismissBase : ComponentBase
         {
             _touchStartX = e.TargetTouches[0].ClientX;
             _touchStartY = e.TargetTouches[0].ClientY;
+            _hasSwiped = false;
         }
     }
 
@@ -32,12 +34,24 @@ public abstract class ToastDismissBase : ComponentBase
 
         var dx = e.ChangedTouches[0].ClientX - _touchStartX;
         var dy = e.ChangedTouches[0].ClientY - _touchStartY;
-        if (Math.Abs(dx) > 50 && Math.Abs(dx) > Math.Abs(dy))
+        if (Math.Abs(dx) > 35 || Math.Abs(dy) > 35)
         {
+            _hasSwiped = true;
             return HandleDismiss();
         }
 
         return Task.CompletedTask;
+    }
+
+    protected Task HandleClick()
+    {
+        if (_hasSwiped)
+        {
+            _hasSwiped = false;
+            return Task.CompletedTask;
+        }
+
+        return HandleDismiss();
     }
 
     protected Task HandleKeyDown(KeyboardEventArgs e)

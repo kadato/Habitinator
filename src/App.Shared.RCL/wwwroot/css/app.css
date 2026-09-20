@@ -180,6 +180,16 @@ a {
     border-color: #60a5fa;
 }
 
+.dark-theme .undo-toast-btn:hover {
+    background: color-mix(in srgb, #60a5fa 22%, transparent);
+    border-color: color-mix(in srgb, #60a5fa 60%, transparent);
+    color: #60a5fa;
+}
+
+.dark-theme .undo-toast-btn:active {
+    background: color-mix(in srgb, #60a5fa 32%, transparent);
+}
+
 /* Dark theme: tinted active pills and badges use theme colors that are too
    dark on dark surfaces. Brighten the text while keeping the hue, so the
    active state stays recognizable. html prefix outranks scoped !important. */
@@ -730,21 +740,44 @@ input[type="number"].mud-input-slot {
     }
 }
 
-/* -- App toasts: flat card, no motion, bottom-left on desktop and full-width bottom on phones -- */
+/* App toasts: compact pill, sized to content */
+#mud-snackbar-container.mud-snackbar-location-bottom-left,
+#mud-snackbar-container,
+.mud-snackbar-provider.mud-snackbar-provider-bottom-left {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--space-2, 0.5rem) !important;
+    bottom: max(var(--space-3, 0.75rem), env(safe-area-inset-bottom, 0px)) !important;
+    left: var(--space-3, 0.75rem) !important;
+    padding: 0 !important;
+    z-index: 2100 !important;
+}
+
+.mud-snackbar.habitinator-toast + .mud-snackbar.habitinator-toast,
+.habitinator-toast + .habitinator-toast {
+    margin-top: var(--space-2, 0.5rem) !important;
+}
+
+.mud-snackbar.habitinator-toast,
 .habitinator-toast {
     position: relative;
     overflow: hidden;
     padding: 0 !important;
-    background: var(--mud-palette-surface) !important;
+    margin: 0 !important;
+    min-height: 0 !important;
+    min-width: 0 !important;
+    width: fit-content !important;
+    max-width: min(26rem, calc(100vw - 1.5rem)) !important;
+    background: color-mix(in srgb, var(--mud-palette-surface) 92%, var(--mud-palette-background-gray) 8%) !important;
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
     color: var(--mud-palette-text-primary) !important;
-    border-radius: var(--radius-lg) !important;
-    border: 1px solid var(--mud-palette-divider) !important;
-    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.16) !important;
+    border-radius: var(--radius-xl) !important;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 70%, transparent) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
     cursor: pointer;
     align-self: flex-start !important;
-    width: fit-content !important;
-    min-width: 280px !important;
-    max-width: min(24rem, calc(100vw - 1.5rem)) !important;
+    transition: transform var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard);
 }
 
 .habitinator-toast:focus-visible {
@@ -757,153 +790,139 @@ input[type="number"].mud-input-slot {
 .habitinator-toast.severity-warning { --toast-accent: #d97706; }
 .habitinator-toast.severity-error   { --toast-accent: var(--hab-type-habit-bad, #dc2626); }
 
-.habitinator-toast.undo-toast { --toast-accent: var(--mud-palette-primary); }
+.habitinator-toast.undo-toast { --toast-accent: var(--mud-palette-primary); cursor: pointer; }
 
 .habitinator-toast .mud-snackbar-icon,
 .habitinator-toast .mud-snackbar-action,
-.habitinator-toast .mud-snackbar-close-button {
+.habitinator-toast .mud-snackbar-close-button,
+.habitinator-toast .mud-snackbar-content-action {
     display: none !important;
 }
 
-.habitinator-toast .mud-snackbar-content {
-    width: 100%;
+.habitinator-toast .mud-snackbar-content,
+.habitinator-toast .mud-snackbar-content-message {
+    width: 100% !important;
     padding: 0 !important;
     margin: 0 !important;
+    line-height: inherit !important;
+    display: block !important;
 }
 
-/* -- Typed message toast: clean horizontal flow, direct typography -- */
+/* Toast: horizontal layout, auto-sized */
 .toast-content {
     display: flex;
     align-items: center;
-    gap: var(--space-4);
+    gap: 0.65rem;
     width: 100%;
-    padding: 0.75rem 0.85rem;
+    padding: 0.35rem 0.85rem 0.35rem 0.5rem;
     box-sizing: border-box;
+    cursor: pointer;
 }
 
 .toast-content__main {
     display: flex;
-    align-items: flex-start;
-    gap: 0.65rem;
+    align-items: center;
+    gap: 0.55rem;
     flex: 1;
     min-width: 0;
-    line-height: 1.4;
+    line-height: 1.35;
 }
 
 .toast-content-icon {
-    --size: 2rem;
+    --size: 1.65rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     width: var(--size);
     height: var(--size);
-    border-radius: var(--radius-md);
-    background: color-mix(in srgb, var(--toast-accent, var(--mud-palette-primary)) 12%, transparent);
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--toast-accent, var(--mud-palette-primary)) 14%, transparent);
     color: var(--toast-accent, var(--mud-palette-primary));
-    --offset: calc((1lh - var(--size)) / 2);
-    transform: translateY(var(--offset));
 }
 
 .toast-content-icon .mud-icon {
-    font-size: 1.15rem !important;
+    font-size: 1rem !important;
 }
 
 .toast-content-message {
     font-family: var(--hab-font-sans);
-    font-size: 0.85rem;
+    font-size: 0.84rem;
     font-weight: 550;
     letter-spacing: -0.01em;
     color: var(--mud-palette-text-primary);
-    line-height: 1.4;
+    line-height: 1.35;
     overflow-wrap: anywhere;
+    user-select: none;
 }
 
-.toast-content-dismiss {
-    --size: 1.75rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    width: var(--size);
-    height: var(--size);
-    margin-left: 0.25rem;
-    border: 1px solid transparent;
-    border-radius: var(--radius-md);
-    background: transparent;
-    color: var(--mud-palette-text-secondary);
-    cursor: pointer;
-    padding: 0;
-    --offset: calc((1lh - var(--size)) / 2);
-    transform: translateY(var(--offset));
-}
-
-.toast-content-dismiss:focus-visible {
-    outline: 2px solid var(--mud-palette-primary);
-    outline-offset: 1px;
-}
-
-/* -- Undo toast: tactile action with high-contrast pill -- */
+/* Undo toast: icon + message + undo button, auto-sized */
 .undo-toast-body {
     display: flex;
-    align-items: flex-start;
-    gap: 0.65rem;
+    align-items: center;
+    gap: 0.6rem;
     width: 100%;
-    padding: 0.7rem 0.85rem;
+    padding: 0.35rem 0.65rem 0.35rem 0.5rem;
     box-sizing: border-box;
     line-height: 1.35;
+    cursor: pointer;
 }
 
 .undo-toast-icon {
-    --size: 2rem;
+    --size: 1.65rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     width: var(--size);
     height: var(--size);
-    border-radius: var(--radius-md);
-    background: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
     color: var(--mud-palette-primary);
-    --offset: calc((1lh - var(--size)) / 2);
-    transform: translateY(var(--offset));
 }
 
 .undo-toast-icon .mud-icon {
-    font-size: 1.15rem !important;
+    font-size: 1rem !important;
 }
 
 .undo-toast-message {
     flex: 1;
     font-family: var(--hab-font-sans);
-    font-size: 0.85rem;
+    font-size: 0.84rem;
     font-weight: 550;
     letter-spacing: -0.01em;
     color: var(--mud-palette-text-primary);
     line-height: 1.35;
     overflow-wrap: anywhere;
+    cursor: default;
+    user-select: none;
 }
 
 .undo-toast-btn {
-    --size: 32px;
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.35rem;
-    background: transparent;
+    gap: 0.3rem;
+    background: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
     color: var(--mud-palette-primary);
-    border: 1px solid var(--mud-palette-primary);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 32%, transparent);
     border-radius: var(--radius-pill);
-    --offset: calc((1lh - var(--size)) / 2);
-    transform: translateY(var(--offset));
-    padding: 0.35rem 0.75rem;
+    padding: 0.25rem 0.65rem;
     font-family: var(--hab-font-sans);
-    font-size: 0.8rem;
+    font-size: 0.76rem;
     font-weight: 650;
     letter-spacing: -0.01em;
     text-transform: none;
     cursor: pointer;
+    line-height: 1.2;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.undo-toast-btn:hover {
+    background: color-mix(in srgb, var(--mud-palette-primary) 22%, transparent);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 55%, transparent);
+    color: var(--mud-palette-primary);
 }
 
 .undo-toast-btn:focus-visible {
@@ -911,36 +930,40 @@ input[type="number"].mud-input-slot {
     outline-offset: 2px;
 }
 
+.undo-toast-btn:active {
+    background: color-mix(in srgb, var(--mud-palette-primary) 30%, transparent);
+}
+
 .undo-toast-btn .mud-icon {
-    font-size: 0.95rem !important;
+    font-size: 0.88rem !important;
 }
 
 @media (max-width: 599.98px) {
     /* Toasts dock below the app bar on phones so they never cover the add field. */
+    #mud-snackbar-container.mud-snackbar-location-bottom-left,
+    #mud-snackbar-container,
     .mud-snackbar-provider.mud-snackbar-provider-bottom-left {
         top: calc(var(--app-top-bar-offset, 3.5rem) + var(--space-2)) !important;
         bottom: auto !important;
+        left: 0.5rem !important;
+        right: 0.5rem !important;
     }
     .habitinator-toast {
         min-width: 0 !important;
-        width: calc(100vw - 1rem) !important;
-        max-width: calc(100vw - 1rem) !important;
+        width: 100% !important;
+        max-width: 100% !important;
     }
     .toast-content {
-        padding: 0.7rem 0.75rem;
-        gap: var(--space-3);
+        padding: 0.35rem 0.5rem;
+        gap: var(--space-2);
     }
     .undo-toast-body {
-        padding: 0.65rem 0.75rem;
-        gap: var(--space-3);
-    }
-    .toast-content-dismiss {
-        width: 44px;
-        height: 44px;
+        padding: 0.35rem 0.5rem;
+        gap: var(--space-2);
     }
     .undo-toast-btn {
-        min-height: 44px;
-        padding: 0.5rem 0.9rem;
+        min-height: 28px;
+        padding: 0.2rem 0.6rem;
     }
 }
 

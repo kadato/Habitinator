@@ -1,7 +1,7 @@
 @inherits ToastDismissBase
 
 <div class="toast-content severity-@SeverityCssClass"
-     @onclick="HandleDismiss"
+     @onclick="HandleClick"
      @onclick:stopPropagation="true"
      @ontouchstart="HandleTouchStart"
      @ontouchend="HandleTouchEnd"
@@ -12,9 +12,6 @@
         </span>
         <span class="toast-content-message">@Message</span>
     </div>
-    <button class="toast-content-dismiss" type="button" aria-label="Dismiss" @onclick="HandleDismiss" @onclick:stopPropagation="true">
-        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small"/>
-    </button>
 </div>
 
 @code {

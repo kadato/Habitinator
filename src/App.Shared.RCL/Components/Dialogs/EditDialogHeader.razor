@@ -22,12 +22,14 @@
             <MudText Typo="Typo.subtitle1" Class="font-weight-bold mb-2" Style="letter-spacing:-0.02em;">@TitleText</MudText>
         }
         <MudText Typo="Typo.caption" Class="edit-daily-label-header">Title</MudText>
-        <MudTextField Value="@_title"
+        <MudTextField @ref="_titleInput"
+                      Value="@_title"
                       ValueChanged="@((string value) => OnTitleValueChanged(value))"
                       Variant="Variant.Outlined"
                       Class="hab-modal__title-input edit-daily-field-header"
                       Placeholder="@TitlePlaceholder"
                       Immediate="true"
+                      AutoFocus="true"
                       Margin="Margin.Dense"
                       aria-label="Title"/>
     </div>
@@ -43,25 +45,42 @@
     [Parameter] public BoardSection? Section { get; set; }
 
     private string _title = string.Empty;
+    private MudTextField<string>? _titleInput;
     private DotNetObjectReference<EditDialogHeader>? _swipeRef;
     private ElementReference _headerRef;
     private bool _swipeStarted;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !_swipeStarted)
+        if (firstRender)
         {
-            _swipeStarted = true;
-            try
+            if (_titleInput is not null)
             {
-                _swipeRef = DotNetObjectReference.Create(this);
-                await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/modalSwipe.js");
-                await JS.InvokeVoidAsync("HabitinatorModalSwipe.init", _headerRef, _swipeRef,
-                    new { horizontal = false, dismissDown = true });
+                try
+                {
+                    await _titleInput.FocusAsync();
+                    await _titleInput.SelectAsync();
+                }
+                catch
+                {
+                    // Focus/selection is best-effort.
+                }
             }
-            catch
+
+            if (!_swipeStarted)
             {
-                // Swipe gestures are a touch enhancement. The close button always works.
+                _swipeStarted = true;
+                try
+                {
+                    _swipeRef = DotNetObjectReference.Create(this);
+                    await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/modalSwipe.js");
+                    await JS.InvokeVoidAsync("HabitinatorModalSwipe.init", _headerRef, _swipeRef,
+                        new { horizontal = false, dismissDown = true });
+                }
+                catch
+                {
+                    // Swipe gestures are a touch enhancement. The close button always works.
+                }
             }
         }
     }

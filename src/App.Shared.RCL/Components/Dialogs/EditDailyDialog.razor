@@ -75,23 +75,14 @@
                 <TagPicker @bind-Tags="_tags" @bind-Tags:after="OnTagsEdited" TriggerId="edit-daily-tags-trigger" @ref="_tagPicker"/>
             </div>
 
-            <div class="hab-advanced @(_advancedOpen ? "hab-advanced--open" : string.Empty)">
-                <button type="button" class="hab-advanced__trigger" @onclick="() => _advancedOpen = !_advancedOpen">
-                    <span>Scheduled streak tuning</span>
-                    <svg class="hab-advanced__chevron" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                </button>
-                @if (_advancedOpen)
-                {
-                    <div class="hab-advanced__body">
-                        <span style="font-size:0.78rem; color:var(--mud-palette-text-secondary);">Backfill past days to match this streak. Today is left unchanged.</span>
-                        <div class="edit-daily-streak-input">
-                            <span class="edit-daily-streak-input__icon" aria-hidden="true">
-                                <MudIcon Icon="@Icons.Material.Filled.Whatshot" Size="Size.Small" Style="color:var(--hab-accent-streak)"/>
-                            </span>
-                            <MudNumericField @bind-Value="_counter" @bind-Value:after="OnCounterEdited" Variant="Variant.Outlined" Class="edit-daily-streak-input__field" Min="0" Max="9999" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Streak count"/>
-                        </div>
-                    </div>
-                }
+            <div class="hab-modal__section" style="padding:0.7rem 0.75rem;">
+                <span class="hab-modal__section-label">
+                    <MudIcon Icon="@Icons.Material.Filled.Whatshot" Size="Size.Small" Style="color:var(--hab-accent-streak); margin-right: 4px;"/>
+                    Streak count
+                </span>
+                <div class="edit-daily-streak-input">
+                    <MudNumericField @bind-Value="_counter" @bind-Value:after="OnCounterEdited" Variant="Variant.Outlined" Class="edit-daily-streak-input__field" Min="0" Max="9999" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Streak count"/>
+                </div>
             </div>
 
             <EditDialogFooterActions OnArchive="ArchiveAsync" OnDelete="DeleteAsync"/>
@@ -112,7 +103,6 @@
     private int _repeatInterval = 1;
     private List<ChecklistRow> _checklistRows = [];
     private int _counter;
-    private bool _advancedOpen;
 
     protected override string BatchDescription => $"Edit \"{Item.Title}\"";
 

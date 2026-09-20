@@ -7,6 +7,17 @@
 // data-dialog-label and this script copies it onto the container.
 
 (function () {
+    function focusAndSelectTitle(dialog) {
+        var input = dialog.querySelector('.hab-modal__title-input input');
+        if (input && !dialog.dataset.titleAutoSelected) {
+            dialog.dataset.titleAutoSelected = 'true';
+            setTimeout(function () {
+                input.focus();
+                input.select();
+            }, 60);
+        }
+    }
+
     function labelDialogs(root) {
         var dialogs = [];
         if (root instanceof Element) {
@@ -16,13 +27,13 @@
             dialogs.push(...root.querySelectorAll('.mud-dialog[role="dialog"]'));
         }
         dialogs.forEach(function (dialog) {
-            if (dialog.hasAttribute('aria-label') || dialog.hasAttribute('aria-labelledby')) {
-                return;
+            if (!dialog.hasAttribute('aria-label') && !dialog.hasAttribute('aria-labelledby')) {
+                var inner = dialog.querySelector('[data-dialog-label]');
+                if (inner && inner.dataset.dialogLabel) {
+                    dialog.setAttribute('aria-label', inner.dataset.dialogLabel);
+                }
             }
-            var inner = dialog.querySelector('[data-dialog-label]');
-            if (inner && inner.dataset.dialogLabel) {
-                dialog.setAttribute('aria-label', inner.dataset.dialogLabel);
-            }
+            focusAndSelectTitle(dialog);
         });
     }
 

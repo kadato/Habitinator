@@ -95,39 +95,27 @@
             </MudSelect>
         </div>
 
-        <div class="hab-advanced @(_advancedOpen ? "hab-advanced--open" : string.Empty)">
-            <button type="button" class="hab-advanced__trigger" @onclick="() => _advancedOpen = !_advancedOpen">
-                <span>Advanced tuning</span>
-                <svg class="hab-advanced__chevron" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </button>
-            @if (_advancedOpen)
-            {
-                <div class="hab-advanced__body">
-                    <span style="font-size:0.78rem; color:var(--mud-palette-text-secondary);">Adjust logged totals. Values are stored as mono badges.</span>
-                    <div style="display:flex; flex-direction:column; gap:0.7rem;">
-                        <span class="edit-daily-label-body" style="margin:0;">Adjust + count</span>
-                        <div class="counter-adjust">
-                            <button type="button" class="counter-adjust__btn counter-adjust__btn--bad" aria-label="Decrease + count" @onclick="DecrementPlusLocal" disabled="@(_counter < 1)">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                            </button>
-                            <MudNumericField @bind-Value="_counter" @bind-Value:after="OnCounterEdited" Variant="Variant.Outlined" Class="counter-adjust__field" Min="0" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Plus count"/>
-                            <button type="button" class="counter-adjust__btn counter-adjust__btn--good" aria-label="Increase + count" @onclick="IncrementPlusLocal">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                            </button>
-                        </div>
-                        <span class="edit-daily-label-body" style="margin:0;">Adjust − count</span>
-                        <div class="counter-adjust">
-                            <button type="button" class="counter-adjust__btn counter-adjust__btn--bad" aria-label="Decrease − count" @onclick="DecrementMinusLocal" disabled="@(_negativeCounter < 1)">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                            </button>
-                            <MudNumericField @bind-Value="_negativeCounter" @bind-Value:after="OnCounterEdited" Variant="Variant.Outlined" Class="counter-adjust__field" Min="0" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Minus count"/>
-                            <button type="button" class="counter-adjust__btn counter-adjust__btn--good" aria-label="Increase − count" @onclick="IncrementMinusLocal">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            }
+        <div class="hab-modal__section hab-modal__section--plain">
+            <span class="edit-daily-label-body" style="margin:0 0 0.35rem 0;">Adjust + count</span>
+            <div class="counter-adjust">
+                <button type="button" class="counter-adjust__btn counter-adjust__btn--bad" aria-label="Decrease + count" @onclick="DecrementPlusLocal" disabled="@(_counter < 1)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+                <MudNumericField @bind-Value="_counter" @bind-Value:after="OnCounterEdited" Variant="Variant.Outlined" Class="counter-adjust__field" Min="0" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Plus count"/>
+                <button type="button" class="counter-adjust__btn counter-adjust__btn--good" aria-label="Increase + count" @onclick="IncrementPlusLocal">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+            </div>
+            <span class="edit-daily-label-body" style="margin:0.5rem 0 0.35rem 0;">Adjust − count</span>
+            <div class="counter-adjust">
+                <button type="button" class="counter-adjust__btn counter-adjust__btn--bad" aria-label="Decrease − count" @onclick="DecrementMinusLocal" disabled="@(_negativeCounter < 1)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+                <MudNumericField @bind-Value="_negativeCounter" @bind-Value:after="OnCounterEdited" Variant="Variant.Outlined" Class="counter-adjust__field" Min="0" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Minus count"/>
+                <button type="button" class="counter-adjust__btn counter-adjust__btn--good" aria-label="Increase − count" @onclick="IncrementMinusLocal">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+            </div>
         </div>
 
         <EditDialogFooterActions OnArchive="ArchiveAsync" OnDelete="DeleteAsync"/>
@@ -148,7 +136,6 @@
     private HabitResetPeriod _resetPeriod = HabitResetPeriod.Daily;
     private int _counter;
     private int _negativeCounter;
-    private bool _advancedOpen;
 
     private List<ChecklistRow> _checklistRows = [];
 

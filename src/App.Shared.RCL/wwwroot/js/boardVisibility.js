@@ -27,35 +27,6 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
   let isListenersAdded = false;
   let isEnabled = true;
 
-  let isAltHeld = false;
-  let isShiftHeld = false;
-
-  // Shift shortcut overlay state
-  let shortcutModeActive = false;
-  let shiftLock = false;
-  let currentSequence = "";
-  let targets = [];
-  let overlayContainer = null;
-
-  const availableKeys = ['A', 'C', 'E', 'I', 'J', 'K', 'L', 'M', 'N', 'Q', 'U', 'V', 'W', 'X', 'Y', 'Z'];
-
-  function updateShortcutOverlay() {
-    if (isEditing()) {
-      document.body.classList.remove("hab-show-shortcuts");
-      return;
-    }
-
-    if (isAltHeld || isShiftHeld || shortcutModeActive) {
-      if (getActiveOpenContainer()) {
-        document.body.classList.remove("hab-show-shortcuts");
-        return;
-      }
-      document.body.classList.add("hab-show-shortcuts");
-    } else {
-      document.body.classList.remove("hab-show-shortcuts");
-    }
-  }
-
   function isEditing() {
     const activeElement = document.activeElement;
     return activeElement && (
@@ -99,6 +70,60 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     return false;
   }
 
+  function isElementVisible(el) {
+    if (el.offsetParent === null && globalThis.getComputedStyle(el).position !== 'fixed') {
+      return false;
+    }
+
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return false;
+
+    const style = globalThis.getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+
+    return (
+      rect.top >= -rect.height &&
+      rect.left >= -rect.width &&
+      rect.top <= (globalThis.innerHeight || document.documentElement.clientHeight) &&
+      rect.left <= (globalThis.innerWidth || document.documentElement.clientWidth)
+    );
+  }
+
+  function isCommandPaletteOpen() {
+    const palette = document.querySelector('.cmd-palette-dialog, .cmd-palette-backdrop');
+    return !!(palette && isElementVisible(palette));
+  }
+
+  function isModalOpen() {
+    const dialogs = document.querySelectorAll('.mud-dialog, .hab-modal, .mud-overlay-dialog');
+    for (const d of dialogs) {
+      if (d.closest('.cmd-palette-backdrop') || d.closest('.cmd-palette-dialog')) continue;
+      if (isElementVisible(d)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function getActiveOpenContainer() {
+    const dialogs = Array.from(document.querySelectorAll('.mud-dialog'));
+    const popovers = Array.from(document.querySelectorAll('.mud-popover.mud-popover-open'));
+    
+    const activeContainers = [...dialogs, ...popovers].filter(isElementVisible);
+    
+    if (activeContainers.length === 0) {
+      return null;
+    }
+    
+    activeContainers.sort((a, b) => {
+      if (a.contains(b)) return 1;
+      if (b.contains(a)) return -1;
+      return a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? 1 : -1;
+    });
+    
+    return activeContainers.at(-1);
+  }
+
   function getScrollableContainer(container) {
     if (!container) return globalThis;
     const known = container.querySelector('.edit-daily-body, .edit-habit-body, .archived-list, .daily-yesterday-body');
@@ -130,19 +155,6 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     }
   }
 
-  // Helper for generating shortcut keys to avoid duplication, S4144
-  function getDynamicKey(index, useTwoChars) {
-    if (!useTwoChars) {
-      return availableKeys[index];
-    }
-    const firstIdx = Math.floor(index / availableKeys.length);
-    const secondIdx = index % availableKeys.length;
-    if (firstIdx < availableKeys.length) {
-      return availableKeys[firstIdx] + availableKeys[secondIdx];
-    }
-    return 'X' + index;
-  }
-
   function scrollToPosition(target, position) {
     if (target === globalThis) {
       const scrollingEl = document.scrollingElement || document.documentElement || document.body;
@@ -152,356 +164,6 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     }
   }
 
-  function isInsideInputControl(el) {
-    return el.closest('.mud-input-control') || 
-           el.closest('.mud-input') || 
-           el.closest('.board-search-wrapper') || 
-           el.closest('.board-add-wrap') ||
-           el.closest('.mud-input-adornment') ||
-           el.closest('.timer-target-field') ||
-           el.closest('.timer-focus-field');
-  }
-
-  function isInsideToggle(el) {
-    if (!el.parentElement) return false;
-    return el.parentElement.closest('.mud-checkbox, .mud-switch, .board-subtask-cb') !== null;
-  }
-
-  function isElementVisible(el) {
-    if (el.offsetParent === null && globalThis.getComputedStyle(el).position !== 'fixed') {
-      return false;
-    }
-
-    const rect = el.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return false;
-
-    const style = globalThis.getComputedStyle(el);
-    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
-
-    // Check if it's within viewport bounds
-    const inViewport = (
-      rect.top >= -rect.height &&
-      rect.left >= -rect.width &&
-      rect.top <= (globalThis.innerHeight || document.documentElement.clientHeight) &&
-      rect.left <= (globalThis.innerWidth || document.documentElement.clientWidth)
-    );
-    return inViewport;
-  }
-
-  function getActiveOpenContainer() {
-    const dialogs = Array.from(document.querySelectorAll('.mud-dialog'));
-    const popovers = Array.from(document.querySelectorAll('.mud-popover.mud-popover-open'));
-    
-    const activeContainers = [...dialogs, ...popovers].filter(isElementVisible);
-    
-    if (activeContainers.length === 0) {
-      return null;
-    }
-    
-    activeContainers.sort((a, b) => {
-      if (a.contains(b)) return 1;
-      if (b.contains(a)) return -1;
-      return a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? 1 : -1;
-    });
-    
-    return activeContainers.at(-1);
-  }
-
-  function buildShortcutTargets() {
-    targets = [];
-    const assignedElements = new Set();
-
-    function addTarget(el, shortcut, type) {
-      if (!el || assignedElements.has(el)) return;
-
-      const rect = el.getBoundingClientRect();
-      const isRendered = rect.width > 0 && rect.height > 0;
-      if (!isRendered) return;
-
-      const isFixed = ["B", "T", "P", "F", "H", "D", "O", "G", "R"].includes(shortcut);
-      if (!isFixed && !isElementVisible(el)) return;
-
-      assignedElements.add(el);
-      targets.push({ element: el, shortcut, type });
-    }
-
-    const activeContainer = getActiveOpenContainer();
-
-    if (activeContainer) {
-      const inputs = Array.from(activeContainer.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([disabled]), textarea:not([disabled]), select:not([disabled]), [contenteditable="true"], .mud-input-slot:not([disabled])'))
-        .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideToggle(el));
-
-      const toggles = Array.from(activeContainer.querySelectorAll('.mud-checkbox, .board-subtask-cb, .mud-switch'))
-        .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideToggle(el));
-
-      const clickables = Array.from(activeContainer.querySelectorAll('a[href]:not([href="#"]), button:not([disabled]):not(.stats-heatmap-day-btn), [role="button"]:not([disabled]), .mud-button-root:not([disabled]), .app-header-profile-btn, .app-header-username-btn, .board-card__title, .board-card__delete, [role="menuitem"]:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), [role="tab"]:not([disabled]), .mud-tab:not([disabled]), .mud-list-item-clickable:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), .mud-menu-item:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), .mud-expand-panel-header'))
-        .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideInputControl(el) && !isInsideToggle(el));
-
-      const totalDynamicElements = inputs.length + toggles.length + clickables.length;
-      const useTwoChars = totalDynamicElements > availableKeys.length;
-      let dynamicIndex = 0;
-
-      inputs.forEach(el => {
-        const key = getDynamicKey(dynamicIndex++, useTwoChars);
-        addTarget(el, key, "input");
-      });
-
-      toggles.forEach(el => {
-        const key = getDynamicKey(dynamicIndex++, useTwoChars);
-        addTarget(el, key, "input");
-      });
-
-      clickables.forEach(el => {
-        const key = getDynamicKey(dynamicIndex++, useTwoChars);
-        addTarget(el, key, "nav");
-      });
-
-      return;
-    }
-
-    // 1. Navigation Elements, fixed shortcuts
-    const allLinks = Array.from(document.querySelectorAll('a[href], button, [role="button"], .mud-button-root, .app-mobile-nav__item, .app-bottom-nav__item, .app-header-nav-btn'));
-    
-    const boardEl = allLinks.find(el => {
-      const txt = el.textContent.trim().toLowerCase();
-      const href = el.getAttribute('href') || '';
-      return href === '/' || txt === 'board' || (el.classList.contains('app-mobile-nav__item') && txt.includes('board'));
-    });
-    addTarget(boardEl, "B", "nav");
-
-    const statsEl = allLinks.find(el => {
-      const txt = el.textContent.trim().toLowerCase();
-      const href = el.getAttribute('href') || '';
-      return href.includes('stats') || txt === 'stats' || txt === 'statistics';
-    });
-    addTarget(statsEl, "T", "nav");
-
-    const settingsEl = allLinks.find(el => {
-      const txt = el.textContent.trim().toLowerCase();
-      const href = el.getAttribute('href') || '';
-      return href.includes('settings') || txt === 'settings' || txt === 'preferences';
-    });
-    addTarget(settingsEl, "P", "nav");
-
-    // 2. Common Inputs, fixed shortcuts
-    const searchInput = document.querySelector('.board-search-field input, #board-search') ||
-                        Array.from(document.querySelectorAll('input[placeholder*="Search" i]'))
-                        .find(el => {
-                          const ph = el.placeholder.toLowerCase();
-                          return !ph.includes("session") && !ph.includes("type a custom");
-                        });
-    addTarget(searchInput, "F", "input");
-
-    const habitInput = document.querySelector('.board-column--habit .board-add-wrap input, input[placeholder*="Add habit" i]');
-    addTarget(habitInput, "H", "input");
-
-    const dailyInput = document.querySelector('.board-column--daily .board-add-wrap input, input[placeholder*="Add daily" i]');
-    addTarget(dailyInput, "D", "input");
-
-    const todoInput = document.querySelector('.board-column--todo .board-add-wrap input, input[placeholder*="Add to-do" i]');
-    addTarget(todoInput, "O", "input");
-
-    // 2b. Statistics Filters, fixed shortcuts
-    const statsTagSelect = document.querySelector('.stats-tag-select-sidebar .mud-input-slot');
-    addTarget(statsTagSelect, "G", "input");
-
-    const statsPeriodSelect = document.querySelector('.stats-year-select-sidebar .mud-input-slot');
-    addTarget(statsPeriodSelect, "R", "input");
-
-    // 3. Elements added at runtime, without prefix
-    const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([disabled]), textarea:not([disabled]), select:not([disabled]), [contenteditable="true"], .mud-input-slot:not([disabled])'))
-      .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideToggle(el));
-
-    const toggles = Array.from(document.querySelectorAll('.mud-checkbox, .board-subtask-cb, .mud-switch'))
-      .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideToggle(el));
-
-    const clickables = Array.from(document.querySelectorAll('a[href]:not([href="#"]), button:not([disabled]):not(.stats-heatmap-day-btn), [role="button"]:not([disabled]), .mud-button-root:not([disabled]), .app-header-profile-btn, .app-header-username-btn, .board-card__title, .board-card__delete, [role="menuitem"]:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), [role="tab"]:not([disabled]), .mud-tab:not([disabled]), .mud-list-item-clickable:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), .mud-menu-item:not([disabled]):not(.mud-list-item-disabled):not([aria-disabled="true"]), .mud-expand-panel-header'))
-      .filter(el => !assignedElements.has(el) && isElementVisible(el) && !isInsideInputControl(el) && !isInsideToggle(el));
-
-    const totalDynamicElements = inputs.length + toggles.length + clickables.length;
-    const useTwoChars = totalDynamicElements > availableKeys.length;
-    let dynamicIndex = 0;
-
-    inputs.forEach(el => {
-      const key = getDynamicKey(dynamicIndex++, useTwoChars);
-      addTarget(el, key, "input");
-    });
-
-    toggles.forEach(el => {
-      const key = getDynamicKey(dynamicIndex++, useTwoChars);
-      addTarget(el, key, "input");
-    });
-
-    clickables.forEach(el => {
-      const key = getDynamicKey(dynamicIndex++, useTwoChars);
-      addTarget(el, key, "nav");
-    });
-  }
-
-  function activateShortcutMode() {
-    if (shortcutModeActive || isEditing()) return;
-    shortcutModeActive = true;
-    currentSequence = "";
-
-    const activeContainer = getActiveOpenContainer();
-    if (activeContainer) {
-      document.body.classList.add("hab-shortcuts-modal-open");
-    } else {
-      document.body.classList.remove("hab-shortcuts-modal-open");
-    }
-
-    buildShortcutTargets();
-    renderOverlays();
-  }
-
-  function deactivateShortcutMode() {
-    if (!shortcutModeActive) return;
-    shortcutModeActive = false;
-    shiftLock = false;
-    currentSequence = "";
-
-    if (overlayContainer) {
-      overlayContainer.remove();
-      overlayContainer = null;
-    }
-
-    targets = [];
-    document.body.classList.remove("hab-show-shortcuts", "hab-shortcuts-modal-open");
-  }
-
-  function renderOverlays() {
-    if (overlayContainer) overlayContainer.remove();
-    overlayContainer = document.createElement('div');
-    overlayContainer.id = 'hab-shortcut-overlays';
-    document.body.appendChild(overlayContainer);
-
-    targets.forEach(t => {
-      const rect = t.element.getBoundingClientRect();
-      const badge = document.createElement('div');
-      badge.className = `hab-shortcut-hint hab-shortcut-hint--${t.type}`;
-      
-      // Position badge
-      const isInputEl = t.type === 'input';
-      const isTagPicker = t.element.classList.contains('habit-tag-picker__control');
-      const top = rect.top + globalThis.scrollY + (rect.height / 2);
-      let left;
-      if (isTagPicker) {
-        left = rect.right + globalThis.scrollX - 24;
-      } else {
-        left = isInputEl 
-          ? rect.left + globalThis.scrollX + 16 
-          : rect.left + globalThis.scrollX + (rect.width / 2);
-      }
-
-      badge.style.top = `${top}px`;
-      badge.style.left = `${left}px`;
-      badge.dataset.shortcut = t.shortcut;
-
-      // Render shortcut characters
-      let html = '';
-      for (const char of t.shortcut) {
-        html += `<span class="key-char key-char--untyped">${char}</span>`;
-      }
-      badge.innerHTML = html;
-
-      overlayContainer.appendChild(badge);
-
-      // Trigger animation
-      setTimeout(() => badge.classList.add('hab-shortcut-hint--visible'), 10);
-    });
-  }
-
-  function handleKeystrokeInShortcutMode(e) {
-    const key = e.key;
-    if (key === 'Escape' || key === 'Esc') {
-      e.preventDefault();
-      e.stopPropagation();
-      shiftLock = false;
-      deactivateShortcutMode();
-      return;
-    }
-
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
-    if (key === 'Shift') return;
-
-    const char = key.toUpperCase();
-    if (!/^[A-Z0-9]$/.test(char)) return;
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    const newSeq = currentSequence + char;
-    const matching = targets.filter(t => t.shortcut.startsWith(newSeq));
-
-    if (matching.length === 0) {
-      return;
-    }
-
-    currentSequence = newSeq;
-
-    // Update badges
-    const badges = Array.from(overlayContainer.querySelectorAll('.hab-shortcut-hint'));
-    badges.forEach(badge => {
-      const shortcut = badge.dataset.shortcut;
-      if (shortcut.startsWith(currentSequence)) {
-        badge.classList.remove('hab-shortcut-hint--dimmed');
-        
-        let html = '';
-        for (let i = 0; i < shortcut.length; i++) {
-          if (i < currentSequence.length) {
-            html += `<span class="key-char key-char--typed">${shortcut[i]}</span>`;
-          } else {
-            html += `<span class="key-char key-char--untyped">${shortcut[i]}</span>`;
-          }
-        }
-        badge.innerHTML = html;
-      } else {
-        badge.classList.add('hab-shortcut-hint--dimmed');
-      }
-    });
-
-    // If exactly one match, trigger it!
-    if (matching.length === 1) {
-      const matched = matching[0];
-      const badge = Array.from(overlayContainer.querySelectorAll('.hab-shortcut-hint')).find(b => b.dataset.shortcut === matched.shortcut);
-      if (badge) {
-        badge.classList.add('hab-shortcut-hint--matched');
-      }
-
-      setTimeout(() => {
-        executeTarget(matched);
-        shiftLock = false;
-        deactivateShortcutMode();
-      }, 150);
-    }
-  }
-
-  function executeTarget(target) {
-    const el = target.element;
-    if (target.type === 'input') {
-      if (el.classList.contains('mud-input-slot')) {
-        el.focus();
-        el.click();
-      } else if (el.classList.contains('mud-checkbox') || el.classList.contains('board-subtask-cb') || el.classList.contains('mud-switch')) {
-        const inputChild = el.querySelector('input');
-        if (inputChild) {
-          inputChild.click();
-        } else {
-          el.click();
-        }
-      } else {
-        el.focus();
-        if (typeof el.select === 'function' && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
-          el.select();
-        }
-      }
-    } else {
-      // For links and buttons, click them. If it is a Blazor SPA link, this correctly handles routing client-side.
-      el.click();
-    }
-  }
-
-  // Extracted helper functions for Escape key handling to reduce Cognitive Complexity, S3776
   function handleTagPickerEscape(e, activeElement) {
     if (activeElement?.classList.contains('habit-tag-picker__search')) {
       e.preventDefault();
@@ -517,7 +179,6 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     return false;
   }
 
-  // Extracted helper functions for Escape key handling to reduce Cognitive Complexity, S3776
   function handleTagsPopoverEscape(activeElement) {
     const tagsPopover = document.querySelector('.board-tags-menu-popover');
     if (tagsPopover && isElementVisible(tagsPopover)) {
@@ -531,7 +192,6 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     return false;
   }
 
-  // Extracted helper functions for Escape key handling to reduce Cognitive Complexity, S3776
   function handleOpenPopoverEscape(activeElement) {
     const hasOpenPopover = Array.from(document.querySelectorAll('.mud-popover')).some(isElementVisible);
     if (hasOpenPopover) {
@@ -542,7 +202,6 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
           document.body.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }));
         });
         
-        // Blur any select slot or input control that got focused back by Blazor's popover closing logic
         const newActive = document.activeElement;
         if (newActive && (
           newActive.classList.contains('mud-input-slot') || 
@@ -558,7 +217,6 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     return false;
   }
 
-  // Extracted helper functions for Escape key handling to reduce Cognitive Complexity, S3776
   function handleEditModeEscape(e, activeElement, isEdit) {
     if (isEdit && activeElement && !activeElement.closest('.mud-popover')) {
       if (activeElement.closest('.edit-daily-dialog, .edit-habit-dialog')) {
@@ -577,11 +235,6 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
   }
 
   function handleEscapeKey(e, activeElement, isEdit) {
-    if (shortcutModeActive) {
-      shiftLock = false;
-      deactivateShortcutMode();
-    }
-
     if (activeElement?.closest('.timer-target-field')) {
       const hasOpenPopover = Array.from(document.querySelectorAll('.mud-popover')).some(isElementVisible);
       if (hasOpenPopover) {
@@ -599,7 +252,6 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     if (e.ctrlKey || e.metaKey || e.altKey) {
       return;
     }
-    // Check if interactive element should consume the key
     if ((e.key === ' ' || e.key === 'Space') && isInteractiveElement(activeElement)) {
       return;
     }
@@ -612,7 +264,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     const activeContainer = getActiveOpenContainer();
     const target = activeContainer ? getScrollableContainer(activeContainer) : globalThis;
 
-    const scrollSpeed = 100; // px
+    const scrollSpeed = 100;
     const pageSpeed = target === globalThis ? globalThis.innerHeight * 0.8 : target.clientHeight * 0.8;
 
     if (e.key === 'ArrowDown' || e.key === 'j' || e.key === 'J') {
@@ -630,9 +282,8 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     }
   }
 
-  // Extracted helper functions for onKeyDown to reduce Cognitive Complexity, S3776
   function preventPopoverScroll(e) {
-    if (!shortcutModeActive && document.querySelector('.mud-popover-open')) {
+    if (document.querySelector('.mud-popover-open')) {
       if (e.key !== 'Escape' && e.key !== 'Esc') {
         const scrollKeys = ['ArrowDown', 'ArrowUp', 'Space', ' ', 'PageDown', 'PageUp', 'Home', 'End'];
         if (scrollKeys.includes(e.key)) {
@@ -648,32 +299,6 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
         }
         return true;
       }
-    }
-    return false;
-  }
-
-  function handleShiftKey(e, isEdit) {
-    if (e.key === 'Shift') {
-      if (isEdit) return true;
-      if (!e.repeat) {
-        shiftLock = !shiftLock;
-        if (shiftLock) {
-          activateShortcutMode();
-        } else {
-          deactivateShortcutMode();
-        }
-        updateShortcutOverlay();
-      }
-      return true;
-    }
-    return false;
-  }
-
-  function handleAltKey(e) {
-    if (e.key === 'Alt') {
-      isAltHeld = true;
-      updateShortcutOverlay();
-      return true;
     }
     return false;
   }
@@ -712,18 +337,6 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     return false;
   }
 
-  function toggleShortcutOverlayMode(e) {
-    e.preventDefault();
-    shiftLock = !shiftLock;
-    if (shiftLock) {
-      activateShortcutMode();
-    } else {
-      deactivateShortcutMode();
-    }
-    updateShortcutOverlay();
-    return true;
-  }
-
   function switchBoardTab(e) {
     const idx = Number.parseInt(e.key, 10) - 1;
     const tabBtn = document.getElementById('board-tab-' + idx);
@@ -735,47 +348,211 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     return false;
   }
 
+  let pendingChord = null;
+  let chordTimeout = null;
+
   function handleDirectShortcuts(e) {
     if (e.ctrlKey || e.metaKey || e.altKey) {
       return false;
     }
 
-    if (e.key === '/') {
-      return focusSearchInput(e);
+    const key = e.key.toLowerCase();
+    const helper = layoutHelper || boardHelper;
+
+    // Handle second key of two-key sequences (e.g. 'g b', 'c h')
+    if (pendingChord) {
+      const prefix = pendingChord;
+      clearTimeout(chordTimeout);
+      pendingChord = null;
+
+      if (prefix === 'g') {
+        if (key === 'b') {
+          e.preventDefault();
+          helper?.invokeMethodAsync("OnShortcutAction", "nav-board").catch(function () {});
+          return true;
+        }
+        if (key === 's') {
+          e.preventDefault();
+          helper?.invokeMethodAsync("OnShortcutAction", "nav-stats").catch(function () {});
+          return true;
+        }
+        if (key === 'p') {
+          e.preventDefault();
+          helper?.invokeMethodAsync("OnShortcutAction", "nav-settings").catch(function () {});
+          return true;
+        }
+      } else if (prefix === 'c') {
+        if (key === 'h') {
+          e.preventDefault();
+          helper?.invokeMethodAsync("OnShortcutAction", "create-habit").catch(function () {});
+          return true;
+        }
+        if (key === 'd') {
+          e.preventDefault();
+          helper?.invokeMethodAsync("OnShortcutAction", "create-daily").catch(function () {});
+          return true;
+        }
+        if (key === 't') {
+          e.preventDefault();
+          helper?.invokeMethodAsync("OnShortcutAction", "create-todo").catch(function () {});
+          return true;
+        }
+      }
     }
-    if (['c', 'C', 'n', 'N'].includes(e.key)) {
+
+    // Start chord: 'g' prefix for navigation shortcuts
+    if (key === 'g') {
+      pendingChord = 'g';
+      chordTimeout = setTimeout(function () { pendingChord = null; }, 1200);
+      return true;
+    }
+
+    // Start chord: 'c' prefix for create shortcuts, or focus the add input
+    if (key === 'c') {
+      pendingChord = 'c';
+      chordTimeout = setTimeout(function () {
+        if (pendingChord === 'c') {
+          pendingChord = null;
+          focusAddInput(e);
+        }
+      }, 350);
+      return true;
+    }
+
+    if (key === 'n') {
       return focusAddInput(e);
     }
-    if (e.key === '?') {
-      return toggleShortcutOverlayMode(e);
+
+    if (key === 'h') {
+      e.preventDefault();
+      helper?.invokeMethodAsync("OnShortcutAction", "create-habit").catch(function () {});
+      return true;
     }
-    if (['1', '2', '3'].includes(e.key)) {
+
+    if (key === 'd') {
+      e.preventDefault();
+      helper?.invokeMethodAsync("OnShortcutAction", "create-daily").catch(function () {});
+      return true;
+    }
+
+    if (key === 't') {
+      e.preventDefault();
+      helper?.invokeMethodAsync("OnShortcutAction", "create-todo").catch(function () {});
+      return true;
+    }
+
+    if (key === 's') {
+      e.preventDefault();
+      helper?.invokeMethodAsync("OnShortcutAction", "toggle-timer").catch(function () {});
+      return true;
+    }
+
+    if (key === '/') {
+      return focusSearchInput(e);
+    }
+
+    if (['1', '2', '3'].includes(key)) {
       return switchBoardTab(e);
     }
+
     return false;
   }
 
   function onKeyDown(e) {
+    const helper = layoutHelper || boardHelper;
+    const modalOpen = isModalOpen();
+
+    // 1. Command palette toggle: Ctrl+K / Cmd+K
+    const isCmdK = (e.ctrlKey || e.metaKey) && (e.code === 'KeyK' || e.key === 'k' || e.key === 'K');
+    if (isCmdK) {
+      if (!modalOpen) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (helper) {
+          helper.invokeMethodAsync("OnCmdKPressed").catch(function () {});
+        }
+      }
+      return;
+    }
+
+    // 2. Intercept Ctrl+H / Cmd+H before the browser opens history
+    const isCtrlH = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.code === 'KeyH' || e.key === 'h' || e.key === 'H');
+    if (isCtrlH) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!modalOpen && helper) {
+        helper.invokeMethodAsync("OnShortcutAction", "create-habit").catch(function () {});
+      }
+      return;
+    }
+
+    // 3. Intercept Ctrl+D / Cmd+D before the browser bookmarks the page
+    const isCtrlD = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.code === 'KeyD' || e.key === 'd' || e.key === 'D');
+    if (isCtrlD) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!modalOpen && helper) {
+        helper.invokeMethodAsync("OnShortcutAction", "create-daily").catch(function () {});
+      }
+      return;
+    }
+
+    // 4. Alt+T for New To-do
+    const isAltT = e.altKey && !e.ctrlKey && !e.metaKey && (e.code === 'KeyT' || e.key === 't' || e.key === 'T');
+    if (isAltT) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!modalOpen && helper) {
+        helper.invokeMethodAsync("OnShortcutAction", "create-todo").catch(function () {});
+      }
+      return;
+    }
+
+    // 5. Global shortcut: Ctrl+Z / Cmd+Z, undo
+    const isUndo = (e.ctrlKey || e.metaKey) && !e.shiftKey && (e.code === 'KeyZ' || e.key === 'z' || e.key === 'Z');
+    if (isUndo) {
+      if (isEditing() || modalOpen) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      const undoHelper = boardHelper || layoutHelper;
+      if (undoHelper) {
+        undoHelper.invokeMethodAsync("OnCtrlZPressed").catch(function () {});
+      }
+      return;
+    }
+
     if (preventPopoverScroll(e)) return;
 
     const activeElement = document.activeElement;
     const isEdit = isEditing();
     
     if (e.code === 'Escape' || e.key === 'Escape') {
+      if (isCommandPaletteOpen()) {
+        e.preventDefault();
+        e.stopPropagation();
+        helper?.invokeMethodAsync("OnEscapePressed").catch(function () {});
+        return;
+      }
       handleEscapeKey(e, activeElement, isEdit);
       return;
     }
 
-    if (handleShiftKey(e, isEdit) || handleAltKey(e)) return;
-
-    // Capture keystrokes in shortcut overlay mode
-    if (shortcutModeActive) {
-      handleKeystrokeInShortcutMode(e);
+    if (isCommandPaletteOpen()) {
       return;
     }
 
-    const dotNetHelper = boardHelper || layoutHelper;
-    if (!dotNetHelper) return;
+    if (modalOpen) {
+      // While a modal is open, board-level shortcuts and item creations must not fire.
+      const scrollKeys = ['ArrowDown', 'ArrowUp', 'Space', ' ', 'PageDown', 'PageUp', 'Home', 'End'];
+      if (!isEdit && scrollKeys.includes(e.key)) {
+        handleScrolling(e, activeElement);
+      }
+      return;
+    }
+
+    if (!helper) return;
 
     if (isEdit) {
       handleEditModeScrolling(e, activeElement);
@@ -791,62 +568,18 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
       handleScrolling(e, activeElement);
       return;
     }
-
-    // 1. Global shortcut: Ctrl+Z / Cmd+Z, undo
-    const isUndo = (e.ctrlKey || e.metaKey) && e.code === 'KeyZ';
-    if (isUndo) {
-      e.preventDefault();
-      dotNetHelper.invokeMethodAsync("OnCtrlZPressed").catch(function () {});
-    }
-  }
-
-  function onKeyUp(e) {
-    if (e.key === 'Alt') {
-      isAltHeld = false;
-      updateShortcutOverlay();
-    }
-    if (e.key === 'Shift') {
-      isShiftHeld = false;
-      updateShortcutOverlay();
-      if (!shiftLock) {
-        deactivateShortcutMode();
-      }
-    }
-  }
-
-  function onWindowBlur() {
-    isAltHeld = false;
-    isShiftHeld = false;
-    shiftLock = false;
-    deactivateShortcutMode();
-    updateShortcutOverlay();
-  }
-
-  function onPointerDown(e) {
-    if (shortcutModeActive) {
-      shiftLock = false;
-      deactivateShortcutMode();
-    }
   }
 
   function ensureListeners() {
     if (!isEnabled) return;
     if (isListenersAdded) return;
-    globalThis.addEventListener("keydown", onKeyDown, true); // Use capture phase to intercept input keys in shortcut mode
-    globalThis.addEventListener("keyup", onKeyUp);
-    globalThis.addEventListener("blur", onWindowBlur);
-    globalThis.addEventListener("mousedown", onPointerDown, true);
-    globalThis.addEventListener("touchstart", onPointerDown, true);
+    globalThis.addEventListener("keydown", onKeyDown, true);
     isListenersAdded = true;
   }
 
   function removeListeners() {
     if (!isListenersAdded) return;
     globalThis.removeEventListener("keydown", onKeyDown, true);
-    globalThis.removeEventListener("keyup", onKeyUp);
-    globalThis.removeEventListener("blur", onWindowBlur);
-    globalThis.removeEventListener("mousedown", onPointerDown, true);
-    globalThis.removeEventListener("touchstart", onPointerDown, true);
     isListenersAdded = false;
   }
 
@@ -858,7 +591,6 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
           ensureListeners();
         }
       } else {
-        deactivateShortcutMode();
         removeListeners();
       }
     },
@@ -876,27 +608,15 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
         removeListeners();
       }
     },
-    // Compatibility methods for old calls
     start: function (dotNetRef) {
       boardHelper = dotNetRef;
       ensureListeners();
     },
     stop: function () {
       boardHelper = null;
-      deactivateShortcutMode();
       if (!layoutHelper && !boardHelper) {
         removeListeners();
       }
-    },
-    toggle: function () {
-      if (shortcutModeActive) {
-        shiftLock = false;
-        deactivateShortcutMode();
-      } else {
-        shiftLock = true;
-        activateShortcutMode();
-      }
-      updateShortcutOverlay();
     }
   };
 })();

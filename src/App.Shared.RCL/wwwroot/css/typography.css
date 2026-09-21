@@ -161,28 +161,4 @@ p, .auth-form-hint, .edit-daily-label-body, .habit-tag-picker__empty {
     text-wrap: pretty;
 }
 
-/* Keyboard shortcuts hint overlay and HUD overlay */
-.hab-shortcut-hint {
-    position: absolute;
-    z-index: 100000;
-    align-items: center;
-    justify-content: center;
-    padding: 4px 8px;
-    font-family: var(--hab-font-mono);
-    font-size: 11px;
-    font-weight: 700;
-    line-height: 1;
-    color: #ffffff !important;
-    background: rgba(15, 23, 42, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: var(--radius-sm);
-    pointer-events: none;
-    display: none;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-feature-settings: "tnum" 1, "zero" 1;
-}
-.hab-shortcut-hint--visible {
-    display: inline-flex;
-}
 

@@ -1220,24 +1220,12 @@ input[type="number"].mud-input-slot {
 .stats-day-summary__count { color: var(--mud-palette-text-primary); }
 .stats-day-summary__dot { width: 3px; height: 3px; border-radius: 50%; background: var(--mud-palette-text-disabled); flex-shrink: 0; }
 .stats-day-timeline { display: flex; flex-direction: column; gap: 0; border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 55%, transparent); border-radius: var(--radius-lg); overflow: hidden; background: var(--mud-palette-surface); }
-.stats-day-event { display: grid; grid-template-columns: 64px 24px 1fr; gap: 0.65rem; align-items: start; padding: 0.75rem 0.85rem; border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 35%, transparent); background: var(--mud-palette-surface); line-height: 1.3; }
+.stats-day-event { display: grid; grid-template-columns: 64px 24px 1fr; gap: 0.65rem; align-items: center; padding: 0.75rem 0.85rem; border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 35%, transparent); background: var(--mud-palette-surface); }
 .stats-day-event:last-child { border-bottom: none; }
 .stats-day-event:nth-child(even) { background: color-mix(in srgb, var(--mud-palette-background-gray) 92%, var(--mud-palette-divider) 8%); }
 .stats-day-event:nth-child(odd) { background: var(--mud-palette-surface); }
-.stats-day-event__time { font-family: var(--hab-font-mono); font-size: 0.78rem; font-weight: 650; letter-spacing: 0.01em; color: var(--mud-palette-text-secondary); font-variant-numeric: tabular-nums; text-align: right; line-height: 1lh; }
-.stats-day-event__icon {
-    --size: 1.15rem;
-    width: var(--size);
-    height: var(--size);
-    font-size: var(--size) !important;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    --offset: calc((1lh - var(--size)) / 2);
-    transform: translateY(var(--offset));
-}
+.stats-day-event__time { font-family: var(--hab-font-mono); font-size: 0.78rem; font-weight: 650; letter-spacing: 0.01em; color: var(--mud-palette-text-secondary); font-variant-numeric: tabular-nums; text-align: right; }
+.stats-day-event__icon { font-size: 1.15rem !important; line-height: 1; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .stats-day-event__icon--daily { color: var(--mud-palette-primary); }
 .stats-day-event__icon--todo { color: var(--hab-type-todo-ink); }
 .stats-day-event__icon--plus { color: var(--hab-type-habit); }

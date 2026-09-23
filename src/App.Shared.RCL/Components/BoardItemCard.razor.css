@@ -204,11 +204,11 @@
     line-height: 1.35;
 }
 
-/* Extra space between subtask checkbox control and label text in MudBlazor 9. */
+/* Space between subtask checkbox control and label text */
 .board-subtask-list__row .board-subtask-cb ::deep .mud-input-control {
     display: flex;
     flex-direction: row;
-    align-items: flex-start;
+    align-items: center;
     column-gap: 0.55rem;
 }
 
@@ -220,15 +220,8 @@
 .board-subtask-list__row ::deep .mud-checkbox {
     margin: 0;
     display: inline-flex;
-    align-items: flex-start;
+    align-items: center;
     line-height: 1.35;
-}
-
-.board-subtask-list__row ::deep .mud-checkbox .mud-button-root {
-    --size: 1.5rem;
-    flex-shrink: 0;
-    --offset: calc((1lh - var(--size)) / 2);
-    transform: translateY(var(--offset));
 }
 
 .board-card__foot {
@@ -388,9 +381,7 @@
     .board-subtask-list__row {
         min-height: 44px;
         display: flex;
-        align-items: flex-start;
-        padding-top: 0.35rem;
-        padding-bottom: 0.35rem;
+        align-items: center;
     }
 
     .board-card__delete.mud-icon-button {

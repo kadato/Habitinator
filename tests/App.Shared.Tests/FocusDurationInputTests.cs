@@ -162,9 +162,10 @@ public sealed class FocusDurationInputTests
     // Seconds only, h == 0 and m == 0
     [InlineData(45, "45s")]
     [InlineData(59, "59s")]
-    // Minutes only, h == 0 and s == 0, becomes "m"
-    [InlineData(60, "1")]
-    [InlineData(25 * 60, "25")]
+    // Minutes only, h == 0 and s == 0, becomes "{m}m"
+    [InlineData(60, "1m")]
+    [InlineData(10 * 60, "10m")]
+    [InlineData(25 * 60, "25m")]
     // Minutes and seconds, h == 0, m > 0, s > 0, becomes "m m s s"
     [InlineData(5 * 60 + 30, "5m30s")]
     // Hours only, m == 0 and s == 0, becomes "h h"

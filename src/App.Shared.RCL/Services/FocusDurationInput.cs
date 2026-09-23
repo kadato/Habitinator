@@ -96,7 +96,7 @@ public static partial class FocusDurationInput
 
         if (h == 0 && s == 0)
         {
-            return m.ToString(CultureInfo.InvariantCulture);
+            return $"{m}m";
         }
 
         if (h == 0)

@@ -12,4 +12,5 @@ public sealed record CommandItem(
     string? ShortcutBadge = null,
     Func<Task>? Action = null,
     Func<Task<List<CommandItem>>>? ChildrenProvider = null,
-    IReadOnlyList<string>? Keywords = null);
+    IReadOnlyList<string>? Keywords = null,
+    bool IsDanger = false);

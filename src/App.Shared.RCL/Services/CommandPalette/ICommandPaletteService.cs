@@ -20,5 +20,19 @@ public interface ICommandPaletteService
 
     Task CreateItemAsync(BoardSection section);
 
+    Task DeleteItemAsync(BoardSection section, Guid itemId);
+
+    Task DeleteCompletedTodosAsync();
+
+    Task ArchiveCompletedTodosAsync();
+
+    Task ExportDataAsync();
+
     Task UndoAsync();
+
+    Task StopTimerSessionAsync();
+
+    Task TogglePomodoroModeAsync();
+
+    Task StartPomodoroSessionAsync();
 }

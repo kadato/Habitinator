@@ -1,0 +1,96 @@
+<MudDialog Class="hab-modal-dialog"
+           ContentClass="hab-modal-content">
+    <DialogContent>
+        <div class="hab-modal hab-modal--neutral" data-dialog-label="Set session target">
+            <div class="hab-modal__header">
+                <div class="hab-modal__topbar hab-modal__topbar--minimal">
+                    <DialogCloseButton OnClose="() => MudDialog.Cancel()" />
+                </div>
+                <MudText Typo="Typo.h6" Class="font-weight-bold mb-1">
+                    Set session target
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Enter a custom label for this focus session. This applies to both Pomodoro and Stopwatch modes.
+                </MudText>
+            </div>
+            <div class="hab-modal__body">
+                <MudTextField @ref="_targetInput"
+                              T="string"
+                              @bind-Value="_targetText"
+                              AutoFocus="true"
+                              tabindex="1"
+                              Label="Target label"
+                              Placeholder="Study Math, Project Refactor, Inbox Zero"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Immediate="true"
+                              Clearable="true"
+                              OnKeyDown="OnKeyDown"
+                              Class="mb-3" />
+            </div>
+            <div class="hab-modal__footer d-flex justify-space-between align-center">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Class="order-2"
+                           tabindex="2"
+                           StartIcon="@Icons.Material.Filled.Check"
+                           OnClick="Submit">
+                    Set target
+                </MudButton>
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Default"
+                           Class="order-1"
+                           tabindex="3"
+                           OnClick="() => MudDialog.Cancel()">
+                    Cancel
+                </MudButton>
+            </div>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public string? CurrentTarget { get; set; }
+
+    private string _targetText = string.Empty;
+    private MudTextField<string>? _targetInput;
+
+    protected override void OnInitialized()
+    {
+        _targetText = CurrentTarget ?? string.Empty;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _targetInput is not null)
+        {
+            try
+            {
+                await _targetInput.FocusAsync();
+                await _targetInput.SelectAsync();
+                await Task.Delay(100);
+                await _targetInput.FocusAsync();
+                await _targetInput.SelectAsync();
+            }
+            catch
+            {
+                // Focus and selection are best effort.
+            }
+        }
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or "NumpadEnter")
+        {
+            Submit();
+        }
+    }
+
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(_targetText.Trim()));
+    }
+}

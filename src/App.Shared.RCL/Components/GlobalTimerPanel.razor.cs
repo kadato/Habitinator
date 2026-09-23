@@ -25,6 +25,7 @@ public partial class GlobalTimerPanel : IDisposable
     {
         _expanded = IsSessionActive;
         TimerService.Ticked += OnTimerTicked;
+        TimerService.StateChanged += OnTimerStateChanged;
 
         try
         {
@@ -133,6 +134,20 @@ public partial class GlobalTimerPanel : IDisposable
             {
                 StateHasChanged();
             }
+        });
+    }
+
+    private void OnTimerStateChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            var wasRunning = _wasRunning;
+            SyncTimerFieldsFromServiceIfNeeded();
+            if (TimerService.IsRunning && !wasRunning)
+            {
+                _expanded = true;
+            }
+            StateHasChanged();
         });
     }
 
@@ -308,14 +323,7 @@ public partial class GlobalTimerPanel : IDisposable
 
     private void Reset()
     {
-        if (TimerService.PomodoroModeEnabled)
-        {
-            TimerService.ResetPomodoroSession();
-        }
-        else
-        {
-            TimerService.Reset();
-        }
+        TimerService.ResetSession();
     }
 
     private void SkipBreak()
@@ -432,5 +440,6 @@ public partial class GlobalTimerPanel : IDisposable
         }
 
         TimerService.Ticked -= OnTimerTicked;
+        TimerService.StateChanged -= OnTimerStateChanged;
     }
 }

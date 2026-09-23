@@ -1,0 +1,134 @@
+@using App.Shared.RCL.Services
+
+<MudDialog Class="hab-modal-dialog"
+           ContentClass="hab-modal-content">
+    <DialogContent>
+        <div class="hab-modal hab-modal--neutral" data-dialog-label="Set focus duration">
+            <div class="hab-modal__header">
+                <div class="hab-modal__topbar hab-modal__topbar--minimal">
+                    <DialogCloseButton OnClose="() => MudDialog.Cancel()" />
+                </div>
+                <MudText Typo="Typo.h6" Class="font-weight-bold mb-1">
+                    @(StartSession ? "Start focus session" : "Set focus duration")
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    @if (!string.IsNullOrWhiteSpace(TargetTitle))
+                    {
+                        <span>Target: <strong>@TargetTitle</strong> - </span>
+                    }
+                    <span>Enter a duration in minutes like 25 or 45m, or hours and minutes like 1:15.</span>
+                </MudText>
+            </div>
+            <div class="hab-modal__body">
+                <MudTextField @ref="_durationInput"
+                              T="string"
+                              @bind-Value="_durationText"
+                              AutoFocus="true"
+                              tabindex="1"
+                              Label="Time's up after"
+                              Placeholder="10m, 25m, 1:15, 90s, or 0:0:30"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Immediate="true"
+                              Clearable="true"
+                              Error="@_hasError"
+                              ErrorText="@(_hasError ? FocusDurationInput.ParseErrorHint : null)"
+                              OnKeyDown="OnKeyDown"
+                              Class="mb-2" />
+
+                @if (FocusDurationInput.TryParse(_durationText, out var parsedDuration) && parsedDuration.HasValue && parsedDuration.Value > TimeSpan.Zero)
+                {
+                    <div class="d-flex align-center gap-1 mb-2 px-1">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Primary" Size="Size.Small" />
+                        <MudText Typo="Typo.caption" Color="Color.Primary" Class="font-weight-medium">
+                            Time's up alert at: @FocusDurationInput.FormatForAlertLabel(parsedDuration.Value)
+                        </MudText>
+                    </div>
+                }
+            </div>
+            <div class="hab-modal__footer d-flex justify-space-between align-center">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Class="order-2"
+                           tabindex="2"
+                           StartIcon="@(StartSession ? Icons.Material.Filled.PlayArrow : Icons.Material.Filled.Check)"
+                           OnClick="Submit">
+                    @(StartSession ? "Start session" : "Apply duration")
+                </MudButton>
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Default"
+                           Class="order-1"
+                           tabindex="3"
+                           OnClick="() => MudDialog.Cancel()">
+                    Cancel
+                </MudButton>
+            </div>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public string? TargetTitle { get; set; }
+
+    [Parameter] public TimeSpan? InitialDuration { get; set; }
+
+    [Parameter] public bool StartSession { get; set; } = true;
+
+    private string _durationText = string.Empty;
+    private bool _hasError;
+    private MudTextField<string>? _durationInput;
+
+    protected override void OnInitialized()
+    {
+        if (InitialDuration.HasValue && InitialDuration.Value > TimeSpan.Zero)
+        {
+            _durationText = FocusDurationInput.FormatForField(InitialDuration.Value);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _durationInput is not null)
+        {
+            try
+            {
+                await _durationInput.FocusAsync();
+                await _durationInput.SelectAsync();
+                await Task.Delay(100);
+                await _durationInput.FocusAsync();
+                await _durationInput.SelectAsync();
+            }
+            catch
+            {
+                // Focus and selection are best effort.
+            }
+        }
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or "NumpadEnter")
+        {
+            Submit();
+        }
+    }
+
+    private void Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_durationText))
+        {
+            MudDialog.Close(DialogResult.Ok<TimeSpan?>(null));
+            return;
+        }
+
+        if (!FocusDurationInput.TryParse(_durationText, out var parsed) || parsed is null || parsed <= TimeSpan.Zero)
+        {
+            _hasError = true;
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok<TimeSpan?>(parsed));
+    }
+}

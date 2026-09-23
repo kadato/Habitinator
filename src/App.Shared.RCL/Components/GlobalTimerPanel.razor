@@ -220,9 +220,23 @@
 
     private bool _showFocusHelp;
 
-    private string FocusHelperText => _showFocusHelp
-        ? "Optional one-time alert. An empty field means no alert."
-        : "Examples: 25, 1:20, 90s";
+    private string FocusHelperText
+    {
+        get
+        {
+            if (_showFocusHelp)
+            {
+                return "Optional one-time alert. An empty field means no alert.";
+            }
+
+            if (FocusDurationInput.TryParse(_focusDurationText, out var parsed) && parsed.HasValue && parsed.Value > TimeSpan.Zero)
+            {
+                return $"Time's up alert at {FocusDurationInput.FormatForAlertLabel(parsed.Value)}";
+            }
+
+            return "Examples: 10m, 25m, 1:20, 90s";
+        }
+    }
 
     private void ToggleFocusHelp() => _showFocusHelp = !_showFocusHelp;
 
@@ -307,7 +321,7 @@
                                     @bind-Text="FocusDurationText"
                                     OnBlur="OnFocusDurationBlur"
                                     Label="Time's up after"
-                                    Placeholder="25, 1:20, 90s, 0:0:30"
+                                    Placeholder="10m, 25m, 1:20, 90s"
                                     HelperText="@FocusHelperText"
                                     Clearable="true"
                                     Variant="Variant.Outlined"

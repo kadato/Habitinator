@@ -86,7 +86,8 @@ public partial class CommandPalette : IDisposable
             {
                 items.AddRange(_currentSubItems.Where(i =>
                     i.Title.Contains(_query, StringComparison.OrdinalIgnoreCase) ||
-                    (i.Subtitle is not null && i.Subtitle.Contains(_query, StringComparison.OrdinalIgnoreCase))));
+                    (i.Subtitle is not null && i.Subtitle.Contains(_query, StringComparison.OrdinalIgnoreCase)) ||
+                    (i.Keywords is not null && i.Keywords.Any(k => k.Contains(_query, StringComparison.OrdinalIgnoreCase)))));
             }
         }
         else
@@ -94,8 +95,8 @@ public partial class CommandPalette : IDisposable
             // Root level: progressive disclosure
             if (string.IsNullOrWhiteSpace(_query))
             {
-                // Calm initial state: only show Suggested & Navigation items (5-7 items max)
-                items.AddRange(_rootItems.Where(i => i.Category is "Suggested" or "Navigation"));
+                // Initial state: show Suggested, Navigation, and top Actions
+                items.AddRange(_rootItems.Where(i => i.Category is "Suggested" or "Navigation" or "Actions"));
             }
             else
             {
@@ -127,8 +128,20 @@ public partial class CommandPalette : IDisposable
             }
         }
 
-        // Group with capped items per category to avoid cognitive overload
-        const int maxItemsPerCategory = 4;
+        // Group with capped items per category when browsing root, but never truncate sub-actions
+        int maxItemsPerCategory;
+        if (_currentSubItems is not null)
+        {
+            maxItemsPerCategory = 100;
+        }
+        else if (string.IsNullOrWhiteSpace(_query))
+        {
+            maxItemsPerCategory = 4;
+        }
+        else
+        {
+            maxItemsPerCategory = 8;
+        }
         _groupedItems = items
             .GroupBy(i => i.Category)
             .Select(g => new CappedGrouping(g.Key, g.Take(maxItemsPerCategory)))

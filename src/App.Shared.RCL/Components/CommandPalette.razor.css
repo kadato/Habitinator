@@ -237,6 +237,25 @@
     color: var(--mud-palette-primary);
 }
 
+/* Danger items like delete */
+.cmd-palette-item--danger .cmd-palette-item-icon {
+    color: var(--mud-palette-error);
+}
+
+.cmd-palette-item--danger:hover:not(.cmd-palette-item--selected) {
+    background-color: color-mix(in srgb, var(--mud-palette-error) 10%, transparent);
+}
+
+.cmd-palette-item--danger.cmd-palette-item--selected {
+    background-color: color-mix(in srgb, var(--mud-palette-error) 16%, var(--mud-palette-surface));
+    border-color: color-mix(in srgb, var(--mud-palette-error) 45%, transparent);
+}
+
+.cmd-palette-item--danger.cmd-palette-item--selected .cmd-palette-item-icon,
+.cmd-palette-item--danger.cmd-palette-item--selected .cmd-palette-item-title {
+    color: var(--mud-palette-error);
+}
+
 /* Empty state */
 .cmd-palette-empty {
     padding: 32px 16px;

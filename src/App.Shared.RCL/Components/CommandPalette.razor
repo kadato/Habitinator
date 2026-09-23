@@ -57,9 +57,10 @@
                             @foreach (var item in group)
                             {
                                 var isSelected = SelectedItemId is not null && item.Id == SelectedItemId;
+                                var isDanger = item.IsDanger;
                                 var itemDomId = $"cmd-item-{item.Id}";
                                 <div id="@itemDomId"
-                                     class="cmd-palette-item @(isSelected ? "cmd-palette-item--selected" : "")"
+                                     class="cmd-palette-item @(isSelected ? "cmd-palette-item--selected" : "") @(isDanger ? "cmd-palette-item--danger" : "")"
                                      role="option"
                                      aria-selected="@(isSelected ? "true" : "false")"
                                      @onclick="() => ExecuteItemAsync(item)"

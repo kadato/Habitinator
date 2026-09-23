@@ -18,7 +18,43 @@ public sealed class GlobalTimerService(IClock clock) : IDisposable
 
     private DateTimeOffset? _runningSince;
 
-    public bool PomodoroModeEnabled { get; set; }
+    private bool _pomodoroModeEnabled;
+
+    public bool PomodoroModeEnabled
+    {
+        get => _pomodoroModeEnabled;
+        set
+        {
+            if (_pomodoroModeEnabled == value)
+            {
+                return;
+            }
+
+            _pomodoroModeEnabled = value;
+            if (value)
+            {
+                ResetPomodoroSession();
+            }
+            else
+            {
+                Reset();
+            }
+
+            NotifyStateChanged();
+        }
+    }
+
+    public event Action? StateChanged;
+
+    public void NotifyStateChanged()
+    {
+        StateChanged?.Invoke();
+    }
+
+    public void TogglePomodoroMode()
+    {
+        PomodoroModeEnabled = !PomodoroModeEnabled;
+    }
 
     public PomodoroState CurrentPomodoroState { get; private set; } = PomodoroState.Idle;
 
@@ -56,6 +92,7 @@ public sealed class GlobalTimerService(IClock clock) : IDisposable
 
             field = value;
             RearmFocusMilestone();
+            NotifyStateChanged();
         }
     }
 
@@ -114,6 +151,7 @@ public sealed class GlobalTimerService(IClock clock) : IDisposable
         TargetType = targetType;
         TargetId = targetId;
         BoardItemId = boardItemId;
+        NotifyStateChanged();
     }
 
     /// <summary>Sets a user-entered focus label, or clears the target when the label is empty.</summary>
@@ -124,12 +162,14 @@ public sealed class GlobalTimerService(IClock clock) : IDisposable
             TargetType = null;
             TargetId = null;
             BoardItemId = null;
+            NotifyStateChanged();
             return;
         }
 
         TargetType = "Session";
         TargetId = label.Trim();
         BoardItemId = null;
+        NotifyStateChanged();
     }
 
     public event Action? Ticked;
@@ -202,6 +242,7 @@ public sealed class GlobalTimerService(IClock clock) : IDisposable
         _runningSince = _clock.UtcNow;
         StartHeartbeat();
         Ticked?.Invoke();
+        NotifyStateChanged();
     }
 
     /// <summary>
@@ -225,6 +266,7 @@ public sealed class GlobalTimerService(IClock clock) : IDisposable
         }
 
         Ticked?.Invoke();
+        NotifyStateChanged();
     }
 
     /// <summary>
@@ -239,6 +281,7 @@ public sealed class GlobalTimerService(IClock clock) : IDisposable
         }
 
         AwaitingFocusTimeUpPrompt = true;
+        NotifyStateChanged();
     }
 
     public void Pause()
@@ -252,6 +295,7 @@ public sealed class GlobalTimerService(IClock clock) : IDisposable
         _accumulated += _clock.UtcNow - runningSince;
         _runningSince = null;
         Ticked?.Invoke();
+        NotifyStateChanged();
     }
 
     public TimeSpan Stop()
@@ -264,6 +308,7 @@ public sealed class GlobalTimerService(IClock clock) : IDisposable
         _runningSince = null;
         _nextFocusMilestoneAtElapsed = null;
         Ticked?.Invoke();
+        NotifyStateChanged();
         return duration;
     }
 
@@ -279,6 +324,7 @@ public sealed class GlobalTimerService(IClock clock) : IDisposable
         _runningSince = null;
         _nextFocusMilestoneAtElapsed = null;
         Ticked?.Invoke();
+        NotifyStateChanged();
     }
 
     /// <summary>
@@ -294,6 +340,7 @@ public sealed class GlobalTimerService(IClock clock) : IDisposable
             TargetId = null;
             BoardItemId = null;
         }
+        NotifyStateChanged();
     }
 
     public void IncrementCompletedIntervals()
@@ -330,6 +377,18 @@ public sealed class GlobalTimerService(IClock clock) : IDisposable
         CurrentPomodoroState = PomodoroState.Idle;
         CompletedWorkIntervalsCount = 0;
         FocusAlertAfter = null;
+    }
+
+    public void ResetSession()
+    {
+        if (PomodoroModeEnabled)
+        {
+            ResetPomodoroSession();
+        }
+        else
+        {
+            Reset();
+        }
     }
 
     private void RearmFocusMilestone()

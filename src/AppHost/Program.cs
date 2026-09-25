@@ -22,7 +22,7 @@ var postgresPassword = builder.AddParameter("postgres-password", "postgres", sec
 
 var postgres = builder
     .AddPostgres("postgres", postgresUser, postgresPassword, 5432)
-    .WithImage("library/postgres", "17.6")
+    .WithImage("library/postgres", "17.11")
     .WithDataVolume("habitinatordb-postgres-data")
     .WithPgAdmin();
 

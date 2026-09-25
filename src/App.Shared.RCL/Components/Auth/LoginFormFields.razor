@@ -2,14 +2,22 @@
 
 <div class="mb-3">
     <label for="email">Email</label>
-    <input class="form-control" id="email" name="Email" type="email" required autocomplete="email" value=""/>
+    <input class="form-control" id="email" name="Email" type="email" required autocomplete="email" value=""
+           aria-invalid="@(HasError ? "true" : null)" aria-describedby="@(HasError ? ErrorId : null)"/>
 </div>
 <div class="mb-3">
     <label for="password">Password</label>
     <input class="form-control" id="password" name="Password" type="password" required
-           autocomplete="current-password" value=""/>
+           autocomplete="current-password" value=""
+           aria-invalid="@(HasError ? "true" : null)" aria-describedby="@(HasError ? ErrorId : null)"/>
 </div>
 <div class="form-check mb-3">
     <input class="form-check-input" id="remember" name="RememberMe" type="checkbox" value="true"/>
     <label class="form-check-label" for="remember">Remember me</label>
 </div>
+
+@code {
+    [Parameter] public bool HasError { get; set; }
+
+    [Parameter] public string ErrorId { get; set; } = "auth-error";
+}

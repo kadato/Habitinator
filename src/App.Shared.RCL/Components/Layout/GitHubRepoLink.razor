@@ -1,0 +1,19 @@
+@using MudBlazor
+
+<span class="app-show-desktop-only align-center">
+    <MudTooltip Text="View source on GitHub" Placement="Placement.Bottom" Delay="400">
+        <MudIconButton Href="@Href"
+                       Target="_blank"
+                       Rel="noopener noreferrer"
+                       Icon="@Icons.Custom.Brands.GitHub"
+                       Size="Size.Small"
+                       Color="Color.Default"
+                       Class="github-repo-link"
+                       aria-label="View Habitinator source on GitHub" />
+    </MudTooltip>
+</span>
+
+@code {
+    /// <summary>Repository URL. Defaults to the public Habitinator repo.</summary>
+    [Parameter] public string Href { get; set; } = "https://github.com/kadato/Habitinator";
+}

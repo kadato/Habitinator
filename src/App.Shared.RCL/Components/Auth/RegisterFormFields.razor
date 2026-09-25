@@ -3,16 +3,22 @@
 <div class="mb-3">
     <label for="reg-email">Email</label>
     <input class="form-control" id="reg-email" name="Email" type="email" required autocomplete="email"
-           value="@FormEmail"/>
+           value="@FormEmail"
+           aria-invalid="@(HasError ? "true" : null)" aria-describedby="@(HasError ? ErrorId : null)"/>
 </div>
 <div class="mb-3">
     <label for="reg-password">Password</label>
     <input class="form-control" id="reg-password" name="Password" type="password" required minlength="8"
-           title="At least 8 characters." autocomplete="new-password" value=""/>
+           title="At least 8 characters." autocomplete="new-password" value=""
+           aria-invalid="@(HasError ? "true" : null)" aria-describedby="@(HasError ? ErrorId : null)"/>
 </div>
-<p class="auth-form-hint">Use at least 8 characters. Avoid obvious passwords for your own account security.</p>
+<p class="auth-form-hint">Use at least 8 characters. Avoid obvious passwords for your account security.</p>
 
 @code {
-    /// <summary>Web form POST: pre-filled email from query string.</summary>
+    /// <summary>Pre-filled email from the query string for the web form POST.</summary>
     [Parameter] public string FormEmail { get; set; } = string.Empty;
+
+    [Parameter] public bool HasError { get; set; }
+
+    [Parameter] public string ErrorId { get; set; } = "auth-error";
 }

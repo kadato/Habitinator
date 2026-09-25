@@ -4,21 +4,21 @@
 @inject NavigationManager Navigation
 
 <PageMeta Title="@PageTitles.Page("Sign in")"
-          Description="Sign in to your Habitinator account or continue as demo guest."
+          Description="You sign in to your Habitinator account or continue as the demo guest."
           CanonicalPath="/auth/login"
           Robots="@SeoDefaults.IndexRobots"/>
 
 <AuthPageShell Title="Sign in"
-               Subtitle="Use your email and password, or try the demo guest."
+               Subtitle="Sign in with your email and password. Or continue as the demo guest."
                MaxWidth="28rem">
     <ChildContent>
         @if (!string.IsNullOrWhiteSpace(_message))
         {
-            <div class="alert alert-info" role="alert">@_message</div>
+            <div class="@(_hasError ? "alert alert-danger" : "alert alert-info")" role="alert" id="@(_hasError ? "auth-error" : null)">@_message</div>
         }
 
         <form method="post" action="/api/auth/cookie-login">
-            <LoginFormFields/>
+            <LoginFormFields HasError="@_hasError" ErrorId="auth-error"/>
             <div class="auth-form-actions">
                 <MudButton ButtonType="ButtonType.Submit"
                            Variant="Variant.Filled"
@@ -45,15 +45,25 @@
     <Footer>
         <span>New here?</span>
         <a href="/auth/register" data-enhance-nav="false">Create account</a>
+        <span> · </span>
+        <a href="/privacy" data-enhance-nav="false">Privacy</a>
     </Footer>
 </AuthPageShell>
 
 @code {
     private string? _message;
+    private bool _hasError;
 
     protected override void OnInitialized()
     {
         _message = AuthQueryMessages.Resolve(Navigation);
+        _hasError = HasErrorQuery(Navigation);
+    }
+
+    private static bool HasErrorQuery(NavigationManager navigation)
+    {
+        var query = navigation.ToAbsoluteUri(navigation.Uri).Query;
+        return query.Contains("error=1", StringComparison.Ordinal);
     }
 
 }

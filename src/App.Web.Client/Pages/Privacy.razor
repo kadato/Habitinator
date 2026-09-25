@@ -1,0 +1,43 @@
+@page "/privacy"
+@layout GuestLayout
+
+<PageMeta Title="@PageTitles.Page("Privacy")"
+          Description="Habitinator explains how it handles cookies, local data, and your account."
+          CanonicalPath="/privacy"
+          Robots="@SeoDefaults.IndexRobots"/>
+
+<AuthPageShell Title="Privacy"
+               Subtitle="The app uses essential cookies only and contains no advertising trackers."
+               MaxWidth="40rem">
+    <ChildContent>
+        <h2>What we store</h2>
+        <p>The app stores only what it needs to sign you in and remember your choices.</p>
+        <ul>
+            <li>The sign-in session cookie keeps you signed in. The cookie is HttpOnly, Secure, and SameSite=Lax.</li>
+            <li>The <code>habitinator_theme</code> cookie remembers light or dark mode. The cookie holds no personal data.</li>
+            <li>Your device stores display name, timezone, and timer settings.</li>
+        </ul>
+        <h2>What we avoid</h2>
+        <ul>
+            <li>The web app contains no third-party advertising trackers.</li>
+            <li>We sell no personal data.</li>
+            <li>Board data needs sign-in and stays private.</li>
+        </ul>
+        <h2>Your controls</h2>
+        <p>You control your data from Settings.</p>
+        <ul>
+            <li>To export your data, open Settings, then Account actions.</li>
+            <li>To delete your account, open Settings, then Account actions. Delete removes your board data.</li>
+            <li>To clear the theme cookie and local preferences, clear site data in your browser.</li>
+        </ul>
+        <p>
+            To report a vulnerability, read
+            <a href="/.well-known/security.txt" target="_self">security.txt</a>.
+        </p>
+    </ChildContent>
+    <Footer>
+        <a href="/" data-enhance-nav="false">Home</a>
+        <span> · </span>
+        <a href="/auth/login" data-enhance-nav="false">Sign in</a>
+    </Footer>
+</AuthPageShell>

@@ -44,6 +44,7 @@
                         <div class="app-top-bar__flex-spacer" aria-hidden="true"></div>
                         <div class="app-top-bar__right d-flex align-center">
                             <div class="app-header-user-rail d-flex align-center">
+                                <GitHubRepoLink />
                                 <SyncStatusIndicator IconOnly="true" />
                                 <MudMenu AnchorOrigin="Origin.BottomRight"
                                          TransformOrigin="Origin.TopRight"
@@ -89,6 +90,7 @@
             <MudAppBar Elevation="0" Dense="true" Class="app-top-bar app-top-bar--guest" ToolBarClass="app-top-bar-toolbar" role="banner">
                 <a href="/" data-enhance-nav="false" class="text-decoration-none app-branding app-branding--header"><MudText Typo="Typo.h6" Class="app-top-bar__title mb-0">Habitinator</MudText></a>
                 <MudSpacer />
+                <GitHubRepoLink />
                 @if (!IsWelcomePage)
                 {
                     <MudButton Href="/auth/login" Target="_self" data-enhance-nav="false" Variant="Variant.Text" Color="Color.Inherit" Class="text-transform-none app-show-mobile-only">Sign in</MudButton>

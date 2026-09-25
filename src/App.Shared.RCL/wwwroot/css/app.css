@@ -546,6 +546,20 @@ input[type="number"].mud-input-slot {
     border-color: transparent !important;
 }
 
+/* GitHub repo link in the desktop header. MudButton root lives outside
+   component CSS isolation, so the visuals live here with the header nav. */
+.github-repo-link.mud-icon-button {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: var(--radius-md) !important;
+    color: var(--mud-palette-text-secondary) !important;
+}
+
+.github-repo-link.mud-icon-button:hover {
+    color: var(--mud-palette-primary) !important;
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 10%, transparent) !important;
+}
+
 /* Mobile nav tabs inside the app bar, always rendered by MudAppBar */
 .app-top-bar__stack {
     display: flex;

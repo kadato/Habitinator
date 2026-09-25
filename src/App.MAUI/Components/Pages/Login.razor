@@ -10,23 +10,25 @@
 <PageTitle>@PageTitles.Page("Sign in")</PageTitle>
 
 <AuthPageShell Title="Sign in"
-               Subtitle="Use your email and password, or try the demo guest."
+               Subtitle="Sign in with your email and password. Or continue as the demo guest."
                MaxWidth="28rem">
     <ChildContent>
         @if (!string.IsNullOrWhiteSpace(_message))
         {
-            <div class="alert alert-info" role="alert">@_message</div>
+            <div class="@(_hasError ? "alert alert-danger" : "alert alert-info")" role="alert" id="@(_hasError ? "auth-error" : null)">@_message</div>
         }
 
         <div class="mb-3">
             <label for="email">Email</label>
             <input class="form-control" id="email" type="email" autocomplete="email"
-                   value="@_email" @oninput="OnEmailInput" @attributes="FormControlAttrs"/>
+                   value="@_email" @oninput="OnEmailInput" @attributes="FormControlAttrs"
+                   aria-invalid="@(_hasError ? "true" : null)" aria-describedby="@(_hasError ? "auth-error" : null)"/>
         </div>
         <div class="mb-3">
             <label for="password">Password</label>
             <input class="form-control" id="password" type="password" autocomplete="current-password"
-                   value="@_password" @oninput="OnPasswordInput" @attributes="FormControlAttrs"/>
+                   value="@_password" @oninput="OnPasswordInput" @attributes="FormControlAttrs"
+                   aria-invalid="@(_hasError ? "true" : null)" aria-describedby="@(_hasError ? "auth-error" : null)"/>
         </div>
         <div class="form-check mb-3">
             <input class="form-check-input" id="remember" type="checkbox" @bind="_rememberMe" @attributes="FormControlAttrs"/>
@@ -66,6 +68,7 @@
     private string? _message;
     private bool _busy;
     private bool _rememberMe;
+    private bool _hasError;
 
     private Dictionary<string, object> FormControlAttrs => _busy
         ? new Dictionary<string, object> { ["disabled"] = true }
@@ -78,6 +81,13 @@
     protected override void OnInitialized()
     {
         _message = AuthQueryMessages.Resolve(Nav);
+        _hasError = _message is not null && !IsInfoMessage(Nav);
+    }
+
+    private static bool IsInfoMessage(NavigationManager nav)
+    {
+        var query = nav.ToAbsoluteUri(nav.Uri).Query;
+        return query.Contains("registered=1", StringComparison.Ordinal);
     }
 
     protected override async Task OnInitializedAsync()
@@ -98,10 +108,12 @@
             if (r is null)
             {
                 _message = "Invalid email or password.";
+                _hasError = true;
                 return;
             }
 
             _message = null;
+            _hasError = false;
             await Session.SetSessionAsync(r);
             Nav.NavigateTo("/");
         }
@@ -120,10 +132,12 @@
             if (r is null)
             {
                 _message = "Demo guest is not available. Is the server running?";
+                _hasError = true;
                 return;
             }
 
             _message = null;
+            _hasError = false;
             await Session.SetSessionAsync(r);
             Nav.NavigateTo("/");
         }

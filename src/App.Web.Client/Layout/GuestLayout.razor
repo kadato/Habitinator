@@ -4,10 +4,13 @@
 
 <MudThemeProvider Theme="@HabitinatorMudTheme.Default" IsDarkMode="@IsDarkMode"/>
 
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
 <MudLayout Class="app-shell-layout">
     <MudAppBar Elevation="0" Dense="true" Class="app-top-bar app-top-bar--guest" ToolBarClass="app-top-bar-toolbar" role="banner">
         <a href="/" data-enhance-nav="false" class="text-decoration-none"><MudText Typo="Typo.h6" Class="app-top-bar__title mb-0">Habitinator</MudText></a>
         <MudSpacer />
+        <GitHubRepoLink />
     </MudAppBar>
     <MudMainContent Class="app-shell-main">
         <main id="main-content">

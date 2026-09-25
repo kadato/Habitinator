@@ -12,21 +12,22 @@ Habitinator is a Blazor web and .NET MAUI productivity app. User board data is p
 
 ## Public pages
 
-- `/` - landing for signed-out visitors: sign in, register, or demo guest
-- `/auth/login` - sign in
-- `/auth/register` - create account
+- `/` shows the landing page. Signed-out visitors sign in, register, or continue as the demo guest.
+- `/auth/login` shows the sign-in form.
+- `/auth/register` shows the registration form.
+- `/privacy` states the cookie and data policy. The app uses essential cookies only.
 
 ## API, authenticated
 
 - [OpenAPI](https://habitinator.app/openapi/v1.json)
 - [API catalog](https://habitinator.app/.well-known/api-catalog)
-- [Board REST API](/api/board) with JWT or cookie auth
+- [Board REST API](/api/board) accepts JWT or cookie auth
 - [Health](https://habitinator.app/health)
 
 ## Privacy
 
-Authentication uses session cookies and optional JWT for native clients. No third-party advertising trackers on the web app.
+Authentication uses session cookies and optional JWT for native clients. The web app contains no third-party advertising trackers. Read [the privacy policy](https://habitinator.app/privacy).
 
 ## Security
 
-Report vulnerabilities: [security.txt](https://habitinator.app/.well-known/security.txt)
+To report a vulnerability, read [security.txt](https://habitinator.app/.well-known/security.txt).

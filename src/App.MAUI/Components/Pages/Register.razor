@@ -13,26 +13,28 @@
 <PageTitle>@PageTitles.Page("Create account")</PageTitle>
 
 <AuthPageShell Title="Create account"
-               Subtitle="Pick an email and a password with at least 8 characters."
+               Subtitle="Choose an email and a password. The password needs at least 8 characters."
                MaxWidth="28rem">
     <ChildContent>
         @if (!string.IsNullOrWhiteSpace(_message))
         {
-            <div class="alert alert-warning" role="alert">@_message</div>
+            <div class="alert alert-danger" role="alert" id="auth-error">@_message</div>
         }
 
         <div class="mb-3">
             <label for="reg-email">Email</label>
             <input class="form-control" id="reg-email" type="email" autocomplete="email"
-                   value="@_email" @oninput="OnEmailInput" @attributes="FormControlAttrs"/>
+                   value="@_email" @oninput="OnEmailInput" @attributes="FormControlAttrs"
+                   aria-invalid="@(_hasError ? "true" : null)" aria-describedby="@(_hasError ? "auth-error" : null)"/>
         </div>
         <div class="mb-3">
             <label for="reg-password">Password</label>
             <input class="form-control" id="reg-password" type="password" minlength="8" autocomplete="new-password"
                    title="At least 8 characters."
-                   value="@_password" @oninput="OnPasswordInput" @attributes="FormControlAttrs"/>
+                   value="@_password" @oninput="OnPasswordInput" @attributes="FormControlAttrs"
+                   aria-invalid="@(_hasError ? "true" : null)" aria-describedby="@(_hasError ? "auth-error" : null)"/>
         </div>
-        <p class="auth-form-hint">Use at least 8 characters. Avoid obvious passwords for your own account security.</p>
+        <p class="auth-form-hint">Use at least 8 characters. Avoid obvious passwords for your account security.</p>
         <div class="auth-form-actions">
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
@@ -55,6 +57,7 @@
     private string _password = string.Empty;
     private string? _message;
     private bool _busy;
+    private bool _hasError;
 
     private Dictionary<string, object> FormControlAttrs => _busy
         ? new Dictionary<string, object> { ["disabled"] = true }
@@ -69,6 +72,7 @@
         var query = AuthQueryMessages.ResolveRegister(Nav);
         _email = query.Email ?? string.Empty;
         _message = query.Message;
+        _hasError = _message is not null;
     }
 
     protected override async Task OnInitializedAsync()
@@ -88,6 +92,7 @@
             if (!RegistrationEmailValidation.IsValid(_email))
             {
                 _message = "Enter a valid email address.";
+                _hasError = true;
                 return;
             }
 
@@ -95,10 +100,12 @@
             if (!result.Succeeded)
             {
                 _message = result.Message;
+                _hasError = true;
                 return;
             }
 
             _message = null;
+            _hasError = false;
             Nav.NavigateTo("/auth/login?registered=1");
         }
         finally

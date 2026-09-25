@@ -9,16 +9,16 @@
           Robots="@SeoDefaults.IndexRobots"/>
 
 <AuthPageShell Title="Create account"
-               Subtitle="Pick an email and a password with at least 8 characters."
+               Subtitle="Choose an email and a password. The password needs at least 8 characters."
                MaxWidth="28rem">
     <ChildContent>
         @if (!string.IsNullOrWhiteSpace(_message))
         {
-            <div class="alert alert-warning" role="alert">@_message</div>
+            <div class="alert alert-danger" role="alert" id="auth-error">@_message</div>
         }
 
         <form method="post" action="/api/auth/register-form">
-            <RegisterFormFields FormEmail="@_email"/>
+            <RegisterFormFields FormEmail="@_email" HasError="@_hasError" ErrorId="auth-error"/>
             <div class="auth-form-actions">
                 <MudButton ButtonType="ButtonType.Submit"
                            Variant="Variant.Filled"
@@ -33,18 +33,22 @@
     <Footer>
         <span>Already have an account?</span>
         <a href="/auth/login" data-enhance-nav="false">Sign in</a>
+        <span> · </span>
+        <a href="/privacy" data-enhance-nav="false">Privacy</a>
     </Footer>
 </AuthPageShell>
 
 @code {
     private string? _message;
     private string _email = string.Empty;
+    private bool _hasError;
 
     protected override void OnInitialized()
     {
         var query = AuthQueryMessages.ResolveRegister(Navigation);
         _email = query.Email ?? string.Empty;
         _message = query.Message;
+        _hasError = _message is not null;
     }
 
 }

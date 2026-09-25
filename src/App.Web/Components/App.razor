@@ -103,9 +103,9 @@
                     root.style.colorScheme = 'light';
                 }
 
-                // Sync the cookie so the server knows it on next loads
+                // Sync the cookie so the server knows the theme on the next load
                 const newTheme = isDark ? "dark" : "light";
-                document.cookie = "habitinator_theme=" + newTheme + "; path=/; max-age=31536000; SameSite=Lax";
+                document.cookie = "habitinator_theme=" + newTheme + "; path=/; max-age=31536000; SameSite=Lax" + (window.location.protocol === "https:" ? "; Secure" : "");
 
                 // Check for mismatch between client-resolved theme and server-rendered theme.
                 // If mismatch occurs, reload once so the server renders the correct theme.

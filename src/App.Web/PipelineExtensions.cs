@@ -26,6 +26,8 @@ internal static class PipelineExtensions
 
         app.UseMiddleware<SecurityHeadersMiddleware>();
         app.UseMiddleware<DiscoveryLinkHeadersMiddleware>();
+        app.UseMiddleware<StaticCacheHeadersMiddleware>();
+        app.UseMiddleware<SameOriginCsrfMiddleware>();
 
         app.UseAuthentication();
         app.UseAuthorization();

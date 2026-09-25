@@ -31,7 +31,8 @@ globalThis.habitinatorSetTheme = function (theme) {
                 root.style.colorScheme = "light";
             }
             // Set cookie so the server knows the theme on next load
-            document.cookie = "habitinator_theme=" + theme + "; path=/; max-age=31536000; SameSite=Lax";
+            const secureSuffix = globalThis.location && globalThis.location.protocol === "https:" ? "; Secure" : "";
+            document.cookie = "habitinator_theme=" + theme + "; path=/; max-age=31536000; SameSite=Lax" + secureSuffix;
         };
 
         if (document.startViewTransition && globalThis.matchMedia('(prefers-reduced-motion: no-preference)').matches) {

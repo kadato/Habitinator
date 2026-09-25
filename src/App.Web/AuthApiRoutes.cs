@@ -31,14 +31,14 @@ internal static class AuthApiRoutes
         endpoints.MapPost("/api/auth/guest-jwt", GuestJwtLoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapPost("/api/auth/guest-login", GuestLoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapPost("/api/auth/cookie-login", CookieLoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
-        endpoints.MapPost("/api/auth/cookie-logout", CookieLogoutAsync).DisableAntiforgery();
-        endpoints.MapGet("/api/auth/status", GetStatus);
+        endpoints.MapPost("/api/auth/cookie-logout", CookieLogoutAsync).DisableAntiforgery().RequireRateLimiting("auth");
+        endpoints.MapGet("/api/auth/status", GetStatus).RequireRateLimiting("api");
     }
 
     private static void MapAccountEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/account/change-password", ChangePasswordAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery();
-        endpoints.MapPost("/api/account/delete", DeleteAccountAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery();
+        endpoints.MapPost("/api/account/change-password", ChangePasswordAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery().RequireRateLimiting("api");
+        endpoints.MapPost("/api/account/delete", DeleteAccountAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery().RequireRateLimiting("api");
         endpoints.MapGet("/api/account/export", ExportDataAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery().RequireRateLimiting("api");
     }
 

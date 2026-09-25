@@ -5,7 +5,7 @@
 ![.NET 11](https://img.shields.io/badge/.NET-11.0-3b82f6?logo=dotnet)
 ![.NET MAUI](https://img.shields.io/badge/.NET_MAUI-11.0-3b82f6?logo=dotnet)
 ![Blazor](https://img.shields.io/badge/Blazor-Interactive_WebAssembly-3b82f6?logo=blazor)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17.6-4169E1?logo=postgresql)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17.11-4169E1?logo=postgresql)
 ![SQLite](https://img.shields.io/badge/SQLite-Local--First-003B57?logo=sqlite)
 ![Platforms](https://img.shields.io/badge/Platforms-Android%20%7C%20Windows%20%7C%20iOS%20%7C%20macOS-blue)
 [![GitHub Release](https://img.shields.io/github/v/release/kadato/Habitinator)](https://github.com/kadato/Habitinator/releases/latest)

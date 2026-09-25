@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <DotNetVersion>11.0.0-preview.6.26359.118</DotNetVersion>
+    <DotNetVersion>11.0.0-rc.1.26425.128</DotNetVersion>
     <WebAssemblyVersion>$(DotNetVersion)</WebAssemblyVersion>
   </PropertyGroup>
 
@@ -17,10 +17,10 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="$(DotNetVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(DotNetVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="$(DotNetVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.9.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.10.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="$(DotNetVersion)" />
-    <PackageVersion Include="MudBlazor" Version="9.9.0" />
-    <PackageVersion Include="Plugin.LocalNotification" Version="14.1.1" />
+    <PackageVersion Include="MudBlazor" Version="9.10.0" />
+    <PackageVersion Include="Plugin.LocalNotification" Version="14.1.2" />
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
 
     <!-- Shared UI and Webassembly Client dependencies -->
@@ -39,38 +39,38 @@
     <PackageVersion Include="Microsoft.Extensions.Identity.Stores" Version="$(DotNetVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(DotNetVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="$(DotNetVersion)" />
-    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="11.0.0-preview.6" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="11.0.0-rc.1.1" />
     <PackageVersion Include="Npgsql.DependencyInjection" Version="10.0.3" />
-    <PackageVersion Include="Polly" Version="8.7.0" />
+    <PackageVersion Include="Polly" Version="8.8.0" />
 
     <!-- Aspire AppHost dependencies -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.5.3" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.5.3" />
-    <PackageVersion Include="MessagePack" Version="3.1.8" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.5.4" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.5.4" />
+    <PackageVersion Include="MessagePack" Version="3.1.10" />
 
     <!-- Testing dependencies -->
-    <PackageVersion Include="Appium.WebDriver" Version="8.4.0" />
-    <PackageVersion Include="FluentAssertions" Version="8.10.0" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.0" />
+    <PackageVersion Include="Appium.WebDriver" Version="9.0.0" />
+    <PackageVersion Include="FluentAssertions" Version="8.11.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
     <PackageVersion Include="Xunit.SkippableFact" Version="1.5.85" />
-    <PackageVersion Include="AngleSharp" Version="1.8.1" />
+    <PackageVersion Include="AngleSharp" Version="1.8.2" />
     <PackageVersion Include="bunit" Version="2.11.3" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="FsCheck.Xunit" Version="3.4.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(DotNetVersion)" />
-    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.14.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.15.0" />
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
-    <PackageVersion Include="Microsoft.Playwright" Version="1.62.0" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.63.0" />
 
     <!-- BrandExporter script dependencies -->
-    <PackageVersion Include="SkiaSharp" Version="3.116.1" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="3.116.1" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="3.116.1" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.macOS" Version="3.116.1" />
-    <PackageVersion Include="Svg.Skia" Version="3.0.6" />
+    <PackageVersion Include="SkiaSharp" Version="3.119.4" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="3.119.4" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.macOS" Version="3.119.4" />
+    <PackageVersion Include="Svg.Skia" Version="3.7.0" />
     <PackageVersion Include="System.Drawing.Common" Version="$(DotNetVersion)" />
   </ItemGroup>
 </Project>

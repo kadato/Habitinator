@@ -17,7 +17,7 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
     private readonly string? _externalConnectionString =
         Environment.GetEnvironmentVariable("APPWEB_INTEGRATIONTESTS_CONNECTION_STRING");
 
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine")
+    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17-alpine")
         .WithReuse(true)
         .Build();
 

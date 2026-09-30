@@ -24,7 +24,8 @@ var postgres = builder
     .AddPostgres("postgres", postgresUser, postgresPassword, 5432)
     .WithImage("library/postgres", "17.11")
     .WithDataVolume("habitinatordb-postgres-data")
-    .WithPgAdmin();
+    .WithPgAdmin()
+    .WithRepl();
 
 var habitinatorDb = postgres.AddDatabase("habitinatordb");
 

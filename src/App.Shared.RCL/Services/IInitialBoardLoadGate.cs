@@ -1,3 +1,5 @@
+using App.Shared.RCL.Services.Board.Local;
+
 namespace App.Shared.RCL.Services;
 
 /// <summary>Signals when the home board has finished its first data load, used to defer non-critical startup work.</summary>
@@ -13,6 +15,7 @@ public interface IInitialBoardLoadGate
 public sealed class InitialBoardLoadGate : IInitialBoardLoadGate
 {
     private readonly MauiInitialBoardLoadSignal? _mauiSignal;
+    private readonly BoardInitialLoadSignal? _signal;
     private bool _isComplete;
 
     public InitialBoardLoadGate()
@@ -22,6 +25,11 @@ public sealed class InitialBoardLoadGate : IInitialBoardLoadGate
     public InitialBoardLoadGate(MauiInitialBoardLoadSignal mauiSignal)
     {
         _mauiSignal = mauiSignal;
+    }
+
+    public InitialBoardLoadGate(BoardInitialLoadSignal signal)
+    {
+        _signal = signal;
     }
 
     public bool IsComplete => _isComplete;
@@ -37,6 +45,7 @@ public sealed class InitialBoardLoadGate : IInitialBoardLoadGate
 
         _isComplete = true;
         _mauiSignal?.MarkComplete();
+        _signal?.MarkComplete();
         Completed?.Invoke(this, EventArgs.Empty);
     }
 }

@@ -1,6 +1,6 @@
 namespace App.Shared.RCL.Services;
 
-/// <summary>MAUI local-first sync surface for UI. Web uses <see cref="NoOpBoardSyncStatus" />.</summary>
+/// <summary>Local-first sync surface for UI. Both MAUI and Web report live sync state.</summary>
 public interface IBoardSyncStatus
 {
     bool IsOffline { get; }
@@ -15,7 +15,7 @@ public interface IBoardSyncStatus
     event EventHandler? Changed;
 }
 
-/// <summary>Web / non-MAUI hosts: no local sync layer.</summary>
+/// <summary>Server prerender has no local store. Interactive clients use the shared local-first status.</summary>
 public sealed class NoOpBoardSyncStatus : IBoardSyncStatus
 {
     public bool IsOffline => false;

@@ -2,8 +2,8 @@ namespace App.Shared.RCL.Models;
 
 /// <summary>
 ///     Single source of truth for the board snapshot ordering rules shared by the server
-///     <c>BoardPersistenceService.BuildSnapshot</c> and the MAUI local mirror
-///     <c>LocalFirstBoardDataService.OrderRows</c>. Both clients must render the same order.
+///     <c>BoardPersistenceService.BuildSnapshot</c> and the local-first mirror
+///     <c>LocalFirstBoardDataService.OrderRows</c>. Every host must render the same order.
 /// </summary>
 public static class BoardOrdering
 {

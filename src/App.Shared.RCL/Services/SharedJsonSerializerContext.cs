@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 
 using App.Shared.RCL.Models;
+using App.Shared.RCL.Services.Board.Local;
 using App.Shared.RCL.Services.Remote;
 
 namespace App.Shared.RCL.Services;
@@ -45,6 +46,12 @@ namespace App.Shared.RCL.Services;
 [JsonSerializable(typeof(AuthStatusDto))]
 [JsonSerializable(typeof(UserDataExportDto))]
 [JsonSerializable(typeof(BoardColumnFilterState))]
+[JsonSerializable(typeof(BoardLocalRow))]
+[JsonSerializable(typeof(List<BoardLocalRow>))]
+[JsonSerializable(typeof(BoardOutboxEntry))]
+[JsonSerializable(typeof(List<BoardOutboxEntry>))]
+[JsonSerializable(typeof(BoardStoreMeta))]
+[JsonSerializable(typeof(BoardLocalState))]
 [JsonSerializable(typeof(Dictionary<Guid, int>))]
 [JsonSerializable(typeof(string[]))]
 [JsonSerializable(typeof(List<string>))]

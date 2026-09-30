@@ -4,7 +4,7 @@
 @implements IDisposable
 
 @code {
-    // Sync health lives in `SyncStatusIndicator`, a dot plus text with `role=status`.
+    // Sync health lives in `SyncStatusIndicator`, a cloud icon plus text with `role=status`.
     // Toasts fire only when sync goes offline or into error. They never fire on recovery.
     private NotificationSettings? _settings;
     private bool _wasOffline;

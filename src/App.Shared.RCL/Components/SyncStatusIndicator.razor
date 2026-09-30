@@ -4,37 +4,38 @@
 @implements IDisposable
 
 @{
-    var hasState = BoardSync.LastSyncedUtc is not null || BoardSync.IsOffline || BoardSync.IsSyncing || !string.IsNullOrEmpty(BoardSync.SyncProblemMessage);
     var state = GetState();
-    var dotClass = GetDotClass(state);
+    var stateClass = GetStateClass(state);
+    var flushClass = Flush ? "sync-row--flush" : string.Empty;
+    var icon = GetStateIcon(state);
     var label = GetSyncStatusText();
     var tooltip = GetSyncStatusTooltip();
 }
 
-@if (hasState)
+@if (IconOnly)
 {
-    @if (IconOnly)
-    {
-        <button type="button" class="sync-dot-wrap me-2" title="@tooltip" aria-label="@label. Show sync details." @onclick="ShowDetailsAsync">
-            <span class="sync-dot @dotClass" aria-hidden="true"></span>
-        </button>
-    }
-    else
-    {
-        <div class="sync-row">
-            <span class="sync-dot @dotClass" aria-hidden="true"></span>
-            <span class="sync-row__label">@label</span>
-            @if (BoardSync.LastSyncedUtc is { } syncedAt && state == SyncState.Synced)
-            {
-                <span class="sync-row__meta">@DateFormatService.Format(syncedAt.LocalDateTime)</span>
-            }
-        </div>
-        <MudDivider Class="my-1"/>
-    }
+    <button type="button" class="sync-icon-btn @stateClass" title="@tooltip" aria-label="@label. Show sync details." @onclick="ShowDetailsAsync">
+        <MudIcon Icon="@icon" Class="sync-icon"/>
+    </button>
+}
+else
+{
+    <div class="sync-row @flushClass @stateClass" role="status">
+        <MudIcon Icon="@icon" Class="sync-row__icon"/>
+        <span class="sync-row__label">@label</span>
+        @if (BoardSync.LastSyncedUtc is { } syncedAt && state == SyncState.Synced)
+        {
+            <span class="sync-row__meta">@DateFormatService.Format(syncedAt.LocalDateTime)</span>
+        }
+    </div>
+    <MudDivider Class="my-1"/>
 }
 
 @code {
     [Parameter] public bool IconOnly { get; set; }
+
+    /// <summary>Drops horizontal padding so the row lines up with the host card text. Keep off inside the profile menu.</summary>
+    [Parameter] public bool Flush { get; set; }
 
     private enum SyncState { Offline, Error, Syncing, Synced, Idle }
 
@@ -81,13 +82,22 @@
         return SyncState.Idle;
     }
 
-    private static string GetDotClass(SyncState state) => state switch
+    private static string GetStateClass(SyncState state) => state switch
     {
-        SyncState.Offline => "sync-dot--offline",
-        SyncState.Error => "sync-dot--error",
-        SyncState.Syncing => "sync-dot--syncing",
-        SyncState.Synced => "sync-dot--ok",
-        _ => "sync-dot--idle"
+        SyncState.Offline => "sync-state--offline",
+        SyncState.Error => "sync-state--error",
+        SyncState.Syncing => "sync-state--syncing",
+        SyncState.Synced => "sync-state--ok",
+        _ => "sync-state--idle"
+    };
+
+    private static string GetStateIcon(SyncState state) => state switch
+    {
+        SyncState.Offline => Icons.Material.Filled.CloudOff,
+        SyncState.Error => Icons.Material.Filled.SyncProblem,
+        SyncState.Syncing => Icons.Material.Filled.CloudSync,
+        SyncState.Synced => Icons.Material.Filled.CloudDone,
+        _ => Icons.Material.Filled.CloudQueue
     };
 
     private string GetSyncStatusTooltip()

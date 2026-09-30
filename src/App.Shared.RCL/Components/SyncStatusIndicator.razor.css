@@ -1,81 +1,65 @@
-/* Header dot: 7px, flat, no motion */
-.sync-dot-wrap {
+/* Sync state lives on one class per state. The icon inherits it through currentColor. */
+.sync-state--ok {
+    color: var(--hab-accent-success);
+}
+.sync-state--syncing {
+    color: var(--mud-palette-primary);
+}
+.sync-state--offline {
+    color: var(--hab-type-todo-ink);
+}
+.sync-state--error {
+    color: var(--hab-type-habit-bad);
+}
+.sync-state--idle {
+    color: var(--mud-palette-text-disabled);
+}
+
+/* App bar status button, sized like the profile icon button next to it. */
+.sync-icon-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: var(--space-8);
+    height: var(--space-8);
     flex-shrink: 0;
     padding: 0;
     border: none;
-    border-radius: var(--radius-md);
-    background: transparent;
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, currentColor 12%, transparent);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
 }
 
-.sync-dot-wrap:focus-visible {
+.sync-icon-btn:hover {
+    background: color-mix(in srgb, currentColor 20%, transparent);
+}
+
+.sync-icon-btn:focus-visible {
     outline: 2px solid var(--mud-palette-primary);
-    outline-offset: 1px;
+    outline-offset: 2px;
 }
 
-@media (max-width: 959.98px) {
-    .sync-dot-wrap {
-        width: 44px;
-        height: 44px;
-        margin-right: 0 !important;
-    }
-}
-.sync-dot {
-    --dot-color: var(--mud-palette-text-disabled);
-    position: relative;
-    width: 7px;
-    height: 7px;
-    border-radius: var(--radius-pill);
-    background: var(--dot-color);
-}
-.sync-dot::after {
-    content: "";
-    position: absolute;
-    inset: -4px;
-    border-radius: var(--radius-pill);
-    border: 1px solid transparent;
-    opacity: 0;
-}
-.sync-dot--offline {
-    --dot-color: var(--hab-type-todo);
-}
-.sync-dot--offline::after {
-    border-color: color-mix(in srgb, var(--hab-type-todo) 28%, transparent);
-    opacity: 1;
-}
-.sync-dot--error {
-    --dot-color: var(--hab-type-habit-bad);
-}
-.sync-dot--syncing {
-    --dot-color: var(--mud-palette-primary);
-}
-.sync-dot--syncing::after {
-    border-color: color-mix(in srgb, var(--mud-palette-primary) 26%, transparent);
-    opacity: 1;
-}
-.sync-dot--ok {
-    --dot-color: #16a34a;
-    opacity: 0.72;
-}
-.sync-dot--idle {
-    --dot-color: var(--mud-palette-text-disabled);
-    opacity: 0.5;
+.sync-icon-btn ::deep .sync-icon {
+    font-size: 1.25rem;
 }
 
-/* Expanded row inside profile menu */
+/* Row inside the profile menu and Settings. */
 .sync-row {
     display: flex;
     align-items: center;
     gap: 0.6rem;
     padding: 0.65rem 1rem;
     flex-wrap: wrap;
+}
+.sync-row ::deep .sync-row__icon {
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+.sync-row--flush {
+    padding-left: 0;
+    padding-right: 0;
 }
 .sync-row__label {
     font-family: var(--hab-font-sans);
@@ -95,4 +79,20 @@
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* Soft pulse while a sync is in flight. The global reduced-motion rule stops it. */
+.sync-icon-btn.sync-state--syncing ::deep .sync-icon,
+.sync-row.sync-state--syncing ::deep .sync-row__icon {
+    animation: sync-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes sync-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
 }

@@ -453,20 +453,12 @@ input[type="number"].mud-input-slot {
         order: 2 !important;
     }
 
-    /* Compact sync/profile icons on mobile */
+    /* Compact profile icons on mobile */
     .app-header-user-rail {
         flex-direction: row !important;
         gap: var(--space-1);
         justify-content: flex-start;
         align-items: center;
-    }
-
-    .app-header-user-rail .sync-status-indicator {
-        margin-right: var(--space-1) !important;
-    }
-
-    .app-header-user-rail .sync-status-indicator .mud-icon {
-        font-size: 1.25rem !important;
     }
 
     .app-header-profile-btn.mud-icon-button {

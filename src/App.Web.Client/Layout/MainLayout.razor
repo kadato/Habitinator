@@ -1,12 +1,14 @@
 @using System.Security.Claims
 @using global::App.Shared.RCL
 @using global::App.Shared.RCL.Services
+@using global::App.Shared.RCL.Services.Board.Local
 @using global::App.Shared.RCL.Themes
 @using Microsoft.AspNetCore.WebUtilities
 @inherits ThemeLayoutBase
 @inject IClientSessionProvider SessionProvider
 @inject IActivityStatisticsReader StatsReader
 @inject IBoardDataService BoardData
+@inject IBoardLocalStoreLifecycle LocalBoardLifecycle
 
 <PageTitle>@SeoDefaults.DefaultTitle</PageTitle>
 
@@ -131,7 +133,20 @@
 
     private async Task TriggerLogout()
     {
+        await ClearLocalBoardAsync();
         await JS.InvokeVoidAsync("habitinatorSubmitForm", "globalLogoutForm");
+    }
+
+    private async Task ClearLocalBoardAsync()
+    {
+        try
+        {
+            await LocalBoardLifecycle.ClearAllLocalStateAsync();
+        }
+        catch
+        {
+            // Never block logout on a local wipe failure.
+        }
     }
 
     [CascadingParameter(Name = "IsDarkMode")]

@@ -1,4 +1,5 @@
 using App.Shared.RCL.Services;
+using App.Shared.RCL.Services.Board.Local;
 using App.Shared.RCL.Services.CommandPalette;
 using App.Shared.RCL.Services.Remote;
 using App.Web.Client.Services;
@@ -47,16 +48,32 @@ builder.Services.AddSingleton<IAppWindowProgressService, FallbackAppWindowProgre
 builder.Services.AddSingleton<IAppUpdaterService, FallbackAppUpdaterService>();
 builder.Services.AddScoped<ITimerSessionLogService, TimerSessionLogService>();
 builder.Services.AddScoped<RemoteBoardRefreshService>();
-builder.Services.AddScoped<IRemoteBoardRefreshService>(sp => sp.GetRequiredService<RemoteBoardRefreshService>());
-builder.Services.AddSingleton<IBoardSyncStatus, NoOpBoardSyncStatus>();
+builder.Services.AddScoped<IRemoteBoardRefreshService, SyncBeforeNotifyRefreshService>();
 builder.Services.AddScoped<BoardRemoteNotifyBridge>();
-builder.Services.AddScoped<IInitialBoardLoadGate, InitialBoardLoadGate>();
+builder.Services.AddScoped<IInitialBoardLoadGate>(sp => new InitialBoardLoadGate(sp.GetRequiredService<BoardInitialLoadSignal>()));
 builder.Services.AddScoped<IUndoService, UndoService>();
 
 builder.Services.AddScoped<RemoteBoardDataService>();
+builder.Services.AddScoped<IBoardLocalStore, IndexedDbBoardLocalStore>();
+builder.Services.AddScoped<ICurrentUserKeyProvider, WasmCurrentUserKeyProvider>();
+builder.Services.AddScoped<BoardSyncStatus>();
+builder.Services.AddScoped<IBoardSyncStatus>(sp => sp.GetRequiredService<BoardSyncStatus>());
+builder.Services.AddScoped<BoardInitialLoadSignal>();
+builder.Services.AddScoped<LocalFirstBoardDataService>();
+builder.Services.AddScoped<IBoardLocalStoreLifecycle>(sp => sp.GetRequiredService<LocalFirstBoardDataService>());
+builder.Services.AddScoped<BoardSyncCoordinator>(sp => new BoardSyncCoordinator(
+    sp.GetRequiredService<LocalFirstBoardDataService>(),
+    sp.GetRequiredService<ICurrentUserKeyProvider>(),
+    sp.GetRequiredService<BoardSyncStatus>(),
+    sp.GetRequiredService<BoardInitialLoadSignal>(),
+    sp.GetRequiredService<RemoteBoardRefreshService>(),
+    sp.GetRequiredService<ILogger<BoardSyncCoordinator>>(),
+    sp,
+    isOfflineProbe: () => sp.GetRequiredService<IBoardLocalStore>() is IndexedDbBoardLocalStore wasm && !wasm.IsOnline()));
+builder.Services.AddScoped<IBoardSyncRequestor>(sp => sp.GetRequiredService<BoardSyncCoordinator>());
 builder.Services.AddScoped<IBoardDataService>(sp =>
 {
-    var inner = sp.GetRequiredService<RemoteBoardDataService>();
+    var inner = sp.GetRequiredService<LocalFirstBoardDataService>();
     var undoService = sp.GetRequiredService<IUndoService>();
     return new UndoableBoardDataService(inner, undoService);
 });

@@ -1,7 +1,9 @@
 @page "/settings"
+@using App.Shared.RCL.Services.Board.Local
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject BoardUiSessionState UiSessionState
+@inject IBoardLocalStoreLifecycle LocalBoardLifecycle
 
 <PageMeta Title="@PageTitles.Page("Settings")"
           Description="Notification preferences, account, and app settings."
@@ -62,12 +64,27 @@
         UiSessionState.SettingsSectionIndex = value;
     }
 
-    private Task LogoutAsync() =>
-        JS.InvokeVoidAsync("habitinatorSubmitForm", "globalLogoutForm").AsTask();
-
-    private Task HandleAccountDeleted()
+    private async Task LogoutAsync()
     {
+        await ClearLocalBoardAsync();
+        await JS.InvokeVoidAsync("habitinatorSubmitForm", "globalLogoutForm");
+    }
+
+    private async Task HandleAccountDeleted()
+    {
+        await ClearLocalBoardAsync();
         Nav.NavigateTo("/?accountDeleted=1", forceLoad: true);
-        return Task.CompletedTask;
+    }
+
+    private async Task ClearLocalBoardAsync()
+    {
+        try
+        {
+            await LocalBoardLifecycle.ClearAllLocalStateAsync();
+        }
+        catch
+        {
+            // Never block logout on a local wipe failure.
+        }
     }
 }

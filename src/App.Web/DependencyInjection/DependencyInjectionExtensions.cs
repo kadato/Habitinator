@@ -2,6 +2,7 @@ using System.Text;
 
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+using App.Shared.RCL.Services.Board.Local;
 using App.Shared.RCL.Services.CommandPalette;
 using App.Web.Auth;
 using App.Web.Data;
@@ -118,6 +119,7 @@ public static class DependencyInjectionExtensions
         services.AddHttpContextAccessor();
         services.AddScoped<IRemoteBoardRefreshService, RemoteBoardRefreshService>();
         services.AddSingleton<IBoardSyncStatus, NoOpBoardSyncStatus>();
+        services.AddSingleton<IBoardLocalStoreLifecycle, NoOpBoardLocalStoreLifecycle>();
         services.AddScoped<BoardRemoteNotifyBridge>();
         services.AddSingleton(sp => new MemoryCacheStore<BoardSnapshot>(
             sp.GetRequiredService<IMemoryCache>(),

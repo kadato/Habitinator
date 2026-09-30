@@ -1,7 +1,7 @@
 #pragma warning disable CA1724 // Type name 'App' conflicts with namespace 'App' - MAUI framework requires this naming convention
 
 using App.MAUI.Services;
-using App.MAUI.Services.LocalBoard;
+using App.Shared.RCL.Services.Board.Local;
 
 using Microsoft.Extensions.Logging;
 
@@ -33,7 +33,7 @@ public partial class App : Application
             return;
         }
 
-        if (sp.GetService(typeof(IMauiBoardLocalStoreLifecycle)) is IMauiBoardLocalStoreLifecycle store)
+        if (sp.GetService(typeof(IBoardLocalStoreLifecycle)) is IBoardLocalStoreLifecycle store)
         {
             _ = RunStartupTaskAsync(sp, "SQLite store init", store.EnsureStoreReadyAsync);
         }
@@ -53,7 +53,7 @@ public partial class App : Application
             return;
         }
 
-        if (sp.GetService(typeof(MauiBoardSyncCoordinator)) is MauiBoardSyncCoordinator sync)
+        if (sp.GetService(typeof(BoardSyncCoordinator)) is BoardSyncCoordinator sync)
         {
             sync.RequestSync();
         }

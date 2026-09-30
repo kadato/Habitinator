@@ -1,5 +1,5 @@
-using App.MAUI.Services.LocalBoard;
 using App.Shared.RCL.Services;
+using App.Shared.RCL.Services.Board.Local;
 
 using Microsoft.Extensions.Logging;
 

@@ -2,6 +2,7 @@ using App.MAUI.Data;
 using App.MAUI.Services;
 using App.MAUI.Services.LocalBoard;
 using App.Shared.RCL.Services;
+using App.Shared.RCL.Services.Board.Local;
 using App.Shared.RCL.Services.CommandPalette;
 using App.Shared.RCL.Services.Remote;
 
@@ -62,14 +63,32 @@ public static class MauiProgram
         builder.Services.AddDbContextFactory<LocalBoardDbContext>(o =>
             o.UseSqlite($"Data Source={localBoardDbPath}"));
         builder.Services.AddSingleton<RemoteBoardRefreshService>();
-        builder.Services.AddSingleton<MauiBoardSyncStatus>();
-        builder.Services.AddSingleton<IBoardSyncStatus>(sp => sp.GetRequiredService<MauiBoardSyncStatus>());
-        builder.Services.AddSingleton<MauiInitialBoardLoadSignal>();
-        builder.Services.AddSingleton<MauiBoardSyncCoordinator>();
-        builder.Services.AddSingleton<IRemoteBoardRefreshService>(sp =>
-            new PullBeforeNotifyRemoteBoardRefreshService(
-                sp.GetRequiredService<RemoteBoardRefreshService>(),
-                sp.GetRequiredService<MauiBoardSyncCoordinator>()));
+        builder.Services.AddSingleton<BoardSyncStatus>();
+        builder.Services.AddSingleton<IBoardSyncStatus>(sp => sp.GetRequiredService<BoardSyncStatus>());
+        builder.Services.AddSingleton<BoardInitialLoadSignal>();
+        builder.Services.AddSingleton<ICurrentUserKeyProvider, MauiCurrentUserKeyProvider>();
+        builder.Services.AddSingleton<IBoardLocalStore, SqliteBoardLocalStore>();
+        builder.Services.AddSingleton<BoardSyncCoordinator>(sp => new BoardSyncCoordinator(
+            sp.GetRequiredService<LocalFirstBoardDataService>(),
+            sp.GetRequiredService<ICurrentUserKeyProvider>(),
+            sp.GetRequiredService<BoardSyncStatus>(),
+            sp.GetRequiredService<BoardInitialLoadSignal>(),
+            sp.GetRequiredService<RemoteBoardRefreshService>(),
+            sp.GetRequiredService<ILogger<BoardSyncCoordinator>>(),
+            sp,
+            isOfflineProbe: () =>
+            {
+                try
+                {
+                    return Connectivity.Current.NetworkAccess != NetworkAccess.Internet;
+                }
+                catch
+                {
+                    return false;
+                }
+            }));
+        builder.Services.AddSingleton<IBoardSyncRequestor>(sp => sp.GetRequiredService<BoardSyncCoordinator>());
+        builder.Services.AddSingleton<IRemoteBoardRefreshService, SyncBeforeNotifyRefreshService>();
         builder.Services.AddSingleton<BoardRemoteNotifyBridge>();
         builder.Services.AddSingleton<MauiBoardHubService>();
         builder.Services.AddTransient<AuthMessageHandler>();
@@ -87,7 +106,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ApiAuthService>();
         builder.Services.AddSingleton<RemoteBoardDataService>();
         builder.Services.AddSingleton<LocalFirstBoardDataService>();
-        builder.Services.AddSingleton<IMauiBoardLocalStoreLifecycle>(sp =>
+        builder.Services.AddSingleton<IBoardLocalStoreLifecycle>(sp =>
             sp.GetRequiredService<LocalFirstBoardDataService>());
         builder.Services.AddSingleton<IApiSession, ApiSession>();
         builder.Services.AddSingleton<IClock, SystemClock>();
@@ -121,7 +140,7 @@ public static class MauiProgram
         builder.Services.AddScoped<IFocusTimerClientAlerts, FocusTimerClientAlerts>();
         builder.Services.AddScoped<IDailyRetroPromptStore, JsDailyRetroPromptStore>();
         builder.Services.AddScoped<IInitialBoardLoadGate>(sp =>
-            new InitialBoardLoadGate(sp.GetRequiredService<MauiInitialBoardLoadSignal>()));
+            new InitialBoardLoadGate(sp.GetRequiredService<BoardInitialLoadSignal>()));
         // Singleton so the singleton LocalFirstBoardDataService and the Blazor components share one
         // instance. A scoped instance captured by the singleton would never be initialized or overridden.
         builder.Services.AddSingleton<IUserTimeZoneService, UserTimeZoneService>();

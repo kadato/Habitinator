@@ -1,6 +1,6 @@
-using App.MAUI.Services.LocalBoard;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+using App.Shared.RCL.Services.Board.Local;
 
 using Microsoft.Extensions.Logging;
 
@@ -18,18 +18,18 @@ public interface IApiSession : IClientSessionProvider
 public sealed class ApiSession : IApiSession
 {
     private readonly MauiBoardHubService _hub;
-    private readonly IMauiBoardLocalStoreLifecycle _localBoard;
-    private readonly MauiBoardSyncCoordinator _sync;
-    private readonly MauiBoardSyncStatus _syncStatus;
+    private readonly IBoardLocalStoreLifecycle _localBoard;
+    private readonly BoardSyncCoordinator _sync;
+    private readonly BoardSyncStatus _syncStatus;
     private readonly IAuthTokenStore _store;
     private readonly ILogger<ApiSession> _logger;
 
     public ApiSession(
         IAuthTokenStore store,
         MauiBoardHubService hub,
-        IMauiBoardLocalStoreLifecycle localBoard,
-        MauiBoardSyncCoordinator sync,
-        MauiBoardSyncStatus syncStatus,
+        IBoardLocalStoreLifecycle localBoard,
+        BoardSyncCoordinator sync,
+        BoardSyncStatus syncStatus,
         ILogger<ApiSession> logger)
     {
         _store = store;
@@ -101,8 +101,7 @@ public sealed class ApiSession : IApiSession
     {
         await _hub.DisconnectAsync(cancellationToken);
         await _localBoard.ClearAllLocalStateAsync(cancellationToken);
-        _syncStatus.LastSyncedUtc = null;
-        _syncStatus.SyncProblemMessage = null;
+        _syncStatus.ClearSyncState();
         await _store.SetAccessTokenAsync(null, cancellationToken);
         await _store.SetEmailAsync(null, cancellationToken);
         IsLoggedIn = false;

@@ -22,4 +22,10 @@ public sealed class UserActivityEventEntity
 
     /// <summary>Custom label for free-text sessions not linked to a board item.</summary>
     public string? CustomLabel { get; set; }
+
+    /// <summary>
+    ///     Client-generated event id used to deduplicate retried log requests. Null for events
+    ///     created by legacy clients or by server-side flows that do not need deduplication.
+    /// </summary>
+    public Guid? EventId { get; set; }
 }

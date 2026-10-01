@@ -562,6 +562,7 @@ public sealed class BoardPersistenceService(
         TimeSpan duration,
         Guid? boardItemId,
         string? customLabel = null,
+        Guid? eventId = null,
         CancellationToken cancellationToken = default)
     {
         var sec = DurationSeconds(duration);
@@ -570,8 +571,13 @@ public sealed class BoardPersistenceService(
             return;
         }
 
-        AddActivityEvent(userId, ActivityEventType.TimerSession, boardItemId, sec, customLabel);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        if (eventId is { } id && await ActivityEventExistsAsync(userId, id, cancellationToken))
+        {
+            return;
+        }
+
+        AddActivityEvent(userId, ActivityEventType.TimerSession, boardItemId, sec, customLabel, eventId: eventId);
+        await SaveActivityEventAsync(eventId, cancellationToken);
     }
 
     internal static int DurationSeconds(TimeSpan duration) =>
@@ -996,10 +1002,36 @@ public sealed class BoardPersistenceService(
         Guid? boardItemId,
         int? durationSeconds = null,
         string? itemTitleSnapshot = null,
+        Guid? eventId = null,
         CancellationToken cancellationToken = default)
     {
-        AddActivityEvent(userId, type, boardItemId, durationSeconds, itemTitleSnapshot);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        if (eventId is { } id && await ActivityEventExistsAsync(userId, id, cancellationToken))
+        {
+            return;
+        }
+
+        AddActivityEvent(userId, type, boardItemId, durationSeconds, itemTitleSnapshot, eventId: eventId);
+        await SaveActivityEventAsync(eventId, cancellationToken);
+    }
+
+    private Task<bool> ActivityEventExistsAsync(Guid userId, Guid eventId, CancellationToken cancellationToken) =>
+        dbContext.UserActivityEvents.AnyAsync(x => x.UserId == userId && x.EventId == eventId, cancellationToken);
+
+    private async Task SaveActivityEventAsync(Guid? eventId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (eventId is not null && PostgresErrors.IsUniqueViolation(ex))
+        {
+            // Another request with the same event id inserted first. The event is already logged.
+            foreach (var entry in dbContext.ChangeTracker.Entries<UserActivityEventEntity>()
+                         .Where(e => e.State == EntityState.Added))
+            {
+                entry.State = EntityState.Detached;
+            }
+        }
     }
 
     private void AddActivityEvent(
@@ -1008,7 +1040,8 @@ public sealed class BoardPersistenceService(
         Guid? boardItemId,
         int? durationSeconds = null,
         string? customLabel = null,
-        DateTimeOffset? occurredAtUtc = null)
+        DateTimeOffset? occurredAtUtc = null,
+        Guid? eventId = null)
     {
         dbContext.UserActivityEvents.Add(new UserActivityEventEntity
         {
@@ -1018,7 +1051,8 @@ public sealed class BoardPersistenceService(
             EventType = type,
             BoardItemId = boardItemId,
             DurationSeconds = type == ActivityEventType.TimerSession ? durationSeconds : null,
-            CustomLabel = customLabel
+            CustomLabel = customLabel,
+            EventId = eventId
         });
     }
 }

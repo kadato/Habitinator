@@ -4,7 +4,7 @@ using App.Shared.RCL.Models;
 
 namespace App.Shared.RCL.Services.Remote;
 
-public sealed class RemoteUserActivityLogService : IUserActivityLogService
+public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDisposable
 {
     private const string PendingKey = "habitinator_activity_pending_v1";
     private static readonly JsonSerializerOptions Serializer = JsonDefaults.Api;
@@ -14,6 +14,7 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService
     private readonly IActivityEventStore? _eventStore;
     private readonly ILocalSettingsStore? _localStore;
     private readonly IClock? _clock;
+    private readonly SemaphoreSlim _queueGate = new(1, 1);
 
     public RemoteUserActivityLogService(
         IHttpClientFactory http,
@@ -59,7 +60,7 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService
         }
 
         await PostBestEffortAsync(
-            new ActivityLogRequest(eventType, boardItemId, durationSeconds, itemTitleSnapshot),
+            new ActivityLogRequest(eventType, boardItemId, durationSeconds, itemTitleSnapshot, Guid.NewGuid()),
             cancellationToken);
     }
 
@@ -96,7 +97,7 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService
         }
 
         await PostBestEffortAsync(
-            new ActivityLogRequest(ActivityEventType.TimerSession, boardItemId, sec, customLabel),
+            new ActivityLogRequest(ActivityEventType.TimerSession, boardItemId, sec, customLabel, Guid.NewGuid()),
             cancellationToken);
     }
 
@@ -113,18 +114,20 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService
         }
         catch
         {
-            // Queue for later sync via outbox pattern
-            EnqueuePending(req);
+            // Queue for later sync via outbox pattern. The request keeps its event id, so a replay
+            // that already reached the server is deduplicated there.
+            await EnqueuePendingAsync(req, CancellationToken.None);
         }
     }
 
-    private void EnqueuePending(ActivityLogRequest req)
+    private async Task EnqueuePendingAsync(ActivityLogRequest req, CancellationToken cancellationToken)
     {
         if (_localStore == null)
         {
             return;
         }
 
+        await _queueGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             var raw = _localStore.Read(PendingKey);
@@ -144,6 +147,10 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService
             // Ignore - best effort to enqueue pending request for later sync
             _ = ex;
         }
+        finally
+        {
+            _queueGate.Release();
+        }
     }
 
     public async Task TryFlushPendingAsync(CancellationToken cancellationToken = default)
@@ -153,78 +160,95 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService
             return;
         }
 
-        List<ActivityLogRequest> pending;
+        List<ActivityLogRequest> batch;
+        await _queueGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
-        {
-            var raw = _localStore.Read(PendingKey);
-            if (string.IsNullOrEmpty(raw))
-            {
-                return;
-            }
-
-            pending = JsonSerializer.Deserialize<List<ActivityLogRequest>>(raw, Serializer) ?? [];
-            if (pending.Count == 0)
-            {
-                return;
-            }
-        }
-        catch (Exception ex)
-        {
-            // Ignore - corrupted pending queue, treat as empty
-            _ = ex;
-            return;
-        }
-
-        var remaining = new List<ActivityLogRequest>();
-        foreach (var p in pending)
         {
             try
             {
-                using var res = await Client.PostAsJsonAsync("api/activity/log", p, cancellationToken);
+                var raw = _localStore.Read(PendingKey);
+                if (string.IsNullOrEmpty(raw))
+                {
+                    return;
+                }
+
+                batch = JsonSerializer.Deserialize<List<ActivityLogRequest>>(raw, Serializer) ?? [];
+                if (batch.Count == 0)
+                {
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Ignore - corrupted pending queue, treat as empty
+                _ = ex;
+                return;
+            }
+
+            // Take the batch out of the queue while it is in flight. Requests enqueued during the
+            // flush land after it, and the failed tail is put back in front of them below.
+            _localStore.Write(PendingKey, "");
+        }
+        finally
+        {
+            _queueGate.Release();
+        }
+
+        var firstFailedIndex = -1;
+        for (var i = 0; i < batch.Count; i++)
+        {
+            try
+            {
+                using var res = await Client.PostAsJsonAsync("api/activity/log", batch[i], cancellationToken);
                 res.EnsureSuccessStatusCode();
             }
             catch (Exception ex)
             {
-                // Ignore - keep remaining pending for next flush attempt
+                // Ignore - keep this and the following entries pending for the next flush attempt
                 _ = ex;
-                remaining.Add(p);
-                // Keep remaining pending in order
-                var idx = pending.IndexOf(p);
-                for (var i = idx + 1; i < pending.Count; i++)
-                {
-                    remaining.Add(pending[i]);
-                }
-
+                firstFailedIndex = i;
                 break;
             }
         }
 
+        if (firstFailedIndex != 0)
+        {
+            _statsReader?.InvalidateCache();
+        }
+
+        if (firstFailedIndex < 0)
+        {
+            return;
+        }
+
+        await _queueGate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
         try
         {
-            if (remaining.Count == 0)
-            {
-                _localStore.Write(PendingKey, "");
-            }
-            else if (remaining.Count != pending.Count)
-            {
-                _localStore.Write(PendingKey, JsonSerializer.Serialize(remaining, Serializer));
-            }
+            var raw = _localStore.Read(PendingKey);
+            var newer = string.IsNullOrEmpty(raw)
+                ? []
+                : JsonSerializer.Deserialize<List<ActivityLogRequest>>(raw, Serializer) ?? [];
+            var failed = batch.Skip(firstFailedIndex).ToList();
+            failed.AddRange(newer);
+            _localStore.Write(PendingKey, JsonSerializer.Serialize(failed, Serializer));
         }
         catch (Exception ex)
         {
             // Ignore - best effort to persist remaining pending queue
             _ = ex;
         }
-
-        if (remaining.Count != pending.Count)
+        finally
         {
-            _statsReader?.InvalidateCache();
+            _queueGate.Release();
         }
     }
+
+    public void Dispose() => _queueGate.Dispose();
 }
 
 public sealed record ActivityLogRequest(
     ActivityEventType EventType,
     Guid? BoardItemId,
     int? DurationSeconds,
-    string? CustomLabel);
+    string? CustomLabel,
+    Guid EventId = default);

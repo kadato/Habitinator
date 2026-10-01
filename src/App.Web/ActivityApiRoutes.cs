@@ -80,6 +80,7 @@ internal static class ActivityApiRoutes
                 TimeSpan.FromSeconds(body.DurationSeconds.Value),
                 body.BoardItemId,
                 body.CustomLabel,
+                eventId: body.EventId == Guid.Empty ? null : body.EventId,
                 cancellationToken);
         }
         else
@@ -90,6 +91,7 @@ internal static class ActivityApiRoutes
                 body.BoardItemId,
                 body.DurationSeconds,
                 body.CustomLabel,
+                eventId: body.EventId == Guid.Empty ? null : body.EventId,
                 cancellationToken);
         }
         return Results.NoContent();

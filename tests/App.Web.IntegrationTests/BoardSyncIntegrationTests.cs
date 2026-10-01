@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 
 using App.Shared.RCL.Models;
+using App.Shared.RCL.Services.Remote;
 using App.Web.Data;
 
 using FluentAssertions;
@@ -247,6 +248,62 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
         var staleSave = async () => await db2.SaveChangesAsync();
 
         await staleSave.Should().ThrowAsync<DbUpdateConcurrencyException>();
+    }
+
+    [Fact]
+    public async Task Duplicate_activity_event_id_is_deduplicated()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (token, _) = await RegisterAndLoginAsync(client);
+
+        var eventId = Guid.NewGuid();
+        var request = new ActivityLogRequest(ActivityEventType.HabitPlus, null, null, "Water", eventId);
+
+        (await PostActivityAsync(client, token, request)).EnsureSuccessStatusCode();
+        (await PostActivityAsync(client, token, request)).EnsureSuccessStatusCode();
+
+        var dbFactory = factory.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        await using var db = await dbFactory.CreateDbContextAsync();
+        (await db.UserActivityEvents.CountAsync(x => x.EventId == eventId)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Concurrent_activity_events_with_the_same_id_insert_once()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (token, _) = await RegisterAndLoginAsync(client);
+
+        var eventId = Guid.NewGuid();
+        var request = new ActivityLogRequest(ActivityEventType.HabitPlus, null, null, "Pushups", eventId);
+
+        var responses = await Task.WhenAll(
+            Enumerable.Range(0, 4).Select(_ => PostActivityAsync(client, token, request)));
+        try
+        {
+            foreach (var response in responses)
+            {
+                response.EnsureSuccessStatusCode();
+            }
+        }
+        finally
+        {
+            foreach (var response in responses)
+            {
+                response.Dispose();
+            }
+        }
+
+        var dbFactory = factory.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        await using var db = await dbFactory.CreateDbContextAsync();
+        (await db.UserActivityEvents.CountAsync(x => x.EventId == eventId)).Should().Be(1);
+    }
+
+    private static Task<HttpResponseMessage> PostActivityAsync(HttpClient client, string token, ActivityLogRequest request)
+    {
+        var message = new HttpRequestMessage(HttpMethod.Post, "/api/activity/log");
+        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        message.Content = JsonContent.Create(request, options: s_json);
+        return client.SendAsync(message);
     }
 
     private static async Task<BoardItem> CreateTodoAsync(HttpClient client, string token, string title)

@@ -6,8 +6,6 @@ using App.Web.Data;
 
 using Microsoft.EntityFrameworkCore;
 
-using Npgsql;
-
 namespace App.Web.Services;
 
 /// <summary>Idempotent replay for board mutations, using the Idempotency-Key and request fingerprint.</summary>
@@ -92,7 +90,7 @@ public sealed class BoardIdempotencyService(
             {
                 await db.SaveChangesAsync(cancellationToken);
             }
-            catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+            catch (DbUpdateException ex) when (PostgresErrors.IsUniqueViolation(ex))
             {
                 db.Entry(claim).State = EntityState.Detached; // Detach failed entry from change tracker
                 claimAttempts++;
@@ -183,19 +181,6 @@ public sealed class BoardIdempotencyService(
 
         logger.LogWarning("Idempotency wait timed out for user {UserId} key {Key}.", userId, idempotencyKey);
         throw new TimeoutException("Idempotency replay wait timed out.");
-    }
-
-    private static bool IsUniqueViolation(DbUpdateException exception)
-    {
-        for (Exception? ex = exception; ex is not null; ex = ex.InnerException)
-        {
-            if (ex is PostgresException { SqlState: "23505" })
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     public static string IdempotencyMismatchJson() =>

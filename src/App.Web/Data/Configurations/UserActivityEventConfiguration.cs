@@ -13,6 +13,7 @@ public sealed class UserActivityEventConfiguration : IEntityTypeConfiguration<Us
         builder.Property(x => x.OccurredAtUtc).IsRequired();
         builder.HasIndex(x => new { x.UserId, x.OccurredAtUtc });
         builder.HasIndex(x => new { x.UserId, x.BoardItemId, x.EventType, x.OccurredAtUtc });
+        builder.HasIndex(x => new { x.UserId, x.EventId }).IsUnique();
         builder.HasOne(x => x.User)
             .WithMany()
             .HasForeignKey(x => x.UserId)

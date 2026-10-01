@@ -39,6 +39,7 @@ public sealed class WebUserActivityLogService : IUserActivityLogService
             boardItemId,
             durationSeconds,
             itemTitleSnapshot,
+            eventId: Guid.NewGuid(),
             cancellationToken);
     }
 
@@ -58,6 +59,6 @@ public sealed class WebUserActivityLogService : IUserActivityLogService
             return;
         }
 
-        await _persistence.LogTimerSessionAsync(userId.Value, duration, boardItemId, customLabel, cancellationToken);
+        await _persistence.LogTimerSessionAsync(userId.Value, duration, boardItemId, customLabel, eventId: Guid.NewGuid(), cancellationToken);
     }
 }

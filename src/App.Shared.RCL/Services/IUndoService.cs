@@ -8,7 +8,9 @@ public interface IUndoService
     Guid RegisterUndo(string description, Func<Task> undoFunc);
 
     /// <summary>
-    ///     Registers an undo entry with associated conflict keys describing touched state.
+    ///     Registers an undo entry with conflict keys describing the state it touches. When an older
+    ///     entry is undone out of order, newer entries with overlapping keys are undone first, so the
+    ///     target's inverse never restores a value a newer change already replaced.
     /// </summary>
     Guid RegisterUndo(string description, Func<Task> undoFunc, IReadOnlyCollection<string> conflictKeys);
 

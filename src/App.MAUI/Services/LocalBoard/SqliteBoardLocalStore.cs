@@ -1,4 +1,5 @@
 using App.MAUI.Data;
+using App.Shared.RCL.Models;
 using App.Shared.RCL.Services.Board.Local;
 
 using Microsoft.EntityFrameworkCore;
@@ -155,6 +156,56 @@ public sealed class SqliteBoardLocalStore(
                 await db.SaveChangesAsync(cancellationToken);
             }
 
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
+    public async Task ApplyDeltaAsync(
+        string userKey,
+        IReadOnlyList<(BoardSection Section, BoardItem Item)> upserts,
+        IReadOnlyList<Guid> deletedIds,
+        CancellationToken cancellationToken = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            if (deletedIds.Count > 0)
+            {
+                await db.BoardItems
+                    .Where(x => x.UserKey == userKey && deletedIds.Contains(x.Id))
+                    .ExecuteDeleteAsync(cancellationToken);
+            }
+
+            if (upserts.Count > 0)
+            {
+                var ids = upserts.Select(u => u.Item.Id).ToList();
+                var existingById = await db.BoardItems
+                    .Where(x => ids.Contains(x.Id))
+                    .ToDictionaryAsync(x => x.Id, cancellationToken);
+
+                foreach (var (section, item) in upserts)
+                {
+                    var local = BoardLocalRow.FromModel(section, userKey, item, awaitingCreate: false);
+                    if (existingById.TryGetValue(item.Id, out var existing))
+                    {
+                        existing.UserKey = userKey;
+                        existing.Section = section;
+                        existing.CopyFrom(ToRow(local));
+                    }
+                    else
+                    {
+                        db.BoardItems.Add(ToRow(local));
+                    }
+                }
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
         catch

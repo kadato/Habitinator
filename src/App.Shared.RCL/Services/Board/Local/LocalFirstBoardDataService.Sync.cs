@@ -86,6 +86,7 @@ public sealed partial class LocalFirstBoardDataService
             var meta = await store.GetMetaAsync(cancellationToken);
             meta.LastSyncCursorUtc = delta.NextCursor;
             await store.SetMetaAsync(meta, cancellationToken);
+            _cachedSnapshot = null;
             return (true, true);
         }
         finally
@@ -135,6 +136,7 @@ public sealed partial class LocalFirstBoardDataService
             .. snap.Dailies.Select(d => BoardLocalRow.FromModel(BoardSection.Daily, userKey, d, false)),
             .. snap.Todos.Select(t => BoardLocalRow.FromModel(BoardSection.Todo, userKey, t, false))];
         await store.ReplaceAllItemsAsync(userKey, rows, ComputeMirrorCursor(snap), cancellationToken);
+        _cachedSnapshot = null;
     }
 
     private static string ComputeMirrorCursor(BoardSnapshot snap)
@@ -157,26 +159,14 @@ public sealed partial class LocalFirstBoardDataService
         HashSet<Guid> skipIds,
         CancellationToken cancellationToken)
     {
-        foreach (var id in delta.DeletedItemIds)
-        {
-            if (skipIds.Contains(id))
-            {
-                continue;
-            }
+        var deletedIds = delta.DeletedItemIds
+            .Where(id => !skipIds.Contains(id))
+            .ToList();
+        var upserts = delta.Items
+            .Where(entry => !skipIds.Contains(entry.Item.Id))
+            .Select(entry => (entry.Section, entry.Item))
+            .ToList();
 
-            await store.DeleteItemAsync(userKey, id, cancellationToken);
-        }
-
-        foreach (var entry in delta.Items)
-        {
-            if (skipIds.Contains(entry.Item.Id))
-            {
-                continue;
-            }
-
-            var existing = await store.FindItemAsync(userKey, entry.Item.Id, cancellationToken);
-            var awaiting = existing?.AwaitingServerCreate ?? false;
-            await store.UpsertItemAsync(BoardLocalRow.FromModel(entry.Section, userKey, entry.Item, awaiting), cancellationToken);
-        }
+        await store.ApplyDeltaAsync(userKey, upserts, deletedIds, cancellationToken);
     }
 }

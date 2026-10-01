@@ -71,7 +71,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
         }
 
         var body = await res.Content.ReadAsStringAsync(cancellationToken);
-        throw new BoardRemoteConflictException(body);
+        throw new BoardRemoteConflictException(body, res.Headers.Date);
     }
 
     public async Task<BoardSyncDelta?> TryGetSyncDeltaAsync(string cursor, CancellationToken cancellationToken = default)

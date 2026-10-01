@@ -162,14 +162,31 @@ public sealed partial class LocalFirstBoardDataService
         }
 
         var serverTime = serverItem.ServerUpdatedAtUtc ?? DateTimeOffset.MinValue;
-        if (localTime >= serverTime)
+        var localTimeInServerClock = localTime;
+        if (ex.ServerTimeUtc is { } serverNow)
         {
-            logger.LogInformation("Conflict auto-resolved via Last-Write-Wins: Keeping Device version (Local: {LocalTime} >= Server: {ServerTime}).", localTime, serverTime);
+            // The device clock may be skewed. Express the local edit in the server's clock using
+            // the offset implied by the 409 response's Date header, so the comparison is between
+            // two readings of the same clock, not two unsynchronized ones.
+            localTimeInServerClock = localTime + (serverNow - DateTimeOffset.UtcNow);
+        }
+
+        if (localTimeInServerClock >= serverTime)
+        {
+            logger.LogInformation(
+                "Conflict auto-resolved via Last-Write-Wins: Keeping Device version (Local: {LocalTime} as {LocalInServerClock} >= Server: {ServerTime}).",
+                localTime,
+                localTimeInServerClock,
+                serverTime);
             await ResolveConflictKeepMineAsync(operationId, serverItem, cancellationToken);
         }
         else
         {
-            logger.LogInformation("Conflict auto-resolved via Last-Write-Wins: Keeping Server version (Local: {LocalTime} < Server: {ServerTime}).", localTime, serverTime);
+            logger.LogInformation(
+                "Conflict auto-resolved via Last-Write-Wins: Keeping Server version (Local: {LocalTime} as {LocalInServerClock} < Server: {ServerTime}).",
+                localTime,
+                localTimeInServerClock,
+                serverTime);
             await ResolveConflictKeepServerAsync(operationId, serverItem, section, cancellationToken);
         }
 
@@ -627,7 +644,9 @@ public sealed partial class LocalFirstBoardDataService
                 ?? throw new InvalidOperationException("Sign in to change your board.");
 
             await EnsureUserScopeAsync(userKey, cancellationToken);
-            return await action(store, userKey);
+            var result = await action(store, userKey);
+            _cachedSnapshot = null;
+            return result;
         }
         finally
         {

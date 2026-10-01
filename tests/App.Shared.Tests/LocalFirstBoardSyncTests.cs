@@ -245,6 +245,69 @@ public sealed class LocalFirstBoardSyncTests
         (await harness.Store.ListItemsAsync(Harness.UserKey, includeArchived: false)).Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task DrainConflictAsync_KeepsDeviceVersionWhenServerClockRunsAhead()
+    {
+        var harness = new Harness();
+        var id = Guid.NewGuid();
+        await harness.Board.CreateItemAsync(BoardSection.Habit, "Read", id, CancellationToken.None);
+
+        // The server clock runs two hours ahead. Its row was last updated five minutes ago in
+        // server time, which is older than the local edit in real time.
+        var serverNow = DateTimeOffset.UtcNow.AddHours(2);
+        var serverItem = new BoardItem(
+            id,
+            "Server title",
+            ServerUpdatedAtUtc: serverNow.AddMinutes(-5),
+            CreatedAtUtc: serverNow.AddDays(-1),
+            SortOrder: 1);
+        harness.Server.Responder = _ =>
+        {
+            var response = ConflictResponse(serverItem);
+            response.Headers.Date = serverNow;
+            return response;
+        };
+
+        var conflicted = await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None);
+
+        conflicted.Should().BeFalse();
+        var pending = await harness.Store.ListOutboxAsync(Harness.UserKey);
+        pending.Should().ContainSingle(x => x.Kind == BoardOutboxOperationKind.Create);
+        pending[0].AttemptCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task DrainConflictAsync_KeepsServerVersionWhenServerEditIsNewerDespiteSkew()
+    {
+        var harness = new Harness();
+        var id = Guid.NewGuid();
+        await harness.Board.CreateItemAsync(BoardSection.Todo, "Local", id, CancellationToken.None);
+
+        // The server clock runs two hours behind. Its row was updated five minutes after the
+        // local edit in real time, so the server version must win once the skew is corrected.
+        var serverNow = DateTimeOffset.UtcNow.AddHours(-2);
+        var serverItem = new BoardItem(
+            id,
+            "Server wins",
+            ServerUpdatedAtUtc: serverNow.AddMinutes(5),
+            CreatedAtUtc: serverNow.AddDays(-1),
+            SortOrder: 1);
+        harness.Server.Responder = _ =>
+        {
+            var response = ConflictResponse(serverItem);
+            response.Headers.Date = serverNow;
+            return response;
+        };
+
+        var conflicted = await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None);
+
+        conflicted.Should().BeFalse();
+        (await harness.Store.ListOutboxAsync(Harness.UserKey)).Should().BeEmpty();
+        var row = await harness.Store.FindItemAsync(Harness.UserKey, id);
+        row.Should().NotBeNull();
+        row.Title.Should().Be("Server wins");
+    }
+
     private static HttpResponseMessage JsonResponse<T>(HttpStatusCode status, T value) =>
         new(status)
         {

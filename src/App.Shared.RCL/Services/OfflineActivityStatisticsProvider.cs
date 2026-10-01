@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using App.Shared.RCL.Models;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace App.Shared.RCL.Services;
 
@@ -10,14 +11,19 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IActivityEventStore _eventStore;
+    private readonly ILogger<OfflineActivityStatisticsProvider> _logger;
     private readonly ConcurrentDictionary<string, ActivityOverviewDto> _overviewCache = new();
     private readonly ConcurrentDictionary<string, int> _overviewEventCount = new();
     private readonly ConcurrentDictionary<string, int> _overviewBoardHash = new();
 
-    public OfflineActivityStatisticsProvider(IServiceProvider serviceProvider, IActivityEventStore eventStore)
+    public OfflineActivityStatisticsProvider(
+        IServiceProvider serviceProvider,
+        IActivityEventStore eventStore,
+        ILogger<OfflineActivityStatisticsProvider> logger)
     {
         _serviceProvider = serviceProvider;
         _eventStore = eventStore;
+        _logger = logger;
         _eventStore.Appended += OnEventAppended;
     }
 
@@ -28,84 +34,12 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
 
     private void OnEventAppended(object? sender, UserActivityEventRecord record)
     {
-        // Granular invalidation: only remove caches where tag matches the new event's board item tags
-        // We do not know the board item tags without a DB lookup, so we conservatively invalidate only tag=null caches
-        // and let tag-filtered caches stay hot until next load where they will be checked for tag match.
-        // For true delta we patch the cached overview if the event falls within its range.
-        TryPatchCacheForNewEvent(record);
-    }
-
-    private void TryPatchCacheForNewEvent(UserActivityEventRecord record)
-    {
-        // For each cached overview, if the new event's date is within its range and tag matches, patch it
-        // This is best-effort incremental, if patch fails we just invalidate that key so next load recomputes
-        foreach (var key in _overviewCache.Keys.ToList())
-        {
-            if (!_overviewCache.TryGetValue(key, out var overview))
-            {
-                continue;
-            }
-            var parts = key.Split('|');
-            var cachedTag = parts.Length > 1 ? parts[1] : null;
-            if (string.IsNullOrEmpty(cachedTag))
-            {
-                // Tag null always affected
-                PatchOrInvalidate(key, overview, record);
-            }
-            else
-            {
-                // Need to check if the event's board item has this tag. We can try to lookup board item tags via snapshot
-                // For now, conservatively invalidate tag-filtered caches when any event arrives, to keep correctness simple
-                // True delta would check BoardTagUtil.ParseTags of the board item
-                _overviewCache.TryRemove(key, out _);
-                _overviewEventCount.TryRemove(key, out _);
-                _overviewBoardHash.TryRemove(key, out _);
-            }
-        }
-    }
-
-    private void PatchOrInvalidate(string key, ActivityOverviewDto overview, UserActivityEventRecord record)
-    {
-        try
-        {
-            using var scope = _serviceProvider.CreateScope();
-            var timeZone = scope.ServiceProvider.GetService<IUserTimeZoneService>();
-            var prefsService = scope.ServiceProvider.GetService<IUserPreferencesService>();
-            TimeSpan? dayStart = null;
-            if (timeZone != null && prefsService != null)
-            {
-                try
-                {
-                    var prefs = prefsService.GetAsync().GetAwaiter().GetResult();
-                    dayStart = prefs.DayStartLocalTime;
-                }
-                catch (Exception ex)
-                {
-                    // Ignore - best effort to load preferences; fallback to null dayStart
-                    _ = ex;
-                }
-            }
-
-            var eventDay = timeZone != null ? DailySchedule.LocalDay(record.OccurredAtUtc, timeZone, dayStart) : DateOnly.FromDateTime(record.OccurredAtUtc.UtcDateTime);
-            if (eventDay < overview.Dashboard.RangeStart || eventDay > overview.Dashboard.RangeEnd)
-            {
-                return;
-            }
-
-            // For dashboard, we can patch the per-day counts
-            // Instead of full recompute, we just invalidate so next load recomputes from delta
-            // To keep it simple and correct, invalidate the key so next BuildOverview recomputes with the new event included
-            // This is still delta in terms of not invalidating other tag caches
-            _overviewCache.TryRemove(key, out _);
-            _overviewEventCount.TryRemove(key, out _);
-            _overviewBoardHash.TryRemove(key, out _);
-        }
-        catch (Exception ex)
-        {
-            // Ignore - patch failed, invalidate cache so next load recomputes
-            _ = ex;
-            _overviewCache.TryRemove(key, out _);
-        }
+        // Invalidate every cached overview. The range check that this replaced needed a synchronous
+        // preference read on the event thread, which could deadlock the UI in WASM and MAUI. A
+        // recompute is cheap next to serving statistics that no longer match the event log.
+        _overviewCache.Clear();
+        _overviewEventCount.Clear();
+        _overviewBoardHash.Clear();
     }
 
     public async Task<ActivityOverviewDto> BuildOverviewAsync(string? periodKey, string? tag, CancellationToken cancellationToken = default)
@@ -204,8 +138,8 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
         }
         catch (Exception ex)
         {
-            // Ignore - cached snapshot unavailable, try full snapshot
-            _ = ex;
+            // Cached snapshot unavailable, try the full snapshot below.
+            _logger.LogDebug(ex, "Cached board snapshot unavailable for offline statistics.");
         }
 
         try
@@ -216,8 +150,8 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
         }
         catch (Exception ex)
         {
-            // Ignore - snapshot failed, return empty
-            _ = ex;
+            // Snapshot failed, serve an empty board rather than failing the statistics page.
+            _logger.LogWarning(ex, "Could not load the board snapshot for offline statistics.");
             return new BoardSnapshot([], [], []);
         }
     }
@@ -244,8 +178,8 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
         }
         catch (Exception ex)
         {
-            // Ignore - best effort to load preferences/timezone; fallback to UTC today
-            _ = ex;
+            // Fall back to the UTC day when preferences or the timezone are unavailable.
+            _logger.LogDebug(ex, "Could not load user preferences for offline statistics day boundaries.");
         }
 
         return (DateOnly.FromDateTime(DateTime.UtcNow), null, null);

@@ -1,3 +1,5 @@
+using App.Shared.RCL.Models;
+
 namespace App.Shared.RCL.Services.Board.Local;
 
 public interface IBoardLocalStore
@@ -19,6 +21,30 @@ public interface IBoardLocalStore
     Task DeleteAllItemsAsync(string userKey, CancellationToken cancellationToken = default);
 
     Task ReplaceAllItemsAsync(string userKey, IReadOnlyList<BoardLocalRow> rows, string? cursor, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Applies a sync delta to the mirror: delete the listed ids, then upsert the listed items,
+    ///     preserving <see cref="BoardLocalRow.AwaitingServerCreate" /> on rows that already exist.
+    ///     Stores that can batch should override this. The default loops the single-item methods.
+    /// </summary>
+    async Task ApplyDeltaAsync(
+        string userKey,
+        IReadOnlyList<(BoardSection Section, BoardItem Item)> upserts,
+        IReadOnlyList<Guid> deletedIds,
+        CancellationToken cancellationToken = default)
+    {
+        foreach (var id in deletedIds)
+        {
+            await DeleteItemAsync(userKey, id, cancellationToken);
+        }
+
+        foreach (var (section, item) in upserts)
+        {
+            var existing = await FindItemAsync(userKey, item.Id, cancellationToken);
+            var awaiting = existing?.AwaitingServerCreate ?? false;
+            await UpsertItemAsync(BoardLocalRow.FromModel(section, userKey, item, awaiting), cancellationToken);
+        }
+    }
 
     Task<IReadOnlyList<BoardOutboxEntry>> ListOutboxAsync(string userKey, CancellationToken cancellationToken = default);
 

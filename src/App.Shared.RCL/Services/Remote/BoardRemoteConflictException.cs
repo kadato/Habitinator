@@ -9,10 +9,14 @@ public sealed class BoardRemoteConflictException : Exception
     public string ResponseBody { get; }
     public BoardItem? ServerItem { get; }
 
-    public BoardRemoteConflictException(string responseBody)
+    /// <summary>Server clock from the 409 response's Date header, used to correct device clock skew.</summary>
+    public DateTimeOffset? ServerTimeUtc { get; }
+
+    public BoardRemoteConflictException(string responseBody, DateTimeOffset? serverTimeUtc = null)
         : base("Board API returned 409 Conflict.")
     {
         ResponseBody = responseBody;
+        ServerTimeUtc = serverTimeUtc;
         try
         {
             using var doc = JsonDocument.Parse(responseBody);

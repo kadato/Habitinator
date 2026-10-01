@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace App.Shared.RCL.Services;
 
 public enum PomodoroState
@@ -8,9 +10,10 @@ public enum PomodoroState
     LongBreak
 }
 
-public sealed class GlobalTimerService(IClock clock) : IDisposable
+public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>? logger = null) : IDisposable
 {
     private readonly IClock _clock = clock;
+    private readonly ILogger<GlobalTimerService>? _logger = logger;
     private TimeSpan _accumulated = TimeSpan.Zero;
 
     /// <summary>Total <see cref="Elapsed" /> at which the next "time's up" event fires, when focus duration is set.</summary>
@@ -191,7 +194,15 @@ public sealed class GlobalTimerService(IClock clock) : IDisposable
             {
                 while (!token.IsCancellationRequested && await timer.WaitForNextTickAsync(token).ConfigureAwait(false))
                 {
-                    Ticked?.Invoke();
+                    try
+                    {
+                        Ticked?.Invoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        // One bad subscriber must not kill the heartbeat for the rest of the session.
+                        _logger?.LogWarning(ex, "A timer tick subscriber threw.");
+                    }
                 }
             }
             catch (OperationCanceledException)

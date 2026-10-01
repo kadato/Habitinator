@@ -23,6 +23,9 @@ public sealed partial class LocalFirstBoardDataService(
     /// <summary>Operations currently on the wire. Guarded by <see cref="_gate" />. Used to keep delete coalescing away from creates that may already have reached the server.</summary>
     private readonly HashSet<Guid> _inFlightOutboxOperations = [];
 
+    /// <summary>Last snapshot read from the local store. Serves the synchronous fast path in the board component. Cleared on every mutation and user switch.</summary>
+    private volatile BoardSnapshot? _cachedSnapshot;
+
     private async Task<DateOnly> TodayAsync(CancellationToken cancellationToken)
     {
         var prefs = await services
@@ -40,6 +43,7 @@ public sealed partial class LocalFirstBoardDataService(
         await _gate.WaitAsync(cancellationToken);
         try
         {
+            _cachedSnapshot = null;
             await store.ClearAllStateAsync(cancellationToken);
         }
         finally
@@ -48,6 +52,12 @@ public sealed partial class LocalFirstBoardDataService(
         }
 
         await store.FlushAsync(cancellationToken);
+    }
+
+    public bool TryGetCachedSnapshot(out BoardSnapshot? snapshot)
+    {
+        snapshot = _cachedSnapshot;
+        return snapshot is not null;
     }
 
     public async Task<BoardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
@@ -70,6 +80,7 @@ public sealed partial class LocalFirstBoardDataService(
             await EnsureUserScopeAsync(userKey, cancellationToken);
             var today = await TodayAsync(cancellationToken);
             snap = ReadSnapshot(await store.ListItemsAsync(userKey, includeArchived: false, cancellationToken), today);
+            _cachedSnapshot = snap;
 
             if (IsEmpty(snap) && !syncStatus.IsSyncing)
             {
@@ -114,11 +125,14 @@ public sealed partial class LocalFirstBoardDataService(
             var current = ReadSnapshot(await store.ListItemsAsync(userKey, includeArchived: false, cancellationToken), today);
             if (!IsEmpty(current))
             {
+                _cachedSnapshot = current;
                 return current;
             }
 
             await ReplaceMirrorAsync(userKey, fresh, cancellationToken);
-            return ReadSnapshot(await store.ListItemsAsync(userKey, includeArchived: false, cancellationToken), today);
+            var replaced = ReadSnapshot(await store.ListItemsAsync(userKey, includeArchived: false, cancellationToken), today);
+            _cachedSnapshot = replaced;
+            return replaced;
         }
         finally
         {
@@ -191,6 +205,7 @@ public sealed partial class LocalFirstBoardDataService(
             return;
         }
 
+        _cachedSnapshot = null;
         await store.DeleteAllItemsAsync(meta.BoundUserKey, cancellationToken);
         await store.ClearOutboxForUserAsync(meta.BoundUserKey, cancellationToken);
         await store.SetMetaAsync(new BoardStoreMeta { BoundUserKey = userKey }, cancellationToken);

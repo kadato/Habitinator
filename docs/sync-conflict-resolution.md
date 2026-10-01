@@ -23,8 +23,10 @@ If all user-facing content fields match exactly, the system treats the conflict 
 
 If content differs, the system applies Last-Write-Wins, LWW, using the most accurate timestamps:
 
-* **Local timestamp.** The time when the edit was enqueued in the local outbox, `BoardOutboxEntry.CreatedAtUtc`.
+* **Local timestamp.** The time when the edit was enqueued in the local outbox, `BoardOutboxEntry.CreatedAtUtc`. The system converts this value into the server's clock before comparing, using the offset implied by the `Date` header of the 409 response. The conversion removes device clock skew. A device clock that is hours fast or slow no longer decides the winner. If the header is missing, the raw local time is used.
 * **Server timestamp.** The time when the item was last updated on the server, `BoardItem.ServerUpdatedAtUtc`.
+
+The conversion is accurate to one network round trip, a few seconds. Two edits within that window still resolve by the raw comparison.
 
 ### Resolution paths
 

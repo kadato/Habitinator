@@ -21,7 +21,7 @@
                 <div class="hab-checklist">
                     <div class="hab-checklist__head">
                         <span class="hab-checklist__head-title">
-                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                            <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
                             Checklist
                         </span>
                         @if (_checklistRows.Count > 0)
@@ -36,7 +36,7 @@
 
                 <div class="hab-modal__section" style="padding:0.7rem 0.75rem;">
                     <span class="hab-modal__section-label">
-                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                         Due date
                     </span>
                     <MudDatePicker @bind-Date="_dueDate" @bind-Date:after="OnDiscreteEdited" Variant="Variant.Outlined" Editable="true" Class="hab-modal__field" DateFormat="@DateFormatService.DateFormat" Placeholder="No due date" Clearable="true" Margin="Margin.Dense" aria-label="Due date"/>
@@ -44,7 +44,7 @@
 
                 <div class="hab-modal__section">
                     <span class="hab-modal__section-label">
-                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path></svg>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path></svg>
                         Tags
                     </span>
                     <TagPicker @bind-Tags="_tags" @bind-Tags:after="OnTagsEdited" TriggerId="edit-todo-tags-trigger" @ref="_tagPicker"/>

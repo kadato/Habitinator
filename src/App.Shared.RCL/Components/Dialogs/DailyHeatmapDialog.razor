@@ -49,7 +49,7 @@
                 else if (_error is not null)
                 {
                     <div class="dialog-inline-fallback">
-                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" Class="dialog-inline-fallback__icon" />
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" Class="dialog-inline-fallback__icon"  aria-hidden="true" />
                         <MudText Typo="Typo.subtitle2" Class="dialog-inline-fallback__title">Could not load heatmap</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">Try again or pick a different period.</MudText>
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="LoadDataAsync">Retry</MudButton>
@@ -74,7 +74,7 @@
                 else
                 {
                     <div class="stats-empty">
-                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" Class="stats-empty__icon" />
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" Class="stats-empty__icon"  aria-hidden="true" />
                         <MudText Typo="Typo.subtitle2" Class="font-weight-bold">No heatmap yet</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">Complete this daily to build its history.</MudText>
                     </div>

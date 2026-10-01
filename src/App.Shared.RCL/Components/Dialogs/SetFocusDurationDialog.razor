@@ -38,7 +38,7 @@
                 @if (FocusDurationInput.TryParse(_durationText, out var parsedDuration) && parsedDuration.HasValue && parsedDuration.Value > TimeSpan.Zero)
                 {
                     <div class="d-flex align-center gap-1 mb-2 px-1">
-                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Primary" Size="Size.Small" />
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Primary" Size="Size.Small"  aria-hidden="true" />
                         <MudText Typo="Typo.caption" Color="Color.Primary" Class="font-weight-medium">
                             Time's up alert at: @FocusDurationInput.FormatForAlertLabel(parsedDuration.Value)
                         </MudText>

@@ -17,7 +17,7 @@
                 }
                 else
                 {
-                    <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Default" Size="Size.Medium"/>
+                    <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Default" Size="Size.Medium" aria-hidden="true" />
                 }
                 @if (IsSessionActive)
                 {
@@ -39,7 +39,7 @@
             <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
                      Color="Color.Default"
                      Class="timer-mobile-expand-icon"
-                     Size="Size.Medium"/>
+                     Size="Size.Medium" aria-hidden="true" />
         </MudStack>
     </div>
 
@@ -307,7 +307,7 @@
                                    Class="w-100">
                              <MudIcon Color="Color.Default"
                                       Icon="@BoardSectionVisuals.GetMudIconForTargetType(entry.TargetType)"
-                                      Size="Size.Small"/>
+                                      Size="Size.Small" aria-hidden="true" />
                              <MudText Typo="Typo.body2" Class="flex-grow-1 text-truncate">@rowKey</MudText>
                          </MudStack>
                      </ItemTemplate>
@@ -359,11 +359,11 @@
                       <MudField Label="Pomodoro session" Variant="Variant.Outlined" Margin="Margin.Dense" Class="timer-pomodoro-field-control" tabindex="-1">
                           <div class="timer-pomodoro-info-container" title="@GetPomodoroCycleTitle()">
                               <span class="timer-pomodoro-info-item timer-pomodoro-info-item--next">
-                                  <MudIcon Icon="@Icons.Material.Filled.ArrowCircleRight" Size="Size.Small" Class="next-icon" />
+                                  <MudIcon Icon="@Icons.Material.Filled.ArrowCircleRight" Size="Size.Small" Class="next-icon"  aria-hidden="true" />
                                   <span class="info-value next-value">@GetNextPomodoroLabelAndDuration()</span>
                               </span>
                               <span class="timer-pomodoro-info-item timer-pomodoro-info-item--done" title="@GetCompletedPomodoroTitle()">
-                                  <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="done-icon" Color="Color.Success" />
+                                  <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="done-icon" Color="Color.Success"  aria-hidden="true" />
                                   <span class="info-value total-value">@GetCompletedInCurrentCycle()/@TimerService.IntervalsBeforeLongBreak</span>
                               </span>
                           </div>

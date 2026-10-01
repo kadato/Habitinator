@@ -29,7 +29,7 @@
     @if (_loadError is not null)
     {
         <div class="board-load-fallback">
-            <MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Large" Class="board-load-fallback__icon" />
+            <MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Large" Class="board-load-fallback__icon"  aria-hidden="true" />
             <MudText Typo="Typo.subtitle2" Class="board-load-fallback__title">We couldn't load your board</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="board-load-fallback__hint">Check your connection and try again.</MudText>
             <MudButton Variant="Variant.Filled"
@@ -85,9 +85,9 @@
                                         aria-haspopup="true"
                                         title="@GetTagsTriggerTitle()"
                                         @onclick="@(e => tagMenu.ToggleAsync(e))">
-                                    <MudIcon Icon="@Icons.Material.Filled.Tune" Class="board-trigger-icon"/>
+                                    <MudIcon Icon="@Icons.Material.Filled.Tune" Class="board-trigger-icon" aria-hidden="true" />
                                     <span class="board-trigger-label">@(SelectedFilterTagCount > 0 ? $"Tags ({SelectedFilterTagCount})" : "Tags")</span>
-                                    <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Class="board-trigger-chevron"/>
+                                    <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Class="board-trigger-chevron" aria-hidden="true" />
                                 </button>
                             </ActivatorContent>
                             <ChildContent>
@@ -128,7 +128,7 @@
                             class="board-trigger-btn board-archive-trigger"
                             aria-label="Archive"
                             @onclick="OpenArchivedItemsDialogAsync">
-                        <MudIcon Icon="@Icons.Material.Filled.Archive" Class="board-trigger-icon"/>
+                        <MudIcon Icon="@Icons.Material.Filled.Archive" Class="board-trigger-icon" aria-hidden="true" />
                         <span class="board-trigger-label app-show-desktop-only">Archive</span>
                     </button>
                     @if (_shortcutsEnabled)

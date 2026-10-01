@@ -25,7 +25,7 @@
                                 <MudDivider Class="my-2"/>
                                 <MudMenuItem OnClick="DeleteAllDoneTodosAsync" Disabled="@(!AnyDoneTodos)">
                                     <div class="d-flex align-center gap-2">
-                                        <MudIcon Icon="@Icons.Material.Filled.DeleteSweep" Size="Size.Small" Color="Color.Error"/>
+                                        <MudIcon Icon="@Icons.Material.Filled.DeleteSweep" Size="Size.Small" Color="Color.Error" aria-hidden="true" />
                                         <MudText Typo="Typo.body2" Color="Color.Error">Delete all done to-dos</MudText>
                                     </div>
                                 </MudMenuItem>
@@ -154,7 +154,7 @@
                     @if (IsBoardFilterExcludingAll)
                     {
                         <div class="empty-state-icon-container empty-state-icon-container--filter">
-                            <MudIcon Icon="@Icons.Material.Outlined.SearchOff" Class="empty-state-icon"/>
+                            <MudIcon Icon="@Icons.Material.Outlined.SearchOff" Class="empty-state-icon" aria-hidden="true" />
                         </div>
                         <MudText Typo="Typo.subtitle2" Class="empty-state-title">No matches found</MudText>
                         <MudText Typo="Typo.caption" Class="empty-state-desc">Try adjusting your search text or removing selected tags.</MudText>
@@ -162,7 +162,7 @@
                     else if (IsColumnFilterHidingAll)
                     {
                         <div class="empty-state-icon-container empty-state-icon-container--filter">
-                            <MudIcon Icon="@Icons.Material.Outlined.FilterListOff" Class="empty-state-icon"/>
+                            <MudIcon Icon="@Icons.Material.Outlined.FilterListOff" Class="empty-state-icon" aria-hidden="true" />
                         </div>
                         <MudText Typo="Typo.subtitle2" Class="empty-state-title">No matches for this filter</MudText>
                         <MudText Typo="Typo.caption" Class="empty-state-desc">The "@GetColumnFilterName()" filter hides @EffectiveItems.Count() items.</MudText>
@@ -177,7 +177,7 @@
                     else
                     {
                         <div class="empty-state-icon-container">
-                            <MudIcon Icon="@GetEmptyStateIcon()" Class="empty-state-icon"/>
+                            <MudIcon Icon="@GetEmptyStateIcon()" Class="empty-state-icon" aria-hidden="true" />
                         </div>
                         <MudText Typo="Typo.subtitle2" Class="empty-state-title">@GetEmptyStateTitle()</MudText>
                         <MudText Typo="Typo.caption" Class="empty-state-desc">@GetEmptyStateDesc()</MudText>

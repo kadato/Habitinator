@@ -17,7 +17,7 @@
     @if (_error is not null)
     {
         <div class="stats-load-fallback">
-            <MudIcon Icon="@Icons.Material.Filled.BarChart" Size="Size.Large" Class="stats-load-fallback__icon" />
+            <MudIcon Icon="@Icons.Material.Filled.BarChart" Size="Size.Large" Class="stats-load-fallback__icon"  aria-hidden="true" />
             <MudText Typo="Typo.subtitle2" Class="stats-load-fallback__title">We couldn't load your stats</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary">Check your connection and try again, or change the filters.</MudText>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="@(() => RefreshAsync(() => LoadStatisticsAsync(_selectedPeriodKey)))">Retry</MudButton>
@@ -52,7 +52,7 @@
     else if (_data is null)
     {
         <MudPaper Class="pa-6 stats-dashboard-card text-center" Elevation="0" Outlined="true">
-            <MudIcon Icon="@Icons.Material.Filled.BarChart" Size="Size.Large" Class="mb-2" Color="Color.Secondary" />
+            <MudIcon Icon="@Icons.Material.Filled.BarChart" Size="Size.Large" Class="mb-2" Color="Color.Secondary"  aria-hidden="true" />
             <MudText Typo="Typo.subtitle1" Class="font-weight-bold">No activity yet</MudText>
             <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">Complete a habit, daily or focus session and your heatmap will appear here.</MudText>
         </MudPaper>
@@ -137,7 +137,7 @@
                     else if (_dailyError is not null || _habitError is not null)
                     {
                         <div class="stats-inline-fallback">
-                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="stats-inline-fallback__icon" />
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="stats-inline-fallback__icon"  aria-hidden="true" />
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Some graphs couldn't load. Try again or change the period.</MudText>
                         </div>
                     }
@@ -152,7 +152,7 @@
                         @if (totalVisible == 0)
                         {
                             <div class="stats-empty">
-                                <MudIcon Icon="@Icons.Material.Filled.Inbox" Size="Size.Large" Class="stats-empty__icon" />
+                                <MudIcon Icon="@Icons.Material.Filled.Inbox" Size="Size.Large" Class="stats-empty__icon"  aria-hidden="true" />
                                 <MudText Typo="Typo.subtitle2" Class="font-weight-bold">No graphs for this filter</MudText>
                                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">Try All or add a @(_consistencyTab == "daily" ? "daily" : "habit") to your board.</MudText>
                             </div>

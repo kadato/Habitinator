@@ -74,7 +74,7 @@
                     @if (GetFilteredItems().Count == 0)
                     {
                         <div class="empty-state">
-                            <MudIcon Icon="@Icons.Material.Filled.Inbox" Class="empty-icon" />
+                            <MudIcon Icon="@Icons.Material.Filled.Inbox" Class="empty-icon"  aria-hidden="true" />
                             <div class="empty-text">No archived items</div>
                             <div class="empty-subtext">@(string.IsNullOrWhiteSpace(_searchQuery) ? "Nothing archived in this section." : "Try a different search.")</div>
                         </div>
@@ -107,7 +107,7 @@
                             };
 
                             <div class="archive-row" @key="item.Id">
-                                <MudIcon Icon="@itemIcon" Class="@($"archive-row-icon {iconClass}")" />
+                                <MudIcon Icon="@itemIcon" Class="@($"archive-row-icon {iconClass}")"  aria-hidden="true" />
                                 <div class="archive-row-info">
                                     <span class="archive-row-title" title="@item.Title">@item.Title</span>
                                     <span class="archive-row-meta">@metaText</span>

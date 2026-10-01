@@ -10,7 +10,7 @@
                     <DialogCloseButton OnClose="() => MudDialog.Close()" />
                 </div>
                 <div class="update-title">
-                    <MudIcon Icon="@Icons.Material.Filled.SystemUpdate" Color="Color.Primary" Size="Size.Medium" />
+                    <MudIcon Icon="@Icons.Material.Filled.SystemUpdate" Color="Color.Primary" Size="Size.Medium"  aria-hidden="true" />
                     <MudText Typo="Typo.h6">Update available</MudText>
                 </div>
             </div>
@@ -25,7 +25,7 @@
                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">Current Version</MudText>
                     <MudText Typo="Typo.body2" Class="font-weight-bold">v@_currentVersion</MudText>
                 </div>
-                <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Color="Color.Secondary" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Color="Color.Secondary" Size="Size.Small"  aria-hidden="true" />
                 <div>
                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">New Version</MudText>
                     <span class="update-version-badge">v@LatestVersion</span>

@@ -5,7 +5,7 @@
             @if (Item.TrackPlus)
             {
                 <button type="button" class="board-sq board-sq--good" title="Log +" draggable="false" @onclick="OnHabitUp" @onclick:stopPropagation="true">
-                    <svg class="board-habit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <svg aria-hidden="true" class="board-habit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
@@ -14,7 +14,7 @@
             @if (Item.TrackMinus)
             {
                 <button type="button" class="board-sq board-sq--bad" title="Log −" draggable="false" @onclick="OnHabitDown" @onclick:stopPropagation="true">
-                    <svg class="board-habit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <svg aria-hidden="true" class="board-habit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
                 </button>
@@ -72,7 +72,7 @@
                 <ChildContent>
                     <MudMenuItem OnClick="OnOpenEditor">
                         <div class="d-flex align-center gap-2">
-                            <MudIcon Icon="@Icons.Material.Outlined.Edit" Size="Size.Small"/>
+                            <MudIcon Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" aria-hidden="true" />
                             <MudText Typo="Typo.body2">Edit</MudText>
                         </div>
                     </MudMenuItem>
@@ -80,20 +80,20 @@
                     {
                         <MudMenuItem OnClick="OnMoveToTop">
                             <div class="d-flex align-center gap-2">
-                                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"/>
+                                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-hidden="true" />
                                 <MudText Typo="Typo.body2">Move to top</MudText>
                             </div>
                         </MudMenuItem>
                         <MudMenuItem OnClick="OnMoveToBottom">
                             <div class="d-flex align-center gap-2">
-                                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"/>
+                                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" aria-hidden="true" />
                                 <MudText Typo="Typo.body2">Move to bottom</MudText>
                             </div>
                         </MudMenuItem>
                     }
                     <MudMenuItem OnClick="OnDelete">
                         <div class="d-flex align-center gap-2">
-                            <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" Color="Color.Error"/>
+                            <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" Color="Color.Error" aria-hidden="true" />
                             <MudText Typo="Typo.body2" Color="Color.Error">Delete</MudText>
                         </div>
                     </MudMenuItem>
@@ -171,7 +171,7 @@
                 @if (Section == BoardSection.Todo && Item.TodoDueDate is { } due)
                 {
                     <div class="@TodoDueCssClass(due)" title="@TodoDueTitle()">
-                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Class="me-1" Size="Size.Small"/>
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Class="me-1" Size="Size.Small" aria-hidden="true" />
                         <span class="board-todo-due__date">@DateFormatService.Format(due)</span>
                         <span class="board-todo-due__sep" aria-hidden="true">·</span>
                         <span class="board-todo-due__relative">@TodoDueRelativeLabel(due)</span>
@@ -183,14 +183,14 @@
                         @if (Item.TrackPlus)
                         {
                             <span class="board-habit-badge board-habit-badge--plus" title="Positive logs">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="me-1"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="me-1"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                 @Item.Counter
                             </span>
                         }
                         @if (Item.TrackMinus)
                         {
                             <span class="board-habit-badge board-habit-badge--minus" title="Negative logs">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="me-1"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="me-1"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                 @Item.NegativeCounter
                             </span>
                         }
@@ -207,14 +207,14 @@
                     @if (Item.Counter > 0)
                     {
                         <div class="board-streak board-streak--active" title="Daily streak: @Item.Counter days">
-                            <MudIcon Icon="@Icons.Material.Filled.Whatshot" Size="Size.Small" Class="me-1 streak-flame-icon"/>
+                            <MudIcon Icon="@Icons.Material.Filled.Whatshot" Size="Size.Small" Class="me-1 streak-flame-icon" aria-hidden="true" />
                             <span class="board-streak__text">@Item.Counter</span>
                         </div>
                     }
                     else
                     {
                         <div class="board-streak board-streak--inactive" title="No current streak">
-                            <MudIcon Icon="@Icons.Material.Outlined.Whatshot" Size="Size.Small" Class="me-1 streak-flame-icon-inactive"/>
+                            <MudIcon Icon="@Icons.Material.Outlined.Whatshot" Size="Size.Small" Class="me-1 streak-flame-icon-inactive" aria-hidden="true" />
                             <span class="board-streak__text">0</span>
                         </div>
                     }

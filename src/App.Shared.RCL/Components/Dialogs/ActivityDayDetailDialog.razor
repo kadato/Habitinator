@@ -49,7 +49,7 @@
         else if (_error is not null)
         {
             <div class="dialog-inline-fallback">
-                <MudIcon Icon="@Icons.Material.Filled.EventBusy" Size="Size.Large" Class="dialog-inline-fallback__icon" />
+                <MudIcon Icon="@Icons.Material.Filled.EventBusy" Size="Size.Large" Class="dialog-inline-fallback__icon"  aria-hidden="true" />
                 <MudText Typo="Typo.subtitle2" Class="dialog-inline-fallback__title">Could not load details</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">Check your connection and try again.</MudText>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="ReloadAsync">Retry</MudButton>
@@ -67,7 +67,7 @@
                 </div>
             }
             <div class="stats-day-empty">
-                <MudIcon Icon="@Icons.Material.Filled.EventBusy" Size="Size.Large" Class="stats-day-empty__icon" />
+                <MudIcon Icon="@Icons.Material.Filled.EventBusy" Size="Size.Large" Class="stats-day-empty__icon"  aria-hidden="true" />
                 <MudText Typo="Typo.subtitle2" Class="font-weight-bold">No activity this day</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">Logs for habits, dailies, todos and focus sessions appear here.</MudText>
             </div>

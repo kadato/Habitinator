@@ -97,7 +97,7 @@ else
            aria-current="@(active ? "page" : null)"
            @onpointerenter="() => Prefetch(path)"
            @ontouchstart="() => Prefetch(path)">
-            <MudIcon Icon="@icon" Class="app-mobile-nav__icon" />
+            <MudIcon Icon="@icon" Class="app-mobile-nav__icon"  aria-hidden="true" />
             <span class="app-mobile-nav__label">@label</span>
         </a>
     };

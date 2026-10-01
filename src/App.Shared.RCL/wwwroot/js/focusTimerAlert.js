@@ -123,6 +123,8 @@ function triggerSystemNotification(title, body, tag = "habitinator-focus") {
                     console.warn("Notification creation failed:", e);
                 }
             }
+        }).catch(function (error) {
+            console.warn("Notification permission request failed:", error);
         });
     }
 }

@@ -95,7 +95,7 @@ globalThis.addEventListener('fetch', event => {
                     }
                     return fetch(event.request).then(response => {
                         if (response?.status === 200) {
-                            cache.put(event.request, response.clone());
+                            event.waitUntil(cache.put(event.request, response.clone()));
                         }
                         return response;
                     });
@@ -125,9 +125,7 @@ globalThis.addEventListener('fetch', event => {
             return fetch(event.request).then(networkResponse => {
                 if (networkResponse?.status === 200 && networkResponse?.type === 'basic') {
                     const responseToCache = networkResponse.clone();
-                    caches.open(CACHE_NAME).then(cache => {
-                        cache.put(event.request, responseToCache);
-                    });
+                    event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache)));
                 }
                 return networkResponse;
             });

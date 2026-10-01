@@ -57,58 +57,6 @@ public sealed class LocalBoardItemRow
 
     public double? SortOrder { get; set; }
 
-    public BoardItem ToModel() => new(
-        Id,
-        Title,
-        IsCompleted,
-        Counter,
-        Notes,
-        Tags,
-        TrackPlus,
-        TrackMinus,
-        NegativeCounter,
-        ResetPeriod,
-        DailyStartDate,
-        DailyRepeat,
-        DailyRepeatInterval,
-        ChecklistJson,
-        DailyLastCompletedOn,
-        TodoDueDate,
-        ServerUpdatedAtUtc,
-        CreatedAtUtc,
-        SortOrder,
-        IsArchived);
-
-    public static LocalBoardItemRow FromModel(BoardSection section, string userKey, BoardItem item, bool awaitingCreate)
-    {
-        return new LocalBoardItemRow
-        {
-            Id = item.Id,
-            UserKey = userKey,
-            Section = section,
-            Title = item.Title,
-            IsCompleted = item.IsCompleted,
-            Counter = item.Counter,
-            Notes = item.Notes,
-            Tags = item.Tags,
-            TrackPlus = item.TrackPlus,
-            TrackMinus = item.TrackMinus,
-            NegativeCounter = item.NegativeCounter,
-            ResetPeriod = item.ResetPeriod,
-            DailyStartDate = item.DailyStartDate,
-            DailyRepeat = item.DailyRepeat,
-            DailyRepeatInterval = item.DailyRepeatInterval,
-            ChecklistJson = item.ChecklistJson,
-            DailyLastCompletedOn = item.DailyLastCompletedOn,
-            TodoDueDate = item.TodoDueDate,
-            AwaitingServerCreate = awaitingCreate,
-            ServerUpdatedAtUtc = item.ServerUpdatedAtUtc,
-            CreatedAtUtc = item.CreatedAtUtc,
-            SortOrder = item.SortOrder,
-            IsArchived = item.IsArchived
-        };
-    }
-
     /// <summary>Copies every server-tracked field from <paramref name="source" /> onto this row, leaving identity and scope fields untouched.</summary>
     public void CopyFrom(LocalBoardItemRow source)
     {

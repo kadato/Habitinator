@@ -14,17 +14,11 @@ public interface IInitialBoardLoadGate
 
 public sealed class InitialBoardLoadGate : IInitialBoardLoadGate
 {
-    private readonly MauiInitialBoardLoadSignal? _mauiSignal;
     private readonly BoardInitialLoadSignal? _signal;
     private bool _isComplete;
 
     public InitialBoardLoadGate()
     {
-    }
-
-    public InitialBoardLoadGate(MauiInitialBoardLoadSignal mauiSignal)
-    {
-        _mauiSignal = mauiSignal;
     }
 
     public InitialBoardLoadGate(BoardInitialLoadSignal signal)
@@ -44,7 +38,6 @@ public sealed class InitialBoardLoadGate : IInitialBoardLoadGate
         }
 
         _isComplete = true;
-        _mauiSignal?.MarkComplete();
         _signal?.MarkComplete();
         Completed?.Invoke(this, EventArgs.Empty);
     }

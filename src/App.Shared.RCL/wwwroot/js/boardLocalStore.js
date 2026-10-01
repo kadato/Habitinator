@@ -103,29 +103,6 @@ globalThis.habBoardStore = (function () {
     save: function (raw) {
       lsSet(raw);
       return idbSet(raw).catch(function () {});
-    },
-    clear: function () {
-      try {
-        localStorage.removeItem(LS_KEY);
-      } catch (err) {
-      }
-
-      return openDb().then(function (db) {
-        return new Promise(function (resolve) {
-          try {
-            var tx = db.transaction(STORE_NAME, "readwrite");
-            tx.objectStore(STORE_NAME).delete(STATE_KEY);
-            tx.oncomplete = function () {
-              resolve();
-            };
-            tx.onerror = function () {
-              resolve();
-            };
-          } catch (err) {
-            resolve();
-          }
-        });
-      }).catch(function () {});
     }
   };
 })();

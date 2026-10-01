@@ -97,12 +97,36 @@ public sealed class BoardPersistenceService(
         }
         catch (DbUpdateConcurrencyException)
         {
+            DiscardPendingMutationChanges();
             return await BuildConflictFromDatabaseAsync(userId, section, itemId, cancellationToken);
         }
 
         var model = toModel is null ? null : await toModel(entity);
         await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         return new BoardMutationResult(BoardMutationStatus.Ok, model);
+    }
+
+    /// <summary>
+    ///     Drops the tracked changes of a mutation that failed to save. The request-scoped context is
+    ///     shared with the idempotency service, so a failed entity left tracked would make the next
+    ///     <c>SaveChangesAsync</c> in the same request retry the failed update and throw again.
+    /// </summary>
+    private void DiscardPendingMutationChanges()
+    {
+        DetachPending<UserActivityEventEntity>();
+        DetachPending<BoardItemEntity>();
+    }
+
+    private void DetachPending<TEntity>()
+        where TEntity : class
+    {
+        var pending = dbContext.ChangeTracker.Entries<TEntity>()
+            .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+            .ToList();
+        foreach (var entry in pending)
+        {
+            entry.State = EntityState.Detached;
+        }
     }
 
     /// <summary>
@@ -278,8 +302,14 @@ public sealed class BoardPersistenceService(
                 {
                     await dbContext.SaveChangesAsync(cancellationToken);
                 }
-                catch (DbUpdateConcurrencyException) when (attempt < 3)
+                catch (DbUpdateConcurrencyException)
                 {
+                    if (attempt >= 3)
+                    {
+                        DiscardPendingMutationChanges();
+                        throw;
+                    }
+
                     await dbContext.Entry(existing).ReloadAsync(cancellationToken);
                     continue;
                 }
@@ -486,6 +516,7 @@ public sealed class BoardPersistenceService(
         }
         catch (DbUpdateConcurrencyException)
         {
+            DiscardPendingMutationChanges();
             return await BuildConflictFromDatabaseAsync(userId, BoardSection.Daily, itemId, cancellationToken);
         }
 

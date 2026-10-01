@@ -3,8 +3,10 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 
 using App.Shared.RCL.Models;
+using App.Shared.RCL.Services;
 using App.Shared.RCL.Services.Remote;
 using App.Web.Data;
+using App.Web.Services;
 
 using FluentAssertions;
 
@@ -206,6 +208,38 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
     }
 
     [Fact]
+    public async Task Daily_reorder_proximity_triggers_rebalancing()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (token, _) = await RegisterAndLoginAsync(client);
+
+        var d1 = await CreateDailyAsync(client, token, "Daily 1");
+        var d2 = await CreateDailyAsync(client, token, "Daily 2");
+        await CreateDailyAsync(client, token, "Daily 3");
+
+        var snapshot = await GetSnapshotAsync(client, token);
+        var daily1 = snapshot.Dailies.First(x => x.Id == d1.Id);
+
+        var targetSortOrder = daily1.SortOrder - 1e-12;
+        using var put = new HttpRequestMessage(HttpMethod.Put, $"/api/board/dailies/{d2.Id}");
+        put.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        put.Content = JsonContent.Create(
+            new DailyUpdateRequest("Daily 2", null, null, null, DailyRepeatType.Daily, 1, null, 0, targetSortOrder),
+            options: s_json);
+        var putRes = await client.SendAsync(put);
+        var body = await putRes.Content.ReadAsStringAsync();
+        putRes.IsSuccessStatusCode.Should().BeTrue($"reorder returned {(int)putRes.StatusCode}: {body}");
+
+        var updatedSnapshot = await GetSnapshotAsync(client, token);
+        var sortedDailies = updatedSnapshot.Dailies.OrderBy(x => x.SortOrder).ToList();
+        sortedDailies.Count.Should().BeGreaterThanOrEqualTo(3);
+        for (var i = 0; i < sortedDailies.Count - 1; i++)
+        {
+            (sortedDailies[i + 1].SortOrder - sortedDailies[i].SortOrder).Should().BeApproximately(1.0, 0.0001);
+        }
+    }
+
+    [Fact]
     public async Task Oversized_idempotency_key_returns_400()
     {
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
@@ -223,6 +257,129 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
 
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await res.Content.ReadAsStringAsync()).Should().ContainEquivalentOf("idempotency_key_too_long");
+    }
+
+    [Fact]
+    public async Task Stale_tracked_entity_returns_conflict_instead_of_server_error()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (token, email) = await RegisterAndLoginAsync(client);
+        var daily = await CreateDailyAsync(client, token, "Tracked");
+
+        var dbFactory = factory.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        await using var otherWriter = await dbFactory.CreateDbContextAsync();
+        var userId = await otherWriter.Users.Where(x => x.Email == email).Select(x => x.Id).SingleAsync();
+
+        using var scope = factory.Services.CreateScope();
+        var scopedDb = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        // Load the row into the scoped context, then let another writer move the version on.
+        _ = await scopedDb.BoardItems.SingleAsync(x => x.Id == daily.Id);
+        var row = await otherWriter.BoardItems.SingleAsync(x => x.Id == daily.Id);
+        row.Title = "Changed elsewhere";
+        row.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        await otherWriter.SaveChangesAsync();
+
+        // The service still sees its stale tracked instance and saves over the new version.
+        var service = scope.ServiceProvider.GetRequiredService<BoardPersistenceService>();
+        var result = await service.UpdateDailyAsync(
+            userId,
+            daily.Id,
+            new UpdateDailyArgs("Tracked", null, null, null, DailyRepeatType.Daily, 1, null, 0, null),
+            CancellationToken.None);
+
+        result.Status.Should().Be(BoardMutationStatus.Conflict);
+        result.Item?.Title.Should().Be("Changed elsewhere");
+    }
+
+    [Fact]
+    public async Task Failed_mutation_does_not_leave_a_stuck_idempotency_claim()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (token, email) = await RegisterAndLoginAsync(client);
+        var daily = await CreateDailyAsync(client, token, "Tracked");
+
+        var dbFactory = factory.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        await using var otherWriter = await dbFactory.CreateDbContextAsync();
+        var userId = await otherWriter.Users.Where(x => x.Email == email).Select(x => x.Id).SingleAsync();
+
+        using var scope = factory.Services.CreateScope();
+        var scopedDb = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var tracked = await scopedDb.BoardItems.SingleAsync(x => x.Id == daily.Id);
+
+        // Move the row version so the scoped context's save conflicts.
+        var row = await otherWriter.BoardItems.SingleAsync(x => x.Id == daily.Id);
+        row.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        await otherWriter.SaveChangesAsync();
+
+        var idem = scope.ServiceProvider.GetRequiredService<BoardIdempotencyService>();
+        var key = Guid.NewGuid().ToString();
+        var fingerprint = BoardIdempotencyService.ComputeFingerprintHex("PUT", $"/api/board/dailies/{daily.Id}", "body");
+
+        Func<Task> act = async () =>
+        {
+            await idem.RunAsync(
+                userId,
+                key,
+                fingerprint,
+                async () =>
+                {
+                    tracked.Title = "Will fail";
+                    await scopedDb.SaveChangesAsync();
+                    return (200, "", "application/json");
+                },
+                CancellationToken.None);
+        };
+
+        await act.Should().ThrowAsync<DbUpdateConcurrencyException>();
+
+        // The claim must be gone, otherwise every retry of this key waits and times out.
+        await using var verify = await dbFactory.CreateDbContextAsync();
+        (await verify.BoardRequestIdempotencies.AnyAsync(x => x.UserId == userId && x.IdempotencyKey == key))
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Conflict_inside_an_idempotent_request_does_not_poison_the_claim_save()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (token, email) = await RegisterAndLoginAsync(client);
+        var daily = await CreateDailyAsync(client, token, "Tracked");
+
+        var dbFactory = factory.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        await using var otherWriter = await dbFactory.CreateDbContextAsync();
+        var userId = await otherWriter.Users.Where(x => x.Email == email).Select(x => x.Id).SingleAsync();
+
+        using var scope = factory.Services.CreateScope();
+        var scopedDb = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        _ = await scopedDb.BoardItems.SingleAsync(x => x.Id == daily.Id);
+        var row = await otherWriter.BoardItems.SingleAsync(x => x.Id == daily.Id);
+        row.Title = "Changed elsewhere";
+        row.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        await otherWriter.SaveChangesAsync();
+
+        var service = scope.ServiceProvider.GetRequiredService<BoardPersistenceService>();
+        var idem = scope.ServiceProvider.GetRequiredService<BoardIdempotencyService>();
+
+        // The mutation returns a conflict, then the idempotency service saves the claim on the same
+        // context. A failed entity left tracked would make that save retry the failed update.
+        var (statusCode, _, _) = await idem.RunAsync(
+            userId,
+            Guid.NewGuid().ToString(),
+            BoardIdempotencyService.ComputeFingerprintHex("PUT", $"/api/board/dailies/{daily.Id}", "body"),
+            async () =>
+            {
+                var result = await service.UpdateDailyAsync(
+                    userId,
+                    daily.Id,
+                    new UpdateDailyArgs("Tracked", null, null, null, DailyRepeatType.Daily, 1, null, 0, null),
+                    CancellationToken.None);
+                return (409, JsonSerializer.Serialize(result.Item), "application/json");
+            },
+            CancellationToken.None);
+
+        statusCode.Should().Be(409);
     }
 
     [Fact]
@@ -304,6 +461,16 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
         message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         message.Content = JsonContent.Create(request, options: s_json);
         return client.SendAsync(message);
+    }
+
+    private static async Task<BoardItem> CreateDailyAsync(HttpClient client, string token, string title)
+    {
+        using var createReq = new HttpRequestMessage(HttpMethod.Post, "/api/board/Daily");
+        createReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        createReq.Content = JsonContent.Create(new ItemTitleRequest(title), options: s_json);
+        var createRes = await client.SendAsync(createReq);
+        createRes.EnsureSuccessStatusCode();
+        return (await createRes.Content.ReadFromJsonAsync<BoardItem>(s_json))!;
     }
 
     private static async Task<BoardItem> CreateTodoAsync(HttpClient client, string token, string title)

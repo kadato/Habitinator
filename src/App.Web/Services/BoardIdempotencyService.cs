@@ -128,8 +128,24 @@ public sealed class BoardIdempotencyService(
         }
         catch
         {
+            // A failed mutation can leave entities tracked on the shared request context. Detach
+            // them before removing the claim, or that save would retry the failed mutation and
+            // leave the claim pending forever, which turns every retry into a timeout.
+            DetachPendingChangesExceptClaim(claim);
             await SafeRemoveClaimAsync(claim, idempotencyKey);
             throw;
+        }
+    }
+
+    private void DetachPendingChangesExceptClaim(BoardRequestIdempotencyEntity claim)
+    {
+        var pending = db.ChangeTracker.Entries()
+            .Where(e => !ReferenceEquals(e.Entity, claim)
+                        && e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+            .ToList();
+        foreach (var entry in pending)
+        {
+            entry.State = EntityState.Detached;
         }
     }
 

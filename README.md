@@ -119,7 +119,7 @@ dotnet build -t:Run -f net11.0-android
 - **Core planner.** Track habits, dailies, and to-dos. Organize them with tags, notes, and checklists.
 - **Global session timer.** A stopwatch with target logging to trace time spent on specific items.
 - **Statistics and heatmap.** Interactive heatmap dashboard to monitor your progress over time.
-- **Local-first and sync.** The mobile and desktop clients run on SQLite for offline support and sync changes to a server-side PostgreSQL backend.
+- **Local-first and sync.** Every client keeps a local mirror and queues changes for a server-side PostgreSQL backend. MAUI stores the mirror in SQLite, and the web app stores it in IndexedDB.
 
 ---
 
@@ -131,7 +131,7 @@ dotnet build -t:Run -f net11.0-android
 | **Web UI** | Blazor Web App with Interactive WebAssembly, MudBlazor |
 | **Native Apps** | .NET MAUI + Blazor Hybrid for Android, iOS, macOS, Windows |
 | **Database, Server** | Neon Serverless PostgreSQL or any PostgreSQL via EF Core |
-| **Database, Client** | SQLite via EF Core |
+| **Database, Client** | SQLite via EF Core, IndexedDB in the browser |
 | **Orchestration** | .NET Aspire AppHost |
 
 ---

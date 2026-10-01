@@ -20,6 +20,9 @@ public sealed partial class LocalFirstBoardDataService(
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
 
+    /// <summary>Operations currently on the wire. Guarded by <see cref="_gate" />. Used to keep delete coalescing away from creates that may already have reached the server.</summary>
+    private readonly HashSet<Guid> _inFlightOutboxOperations = [];
+
     private async Task<DateOnly> TodayAsync(CancellationToken cancellationToken)
     {
         var prefs = await services

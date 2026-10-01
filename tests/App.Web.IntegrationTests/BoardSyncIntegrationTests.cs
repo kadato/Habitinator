@@ -3,10 +3,13 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 
 using App.Shared.RCL.Models;
+using App.Web.Data;
 
 using FluentAssertions;
 
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace App.Web.IntegrationTests;
 
@@ -199,6 +202,51 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
         {
             (sortedTodos[i + 1].SortOrder - sortedTodos[i].SortOrder).Should().BeApproximately(1.0, 0.0001);
         }
+    }
+
+    [Fact]
+    public async Task Oversized_idempotency_key_returns_400()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (token, _) = await RegisterAndLoginAsync(client);
+
+        using var createReq = new HttpRequestMessage(HttpMethod.Post, "/api/board/Habit");
+        createReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        createReq.Content = JsonContent.Create(new ItemTitleRequest("Water"), options: s_json);
+        var createRes = await client.SendAsync(createReq);
+        createRes.EnsureSuccessStatusCode();
+        var created = (await createRes.Content.ReadFromJsonAsync<BoardItem>(s_json))!;
+
+        using var inc = IncrementRequest(token, created.Id, new string('k', 129));
+        var res = await client.SendAsync(inc);
+
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await res.Content.ReadAsStringAsync()).Should().ContainEquivalentOf("idempotency_key_too_long");
+    }
+
+    [Fact]
+    public async Task Stale_update_from_second_context_throws_concurrency_exception()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (token, _) = await RegisterAndLoginAsync(client);
+        var created = await CreateTodoAsync(client, token, "Concurrent");
+
+        var dbFactory = factory.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        await using var db1 = await dbFactory.CreateDbContextAsync();
+        await using var db2 = await dbFactory.CreateDbContextAsync();
+
+        var row1 = await db1.BoardItems.SingleAsync(x => x.Id == created.Id);
+        var row2 = await db2.BoardItems.SingleAsync(x => x.Id == created.Id);
+
+        row1.Title = "Writer one";
+        row1.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        await db1.SaveChangesAsync();
+
+        row2.Title = "Writer two";
+        row2.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        var staleSave = async () => await db2.SaveChangesAsync();
+
+        await staleSave.Should().ThrowAsync<DbUpdateConcurrencyException>();
     }
 
     private static async Task<BoardItem> CreateTodoAsync(HttpClient client, string token, string title)

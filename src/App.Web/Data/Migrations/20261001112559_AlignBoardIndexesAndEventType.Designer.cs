@@ -4,6 +4,7 @@ using App.Shared.RCL.Models;
 using App.Web.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,14 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace App.Web.Data.Migrations;
 
 [DbContext(typeof(ApplicationDbContext))]
-partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+[Migration("20261001112559_AlignBoardIndexesAndEventType")]
+partial class AlignBoardIndexesAndEventType
 {
-    // If you encounter a merge conflict in the line below, it means you need to
-    // discard one of the migration branches and recreate its migrations on top of
-    // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261001112849_TempTokenCheck";
-
-    protected override void BuildModel(ModelBuilder modelBuilder)
+    /// <inheritdoc />
+    protected override void BuildTargetModel(ModelBuilder modelBuilder)
     {
 #pragma warning disable 612, 618
         modelBuilder
@@ -172,7 +170,6 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .HasColumnType("boolean");
 
                 b.Property<DateTimeOffset>("UpdatedAtUtc")
-                    .IsConcurrencyToken()
                     .HasColumnType("timestamp with time zone");
 
                 b.Property<Guid>("UserId")

@@ -21,7 +21,7 @@ public sealed class BoardItemConfiguration : IEntityTypeConfiguration<BoardItemE
         builder.Property(x => x.Section).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.CreatedAtUtc).IsRequired();
         builder.Property(x => x.SortOrder).IsRequired();
-        builder.Property(x => x.UpdatedAtUtc).IsRequired();
+        builder.Property(x => x.UpdatedAtUtc).IsRequired().IsConcurrencyToken();
         builder.HasIndex(x => new { x.UserId, x.Section });
         builder.HasIndex(x => new { x.UserId, x.DeletedAtUtc });
         builder.HasIndex(x => new { x.UserId, x.UpdatedAtUtc });

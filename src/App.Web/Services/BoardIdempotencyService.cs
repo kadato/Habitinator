@@ -6,6 +6,8 @@ using App.Web.Data;
 
 using Microsoft.EntityFrameworkCore;
 
+using Npgsql;
+
 namespace App.Web.Services;
 
 /// <summary>Idempotent replay for board mutations, using the Idempotency-Key and request fingerprint.</summary>
@@ -14,6 +16,15 @@ public sealed class BoardIdempotencyService(
     ILogger<BoardIdempotencyService> logger)
 {
     public const int PendingResponseCode = -1;
+
+    /// <summary>Matches the <c>varchar(128)</c> column. Longer keys are rejected before they reach the database.</summary>
+    public const int MaxIdempotencyKeyLength = 128;
+
+    private const int MaxClaimAttempts = 5;
+
+    private const int MaxWaitMilliseconds = 500;
+
+    private static readonly TimeSpan s_waitTimeout = TimeSpan.FromSeconds(10);
 
     private static readonly JsonSerializerOptions s_problemJson = new()
     {
@@ -40,10 +51,10 @@ public sealed class BoardIdempotencyService(
             return await execute();
         }
 
+        var claimAttempts = 0;
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-
             var row = await db.BoardRequestIdempotencies.AsNoTracking()
                 .FirstOrDefaultAsync(
                     x => x.UserId == userId && x.IdempotencyKey == idempotencyKey,
@@ -81,9 +92,20 @@ public sealed class BoardIdempotencyService(
             {
                 await db.SaveChangesAsync(cancellationToken);
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex) when (IsUniqueViolation(ex))
             {
                 db.Entry(claim).State = EntityState.Detached; // Detach failed entry from change tracker
+                claimAttempts++;
+                if (claimAttempts >= MaxClaimAttempts)
+                {
+                    logger.LogError(
+                        ex,
+                        "Could not claim idempotency key for user {UserId} after {Attempts} attempts.",
+                        userId,
+                        claimAttempts);
+                    throw;
+                }
+
                 await Task.Delay(25, cancellationToken);
                 continue;
             }
@@ -132,9 +154,13 @@ public sealed class BoardIdempotencyService(
         string fingerprintHex,
         CancellationToken cancellationToken)
     {
-        for (var i = 0; i < 400; i++)
+        var delayMs = 25;
+        var deadline = DateTimeOffset.UtcNow + s_waitTimeout;
+        while (DateTimeOffset.UtcNow < deadline)
         {
-            await Task.Delay(25, cancellationToken);
+            await Task.Delay(delayMs, cancellationToken);
+            delayMs = Math.Min(delayMs * 2, MaxWaitMilliseconds);
+
             var row = await db.BoardRequestIdempotencies.AsNoTracking()
                 .FirstOrDefaultAsync(
                     x => x.UserId == userId && x.IdempotencyKey == idempotencyKey,
@@ -159,12 +185,34 @@ public sealed class BoardIdempotencyService(
         throw new TimeoutException("Idempotency replay wait timed out.");
     }
 
+    private static bool IsUniqueViolation(DbUpdateException exception)
+    {
+        for (Exception? ex = exception; ex is not null; ex = ex.InnerException)
+        {
+            if (ex is PostgresException { SqlState: "23505" })
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static string IdempotencyMismatchJson() =>
         JsonSerializer.Serialize(
             new
             {
                 problem = "idempotency_key_reuse",
                 detail = "Idempotency-Key was reused with a different request fingerprint."
+            },
+            s_problemJson);
+
+    public static string IdempotencyKeyTooLongJson() =>
+        JsonSerializer.Serialize(
+            new
+            {
+                problem = "idempotency_key_too_long",
+                detail = $"Idempotency-Key must be at most {MaxIdempotencyKeyLength} characters."
             },
             s_problemJson);
 }

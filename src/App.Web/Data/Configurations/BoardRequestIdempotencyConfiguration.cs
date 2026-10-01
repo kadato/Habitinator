@@ -1,3 +1,5 @@
+using App.Web.Services;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -9,7 +11,7 @@ public sealed class BoardRequestIdempotencyConfiguration : IEntityTypeConfigurat
     {
         builder.ToTable("BoardRequestIdempotencies");
         builder.HasKey(x => x.Id);
-        builder.Property(x => x.IdempotencyKey).HasMaxLength(128).IsRequired();
+        builder.Property(x => x.IdempotencyKey).HasMaxLength(BoardIdempotencyService.MaxIdempotencyKeyLength).IsRequired();
         builder.Property(x => x.RequestFingerprintHex).HasMaxLength(64).IsRequired();
         builder.Property(x => x.ResponseBody).HasColumnType("text");
         builder.Property(x => x.CreatedAtUtc).IsRequired();

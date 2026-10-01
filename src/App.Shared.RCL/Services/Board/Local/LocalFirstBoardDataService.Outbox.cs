@@ -292,13 +292,29 @@ public sealed partial class LocalFirstBoardDataService
         {
             head = await store.FindOutboxAsync(operationId, cancellationToken)
                    ?? throw new InvalidOperationException("Outbox entry disappeared.");
+            _inFlightOutboxOperations.Add(operationId);
         }
         finally
         {
             _gate.Release();
         }
 
-        await ExecuteOutboxRemoteAsync(head, api, cancellationToken);
+        try
+        {
+            await ExecuteOutboxRemoteAsync(head, api, cancellationToken);
+        }
+        finally
+        {
+            await _gate.WaitAsync(CancellationToken.None);
+            try
+            {
+                _inFlightOutboxOperations.Remove(operationId);
+            }
+            finally
+            {
+                _gate.Release();
+            }
+        }
     }
 
     private static T DeserializePayload<T>(BoardOutboxEntry head, string failureMessage)
@@ -318,7 +334,7 @@ public sealed partial class LocalFirstBoardDataService
                 {
                     var p = DeserializePayload<CreateOutboxPayload>(head, "Invalid create payload.");
                     var serverItem = await api.CreateItemAsync(p.Section, p.Title, p.ClientItemId, head.OperationId, cancellationToken);
-                    await CommitCreateSuccessAsync(p.ClientItemId, p.Section, serverItem, head.UserKey, cancellationToken);
+                    await CommitCreateSuccessAsync(head.OperationId, p.ClientItemId, p.Section, serverItem, head.UserKey, cancellationToken);
                     return;
                 }
             case BoardOutboxOperationKind.Rename:
@@ -517,13 +533,25 @@ public sealed partial class LocalFirstBoardDataService
     }
 
     private async Task CommitCreateSuccessAsync(
-        Guid clientId, BoardSection section, BoardItem serverItem, string userKey, CancellationToken cancellationToken)
+        Guid operationId, Guid clientId, BoardSection section, BoardItem serverItem, string userKey, CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await store.DeleteItemAsync(userKey, clientId, cancellationToken);
-            await store.UpsertItemAsync(BoardLocalRow.FromModel(section, userKey, serverItem, false), cancellationToken);
+            var localRow = await store.FindItemAsync(userKey, clientId, cancellationToken);
+            if (localRow is null)
+            {
+                // The item was deleted while this create was in flight. The delete is queued, and
+                // its payload is remapped below, so keep the item deleted locally.
+                logger.LogInformation(
+                    "Create operation {OperationId} was acknowledged after its local item was removed. Keeping it deleted.",
+                    operationId);
+            }
+            else
+            {
+                await store.DeleteItemAsync(userKey, clientId, cancellationToken);
+                await store.UpsertItemAsync(BoardLocalRow.FromModel(section, userKey, serverItem, false), cancellationToken);
+            }
 
             foreach (var row in await store.ListOutboxAsync(userKey, cancellationToken))
             {
@@ -691,7 +719,7 @@ public sealed partial class LocalFirstBoardDataService
             cancellationToken);
     }
 
-    private static async Task<bool> TryCoalesceDeletePendingCreateAsync(IBoardLocalStore local, string userKey, Guid itemId,
+    private async Task<bool> TryCoalesceDeletePendingCreateAsync(IBoardLocalStore local, string userKey, Guid itemId,
         CancellationToken cancellationToken)
     {
         var pending = await local.ListOutboxAsync(userKey, cancellationToken);
@@ -702,6 +730,24 @@ public sealed partial class LocalFirstBoardDataService
             if (p?.ClientItemId != itemId)
             {
                 continue;
+            }
+
+            // The create may already be on the wire, or an earlier attempt may have reached the
+            // server before its response was lost. In both cases the delete has to travel as a
+            // real operation: the create is retried, acknowledged, and remapped to the server id,
+            // and the queued delete then removes the server row.
+            if (_inFlightOutboxOperations.Contains(row.OperationId) || row.AttemptCount > 0)
+            {
+                return false;
+            }
+
+            // The server has never seen this item. Remove every pending operation for it, not
+            // just the create, so no orphan operation is later sent with an unknown id.
+            foreach (var op in pending.Where(o => o.OperationId != row.OperationId
+                && !_inFlightOutboxOperations.Contains(o.OperationId)
+                && BoardOutboxReferencedIds.ReferencesItem(o.Kind, o.PayloadJson, itemId)))
+            {
+                await local.DeleteOutboxAsync(op.OperationId, cancellationToken);
             }
 
             await local.DeleteOutboxAsync(row.OperationId, cancellationToken);

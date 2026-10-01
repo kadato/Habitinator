@@ -124,6 +124,127 @@ public sealed class LocalFirstBoardSyncTests
         snapshot.Todos.Should().ContainSingle(x => x.Id == id && x.Title == "Server wins");
     }
 
+    [Fact]
+    public async Task DrainCreateAsync_DeleteDuringInFlightCreateKeepsItemDeletedAndQueuesDelete()
+    {
+        var harness = new Harness();
+        var clientId = Guid.NewGuid();
+        var serverId = Guid.NewGuid();
+        await harness.Board.CreateItemAsync(BoardSection.Habit, "Read", clientId, CancellationToken.None);
+
+        var createStarted = new TaskCompletionSource();
+        var releaseCreate = new TaskCompletionSource();
+        var requests = new List<string>();
+        harness.Server.AsyncResponder = async request =>
+        {
+            requests.Add($"{request.Method} {request.RequestUri!.AbsolutePath}");
+            if (request.Method == HttpMethod.Post)
+            {
+                createStarted.SetResult();
+                await releaseCreate.Task;
+                var serverTime = DateTimeOffset.UtcNow;
+                return JsonResponse(
+                    HttpStatusCode.OK,
+                    new BoardItem(serverId, "Read", ServerUpdatedAtUtc: serverTime, CreatedAtUtc: serverTime, SortOrder: 1));
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        };
+
+        var drain = harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None);
+        await createStarted.Task;
+
+        (await harness.Board.DeleteItemAsync(BoardSection.Habit, clientId, CancellationToken.None)).Should().BeTrue();
+        (await harness.Store.ListItemsAsync(Harness.UserKey, includeArchived: false)).Should().BeEmpty();
+
+        releaseCreate.SetResult();
+        (await drain).Should().BeTrue();
+
+        // The acknowledged create must not resurrect the deleted item locally.
+        (await harness.Store.ListItemsAsync(Harness.UserKey, includeArchived: false)).Should().BeEmpty();
+        var pending = await harness.Store.ListOutboxAsync(Harness.UserKey);
+        pending.Should().ContainSingle(x => x.Kind == BoardOutboxOperationKind.Delete);
+
+        (await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None)).Should().BeTrue();
+
+        requests.Should().Contain($"DELETE /api/board/Habit/{serverId}");
+        (await harness.Store.ListOutboxAsync(Harness.UserKey)).Should().BeEmpty();
+        (await harness.Store.ListItemsAsync(Harness.UserKey, includeArchived: false)).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DeleteAsync_BeforeCreateDrain_CoalescesCreateAndAllItemOperations()
+    {
+        var harness = new Harness();
+        var id = Guid.NewGuid();
+        var calls = 0;
+        harness.Server.Responder = _ =>
+        {
+            calls++;
+            return new HttpResponseMessage(HttpStatusCode.InternalServerError);
+        };
+
+        await harness.Board.CreateItemAsync(BoardSection.Habit, "Read", id, CancellationToken.None);
+        await harness.Board.RenameItemAsync(BoardSection.Habit, id, "Read more", CancellationToken.None);
+        (await harness.Board.DeleteItemAsync(BoardSection.Habit, id, CancellationToken.None)).Should().BeTrue();
+
+        var drained = await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None);
+
+        drained.Should().BeFalse();
+        calls.Should().Be(0);
+        (await harness.Store.ListOutboxAsync(Harness.UserKey)).Should().BeEmpty();
+        (await harness.Store.ListItemsAsync(Harness.UserKey, includeArchived: false)).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DeleteAsync_AfterFailedCreateAttempt_QueuesDeleteAndResolvesAfterRetry()
+    {
+        var harness = new Harness();
+        var clientId = Guid.NewGuid();
+        var serverId = Guid.NewGuid();
+        await harness.Board.CreateItemAsync(BoardSection.Habit, "Read", clientId, CancellationToken.None);
+
+        harness.Server.Responder = _ => new HttpResponseMessage(HttpStatusCode.InternalServerError);
+        (await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None)).Should().BeFalse();
+
+        (await harness.Board.DeleteItemAsync(BoardSection.Habit, clientId, CancellationToken.None)).Should().BeTrue();
+        var pendingAfterDelete = await harness.Store.ListOutboxAsync(Harness.UserKey);
+        pendingAfterDelete.Should().HaveCount(2);
+        pendingAfterDelete.Should().ContainSingle(x => x.Kind == BoardOutboxOperationKind.Create);
+        pendingAfterDelete.Should().ContainSingle(x => x.Kind == BoardOutboxOperationKind.Delete);
+
+        // Move the backoff window into the past so the retry runs now.
+        var createOp = pendingAfterDelete.Single(x => x.Kind == BoardOutboxOperationKind.Create);
+        createOp.LastAttemptUtc = DateTime.UtcNow.AddMinutes(-1);
+        await harness.Store.UpdateOutboxAsync(createOp, CancellationToken.None);
+
+        var requests = new List<string>();
+        harness.Server.AsyncResponder = request =>
+        {
+            requests.Add($"{request.Method} {request.RequestUri!.AbsolutePath}");
+            if (request.Method == HttpMethod.Post)
+            {
+                var serverTime = DateTimeOffset.UtcNow;
+                return Task.FromResult(JsonResponse(
+                    HttpStatusCode.OK,
+                    new BoardItem(serverId, "Read", ServerUpdatedAtUtc: serverTime, CreatedAtUtc: serverTime, SortOrder: 1)));
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        };
+
+        (await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None)).Should().BeTrue();
+        var pendingAfterRetry = await harness.Store.ListOutboxAsync(Harness.UserKey);
+        pendingAfterRetry.Should().ContainSingle(x => x.Kind == BoardOutboxOperationKind.Delete);
+        (await harness.Store.ListItemsAsync(Harness.UserKey, includeArchived: false)).Should().BeEmpty();
+
+        (await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None)).Should().BeTrue();
+
+        requests.Should().Contain($"DELETE /api/board/Habit/{serverId}");
+        (await harness.Store.ListOutboxAsync(Harness.UserKey)).Should().BeEmpty();
+        (await harness.Store.ListItemsAsync(Harness.UserKey, includeArchived: false)).Should().BeEmpty();
+    }
+
     private static HttpResponseMessage JsonResponse<T>(HttpStatusCode status, T value) =>
         new(status)
         {
@@ -164,8 +285,10 @@ public sealed class LocalFirstBoardSyncTests
         public Func<HttpRequestMessage, HttpResponseMessage> Responder { get; set; } =
             _ => new HttpResponseMessage(HttpStatusCode.InternalServerError);
 
+        public Func<HttpRequestMessage, Task<HttpResponseMessage>>? AsyncResponder { get; set; }
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-            Task.FromResult(Responder(request));
+            AsyncResponder is null ? Task.FromResult(Responder(request)) : AsyncResponder(request);
     }
 
     private sealed class StubHttpFactory(ScriptedBoardServer server) : IHttpClientFactory

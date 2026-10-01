@@ -13,6 +13,10 @@ public static class BoardOutboxReferencedIds
             .Select(id => id.GetValueOrDefault())
             .ToHashSet();
 
+    /// <summary>Whether one pending operation payload references the given item id.</summary>
+    public static bool ReferencesItem(BoardOutboxOperationKind kind, string payloadJson, Guid itemId) =>
+        ExtractItemId(kind, payloadJson) == itemId;
+
     private static Guid? ExtractItemId(BoardOutboxOperationKind kind, string json)
     {
         return kind switch

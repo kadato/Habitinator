@@ -91,10 +91,38 @@ public sealed class BoardPersistenceService(
             return new BoardMutationResult(BoardMutationStatus.NotFound, null);
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return await BuildConflictFromDatabaseAsync(userId, section, itemId, cancellationToken);
+        }
+
         var model = toModel is null ? null : await toModel(entity);
         await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         return new BoardMutationResult(BoardMutationStatus.Ok, model);
+    }
+
+    /// <summary>
+    ///     A concurrent writer changed the row between the expected-version check and the save.
+    ///     Read the row as it now exists so the client can resolve the conflict with real data.
+    /// </summary>
+    private async Task<BoardMutationResult> BuildConflictFromDatabaseAsync(
+        Guid userId,
+        BoardSection section,
+        Guid itemId,
+        CancellationToken cancellationToken)
+    {
+        await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var fresh = await readDb.BoardItems
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                x => x.UserId == userId && x.Section == section && x.Id == itemId && x.DeletedAtUtc == null,
+                cancellationToken);
+        var model = fresh is null ? null : await ToModelWithDailyStreaksAsync(userId, fresh, cancellationToken);
+        return new BoardMutationResult(BoardMutationStatus.Conflict, model);
     }
 
     private async Task<(BoardItemEntity? Entity, BoardMutationResult? Conflict)> LoadAndCheckAsync(
@@ -232,14 +260,30 @@ public sealed class BoardPersistenceService(
         var utcNow = DateTimeOffset.UtcNow;
         if (itemId is { } id)
         {
-            var existing = await dbContext.BoardItems
-                .FirstOrDefaultAsync(x => x.UserId == userId && x.Id == id, cancellationToken);
-            if (existing is not null)
+            // Idempotent create replay: the same client id may already exist. Restore it. A
+            // concurrent writer can touch the row between load and save, so retry a few times.
+            for (var attempt = 1; attempt <= 3; attempt++)
             {
+                var existing = await dbContext.BoardItems
+                    .FirstOrDefaultAsync(x => x.UserId == userId && x.Id == id, cancellationToken);
+                if (existing is null)
+                {
+                    break;
+                }
+
                 existing.DeletedAtUtc = null;
                 existing.Title = ZalgoSanitizer.SanitizeAndTrim(title);
-                existing.UpdatedAtUtc = utcNow;
-                await dbContext.SaveChangesAsync(cancellationToken);
+                existing.UpdatedAtUtc = DateTimeOffset.UtcNow;
+                try
+                {
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                }
+                catch (DbUpdateConcurrencyException) when (attempt < 3)
+                {
+                    await dbContext.Entry(existing).ReloadAsync(cancellationToken);
+                    continue;
+                }
+
                 var restored = await ToModelWithDailyStreaksAsync(userId, existing, cancellationToken);
                 await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
                 return restored;
@@ -436,7 +480,15 @@ public sealed class BoardPersistenceService(
         AddActivityEvent(userId, ActivityEventType.DailyComplete, itemId, null, entity.Title,
             DailyStreakCalculator.BackdatedDailyEventOccurredAt(completedOn));
         var streakMap = await ComputeDailyStreakMapAsync(userId, entity, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return await BuildConflictFromDatabaseAsync(userId, BoardSection.Daily, itemId, cancellationToken);
+        }
+
         var completed = ToModelWithDailyStreaksAsync(entity, streakMap, today);
         await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         return new BoardMutationResult(BoardMutationStatus.Ok, completed);

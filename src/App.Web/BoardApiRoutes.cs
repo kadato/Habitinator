@@ -265,11 +265,20 @@ internal static class BoardApiRoutes
         CancellationToken cancellationToken)
     {
         var path = http.Request.Path.Value ?? "";
+        var idempotencyKey = http.Request.Headers[IdempotencyKeyHeader].FirstOrDefault();
+        if (idempotencyKey is { Length: > BoardIdempotencyService.MaxIdempotencyKeyLength })
+        {
+            return Results.Text(
+                BoardIdempotencyService.IdempotencyKeyTooLongJson(),
+                JsonContentType,
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
         try
         {
             var outcome = await idem.RunAsync(
                 userId,
-                http.Request.Headers[IdempotencyKeyHeader].FirstOrDefault(),
+                idempotencyKey,
                 BoardIdempotencyService.ComputeFingerprintHex(method, path, bodyJson),
                 () => execute(cancellationToken),
                 cancellationToken);

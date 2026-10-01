@@ -114,3 +114,80 @@ jobs:
           check_name: Test results by suite
           files: TestResults/**/*.trx
           comment_mode: failures
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ 'postgres' }}
+          POSTGRES_DB: habitinator_integration
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d habitinator_integration"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DOTNET_NO_LOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=127.0.0.1;Port=5432;Database=habitinator_integration;Username=postgres;Password=${{ 'postgres' }};Pooling=false;Timeout=15
+      ConnectionStrings__habitinatordb: Host=127.0.0.1;Port=5432;Database=habitinator_integration;Username=postgres;Password=${{ 'postgres' }};Pooling=false;Timeout=15
+      E2E_BASE_URL: http://127.0.0.1:5050
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            11.0.x
+          dotnet-quality: 'preview'
+
+      - name: Install workloads
+        run: |
+          dotnet workload install wasm-tools
+          dotnet workload restore Habitinator.slnx
+
+      - name: Build web app and E2E tests
+        run: |
+          dotnet build src/App.Web/App.Web.csproj --configuration Release
+          dotnet build tests/App.Web.E2E/App.Web.E2E.csproj --configuration Release
+
+      - name: Install Playwright Chromium
+        run: pwsh tests/App.Web.E2E/bin/Release/net11.0/playwright.ps1 install --with-deps chromium
+
+      - name: Start web app
+        run: |
+          dotnet run --project src/App.Web/App.Web.csproj --configuration Release --no-build --urls http://127.0.0.1:5050 > app.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:5050/health > /dev/null; then
+              echo "Web app is healthy after $i attempts."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Web app did not become healthy in time."
+          tail -100 app.log
+          exit 1
+
+      - name: Run Playwright smoke tests
+        run: >
+          dotnet test tests/App.Web.E2E/App.Web.E2E.csproj
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=App.Web.E2E.trx"
+          --results-directory "${{ github.workspace }}/TestResults"
+
+      - name: Upload web app log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-web-app-log
+          path: app.log

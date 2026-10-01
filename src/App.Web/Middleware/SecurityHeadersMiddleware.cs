@@ -12,6 +12,7 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next)
             "camera=(), microphone=(), geolocation=(), payment=(), usb=()";
         headers.XFrameOptions = "DENY";
 #pragma warning disable S7039 // Suppress Content Security Policies restriction warning for Blazor Server compatibility
+        var host = context.Request.Host.Value;
         headers.ContentSecurityPolicy =
             "default-src 'self'; " +
             "base-uri 'self'; " +
@@ -21,7 +22,7 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next)
             "font-src 'self' data: https://fonts.gstatic.com; " +
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
             "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; " +
-            "connect-src 'self' https: wss: ws:; " +
+            $"connect-src 'self' wss://{host} ws://{host}; " +
             "object-src 'none'; " +
             "upgrade-insecure-requests";
 #pragma warning restore S7039

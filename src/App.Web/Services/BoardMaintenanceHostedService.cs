@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 using App.Web.Data;
 
 using Microsoft.EntityFrameworkCore;
@@ -10,11 +12,14 @@ public sealed class BoardMaintenanceOptions
     public const string SectionName = "BoardMaintenance";
 
     /// <summary>Idempotency rows older than this are purged.</summary>
+    [Range(typeof(TimeSpan), "1.00:00:00", "3650.00:00:00")]
     public TimeSpan IdempotencyRetention { get; set; } = TimeSpan.FromDays(14);
 
     /// <summary>Soft-deleted board rows older than this are physically removed.</summary>
+    [Range(typeof(TimeSpan), "1.00:00:00", "3650.00:00:00")]
     public TimeSpan TombstoneRetention { get; set; } = TimeSpan.FromDays(90);
 
+    [Range(typeof(TimeSpan), "00:00:30", "30.00:00:00")]
     public TimeSpan Interval { get; set; } = TimeSpan.FromHours(6);
 }
 

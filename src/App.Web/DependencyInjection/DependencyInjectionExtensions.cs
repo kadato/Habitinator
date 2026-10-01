@@ -49,7 +49,6 @@ public static class DependencyInjectionExtensions
 
         services.AddOptions<DemoUserOptions>()
             .BindConfiguration(DemoUserOptions.SectionName)
-            .ValidateDataAnnotations()
             .ValidateOnStart();
 
         services.PostConfigure<DemoUserOptions>(static o =>

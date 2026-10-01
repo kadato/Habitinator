@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 using Microsoft.Extensions.Options;
 
 namespace App.Web.Services;
@@ -81,7 +83,9 @@ public sealed class DemoInitializationOptions
     public const string SectionName = "DemoInitialization";
 
     /// <summary>Retries when Postgres is waking on Neon or transiently unavailable.</summary>
+    [Range(1, 100)]
     public int MaxAttempts { get; set; } = 6;
 
+    [Range(0, 3600)]
     public int RetryDelaySeconds { get; set; } = 5;
 }

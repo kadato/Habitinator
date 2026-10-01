@@ -52,3 +52,6 @@ undefined:/
 .sonar/
 .scannerwork/
 .sonarqube/
+
+# Playwright MCP local dumps. Never commit these.
+.playwright-mcp/

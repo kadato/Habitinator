@@ -32,6 +32,8 @@ public sealed class LocalBoardItemRow
 
     public HabitResetPeriod ResetPeriod { get; set; } = HabitResetPeriod.Daily;
 
+    public DateOnly? HabitPeriodStart { get; set; }
+
     public DateOnly? DailyStartDate { get; set; }
 
     public DailyRepeatType DailyRepeat { get; set; } = DailyRepeatType.Daily;
@@ -69,6 +71,7 @@ public sealed class LocalBoardItemRow
         TrackMinus = source.TrackMinus;
         NegativeCounter = source.NegativeCounter;
         ResetPeriod = source.ResetPeriod;
+        HabitPeriodStart = source.HabitPeriodStart;
         DailyStartDate = source.DailyStartDate;
         DailyRepeat = source.DailyRepeat;
         DailyRepeatInterval = source.DailyRepeatInterval;

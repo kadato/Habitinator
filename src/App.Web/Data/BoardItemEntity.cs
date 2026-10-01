@@ -24,6 +24,9 @@ public sealed class BoardItemEntity
 
     public int ResetPeriod { get; set; }
 
+    /// <summary>UTC date, the time is ignored, marking the local period the habit counters belong to.</summary>
+    public DateTime? HabitPeriodStart { get; set; }
+
     public bool IsCompleted { get; set; }
 
     public int Counter { get; set; }

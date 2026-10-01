@@ -62,7 +62,9 @@ public sealed record BoardItem(
     /// <summary>Explicit user-defined sort position. New items get max+1. Reorder sets midpoint between neighbours.</summary>
     double? SortOrder = null,
     /// <summary>True if the item is archived and hidden from the active board.</summary>
-    bool IsArchived = false);
+    bool IsArchived = false,
+    /// <summary>Local-day start of the period the habit counters belong to. Null for rows written before resets existed.</summary>
+    DateOnly? HabitPeriodStart = null);
 
 public sealed record BoardSnapshot(
     IReadOnlyList<BoardItem> Habits,

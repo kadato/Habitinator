@@ -80,6 +80,7 @@ public sealed partial class LocalFirstBoardDataService
                a.TrackMinus == b.TrackMinus &&
                a.NegativeCounter == b.NegativeCounter &&
                a.ResetPeriod == b.ResetPeriod &&
+               a.HabitPeriodStart == b.HabitPeriodStart &&
                a.DailyStartDate == b.DailyStartDate &&
                a.DailyRepeat == b.DailyRepeat &&
                a.DailyRepeatInterval == b.DailyRepeatInterval &&

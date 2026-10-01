@@ -268,6 +268,7 @@ public sealed class InMemoryBoardLocalStore : IBoardLocalStore
         TrackMinus = source.TrackMinus,
         NegativeCounter = source.NegativeCounter,
         ResetPeriod = source.ResetPeriod,
+        HabitPeriodStart = source.HabitPeriodStart,
         DailyStartDate = source.DailyStartDate,
         DailyRepeat = source.DailyRepeat,
         DailyRepeatInterval = source.DailyRepeatInterval,

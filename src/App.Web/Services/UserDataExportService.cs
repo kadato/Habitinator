@@ -40,18 +40,29 @@ public sealed class UserDataExportService(
         var isCompleted = e.Section == BoardSection.Daily
             ? e.IsCompleted && lastCompleted == today
             : e.IsCompleted;
+        var resetPeriod = Enum.IsDefined((HabitResetPeriod)e.ResetPeriod)
+            ? (HabitResetPeriod)e.ResetPeriod
+            : HabitResetPeriod.Daily;
+        DateOnly? anchor = e.HabitPeriodStart is { } h ? DateOnly.FromDateTime(h) : null;
+        var counter = e.Counter;
+        var negative = e.NegativeCounter;
+        if (e.Section == BoardSection.Habit)
+        {
+            (counter, negative) = HabitResetSchedule.EffectiveCounters(counter, negative, anchor, today, resetPeriod);
+            anchor = HabitResetSchedule.EffectiveAnchor(anchor, today, resetPeriod);
+        }
 
         return new BoardItem(
             e.Id,
             e.Title,
             isCompleted,
-            e.Counter,
+            counter,
             e.Notes,
             e.Tags,
             e.TrackPlus,
             e.TrackMinus,
-            e.NegativeCounter,
-            (HabitResetPeriod)e.ResetPeriod,
+            negative,
+            resetPeriod,
             start,
             (DailyRepeatType)e.DailyRepeatType,
             e.DailyRepeatInterval,
@@ -61,6 +72,7 @@ public sealed class UserDataExportService(
             e.UpdatedAtUtc,
             e.CreatedAtUtc,
             e.SortOrder,
-            e.IsArchived);
+            e.IsArchived,
+            anchor);
     }
 }

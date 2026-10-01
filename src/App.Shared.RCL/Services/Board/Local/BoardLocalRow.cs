@@ -29,8 +29,9 @@ public sealed class BoardLocalRow
 
     public HabitResetPeriod ResetPeriod { get; set; } = HabitResetPeriod.Daily;
 
-    public DateOnly? DailyStartDate { get; set; }
+    public DateOnly? HabitPeriodStart { get; set; }
 
+    public DateOnly? DailyStartDate { get; set; }
     public DailyRepeatType DailyRepeat { get; set; } = DailyRepeatType.Daily;
 
     public int DailyRepeatInterval { get; set; } = 1;
@@ -71,7 +72,8 @@ public sealed class BoardLocalRow
         ServerUpdatedAtUtc,
         CreatedAtUtc,
         SortOrder,
-        IsArchived);
+        IsArchived,
+        HabitPeriodStart);
 
     public static BoardLocalRow FromModel(BoardSection section, string userKey, BoardItem item, bool awaitingCreate)
     {
@@ -89,6 +91,7 @@ public sealed class BoardLocalRow
             TrackMinus = item.TrackMinus,
             NegativeCounter = item.NegativeCounter,
             ResetPeriod = item.ResetPeriod,
+            HabitPeriodStart = item.HabitPeriodStart,
             DailyStartDate = item.DailyStartDate,
             DailyRepeat = item.DailyRepeat,
             DailyRepeatInterval = item.DailyRepeatInterval,
@@ -114,6 +117,7 @@ public sealed class BoardLocalRow
         TrackMinus = source.TrackMinus;
         NegativeCounter = source.NegativeCounter;
         ResetPeriod = source.ResetPeriod;
+        HabitPeriodStart = source.HabitPeriodStart;
         DailyStartDate = source.DailyStartDate;
         DailyRepeat = source.DailyRepeat;
         DailyRepeatInterval = source.DailyRepeatInterval;

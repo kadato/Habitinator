@@ -331,6 +331,9 @@ public sealed class BoardPersistenceService(
             TrackPlus = true,
             TrackMinus = true,
             ResetPeriod = (int)HabitResetPeriod.Daily,
+            HabitPeriodStart = section == BoardSection.Habit
+                ? ToUtcDate(await TodayAsync(userId, cancellationToken))
+                : null,
             IsCompleted = false,
             Counter = 0,
             NegativeCounter = 0,
@@ -614,12 +617,14 @@ public sealed class BoardPersistenceService(
     internal static int DurationSeconds(TimeSpan duration) =>
         (int)Math.Min(int.MaxValue, Math.Max(0, duration.TotalSeconds));
 
-    public Task<BoardMutationResult> IncrementHabitPlusAsync(
+    public async Task<BoardMutationResult> IncrementHabitPlusAsync(
         Guid userId,
         Guid itemId,
         DateTimeOffset? expectedUpdatedAtUtc = null,
-        CancellationToken cancellationToken = default) =>
-        MutateItemAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var today = await TodayAsync(userId, cancellationToken);
+        return await MutateItemAsync(
                 userId,
                 BoardSection.Habit,
                 itemId,
@@ -631,19 +636,23 @@ public sealed class BoardPersistenceService(
                         return Task.FromResult(false);
                     }
 
+                    EnsureHabitPeriodCurrent(entity, today);
                     entity.Counter++;
                     AddActivityEvent(userId, ActivityEventType.HabitPlus, itemId, customLabel: entity.Title);
                     return Task.FromResult(true);
                 },
                 entity => ToModelWithDailyStreaksAsync(userId, entity, cancellationToken),
                 cancellationToken);
+    }
 
-    public Task<BoardMutationResult> IncrementHabitMinusAsync(
+    public async Task<BoardMutationResult> IncrementHabitMinusAsync(
         Guid userId,
         Guid itemId,
         DateTimeOffset? expectedUpdatedAtUtc = null,
-        CancellationToken cancellationToken = default) =>
-        MutateItemAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var today = await TodayAsync(userId, cancellationToken);
+        return await MutateItemAsync(
                 userId,
                 BoardSection.Habit,
                 itemId,
@@ -655,19 +664,23 @@ public sealed class BoardPersistenceService(
                         return Task.FromResult(false);
                     }
 
+                    EnsureHabitPeriodCurrent(entity, today);
                     entity.NegativeCounter++;
                     AddActivityEvent(userId, ActivityEventType.HabitMinus, itemId, customLabel: entity.Title);
                     return Task.FromResult(true);
                 },
                 entity => ToModelWithDailyStreaksAsync(userId, entity, cancellationToken),
                 cancellationToken);
+    }
 
-    public Task<BoardMutationResult> UpdateHabitAsync(
+    public async Task<BoardMutationResult> UpdateHabitAsync(
         Guid userId,
         Guid itemId,
         UpdateHabitArgs args,
-        CancellationToken cancellationToken = default) =>
-        MutateItemAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var today = await TodayAsync(userId, cancellationToken);
+        return await MutateItemAsync(
                 userId,
                 BoardSection.Habit,
                 itemId,
@@ -690,10 +703,12 @@ public sealed class BoardPersistenceService(
                     entity.ResetPeriod = (int)args.ResetPeriod;
                     entity.Counter = newCounter;
                     entity.NegativeCounter = newNegativeCounter;
+                    entity.HabitPeriodStart = ToUtcDate(HabitResetSchedule.PeriodStartFor(today, args.ResetPeriod));
                     return true;
                 },
                 entity => ToModelWithDailyStreaksAsync(userId, entity, cancellationToken),
                 cancellationToken);
+    }
 
     private static (bool TrackPlus, bool TrackMinus) ResolveHabitTracks(bool trackPlus, bool trackMinus)
     {
@@ -811,12 +826,12 @@ public sealed class BoardPersistenceService(
         BoardItemEntity entity,
         CancellationToken cancellationToken = default)
     {
+        var (today, dayStart) = await TodayAndDayStartAsync(userId, cancellationToken);
         if (entity.Section != BoardSection.Daily)
         {
-            return ToModelWithToday(entity, DateOnly.MinValue, EmptyDailyStreaks);
+            return ToModelWithToday(entity, today, EmptyDailyStreaks);
         }
 
-        var (today, dayStart) = await TodayAndDayStartAsync(userId, cancellationToken);
         await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var singleDailyList = new List<BoardItemEntity> { entity };
         var streaks = await streakCalculator.BuildDailyStreakMapAsync(userId, singleDailyList, today, dayStart, readDb, cancellationToken);
@@ -870,6 +885,36 @@ public sealed class BoardPersistenceService(
             : HabitResetPeriod.Daily;
     }
 
+    private static DateOnly? HabitAnchor(BoardItemEntity entity) =>
+        entity.HabitPeriodStart is { } d ? DateOnly.FromDateTime(d) : null;
+
+    private static DateTime ToUtcDate(DateOnly day) =>
+        day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+    /// <summary>Zero habit counters when the stored period is older than today. Null anchors initialize without wiping.</summary>
+    private static void EnsureHabitPeriodCurrent(BoardItemEntity entity, DateOnly today)
+    {
+        if (entity.Section != BoardSection.Habit)
+        {
+            return;
+        }
+
+        var period = ResolveResetPeriod(entity);
+        var anchor = HabitAnchor(entity);
+        if (anchor is null)
+        {
+            entity.HabitPeriodStart = ToUtcDate(HabitResetSchedule.PeriodStartFor(today, period));
+            return;
+        }
+
+        if (HabitResetSchedule.NeedsReset(anchor, today, period))
+        {
+            entity.Counter = 0;
+            entity.NegativeCounter = 0;
+            entity.HabitPeriodStart = ToUtcDate(HabitResetSchedule.PeriodStartFor(today, period));
+        }
+    }
+
     private static BoardItem ToModelWithToday(
         BoardItemEntity entity,
         DateOnly today,
@@ -885,15 +930,26 @@ public sealed class BoardPersistenceService(
             : entity.IsCompleted;
 
         int displayCounter;
+        int displayNegative;
+        DateOnly? habitAnchor = HabitAnchor(entity);
+        var resetPeriod = ResolveResetPeriod(entity);
         if (entity.Section == BoardSection.Daily)
         {
             displayCounter = dailyStreakById.TryGetValue(entity.Id, out var computedStreak)
                 ? computedStreak
                 : entity.Counter;
+            displayNegative = entity.NegativeCounter;
+        }
+        else if (entity.Section == BoardSection.Habit)
+        {
+            (displayCounter, displayNegative) = HabitResetSchedule.EffectiveCounters(
+                entity.Counter, entity.NegativeCounter, habitAnchor, today, resetPeriod);
+            habitAnchor = HabitResetSchedule.EffectiveAnchor(habitAnchor, today, resetPeriod);
         }
         else
         {
             displayCounter = entity.Counter;
+            displayNegative = entity.NegativeCounter;
         }
 
         return new BoardItem(
@@ -905,8 +961,8 @@ public sealed class BoardPersistenceService(
             entity.Tags,
             entity.TrackPlus,
             entity.TrackMinus,
-            entity.NegativeCounter,
-            ResolveResetPeriod(entity),
+            displayNegative,
+            resetPeriod,
             start,
             repeat,
             interval,
@@ -916,7 +972,8 @@ public sealed class BoardPersistenceService(
             entity.UpdatedAtUtc,
             entity.CreatedAtUtc,
             entity.SortOrder,
-            entity.IsArchived);
+            entity.IsArchived,
+            habitAnchor);
     }
 
     private static bool IsDailyEntityCompleteForToday(BoardItemEntity entity, DateOnly today)

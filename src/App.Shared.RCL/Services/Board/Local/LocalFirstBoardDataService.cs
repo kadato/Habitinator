@@ -160,6 +160,12 @@ public sealed partial class LocalFirstBoardDataService(
                 return null;
             }
 
+            if (row.Section == BoardSection.Habit)
+            {
+                var today = await TodayAsync(cancellationToken);
+                return ToEffectiveModel(row, today);
+            }
+
             return row.ToModel();
         }
         finally
@@ -236,7 +242,7 @@ public sealed partial class LocalFirstBoardDataService(
             x => x.SortOrder ?? double.MaxValue,
             x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue,
             x => x.Id)
-            .Select(x => x.ToModel())];
+            .Select(x => ToEffectiveModel(x, today))];
         List<BoardItem> dailies = [.. BoardOrdering.SortDailies(
             items.Where(x => x.Section == BoardSection.Daily),
             x => IsDailyRowCompleteForToday(x, today),
@@ -253,6 +259,42 @@ public sealed partial class LocalFirstBoardDataService(
             x => x.Id)
             .Select(x => x.ToModel())];
         return (habits, dailies, todos);
+    }
+
+    internal static BoardItem ToEffectiveModel(BoardLocalRow row, DateOnly today)
+    {
+        var model = row.ToModel();
+        if (row.Section != BoardSection.Habit)
+        {
+            return model;
+        }
+
+        var (counter, negative) = HabitResetSchedule.EffectiveCounters(
+            model.Counter, model.NegativeCounter, model.HabitPeriodStart, today, model.ResetPeriod);
+        var anchor = HabitResetSchedule.EffectiveAnchor(model.HabitPeriodStart, today, model.ResetPeriod);
+        return model with { Counter = counter, NegativeCounter = negative, HabitPeriodStart = anchor };
+    }
+
+    internal static void EnsureLocalHabitPeriodCurrent(BoardLocalRow row, DateOnly today)
+    {
+        if (row.Section != BoardSection.Habit)
+        {
+            return;
+        }
+
+        var current = HabitResetSchedule.PeriodStartFor(today, row.ResetPeriod);
+        if (row.HabitPeriodStart is null)
+        {
+            row.HabitPeriodStart = current;
+            return;
+        }
+
+        if (HabitResetSchedule.NeedsReset(row.HabitPeriodStart, today, row.ResetPeriod))
+        {
+            row.Counter = 0;
+            row.NegativeCounter = 0;
+            row.HabitPeriodStart = current;
+        }
     }
 
     private static bool IsDailyRowCompleteForToday(BoardLocalRow row, DateOnly today) =>

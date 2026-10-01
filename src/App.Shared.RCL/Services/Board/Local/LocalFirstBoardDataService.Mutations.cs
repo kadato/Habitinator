@@ -14,7 +14,11 @@ public sealed partial class LocalFirstBoardDataService
                 var id = itemId ?? Guid.NewGuid();
                 var now = DateTimeOffset.UtcNow;
                 var sortOrder = await GetInitialLocalSortOrderAsync(local, userKey, section, cancellationToken);
-                BoardItem item = new(id, ZalgoSanitizer.SanitizeAndTrim(title), CreatedAtUtc: now, SortOrder: sortOrder);
+                var today = await TodayAsync(cancellationToken);
+                BoardItem item = section == BoardSection.Habit
+                    ? new(id, ZalgoSanitizer.SanitizeAndTrim(title), CreatedAtUtc: now, SortOrder: sortOrder,
+                        HabitPeriodStart: HabitResetSchedule.PeriodStartFor(today, HabitResetPeriod.Daily))
+                    : new(id, ZalgoSanitizer.SanitizeAndTrim(title), CreatedAtUtc: now, SortOrder: sortOrder);
                 await local.UpsertItemAsync(BoardLocalRow.FromModel(section, userKey, item, true), cancellationToken);
                 CreateOutboxPayload payload = new(section, item.Title, id);
                 await EnqueueStaticAsync(local, userKey, BoardOutboxOperationKind.Create, payload, cancellationToken);
@@ -193,12 +197,14 @@ public sealed partial class LocalFirstBoardDataService
         MutateWithSyncAsync(
             async (local, userKey) =>
             {
+                var today = await TodayAsync(cancellationToken);
                 var result = await UpdateRowAsync(
                     local,
                     userKey,
                     new RowUpdateOp(itemId, BoardSection.Habit, BoardOutboxOperationKind.HabitIncrement, (row, expected) => new ItemIdOutboxPayload(itemId, expected)),
                     row =>
                     {
+                        EnsureLocalHabitPeriodCurrent(row, today);
                         if (row.TrackPlus)
                         {
                             row.Counter++;
@@ -221,12 +227,14 @@ public sealed partial class LocalFirstBoardDataService
         MutateWithSyncAsync(
             async (local, userKey) =>
             {
+                var today = await TodayAsync(cancellationToken);
                 var result = await UpdateRowAsync(
                     local,
                     userKey,
                     new RowUpdateOp(itemId, BoardSection.Habit, BoardOutboxOperationKind.HabitDecrement, (row, expected) => new ItemIdOutboxPayload(itemId, expected)),
                     row =>
                     {
+                        EnsureLocalHabitPeriodCurrent(row, today);
                         if (row.TrackMinus)
                         {
                             row.NegativeCounter++;
@@ -317,36 +325,41 @@ public sealed partial class LocalFirstBoardDataService
         UpdateHabitArgs args,
         CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
-            async (local, userKey) => await UpdateRowAsync(
-                local,
-                userKey,
-                new RowUpdateOp(itemId, BoardSection.Habit, BoardOutboxOperationKind.UpdateHabit, (row, expected) => new UpdateHabitOutboxPayload(
-                    itemId,
-                    row.Title,
-                    row.Notes,
-                    row.Tags,
-                    row.TrackPlus,
-                    row.TrackMinus,
-                    row.ResetPeriod,
-                    row.Counter,
-                    row.NegativeCounter,
-                    row.ChecklistJson,
-                    expected,
-                    row.SortOrder)),
-                async row =>
-                {
-                    row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
-                    row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
-                    row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
-                    row.TrackPlus = args.TrackPlus;
-                    row.TrackMinus = args.TrackMinus;
-                    row.ResetPeriod = args.ResetPeriod;
-                    row.Counter = args.Counter;
-                    row.NegativeCounter = args.NegativeCounter;
-                    row.ChecklistJson = DailyChecklistJson.Normalize(args.ChecklistJson);
-                    await HandleSortOrderUpdateAsync(local, userKey, BoardSection.Habit, itemId, args.SortOrder, row, cancellationToken);
-                },
-                cancellationToken),
+            async (local, userKey) =>
+            {
+                var today = await TodayAsync(cancellationToken);
+                return await UpdateRowAsync(
+                    local,
+                    userKey,
+                    new RowUpdateOp(itemId, BoardSection.Habit, BoardOutboxOperationKind.UpdateHabit, (row, expected) => new UpdateHabitOutboxPayload(
+                        itemId,
+                        row.Title,
+                        row.Notes,
+                        row.Tags,
+                        row.TrackPlus,
+                        row.TrackMinus,
+                        row.ResetPeriod,
+                        row.Counter,
+                        row.NegativeCounter,
+                        row.ChecklistJson,
+                        expected,
+                        row.SortOrder)),
+                    async row =>
+                    {
+                        row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
+                        row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
+                        row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
+                        row.TrackPlus = args.TrackPlus;
+                        row.TrackMinus = args.TrackMinus;
+                        row.ResetPeriod = args.ResetPeriod;
+                        row.Counter = args.Counter;
+                        row.NegativeCounter = args.NegativeCounter;
+                        row.HabitPeriodStart = HabitResetSchedule.PeriodStartFor(today, args.ResetPeriod);
+                        row.ChecklistJson = DailyChecklistJson.Normalize(args.ChecklistJson);
+                        await HandleSortOrderUpdateAsync(local, userKey, BoardSection.Habit, itemId, args.SortOrder, row, cancellationToken);
+                    },
+                    cancellationToken);
+            },
             cancellationToken);
 
     public Task<BoardItem?> UpdateTodoAsync(

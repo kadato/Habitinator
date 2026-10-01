@@ -318,6 +318,7 @@ public sealed class SqliteBoardLocalStore(
         TrackMinus = row.TrackMinus,
         NegativeCounter = row.NegativeCounter,
         ResetPeriod = row.ResetPeriod,
+        HabitPeriodStart = row.HabitPeriodStart,
         DailyStartDate = row.DailyStartDate,
         DailyRepeat = row.DailyRepeat,
         DailyRepeatInterval = row.DailyRepeatInterval,
@@ -357,6 +358,7 @@ public sealed class SqliteBoardLocalStore(
         TrackMinus = item.TrackMinus,
         NegativeCounter = item.NegativeCounter,
         ResetPeriod = item.ResetPeriod,
+        HabitPeriodStart = item.HabitPeriodStart,
         DailyStartDate = item.DailyStartDate,
         DailyRepeat = item.DailyRepeat,
         DailyRepeatInterval = item.DailyRepeatInterval,
@@ -391,7 +393,8 @@ public sealed class SqliteBoardLocalStore(
         [
             ("ServerUpdatedAtUtc", "ALTER TABLE BoardItems ADD COLUMN ServerUpdatedAtUtc TEXT NULL;"),
             ("CreatedAtUtc", "ALTER TABLE BoardItems ADD COLUMN CreatedAtUtc TEXT NULL;"),
-            ("IsArchived", "ALTER TABLE BoardItems ADD COLUMN IsArchived INTEGER NOT NULL DEFAULT 0;")
+            ("IsArchived", "ALTER TABLE BoardItems ADD COLUMN IsArchived INTEGER NOT NULL DEFAULT 0;"),
+            ("HabitPeriodStart", "ALTER TABLE BoardItems ADD COLUMN HabitPeriodStart TEXT NULL;")
         ];
 
         foreach (var (column, ddl) in boardMigrations)

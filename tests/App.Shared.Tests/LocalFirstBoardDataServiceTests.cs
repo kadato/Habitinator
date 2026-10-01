@@ -54,6 +54,47 @@ public sealed class LocalFirstBoardDataServiceTests
         snapshot.Habits.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task SnapshotAsync_StaleHabitAnchor_ShowsZeroWithoutWipingStore()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var item = await harness.Board.CreateItemAsync(BoardSection.Habit, "Read", cancellationToken: ct);
+        await harness.Board.IncrementHabitPlusAsync(item.Id, ct);
+
+        var row = await harness.Store.FindItemAsync(Harness.UserKey, item.Id, ct);
+        Assert.NotNull(row);
+        row.Counter = 5;
+        row.HabitPeriodStart = HabitResetSchedule.PeriodStartFor(
+            DateOnly.FromDateTime(DateTime.UtcNow), HabitResetPeriod.Daily).AddDays(-1);
+        await harness.Store.UpsertItemAsync(row, ct);
+
+        var snapshot = await harness.Board.GetSnapshotAsync(ct);
+        snapshot.Habits.Should().ContainSingle(x => x.Id == item.Id && x.Counter == 0);
+    }
+
+    [Fact]
+    public async Task IncrementHabitPlusAsync_StaleAnchor_ResetsThenCountsOne()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var item = await harness.Board.CreateItemAsync(BoardSection.Habit, "Read", cancellationToken: ct);
+
+        var row = await harness.Store.FindItemAsync(Harness.UserKey, item.Id, ct);
+        Assert.NotNull(row);
+        row.Counter = 5;
+        row.NegativeCounter = 3;
+        row.HabitPeriodStart = HabitResetSchedule.PeriodStartFor(
+            DateOnly.FromDateTime(DateTime.UtcNow), HabitResetPeriod.Daily).AddDays(-1);
+        await harness.Store.UpsertItemAsync(row, ct);
+
+        var updated = await harness.Board.IncrementHabitPlusAsync(item.Id, ct);
+
+        Assert.NotNull(updated);
+        updated.Counter.Should().Be(1);
+        updated.NegativeCounter.Should().Be(0);
+    }
+
     private sealed class Harness
     {
         public const string UserKey = "WEBTEST@LOCAL";

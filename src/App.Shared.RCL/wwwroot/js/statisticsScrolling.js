@@ -14,25 +14,23 @@ globalThis.scrollHeatmapsToEnd = function () {
     });
 };
 
-// JavaScript helper to initialize roving tabindex for the Activity Heatmap on load/reload
-globalThis.initializeHeatmapRovingTabindex = function () {
-    const grid = document.querySelector('.stats-heatmap-grid');
-    if (!grid) return;
+// JavaScript helper to initialize roving tabindex for every Activity Heatmap on load/reload
+globalThis.initializeHeatmapRovingTabindex = function (root) {
+    const scope = root && typeof root.querySelectorAll === 'function' ? root : document;
+    const grids = scope.querySelectorAll('.stats-heatmap-grid');
 
-    const btns = Array.from(grid.querySelectorAll('.stats-heatmap-day-btn'));
-    if (btns.length === 0) return;
+    grids.forEach(grid => {
+        const btns = Array.from(grid.querySelectorAll('.stats-heatmap-day-btn'));
+        if (btns.length === 0) return;
 
-    btns.forEach(btn => btn.setAttribute('tabindex', '-1'));
+        btns.forEach(btn => btn.setAttribute('tabindex', '-1'));
 
-    const todayBtn = grid.querySelector('.stats-heatmap-day--today.stats-heatmap-day-btn');
-    if (todayBtn) {
-        todayBtn.setAttribute('tabindex', '0');
-    } else {
-        const lastBtn = btns.at(-1);
-        if (lastBtn) {
-            lastBtn.setAttribute('tabindex', '0');
+        const todayBtn = grid.querySelector('.stats-heatmap-day--today.stats-heatmap-day-btn');
+        const firstTabStop = todayBtn ?? btns.at(-1);
+        if (firstTabStop) {
+            firstTabStop.setAttribute('tabindex', '0');
         }
-    }
+    });
 };
 
 

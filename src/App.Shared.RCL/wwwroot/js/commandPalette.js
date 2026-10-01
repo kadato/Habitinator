@@ -2,9 +2,52 @@
 globalThis.HabitinatorCommandPalette = (function () {
   let previousActiveElement = null;
 
+  function getDialog() {
+    return document.querySelector('.cmd-palette-dialog');
+  }
+
+  function getFocusable(dialog) {
+    const selector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    return Array.from(dialog.querySelectorAll(selector))
+      .filter(function (el) { return el.getClientRects().length > 0; });
+  }
+
+  function onKeydown(e) {
+    if (e.key !== 'Tab') {
+      return;
+    }
+
+    const dialog = getDialog();
+    if (!dialog) {
+      return;
+    }
+
+    const focusable = getFocusable(dialog);
+    if (focusable.length === 0) {
+      e.preventDefault();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    const inside = dialog.contains(active);
+
+    if (e.shiftKey) {
+      if (!inside || active === first) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else if (!inside || active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
   return {
     onOpen: function () {
       previousActiveElement = document.activeElement;
+      document.addEventListener('keydown', onKeydown, true);
       requestAnimationFrame(function () {
         const input = document.querySelector('.cmd-palette-input');
         if (input) {
@@ -15,6 +58,7 @@ globalThis.HabitinatorCommandPalette = (function () {
     },
 
     onClose: function () {
+      document.removeEventListener('keydown', onKeydown, true);
       if (previousActiveElement && typeof previousActiveElement.focus === 'function' && document.body.contains(previousActiveElement)) {
         try {
           previousActiveElement.focus();

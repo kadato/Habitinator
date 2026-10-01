@@ -113,13 +113,16 @@
 }
 
 .board-filter-btn--active,
-.board-filter-btn--active:focus,
-.board-filter-btn--active:focus-visible {
+.board-filter-btn--active:focus {
     background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent) !important;
     color: var(--mud-palette-primary) !important;
     border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, transparent) !important;
     font-weight: 700 !important;
-    outline: none !important;
+}
+
+.board-filter-btn--active:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: -2px;
 }
 
 .board-add-wrap ::deep .mud-input-outlined {

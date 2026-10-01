@@ -29,8 +29,11 @@
             <div class="hab-modal__body">
         @if (_loading)
         {
-            <div class="d-flex justify-center my-8">
-                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            <div class="dialog-body" aria-busy="true">
+                @for (var i = 0; i < 5; i++)
+                {
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="2.5rem" Class="mb-2 rounded" />
+                }
             </div>
         }
         else
@@ -41,6 +44,7 @@
                     <div class="search-container">
                         <MudTextField @bind-Value="_searchQuery"
                                       Placeholder="Search archived items..."
+                                      aria-label="Search archived items"
                                       AdornmentAriaLabel="Search archived items"
                                       Adornment="Adornment.Start"
                                       AdornmentIcon="@Icons.Material.Filled.Search"

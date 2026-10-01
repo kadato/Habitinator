@@ -587,12 +587,6 @@ public partial class MainBoard : IAsyncDisposable
             return;
         }
 
-        if (Habits.Count > 0 || Dailies.Count > 0 || Todos.Count > 0)
-        {
-            _onboardingOffered = true;
-            return;
-        }
-
         _onboardingOffered = true;
         try
         {
@@ -601,8 +595,12 @@ public partial class MainBoard : IAsyncDisposable
                 return;
             }
 
-            var options = DialogDefaults.SmallEditor;
-            await DialogService.ShowAsync<OnboardingDialog>(string.Empty, options);
+            // Registration seeds a starter board, so item count is not a signal that the user has
+            // seen the welcome. Mark completion for every dismissal path, including Escape and
+            // backdrop click, by waiting for the dialog result.
+            var dialog = await DialogService.ShowAsync<OnboardingDialog>(string.Empty, DialogDefaults.SmallEditor);
+            await dialog.Result;
+            await OnboardingStore.MarkCompletedAsync();
         }
         catch (Exception)
         {

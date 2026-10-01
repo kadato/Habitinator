@@ -944,8 +944,9 @@ input[type="number"].mud-input-slot {
     font-size: 0.88rem !important;
 }
 
-@media (max-width: 599.98px) {
-    /* Toasts dock below the app bar on phones so they never cover the add field. */
+@media (max-width: 767.98px) {
+    /* Toasts dock below the app bar below the tablet breakpoint so they never cover the add field
+       or the fixed bottom navigation. */
     #mud-snackbar-container.mud-snackbar-location-bottom-left,
     #mud-snackbar-container,
     .mud-snackbar-provider.mud-snackbar-provider-bottom-left {
@@ -968,8 +969,8 @@ input[type="number"].mud-input-slot {
         gap: var(--space-2);
     }
     .undo-toast-btn {
-        min-height: 28px;
-        padding: 0.2rem 0.6rem;
+        min-height: 44px;
+        padding: 0.35rem 0.75rem;
     }
 }
 

@@ -65,6 +65,7 @@
                                            GetCellClass="@((r, c) => DailyHeatmapCellClass(_cellIndex[(r, c)]))"
                                            GetCellTitle="@((r, c) => DailyHeatmapDayTitle(_cellIndex[(r, c)].Date, _cellIndex[(r, c)].Count))"
                                            GetCellAriaLabel="@((r, c) => DailyHeatmapDayTitle(_cellIndex[(r, c)].Date, _cellIndex[(r, c)].Count))"
+                                           IncludeRovingTabindex="true"
                                            OnCellClick="OnCellClickAsync"/>
                     </div>
                 }
@@ -89,6 +90,8 @@
     private string _selectedPeriodKey = DailyGraphPeriods.Rolling370Days;
     private IReadOnlyList<DailyGraphPeriodOption> _periodOptions = [];
     private DailyContributionGraphDto? _graph;
+
+    private bool _shouldScrollToEnd;
     private Dictionary<(int R, int C), ActivityHeatmapCellDto> _cellIndex = [];
     private bool _loading = true;
     private string? _error;
@@ -126,17 +129,21 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_graph is not null)
+        if (!_shouldScrollToEnd)
         {
-            try
-            {
-                await JSRuntime.InvokeVoidAsync("scrollHeatmapsToEnd");
-            }
-            catch (Exception ex)
-            {
-                // Ignore JS invocation failures in non-browser context
-                _ = ex;
-            }
+            return;
+        }
+
+        _shouldScrollToEnd = false;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("scrollHeatmapsToEnd");
+            await JSRuntime.InvokeVoidAsync("initializeHeatmapRovingTabindex");
+        }
+        catch (Exception ex)
+        {
+            // Ignore JS invocation failures in non-browser context
+            _ = ex;
         }
     }
 
@@ -182,6 +189,7 @@
         {
             _cellIndex = _graph.Heatmap.ToDictionary(x => (x.DayRow, x.WeekCol));
             _periodOptions = _periodOptions.Where(o => _graph.AvailablePeriodKeys.Contains(o.Key)).ToList();
+            _shouldScrollToEnd = true;
         }
         else
         {
@@ -256,7 +264,11 @@
         if (_cellIndex.TryGetValue((row, col), out var cell) && cell.InDataRange)
         {
             var options = DialogDefaults.Wide;
-            var parameters = new DialogParameters<ActivityDayDetailDialog> { { x => x.Date, cell.Date } };
+            var parameters = new DialogParameters<ActivityDayDetailDialog>
+            {
+                { x => x.Date, cell.Date },
+                { x => x.BoardItemId, BoardItemId }
+            };
             await DialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters, options);
         }
     }

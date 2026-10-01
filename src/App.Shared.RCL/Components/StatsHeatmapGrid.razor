@@ -41,13 +41,13 @@
                             {
                                 <button type="button"
                                         @key="(row, col)"
-                                        class="@cellClass"
+                                        class="@cellClass @(IncludeRovingTabindex ? "stats-heatmap-day-btn" : null)"
                                         title="@cellTitle"
                                         aria-label="@cellAria"
                                         aria-current="@(isToday ? "date" : null)"
                                         data-row="@(IncludeRovingTabindex ? row : null)"
                                         data-col="@(IncludeRovingTabindex ? col : null)"
-                                        tabindex="@(IncludeRovingTabindex ? "0" : null)"
+                                        tabindex="@(IncludeRovingTabindex ? "-1" : null)"
                                         @onclick="() => OnCellClickAsync(row, col)">
                                 </button>
                             }

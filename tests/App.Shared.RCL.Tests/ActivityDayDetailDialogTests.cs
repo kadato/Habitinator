@@ -24,6 +24,7 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
     private readonly IUserTimeZoneService _timeZoneService = Substitute.For<IUserTimeZoneService>();
     private readonly IUserDateFormatService _dateFormatService = Substitute.For<IUserDateFormatService>();
     private readonly IUserNotifier _notifier = Substitute.For<IUserNotifier>();
+    private readonly IBoardDataService _boardData = Substitute.For<IBoardDataService>();
 
     public ActivityDayDetailDialogTests()
     {
@@ -33,6 +34,7 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         _ctx.Services.AddSingleton(_timeZoneService);
         _ctx.Services.AddSingleton(_dateFormatService);
         _ctx.Services.AddSingleton<IUserNotifier>(_notifier);
+        _ctx.Services.AddSingleton(_boardData);
 
         _timeZoneService.ConvertToLocal(Arg.Any<DateTimeOffset>())
             .Returns(x => ((DateTimeOffset)x[0]!).ToLocalTime());
@@ -81,6 +83,40 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         provider.Markup.Should().NotContain("activity-day-detail-summary");
         provider.Markup.Should().NotContain("activity-day-detail-count");
         provider.Markup.Should().NotContain("day-stepper__today");
+    }
+
+    [Fact]
+    public async Task Offers_retro_check_in_for_a_scheduled_past_day()
+    {
+        // Arrange
+        var itemId = Guid.NewGuid();
+        var daily = new BoardItem(
+            itemId,
+            "Meditate",
+            DailyStartDate: new DateOnly(2026, 8, 1),
+            DailyRepeat: DailyRepeatType.Daily,
+            DailyRepeatInterval: 1);
+        _boardData.GetItemAsync(itemId, Arg.Any<CancellationToken>()).Returns(Task.FromResult<BoardItem?>(daily));
+        _stats.GetActivityDayDetailAsync(Arg.Any<DateOnly>(), Arg.Any<string?>())
+            .Returns(Task.FromResult(new ActivityDayDetailDto(new DateOnly(2026, 8, 11), [], 0)));
+
+        var provider = _ctx.Render<MudDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+        var parameters = new DialogParameters<ActivityDayDetailDialog>
+        {
+            { x => x.Date, new DateOnly(2026, 8, 11) },
+            { x => x.BoardItemId, itemId }
+        };
+
+        await provider.InvokeAsync(async () => await dialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Mark done for this day"), TimeSpan.FromSeconds(5));
+
+        // Act
+        var button = provider.FindAll("button").First(b => b.TextContent.Contains("Mark done for this day"));
+        await provider.InvokeAsync(() => button.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
+
+        // Assert
+        await _boardData.Received(1).CompleteDailyForDateAsync(itemId, new DateOnly(2026, 8, 11), Arg.Any<CancellationToken>());
     }
 
     [Fact]

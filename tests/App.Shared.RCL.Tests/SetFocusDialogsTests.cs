@@ -68,7 +68,7 @@ public sealed class SetFocusDialogsTests : IAsyncDisposable
         // Submit
         var submitButton = provider.FindAll("button").FirstOrDefault(b => b.TextContent.Contains("Start session"));
         submitButton.Should().NotBeNull();
-        submitButton?.GetAttribute("tabindex").Should().Be("2");
+        submitButton?.GetAttribute("tabindex").Should().BeNull();
         if (submitButton is not null)
         {
             await submitButton.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
@@ -108,7 +108,7 @@ public sealed class SetFocusDialogsTests : IAsyncDisposable
 
         var submitButton = provider.FindAll("button").FirstOrDefault(b => b.TextContent.Contains("Set target"));
         submitButton.Should().NotBeNull();
-        submitButton?.GetAttribute("tabindex").Should().Be("2");
+        submitButton?.GetAttribute("tabindex").Should().BeNull();
         if (submitButton is not null)
         {
             await submitButton.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());

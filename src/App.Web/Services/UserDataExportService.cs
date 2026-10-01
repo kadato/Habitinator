@@ -7,11 +7,15 @@ using Microsoft.EntityFrameworkCore;
 namespace App.Web.Services;
 
 /// <summary>Builds the personal data export payload for a user.</summary>
-public sealed class UserDataExportService(IDbContextFactory<ApplicationDbContext> dbFactory)
+public sealed class UserDataExportService(
+    IDbContextFactory<ApplicationDbContext> dbFactory,
+    IUserTimeZoneService timeZone)
 {
     public async Task<UserDataExportDto> BuildAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+
+        var (today, _) = await UserDayContext.LoadAsync(db, userId, timeZone, cancellationToken);
 
         var items = await db.BoardItems.AsNoTracking()
             .Where(x => x.UserId == userId && x.DeletedAtUtc == null)
@@ -26,12 +30,11 @@ public sealed class UserDataExportService(IDbContextFactory<ApplicationDbContext
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
             .ToListAsync(cancellationToken);
 
-        return new UserDataExportDto(DateTimeOffset.UtcNow, [.. items.Select(Map)], events);
+        return new UserDataExportDto(DateTimeOffset.UtcNow, [.. items.Select(e => Map(e, today))], events);
     }
 
-    private static BoardItem Map(BoardItemEntity e)
+    private static BoardItem Map(BoardItemEntity e, DateOnly today)
     {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         DateOnly? start = e.DailyStartDate is { } d ? DateOnly.FromDateTime(d) : null;
         DateOnly? lastCompleted = e.DailyLastCompletedOn is { } lc ? DateOnly.FromDateTime(lc) : null;
         var isCompleted = e.Section == BoardSection.Daily

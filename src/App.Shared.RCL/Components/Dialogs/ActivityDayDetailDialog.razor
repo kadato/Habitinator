@@ -1,6 +1,7 @@
 @using Microsoft.Extensions.DependencyInjection
 @using Microsoft.JSInterop
 @inject IActivityStatisticsReader Stats
+@inject IBoardDataService BoardData
 @inject IUserTimeZoneService TimeZoneService
 @inject IUserDateFormatService DateFormatService
 @inject IUserNotifier Notifier
@@ -32,8 +33,7 @@
             </div>
             <div class="hab-modal__body" @ref="_bodyRef">
         @if (_loading)
-        {
-            <div class="stats-day-timeline">
+        {            <div class="stats-day-timeline">
                 @for (int i = 0; i < 4; i++)
                 {
                     <div class="stats-day-event stats-day-event--skeleton">
@@ -95,6 +95,19 @@
                 }
             </div>
         }
+        @if (_canCompleteShownDate && _dailyItem is not null)
+        {
+            <div class="d-flex justify-end mt-3">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           Disabled="@_completing"
+                           StartIcon="@Icons.Material.Filled.Check"
+                           OnClick="CompleteShownDateAsync">
+                    Mark done for this day
+                </MudButton>
+            </div>
+        }
             </div>
         </div>
     </DialogContent>
@@ -105,6 +118,9 @@
     [Parameter] [EditorRequired] public DateOnly Date { get; set; }
     [Parameter] public string? TagFilter { get; set; }
 
+    /// <summary>When set, the dialog offers a retroactive check-in for this daily on the shown date.</summary>
+    [Parameter] public Guid? BoardItemId { get; set; }
+
     private ActivityDayDetailDto? _detail;
     private bool _loading = true;
     private string? _error;
@@ -114,6 +130,9 @@
     private ElementReference _bodyRef;
     private DotNetObjectReference<ActivityDayDetailDialog>? _swipeRef;
     private bool _swipeStarted;
+    private BoardItem? _dailyItem;
+    private bool _canCompleteShownDate;
+    private bool _completing;
 
     protected override async Task OnInitializedAsync()
     {
@@ -255,7 +274,74 @@
                 _ = notifyEx;
             }
         }
-        finally { _loading = false; }
+        finally
+        {
+            _loading = false;
+            await RefreshCompletionStateAsync();
+        }
+    }
+
+    /// <summary>Recomputes whether the shown date can still be checked off for the daily that opened this dialog.</summary>
+    private async Task RefreshCompletionStateAsync()
+    {
+        _canCompleteShownDate = false;
+        _dailyItem = null;
+        if (BoardItemId is not { } itemId)
+        {
+            return;
+        }
+
+        try
+        {
+            var item = await BoardData.GetItemAsync(itemId);
+            if (item is null)
+            {
+                return;
+            }
+
+            var today = DailySchedule.LocalToday(TimeZoneService);
+            _dailyItem = item;
+            _canCompleteShownDate = DailySchedule.CanCompleteForDate(
+                item.DailyStartDate,
+                item.DailyRepeat,
+                item.DailyRepeatInterval,
+                item.DailyLastCompletedOn,
+                _shownDate,
+                today);
+        }
+        catch
+        {
+            // The action is an extra. Failures leave it hidden.
+        }
+    }
+
+    private async Task CompleteShownDateAsync()
+    {
+        if (_dailyItem is null || _completing)
+        {
+            return;
+        }
+
+        _completing = true;
+        try
+        {
+            var result = await BoardData.CompleteDailyForDateAsync(_dailyItem.Id, _shownDate);
+            if (result is not null)
+            {
+                await Notifier.NotifyAsync($"Marked done for {_shownDateLabel}.", MudBlazor.Severity.Success);
+            }
+        }
+        catch
+        {
+            await Notifier.NotifyAsync("Could not mark this day done. Try again.", MudBlazor.Severity.Error);
+        }
+        finally
+        {
+            _completing = false;
+        }
+
+        await LoadAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task ReloadAsync()

@@ -529,6 +529,21 @@
     }
 }
 
+/* Touch devices get full-size targets regardless of viewport width, for tablets and touch laptops */
+@media (pointer: coarse) {
+    .board-row--habit .board-sq {
+        width: 2.75rem;
+        height: 2.75rem;
+    }
+
+    .board-check {
+        width: 2.75rem;
+        height: 2.75rem;
+        min-width: 2.75rem;
+        min-height: 2.75rem;
+    }
+}
+
 /* Container query: narrow columns get more compact cards */
 @container board-col (max-width: 280px) {
     .board-card {

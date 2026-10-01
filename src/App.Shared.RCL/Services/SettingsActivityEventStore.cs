@@ -1,5 +1,7 @@
 using System.Text.Json;
 
+using Microsoft.Extensions.Logging;
+
 namespace App.Shared.RCL.Services;
 
 public sealed class SettingsActivityEventStore : IActivityEventStore, IDisposable
@@ -7,13 +9,17 @@ public sealed class SettingsActivityEventStore : IActivityEventStore, IDisposabl
     private const string EventsKey = "habitinator_activity_events_v1";
     private static readonly JsonSerializerOptions Serializer = JsonDefaults.Api;
     private readonly ILocalSettingsStore? _store;
+    private readonly ILogger<SettingsActivityEventStore>? _logger;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private List<UserActivityEventRecord>? _memory;
     private bool _disposed;
 
-    public SettingsActivityEventStore(ILocalSettingsStore? store = null)
+    public SettingsActivityEventStore(
+        ILocalSettingsStore? store = null,
+        ILogger<SettingsActivityEventStore>? logger = null)
     {
         _store = store;
+        _logger = logger;
     }
 
     public event EventHandler<UserActivityEventRecord>? Appended;
@@ -44,8 +50,7 @@ public sealed class SettingsActivityEventStore : IActivityEventStore, IDisposabl
         }
         catch (Exception ex)
         {
-            // Ignore - best effort event notification, subscribers should handle their own errors
-            _ = ex;
+            _logger?.LogDebug(ex, "Activity event subscriber failed; continuing with remaining subscribers.");
         }
     }
 
@@ -83,8 +88,7 @@ public sealed class SettingsActivityEventStore : IActivityEventStore, IDisposabl
                 }
                 catch (Exception ex)
                 {
-                    // Ignore - best effort to clear persisted store
-                    _ = ex;
+                    _logger?.LogDebug(ex, "Clearing persisted activity events failed.");
                 }
             }
         }
@@ -128,8 +132,7 @@ public sealed class SettingsActivityEventStore : IActivityEventStore, IDisposabl
         }
         catch (Exception ex)
         {
-            // Ignore - best effort read from store, treat as empty
-            _ = ex;
+            _logger?.LogDebug(ex, "Reading persisted activity events failed; treating as empty.");
         }
 
         if (string.IsNullOrEmpty(raw))
@@ -146,8 +149,7 @@ public sealed class SettingsActivityEventStore : IActivityEventStore, IDisposabl
         }
         catch (Exception ex)
         {
-            // Ignore - corrupted data, reset to empty
-            _ = ex;
+            _logger?.LogDebug(ex, "Persisted activity events are corrupted; resetting to empty.");
             _memory = [];
             return Task.FromResult(_memory);
         }
@@ -167,8 +169,7 @@ public sealed class SettingsActivityEventStore : IActivityEventStore, IDisposabl
             }
             catch (Exception ex)
             {
-                // Ignore - best effort write to store
-                _ = ex;
+                _logger?.LogDebug(ex, "Persisting activity events failed; keeping the in-memory copy.");
             }
         }
 

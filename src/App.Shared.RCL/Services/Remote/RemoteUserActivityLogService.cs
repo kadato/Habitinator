@@ -2,6 +2,8 @@ using System.Text.Json;
 
 using App.Shared.RCL.Models;
 
+using Microsoft.Extensions.Logging;
+
 namespace App.Shared.RCL.Services.Remote;
 
 public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDisposable
@@ -14,6 +16,7 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
     private readonly IActivityEventStore? _eventStore;
     private readonly ILocalSettingsStore? _localStore;
     private readonly IClock? _clock;
+    private readonly ILogger<RemoteUserActivityLogService>? _logger;
     private readonly SemaphoreSlim _queueGate = new(1, 1);
 
     public RemoteUserActivityLogService(
@@ -21,13 +24,15 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
         IActivityStatisticsReader? statsReader = null,
         IActivityEventStore? eventStore = null,
         ILocalSettingsStore? localStore = null,
-        IClock? clock = null)
+        IClock? clock = null,
+        ILogger<RemoteUserActivityLogService>? logger = null)
     {
         _http = http;
         _statsReader = statsReader;
         _eventStore = eventStore;
         _localStore = localStore;
         _clock = clock;
+        _logger = logger;
     }
 
     private HttpClient Client => _http.CreateClient("api");
@@ -54,8 +59,7 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
             }
             catch (Exception ex)
             {
-                // Ignore - best effort local store; remote will be attempted anyway
-                _ = ex;
+                _logger?.LogDebug(ex, "Best-effort local activity store failed; remote will be attempted anyway.");
             }
         }
 
@@ -91,8 +95,7 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
             }
             catch (Exception ex)
             {
-                // Ignore - best effort local store; remote will be attempted anyway
-                _ = ex;
+                _logger?.LogDebug(ex, "Best-effort local activity store failed; remote will be attempted anyway.");
             }
         }
 
@@ -112,10 +115,11 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
             res.EnsureSuccessStatusCode();
             _statsReader?.InvalidateCache();
         }
-        catch
+        catch (Exception ex)
         {
             // Queue for later sync via outbox pattern. The request keeps its event id, so a replay
             // that already reached the server is deduplicated there.
+            _logger?.LogDebug(ex, "Activity log post failed; queued for later sync.");
             await EnqueuePendingAsync(req, CancellationToken.None);
         }
     }
@@ -144,8 +148,7 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
         }
         catch (Exception ex)
         {
-            // Ignore - best effort to enqueue pending request for later sync
-            _ = ex;
+            _logger?.LogDebug(ex, "Enqueueing pending activity request failed; the event is dropped.");
         }
         finally
         {
@@ -180,8 +183,7 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
             }
             catch (Exception ex)
             {
-                // Ignore - corrupted pending queue, treat as empty
-                _ = ex;
+                _logger?.LogDebug(ex, "Pending activity queue is corrupted; treating as empty.");
                 return;
             }
 
@@ -204,8 +206,7 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
             }
             catch (Exception ex)
             {
-                // Ignore - keep this and the following entries pending for the next flush attempt
-                _ = ex;
+                _logger?.LogDebug(ex, "Activity flush failed; keeping this and following entries pending.");
                 firstFailedIndex = i;
                 break;
             }
@@ -234,8 +235,7 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
         }
         catch (Exception ex)
         {
-            // Ignore - best effort to persist remaining pending queue
-            _ = ex;
+            _logger?.LogDebug(ex, "Persisting the remaining pending activity queue failed.");
         }
         finally
         {

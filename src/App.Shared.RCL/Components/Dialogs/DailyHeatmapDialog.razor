@@ -9,6 +9,8 @@
 @inject IJSRuntime JSRuntime
 @inject IUserDateFormatService DateFormatService
 @inject IUserNotifier Notifier
+@using Microsoft.Extensions.Logging;
+
 @inject IServiceProvider ServiceProvider
 
 <MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content">
@@ -142,8 +144,7 @@
         }
         catch (Exception ex)
         {
-            // Ignore JS invocation failures in non-browser context
-            _ = ex;
+            LogFallback(ex, "Heatmap JS init failed; the grid still renders without it.");
         }
     }
 
@@ -219,6 +220,9 @@
         }
     }
 
+    private void LogFallback(Exception ex, string message) =>
+        ServiceProvider.GetService<ILogger<DailyHeatmapDialog>>()?.LogDebug(ex, "{Message}", message);
+
     private async Task NotifySafeAsync(string message, MudBlazor.Severity severity)
     {
         try
@@ -241,8 +245,7 @@
         }
         catch (Exception ex)
         {
-            // Ignore JS invocation failures in non-browser context
-            _ = ex;
+            LogFallback(ex, "Heatmap JS init failed; the grid still renders without it.");
         }
     }
 

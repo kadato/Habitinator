@@ -5,6 +5,8 @@
 @inject IUserTimeZoneService TimeZoneService
 @inject IUserDateFormatService DateFormatService
 @inject IUserNotifier Notifier
+@using Microsoft.Extensions.Logging;
+
 @inject IServiceProvider ServiceProvider
 @inject IJSRuntime JS
 @implements IAsyncDisposable
@@ -117,6 +119,9 @@
     [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
     [Parameter] [EditorRequired] public DateOnly Date { get; set; }
     [Parameter] public string? TagFilter { get; set; }
+
+    private void LogFallback(Exception ex, string message) =>
+        ServiceProvider.GetService<ILogger<ActivityDayDetailDialog>>()?.LogDebug(ex, "{Message}", message);
 
     /// <summary>When set, the dialog offers a retroactive check-in for this daily on the shown date.</summary>
     [Parameter] public Guid? BoardItemId { get; set; }
@@ -250,16 +255,14 @@
                     }
                     catch (Exception notifyEx)
                     {
-                        // Ignore - best effort toast, fallback already rendered
-                        _ = notifyEx;
+                        LogFallback(notifyEx, "Offline fallback toast failed; details already shown.");
                     }
 
                     return;
                 }
                 catch (Exception fallbackEx)
                 {
-                    // Ignore - offline fallback failed, main error handling below
-                    _ = fallbackEx;
+                    LogFallback(fallbackEx, "Offline fallback failed; showing the main error instead.");
                 }
             }
 
@@ -270,8 +273,7 @@
             }
             catch (Exception notifyEx)
             {
-                // Ignore - best effort toast, fallback already rendered
-                _ = notifyEx;
+                LogFallback(notifyEx, "Error toast failed; inline error already shown.");
             }
         }
         finally

@@ -8,6 +8,7 @@ using App.Shared.RCL.Services;
 
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
 using MudBlazor;
@@ -44,6 +45,9 @@ public partial class StatisticsPanel : IDisposable
     private DateOnly _heatmapToday;
 
     [Inject] public IServiceProvider ServiceProvider { get; set; } = default!;
+
+    private void LogFallback(Exception ex, string message) =>
+        ServiceProvider.GetService<ILogger<StatisticsPanel>>()?.LogDebug(ex, "{Message}", message);
 
     private OfflineActivityStatisticsProvider? OfflineStats => ServiceProvider.GetService<OfflineActivityStatisticsProvider>();
 
@@ -159,8 +163,7 @@ public partial class StatisticsPanel : IDisposable
         }
         catch (Exception notifyEx)
         {
-            // Ignore - best effort toast, fallback already rendered
-            _ = notifyEx;
+            LogFallback(notifyEx, "Best-effort toast failed; fallback already rendered.");
         }
     }
 
@@ -472,8 +475,7 @@ public partial class StatisticsPanel : IDisposable
             }
             catch (Exception notifyEx)
             {
-                // Ignore - best effort toast, fallback already rendered
-                _ = notifyEx;
+                LogFallback(notifyEx, "Best-effort toast failed; fallback already rendered.");
             }
         }
         finally

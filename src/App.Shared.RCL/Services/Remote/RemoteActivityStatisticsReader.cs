@@ -5,6 +5,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
+using Microsoft.Extensions.Logging;
+
 namespace App.Shared.RCL.Services.Remote;
 
 public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
@@ -17,13 +19,18 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
 
     private readonly IHttpClientFactory _http;
     private readonly ILocalSettingsStore? _localStore;
+    private readonly ILogger<RemoteActivityStatisticsReader>? _logger;
     private readonly ConcurrentDictionary<string, (object? Value, DateTime ExpiresAtUtc)> _cache = new();
     private static readonly TimeSpan DefaultCacheTtl = TimeSpan.FromSeconds(60);
 
-    public RemoteActivityStatisticsReader(IHttpClientFactory http, ILocalSettingsStore? localStore = null)
+    public RemoteActivityStatisticsReader(
+        IHttpClientFactory http,
+        ILocalSettingsStore? localStore = null,
+        ILogger<RemoteActivityStatisticsReader>? logger = null)
     {
         _http = http;
         _localStore = localStore;
+        _logger = logger;
         if (_localStore != null)
         {
             var raw = _localStore.Read(StatsOverviewCacheKeyPrefix);
@@ -83,8 +90,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         }
         catch (Exception ex)
         {
-            // Ignore - best effort hydration of persistent cache
-            _ = ex;
+            _logger?.LogDebug(ex, "Persistent stats cache hydration failed; continuing without it.");
         }
     }
 
@@ -104,8 +110,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
             }
             catch (Exception ex)
             {
-                // Ignore storage write errors
-                _ = ex;
+                _logger?.LogDebug(ex, "Stats overview cache write failed; continuing without persisting.");
             }
         }
 
@@ -187,8 +192,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         }
         catch (Exception ex)
         {
-            // Ignore storage write errors
-            _ = ex;
+            _logger?.LogDebug(ex, "Stats index reset write failed; continuing without persisting.");
         }
     }
 
@@ -200,8 +204,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         }
         catch (Exception ex)
         {
-            // Ignore - best effort
-            _ = ex;
+            _logger?.LogDebug(ex, "Best-effort stats store write failed.");
         }
     }
 
@@ -321,8 +324,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         }
         catch (Exception ex)
         {
-            // Ignore - best effort to remove persistent entry
-            _ = ex;
+            _logger?.LogDebug(ex, "Removing stale persistent stats entry failed; it will be retried.");
         }
     }
 
@@ -383,8 +385,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         }
         catch (Exception ex)
         {
-            // Ignore corrupted local cache
-            _ = ex;
+            _logger?.LogDebug(ex, "Cached stats overview is corrupted; ignoring it.");
             return false;
         }
     }
@@ -418,8 +419,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         }
         catch (Exception ex)
         {
-            // Ignore - best effort to write persistent cache
-            _ = ex;
+            _logger?.LogDebug(ex, "Persistent stats cache write failed; continuing without persisting.");
         }
     }
 
@@ -449,8 +449,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         }
         catch (Exception ex)
         {
-            // Ignore - best effort to read persistent cache
-            _ = ex;
+            _logger?.LogDebug(ex, "Persistent stats cache read failed; treating as a miss.");
         }
 
         return false;

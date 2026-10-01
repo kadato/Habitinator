@@ -925,44 +925,30 @@ public sealed class BoardPersistenceService(
         DateOnly? lastCompleted = entity.DailyLastCompletedOn is { } lc
             ? DateOnly.FromDateTime(lc)
             : null;
-        var isCompleted = entity.Section == BoardSection.Daily
-            ? IsDailyEntityCompleteForToday(entity, today)
-            : entity.IsCompleted;
 
         int displayCounter;
-        int displayNegative;
-        DateOnly? habitAnchor = HabitAnchor(entity);
-        var resetPeriod = ResolveResetPeriod(entity);
         if (entity.Section == BoardSection.Daily)
         {
             displayCounter = dailyStreakById.TryGetValue(entity.Id, out var computedStreak)
                 ? computedStreak
                 : entity.Counter;
-            displayNegative = entity.NegativeCounter;
-        }
-        else if (entity.Section == BoardSection.Habit)
-        {
-            (displayCounter, displayNegative) = HabitResetSchedule.EffectiveCounters(
-                entity.Counter, entity.NegativeCounter, habitAnchor, today, resetPeriod);
-            habitAnchor = HabitResetSchedule.EffectiveAnchor(habitAnchor, today, resetPeriod);
         }
         else
         {
             displayCounter = entity.Counter;
-            displayNegative = entity.NegativeCounter;
         }
 
-        return new BoardItem(
+        var raw = new BoardItem(
             entity.Id,
             entity.Title,
-            isCompleted,
+            entity.IsCompleted,
             displayCounter,
             entity.Notes,
             entity.Tags,
             entity.TrackPlus,
             entity.TrackMinus,
-            displayNegative,
-            resetPeriod,
+            entity.NegativeCounter,
+            ResolveResetPeriod(entity),
             start,
             repeat,
             interval,
@@ -973,7 +959,8 @@ public sealed class BoardPersistenceService(
             entity.CreatedAtUtc,
             entity.SortOrder,
             entity.IsArchived,
-            habitAnchor);
+            HabitAnchor(entity));
+        return BoardItemMapper.WithLocalDay(raw, entity.Section, today);
     }
 
     private static bool IsDailyEntityCompleteForToday(BoardItemEntity entity, DateOnly today)

@@ -45,6 +45,14 @@ public static class HabitResetSchedule
         HabitResetPeriod period) =>
         NeedsReset(anchor, today, period) ? (0, 0) : (counter, negativeCounter);
 
-    public static DateOnly EffectiveAnchor(DateOnly? anchor, DateOnly today, HabitResetPeriod period) =>
-        anchor ?? PeriodStartFor(today, period);
+    public static DateOnly EffectiveAnchor(DateOnly? anchor, DateOnly today, HabitResetPeriod period)
+    {
+        var current = PeriodStartFor(today, period);
+        if (anchor is null || anchor.Value != current)
+        {
+            return current;
+        }
+
+        return anchor.Value;
+    }
 }

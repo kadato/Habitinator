@@ -37,31 +37,21 @@ public sealed class UserDataExportService(
     {
         DateOnly? start = e.DailyStartDate is { } d ? DateOnly.FromDateTime(d) : null;
         DateOnly? lastCompleted = e.DailyLastCompletedOn is { } lc ? DateOnly.FromDateTime(lc) : null;
-        var isCompleted = e.Section == BoardSection.Daily
-            ? e.IsCompleted && lastCompleted == today
-            : e.IsCompleted;
         var resetPeriod = Enum.IsDefined((HabitResetPeriod)e.ResetPeriod)
             ? (HabitResetPeriod)e.ResetPeriod
             : HabitResetPeriod.Daily;
         DateOnly? anchor = e.HabitPeriodStart is { } h ? DateOnly.FromDateTime(h) : null;
-        var counter = e.Counter;
-        var negative = e.NegativeCounter;
-        if (e.Section == BoardSection.Habit)
-        {
-            (counter, negative) = HabitResetSchedule.EffectiveCounters(counter, negative, anchor, today, resetPeriod);
-            anchor = HabitResetSchedule.EffectiveAnchor(anchor, today, resetPeriod);
-        }
 
-        return new BoardItem(
+        var raw = new BoardItem(
             e.Id,
             e.Title,
-            isCompleted,
-            counter,
+            e.IsCompleted,
+            e.Counter,
             e.Notes,
             e.Tags,
             e.TrackPlus,
             e.TrackMinus,
-            negative,
+            e.NegativeCounter,
             resetPeriod,
             start,
             (DailyRepeatType)e.DailyRepeatType,
@@ -74,5 +64,6 @@ public sealed class UserDataExportService(
             e.SortOrder,
             e.IsArchived,
             anchor);
+        return BoardItemMapper.WithLocalDay(raw, e.Section, today);
     }
 }

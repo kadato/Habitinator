@@ -261,19 +261,8 @@ public sealed partial class LocalFirstBoardDataService(
         return (habits, dailies, todos);
     }
 
-    internal static BoardItem ToEffectiveModel(BoardLocalRow row, DateOnly today)
-    {
-        var model = row.ToModel();
-        if (row.Section != BoardSection.Habit)
-        {
-            return model;
-        }
-
-        var (counter, negative) = HabitResetSchedule.EffectiveCounters(
-            model.Counter, model.NegativeCounter, model.HabitPeriodStart, today, model.ResetPeriod);
-        var anchor = HabitResetSchedule.EffectiveAnchor(model.HabitPeriodStart, today, model.ResetPeriod);
-        return model with { Counter = counter, NegativeCounter = negative, HabitPeriodStart = anchor };
-    }
+    internal static BoardItem ToEffectiveModel(BoardLocalRow row, DateOnly today) =>
+        BoardItemMapper.WithLocalDay(row.ToModel(), row.Section, today);
 
     internal static void EnsureLocalHabitPeriodCurrent(BoardLocalRow row, DateOnly today)
     {

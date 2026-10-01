@@ -160,7 +160,9 @@
     @if (_initialLoadComplete && _loadError is null)
     {
         <div class="board-columns-stage">
-            <div class="board-columns-mobile" @ref="_swipeAreaRef">
+            @if (_isMobileViewport is true)
+            {
+                <div class="board-columns-mobile" @ref="_swipeAreaRef">
                 <div class="board-section-switcher" role="tablist" aria-label="Board sections">
                     <button type="button"
                             role="tab"
@@ -209,52 +211,62 @@
                         }
                     }
                 </div>
-            </div>
-            <div class="board-columns-desktop">
-                <MudGrid Spacing="2" Class="board-columns-grid w-100">
-                    @foreach (var col in BoardColumns)
-                    {
-                        <MudItem xs="12" md="4">
-                            <BoardColumn Section="col.Section"
-                                         Items="col.Items"
-                                         IsBoardFilterExcludingAll="col.IsExcluded"
-                                         OnChanged="OnBoardChanged"/>
-                        </MudItem>
-                    }
-                </MudGrid>
-            </div>
+                </div>
+            }
+            else
+            {
+                <div class="board-columns-desktop">
+                    <MudGrid Spacing="2" Class="board-columns-grid w-100">
+                        @foreach (var col in BoardColumns)
+                        {
+                            <MudItem xs="12" md="4">
+                                <BoardColumn Section="col.Section"
+                                             Items="col.Items"
+                                             IsBoardFilterExcludingAll="col.IsExcluded"
+                                             OnChanged="OnBoardChanged"/>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </div>
+            }
         </div>
     }
     else if (_isLoading && !_initialLoadComplete)
     {
         <div class="board-columns-stage">
-            <div class="board-columns-mobile">
-                <div class="board-section-switcher" role="tablist" aria-label="Loading board sections">
-                    <button type="button" role="tab" aria-selected="true" class="board-section-switcher__btn board-section-switcher__btn--active" disabled>
-                        <span class="board-section-switcher__label">Habits</span>
-                    </button>
-                    <button type="button" role="tab" aria-selected="false" class="board-section-switcher__btn" disabled>
-                        <span class="board-section-switcher__label">Dailies</span>
-                    </button>
-                    <button type="button" role="tab" aria-selected="false" class="board-section-switcher__btn" disabled>
-                        <span class="board-section-switcher__label">To-dos</span>
-                    </button>
+            @if (_isMobileViewport is true)
+            {
+                <div class="board-columns-mobile">
+                    <div class="board-section-switcher" role="tablist" aria-label="Loading board sections">
+                        <button type="button" role="tab" aria-selected="true" class="board-section-switcher__btn board-section-switcher__btn--active" disabled>
+                            <span class="board-section-switcher__label">Habits</span>
+                        </button>
+                        <button type="button" role="tab" aria-selected="false" class="board-section-switcher__btn" disabled>
+                            <span class="board-section-switcher__label">Dailies</span>
+                        </button>
+                        <button type="button" role="tab" aria-selected="false" class="board-section-switcher__btn" disabled>
+                            <span class="board-section-switcher__label">To-dos</span>
+                        </button>
+                    </div>
+                    <BoardColumnSkeleton Section="BoardSection.Habit" />
                 </div>
-                <BoardColumnSkeleton Section="BoardSection.Habit" />
-            </div>
-            <div class="board-columns-desktop">
-                <MudGrid Spacing="2" Class="board-columns-grid w-100">
-                    <MudItem xs="12" md="4">
-                        <BoardColumnSkeleton Section="BoardSection.Habit" />
-                    </MudItem>
-                    <MudItem xs="12" md="4">
-                        <BoardColumnSkeleton Section="BoardSection.Daily" />
-                    </MudItem>
-                    <MudItem xs="12" md="4">
-                        <BoardColumnSkeleton Section="BoardSection.Todo" />
-                    </MudItem>
-                </MudGrid>
-            </div>
+            }
+            else
+            {
+                <div class="board-columns-desktop">
+                    <MudGrid Spacing="2" Class="board-columns-grid w-100">
+                        <MudItem xs="12" md="4">
+                            <BoardColumnSkeleton Section="BoardSection.Habit" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <BoardColumnSkeleton Section="BoardSection.Daily" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <BoardColumnSkeleton Section="BoardSection.Todo" />
+                        </MudItem>
+                    </MudGrid>
+                </div>
+            }
         </div>
     }
 </MudStack>

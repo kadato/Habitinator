@@ -32,6 +32,8 @@ public partial class MainBoard : IAsyncDisposable
     private DotNetObjectReference<BoardRemoteNotifyBridge>? _visibilityRef;
     private DotNetObjectReference<MainBoard>? _selfRef;
     private ElementReference _swipeAreaRef;
+    private bool? _isMobileViewport;
+    private bool _swipeInitialized;
     private DateTimeOffset _lastLocalMutationTime = DateTimeOffset.MinValue;
     private PersistingComponentStateSubscription _subscription;
 
@@ -239,7 +241,12 @@ public partial class MainBoard : IAsyncDisposable
         PreferencesService.Changed -= OnPreferencesChanged;
         if (_boardClientScriptsStarted)
         {
-            await SafeInvokeVoidAsync("HabitinatorBoardSwipe.destroy", _swipeAreaRef);
+            if (_swipeInitialized)
+            {
+                await SafeInvokeVoidAsync("HabitinatorBoardSwipe.destroy", _swipeAreaRef);
+                _swipeInitialized = false;
+            }
+            await SafeInvokeVoidAsync("HabitinatorBoardViewport.unwatch");
             await SafeInvokeVoidAsync("HabitinatorBoardVisibility.stop");
             await SafeInvokeVoidAsync("HabitinatorKeyboardShortcuts.stop");
         }
@@ -276,6 +283,11 @@ public partial class MainBoard : IAsyncDisposable
         {
             await StartBoardClientScriptsAsync();
         }
+
+        if (_boardClientScriptsStarted)
+        {
+            await EnsureSwipeAsync();
+        }
     }
 
     private async Task PreloadSortableScriptsAsync()
@@ -308,8 +320,21 @@ public partial class MainBoard : IAsyncDisposable
 
             await JS.InvokeVoidAsync(
                 HabitinatorLoadScriptFunction,
-                "_content/App.Shared.RCL/js/boardSwipe.js");
-            await JS.InvokeVoidAsync("HabitinatorBoardSwipe.init", _swipeAreaRef, _selfRef);
+                "_content/App.Shared.RCL/js/boardViewport.js");
+            try
+            {
+                _isMobileViewport = await JS.InvokeAsync<bool>("HabitinatorBoardViewport.isMobile");
+            }
+            catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or InvalidOperationException)
+            {
+                _isMobileViewport = false;
+            }
+            await JS.InvokeVoidAsync("HabitinatorBoardViewport.watch", _selfRef);
+            if (_isMobileViewport is true)
+            {
+                // The pre-interactive render used the desktop branch. Mount the mobile branch now.
+                await InvokeAsync(StateHasChanged);
+            }
 
             _dailyRetroClientReady = true;
             _ = RefreshStreaksAsync();
@@ -331,6 +356,51 @@ public partial class MainBoard : IAsyncDisposable
         catch (JSException)
         {
             _boardClientScriptsStarted = false;
+        }
+    }
+
+    /// <summary>
+    /// Called by <c>HabitinatorBoardViewport</c> when the viewport crosses the mobile breakpoint.
+    /// Only one column branch stays mounted, so flips mount the other branch and move swipe handling with it.
+    /// </summary>
+    [JSInvokable]
+    public async Task OnViewportChanged(bool isMobile)
+    {
+        if (_isMobileViewport == isMobile)
+        {
+            return;
+        }
+
+        _isMobileViewport = isMobile;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Swipe gestures belong to the mobile branch only. The swipe area ref exists solely while
+    /// that branch is mounted, so init follows the ref and destroy follows the branch switch.
+    /// </summary>
+    private async Task EnsureSwipeAsync()
+    {
+        if (_isMobileViewport is true && !_swipeInitialized && _swipeAreaRef.Context is not null)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync(
+                    HabitinatorLoadScriptFunction,
+                    "_content/App.Shared.RCL/js/boardSwipe.js");
+                _selfRef ??= DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("HabitinatorBoardSwipe.init", _swipeAreaRef, _selfRef);
+                _swipeInitialized = true;
+            }
+            catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or InvalidOperationException)
+            {
+                // Ignored during page navigation/disposal
+            }
+        }
+        else if (_isMobileViewport is not true && _swipeInitialized)
+        {
+            await SafeInvokeVoidAsync("HabitinatorBoardSwipe.destroy", _swipeAreaRef);
+            _swipeInitialized = false;
         }
     }
 

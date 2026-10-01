@@ -216,7 +216,7 @@ public sealed partial class LocalFirstBoardDataService
 
     private async Task ResolveConflictKeepMineAsync(Guid operationId, BoardItem serverItem, CancellationToken cancellationToken)
     {
-        logger.LogInformation("Conflict resolved by user: Keeping Device version.");
+        logger.LogInformation("Conflict auto-resolved: keeping the device version.");
         await _gate.WaitAsync(cancellationToken);
         try
         {
@@ -244,7 +244,7 @@ public sealed partial class LocalFirstBoardDataService
         BoardSection section,
         CancellationToken cancellationToken)
     {
-        logger.LogInformation("Conflict resolved by user: Keeping Server version.");
+        logger.LogInformation("Conflict auto-resolved: keeping the server version.");
         await _gate.WaitAsync(cancellationToken);
         try
         {
@@ -257,6 +257,14 @@ public sealed partial class LocalFirstBoardDataService
                 var updated = BoardLocalRow.FromModel(section, userKey, serverItem, false);
                 updated.UserKey = userKey;
                 await store.UpsertItemAsync(updated, cancellationToken);
+
+                // Newer pending operations for the same item were built against the version this
+                // one conflicted with. Rebase them onto the server version so they apply on top
+                // instead of conflicting one after another.
+                if (serverItem.ServerUpdatedAtUtc is { } serverVersion)
+                {
+                    await RebasePendingOperationsAsync(userKey, serverItem.Id, serverVersion, cancellationToken);
+                }
             }
         }
         finally
@@ -265,6 +273,30 @@ public sealed partial class LocalFirstBoardDataService
         }
 
         RequestSyncSoon();
+    }
+
+    private async Task RebasePendingOperationsAsync(
+        string userKey,
+        Guid itemId,
+        DateTimeOffset serverVersion,
+        CancellationToken cancellationToken)
+    {
+        foreach (var row in await store.ListOutboxAsync(userKey, cancellationToken))
+        {
+            if (!BoardOutboxReferencedIds.ReferencesItem(row.Kind, row.PayloadJson, itemId))
+            {
+                continue;
+            }
+
+            var remapped = BoardOutboxPayloadMapper.RemapExpectedVersion(row.Kind, row.PayloadJson, serverVersion);
+            if (!string.Equals(remapped, row.PayloadJson, StringComparison.Ordinal))
+            {
+                row.PayloadJson = remapped;
+                row.AttemptCount = 0;
+                row.LastError = null;
+                await store.UpdateOutboxAsync(row, cancellationToken);
+            }
+        }
     }
 
     public async Task<string?> TryGetStuckOutboxHintAsync(int minAttempts, CancellationToken cancellationToken = default)

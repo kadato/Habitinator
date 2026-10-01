@@ -87,7 +87,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
         if (!res.IsSuccessStatusCode)
         {
             await ThrowIfConflictAsync(res, cancellationToken);
-            res.EnsureSuccessStatusCode();
+            await EnsureSuccessWithBodyAsync(res, cancellationToken);
         }
 
         return await res.Content.ReadFromJsonAsync<BoardSyncDelta>(Serializer, cancellationToken);
@@ -161,7 +161,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
         }
 
         using var res = await Client.GetAsync("api/board/streaks", cancellationToken);
-        res.EnsureSuccessStatusCode();
+        await EnsureSuccessWithBodyAsync(res, cancellationToken);
         var result = (await res.Content.ReadFromJsonAsync<Dictionary<Guid, int>>(Serializer, cancellationToken))
                ?? [];
         _cachedStreaks = result;
@@ -187,7 +187,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
         AddMutationHeaders(req, operationId, null);
         using var res = await Client.SendAsync(req, cancellationToken);
         await ThrowIfConflictAsync(res, cancellationToken);
-        res.EnsureSuccessStatusCode();
+        await EnsureSuccessWithBodyAsync(res, cancellationToken);
         var item = await res.Content.ReadFromJsonAsync<BoardItem>(Serializer, cancellationToken)
                ?? throw new InvalidOperationException("Server returned an empty create response.");
         _statsReader?.InvalidateCache();
@@ -236,7 +236,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
         }
 
         await ThrowIfConflictAsync(res, cancellationToken);
-        res.EnsureSuccessStatusCode();
+        await EnsureSuccessWithBodyAsync(res, cancellationToken);
         _statsReader?.InvalidateCache();
         InvalidateStreaksCache();
         return true;
@@ -277,7 +277,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
     public async Task<BoardSnapshot> GetArchivedSnapshotAsync(CancellationToken cancellationToken = default)
     {
         using var res = await Client.GetAsync("api/board/archived", cancellationToken);
-        res.EnsureSuccessStatusCode();
+        await EnsureSuccessWithBodyAsync(res, cancellationToken);
         return await res.Content.ReadFromJsonAsync<BoardSnapshot>(Serializer, cancellationToken)
                ?? throw new InvalidOperationException("Server returned an empty snapshot response.");
     }
@@ -458,6 +458,36 @@ public sealed class RemoteBoardDataService : IBoardDataService
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
 
+    /// <summary>
+    ///     Fails with the server's response body included, so client logs and the stuck-sync hint show
+    ///     the server-side exception instead of only the status code.
+    /// </summary>
+    private static async Task EnsureSuccessWithBodyAsync(HttpResponseMessage res, CancellationToken cancellationToken)
+    {
+        if (res.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        string body;
+        try
+        {
+            body = await res.Content.ReadAsStringAsync(cancellationToken);
+        }
+        catch
+        {
+            body = string.Empty;
+        }
+
+        if (body.Length > 2000)
+        {
+            body = body[..2000];
+        }
+
+        throw new HttpRequestException(
+            $"Board API returned {(int)res.StatusCode} {res.ReasonPhrase}. Response body: {body}");
+    }
+
     private async Task<BoardItem?> ReadBoardItemOrNullAsync(HttpResponseMessage res,
         CancellationToken cancellationToken)
     {
@@ -467,7 +497,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
         }
 
         await ThrowIfConflictAsync(res, cancellationToken);
-        res.EnsureSuccessStatusCode();
+        await EnsureSuccessWithBodyAsync(res, cancellationToken);
         var item = await res.Content.ReadFromJsonAsync<BoardItem>(Serializer, cancellationToken);
         if (item is not null)
         {

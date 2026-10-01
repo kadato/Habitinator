@@ -10,60 +10,37 @@ public partial class AlignBoardIndexesAndEventType : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropIndex(
-            name: "IX_UserActivityEvents_UserId_BoardItemId_OccurredAtUtc",
-            table: "UserActivityEvents");
+        // Idempotent on purpose. Databases that predate the migration chain can already carry some
+        // of these indexes, and a plain CREATE INDEX would abort the whole migration run, leaving
+        // later migrations unapplied.
+        migrationBuilder.Sql("DROP INDEX IF EXISTS \"IX_UserActivityEvents_UserId_BoardItemId_OccurredAtUtc\";");
 
-        migrationBuilder.AlterColumn<int>(
-            name: "EventType",
-            table: "UserActivityEvents",
-            type: "integer",
-            nullable: false,
-            oldClrType: typeof(byte),
-            oldType: "smallint");
+        migrationBuilder.Sql("ALTER TABLE \"UserActivityEvents\" ALTER COLUMN \"EventType\" TYPE integer;");
 
-        migrationBuilder.CreateIndex(
-            name: "IX_UserActivityEvents_UserId_BoardItemId_EventType_OccurredAtU~",
-            table: "UserActivityEvents",
-            columns: new[] { "UserId", "BoardItemId", "EventType", "OccurredAtUtc" });
+        migrationBuilder.Sql(
+            "CREATE INDEX IF NOT EXISTS \"IX_UserActivityEvents_UserId_BoardItemId_EventType_OccurredAtU~\" " +
+            "ON \"UserActivityEvents\" (\"UserId\", \"BoardItemId\", \"EventType\", \"OccurredAtUtc\");");
 
-        migrationBuilder.CreateIndex(
-            name: "IX_BoardItems_UserId_DeletedAtUtc",
-            table: "BoardItems",
-            columns: new[] { "UserId", "DeletedAtUtc" });
+        migrationBuilder.Sql(
+            "CREATE INDEX IF NOT EXISTS \"IX_BoardItems_UserId_DeletedAtUtc\" " +
+            "ON \"BoardItems\" (\"UserId\", \"DeletedAtUtc\");");
 
-        migrationBuilder.CreateIndex(
-            name: "IX_BoardItems_UserId_UpdatedAtUtc",
-            table: "BoardItems",
-            columns: new[] { "UserId", "UpdatedAtUtc" });
+        migrationBuilder.Sql(
+            "CREATE INDEX IF NOT EXISTS \"IX_BoardItems_UserId_UpdatedAtUtc\" " +
+            "ON \"BoardItems\" (\"UserId\", \"UpdatedAtUtc\");");
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropIndex(
-            name: "IX_UserActivityEvents_UserId_BoardItemId_EventType_OccurredAtU~",
-            table: "UserActivityEvents");
+        migrationBuilder.Sql("DROP INDEX IF EXISTS \"IX_UserActivityEvents_UserId_BoardItemId_EventType_OccurredAtU~\";");
+        migrationBuilder.Sql("DROP INDEX IF EXISTS \"IX_BoardItems_UserId_DeletedAtUtc\";");
+        migrationBuilder.Sql("DROP INDEX IF EXISTS \"IX_BoardItems_UserId_UpdatedAtUtc\";");
 
-        migrationBuilder.DropIndex(
-            name: "IX_BoardItems_UserId_DeletedAtUtc",
-            table: "BoardItems");
+        migrationBuilder.Sql("ALTER TABLE \"UserActivityEvents\" ALTER COLUMN \"EventType\" TYPE smallint;");
 
-        migrationBuilder.DropIndex(
-            name: "IX_BoardItems_UserId_UpdatedAtUtc",
-            table: "BoardItems");
-
-        migrationBuilder.AlterColumn<byte>(
-            name: "EventType",
-            table: "UserActivityEvents",
-            type: "smallint",
-            nullable: false,
-            oldClrType: typeof(int),
-            oldType: "integer");
-
-        migrationBuilder.CreateIndex(
-            name: "IX_UserActivityEvents_UserId_BoardItemId_OccurredAtUtc",
-            table: "UserActivityEvents",
-            columns: new[] { "UserId", "BoardItemId", "OccurredAtUtc" });
+        migrationBuilder.Sql(
+            "CREATE INDEX IF NOT EXISTS \"IX_UserActivityEvents_UserId_BoardItemId_OccurredAtUtc\" " +
+            "ON \"UserActivityEvents\" (\"UserId\", \"BoardItemId\", \"OccurredAtUtc\");");
     }
 }

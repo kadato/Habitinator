@@ -8,6 +8,32 @@ namespace App.Shared.Tests;
 public class DailyScheduleTests
 {
     [Fact]
+    public void WalkScheduledDaysBackward_StopsAtTheMinimumDate()
+    {
+        var days = DailySchedule.WalkScheduledDaysBackward(
+            new DateOnly(1, 1, 3),
+            DateOnly.MinValue,
+            DailyRepeatType.Daily,
+            1).ToList();
+
+        days.Should().Equal(new DateOnly(1, 1, 3), new DateOnly(1, 1, 2), new DateOnly(1, 1, 1));
+    }
+
+    [Fact]
+    public void YearlySchedule_WithAHugeStreakWindow_ReturnsTheMinimumDateAnchor()
+    {
+        var notAfter = new DateOnly(2026, 10, 1);
+        var anchor = DailySchedule.StreakHistoryScheduleStart(
+            notAfter,
+            notAfter,
+            DailyRepeatType.Yearly,
+            1,
+            9999);
+
+        anchor.Should().Be(DateOnly.MinValue);
+    }
+
+    [Fact]
     public void EveryNDays_Interval1_HitsAllDaysOnOrAfterStart()
     {
         var start = new DateOnly(2024, 1, 1);

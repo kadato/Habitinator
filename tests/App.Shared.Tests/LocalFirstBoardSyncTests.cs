@@ -308,6 +308,58 @@ public sealed class LocalFirstBoardSyncTests
         row.Title.Should().Be("Server wins");
     }
 
+    [Fact]
+    public async Task DrainConflictAsync_KeepServerRebasesNewerPendingOperationsForTheSameItem()
+    {
+        var harness = new Harness();
+        var id = Guid.NewGuid();
+        var v1 = DateTimeOffset.UtcNow.AddMinutes(-10);
+        await harness.Board.CreateItemAsync(BoardSection.Habit, "Read", id, CancellationToken.None);
+        harness.Server.Responder = _ => JsonResponse(
+            HttpStatusCode.OK,
+            new BoardItem(id, "Read", ServerUpdatedAtUtc: v1, CreatedAtUtc: v1, SortOrder: 1));
+        (await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None)).Should().BeTrue();
+
+        // Two newer edits, both built against v1.
+        await harness.Board.RenameItemAsync(BoardSection.Habit, id, "Read more", CancellationToken.None);
+        await harness.Board.RenameItemAsync(BoardSection.Habit, id, "Read even more", CancellationToken.None);
+
+        var v2 = DateTimeOffset.UtcNow.AddMinutes(5);
+        var serverItem = new BoardItem(id, "Server title", ServerUpdatedAtUtc: v2, CreatedAtUtc: v1, SortOrder: 1);
+        var expectedHeaders = new List<string?>();
+        harness.Server.Responder = request =>
+        {
+            expectedHeaders.Add(request.Headers.TryGetValues("X-Board-Expected-Updated-At-Utc", out var values)
+                ? values.FirstOrDefault()
+                : null);
+            return request.Method == HttpMethod.Put
+                ? ConflictResponse(serverItem)
+                : JsonResponse(HttpStatusCode.OK, serverItem);
+        };
+
+        // The first rename conflicts and the server version wins.
+        (await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None)).Should().BeFalse();
+
+        // The newer rename is rebased onto the server version instead of keeping its stale one.
+        var pending = await harness.Store.ListOutboxAsync(Harness.UserKey);
+        pending.Should().ContainSingle(x => x.Kind == BoardOutboxOperationKind.Rename);
+        var payload = JsonSerializer.Deserialize<RenameOutboxPayload>(pending[0].PayloadJson, BoardOutboxJson.Options)
+                      ?? throw new InvalidOperationException("Rename payload did not deserialize.");
+        payload.ExpectedServerUpdatedAtUtc.Should().Be(v2);
+
+        // It now applies cleanly on top of the server version.
+        harness.Server.Responder = request =>
+        {
+            expectedHeaders.Add(request.Headers.TryGetValues("X-Board-Expected-Updated-At-Utc", out var values)
+                ? values.FirstOrDefault()
+                : null);
+            return JsonResponse(HttpStatusCode.OK, serverItem);
+        };
+        (await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None)).Should().BeTrue();
+        expectedHeaders.Should().Contain(v2.ToString("O"));
+        (await harness.Store.ListOutboxAsync(Harness.UserKey)).Should().BeEmpty();
+    }
+
     private static HttpResponseMessage JsonResponse<T>(HttpStatusCode status, T value) =>
         new(status)
         {

@@ -45,7 +45,8 @@ public static class DailySchedule
             : utcInstant;
 
         var localDateTime = local.DateTime;
-        if (dayStartLocalTime is { } start && start > TimeSpan.Zero && start < TimeSpan.FromDays(1) && localDateTime.TimeOfDay < start)
+        if (dayStartLocalTime is { } start && start > TimeSpan.Zero && start < TimeSpan.FromDays(1) && localDateTime.TimeOfDay < start
+            && localDateTime > DateTime.MinValue)
         {
             localDateTime = localDateTime.AddDays(-1);
         }
@@ -157,7 +158,13 @@ public static class DailySchedule
 
         for (var bump = 0; bump <= interval; bump++)
         {
-            var candidate = AddMonths(dailyStart, -(k + bump) * interval);
+            var monthsBack = (k + bump) * interval;
+            if (monthsBack > MonthIndex(dailyStart))
+            {
+                break;
+            }
+
+            var candidate = AddMonths(dailyStart, -monthsBack);
             var day = Math.Min(dailyStart.Day, DateTime.DaysInMonth(candidate.Year, candidate.Month));
             if (day == dailyStart.Day)
             {
@@ -186,6 +193,11 @@ public static class DailySchedule
         for (var bump = 0; bump <= 4 * interval; bump++)
         {
             var year = dailyStart.Year - (k + bump) * interval;
+            if (year < 1)
+            {
+                break;
+            }
+
             var day = Math.Min(dailyStart.Day, DateTime.DaysInMonth(year, dailyStart.Month));
             if (day == dailyStart.Day)
             {
@@ -260,6 +272,11 @@ public static class DailySchedule
             if (IsScheduledOn(scheduleAnchor, repeat, interval, d))
             {
                 yield return d;
+            }
+
+            if (d == DateOnly.MinValue)
+            {
+                yield break;
             }
 
             d = d.AddDays(-1);

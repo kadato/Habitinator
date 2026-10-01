@@ -463,6 +463,42 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
         return client.SendAsync(message);
     }
 
+    [Fact]
+    public async Task Daily_update_edge_case_payloads_do_not_return_server_errors()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (token, _) = await RegisterAndLoginAsync(client);
+
+        var cases = new (string Name, DailyUpdateRequest Request)[]
+        {
+            ("monthly huge streak", new DailyUpdateRequest("Edge", null, null, new DateOnly(2016, 1, 1), DailyRepeatType.Monthly, 1, null, 9999, 1.0)),
+            ("daily huge streak", new DailyUpdateRequest("Edge", null, null, new DateOnly(2016, 1, 1), DailyRepeatType.Daily, 1, null, 9999, 1.0)),
+            ("invalid repeat enum", new DailyUpdateRequest("Edge", null, null, new DateOnly(2026, 1, 1), (DailyRepeatType)99, 1, null, 0, 1.0)),
+            ("min start date", new DailyUpdateRequest("Edge", null, null, DateOnly.MinValue, DailyRepeatType.Daily, 1, null, 0, 1.0)),
+            ("max start date", new DailyUpdateRequest("Edge", null, null, DateOnly.MaxValue, DailyRepeatType.Daily, 1, null, 0, 1.0)),
+            ("max counter", new DailyUpdateRequest("Edge", null, null, new DateOnly(2026, 1, 1), DailyRepeatType.Daily, 1, null, int.MaxValue, 1.0)),
+            ("max interval monthly", new DailyUpdateRequest("Edge", null, null, new DateOnly(2016, 1, 1), DailyRepeatType.Monthly, 999, null, 50, 1.0)),
+            ("yearly huge streak", new DailyUpdateRequest("Edge", null, null, new DateOnly(2016, 1, 1), DailyRepeatType.Yearly, 1, null, 9999, 1.0)),
+        };
+
+        var failures = new List<string>();
+        foreach (var (name, request) in cases)
+        {
+            var daily = await CreateDailyAsync(client, token, $"Edge {name} {Guid.NewGuid():N}");
+            using var put = new HttpRequestMessage(HttpMethod.Put, $"/api/board/dailies/{daily.Id}");
+            put.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            put.Content = JsonContent.Create(request, options: s_json);
+            using var res = await client.SendAsync(put);
+            if ((int)res.StatusCode >= 500)
+            {
+                var body = await res.Content.ReadAsStringAsync();
+                failures.Add($"{name} -> {(int)res.StatusCode}: {body[..Math.Min(body.Length, 600)]}");
+            }
+        }
+
+        failures.Should().BeEmpty(string.Join("\n---\n", failures));
+    }
+
     private static async Task<BoardItem> CreateDailyAsync(HttpClient client, string token, string title)
     {
         using var createReq = new HttpRequestMessage(HttpMethod.Post, "/api/board/Daily");

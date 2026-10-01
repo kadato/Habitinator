@@ -149,14 +149,16 @@ public sealed class DailyStreakCalculationService(IUserTimeZoneService timeZone)
         }
 
         // One day of margin on each side keeps boundary events for any timezone offset.
-        var historyStartUtc = new DateTimeOffset(
-            minHistoryStart.Value.Year,
-            minHistoryStart.Value.Month,
-            minHistoryStart.Value.Day,
-            0,
-            0,
-            0,
-            TimeSpan.Zero).AddDays(-1);
+        var historyStartUtc = minHistoryStart.Value == DateOnly.MinValue
+            ? DateTimeOffset.MinValue
+            : new DateTimeOffset(
+                minHistoryStart.Value.Year,
+                minHistoryStart.Value.Month,
+                minHistoryStart.Value.Day,
+                0,
+                0,
+                0,
+                TimeSpan.Zero).AddDays(-1);
         var endUtcExclusive = new DateTimeOffset(today.Year, today.Month, today.Day, 0, 0, 0, TimeSpan.Zero)
             .AddDays(2);
 

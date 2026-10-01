@@ -10,28 +10,20 @@ public partial class ActivityEventIdempotency : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AddColumn<Guid>(
-            name: "EventId",
-            table: "UserActivityEvents",
-            type: "uuid",
-            nullable: true);
+        // Idempotent for the same reason as the previous migration: a column or index may already
+        // exist in databases that were repaired by hand or created outside the chain.
+        migrationBuilder.Sql(
+            "ALTER TABLE \"UserActivityEvents\" ADD COLUMN IF NOT EXISTS \"EventId\" uuid NULL;");
 
-        migrationBuilder.CreateIndex(
-            name: "IX_UserActivityEvents_UserId_EventId",
-            table: "UserActivityEvents",
-            columns: new[] { "UserId", "EventId" },
-            unique: true);
+        migrationBuilder.Sql(
+            "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_UserActivityEvents_UserId_EventId\" " +
+            "ON \"UserActivityEvents\" (\"UserId\", \"EventId\");");
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropIndex(
-            name: "IX_UserActivityEvents_UserId_EventId",
-            table: "UserActivityEvents");
-
-        migrationBuilder.DropColumn(
-            name: "EventId",
-            table: "UserActivityEvents");
+        migrationBuilder.Sql("DROP INDEX IF EXISTS \"IX_UserActivityEvents_UserId_EventId\";");
+        migrationBuilder.Sql("ALTER TABLE \"UserActivityEvents\" DROP COLUMN IF EXISTS \"EventId\";");
     }
 }

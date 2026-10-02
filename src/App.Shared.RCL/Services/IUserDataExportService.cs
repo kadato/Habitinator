@@ -14,7 +14,8 @@ public sealed record UserDataExportDto(
     IReadOnlyList<UserActivityEventRecord> Events,
     UserPreferences? Preferences = null,
     NotificationSettings? NotificationSettings = null,
-    DateOnly ExportedForLocalDay = default);
+    DateOnly ExportedForLocalDay = default,
+    int FormatVersion = BoardProtocolVersion.Current);
 
 public interface IUserDataExportService
 {

@@ -38,7 +38,11 @@ public sealed class RemoteBoardDataService : IBoardDataService
             {
                 try
                 {
-                    _cachedSnapshot = JsonSerializer.Deserialize<BoardSnapshot>(raw, Serializer);
+                    var cached = JsonSerializer.Deserialize<BoardSnapshot>(raw, Serializer);
+                    // Cache written before protocol versioning deserializes to 0; treat it as v1.
+                    _cachedSnapshot = cached is { ProtocolVersion: 0 }
+                        ? cached with { ProtocolVersion = BoardProtocolVersion.Current }
+                        : cached;
                 }
                 catch
                 {
@@ -90,7 +94,19 @@ public sealed class RemoteBoardDataService : IBoardDataService
             await EnsureSuccessWithBodyAsync(res, cancellationToken);
         }
 
-        return await res.Content.ReadFromJsonAsync<BoardSyncDelta>(Serializer, cancellationToken);
+        var delta = await res.Content.ReadFromJsonAsync<BoardSyncDelta>(Serializer, cancellationToken);
+        if (delta is { ProtocolVersion: 0 })
+        {
+            delta = delta with { ProtocolVersion = BoardProtocolVersion.Current };
+        }
+
+        // A newer server speaks a protocol we do not understand; fall back to a full snapshot.
+        if (delta is not null && delta.ProtocolVersion != BoardProtocolVersion.Current)
+        {
+            return null;
+        }
+
+        return delta;
     }
 
     public bool TryGetCachedSnapshot(out BoardSnapshot? snapshot)
@@ -124,6 +140,10 @@ public sealed class RemoteBoardDataService : IBoardDataService
             }
 
             _cachedSnapshot = s ?? throw new InvalidOperationException("Empty board response.");
+            if (_cachedSnapshot.ProtocolVersion == 0)
+            {
+                _cachedSnapshot = _cachedSnapshot with { ProtocolVersion = BoardProtocolVersion.Current };
+            }
             if (_localStore != null)
             {
                 try

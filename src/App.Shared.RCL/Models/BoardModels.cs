@@ -75,7 +75,8 @@ public sealed record BoardItem(
 public sealed record BoardSnapshot(
     IReadOnlyList<BoardItem> Habits,
     IReadOnlyList<BoardItem> Dailies,
-    IReadOnlyList<BoardItem> Todos);
+    IReadOnlyList<BoardItem> Todos,
+    int ProtocolVersion = BoardProtocolVersion.Current);
 
 public static class BoardTagUtil
 {

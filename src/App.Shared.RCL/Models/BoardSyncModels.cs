@@ -6,4 +6,5 @@ public sealed record BoardSyncItem(BoardSection Section, BoardItem Item);
 public sealed record BoardSyncDelta(
     IReadOnlyList<BoardSyncItem> Items,
     IReadOnlyList<Guid> DeletedItemIds,
-    string NextCursor);
+    string NextCursor,
+    int ProtocolVersion = BoardProtocolVersion.Current);

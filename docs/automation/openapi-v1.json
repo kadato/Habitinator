@@ -1,33 +1,41 @@
 {
-  "openapi": "3.1.1",
+  "x-generator": "NSwag v14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))",
+  "openapi": "3.0.0",
   "info": {
-    "title": "App.Web | v1",
+    "title": "My Title",
     "version": "1.0.0"
   },
   "servers": [
     {
-      "url": "http://127.0.0.1:5031/"
+      "url": "http://localhost"
     }
   ],
   "paths": {
     "/health": {
       "get": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "GetHealth",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
+          }
+        }
+      }
+    },
+    "/.well-known/change-password": {
+      "get": {
+        "operationId": "Get.wellKnownChangePassword",
+        "responses": {
+          "200": {
+            "description": ""
           }
         }
       }
     },
     "/api/auth/register": {
       "post": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PostApiAuthRegister",
         "requestBody": {
+          "x-name": "request",
           "content": {
             "application/json": {
               "schema": {
@@ -35,21 +43,75 @@
               }
             }
           },
-          "required": true
+          "required": true,
+          "x-position": 1
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/auth/register-form": {
+      "post": {
+        "operationId": "PostApiAuthRegisterForm",
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/auth/forgot-password": {
+      "post": {
+        "operationId": "PostApiAuthForgotPassword",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/auth/reset-password": {
+      "post": {
+        "operationId": "PostApiAuthResetPassword",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": ""
           }
         }
       }
     },
     "/api/auth/login": {
       "post": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PostApiAuthLogin",
         "requestBody": {
+          "x-name": "request",
           "content": {
             "application/json": {
               "schema": {
@@ -57,69 +119,71 @@
               }
             }
           },
-          "required": true
+          "required": true,
+          "x-position": 1
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
           }
         }
       }
     },
     "/api/auth/guest-jwt": {
       "post": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PostApiAuthGuestJwt",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
           }
         }
       }
     },
     "/api/auth/guest-login": {
       "post": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PostApiAuthGuestLogin",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
           }
         }
       }
     },
     "/api/auth/cookie-login": {
       "post": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PostApiAuthCookieLogin",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
           }
         }
       }
     },
     "/api/auth/cookie-logout": {
       "post": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PostApiAuthCookieLogout",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/auth/status": {
+      "get": {
+        "operationId": "GetApiAuthStatus",
+        "responses": {
+          "200": {
+            "description": ""
           }
         }
       }
     },
     "/api/account/change-password": {
       "post": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PostApiAccountChangePassword",
         "requestBody": {
+          "x-name": "body",
           "content": {
             "application/json": {
               "schema": {
@@ -127,68 +191,101 @@
               }
             }
           },
-          "required": true
+          "required": true,
+          "x-position": 1
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
           }
         }
       }
     },
     "/api/account/delete": {
       "post": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PostApiAccountDelete",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
           }
         }
       }
     },
-    "/api/auth/register-form": {
-      "post": {
-        "tags": [
-          "App.Web"
-        ],
+    "/api/account/export": {
+      "get": {
+        "operationId": "GetApiAccountExport",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/account/import": {
+      "post": {
+        "operationId": "PostApiAccountImport",
+        "requestBody": {
+          "x-name": "payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserDataExportDto"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": ""
           }
         }
       }
     },
     "/api/board": {
       "get": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "GetApiBoard",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
           }
         }
       }
     },
     "/api/board/sync": {
       "get": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "GetApiBoardSync",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/board/archived": {
+      "get": {
+        "operationId": "GetApiBoardArchived",
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/board/streaks": {
+      "get": {
+        "operationId": "GetApiBoardStreaks",
+        "responses": {
+          "200": {
+            "description": ""
           }
         }
       }
     },
     "/api/board/{section}": {
       "post": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PostApiBoard",
         "parameters": [
           {
             "name": "section",
@@ -196,10 +293,12 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/BoardSection"
-            }
+            },
+            "x-position": 1
           }
         ],
         "requestBody": {
+          "x-name": "request",
           "content": {
             "application/json": {
               "schema": {
@@ -207,20 +306,19 @@
               }
             }
           },
-          "required": true
+          "required": true,
+          "x-position": 2
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
           }
         }
       }
     },
     "/api/board/{section}/{itemId}": {
       "put": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PutApiBoard",
         "parameters": [
           {
             "name": "section",
@@ -228,7 +326,8 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/BoardSection"
-            }
+            },
+            "x-position": 1
           },
           {
             "name": "itemId",
@@ -236,11 +335,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
-            }
+              "format": "guid"
+            },
+            "x-position": 2
           }
         ],
         "requestBody": {
+          "x-name": "request",
           "content": {
             "application/json": {
               "schema": {
@@ -248,18 +349,17 @@
               }
             }
           },
-          "required": true
+          "required": true,
+          "x-position": 3
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
           }
         }
       },
       "delete": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "DeleteApiBoard",
         "parameters": [
           {
             "name": "section",
@@ -267,7 +367,8 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/BoardSection"
-            }
+            },
+            "x-position": 1
           },
           {
             "name": "itemId",
@@ -275,22 +376,83 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
-            }
+              "format": "guid"
+            },
+            "x-position": 2
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/board/{section}/{itemId}/archive": {
+      "post": {
+        "operationId": "PostApiBoardArchive",
+        "parameters": [
+          {
+            "name": "section",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/BoardSection"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/board/{section}/{itemId}/unarchive": {
+      "post": {
+        "operationId": "PostApiBoardUnarchive",
+        "parameters": [
+          {
+            "name": "section",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/BoardSection"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
           }
         }
       }
     },
     "/api/board/{section}/{itemId}/toggle": {
       "post": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PostApiBoardToggle",
         "parameters": [
           {
             "name": "section",
@@ -298,7 +460,8 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/BoardSection"
-            }
+            },
+            "x-position": 1
           },
           {
             "name": "itemId",
@@ -306,22 +469,21 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
-            }
+              "format": "guid"
+            },
+            "x-position": 2
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
           }
         }
       }
     },
     "/api/board/habits/{itemId}/increment": {
       "post": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PostApiBoardHabitsIncrement",
         "parameters": [
           {
             "name": "itemId",
@@ -329,22 +491,21 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
-            }
+              "format": "guid"
+            },
+            "x-position": 1
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
           }
         }
       }
     },
     "/api/board/habits/{itemId}/decrement": {
       "post": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PostApiBoardHabitsDecrement",
         "parameters": [
           {
             "name": "itemId",
@@ -352,22 +513,21 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
-            }
+              "format": "guid"
+            },
+            "x-position": 1
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
           }
         }
       }
     },
     "/api/board/habits/{itemId}": {
       "put": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PutApiBoardHabits",
         "parameters": [
           {
             "name": "itemId",
@@ -375,11 +535,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
-            }
+              "format": "guid"
+            },
+            "x-position": 1
           }
         ],
         "requestBody": {
+          "x-name": "request",
           "content": {
             "application/json": {
               "schema": {
@@ -387,20 +549,19 @@
               }
             }
           },
-          "required": true
+          "required": true,
+          "x-position": 2
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
           }
         }
       }
     },
     "/api/board/todos/{itemId}": {
       "put": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PutApiBoardTodos",
         "parameters": [
           {
             "name": "itemId",
@@ -408,11 +569,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
-            }
+              "format": "guid"
+            },
+            "x-position": 1
           }
         ],
         "requestBody": {
+          "x-name": "request",
           "content": {
             "application/json": {
               "schema": {
@@ -420,20 +583,19 @@
               }
             }
           },
-          "required": true
+          "required": true,
+          "x-position": 2
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
           }
         }
       }
     },
     "/api/board/dailies/{itemId}": {
       "put": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PutApiBoardDailies",
         "parameters": [
           {
             "name": "itemId",
@@ -441,11 +603,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
-            }
+              "format": "guid"
+            },
+            "x-position": 1
           }
         ],
         "requestBody": {
+          "x-name": "request",
           "content": {
             "application/json": {
               "schema": {
@@ -453,20 +617,19 @@
               }
             }
           },
-          "required": true
+          "required": true,
+          "x-position": 2
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
           }
         }
       }
     },
     "/api/board/dailies/{itemId}/complete-for-date": {
       "post": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PostApiBoardDailiesCompleteForDate",
         "parameters": [
           {
             "name": "itemId",
@@ -474,11 +637,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
-            }
+              "format": "guid"
+            },
+            "x-position": 1
           }
         ],
         "requestBody": {
+          "x-name": "request",
           "content": {
             "application/json": {
               "schema": {
@@ -486,76 +651,173 @@
               }
             }
           },
-          "required": true
+          "required": true,
+          "x-position": 2
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/board/dailies/{itemId}/skip-for-date": {
+      "post": {
+        "operationId": "PostApiBoardDailiesSkipForDate",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DailySkipForDateRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/activity/overview": {
+      "get": {
+        "operationId": "GetApiActivityOverview",
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
           }
         }
       }
     },
     "/api/activity/dashboard": {
       "get": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "GetApiActivityDashboard",
         "parameters": [
           {
             "name": "period",
             "in": "query",
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
           },
           {
             "name": "tag",
             "in": "query",
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
           }
         }
       }
     },
     "/api/activity/daily-contributions": {
       "get": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "GetApiActivityDailyContributions",
         "parameters": [
           {
             "name": "period",
             "in": "query",
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
           },
           {
             "name": "tag",
             "in": "query",
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/activity/habit-contributions": {
+      "get": {
+        "operationId": "GetApiActivityHabitContributions",
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
           }
         }
       }
     },
     "/api/activity/day": {
       "get": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "GetApiActivityDay",
         "parameters": [
           {
             "name": "date",
@@ -564,39 +826,71 @@
             "schema": {
               "type": "string",
               "format": "date"
-            }
+            },
+            "x-position": 1
           },
           {
             "name": "tag",
             "in": "query",
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/activity/log": {
+      "post": {
+        "operationId": "PostApiActivityLog",
+        "requestBody": {
+          "x-name": "body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivityLogRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": ""
           }
         }
       }
     },
     "/api/settings/notifications": {
       "get": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "GetApiSettingsNotifications",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationSettings"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
           }
         }
       },
       "put": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PutApiSettingsNotifications",
         "requestBody": {
+          "x-name": "body",
           "content": {
             "application/json": {
               "schema": {
@@ -604,31 +898,42 @@
               }
             }
           },
-          "required": true
+          "required": true,
+          "x-position": 1
         },
         "responses": {
-          "200": {
-            "description": "OK"
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
           }
         }
       }
     },
     "/api/settings/preferences": {
       "get": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "GetApiSettingsPreferences",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferences"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
           }
         }
       },
       "put": {
-        "tags": [
-          "App.Web"
-        ],
+        "operationId": "PutApiSettingsPreferences",
         "requestBody": {
+          "x-name": "body",
           "content": {
             "application/json": {
               "schema": {
@@ -636,11 +941,15 @@
               }
             }
           },
-          "required": true
+          "required": true,
+          "x-position": 1
         },
         "responses": {
-          "200": {
-            "description": "OK"
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
           }
         }
       }
@@ -648,18 +957,60 @@
   },
   "components": {
     "schemas": {
-      "AppTheme": {
-        "type": "integer"
+      "RegisterRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
       },
-      "BoardSection": {
-        "type": "integer"
+      "ForgotPasswordRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string"
+          }
+        }
+      },
+      "ResetPasswordRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          },
+          "newPassword": {
+            "type": "string"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "rememberMe": {
+            "type": "boolean"
+          }
+        }
       },
       "ChangePasswordRequest": {
-        "required": [
-          "currentPassword",
-          "newPassword"
-        ],
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "currentPassword": {
             "type": "string"
@@ -669,131 +1020,105 @@
           }
         }
       },
-      "DailyCompleteForDateRequest": {
-        "required": [
-          "completedOn"
-        ],
+      "UserDataExportDto": {
         "type": "object",
+        "description": "Complete snapshot of the user's data for personal export and restore.\nItems carries each item with its section since dates alone cannot\ntell a daily from a to-do. ExportedForLocalDay anchors the local\nday the snapshot was computed for so readers interpret the dates correctly.",
+        "additionalProperties": false,
         "properties": {
-          "completedOn": {
+          "exportedAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardSyncItem"
+            }
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserActivityEventRecord"
+            }
+          },
+          "preferences": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UserPreferences"
+              }
+            ]
+          },
+          "notificationSettings": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/NotificationSettings"
+              }
+            ]
+          },
+          "exportedForLocalDay": {
             "type": "string",
             "format": "date"
+          },
+          "formatVersion": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
-      "DailyRepeatType": {
-        "type": "integer"
-      },
-      "DailyUpdateRequest": {
-        "required": [
-          "title",
-          "notes",
-          "tags",
-          "startDate",
-          "repeat",
-          "repeatInterval",
-          "checklistJson"
-        ],
+      "BoardSyncItem": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
+          "section": {
+            "$ref": "#/components/schemas/BoardSection"
+          },
+          "item": {
+            "$ref": "#/components/schemas/BoardItem"
+          }
+        }
+      },
+      "BoardSection": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Habit",
+          "Daily",
+          "Todo"
+        ],
+        "enum": [
+          0,
+          1,
+          2
+        ]
+      },
+      "BoardItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
           "title": {
             "type": "string"
           },
-          "notes": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "tags": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "startDate": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date"
-          },
-          "repeat": {
-            "$ref": "#/components/schemas/DailyRepeatType"
-          },
-          "repeatInterval": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "checklistJson": {
-            "type": [
-              "null",
-              "string"
-            ]
+          "isCompleted": {
+            "type": "boolean"
           },
           "counter": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32",
-            "default": 0
-          },
-          "sortOrder": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
-            "type": [
-              "null",
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "weekdays": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32",
-            "default": 0
-          }
-        }
-      },
-      "HabitResetPeriod": {
-        "type": "integer"
-      },
-      "HabitUpdateRequest": {
-        "required": [
-          "title",
-          "notes",
-          "tags",
-          "trackPlus",
-          "trackMinus",
-          "resetPeriod",
-          "counter",
-          "negativeCounter"
-        ],
-        "type": "object",
-        "properties": {
-          "title": {
-            "type": "string"
+            "type": "integer",
+            "description": "For habits: + counter when TrackPlus is enabled. For dailies: the larger of the\nevent-derived streak and the Counter column, representing the last value from the daily edit dialog and\nbackfill, so a manual change is visible in the API/UI even when the computed streak lags.\n            ",
+            "format": "int32"
           },
           "notes": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": "string",
+            "nullable": true
           },
           "tags": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": "string",
+            "nullable": true
           },
           "trackPlus": {
             "type": "boolean"
@@ -801,81 +1126,214 @@
           "trackMinus": {
             "type": "boolean"
           },
+          "negativeCounter": {
+            "type": "integer",
+            "description": "Tally for the − button when TrackMinus is enabled.",
+            "format": "int32"
+          },
           "resetPeriod": {
             "$ref": "#/components/schemas/HabitResetPeriod"
           },
-          "counter": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
+          "dailyStartDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
           },
-          "negativeCounter": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
+          "dailyRepeat": {
+            "$ref": "#/components/schemas/DailyRepeatType"
+          },
+          "dailyRepeatInterval": {
+            "type": "integer",
             "format": "int32"
           },
           "checklistJson": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": "string",
+            "nullable": true
+          },
+          "dailyLastCompletedOn": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "todoDueDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "serverUpdatedAtUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAtUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           },
           "sortOrder": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
-            "type": [
-              "null",
-              "number",
-              "string"
-            ],
-            "format": "double"
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "isArchived": {
+            "type": "boolean"
+          },
+          "habitPeriodStart": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "dailyWeekdays": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
-      "ItemTitleRequest": {
-        "required": [
-          "title"
+      "HabitResetPeriod": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Daily",
+          "Weekly",
+          "Monthly"
         ],
+        "enum": [
+          0,
+          1,
+          2
+        ]
+      },
+      "DailyRepeatType": {
+        "type": "integer",
+        "description": "How often a daily, or its checklist due logic, is scheduled to repeat.",
+        "x-enumNames": [
+          "Daily",
+          "Weekly",
+          "Monthly",
+          "Yearly"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "UserActivityEventRecord": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "title": {
-            "type": "string"
+          "occurredAtUtc": {
+            "type": "string",
+            "format": "date-time"
           },
-          "itemId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
+          "eventType": {
+            "$ref": "#/components/schemas/ActivityEventType"
+          },
+          "boardItemId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "customLabel": {
+            "type": "string",
+            "nullable": true
           }
         }
       },
-      "LoginRequest": {
-        "required": [
-          "email",
-          "password"
+      "ActivityEventType": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "HabitPlus",
+          "HabitMinus",
+          "DailyComplete",
+          "DailyUncomplete",
+          "TodoComplete",
+          "TodoUncomplete",
+          "TimerSession",
+          "DailySkip"
         ],
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      "UserPreferences": {
         "type": "object",
+        "description": "User profile preferences that affect display and scheduling.",
+        "additionalProperties": false,
         "properties": {
-          "email": {
+          "dateFormat": {
             "type": "string"
           },
-          "password": {
-            "type": "string"
+          "dayStartLocalTime": {
+            "type": "string",
+            "description": "Local time-of-day when the user considers a new day to start.",
+            "format": "duration"
           },
-          "rememberMe": {
-            "type": "boolean",
-            "default": false
+          "timeZoneOverrideId": {
+            "type": "string",
+            "description": "Optional timezone override using an IANA or Windows ID.",
+            "nullable": true
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "theme": {
+            "$ref": "#/components/schemas/AppTheme"
+          },
+          "pomodoroWorkDurationMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pomodoroShortBreakMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pomodoroLongBreakMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pomodoroCyclesBeforeLongBreak": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "enableKeyboardShortcuts": {
+            "type": "boolean"
           }
         }
+      },
+      "AppTheme": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "System",
+          "Light",
+          "Dark"
+        ],
+        "enum": [
+          0,
+          1,
+          2
+        ]
       },
       "NotificationSettings": {
         "type": "object",
+        "description": "User preferences for in-app toasts and local device notifications where supported. JSON-serializable.",
+        "additionalProperties": false,
         "properties": {
           "inAppMessagesEnabled": {
             "type": "boolean"
@@ -896,11 +1354,10 @@
             "type": "boolean"
           },
           "dailyReminderTime": {
-            "pattern": "^-?(\\d+\\.)?\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,7})?$",
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": "string",
+            "description": "Time of day for daily reminder, the date portion is ignored.",
+            "format": "duration",
+            "nullable": true
           },
           "focusTimerAlertsEnabled": {
             "type": "boolean"
@@ -915,120 +1372,214 @@
             "type": "boolean"
           },
           "quietHoursStartUtc": {
-            "pattern": "^-?(\\d+\\.)?\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,7})?$",
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": "string",
+            "description": "Start of quiet window, UTC time-of-day.",
+            "format": "duration",
+            "nullable": true
           },
           "quietHoursEndUtc": {
-            "pattern": "^-?(\\d+\\.)?\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,7})?$",
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": "string",
+            "description": "End of quiet window, UTC time-of-day.",
+            "format": "duration",
+            "nullable": true
           }
         }
       },
       "NotificationToastDuration": {
-        "type": "integer"
-      },
-      "RegisterRequest": {
-        "required": [
-          "email",
-          "password"
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Short",
+          "Normal",
+          "Long"
         ],
+        "enum": [
+          0,
+          1,
+          2
+        ]
+      },
+      "ItemTitleRequest": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "email": {
+          "title": {
             "type": "string"
           },
-          "password": {
-            "type": "string"
+          "itemId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
           }
         }
       },
-      "TodoUpdateRequest": {
-        "required": [
-          "title",
-          "notes",
-          "tags",
-          "checklistJson",
-          "dueDate"
-        ],
+      "HabitUpdateRequest": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "title": {
             "type": "string"
           },
           "notes": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": "string",
+            "nullable": true
           },
           "tags": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": "string",
+            "nullable": true
+          },
+          "trackPlus": {
+            "type": "boolean"
+          },
+          "trackMinus": {
+            "type": "boolean"
+          },
+          "resetPeriod": {
+            "$ref": "#/components/schemas/HabitResetPeriod"
+          },
+          "counter": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "negativeCounter": {
+            "type": "integer",
+            "format": "int32"
           },
           "checklistJson": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "dueDate": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date"
+            "type": "string",
+            "nullable": true
           },
           "sortOrder": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
-            "type": [
-              "null",
-              "number",
-              "string"
-            ],
-            "format": "double"
+            "type": "number",
+            "format": "double",
+            "nullable": true
           }
         }
       },
-      "UserPreferences": {
+      "TodoUpdateRequest": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "dateFormat": {
+          "title": {
             "type": "string"
           },
-          "dayStartLocalTime": {
-            "pattern": "^-?(\\d+\\.)?\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,7})?$",
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "tags": {
+            "type": "string",
+            "nullable": true
+          },
+          "checklistJson": {
+            "type": "string",
+            "nullable": true
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "sortOrder": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        }
+      },
+      "DailyUpdateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
             "type": "string"
           },
-          "timeZoneOverrideId": {
-            "type": [
-              "null",
-              "string"
-            ]
+          "notes": {
+            "type": "string",
+            "nullable": true
           },
-          "displayName": {
-            "type": [
-              "null",
-              "string"
-            ]
+          "tags": {
+            "type": "string",
+            "nullable": true
           },
-          "theme": {
-            "$ref": "#/components/schemas/AppTheme"
+          "startDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "repeat": {
+            "$ref": "#/components/schemas/DailyRepeatType"
+          },
+          "repeatInterval": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "checklistJson": {
+            "type": "string",
+            "nullable": true
+          },
+          "counter": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sortOrder": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "weekdays": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "DailyCompleteForDateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "completedOn": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "DailySkipForDateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "skippedOn": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "ActivityLogRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "eventType": {
+            "$ref": "#/components/schemas/ActivityEventType"
+          },
+          "boardItemId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "customLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "eventId": {
+            "type": "string",
+            "format": "guid"
           }
         }
       }
     }
-  },
-  "tags": [
-    {
-      "name": "App.Web"
-    }
-  ]
+  }
 }

@@ -597,6 +597,30 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
         failures.Should().BeEmpty(string.Join("\n---\n", failures));
     }
 
+    [Fact]
+    public async Task Board_sync_payloads_carry_protocol_version()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (token, _) = await RegisterAndLoginAsync(client);
+
+        using var snapReq = new HttpRequestMessage(HttpMethod.Get, "/api/board/");
+        snapReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var snapRes = await client.SendAsync(snapReq);
+        snapRes.EnsureSuccessStatusCode();
+        snapRes.Headers.TryGetValues("X-Board-Protocol-Version", out var snapVersions).Should().BeTrue();
+        snapVersions!.Should().ContainSingle().Which.Should().Be(BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        var snapshot = await snapRes.Content.ReadFromJsonAsync<BoardSnapshot>(s_json);
+        snapshot!.ProtocolVersion.Should().Be(BoardProtocolVersion.Current);
+
+        var cursor = DateTimeOffset.UtcNow.AddDays(-1).ToString("O");
+        using var deltaReq = new HttpRequestMessage(HttpMethod.Get, $"/api/board/sync?cursor={Uri.EscapeDataString(cursor)}");
+        deltaReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var deltaRes = await client.SendAsync(deltaReq);
+        deltaRes.EnsureSuccessStatusCode();
+        var delta = await deltaRes.Content.ReadFromJsonAsync<BoardSyncDelta>(s_json);
+        delta!.ProtocolVersion.Should().Be(BoardProtocolVersion.Current);
+    }
+
     private static async Task<BoardItem> CreateDailyAsync(HttpClient client, string token, string title)
     {
         using var createReq = new HttpRequestMessage(HttpMethod.Post, "/api/board/Daily");

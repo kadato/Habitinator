@@ -18,4 +18,18 @@ public sealed class OpenApiDocumentTests(PostgresWebAppFactory factory)
         json.Should().Contain("/api/board");
         json.Should().Contain("/api/activity/overview");
     }
+
+    [Fact]
+    public async Task OpenApi_v1_json_covers_recent_routes()
+    {
+        var client = factory.CreateClient();
+        var res = await client.GetAsync("/openapi/v1.json");
+        res.EnsureSuccessStatusCode();
+        var json = await res.Content.ReadAsStringAsync();
+        json.Should().Contain("/api/auth/forgot-password");
+        json.Should().Contain("/api/auth/reset-password");
+        json.Should().Contain("skip-for-date");
+        json.Should().Contain("/api/account/import");
+        json.Should().Contain("/api/account/export");
+    }
 }

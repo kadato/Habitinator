@@ -33,8 +33,9 @@ internal static class BoardApiRoutes
     private static void MapReadRoutes(RouteGroupBuilder boardApi)
     {
         boardApi.MapGet("/",
-            async (CurrentUserId user, BoardPersistenceService boardPersistenceService) =>
+            async (HttpContext http, CurrentUserId user, BoardPersistenceService boardPersistenceService) =>
             {
+                http.Response.Headers["X-Board-Protocol-Version"] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 var snapshot = await boardPersistenceService.GetSnapshotAsync(user.Value);
                 return Results.Json(snapshot, Json);
             });
@@ -43,6 +44,7 @@ internal static class BoardApiRoutes
             async (HttpRequest request, CurrentUserId user, BoardPersistenceService boardPersistenceService,
                 CancellationToken cancellationToken) =>
             {
+                request.HttpContext.Response.Headers["X-Board-Protocol-Version"] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 var cursorRaw = request.Query["cursor"].FirstOrDefault();
                 if (string.IsNullOrWhiteSpace(cursorRaw))
                 {
@@ -59,16 +61,18 @@ internal static class BoardApiRoutes
             });
 
         boardApi.MapGet("/archived",
-            async (CurrentUserId user, BoardPersistenceService boardPersistenceService) =>
+            async (HttpContext http, CurrentUserId user, BoardPersistenceService boardPersistenceService) =>
             {
+                http.Response.Headers["X-Board-Protocol-Version"] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 var snapshot = await boardPersistenceService.GetArchivedSnapshotAsync(user.Value);
                 return Results.Json(snapshot, Json);
             });
 
         boardApi.MapGet("/streaks",
-            async (CurrentUserId user, BoardPersistenceService boardPersistenceService,
+            async (HttpContext http, CurrentUserId user, BoardPersistenceService boardPersistenceService,
                 CancellationToken cancellationToken) =>
             {
+                http.Response.Headers["X-Board-Protocol-Version"] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 var streaks = await boardPersistenceService.GetDailyStreakMapAsync(user.Value, cancellationToken);
                 return Results.Json(streaks, Json);
             });
@@ -292,6 +296,7 @@ internal static class BoardApiRoutes
                 BoardIdempotencyService.ComputeFingerprintHex(method, path, bodyJson),
                 () => execute(cancellationToken),
                 cancellationToken);
+            http.Response.Headers["X-Board-Protocol-Version"] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
             return ToHttpResult(outcome);
         }
         catch (BoardIdempotencyFingerprintMismatchException)

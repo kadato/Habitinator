@@ -44,3 +44,9 @@ Sync goes through the HTTP API. The client and the server share three data types
 * Native types map to portable equivalents: `uuid` to `TEXT`, `timestamptz` to ISO-8601 `TEXT`, `boolean` to `INTEGER`, `double` to `REAL`, dates to `TEXT`. GIN indexes, cascades, and the idempotency table stay server-side.
 
 The sync protocol enforces correctness: `Idempotency-Key` headers, `X-Board-Expected-Updated-At-Utc` version checks, HTTP 409 with the server row in the body, the outbox queue, and the two stages above. The client mirror is a cache with a write queue. PostgreSQL is the source of truth.
+
+## Protocol versioning
+
+`BoardSnapshot.ProtocolVersion`, `BoardSyncDelta.ProtocolVersion`, and `UserDataExportDto.FormatVersion` all carry `BoardProtocolVersion.Current`. That value is 1. Every board read and mutation response also sends `X-Board-Protocol-Version: 1`.
+
+If the delta version is newer than the client understands, the client discards the delta. The client then loads a full snapshot. Snapshots cached before versioning deserialize to 0. The client treats them as version 1. The import service accepts export files without a version as version 1.

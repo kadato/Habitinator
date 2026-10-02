@@ -119,6 +119,7 @@ public static class DependencyInjectionExtensions
         services.AddScoped<IRemoteBoardRefreshService, RemoteBoardRefreshService>();
         services.AddSingleton<IBoardSyncStatus, NoOpBoardSyncStatus>();
         services.AddSingleton<IBoardLocalStoreLifecycle, NoOpBoardLocalStoreLifecycle>();
+        services.AddSingleton<IBoardSyncRequestor, NoOpBoardSyncRequestor>();
         services.AddScoped<BoardRemoteNotifyBridge>();
         services.AddSingleton(sp => new MemoryCacheStore<BoardSnapshot>(
             sp.GetRequiredService<IMemoryCache>(),

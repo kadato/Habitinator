@@ -28,3 +28,11 @@ public sealed class NoOpBoardLocalStoreLifecycle : IBoardLocalStoreLifecycle
     public Task ClearAllLocalStateAsync(CancellationToken cancellationToken = default) =>
         Task.CompletedTask;
 }
+
+/// <summary>Server prerender has no outbox, so sync requests are no-ops.</summary>
+public sealed class NoOpBoardSyncRequestor : IBoardSyncRequestor
+{
+    public void RequestSync(bool notifyOnProgress = true)
+    {
+    }
+}

@@ -4,6 +4,7 @@ using System.Text.Json;
 
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+using App.Shared.RCL.Services.Board.Local;
 using App.Shared.RCL.Services.Remote;
 using App.Web.Data;
 using App.Web.Services;
@@ -595,6 +596,16 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
         }
 
         failures.Should().BeEmpty(string.Join("\n---\n", failures));
+    }
+
+    [Fact]
+    public void Server_services_resolve_sync_requestor_for_prerender()
+    {
+        using var scope = factory.Services.CreateScope();
+        var requestor = scope.ServiceProvider.GetService<IBoardSyncRequestor>();
+        requestor.Should().NotBeNull();
+        var act = () => requestor.RequestSync();
+        act.Should().NotThrow();
     }
 
     [Fact]

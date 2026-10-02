@@ -66,7 +66,7 @@ public sealed class WebSmokeTests
             new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
         res.Should().NotBeNull();
         res.Ok.Should().BeTrue($"Login page status {res.Status}. Base: {BaseUrl}");
-        await Assertions.Expect(page.Locator("body")).ToContainTextAsync("login", new() { IgnoreCase = true });
+        await Assertions.Expect(page.Locator("body")).ToContainTextAsync("Sign in", new() { IgnoreCase = true });
     }
 
     [SkippableFact]
@@ -80,6 +80,6 @@ public sealed class WebSmokeTests
             new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
         res.Should().NotBeNull();
         res.Ok.Should().BeTrue($"Register page status {res.Status}. Base: {BaseUrl}");
-        await Assertions.Expect(page.Locator("body")).ToContainTextAsync("register", new() { IgnoreCase = true });
+        await Assertions.Expect(page.Locator("body")).ToContainTextAsync("Create account", new() { IgnoreCase = true });
     }
 }

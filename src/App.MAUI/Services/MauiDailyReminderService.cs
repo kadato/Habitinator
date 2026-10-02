@@ -23,17 +23,26 @@ public sealed partial class MauiDailyReminderService : IDisposable
 
     private readonly INotificationSettingsService _notificationSettings;
     private readonly IUserDateFormatService _dateFormatService;
+    private readonly IUserTimeZoneService _timeZoneService;
+    private readonly IUserPreferencesService _preferencesService;
+    private readonly IClock _clock;
     private readonly SemaphoreSlim _syncGate = new(1, 1);
 
     public MauiDailyReminderService(
         INotificationSettingsService notificationSettings,
         IUserDateFormatService dateFormatService,
         LocalFirstBoardDataService board,
+        IUserTimeZoneService timeZoneService,
+        IUserPreferencesService preferencesService,
+        IClock clock,
         ILogger<MauiDailyReminderService> logger)
     {
         _notificationSettings = notificationSettings;
         _dateFormatService = dateFormatService;
         _board = board;
+        _timeZoneService = timeZoneService;
+        _preferencesService = preferencesService;
+        _clock = clock;
         _logger = logger;
         _notificationSettings.Changed += OnSettingsChanged;
     }
@@ -74,12 +83,24 @@ public sealed partial class MauiDailyReminderService : IDisposable
 
             await _dateFormatService.InitializeAsync(cancellationToken).ConfigureAwait(false);
 
-            var timeOfDay = settings.DailyReminderTime.Value;
-            var next = NextLocalNotificationTime(timeOfDay);
+            var utcNow = _clock.UtcNow;
+            var timeOfDay = DailyReminderSchedule.NormalizeTime(settings.DailyReminderTime);
+            var next = DailyReminderSchedule.NextLocalTime(timeOfDay, utcNow, _timeZoneService, settings);
+
+            TimeSpan? dayStart = null;
+            try
+            {
+                var prefs = await _preferencesService.GetAsync(cancellationToken).ConfigureAwait(false);
+                dayStart = prefs.DayStartLocalTime;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Could not load day-start for reminder content; using midnight.");
+            }
 
             var snapshot = await _board.GetSnapshotAsync(cancellationToken);
-            // Use device's local timezone for the daily reminder
-            var localToday = DateOnly.FromDateTime(DateTime.Now);
+            // Same calendar the board uses, so the notification lists what the app shows.
+            var localToday = DailyReminderSchedule.ResolveToday(utcNow, _timeZoneService, dayStart);
             var (title, body) = DailyReminderText.Build(snapshot, localToday, _dateFormatService.DateFormat);
 
             var perm = new NotificationPermission { AskPermission = true };
@@ -105,7 +126,7 @@ public sealed partial class MauiDailyReminderService : IDisposable
                 Schedule =
                 {
                     NotifyTime = next,
-                    RepeatType = NotificationRepeat.No
+                    RepeatType = NotificationRepeat.Daily
                 }
             };
 
@@ -124,15 +145,7 @@ public sealed partial class MauiDailyReminderService : IDisposable
     /// <summary>Next <paramref name="timeOfDay" /> on the device clock, today if still ahead, else tomorrow.</summary>
     internal static DateTime NextLocalNotificationTime(TimeSpan timeOfDay)
     {
-        if (timeOfDay < TimeSpan.Zero || timeOfDay >= TimeSpan.FromDays(1))
-        {
-            timeOfDay = TimeSpan.FromHours(7);
-        }
-
-        var now = DateTime.Now;
-        var today = now.Date;
-        var candidate = today + timeOfDay;
-        return candidate > now ? candidate : candidate.AddDays(1);
+        return DailyReminderSchedule.NextLocalTime(timeOfDay, DateTimeOffset.UtcNow, tz: null, settings: null);
     }
 
     public void Dispose()

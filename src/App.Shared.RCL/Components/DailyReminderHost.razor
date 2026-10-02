@@ -1,0 +1,125 @@
+@using Microsoft.Extensions.Logging
+@inject INotificationSettingsService SettingsService
+@inject IUserPreferencesService PreferencesService
+@inject IUserTimeZoneService TimeZoneService
+@inject IClock Clock
+@inject IUserNotifier UserNotifier
+@inject ILocalSettingsStore LocalSettings
+@inject IBoardDataService BoardData
+@inject ILogger<DailyReminderHost> Logger
+@implements IDisposable
+
+@code {
+    private const string DismissKey = "daily_reminder_dismissed_on";
+    private readonly CancellationTokenSource _cts = new();
+    private NotificationSettings? _settings;
+    private TimeSpan _dayStart = TimeSpan.Zero;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SettingsService.Changed += OnSettingsChanged;
+        await LoadAsync();
+        await MaybeShowAsync();
+        _ = PollAsync(_cts.Token);
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _settings = await SettingsService.GetAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not load notification settings for daily reminder.");
+            _settings = null;
+        }
+
+        try
+        {
+            var prefs = await PreferencesService.GetAsync();
+            _dayStart = prefs.DayStartLocalTime;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not load day-start for daily reminder.");
+            _dayStart = TimeSpan.Zero;
+        }
+    }
+
+    private void OnSettingsChanged(object? sender, EventArgs e)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await LoadAsync();
+            await MaybeShowAsync();
+        });
+    }
+
+    private async Task PollAsync(CancellationToken token)
+    {
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromMinutes(5), token);
+                await MaybeShowAsync();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Shutdown is expected.
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Daily reminder background poll failed.");
+        }
+    }
+
+    private async Task MaybeShowAsync()
+    {
+        if (_settings is null)
+        {
+            return;
+        }
+
+        DateOnly? lastDismissed = null;
+        try
+        {
+            var raw = LocalSettings.Read(DismissKey);
+            if (DateOnly.TryParse(raw, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsed))
+            {
+                lastDismissed = parsed;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not read daily reminder dismissal.");
+        }
+
+        if (!DailyReminderSchedule.ShouldShowWebReminder(_settings, _dayStart, TimeZoneService, Clock, lastDismissed))
+        {
+            return;
+        }
+
+        try
+        {
+            var today = DailyReminderSchedule.ResolveToday(Clock.UtcNow, TimeZoneService, _dayStart);
+            var snapshot = await BoardData.GetSnapshotAsync();
+            var (title, body) = DailyReminderText.Build(snapshot, today);
+            await UserNotifier.NotifyAsync($"{title}: {body}", Severity.Info);
+            LocalSettings.Write(DismissKey, today.ToString("O", System.Globalization.CultureInfo.InvariantCulture));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not show daily reminder.");
+        }
+    }
+
+    public void Dispose()
+    {
+        SettingsService.Changed -= OnSettingsChanged;
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

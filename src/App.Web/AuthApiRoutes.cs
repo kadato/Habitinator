@@ -1,6 +1,7 @@
 using System.Security.Claims;
 
 using App.Shared.RCL.Models;
+using App.Shared.RCL.Services;
 using App.Web.Auth;
 using App.Web.Data;
 using App.Web.Services;
@@ -40,6 +41,7 @@ internal static class AuthApiRoutes
         endpoints.MapPost("/api/account/change-password", ChangePasswordAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery().RequireRateLimiting("api");
         endpoints.MapPost("/api/account/delete", DeleteAccountAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery().RequireRateLimiting("api");
         endpoints.MapGet("/api/account/export", ExportDataAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery().RequireRateLimiting("api");
+        endpoints.MapPost("/api/account/import", ImportDataAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery().RequireRateLimiting("api");
     }
 
     // Endpoint handlers
@@ -270,6 +272,22 @@ internal static class AuthApiRoutes
         CancellationToken cancellationToken)
     {
         return Results.Ok(await exportService.BuildAsync(user.Value, cancellationToken));
+    }
+
+    private static async Task<IResult> ImportDataAsync(
+        CurrentUserId user,
+        UserDataExportDto payload,
+        UserDataImportService importService,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Results.Ok(await importService.ImportAsync(user.Value, payload, cancellationToken));
+        }
+        catch (UserDataImportValidationException ex)
+        {
+            return Results.BadRequest(new { detail = ex.Message });
+        }
     }
 
     private static async Task<IResult> DeleteAccountAsync(

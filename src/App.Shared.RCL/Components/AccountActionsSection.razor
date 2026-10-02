@@ -35,10 +35,22 @@
         <MudStack Spacing="2">
             <MudText Typo="Typo.subtitle1" Class="mb-1">Export your data</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
-                Download everything Habitinator stores for your account as a JSON file, including board items and activity history.
+                Download everything Habitinator stores for your account as a JSON file, including board items, activity history, preferences, and notification settings.
             </MudText>
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="_exporting" OnClick="ExportDataAsync">
                 Export data
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.subtitle1" Class="mb-1">Import your data</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
+                Restore a backup exported from Settings. This replaces every board item and activity event on your account.
+            </MudText>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OpenImportDialogAsync">
+                Import data
             </MudButton>
         </MudStack>
     </MudPaper>
@@ -113,6 +125,11 @@
         {
             _exporting = false;
         }
+    }
+
+    private async Task OpenImportDialogAsync()
+    {
+        await DialogService.ShowAsync<ImportDataDialog>(string.Empty, DialogDefaults.Wide);
     }
 
     private async Task ChangePasswordAsync()

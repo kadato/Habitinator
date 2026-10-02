@@ -30,9 +30,25 @@ public sealed class UserDataExportService(
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
             .ToListAsync(cancellationToken);
 
-        return new UserDataExportDto(DateTimeOffset.UtcNow, [.. items.Select(e => Map(e, today))], events);
+        var settings = await db.Users.AsNoTracking()
+            .Where(x => x.Id == userId)
+            .Select(x => new { x.UserPreferences, x.NotificationSettings })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new UserDataExportDto(
+            DateTimeOffset.UtcNow,
+            [.. items.Select(e => new BoardSyncItem(e.Section, Map(e, today)))],
+            events,
+            settings?.UserPreferences ?? UserPreferences.CreateDefault(),
+            settings?.NotificationSettings ?? NotificationSettings.CreateDefault(),
+            today);
     }
 
+    /// <summary>
+    /// Stored dates are UTC midnights of the local calendar date the client wrote,
+    /// so truncating the UTC day inverts the write convention exactly. Do not convert
+    /// through the timezone here: for users west of UTC that shifts dates back a day.
+    /// </summary>
     private static BoardItem Map(BoardItemEntity e, DateOnly today)
     {
         DateOnly? start = e.DailyStartDate is { } d ? DateOnly.FromDateTime(d) : null;

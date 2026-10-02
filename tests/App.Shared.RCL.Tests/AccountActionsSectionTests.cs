@@ -24,6 +24,7 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
     private readonly IAccountActionsService _accountActions = Substitute.For<IAccountActionsService>();
     private readonly IUserNotifier _notifier = Substitute.For<IUserNotifier>();
     private readonly IUserDataExportService _export = Substitute.For<IUserDataExportService>();
+    private readonly IUserDataImportService _import = Substitute.For<IUserDataImportService>();
 
     public AccountActionsSectionTests()
     {
@@ -32,6 +33,7 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         _ctx.Services.AddSingleton<IAccountActionsService>(_accountActions);
         _ctx.Services.AddSingleton<IUserNotifier>(_notifier);
         _ctx.Services.AddSingleton<IUserDataExportService>(_export);
+        _ctx.Services.AddSingleton<IUserDataImportService>(_import);
         _export.ExportAsync(Arg.Any<CancellationToken>())
             .Returns(new UserDataExportDto(DateTimeOffset.UtcNow, [], []));
 
@@ -59,10 +61,11 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         inputs[2].Instance.Label.Should().Be("Confirm new password");
 
         var buttons = cut.FindComponents<MudButton>();
-        buttons.Should().HaveCount(3);
+        buttons.Should().HaveCount(4);
         cut.FindAll("button")[0].TextContent.Should().Contain("Change password");
         cut.FindAll("button")[1].TextContent.Should().Contain("Export data");
-        cut.FindAll("button")[2].TextContent.Should().Contain("Delete account");
+        cut.FindAll("button")[2].TextContent.Should().Contain("Import data");
+        cut.FindAll("button")[3].TextContent.Should().Contain("Delete account");
     }
 
     [Fact]
@@ -157,8 +160,8 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         var cut = _ctx.Render<AccountActionsSection>();
         var buttons = cut.FindComponents<MudButton>();
 
-        // Act - Click Delete Account, buttons[2]. Do not await: the handler waits on the confirmation dialog.
-        var deleteClick = cut.InvokeAsync(() => buttons[2].Instance.OnClick.InvokeAsync(null));
+        // Act - Click Delete Account, buttons[3]. Do not await: the handler waits on the confirmation dialog.
+        var deleteClick = cut.InvokeAsync(() => buttons[3].Instance.OnClick.InvokeAsync(null));
 
         // Assert - confirmation dialog is shown and service is not called yet
         await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Delete your account?"), TimeSpan.FromSeconds(5));
@@ -184,8 +187,8 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         var cut = _ctx.Render<AccountActionsSection>();
         var buttons = cut.FindComponents<MudButton>();
 
-        // Act - Click Delete Account, buttons[2], then cancel the confirmation
-        var deleteClick = cut.InvokeAsync(() => buttons[2].Instance.OnClick.InvokeAsync(null));
+        // Act - Click Delete Account, buttons[3], then cancel the confirmation
+        var deleteClick = cut.InvokeAsync(() => buttons[3].Instance.OnClick.InvokeAsync(null));
         await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Cancel"), TimeSpan.FromSeconds(5));
         var cancelButton = _dialogProvider.FindAll("button").First(b => b.TextContent.Contains("Cancel"));
         await cancelButton.ClickAsync();
@@ -205,8 +208,8 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
             .Add(x => x.OnAccountDeleted, () => callbackInvoked = true));
         var buttons = cut.FindComponents<MudButton>();
 
-        // Act - Click Delete Account, buttons[2], then confirm
-        var deleteClick = cut.InvokeAsync(() => buttons[2].Instance.OnClick.InvokeAsync(null));
+        // Act - Click Delete Account, buttons[3], then confirm
+        var deleteClick = cut.InvokeAsync(() => buttons[3].Instance.OnClick.InvokeAsync(null));
         await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Delete your account?"), TimeSpan.FromSeconds(5));
         var confirmButton = _dialogProvider.FindAll("button").First(b => b.TextContent.Contains("Delete account"));
         await confirmButton.ClickAsync();
@@ -226,8 +229,8 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         _accountActions.DeleteAccountAsync(Arg.Any<CancellationToken>())
             .Returns(x => Task.FromException(new InvalidOperationException("Account deletion failed.")));
 
-        // Act - Click Delete Account, buttons[2], then confirm
-        var deleteClick = cut.InvokeAsync(() => buttons[2].Instance.OnClick.InvokeAsync(null));
+        // Act - Click Delete Account, buttons[3], then confirm
+        var deleteClick = cut.InvokeAsync(() => buttons[3].Instance.OnClick.InvokeAsync(null));
         await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Delete your account?"), TimeSpan.FromSeconds(5));
         var confirmButton = _dialogProvider.FindAll("button").First(b => b.TextContent.Contains("Delete account"));
         await confirmButton.ClickAsync();
@@ -252,5 +255,20 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         await _export.Received(1).ExportAsync(Arg.Any<CancellationToken>());
         var jsLog = string.Join(";", _ctx.JSInterop.Invocations.Select(i => i.Identifier));
         jsLog.Should().Contain("habitinatorLoadScript");
+    }
+
+    [Fact]
+    public async Task ImportData_OpensImportDialog()
+    {
+        // Arrange
+        var cut = _ctx.Render<AccountActionsSection>();
+        var buttons = cut.FindComponents<MudButton>();
+
+        // Act - Click Import Data, buttons[2]
+        await cut.InvokeAsync(() => buttons[2].Instance.OnClick.InvokeAsync(null));
+
+        // Assert
+        await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Paste an export file below"), TimeSpan.FromSeconds(5));
+        _dialogProvider.Markup.Should().Contain("Restore replaces every board item");
     }
 }

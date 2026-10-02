@@ -165,6 +165,8 @@ public static class DependencyInjectionExtensions
         services.AddScoped<IUserDateFormatService, UserDateFormatService>();
         services.AddScoped<UserDataExportService>();
         services.AddScoped<IUserDataExportService, WebUserDataExportService>();
+        services.AddScoped<UserDataImportService>();
+        services.AddScoped<IUserDataImportService, WebUserDataImportService>();
         services.AddScoped<IBoardColumnStateStore, JsBoardColumnStateStore>();
         services.AddScoped<IOnboardingStore, JsOnboardingStore>();
         services.AddScoped<BoardUiSessionState>();

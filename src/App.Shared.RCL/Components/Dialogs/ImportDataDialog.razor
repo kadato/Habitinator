@@ -1,0 +1,151 @@
+@inject IUserDataImportService Import
+@inject IUserNotifier Notifier
+@inject IDialogService DialogService
+
+<MudDialog Class="hab-modal-dialog"
+           ContentClass="hab-modal-content">
+    <DialogContent>
+        <div class="hab-modal hab-modal--neutral" data-dialog-label="Import data">
+            <div class="hab-modal__header">
+                <div class="hab-modal__topbar hab-modal__topbar--minimal">
+                    <DialogCloseButton OnClose="() => MudDialog.Close()" />
+                </div>
+                <MudText Typo="Typo.h6" Class="font-weight-bold mb-1">Import data</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Paste an export file below. Restore replaces every board item and activity event on this account. Preferences in the file replace yours.
+                </MudText>
+            </div>
+            <div class="hab-modal__body">
+            <MudTextField T="string"
+                          @bind-Value="_json"
+                          @bind-Value:after="ClearPreview"
+                          Variant="Variant.Outlined"
+                          Lines="12"
+                          Placeholder="Paste habitinator-export-....json here"
+                          aria-label="Export file contents as JSON"
+                          Class="export-textarea mb-3"/>
+            @if (_error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-3">@_error</MudAlert>
+            }
+            else if (_preview is not null)
+            {
+                <MudText Typo="Typo.body2" Class="mb-3">@_preview</MudText>
+            }
+            </div>
+            <div class="hab-modal__footer">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       Size="Size.Medium"
+                       Disabled="_validating || string.IsNullOrWhiteSpace(_json)"
+                       OnClick="ValidateAsync">
+                Validate
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Size="Size.Medium"
+                       Class="hab-primary-btn"
+                       Disabled="_importing || _parsed is null"
+                       OnClick="RestoreAsync">
+                Restore
+            </MudButton>
+            </div>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
+
+    private string _json = string.Empty;
+    private string? _error;
+    private string? _preview;
+    private UserDataExportDto? _parsed;
+    private bool _validating;
+    private bool _importing;
+
+    private void ClearPreview()
+    {
+        _parsed = null;
+        _preview = null;
+        _error = null;
+    }
+
+    private Task ValidateAsync()
+    {
+        if (_validating) return Task.CompletedTask;
+        _validating = true;
+        try
+        {
+            UserDataExportDto? data;
+            try
+            {
+                data = System.Text.Json.JsonSerializer.Deserialize<UserDataExportDto>(_json, JsonDefaults.Api);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                _error = "The text is not valid JSON.";
+                _parsed = null;
+                _preview = null;
+                return Task.CompletedTask;
+            }
+
+            if (UserDataImportValidator.Validate(data) is { } problem)
+            {
+                _error = problem;
+                _parsed = null;
+                _preview = null;
+                return Task.CompletedTask;
+            }
+
+            _parsed = data;
+            _error = null;
+            _preview = Summary(data!);
+            return Task.CompletedTask;
+        }
+        finally
+        {
+            _validating = false;
+        }
+    }
+
+    private static string Summary(UserDataExportDto data)
+    {
+        var prefs = data.Preferences is null ? "no preferences" : "preferences";
+        var notif = data.NotificationSettings is null ? "no notification settings" : "notification settings";
+        return $"{data.Items.Count} items, {data.Events.Count} activity events, {prefs}, {notif}.";
+    }
+
+    private async Task RestoreAsync()
+    {
+        if (_importing || _parsed is null) return;
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Restore this backup?",
+            "This replaces every board item and activity event on your account. This cannot be undone.",
+            "Restore backup",
+            null,
+            "Cancel");
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        _importing = true;
+        try
+        {
+            var result = await Import.ImportAsync(_json);
+            await Notifier.NotifyAsync(
+                $"Restored {result.Items} items and {result.Events} activity events.",
+                Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            await Notifier.NotifyAsync(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _importing = false;
+        }
+    }
+}

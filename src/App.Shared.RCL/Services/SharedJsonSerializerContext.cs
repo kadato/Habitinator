@@ -45,6 +45,7 @@ namespace App.Shared.RCL.Services;
 [JsonSerializable(typeof(UpdateDailyOutboxPayload))]
 [JsonSerializable(typeof(AuthStatusDto))]
 [JsonSerializable(typeof(UserDataExportDto))]
+[JsonSerializable(typeof(UserDataImportResult))]
 [JsonSerializable(typeof(BoardColumnFilterState))]
 [JsonSerializable(typeof(BoardLocalRow))]
 [JsonSerializable(typeof(List<BoardLocalRow>))]

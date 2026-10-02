@@ -148,6 +148,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IUserDateFormatService, UserDateFormatService>();
         builder.Services.AddSingleton<IAccountActionsService, RemoteAccountActionsService>();
         builder.Services.AddSingleton<IUserDataExportService, RemoteUserDataExportService>();
+        builder.Services.AddSingleton<IUserDataImportService, RemoteUserDataImportService>();
         builder.Services.AddScoped<IBoardColumnStateStore, JsBoardColumnStateStore>();
         builder.Services.AddScoped<IOnboardingStore, JsOnboardingStore>();
         builder.Services.AddScoped<BoardUiSessionState>();

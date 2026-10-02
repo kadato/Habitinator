@@ -34,6 +34,7 @@ namespace App.Web.Services;
 [JsonSerializable(typeof(ActivityDayDetailDto))]
 [JsonSerializable(typeof(AuthStatusDto))]
 [JsonSerializable(typeof(UserDataExportDto))]
+[JsonSerializable(typeof(UserDataImportResult))]
 [JsonSerializable(typeof(BoardColumnFilterState))]
 [JsonSerializable(typeof(Dictionary<Guid, int>))]
 [JsonSerializable(typeof(string[]))]

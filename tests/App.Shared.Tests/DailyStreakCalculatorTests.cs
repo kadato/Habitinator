@@ -343,4 +343,49 @@ public class DailyStreakCalculatorTests
         DailyStreakCalculator.ComputeStreak(start, DailyRepeatType.Weekly, 1, today, events, null, mask)
             .Should().Be(1);
     }
+
+    [Fact]
+    public void IsCalendarDaySkipped_LastEventSkip_IsTrue()
+    {
+        var at = new DateTimeOffset(2024, 5, 20, 15, 0, 0, TimeSpan.Zero);
+        List<(DateTimeOffset, ActivityEventType)> skipped = [(at, ActivityEventType.DailySkip)];
+        List<(DateTimeOffset, ActivityEventType)> completed = [(at, ActivityEventType.DailyComplete)];
+
+        DailyStreakCalculator.IsCalendarDaySkipped(skipped).Should().BeTrue();
+        DailyStreakCalculator.IsCalendarDaySkipped(completed).Should().BeFalse();
+        DailyStreakCalculator.IsCalendarDaySkipped(null).Should().BeFalse();
+        DailyStreakCalculator.IsCalendarDayNetCompleted(new DateOnly(2024, 5, 20), skipped, null).Should().BeFalse();
+    }
+
+    [Fact]
+    public void ComputeStreak_SkippedDay_BridgesWithoutCounting()
+    {
+        var start = new DateOnly(2024, 5, 18);
+        var today = new DateOnly(2024, 5, 20);
+        Dictionary<DateOnly, List<(DateTimeOffset, ActivityEventType)>> events = new()
+        {
+            { new DateOnly(2024, 5, 20), [(new DateTimeOffset(2024, 5, 20, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)] },
+            { new DateOnly(2024, 5, 19), [(new DateTimeOffset(2024, 5, 19, 15, 0, 0, TimeSpan.Zero), ActivityEventType.DailySkip)] },
+            { new DateOnly(2024, 5, 18), [(new DateTimeOffset(2024, 5, 18, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)] },
+        };
+
+        DailyStreakCalculator.ComputeStreak(start, DailyRepeatType.Daily, 1, today, events, null)
+            .Should().Be(2);
+    }
+
+    [Fact]
+    public void ComputeStreak_SkippedToday_ContinuesFromYesterday()
+    {
+        var start = new DateOnly(2024, 5, 18);
+        var today = new DateOnly(2024, 5, 20);
+        Dictionary<DateOnly, List<(DateTimeOffset, ActivityEventType)>> events = new()
+        {
+            { new DateOnly(2024, 5, 20), [(new DateTimeOffset(2024, 5, 20, 15, 0, 0, TimeSpan.Zero), ActivityEventType.DailySkip)] },
+            { new DateOnly(2024, 5, 19), [(new DateTimeOffset(2024, 5, 19, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)] },
+            { new DateOnly(2024, 5, 18), [(new DateTimeOffset(2024, 5, 18, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)] },
+        };
+
+        DailyStreakCalculator.ComputeStreak(start, DailyRepeatType.Daily, 1, today, events, null)
+            .Should().Be(2);
+    }
 }

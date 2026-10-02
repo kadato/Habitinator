@@ -529,6 +529,51 @@ public sealed class BoardPersistenceService(
         return new BoardMutationResult(BoardMutationStatus.Ok, completed);
     }
 
+    public async Task<BoardMutationResult> SkipDailyForDateAsync(
+        Guid userId,
+        Guid itemId,
+        DateOnly skippedOn,
+        DateTimeOffset? expectedUpdatedAtUtc = null,
+        CancellationToken cancellationToken = default)
+    {
+        var today = await TodayAsync(userId, cancellationToken);
+        if (skippedOn >= today)
+        {
+            return new BoardMutationResult(BoardMutationStatus.NotFound, null);
+        }
+
+        var (entity, conflict) = await LoadAndCheckAsync(userId, BoardSection.Daily, itemId, expectedUpdatedAtUtc, cancellationToken);
+        if (entity is null || conflict is not null)
+        {
+            return conflict ?? new BoardMutationResult(BoardMutationStatus.NotFound, null);
+        }
+
+        var model = ToModelForDailyCheck(entity, today);
+        if (!DailySchedule.IsScheduledOn(model.DailyStartDate, model.DailyRepeat, model.DailyRepeatInterval, skippedOn, model.DailyWeekdays))
+        {
+            return new BoardMutationResult(BoardMutationStatus.NotFound, null);
+        }
+
+        entity.IsCompleted = false;
+        entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        AddActivityEvent(userId, ActivityEventType.DailySkip, itemId, null, entity.Title,
+            DailyStreakCalculator.BackdatedDailyEventOccurredAt(skippedOn));
+        var streakMap = await ComputeDailyStreakMapAsync(userId, entity, cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            DiscardPendingMutationChanges();
+            return await BuildConflictFromDatabaseAsync(userId, BoardSection.Daily, itemId, cancellationToken);
+        }
+
+        var skipped = ToModelWithDailyStreaksAsync(entity, streakMap, today);
+        await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+        return new BoardMutationResult(BoardMutationStatus.Ok, skipped);
+    }
+
     public async Task<BoardMutationResult> ToggleItemAsync(
         Guid userId,
         BoardSection section,

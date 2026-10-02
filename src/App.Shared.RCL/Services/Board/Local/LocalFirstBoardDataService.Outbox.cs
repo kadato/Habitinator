@@ -460,6 +460,19 @@ public sealed partial class LocalFirstBoardDataService
                     await Patch(p.ItemId, updated);
                     return;
                 }
+            case BoardOutboxOperationKind.SkipDailyForDate:
+                {
+                    var p = DeserializePayload<SkipDailyOutboxPayload>(head, "Invalid skip-daily payload.");
+                    var updated = await api.SkipDailyForDateAsync(
+                        p.ItemId,
+                        p.SkippedOn,
+                        head.OperationId,
+                        p.ExpectedServerUpdatedAtUtc,
+                        cancellationToken);
+                    updated ??= await api.GetItemAsync(p.ItemId, cancellationToken);
+                    await Patch(p.ItemId, updated);
+                    return;
+                }
             case BoardOutboxOperationKind.HabitIncrement:
                 {
                     var p = DeserializePayload<ItemIdOutboxPayload>(head, "Invalid habit+ payload.");

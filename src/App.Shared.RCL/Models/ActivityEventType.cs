@@ -8,5 +8,6 @@ public enum ActivityEventType
     DailyUncomplete = 3,
     TodoComplete = 4,
     TodoUncomplete = 5,
-    TimerSession = 6
+    TimerSession = 6,
+    DailySkip = 7
 }

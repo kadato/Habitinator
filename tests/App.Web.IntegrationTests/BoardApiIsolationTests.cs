@@ -5,10 +5,13 @@ using System.Text.Json;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 using App.Shared.RCL.Services.Remote;
+using App.Web.Data;
 
 using FluentAssertions;
 
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace App.Web.IntegrationTests;
 
@@ -198,6 +201,48 @@ public sealed class BoardApiIsolationTests(PostgresWebAppFactory factory)
         var completeRes = await client.SendAsync(requestComplete);
         var body = await completeRes.Content.ReadAsStringAsync();
         completeRes.StatusCode.Should().Be(HttpStatusCode.OK, $"response body was: {body}");
+    }
+
+    [Fact]
+    public async Task SkipDailyForDate_WithValidRequest_StoresSkipAndKeepsStreakNeutral()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var email = $"skip-user-{suffix}@integration.test";
+        const string password = "TestUser1!Aa";
+
+        (await client.PostAsJsonAsync("/api/auth/register",
+            new RegisterRequest(email, password))).IsSuccessStatusCode.Should().BeTrue();
+
+        var login = await client.PostAsJsonAsync("/api/auth/login",
+            new LoginRequest(email, password, RememberMe: false));
+        login.EnsureSuccessStatusCode();
+        var token = (await login.Content.ReadFromJsonAsync<LoginResponse>(s_json))!.AccessToken;
+
+        using var requestCreate = new HttpRequestMessage(HttpMethod.Post, "/api/board/Daily");
+        requestCreate.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        requestCreate.Content = JsonContent.Create(new ItemTitleRequest("Skip Test"));
+        var createRes = await client.SendAsync(requestCreate);
+        createRes.EnsureSuccessStatusCode();
+        var created = await createRes.Content.ReadFromJsonAsync<BoardItem>(s_json);
+        created.Should().NotBeNull();
+
+        var yesterday = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+        using var requestSkip = new HttpRequestMessage(HttpMethod.Post, $"/api/board/dailies/{created.Id}/skip-for-date");
+        requestSkip.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        requestSkip.Content = JsonContent.Create(new DailySkipForDateRequest(yesterday), options: JsonDefaults.Api);
+        var skipRes = await client.SendAsync(requestSkip);
+        var body = await skipRes.Content.ReadAsStringAsync();
+        skipRes.StatusCode.Should().Be(HttpStatusCode.OK, $"response body was: {body}");
+
+        var dbFactory = factory.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        await using var db = await dbFactory.CreateDbContextAsync();
+        var userId = await db.Users.Where(x => x.Email == email).Select(x => x.Id).SingleAsync();
+        (await db.UserActivityEvents.AnyAsync(x => x.UserId == userId
+            && x.BoardItemId == created.Id
+            && x.EventType == ActivityEventType.DailySkip))
+            .Should().BeTrue();
     }
 }
 

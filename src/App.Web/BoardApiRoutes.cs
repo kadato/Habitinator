@@ -226,6 +226,7 @@ internal static class BoardApiRoutes
     {
         boardApi.MapPut("/dailies/{itemId:guid}", HandleUpdateDailyAsync);
         boardApi.MapPost("/dailies/{itemId:guid}/complete-for-date", HandleCompleteDailyForDateAsync);
+        boardApi.MapPost("/dailies/{itemId:guid}/skip-for-date", HandleSkipDailyForDateAsync);
     }
 
     private static Task<IResult> HandleUpdateDailyAsync(
@@ -254,6 +255,14 @@ internal static class BoardApiRoutes
         DailyCompleteForDateRequest request) =>
         ExecuteBoardMutationAsync(ctx, user, "POST", request, (expected, ct) =>
             ctx.Board.CompleteDailyForDateAsync(user.Value, itemId, request.CompletedOn, expected, ct));
+
+    private static Task<IResult> HandleSkipDailyForDateAsync(
+        [AsParameters] BoardMutationContext ctx,
+        CurrentUserId user,
+        Guid itemId,
+        DailySkipForDateRequest request) =>
+        ExecuteBoardMutationAsync(ctx, user, "POST", request, (expected, ct) =>
+            ctx.Board.SkipDailyForDateAsync(user.Value, itemId, request.SkippedOn, expected, ct));
 
     /// <summary>Runs a board mutation with the shared idempotency + optimistic-concurrency envelope.</summary>
     private static async Task<IResult> RunIdempotentAsync(

@@ -17,6 +17,8 @@ public static class DailyStreakCalculator
     ///     For each day, completion is: last <see cref="ActivityEventType.DailyComplete" /> or
     ///     <see cref="ActivityEventType.DailyUncomplete" /> for that day wins. A day with no such events
     ///     is completed only if it equals <paramref name="dailyLastCompletedOn" />.
+    ///     A trailing <see cref="ActivityEventType.DailySkip" /> marks the day skipped.
+    ///     The skipped day stays neutral for streaks.
     /// </summary>
     public static bool IsCalendarDayNetCompleted(
         DateOnly d,
@@ -25,6 +27,10 @@ public static class DailyStreakCalculator
         eventsOnDay is { Count: > 0 }
             ? eventsOnDay[^1].Type == ActivityEventType.DailyComplete
             : dailyLastCompletedOn == d;
+
+    public static bool IsCalendarDaySkipped(
+        IReadOnlyList<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)>? eventsOnDay) =>
+        eventsOnDay is { Count: > 0 } && eventsOnDay[^1].Type == ActivityEventType.DailySkip;
 
     /// <summary>
     ///     Groups events by the user's local calendar day, applying the same timezone and day-start
@@ -40,7 +46,7 @@ public static class DailyStreakCalculator
         TimeSpan? dayStartLocalTime = null)
     {
         return source
-            .Where(e => e.Type is ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete)
+            .Where(e => e.Type is ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete or ActivityEventType.DailySkip)
             .GroupBy(e => DailySchedule.LocalDay(e.OccurredAtUtc, timeZone, dayStartLocalTime))
             .ToDictionary(
                 g => g.Key,
@@ -89,7 +95,14 @@ public static class DailyStreakCalculator
         var n = 0;
         foreach (var d in DailySchedule.WalkScheduledDaysBackward(end, historyStart, effectiveRepeat, effectiveInterval, DailySchedule.MaxScheduledStepCap, effectiveWeekdays))
         {
-            if (!IsCalendarDayNetCompleted(d, GetDayListOrNull(eventsByDay, d), dailyLastCompletedOn))
+            var dayEvents = GetDayListOrNull(eventsByDay, d);
+            if (IsCalendarDaySkipped(dayEvents))
+            {
+                // Skipped days are neutral: they bridge the streak without adding to it.
+                continue;
+            }
+
+            if (!IsCalendarDayNetCompleted(d, dayEvents, dailyLastCompletedOn))
             {
                 break;
             }

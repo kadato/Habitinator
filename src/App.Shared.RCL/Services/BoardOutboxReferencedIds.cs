@@ -25,6 +25,7 @@ public static class BoardOutboxReferencedIds
             BoardOutboxOperationKind.Rename => JsonSerializer.Deserialize<RenameOutboxPayload>(json, BoardOutboxJson.Options)?.ItemId,
             BoardOutboxOperationKind.Delete or BoardOutboxOperationKind.Toggle or BoardOutboxOperationKind.Archive or BoardOutboxOperationKind.Unarchive => JsonSerializer.Deserialize<SectionItemOutboxPayload>(json, BoardOutboxJson.Options)?.ItemId,
             BoardOutboxOperationKind.CompleteDailyForDate => JsonSerializer.Deserialize<CompleteDailyOutboxPayload>(json, BoardOutboxJson.Options)?.ItemId,
+            BoardOutboxOperationKind.SkipDailyForDate => JsonSerializer.Deserialize<SkipDailyOutboxPayload>(json, BoardOutboxJson.Options)?.ItemId,
             BoardOutboxOperationKind.HabitIncrement or BoardOutboxOperationKind.HabitDecrement => JsonSerializer.Deserialize<ItemIdOutboxPayload>(json, BoardOutboxJson.Options)?.ItemId,
             BoardOutboxOperationKind.UpdateHabit => JsonSerializer.Deserialize<UpdateHabitOutboxPayload>(json, BoardOutboxJson.Options)?.ItemId,
             BoardOutboxOperationKind.UpdateTodo => JsonSerializer.Deserialize<UpdateTodoOutboxPayload>(json, BoardOutboxJson.Options)?.ItemId,

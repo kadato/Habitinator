@@ -189,6 +189,35 @@ public sealed partial class LocalFirstBoardDataService
             cancellationToken);
     }
 
+    public async Task<BoardItem?> SkipDailyForDateAsync(Guid itemId, DateOnly skippedOn,
+        CancellationToken cancellationToken = default)
+    {
+        var today = await TodayAsync(cancellationToken);
+        return await MutateWithSyncAsync(
+            async (local, userKey) =>
+            {
+                var result = await UpdateRowAsync(
+                    local,
+                    userKey,
+                    new RowUpdateOp(itemId, BoardSection.Daily, BoardOutboxOperationKind.SkipDailyForDate, (row, expected) => new SkipDailyOutboxPayload(itemId, skippedOn, expected)),
+                    row =>
+                    {
+                        row.IsCompleted = false;
+                        return Task.CompletedTask;
+                    },
+                    cancellationToken,
+                    row => CanCompleteDailyForDate(row, skippedOn, today));
+
+                if (result != null)
+                {
+                    await AppendLocalActivityAsync(ActivityEventType.DailySkip, itemId, result.Title, cancellationToken);
+                }
+
+                return result;
+            },
+            cancellationToken);
+    }
+
     private static bool CanCompleteDailyForDate(BoardLocalRow row, DateOnly completedOn, DateOnly today) =>
         DailySchedule.CanCompleteForDate(
             row.DailyStartDate, row.DailyRepeat, row.DailyRepeatInterval, row.DailyLastCompletedOn, completedOn, today, row.DailyWeekdays);

@@ -105,6 +105,10 @@ public interface IBoardDataService
     Task<BoardItem?> CompleteDailyForDateAsync(Guid itemId, DateOnly completedOn,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Marks a past scheduled day as skipped. The skipped day bridges the streak and does not count as completed.</summary>
+    Task<BoardItem?> SkipDailyForDateAsync(Guid itemId, DateOnly skippedOn,
+        CancellationToken cancellationToken = default);
+
     Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default);
 
     Task<BoardItem?> IncrementHabitMinusAsync(Guid itemId, CancellationToken cancellationToken = default);

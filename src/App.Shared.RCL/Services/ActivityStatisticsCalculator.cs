@@ -757,6 +757,7 @@ public static class ActivityStatisticsCalculator
         {
             ActivityEventType.DailyComplete => name is not null ? $"Completed daily: {name}" : "Completed daily",
             ActivityEventType.DailyUncomplete => name ?? eventType.ToString(),
+            ActivityEventType.DailySkip => name is not null ? $"Skipped daily: {name}" : "Skipped daily",
             ActivityEventType.TodoComplete => name is not null ? $"Completed to-do: {name}" : "Completed to-do",
             ActivityEventType.TodoUncomplete => name ?? eventType.ToString(),
             ActivityEventType.HabitPlus => name is not null ? $"Habit +: {name}" : "Habit +",

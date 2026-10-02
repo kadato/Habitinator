@@ -169,7 +169,8 @@ public sealed class DailyStreakCalculationService(IUserTimeZoneService timeZone)
                         && e.BoardItemId != null
                         && ids.Contains(e.BoardItemId.Value)
                         && (e.EventType == ActivityEventType.DailyComplete
-                            || e.EventType == ActivityEventType.DailyUncomplete)
+                            || e.EventType == ActivityEventType.DailyUncomplete
+                            || e.EventType == ActivityEventType.DailySkip)
                         && e.OccurredAtUtc >= historyStartUtc
                         && e.OccurredAtUtc < endUtcExclusive)
             .Select(e => new { e.BoardItemId, e.OccurredAtUtc, e.EventType })

@@ -99,7 +99,15 @@
         }
         @if (_canCompleteShownDate && _dailyItem is not null)
         {
-            <div class="d-flex justify-end mt-3">
+            <div class="d-flex justify-end gap-2 mt-3">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           Size="Size.Small"
+                           Disabled="@_completing"
+                           StartIcon="@Icons.Material.Filled.NextPlan"
+                           OnClick="SkipShownDateAsync">
+                    Skip this day
+                </MudButton>
                 <MudButton Variant="Variant.Filled"
                            Color="Color.Primary"
                            Size="Size.Small"
@@ -347,6 +355,35 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    private async Task SkipShownDateAsync()
+    {
+        if (_dailyItem is null || _completing)
+        {
+            return;
+        }
+
+        _completing = true;
+        try
+        {
+            var result = await BoardData.SkipDailyForDateAsync(_dailyItem.Id, _shownDate);
+            if (result is not null)
+            {
+                await Notifier.NotifyAsync($"Skipped {_shownDateLabel}. Streak continues.", MudBlazor.Severity.Success);
+            }
+        }
+        catch
+        {
+            await Notifier.NotifyAsync("Could not skip this day. Try again.", MudBlazor.Severity.Error);
+        }
+        finally
+        {
+            _completing = false;
+        }
+
+        await LoadAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
     private async Task ReloadAsync()
     {
         await LoadAsync();
@@ -378,6 +415,7 @@
     private static string GetEventIcon(ActivityEventType t) => t switch
     {
         ActivityEventType.DailyComplete => Icons.Material.Filled.CheckCircle,
+        ActivityEventType.DailySkip => Icons.Material.Filled.NextPlan,
         ActivityEventType.TodoComplete => Icons.Material.Filled.CheckBox,
         ActivityEventType.HabitPlus => Icons.Material.Filled.Add,
         ActivityEventType.HabitMinus => Icons.Material.Filled.Remove,
@@ -398,6 +436,7 @@
     private static string GetEventMeta(ActivityDayEventDto e) => e.EventType switch
     {
         ActivityEventType.DailyComplete => "Daily completed",
+        ActivityEventType.DailySkip => "Daily skipped",
         ActivityEventType.TodoComplete => "To-do completed",
         ActivityEventType.HabitPlus => "Habit plus",
         ActivityEventType.HabitMinus => "Habit minus",
@@ -412,6 +451,7 @@
         return e.EventType switch
         {
             ActivityEventType.DailyComplete => "Daily task completed",
+            ActivityEventType.DailySkip => "Daily skipped",
             ActivityEventType.TodoComplete => "To-do completed",
             ActivityEventType.HabitPlus => "Habit logged +",
             ActivityEventType.HabitMinus => "Habit logged -",

@@ -40,3 +40,5 @@ public sealed record TodoUpdateRequest(
 
 public sealed record DailyCompleteForDateRequest(DateOnly CompletedOn);
 
+public sealed record DailySkipForDateRequest(DateOnly SkippedOn);
+

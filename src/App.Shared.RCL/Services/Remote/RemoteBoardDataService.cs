@@ -319,6 +319,26 @@ public sealed class RemoteBoardDataService : IBoardDataService
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
 
+    public Task<BoardItem?> SkipDailyForDateAsync(Guid itemId, DateOnly skippedOn,
+        CancellationToken cancellationToken = default) =>
+        SkipDailyForDateAsync(itemId, skippedOn, Guid.Empty, null, cancellationToken);
+
+    public async Task<BoardItem?> SkipDailyForDateAsync(
+        Guid itemId,
+        DateOnly skippedOn,
+        Guid operationId,
+        DateTimeOffset? expectedServerUpdatedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        using HttpRequestMessage req = new(HttpMethod.Post, $"api/board/dailies/{itemId}/skip-for-date")
+        {
+            Content = JsonContent.Create(new DailySkipForDateRequest(skippedOn), options: Serializer)
+        };
+        AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
+        using var res = await Client.SendAsync(req, cancellationToken);
+        return await ReadBoardItemOrNullAsync(res, cancellationToken);
+    }
+
     public Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default) =>
         IncrementHabitPlusAsync(itemId, Guid.Empty, null, cancellationToken);
 

@@ -99,6 +99,11 @@ public sealed class WebBoardDataService(
         MutateAsync((userId, ct) => boardPersistenceService.CompleteDailyForDateAsync(userId, itemId, completedOn, null, ct),
             cancellationToken);
 
+    public Task<BoardItem?> SkipDailyForDateAsync(Guid itemId, DateOnly skippedOn,
+        CancellationToken cancellationToken = default) =>
+        MutateAsync((userId, ct) => boardPersistenceService.SkipDailyForDateAsync(userId, itemId, skippedOn, null, ct),
+            cancellationToken);
+
     public Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default) =>
         MutateAsync((userId, ct) => boardPersistenceService.IncrementHabitPlusAsync(userId, itemId, null, ct),
             cancellationToken);

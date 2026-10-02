@@ -6,6 +6,7 @@ Allow: /
 Disallow: /api/
 Disallow: /hubs/
 Disallow: /stats
+Disallow: /upcoming
 Disallow: /settings
 Disallow: /Error
 Disallow: /not-found
@@ -16,6 +17,7 @@ Allow: /
 Disallow: /api/
 Disallow: /hubs/
 Disallow: /stats
+Disallow: /upcoming
 Disallow: /settings
 
 User-agent: Claude-Web
@@ -23,6 +25,7 @@ Allow: /
 Disallow: /api/
 Disallow: /hubs/
 Disallow: /stats
+Disallow: /upcoming
 Disallow: /settings
 
 User-agent: Google-Extended
@@ -30,6 +33,7 @@ Allow: /
 Disallow: /api/
 Disallow: /hubs/
 Disallow: /stats
+Disallow: /upcoming
 Disallow: /settings
 
 Sitemap: https://habitinator.app/sitemap.xml

@@ -371,6 +371,11 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
           helper?.invokeMethodAsync("OnShortcutAction", "nav-board").catch(function () {});
           return true;
         }
+        if (key === 'u') {
+          e.preventDefault();
+          helper?.invokeMethodAsync("OnShortcutAction", "nav-upcoming").catch(function () {});
+          return true;
+        }
         if (key === 's') {
           e.preventDefault();
           helper?.invokeMethodAsync("OnShortcutAction", "nav-stats").catch(function () {});

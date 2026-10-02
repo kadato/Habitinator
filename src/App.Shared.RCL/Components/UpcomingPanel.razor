@@ -1,0 +1,190 @@
+@using App.Shared.RCL.Models
+@inject IBoardDataService BoardData
+@inject IUserTimeZoneService TimeZoneService
+@inject IUserDateFormatService DateFormatService
+@inject IUserNotifier Notifier
+
+<MudStack Spacing="2" Class="upcoming-panel">
+    @if (_error is not null)
+    {
+        <div class="upcoming-load-fallback">
+            <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Large" Class="upcoming-load-fallback__icon" aria-hidden="true" />
+            <MudText Typo="Typo.subtitle2" Class="upcoming-load-fallback__title">Upcoming unavailable</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">We couldn't load your upcoming schedule. Try again in a moment.</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="ReloadAsync">Retry</MudButton>
+        </div>
+    }
+    else if (_loading)
+    {
+        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+            <MudSkeleton Width="180px" Height="24px" Class="mb-2" />
+            <MudSkeleton Width="90%" Height="20px" Class="mb-1" />
+            <MudSkeleton Width="80%" Height="20px" Class="mb-1" />
+            <MudSkeleton Width="85%" Height="20px" />
+        </MudPaper>
+        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+            <MudSkeleton Width="160px" Height="24px" Class="mb-2" />
+            <MudSkeleton Width="70%" Height="20px" />
+        </MudPaper>
+    }
+    else
+    {
+        @if (_overdue.Count > 0)
+        {
+            <MudPaper Class="pa-4 upcoming-day-card" Elevation="0" Outlined="true">
+                <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="mb-1">Overdue</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">@_overdue.Count overdue to-do(s)</MudText>
+                <MudStack Spacing="1">
+                    @foreach (var todo in _overdue)
+                    {
+                        <div class="upcoming-row" @key="todo.Id">
+                            <MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Small" Class="me-2" aria-hidden="true" />
+                            <div class="upcoming-row__text">
+                                <MudText Typo="Typo.body2">@todo.Title</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@TodoDueRelativeText.Format(todo.TodoDueDate!.Value, _today)</MudText>
+                            </div>
+                        </div>
+                    }
+                </MudStack>
+            </MudPaper>
+        }
+
+        @foreach (var day in _days)
+        {
+            <MudPaper Class="pa-4 upcoming-day-card" Elevation="0" Outlined="true" @key="day.Date">
+                <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="mb-1">@DayLabel(day)</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">@FormatDate(day.Date)</MudText>
+                @if (day.Dailies.Count == 0 && day.TodosDue.Count == 0)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Nothing scheduled.</MudText>
+                }
+                else
+                {
+                    <MudStack Spacing="1">
+                        @foreach (var daily in day.Dailies)
+                        {
+                            <div class="upcoming-row" @key="daily.Id">
+                                @if (day.IsToday)
+                                {
+                                    <MudCheckBox T="bool"
+                                                 Value="@IsCheckedToday(daily)"
+                                                 ValueChanged="@(v => ToggleTodayAsync(daily))"
+                                                 Label="@daily.Title"
+                                                 Class="ma-0 upcoming-check"
+                                                 Color="Color.Primary"
+                                                 Dense="true" />
+                                }
+                                else
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Repeat" Size="Size.Small" Class="me-2" aria-hidden="true" />
+                                    <div class="upcoming-row__text">
+                                        <MudText Typo="Typo.body2">@daily.Title</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@UpcomingSchedule.DescribeDaily(daily)</MudText>
+                                    </div>
+                                }
+                            </div>
+                            @if (day.IsToday)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ms-8">@UpcomingSchedule.DescribeDaily(daily)</MudText>
+                            }
+                        }
+                        @foreach (var todo in day.TodosDue)
+                        {
+                            <div class="upcoming-row" @key="todo.Id">
+                                <MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Small" Class="me-2" aria-hidden="true" />
+                                <div class="upcoming-row__text">
+                                    <MudText Typo="Typo.body2">@todo.Title</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@TodoDueRelativeText.Format(todo.TodoDueDate!.Value, _today)</MudText>
+                                </div>
+                            </div>
+                        }
+                    </MudStack>
+                }
+            </MudPaper>
+        }
+    }
+</MudStack>
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private DateOnly _today;
+    private IReadOnlyList<UpcomingDay> _days = [];
+    private IReadOnlyList<BoardItem> _overdue = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        _loading = true;
+        _error = null;
+        StateHasChanged();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            await DateFormatService.InitializeAsync();
+            var snapshot = await BoardData.GetSnapshotAsync();
+            _today = DailySchedule.LocalToday(TimeZoneService);
+            _days = UpcomingSchedule.GetUpcomingDays(snapshot, _today);
+            _overdue = UpcomingSchedule.GetOverdueTodos(snapshot, _today);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            try { await Notifier.NotifyAsync("Could not load upcoming schedule. Please try again.", Severity.Error); } catch (Exception) { /* Best-effort toast. Fallback UI already indicates the failure. */ }
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private bool IsCheckedToday(BoardItem daily) =>
+        DailySchedule.IsCompletedForToday(daily.DailyLastCompletedOn, daily.IsCompleted, _today);
+
+    private async Task ToggleTodayAsync(BoardItem daily)
+    {
+        try
+        {
+            await BoardData.ToggleItemAsync(BoardSection.Daily, daily.Id);
+            var snapshot = await BoardData.GetSnapshotAsync();
+            _today = DailySchedule.LocalToday(TimeZoneService);
+            _days = UpcomingSchedule.GetUpcomingDays(snapshot, _today);
+            _overdue = UpcomingSchedule.GetOverdueTodos(snapshot, _today);
+        }
+        catch (Exception)
+        {
+            await Notifier.NotifyAsync("Could not update this daily. Check your connection. Try again.", Severity.Error);
+        }
+    }
+
+    private string DayLabel(UpcomingDay day)
+    {
+        var offset = day.Date.DayNumber - _today.DayNumber;
+        return offset switch
+        {
+            0 => "Today",
+            1 => "Tomorrow",
+            _ => day.Date.ToString("dddd"),
+        };
+    }
+
+    private string FormatDate(DateOnly date)
+    {
+        try
+        {
+            return DateFormatService.Format(date);
+        }
+        catch
+        {
+            return date.ToString("yyyy-MM-dd");
+        }
+    }
+}

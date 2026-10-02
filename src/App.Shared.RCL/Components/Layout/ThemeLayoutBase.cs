@@ -119,6 +119,9 @@ public abstract class ThemeLayoutBase : LayoutComponentBase, IDisposable
             case "nav-board":
                 Nav.NavigateTo("/");
                 break;
+            case "nav-upcoming":
+                Nav.NavigateTo("/upcoming");
+                break;
             case "nav-stats":
                 Nav.NavigateTo("/stats");
                 break;

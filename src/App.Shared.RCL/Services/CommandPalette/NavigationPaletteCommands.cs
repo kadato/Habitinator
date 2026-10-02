@@ -49,6 +49,16 @@ internal sealed class NavigationPaletteCommands(
             Keywords: ["stats", "statistics", "charts", "history", "analytics"]));
 
         list.Add(new(
+            Id: "nav-upcoming",
+            Title: "Upcoming",
+            Subtitle: "Dailies and to-dos due over the next 7 days",
+            Category: "Navigation",
+            Icon: Icons.Material.Filled.CalendarMonth,
+            ShortcutBadge: "G U",
+            Action: () => NavigateAsync("/upcoming"),
+            Keywords: ["upcoming", "calendar", "schedule", "due", "next", "week"]));
+
+        list.Add(new(
             Id: "nav-settings",
             Title: "Settings",
             Subtitle: "Preferences, appearance, notifications",

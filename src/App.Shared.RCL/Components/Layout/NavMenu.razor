@@ -17,6 +17,7 @@
         @MobileNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
         @if (Session.IsLoggedIn)
         {
+            @MobileNavItem("/upcoming", "upcoming", NavLinkMatch.Prefix, Icons.Material.Filled.CalendarMonth, "Upcoming")
             @MobileNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Stats")
             @MobileNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Settings, "Settings")
         }
@@ -26,6 +27,7 @@ else if (BottomBar)
 {
     <nav class="app-bottom-nav" role="navigation" aria-label="Main navigation">
         @BottomNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
+        @BottomNavItem("/upcoming", "upcoming", NavLinkMatch.Prefix, Icons.Material.Filled.CalendarMonth, "Upcoming")
         @BottomNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Stats")
         @BottomNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Settings, "Settings")
     </nav>
@@ -36,6 +38,7 @@ else
         @HeaderNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
         @if (Session.IsLoggedIn)
         {
+            @HeaderNavItem("/upcoming", "upcoming", NavLinkMatch.Prefix, Icons.Material.Filled.CalendarMonth, "Upcoming")
             @HeaderNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Statistics")
             @HeaderNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Settings, "Settings")
         }
@@ -80,6 +83,10 @@ else
         {
             _ = StatsReader.GetOverviewAsync(DailyGraphPeriods.Rolling370Days, null);
             _ = BoardData.GetStreakMapAsync();
+        }
+        else if (path == "upcoming")
+        {
+            _ = BoardData.GetSnapshotAsync();
         }
         else if (string.IsNullOrEmpty(path))
         {

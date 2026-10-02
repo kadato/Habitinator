@@ -308,6 +308,45 @@ public static class DailySchedule
         }
     }
 
+    /// <summary>
+    /// Yields scheduled days walking forward from <paramref name="fromInclusive" />,
+    /// oldest first, for at most <paramref name="maxDaysToScan" /> calendar days.
+    /// </summary>
+    public static IEnumerable<DateOnly> WalkScheduledDaysForward(
+        DateOnly? dailyStart,
+        DailyRepeatType repeat,
+        int interval,
+        DateOnly fromInclusive,
+        int maxDaysToScan,
+        int weekdays = 0)
+    {
+        if (maxDaysToScan <= 0)
+        {
+            yield break;
+        }
+
+        var d = fromInclusive;
+        for (var i = 0; i < maxDaysToScan; i++)
+        {
+            if (d == DateOnly.MaxValue)
+            {
+                if (IsScheduledOn(dailyStart, repeat, interval, d, weekdays))
+                {
+                    yield return d;
+                }
+
+                yield break;
+            }
+
+            if (IsScheduledOn(dailyStart, repeat, interval, d, weekdays))
+            {
+                yield return d;
+            }
+
+            d = d.AddDays(1);
+        }
+    }
+
     /// <summary>Whether this daily is checked off for the given calendar day in the local timezone.</summary>
     public static bool IsCompleteForDate(BoardItem daily, DateOnly on)
     {

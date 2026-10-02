@@ -82,6 +82,7 @@ public sealed class CommandPaletteTests : IAsyncDisposable
         rootCommands.Should().Contain(c => c.Id == "create-habit" && c.Category == "Suggested");
         rootCommands.Should().Contain(c => c.Id == "create-daily" && c.Category == "Suggested");
         rootCommands.Should().Contain(c => c.Id == "nav-board" && c.Category == "Navigation");
+        rootCommands.Should().Contain(c => c.Id == "nav-upcoming" && c.Category == "Navigation");
         rootCommands.Should().Contain(c => c.Id == "nav-stats" && c.Category == "Navigation");
         rootCommands.Should().Contain(c => c.Id == "nav-settings" && c.Category == "Navigation");
         rootCommands.Should().Contain(c => c.Id == "theme-dark" && c.Category == "Appearance");

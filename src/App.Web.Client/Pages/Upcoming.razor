@@ -1,0 +1,16 @@
+@page "/upcoming"
+
+<PageMeta Title="@PageTitles.Page("Upcoming")"
+          Description="Dailies and to-dos due over the next 7 days."
+          CanonicalPath="/upcoming" />
+
+<h1 class="hab-visually-hidden">Upcoming</h1>
+
+<AuthorizeView>
+    <NotAuthorized>
+        <SignInPrompt Title="Upcoming" Message="Sign in to see your upcoming dailies and to-dos." />
+    </NotAuthorized>
+    <Authorized>
+        <UpcomingPanel />
+    </Authorized>
+</AuthorizeView>

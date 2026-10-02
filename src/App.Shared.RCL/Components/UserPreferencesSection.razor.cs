@@ -33,6 +33,9 @@ public partial class UserPreferencesSection
     private string _themeStatusText = string.Empty;
 
     private readonly List<(string Id, string Label)> _timeZones = [];
+    private bool _timeZonesLoading;
+    private static List<(string Id, string Label)>? _cachedTimeZones;
+    private static readonly Lock _timeZoneCacheLock = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -41,6 +44,7 @@ public partial class UserPreferencesSection
             var loaded = await PreferencesService.GetAsync();
             ApplyModel(loaded);
             ApplyTimeZoneOverride();
+            EnsureTimeZonesAsync();
         }
         catch (Exception ex)
         {
@@ -63,6 +67,7 @@ public partial class UserPreferencesSection
             var loaded = await PreferencesService.GetAsync();
             ApplyModel(loaded);
             ApplyTimeZoneOverride();
+            EnsureTimeZonesAsync();
         }
         catch (Exception ex)
         {
@@ -93,10 +98,80 @@ public partial class UserPreferencesSection
 
     private void UpdateTimeZoneList()
     {
+        lock (_timeZoneCacheLock)
+        {
+            if (_cachedTimeZones is not null)
+            {
+                _timeZones.Clear();
+                _timeZones.AddRange(_cachedTimeZones);
+                _timeZonesLoading = false;
+                return;
+            }
+        }
+
+        // The select renders with Auto only until the full list arrives.
+        // This keeps the first paint fast.
         _timeZones.Clear();
+        _timeZonesLoading = true;
+    }
+
+    private void EnsureTimeZonesAsync()
+    {
+        lock (_timeZoneCacheLock)
+        {
+            if (_cachedTimeZones is not null)
+            {
+                return;
+            }
+        }
+
+        _ = LoadTimeZonesInBackgroundAsync();
+    }
+
+    private async Task LoadTimeZonesInBackgroundAsync()
+    {
+        List<(string Id, string Label)> built;
+        try
+        {
+            built = await Task.Run(BuildTimeZoneList, CancellationToken.None);
+        }
+        catch (Exception)
+        {
+            await InvokeAsync(() =>
+            {
+                _timeZonesLoading = false;
+                StateHasChanged();
+            });
+            return;
+        }
+
+        SetCachedTimeZones(built);
+
+        await InvokeAsync(() =>
+        {
+            _timeZones.Clear();
+            _timeZones.AddRange(built);
+            _timeZonesLoading = false;
+            StateHasChanged();
+        });
+    }
+
+    private static List<(string Id, string Label)> BuildTimeZoneList()
+    {
+        var list = new List<(string Id, string Label)>();
         foreach (var tz in TimeZoneInfo.GetSystemTimeZones())
         {
-            _timeZones.Add((tz.Id, $"{tz.DisplayName} ({tz.Id})"));
+            list.Add((tz.Id, $"{tz.DisplayName} ({tz.Id})"));
+        }
+
+        return list;
+    }
+
+    private static void SetCachedTimeZones(List<(string Id, string Label)> built)
+    {
+        lock (_timeZoneCacheLock)
+        {
+            _cachedTimeZones = built;
         }
     }
 

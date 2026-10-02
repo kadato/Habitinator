@@ -152,6 +152,10 @@
                         <MudSelectItem Value="@tz.Id">@tz.Label</MudSelectItem>
                     }
                 </MudSelect>
+                @if (_timeZonesLoading)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Loading timezones...</MudText>
+                }
                 <MudText Typo="Typo.caption" Color="Color.Secondary">
                     Current: @_resolvedTimeZoneLabel
                 </MudText>

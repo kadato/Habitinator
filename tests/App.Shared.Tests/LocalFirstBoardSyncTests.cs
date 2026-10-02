@@ -371,6 +371,117 @@ public sealed class LocalFirstBoardSyncTests
         (await harness.Store.ListOutboxAsync(Harness.UserKey)).Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task DrainFailureAsync_RecordsAttemptCountLastAttemptAndLastError()
+    {
+        var harness = new Harness();
+        await harness.Board.CreateItemAsync(BoardSection.Habit, "Read", Guid.NewGuid(), CancellationToken.None);
+        harness.Server.Responder = _ => new HttpResponseMessage(HttpStatusCode.InternalServerError);
+
+        var drained = await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None);
+
+        drained.Should().BeFalse();
+        var pending = await harness.Store.ListOutboxAsync(Harness.UserKey);
+        pending.Should().ContainSingle();
+        pending[0].AttemptCount.Should().Be(1);
+        pending[0].LastAttemptUtc.Should().NotBeNull();
+        pending[0].LastAttemptUtc!.Value.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
+        pending[0].LastError.Should().NotBeNullOrWhiteSpace();
+        pending[0].LastError.Should().Contain("500");
+        (await harness.Board.GetPendingOutboxCountAsync(CancellationToken.None)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task DrainFailureAsync_BackoffBlocksImmediateRetryWithoutHttpCall()
+    {
+        var harness = new Harness();
+        await harness.Board.CreateItemAsync(BoardSection.Habit, "Read", Guid.NewGuid(), CancellationToken.None);
+
+        var calls = 0;
+        harness.Server.Responder = _ =>
+        {
+            calls++;
+            return new HttpResponseMessage(HttpStatusCode.InternalServerError);
+        };
+
+        (await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None)).Should().BeFalse();
+        calls.Should().Be(1);
+
+        // Immediate retry stays inside the backoff window, so no second HTTP call runs.
+        (await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None)).Should().BeFalse();
+        calls.Should().Be(1);
+
+        // After the window passes the operation retries.
+        var pending = await harness.Store.ListOutboxAsync(Harness.UserKey);
+        pending.Should().ContainSingle();
+        pending[0].LastAttemptUtc = DateTime.UtcNow.AddMinutes(-1);
+        await harness.Store.UpdateOutboxAsync(pending[0], CancellationToken.None);
+
+        (await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None)).Should().BeFalse();
+        calls.Should().Be(2);
+        (await harness.Store.ListOutboxAsync(Harness.UserKey)).Should().ContainSingle(x => x.AttemptCount == 2);
+    }
+
+    [Fact]
+    public async Task DrainFailureAsync_RepeatedFailuresAccumulateAndStuckHintAppears()
+    {
+        var harness = new Harness();
+        await harness.Board.CreateItemAsync(BoardSection.Habit, "Read", Guid.NewGuid(), CancellationToken.None);
+        harness.Server.Responder = _ => new HttpResponseMessage(HttpStatusCode.InternalServerError);
+
+        (await harness.Board.TryGetStuckOutboxHintAsync(1, CancellationToken.None)).Should().BeNull();
+
+        (await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None)).Should().BeFalse();
+        var first = (await harness.Store.ListOutboxAsync(Harness.UserKey)).Single();
+        first.LastAttemptUtc = DateTime.UtcNow.AddMinutes(-1);
+        await harness.Store.UpdateOutboxAsync(first, CancellationToken.None);
+
+        (await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None)).Should().BeFalse();
+        var pending = await harness.Store.ListOutboxAsync(Harness.UserKey);
+        pending.Should().ContainSingle(x => x.AttemptCount == 2);
+
+        var hint = await harness.Board.TryGetStuckOutboxHintAsync(2, CancellationToken.None);
+        hint.Should().NotBeNullOrWhiteSpace();
+        (await harness.Board.TryGetStuckOutboxHintAsync(3, CancellationToken.None)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task DrainFailureAsync_NetworkExceptionRecordedLikeServerError()
+    {
+        var harness = new Harness();
+        await harness.Board.CreateItemAsync(BoardSection.Habit, "Read", Guid.NewGuid(), CancellationToken.None);
+        harness.Server.Responder = _ => throw new HttpRequestException("Network down");
+
+        var drained = await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None);
+
+        drained.Should().BeFalse();
+        var pending = await harness.Store.ListOutboxAsync(Harness.UserKey);
+        pending.Should().ContainSingle();
+        pending[0].AttemptCount.Should().Be(1);
+        pending[0].LastError.Should().Contain("Network down");
+    }
+
+    [Fact]
+    public async Task DrainFailureAsync_UnknownOutboxKindRecordedAsFailure()
+    {
+        var harness = new Harness();
+        await harness.Board.CreateItemAsync(BoardSection.Habit, "Read", Guid.NewGuid(), CancellationToken.None);
+
+        var pending = await harness.Store.ListOutboxAsync(Harness.UserKey);
+        pending.Should().ContainSingle();
+        pending[0].Kind = (BoardOutboxOperationKind)999;
+        pending[0].PayloadJson = "{}";
+        await harness.Store.UpdateOutboxAsync(pending[0], CancellationToken.None);
+
+        var drained = await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None);
+
+        drained.Should().BeFalse();
+        var after = await harness.Store.ListOutboxAsync(Harness.UserKey);
+        after.Should().ContainSingle();
+        after[0].AttemptCount.Should().Be(1);
+        after[0].LastError.Should().Contain("Unknown outbox kind");
+    }
+
     private static HttpResponseMessage JsonResponse<T>(HttpStatusCode status, T value) =>
         new(status)
         {

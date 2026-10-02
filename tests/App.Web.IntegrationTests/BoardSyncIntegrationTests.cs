@@ -260,6 +260,104 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
     }
 
     [Fact]
+    public async Task Oversized_idempotency_key_is_rejected_at_service_level_without_touching_db()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (_, email) = await RegisterAndLoginAsync(client);
+
+        var dbFactory = factory.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        await using var lookup = await dbFactory.CreateDbContextAsync();
+        var userId = await lookup.Users.Where(x => x.Email == email).Select(x => x.Id).SingleAsync();
+
+        using var scope = factory.Services.CreateScope();
+        var idem = scope.ServiceProvider.GetRequiredService<BoardIdempotencyService>();
+
+        var executed = false;
+        var (statusCode, body, _) = await idem.RunAsync(
+            userId,
+            new string('k', 129),
+            BoardIdempotencyService.ComputeFingerprintHex("POST", "/api/board/habits/x/increment", "{}"),
+            () =>
+            {
+                executed = true;
+                return Task.FromResult<(int statusCode, string body, string? contentType)>((200, "{}", "application/json"));
+            },
+            CancellationToken.None);
+
+        statusCode.Should().Be(400);
+        body.Should().ContainEquivalentOf("idempotency_key_too_long");
+        executed.Should().BeFalse();
+
+        await using var verify = await dbFactory.CreateDbContextAsync();
+        (await verify.BoardRequestIdempotencies.AnyAsync(x => x.UserId == userId && x.IdempotencyKey.Length == 129))
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Idempotency_key_at_max_length_reaches_execute()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (_, email) = await RegisterAndLoginAsync(client);
+
+        var dbFactory = factory.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        await using var lookup = await dbFactory.CreateDbContextAsync();
+        var userId = await lookup.Users.Where(x => x.Email == email).Select(x => x.Id).SingleAsync();
+
+        using var scope = factory.Services.CreateScope();
+        var idem = scope.ServiceProvider.GetRequiredService<BoardIdempotencyService>();
+
+        var key = new string('k', BoardIdempotencyService.MaxIdempotencyKeyLength);
+        var (statusCode, _, _) = await idem.RunAsync(
+            userId,
+            key,
+            BoardIdempotencyService.ComputeFingerprintHex("POST", "/p", "{}"),
+            () => Task.FromResult<(int statusCode, string body, string? contentType)>((200, "{}", "application/json")),
+            CancellationToken.None);
+
+        statusCode.Should().Be(200);
+
+        await using var cleanup = await dbFactory.CreateDbContextAsync();
+        var row = await cleanup.BoardRequestIdempotencies.SingleOrDefaultAsync(x => x.UserId == userId && x.IdempotencyKey == key);
+        if (row is not null)
+        {
+            cleanup.BoardRequestIdempotencies.Remove(row);
+            await cleanup.SaveChangesAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Empty_idempotency_key_bypasses_store()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (_, email) = await RegisterAndLoginAsync(client);
+
+        var dbFactory = factory.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        await using var lookup = await dbFactory.CreateDbContextAsync();
+        var userId = await lookup.Users.Where(x => x.Email == email).Select(x => x.Id).SingleAsync();
+
+        using var scope = factory.Services.CreateScope();
+        var idem = scope.ServiceProvider.GetRequiredService<BoardIdempotencyService>();
+
+        foreach (var empty in new string?[] { null, "", "   " })
+        {
+            var calls = 0;
+            var (statusCode, _, _) = await idem.RunAsync(
+                userId,
+                empty,
+                "fp",
+                () =>
+                {
+                    calls++;
+                    return Task.FromResult<(int statusCode, string body, string? contentType)>((200, "ok", "application/json"));
+                },
+                CancellationToken.None);
+
+            statusCode.Should().Be(200);
+            calls.Should().Be(1);
+        }
+    }
+
+    [Fact]
     public async Task Stale_tracked_entity_returns_conflict_instead_of_server_error()
     {
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });

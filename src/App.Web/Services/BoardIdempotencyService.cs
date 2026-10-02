@@ -49,6 +49,11 @@ public sealed class BoardIdempotencyService(
             return await execute();
         }
 
+        if (idempotencyKey.Length > MaxIdempotencyKeyLength)
+        {
+            return (400, IdempotencyKeyTooLongJson(), "application/json");
+        }
+
         var claimAttempts = 0;
         while (true)
         {

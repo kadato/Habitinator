@@ -183,13 +183,88 @@ public sealed partial class LocalFirstBoardDataService(
             return [];
         }
 
+        // The server owns streak math. A missed day resets the streak
+        // without touching any board row. The local mirror then keeps
+        // the old Counter until a full snapshot replaces it. Use the
+        // remote map when online so the board keeps the correct
+        // prerendered snapshot instead of flipping back to stale values.
+        Dictionary<Guid, int>? remoteMap = null;
+        try
+        {
+            remoteMap = await remote.GetStreakMapAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Remote streak map unavailable. Use local counters.");
+        }
+
         await _gate.WaitAsync(cancellationToken);
         try
         {
             var items = await store.ListItemsAsync(userKey, includeArchived: false, cancellationToken);
-            return items
-                .Where(x => x.Section == BoardSection.Daily)
-                .ToDictionary(x => x.Id, x => x.Counter);
+            if (remoteMap is null)
+            {
+                return items
+                    .Where(x => x.Section == BoardSection.Daily)
+                    .ToDictionary(x => x.Id, x => x.Counter);
+            }
+
+            // Pending outbox ops mean the server has not seen our latest optimistic
+            // streak yet. Keep the local Counter for those items so a retro check-in
+            // does not flicker back to the pre-sync value.
+            var pendingIds = new HashSet<Guid>();
+            try
+            {
+                var pending = await store.ListOutboxAsync(userKey, cancellationToken);
+                pendingIds = BoardOutboxReferencedIds.CollectFromPayloads(
+                    pending.Select(p => (p.Kind, p.PayloadJson)));
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Could not list outbox for streak merge.");
+            }
+
+            var merged = new Dictionary<Guid, int>(remoteMap.Count);
+            var changed = false;
+            foreach (var row in items.Where(x => x.Section == BoardSection.Daily))
+            {
+                if (pendingIds.Contains(row.Id))
+                {
+                    merged[row.Id] = row.Counter;
+                    continue;
+                }
+
+                if (remoteMap.TryGetValue(row.Id, out var streak))
+                {
+                    merged[row.Id] = streak;
+                    if (row.Counter != streak)
+                    {
+                        row.Counter = streak;
+                        await store.UpsertItemAsync(row, cancellationToken);
+                        changed = true;
+                    }
+                }
+                else
+                {
+                    merged[row.Id] = row.Counter;
+                }
+            }
+
+            foreach (var kvp in remoteMap.Where(kvp => !merged.ContainsKey(kvp.Key)))
+            {
+                merged[kvp.Key] = kvp.Value;
+            }
+
+            if (changed)
+            {
+                _cachedSnapshot = null;
+            }
+
+            return merged;
         }
         finally
         {

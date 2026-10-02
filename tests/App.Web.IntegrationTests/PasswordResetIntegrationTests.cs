@@ -5,8 +5,8 @@ using App.Web.Data;
 
 using FluentAssertions;
 
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace App.Web.IntegrationTests;

@@ -24,6 +24,8 @@ internal static class AuthApiRoutes
     {
         endpoints.MapPost("/api/auth/register", RegisterAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapPost("/api/auth/register-form", RegisterFormAsync).DisableAntiforgery().RequireRateLimiting("auth");
+        endpoints.MapPost("/api/auth/forgot-password", ForgotPasswordAsync).DisableAntiforgery().RequireRateLimiting("auth");
+        endpoints.MapPost("/api/auth/reset-password", ResetPasswordAsync).DisableAntiforgery().RequireRateLimiting("auth");
     }
 
     private static void MapLoginEndpoints(this IEndpointRouteBuilder endpoints)
@@ -97,6 +99,54 @@ internal static class AuthApiRoutes
         await SeedNewUserBoardAsync(dbContext, notifier, user.Id, loggerFactory);
 
         return Results.LocalRedirect("/auth/login?registered=1");
+    }
+
+    private static async Task<IResult> ForgotPasswordAsync(
+        ForgotPasswordRequest request,
+        UserManager<ApplicationUser> userManager,
+        IEmailSender emailSender,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var user = await userManager.FindByEmailAsync(request.Email);
+        if (user is null || string.IsNullOrWhiteSpace(user.Email))
+        {
+            // Same work as the real branch so unknown emails cannot be enumerated by timing.
+            RunDummyPasswordCheck(request.Email);
+            return Results.Ok(new { message = "If an account exists for this email, the server sent a reset link." });
+        }
+
+        var token = await userManager.GeneratePasswordResetTokenAsync(user);
+        var resetLink = BuildResetLink(httpContext, user.Email, token);
+        await emailSender.SendPasswordResetAsync(user.Email, resetLink, cancellationToken);
+        return Results.Ok(new { message = "If an account exists for this email, the server sent a reset link." });
+    }
+
+    private static async Task<IResult> ResetPasswordAsync(
+        ResetPasswordRequest request,
+        UserManager<ApplicationUser> userManager)
+    {
+        var user = await userManager.FindByEmailAsync(request.Email);
+        if (user is null)
+        {
+            return Results.BadRequest(new { detail = "Invalid reset link. Request a new one." });
+        }
+
+        var result = await userManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
+        if (!result.Succeeded)
+        {
+            return Results.BadRequest(new { detail = "Invalid reset link. Request a new one." });
+        }
+
+        return Results.Ok(new { message = "Password has been reset. Sign in with your new password." });
+    }
+
+    private static string BuildResetLink(HttpContext httpContext, string email, string token)
+    {
+        var scheme = httpContext.Request.Scheme;
+        var host = httpContext.Request.Host.Value;
+        var query = $"email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
+        return $"{scheme}://{host}/auth/reset-password?{query}";
     }
 
     private static async Task<(ApplicationUser? User, IdentityResult? CreateResult)> CreateUserCoreAsync(

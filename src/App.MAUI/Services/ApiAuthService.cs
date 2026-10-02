@@ -104,4 +104,40 @@ public sealed class ApiAuthService
             false,
             OtherError: $"Registration failed (HTTP {(int)res.StatusCode}). Check the API and try again.");
     }
+
+    public async Task<bool> ForgotPasswordAsync(string email, CancellationToken cancellationToken = default)
+    {
+        var client = _http.CreateClient("apiAuth");
+        try
+        {
+            using var res = await client.PostAsJsonAsync(
+                "api/auth/forgot-password",
+                new ForgotPasswordRequest(email),
+                Serializer,
+                cancellationToken);
+            return res.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public async Task<bool> ResetPasswordAsync(string email, string token, string newPassword, CancellationToken cancellationToken = default)
+    {
+        var client = _http.CreateClient("apiAuth");
+        try
+        {
+            using var res = await client.PostAsJsonAsync(
+                "api/auth/reset-password",
+                new ResetPasswordRequest(email, token, newPassword),
+                Serializer,
+                cancellationToken);
+            return res.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }

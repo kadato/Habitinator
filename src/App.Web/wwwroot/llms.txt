@@ -15,6 +15,7 @@ Habitinator is a Blazor web and .NET MAUI productivity app. User board data is p
 - `/` shows the landing page. Signed-out visitors sign in, register, or continue as the demo guest.
 - `/auth/login` shows the sign-in form.
 - `/auth/register` shows the registration form.
+- `/auth/forgot-password` starts a password reset. The reset link is emailed.
 - `/privacy` states the cookie and data policy. The app uses essential cookies only.
 
 ## API, authenticated

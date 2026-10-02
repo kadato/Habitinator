@@ -33,3 +33,11 @@ public sealed record LoginRequest(
 
 public sealed record LoginResponse(string AccessToken, string Email);
 
+public sealed record ForgotPasswordRequest(
+    [Required, EmailAddress] string Email);
+
+public sealed record ResetPasswordRequest(
+    [Required, EmailAddress] string Email,
+    [Required] string Token,
+    [Required, MinLength(8)] string NewPassword);
+

@@ -14,6 +14,11 @@ public static class AuthQueryMessages
             return "Registration complete. You can sign in now.";
         }
 
+        if (query.TryGetValue("reset", out var reset) && reset == "1")
+        {
+            return "Password has been reset. Sign in with your new password.";
+        }
+
         if (query.TryGetValue("error", out var error) && error == "1")
         {
             return "Invalid email or password.";

@@ -171,6 +171,19 @@ public static class DependencyInjectionExtensions
         services.AddScoped<IOnboardingStore, JsOnboardingStore>();
         services.AddScoped<BoardUiSessionState>();
         services.AddScoped<ICommandPaletteService, CommandPaletteService>();
+        services.AddOptions<SmtpOptions>().BindConfiguration(SmtpOptions.SectionName);
+        services.AddSingleton<IEmailSender>(sp =>
+        {
+            var smtp = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SmtpOptions>>().Value;
+            if (string.IsNullOrWhiteSpace(smtp.Host))
+            {
+                return sp.GetRequiredService<LoggingEmailSender>();
+            }
+
+            return sp.GetRequiredService<SmtpEmailSender>();
+        });
+        services.AddSingleton<LoggingEmailSender>();
+        services.AddSingleton<SmtpEmailSender>();
         services.AddHttpClient();
         services.AddValidation();
 

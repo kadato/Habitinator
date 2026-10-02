@@ -13,7 +13,8 @@ public sealed record DailyBackfillArgs(
     DateOnly? DailyStart,
     DailyRepeatType Repeat,
     int Interval,
-    int Streak);
+    int Streak,
+    int Weekdays = 0);
 
 public sealed class BoardPersistenceService(
     ApplicationDbContext dbContext,
@@ -791,6 +792,7 @@ public sealed class BoardPersistenceService(
                 var n = Math.Max(1, Math.Min(999, args.RepeatInterval));
                 var startUtc = args.StartDate?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
                 var streakClamped = Math.Max(0, Math.Min(9999, args.Counter));
+                var weekdays = DailyWeekdays.Normalize(args.Weekdays);
 
                 DateOnly? newStartD = startUtc is { } su ? DateOnly.FromDateTime(su) : null;
 
@@ -799,6 +801,7 @@ public sealed class BoardPersistenceService(
                 entity.DailyStartDate = startUtc;
                 entity.DailyRepeatType = (int)args.Repeat;
                 entity.DailyRepeatInterval = n;
+                entity.DailyWeekdays = weekdays;
                 entity.Counter = streakClamped;
 
                 // Always reconcile streak backfill, not only when Counter or schedule appear to change. Otherwise a save
@@ -806,9 +809,9 @@ public sealed class BoardPersistenceService(
                 // rows, so statistics and the heatmap never match the daily streak.
                 var streakNotAfter = today.AddDays(-1);
                 await streakCalculator.ReconcileDailyStreakBackfillAsync(dbContext, userId, itemId,
-                    new DailyBackfillArgs(newStartD, args.Repeat, n, streakClamped),
+                    new DailyBackfillArgs(newStartD, args.Repeat, n, streakClamped, weekdays),
                     streakNotAfter, cancellationToken);
-                DailyStreakCalculationService.ApplyManualStreakToEntity(entity, newStartD, args.Repeat, n, streakClamped, today, wasCompleteForToday);
+                DailyStreakCalculationService.ApplyManualStreakToEntity(entity, newStartD, args.Repeat, n, streakClamped, today, wasCompleteForToday, weekdays);
                 return true;
             },
             entity => ToModelWithDailyStreaksAsync(userId, entity, cancellationToken),
@@ -864,18 +867,18 @@ public sealed class BoardPersistenceService(
         return (null, null);
     }
 
-    private static (DailyRepeatType repeat, int interval) ResolveSchedule(BoardItemEntity entity)
+    private static (DailyRepeatType repeat, int interval, int weekdays) ResolveSchedule(BoardItemEntity entity)
     {
         if (entity.Section != BoardSection.Daily)
         {
-            return (DailyRepeatType.Daily, 1);
+            return (DailyRepeatType.Daily, 1, 0);
         }
 
         var repeat = Enum.IsDefined((DailyRepeatType)entity.DailyRepeatType)
             ? (DailyRepeatType)entity.DailyRepeatType
             : DailyRepeatType.Daily;
         var interval = entity.DailyRepeatInterval < 1 ? 1 : Math.Min(999, entity.DailyRepeatInterval);
-        return (repeat, interval);
+        return (repeat, interval, DailyWeekdays.Normalize(entity.DailyWeekdays));
     }
 
     private static HabitResetPeriod ResolveResetPeriod(BoardItemEntity entity)
@@ -921,7 +924,7 @@ public sealed class BoardPersistenceService(
         IReadOnlyDictionary<Guid, int> dailyStreakById)
     {
         var (start, todoDue) = ResolveDates(entity);
-        var (repeat, interval) = ResolveSchedule(entity);
+        var (repeat, interval, weekdays) = ResolveSchedule(entity);
         DateOnly? lastCompleted = entity.DailyLastCompletedOn is { } lc
             ? DateOnly.FromDateTime(lc)
             : null;
@@ -959,7 +962,8 @@ public sealed class BoardPersistenceService(
             entity.CreatedAtUtc,
             entity.SortOrder,
             entity.IsArchived,
-            HabitAnchor(entity));
+            HabitAnchor(entity),
+            weekdays);
         return BoardItemMapper.WithLocalDay(raw, entity.Section, today);
     }
 

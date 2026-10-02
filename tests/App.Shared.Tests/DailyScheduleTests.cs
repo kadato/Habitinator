@@ -217,4 +217,94 @@ public class DailyScheduleTests
         DailyRepeat: DailyRepeatType.Daily,
         DailyRepeatInterval: 1,
         CreatedAtUtc: createdUtc);
+
+    [Fact]
+    public void Weekly_WithWeekdayMask_DueOnlyOnSelectedDays()
+    {
+        var start = new DateOnly(2024, 1, 1); // Monday
+        var mask = DailyWeekdays.From(DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday);
+
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, new DateOnly(2024, 1, 1), mask).Should().BeTrue();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, new DateOnly(2024, 1, 2), mask).Should().BeFalse();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, new DateOnly(2024, 1, 3), mask).Should().BeTrue();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, new DateOnly(2024, 1, 5), mask).Should().BeTrue();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, new DateOnly(2024, 1, 6), mask).Should().BeFalse();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, new DateOnly(2024, 1, 7), mask).Should().BeFalse();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, new DateOnly(2024, 1, 8), mask).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Weekly_WithWeekdayMask_Interval2_SkipsAlternateWeeks()
+    {
+        var start = new DateOnly(2024, 1, 1); // Monday
+        var mask = DailyWeekdays.From(DayOfWeek.Monday, DayOfWeek.Wednesday);
+
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 2, new DateOnly(2024, 1, 1), mask).Should().BeTrue();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 2, new DateOnly(2024, 1, 3), mask).Should().BeTrue();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 2, new DateOnly(2024, 1, 8), mask).Should().BeFalse();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 2, new DateOnly(2024, 1, 10), mask).Should().BeFalse();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 2, new DateOnly(2024, 1, 15), mask).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Weekly_ZeroMask_KeepsLegacySameDow()
+    {
+        var start = new DateOnly(2024, 1, 8); // Monday
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, new DateOnly(2024, 1, 15), 0).Should().BeTrue();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, new DateOnly(2024, 1, 9), 0).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Weekly_MaskDoesNotAffectOtherRepeats()
+    {
+        var start = new DateOnly(2024, 1, 1);
+        var mask = DailyWeekdays.From(DayOfWeek.Monday);
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Daily, 1, new DateOnly(2024, 1, 2), mask).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Weekly_MaskOutOfRangeBits_AreIgnored()
+    {
+        var start = new DateOnly(2024, 1, 1); // Monday
+        var mondayOnly = DailyWeekdays.From(DayOfWeek.Monday);
+        var withHighBit = mondayOnly | (1 << 7) | (1 << 20);
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, new DateOnly(2024, 1, 1), withHighBit).Should().BeTrue();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, new DateOnly(2024, 1, 2), withHighBit).Should().BeFalse();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, new DateOnly(2024, 1, 1), mondayOnly).Should().Be(
+            DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, new DateOnly(2024, 1, 1), withHighBit));
+    }
+
+    [Fact]
+    public void Weekly_MaskStartDayNotInMask_StartDayIsNotDue()
+    {
+        var start = new DateOnly(2024, 1, 2); // Tuesday
+        var mask = DailyWeekdays.From(DayOfWeek.Monday);
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, start, mask).Should().BeFalse();
+        DailySchedule.IsScheduledOn(start, DailyRepeatType.Weekly, 1, new DateOnly(2024, 1, 8), mask).Should().BeTrue();
+    }
+
+    [Fact]
+    public void CanCompleteForDate_RespectsWeekdayMask()
+    {
+        var start = new DateOnly(2024, 1, 1); // Monday
+        var today = new DateOnly(2024, 1, 10); // Wednesday
+        var mask = DailyWeekdays.From(DayOfWeek.Monday, DayOfWeek.Wednesday);
+        DailySchedule.CanCompleteForDate(start, DailyRepeatType.Weekly, 1, null, new DateOnly(2024, 1, 8), today, mask).Should().BeTrue();
+        DailySchedule.CanCompleteForDate(start, DailyRepeatType.Weekly, 1, null, new DateOnly(2024, 1, 9), today, mask).Should().BeFalse();
+    }
+
+    [Fact]
+    public void WalkBackward_WithMask_YieldsOnlySelectedDays()
+    {
+        var start = new DateOnly(2024, 1, 1); // Monday
+        var mask = DailyWeekdays.From(DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday);
+        var days = DailySchedule.WalkScheduledDaysBackward(
+            new DateOnly(2024, 1, 8),
+            start,
+            DailyRepeatType.Weekly,
+            1,
+            DailySchedule.MaxScheduledStepCap,
+            mask).ToList();
+        days.Should().Equal(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 5), new DateOnly(2024, 1, 3), new DateOnly(2024, 1, 1));
+    }
 }

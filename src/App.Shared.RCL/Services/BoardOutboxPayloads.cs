@@ -70,7 +70,8 @@ public sealed record UpdateDailyOutboxPayload(
     string? ChecklistJson,
     int Counter,
     DateTimeOffset? ExpectedServerUpdatedAtUtc = null,
-    double? SortOrder = null) : IOutboxItemIdPayload;
+    double? SortOrder = null,
+    int Weekdays = 0) : IOutboxItemIdPayload;
 
 public static class BoardOutboxPayloadMapper
 {

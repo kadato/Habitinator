@@ -27,7 +27,8 @@ public static class DailyStreakBackfill
         DailyRepeatType repeat,
         int repeatInterval,
         int streakCount,
-        DateOnly notAfter)
+        DateOnly notAfter,
+        int weekdays = 0)
     {
         if (streakCount <= 0)
         {
@@ -36,12 +37,13 @@ public static class DailyStreakBackfill
 
         var effectiveRepeat = dailyStart is null ? DailyRepeatType.Daily : repeat;
         var effectiveInterval = dailyStart is null ? 1 : repeatInterval;
+        var effectiveWeekdays = dailyStart is null ? DailyWeekdays.None : DailyWeekdays.Normalize(weekdays);
 
         var n = Math.Min(DailySchedule.MaxHistoryDays, streakCount);
         var scheduleStart = DailySchedule.StreakHistoryScheduleStart(
             dailyStart, notAfter, effectiveRepeat, effectiveInterval, n);
         var list = new List<DateOnly>(n);
-        foreach (var d in DailySchedule.WalkScheduledDaysBackward(notAfter, scheduleStart, effectiveRepeat, effectiveInterval))
+        foreach (var d in DailySchedule.WalkScheduledDaysBackward(notAfter, scheduleStart, effectiveRepeat, effectiveInterval, DailySchedule.MaxScheduledStepCap, effectiveWeekdays))
         {
             list.Add(d);
             if (list.Count >= n)

@@ -40,6 +40,9 @@ public sealed class BoardItemEntity
 
     public int DailyRepeatInterval { get; set; } = 1;
 
+    /// <summary>Weekly weekday mask, see <c>DailyWeekdays</c>. Zero means no mask, legacy same-weekday.</summary>
+    public int DailyWeekdays { get; set; }
+
     public string? ChecklistJson { get; set; }
 
     public DateTime? DailyLastCompletedOn { get; set; }

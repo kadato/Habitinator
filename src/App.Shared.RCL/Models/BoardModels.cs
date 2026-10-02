@@ -64,7 +64,13 @@ public sealed record BoardItem(
     /// <summary>True if the item is archived and hidden from the active board.</summary>
     bool IsArchived = false,
     /// <summary>Local-day start of the period the habit counters belong to. Null for rows written before resets existed.</summary>
-    DateOnly? HabitPeriodStart = null);
+    DateOnly? HabitPeriodStart = null,
+    /// <summary>
+    /// Weekly weekday mask, see <see cref="DailyWeekdays" />. Zero means no mask, the legacy
+    /// behavior of repeating on the start date's weekday. Only honored when
+    /// <see cref="DailyRepeat" /> is <see cref="DailyRepeatType.Weekly" />.
+    /// </summary>
+    int DailyWeekdays = 0);
 
 public sealed record BoardSnapshot(
     IReadOnlyList<BoardItem> Habits,

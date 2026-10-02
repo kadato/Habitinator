@@ -309,4 +309,38 @@ public class DailyStreakCalculatorTests
         DailyStreakCalculator.ComputeStreak(start, DailyRepeatType.Daily, 1, today, localGrouped, today.AddDays(-1))
             .Should().Be(1);
     }
+
+    [Fact]
+    public void ComputeStreak_WeeklyMask_SkipsUnscheduledDays()
+    {
+        var start = new DateOnly(2024, 1, 1); // Monday
+        var today = new DateOnly(2024, 1, 9); // Tuesday, not scheduled
+        var mask = DailyWeekdays.From(DayOfWeek.Monday, DayOfWeek.Wednesday);
+
+        Dictionary<DateOnly, List<(DateTimeOffset, ActivityEventType)>> events = new()
+        {
+            { new DateOnly(2024, 1, 8), [(new DateTimeOffset(2024, 1, 8, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)] },
+            { new DateOnly(2024, 1, 3), [(new DateTimeOffset(2024, 1, 3, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)] },
+            { new DateOnly(2024, 1, 1), [(new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)] },
+        };
+
+        DailyStreakCalculator.ComputeStreak(start, DailyRepeatType.Weekly, 1, today, events, null, mask)
+            .Should().Be(3);
+    }
+
+    [Fact]
+    public void ComputeStreak_WeeklyMask_MissedScheduledDay_BreaksStreak()
+    {
+        var start = new DateOnly(2024, 1, 1); // Monday
+        var today = new DateOnly(2024, 1, 9);
+        var mask = DailyWeekdays.From(DayOfWeek.Monday, DayOfWeek.Wednesday);
+
+        Dictionary<DateOnly, List<(DateTimeOffset, ActivityEventType)>> events = new()
+        {
+            { new DateOnly(2024, 1, 8), [(new DateTimeOffset(2024, 1, 8, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)] },
+        };
+
+        DailyStreakCalculator.ComputeStreak(start, DailyRepeatType.Weekly, 1, today, events, null, mask)
+            .Should().Be(1);
+    }
 }

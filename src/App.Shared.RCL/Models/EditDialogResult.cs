@@ -16,7 +16,8 @@ public record EditDailyDialogResult(
     DailyRepeatType Repeat,
     int RepeatInterval,
     string? ChecklistJson,
-    int Counter
+    int Counter,
+    int Weekdays = 0
 );
 
 public record EditHabitDialogResult(

@@ -56,7 +56,8 @@ public sealed record UpdateDailyArgs(
     string? ChecklistJson,
     int Counter,
     double? SortOrder = null,
-    DateTimeOffset? ExpectedUpdatedAtUtc = null)
+    DateTimeOffset? ExpectedUpdatedAtUtc = null,
+    int Weekdays = 0)
 {
     public static UpdateDailyArgs From(BoardItem item) => new(
         item.Title,
@@ -67,7 +68,9 @@ public sealed record UpdateDailyArgs(
         item.DailyRepeatInterval,
         item.ChecklistJson,
         item.Counter,
-        item.SortOrder);
+        item.SortOrder,
+        null,
+        item.DailyWeekdays);
 }
 
 public interface IBoardDataService

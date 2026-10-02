@@ -27,7 +27,8 @@ public sealed record DailyUpdateRequest(
     int RepeatInterval,
     [StringLength(8000)] string? ChecklistJson,
     int Counter = 0,
-    double? SortOrder = null);
+    double? SortOrder = null,
+    int Weekdays = 0);
 
 public sealed record TodoUpdateRequest(
     [Required, StringLength(200)] string Title,

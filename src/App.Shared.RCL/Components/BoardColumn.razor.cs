@@ -265,7 +265,8 @@ public partial class BoardColumn : IAsyncDisposable
                 match = match
                     && serverItem.DailyStartDate == overrideItem.DailyStartDate
                     && serverItem.DailyRepeat == overrideItem.DailyRepeat
-                    && serverItem.DailyRepeatInterval == overrideItem.DailyRepeatInterval;
+                    && serverItem.DailyRepeatInterval == overrideItem.DailyRepeatInterval
+                    && serverItem.DailyWeekdays == overrideItem.DailyWeekdays;
                 // Note: We intentionally do NOT check Counter, the streak, here because the server
                 // automatically increments/updates it upon completion, which would prevent
                 // the optimistic override from being pruned.

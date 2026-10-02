@@ -224,7 +224,8 @@ public static class DailySchedule
         DateOnly? dailyStart,
         DailyRepeatType repeat,
         int rawInterval,
-        DateOnly on)
+        DateOnly on,
+        int weekdays = 0)
     {
         var interval = Math.Max(1, Math.Min(999, rawInterval < 1 ? 1 : rawInterval));
         var start = ResolveStartDateOrToday(dailyStart, on);
@@ -236,7 +237,7 @@ public static class DailySchedule
         return repeat switch
         {
             DailyRepeatType.Daily => IsEveryNDaysFrom(start, on, interval),
-            DailyRepeatType.Weekly => IsEveryNWeeksOnSameDowFrom(start, on, interval),
+            DailyRepeatType.Weekly => IsWeeklyScheduledOn(start, on, interval, weekdays),
             DailyRepeatType.Monthly => IsEveryNMonthsSameDayFrom(start, on, interval),
             DailyRepeatType.Yearly => IsEveryNYearsSameDayFrom(start, on, interval),
             _ => IsEveryNDaysFrom(start, on, interval)
@@ -246,7 +247,30 @@ public static class DailySchedule
     public static bool IsScheduledOn(BoardItem daily, DateOnly on)
     {
         ArgumentNullException.ThrowIfNull(daily);
-        return IsScheduledOn(daily.DailyStartDate, daily.DailyRepeat, daily.DailyRepeatInterval, on);
+        return IsScheduledOn(daily.DailyStartDate, daily.DailyRepeat, daily.DailyRepeatInterval, on, daily.DailyWeekdays);
+    }
+
+    /// <summary>
+    /// Weekly schedule with an optional weekday mask. Zero mask keeps the legacy
+    /// same-weekday every N weeks. A non-zero mask means due on the selected weekdays
+    /// in every N-th 7-day block counted from the start date.
+    /// </summary>
+    private static bool IsWeeklyScheduledOn(DateOnly start, DateOnly on, int interval, int weekdays)
+    {
+        var mask = DailyWeekdays.Normalize(weekdays);
+        if (mask == DailyWeekdays.None)
+        {
+            return IsEveryNWeeksOnSameDowFrom(start, on, interval);
+        }
+
+        if (!DailyWeekdays.Has(mask, on.DayOfWeek))
+        {
+            return false;
+        }
+
+        var daysDiff = (on.ToDateTime(TimeOnly.MinValue) - start.ToDateTime(TimeOnly.MinValue)).Days;
+        var weekIndex = daysDiff / 7;
+        return weekIndex % interval == 0;
     }
 
     /// <summary>
@@ -258,7 +282,8 @@ public static class DailySchedule
         DateOnly scheduleAnchor,
         DailyRepeatType repeat,
         int interval,
-        int maxSteps = MaxScheduledStepCap)
+        int maxSteps = MaxScheduledStepCap,
+        int weekdays = 0)
     {
         var d = from;
         var steps = maxSteps;
@@ -269,7 +294,7 @@ public static class DailySchedule
                 yield break;
             }
 
-            if (IsScheduledOn(scheduleAnchor, repeat, interval, d))
+            if (IsScheduledOn(scheduleAnchor, repeat, interval, d, weekdays))
             {
                 yield return d;
             }
@@ -322,11 +347,12 @@ public static class DailySchedule
         int interval,
         DateOnly? dailyLastCompletedOn,
         DateOnly completedOn,
-        DateOnly today) =>
+        DateOnly today,
+        int weekdays = 0) =>
         completedOn < today
         && dailyLastCompletedOn != today
         && dailyLastCompletedOn != completedOn
-        && IsScheduledOn(dailyStart, repeat, interval, completedOn);
+        && IsScheduledOn(dailyStart, repeat, interval, completedOn, weekdays);
 
     /// <summary>Due = scheduled for <paramref name="on" /> and not yet completed for that day.</summary>
     public static bool IsDueOnDate(BoardItem daily, DateOnly on)

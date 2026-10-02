@@ -36,6 +36,8 @@ public sealed class BoardLocalRow
 
     public int DailyRepeatInterval { get; set; } = 1;
 
+    public int DailyWeekdays { get; set; }
+
     public string? ChecklistJson { get; set; }
 
     public DateOnly? DailyLastCompletedOn { get; set; }
@@ -73,7 +75,8 @@ public sealed class BoardLocalRow
         CreatedAtUtc,
         SortOrder,
         IsArchived,
-        HabitPeriodStart);
+        HabitPeriodStart,
+        DailyWeekdays);
 
     public static BoardLocalRow FromModel(BoardSection section, string userKey, BoardItem item, bool awaitingCreate)
     {
@@ -95,6 +98,7 @@ public sealed class BoardLocalRow
             DailyStartDate = item.DailyStartDate,
             DailyRepeat = item.DailyRepeat,
             DailyRepeatInterval = item.DailyRepeatInterval,
+            DailyWeekdays = item.DailyWeekdays,
             ChecklistJson = item.ChecklistJson,
             DailyLastCompletedOn = item.DailyLastCompletedOn,
             TodoDueDate = item.TodoDueDate,
@@ -121,6 +125,7 @@ public sealed class BoardLocalRow
         DailyStartDate = source.DailyStartDate;
         DailyRepeat = source.DailyRepeat;
         DailyRepeatInterval = source.DailyRepeatInterval;
+        DailyWeekdays = source.DailyWeekdays;
         ChecklistJson = source.ChecklistJson;
         DailyLastCompletedOn = source.DailyLastCompletedOn;
         TodoDueDate = source.TodoDueDate;

@@ -40,6 +40,8 @@ public sealed class LocalBoardItemRow
 
     public int DailyRepeatInterval { get; set; } = 1;
 
+    public int DailyWeekdays { get; set; }
+
     public string? ChecklistJson { get; set; }
 
     public DateOnly? DailyLastCompletedOn { get; set; }
@@ -75,6 +77,7 @@ public sealed class LocalBoardItemRow
         DailyStartDate = source.DailyStartDate;
         DailyRepeat = source.DailyRepeat;
         DailyRepeatInterval = source.DailyRepeatInterval;
+        DailyWeekdays = source.DailyWeekdays;
         ChecklistJson = source.ChecklistJson;
         DailyLastCompletedOn = source.DailyLastCompletedOn;
         TodoDueDate = source.TodoDueDate;

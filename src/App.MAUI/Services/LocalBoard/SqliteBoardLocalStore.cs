@@ -322,6 +322,7 @@ public sealed class SqliteBoardLocalStore(
         DailyStartDate = row.DailyStartDate,
         DailyRepeat = row.DailyRepeat,
         DailyRepeatInterval = row.DailyRepeatInterval,
+        DailyWeekdays = row.DailyWeekdays,
         ChecklistJson = row.ChecklistJson,
         DailyLastCompletedOn = row.DailyLastCompletedOn,
         TodoDueDate = row.TodoDueDate,
@@ -362,6 +363,7 @@ public sealed class SqliteBoardLocalStore(
         DailyStartDate = item.DailyStartDate,
         DailyRepeat = item.DailyRepeat,
         DailyRepeatInterval = item.DailyRepeatInterval,
+        DailyWeekdays = item.DailyWeekdays,
         ChecklistJson = item.ChecklistJson,
         DailyLastCompletedOn = item.DailyLastCompletedOn,
         TodoDueDate = item.TodoDueDate,
@@ -394,7 +396,8 @@ public sealed class SqliteBoardLocalStore(
             ("ServerUpdatedAtUtc", "ALTER TABLE BoardItems ADD COLUMN ServerUpdatedAtUtc TEXT NULL;"),
             ("CreatedAtUtc", "ALTER TABLE BoardItems ADD COLUMN CreatedAtUtc TEXT NULL;"),
             ("IsArchived", "ALTER TABLE BoardItems ADD COLUMN IsArchived INTEGER NOT NULL DEFAULT 0;"),
-            ("HabitPeriodStart", "ALTER TABLE BoardItems ADD COLUMN HabitPeriodStart TEXT NULL;")
+            ("HabitPeriodStart", "ALTER TABLE BoardItems ADD COLUMN HabitPeriodStart TEXT NULL;"),
+            ("DailyWeekdays", "ALTER TABLE BoardItems ADD COLUMN DailyWeekdays INTEGER NOT NULL DEFAULT 0;")
         ];
 
         foreach (var (column, ddl) in boardMigrations)

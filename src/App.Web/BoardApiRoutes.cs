@@ -244,7 +244,8 @@ internal static class BoardApiRoutes
                 DailyChecklistJson.Normalize(request.ChecklistJson),
                 request.Counter,
                 request.SortOrder,
-                expected), ct));
+                expected,
+                request.Weekdays), ct));
 
     private static Task<IResult> HandleCompleteDailyForDateAsync(
         [AsParameters] BoardMutationContext ctx,

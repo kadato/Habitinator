@@ -448,7 +448,8 @@ public sealed class RemoteBoardDataService : IBoardDataService
             args.RepeatInterval,
             args.ChecklistJson,
             args.Counter,
-            args.SortOrder);
+            args.SortOrder,
+            args.Weekdays);
         using HttpRequestMessage req = new(HttpMethod.Put, $"api/board/dailies/{itemId}")
         {
             Content = JsonContent.Create(body, options: Serializer)

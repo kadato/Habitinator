@@ -15,7 +15,8 @@ public sealed class DailyStreakCalculationService(IUserTimeZoneService timeZone)
         int interval,
         int streak,
         DateOnly today,
-        bool wasCompleteForToday)
+        bool wasCompleteForToday,
+        int weekdays = 0)
     {
         if (streak <= 0)
         {
@@ -26,7 +27,7 @@ public sealed class DailyStreakCalculationService(IUserTimeZoneService timeZone)
 
         var notAfterPrevDays = today.AddDays(-1);
         var days = DailyStreakBackfill.GetLastNScheduledCompletionDays(
-            start, repeat, interval, streak, notAfterPrevDays);
+            start, repeat, interval, streak, notAfterPrevDays, weekdays);
         if (days.Count == 0)
         {
             if (wasCompleteForToday)
@@ -65,7 +66,7 @@ public sealed class DailyStreakCalculationService(IUserTimeZoneService timeZone)
         CancellationToken cancellationToken)
     {
         var newSet = new HashSet<DateOnly>(DailyStreakBackfill.GetLastNScheduledCompletionDays(
-            args.DailyStart, args.Repeat, args.Interval, args.Streak, notAfter));
+            args.DailyStart, args.Repeat, args.Interval, args.Streak, notAfter, args.Weekdays));
 
         // Only synthetic backfill markers, the fixed UTC hour, can be reconciled away. Real toggles
         // are never removed. The marker hour filters the loaded set, so the query scans
@@ -240,14 +241,15 @@ public sealed class DailyStreakCalculationService(IUserTimeZoneService timeZone)
             byItem.TryGetValue(ent.Id, out var evList);
             var grouped = DailyStreakCalculator.GroupDailyEventsByLocalDay(evList ?? [], timeZone, dayStartLocalTime);
             var lastC = ent.DailyLastCompletedOn is { } l ? DateOnly.FromDateTime(l) : (DateOnly?)null;
-            GetDailyEntitySchedule(ent, out var start, out var repeat, out var interval);
+            GetDailyEntitySchedule(ent, out var start, out var repeat, out var interval, out var weekdays);
             outMap[ent.Id] = DailyStreakCalculator.ComputeStreak(
                 start,
                 repeat,
                 interval,
                 today,
                 grouped,
-                lastC);
+                lastC,
+                weekdays);
         }
         return outMap;
     }
@@ -258,21 +260,37 @@ public sealed class DailyStreakCalculationService(IUserTimeZoneService timeZone)
         out DailyRepeatType repeat,
         out int interval)
     {
+        GetDailyEntitySchedule(entity, out start, out repeat, out interval, out _);
+    }
+
+    public static void GetDailyEntitySchedule(
+        BoardItemEntity entity,
+        out DateOnly? start,
+        out DailyRepeatType repeat,
+        out int interval,
+        out int weekdays)
+    {
         start = entity.DailyStartDate is { } d0 ? DateOnly.FromDateTime(d0) : null;
-        (repeat, interval) = ResolveSchedule(entity);
+        (repeat, interval, weekdays) = ResolveScheduleWithWeekdays(entity);
     }
 
     public static (DailyRepeatType repeat, int interval) ResolveSchedule(BoardItemEntity entity)
     {
+        var (repeat, interval, _) = ResolveScheduleWithWeekdays(entity);
+        return (repeat, interval);
+    }
+
+    public static (DailyRepeatType repeat, int interval, int weekdays) ResolveScheduleWithWeekdays(BoardItemEntity entity)
+    {
         if (entity.Section != BoardSection.Daily)
         {
-            return (DailyRepeatType.Daily, 1);
+            return (DailyRepeatType.Daily, 1, 0);
         }
 
         var repeat = Enum.IsDefined((DailyRepeatType)entity.DailyRepeatType)
             ? (DailyRepeatType)entity.DailyRepeatType
             : DailyRepeatType.Daily;
         var interval = entity.DailyRepeatInterval < 1 ? 1 : Math.Min(999, entity.DailyRepeatInterval);
-        return (repeat, interval);
+        return (repeat, interval, DailyWeekdays.Normalize(entity.DailyWeekdays));
     }
 }

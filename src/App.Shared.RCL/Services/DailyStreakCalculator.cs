@@ -65,12 +65,18 @@ public static class DailyStreakCalculator
         int repeatInterval,
         DateOnly today,
         IReadOnlyDictionary<DateOnly, List<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)>> eventsByDay,
-        DateOnly? dailyLastCompletedOn)
+        DateOnly? dailyLastCompletedOn,
+        int weekdays = 0)
     {
+        var effectiveWeekdays = DailyWeekdays.Normalize(weekdays);
         var effectiveRepeat = dailyStart is null ? DailyRepeatType.Daily : repeat;
         var effectiveInterval = dailyStart is null ? 1 : repeatInterval;
+        if (dailyStart is null)
+        {
+            effectiveWeekdays = DailyWeekdays.None;
+        }
 
-        var todayOnSchedule = DailySchedule.IsScheduledOn(dailyStart, effectiveRepeat, effectiveInterval, today);
+        var todayOnSchedule = DailySchedule.IsScheduledOn(dailyStart, effectiveRepeat, effectiveInterval, today, effectiveWeekdays);
         var todayDone = todayOnSchedule &&
             IsCalendarDayNetCompleted(today, GetDayListOrNull(eventsByDay, today), dailyLastCompletedOn);
 
@@ -81,7 +87,7 @@ public static class DailyStreakCalculator
             DailySchedule.StreakHistoryScheduleStart(dailyStart, end, effectiveRepeat, effectiveInterval, MaxStreak);
 
         var n = 0;
-        foreach (var d in DailySchedule.WalkScheduledDaysBackward(end, historyStart, effectiveRepeat, effectiveInterval))
+        foreach (var d in DailySchedule.WalkScheduledDaysBackward(end, historyStart, effectiveRepeat, effectiveInterval, DailySchedule.MaxScheduledStepCap, effectiveWeekdays))
         {
             if (!IsCalendarDayNetCompleted(d, GetDayListOrNull(eventsByDay, d), dailyLastCompletedOn))
             {

@@ -191,7 +191,7 @@ public sealed partial class LocalFirstBoardDataService
 
     private static bool CanCompleteDailyForDate(BoardLocalRow row, DateOnly completedOn, DateOnly today) =>
         DailySchedule.CanCompleteForDate(
-            row.DailyStartDate, row.DailyRepeat, row.DailyRepeatInterval, row.DailyLastCompletedOn, completedOn, today);
+            row.DailyStartDate, row.DailyRepeat, row.DailyRepeatInterval, row.DailyLastCompletedOn, completedOn, today, row.DailyWeekdays);
 
     public Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
@@ -406,11 +406,12 @@ public sealed partial class LocalFirstBoardDataService
                     row.Tags,
                     args.StartDate,
                     args.Repeat,
-                    args.RepeatInterval,
+                    Math.Max(1, Math.Min(999, args.RepeatInterval)),
                     row.ChecklistJson,
                     args.Counter,
                     expected,
-                    row.SortOrder)),
+                    row.SortOrder,
+                    DailyWeekdays.Normalize(args.Weekdays))),
                 async row =>
                 {
                     row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
@@ -418,7 +419,8 @@ public sealed partial class LocalFirstBoardDataService
                     row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
                     row.DailyStartDate = args.StartDate;
                     row.DailyRepeat = args.Repeat;
-                    row.DailyRepeatInterval = args.RepeatInterval;
+                    row.DailyRepeatInterval = Math.Max(1, Math.Min(999, args.RepeatInterval));
+                    row.DailyWeekdays = DailyWeekdays.Normalize(args.Weekdays);
                     row.ChecklistJson = DailyChecklistJson.Normalize(args.ChecklistJson);
                     row.Counter = args.Counter;
                     await HandleSortOrderUpdateAsync(local, userKey, BoardSection.Daily, itemId, args.SortOrder, row, cancellationToken);

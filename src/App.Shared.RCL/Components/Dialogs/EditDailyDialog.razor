@@ -67,6 +67,29 @@
                 </div>
             </div>
 
+            @if (_repeat == DailyRepeatType.Weekly)
+            {
+                <div class="hab-modal__section" style="padding:0.7rem 0.75rem;">
+                    <span class="hab-modal__section-label" id="edit-daily-weekdays-label">Weekdays</span>
+                    <div class="edit-daily-weekdays" role="group" aria-labelledby="edit-daily-weekdays-label">
+                        @foreach (var day in WeekdayOrder)
+                        {
+                            var selected = DailyWeekdays.Has(_weekdays, day);
+                            <MudButton Variant="@(selected ? Variant.Filled : Variant.Outlined)"
+                                       Color="@(selected ? Color.Primary : Color.Default)"
+                                       Size="Size.Small"
+                                       Class="edit-daily-weekdays__chip"
+                                       aria-pressed="@(selected ? "true" : "false")"
+                                       aria-label="@day.ToString()"
+                                       OnClick="@(() => ToggleWeekday(day))">@WeekdayShort(day)</MudButton>
+                        }
+                    </div>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mt-1">
+                        @WeekdayHint()
+                    </MudText>
+                </div>
+            }
+
             <div class="hab-modal__section">
                 <span class="hab-modal__section-label">
                     <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path></svg>
@@ -101,8 +124,32 @@
     private DateTime? _startDate;
     private DailyRepeatType _repeat = DailyRepeatType.Daily;
     private int _repeatInterval = 1;
+    private int _weekdays;
     private List<ChecklistRow> _checklistRows = [];
     private int _counter;
+
+    private static readonly DayOfWeek[] WeekdayOrder =
+    [
+        DayOfWeek.Monday,
+        DayOfWeek.Tuesday,
+        DayOfWeek.Wednesday,
+        DayOfWeek.Thursday,
+        DayOfWeek.Friday,
+        DayOfWeek.Saturday,
+        DayOfWeek.Sunday,
+    ];
+
+    private static string WeekdayShort(DayOfWeek day) => day switch
+    {
+        DayOfWeek.Monday => "Mon",
+        DayOfWeek.Tuesday => "Tue",
+        DayOfWeek.Wednesday => "Wed",
+        DayOfWeek.Thursday => "Thu",
+        DayOfWeek.Friday => "Fri",
+        DayOfWeek.Saturday => "Sat",
+        DayOfWeek.Sunday => "Sun",
+        _ => day.ToString(),
+    };
 
     protected override string BatchDescription => $"Edit \"{Item.Title}\"";
 
@@ -116,6 +163,7 @@
         _startDate = Item.DailyStartDate?.ToDateTime(TimeOnly.MinValue) ?? DateTime.Today;
         _repeat = Item.DailyRepeat;
         _repeatInterval = Item.DailyRepeatInterval < 1 ? 1 : Item.DailyRepeatInterval;
+        _weekdays = DailyWeekdays.Normalize(Item.DailyWeekdays);
         _checklistRows = EditDialogHelpers.ParseChecklistRows(Item.ChecklistJson);
     }
 
@@ -128,6 +176,21 @@
         DailyRepeatType.Yearly => _repeatInterval == 1 ? "year" : "years",
         _ => "days"
     };
+
+    private string WeekdayHint()
+    {
+        if (_weekdays == 0)
+        {
+            return "No days selected repeats on the start date's weekday.";
+        }
+
+        if (_repeatInterval == 1)
+        {
+            return "Due on the selected days every week.";
+        }
+
+        return $"Due on the selected days every {_repeatInterval} weeks.";
+    }
     private void OnTitleEdited() => ScheduleSave();
     private void OnNotesEdited() => ScheduleSave();
     private Task OnTagsEdited() => SaveNowAsync();
@@ -136,20 +199,30 @@
     private void OnIntervalEdited() => ScheduleSave(400);
     private void OnCounterEdited() => ScheduleSave(400);
 
+    private Task ToggleWeekday(DayOfWeek day)
+    {
+        _weekdays ^= 1 << (int)day;
+        _weekdays = DailyWeekdays.Normalize(_weekdays);
+        return SaveNowAsync();
+    }
+
     protected override async Task SaveValuesAsync(CancellationToken cancellationToken = default)
     {
         var title = string.IsNullOrWhiteSpace(_title) ? Item.Title : _title.Trim();
         var tagsPayload = EditDialogHelpers.CleanStringPayload(_tags);
         var checklistPayload = EditDialogHelpers.SerializeChecklistRows(_checklistRows);
         var start = _startDate is { } d ? DateOnly.FromDateTime(d.Date) : Item.DailyStartDate ?? DateOnly.FromDateTime(DateTime.Today);
-        var interval = _repeatInterval < 1 ? 1 : _repeatInterval;
-        await BoardData.UpdateDailyAsync(Item.Id, new UpdateDailyArgs(title, EditDialogHelpers.CleanStringPayload(_notes), tagsPayload, start, _repeat, interval, checklistPayload, _counter), cancellationToken);
+        var interval = _repeatInterval < 1 ? 1 : Math.Min(999, _repeatInterval);
+        var weekdays = _repeat == DailyRepeatType.Weekly ? DailyWeekdays.Normalize(_weekdays) : DailyWeekdays.None;
+        await BoardData.UpdateDailyAsync(Item.Id, new UpdateDailyArgs(title, EditDialogHelpers.CleanStringPayload(_notes), tagsPayload, start, _repeat, interval, checklistPayload, _counter, null, null, weekdays), cancellationToken);
     }
 
     protected override EditDailyDialogResult BuildResult(EditDialogAction action)
     {
         var start = _startDate is { } d ? DateOnly.FromDateTime(d.Date) : Item.DailyStartDate ?? DateOnly.FromDateTime(DateTime.Today);
-        return new EditDailyDialogResult(action, _title.Trim(), EditDialogHelpers.CleanStringPayload(_notes), EditDialogHelpers.CleanStringPayload(_tags), start, _repeat, _repeatInterval < 1 ? 1 : _repeatInterval, EditDialogHelpers.SerializeChecklistRows(_checklistRows), _counter);
+        var interval = _repeatInterval < 1 ? 1 : Math.Min(999, _repeatInterval);
+        var weekdays = _repeat == DailyRepeatType.Weekly ? DailyWeekdays.Normalize(_weekdays) : DailyWeekdays.None;
+        return new EditDailyDialogResult(action, _title.Trim(), EditDialogHelpers.CleanStringPayload(_notes), EditDialogHelpers.CleanStringPayload(_tags), start, _repeat, interval, EditDialogHelpers.SerializeChecklistRows(_checklistRows), _counter, weekdays);
     }
 
     private void ArchiveAsync() => CloseWithAction(EditDialogAction.Archive);

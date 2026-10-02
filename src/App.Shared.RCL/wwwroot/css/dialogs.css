@@ -662,6 +662,9 @@
 }
 .edit-daily-repeat-every__unit { color: var(--mud-palette-text-secondary); font-size: 0.85rem; min-width: 2.5rem; }
 
+.edit-daily-weekdays { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+.edit-daily-weekdays__chip { min-width: 2.75rem; min-height: 2.25rem; }
+
 /* To-do repeat */
 .edit-todo-repeat-field { flex: 0 0 6.2rem; max-width: 6.2rem; }
 .edit-todo-repeat-field .mud-input-slot { font-family: var(--hab-font-mono) !important; }

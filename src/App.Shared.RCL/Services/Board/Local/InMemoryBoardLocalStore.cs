@@ -272,6 +272,7 @@ public sealed class InMemoryBoardLocalStore : IBoardLocalStore
         DailyStartDate = source.DailyStartDate,
         DailyRepeat = source.DailyRepeat,
         DailyRepeatInterval = source.DailyRepeatInterval,
+        DailyWeekdays = source.DailyWeekdays,
         ChecklistJson = source.ChecklistJson,
         DailyLastCompletedOn = source.DailyLastCompletedOn,
         TodoDueDate = source.TodoDueDate,

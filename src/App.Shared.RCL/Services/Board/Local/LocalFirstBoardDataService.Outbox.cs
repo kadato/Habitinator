@@ -84,6 +84,7 @@ public sealed partial class LocalFirstBoardDataService
                a.DailyStartDate == b.DailyStartDate &&
                a.DailyRepeat == b.DailyRepeat &&
                a.DailyRepeatInterval == b.DailyRepeatInterval &&
+               a.DailyWeekdays == b.DailyWeekdays &&
                string.Equals(a.ChecklistJson ?? string.Empty, b.ChecklistJson ?? string.Empty, StringComparison.Ordinal) &&
                a.DailyLastCompletedOn == b.DailyLastCompletedOn &&
                a.TodoDueDate == b.TodoDueDate &&
@@ -513,7 +514,9 @@ public sealed partial class LocalFirstBoardDataService
                             p.RepeatInterval,
                             p.ChecklistJson,
                             p.Counter,
-                            p.SortOrder),
+                            p.SortOrder,
+                            null,
+                            p.Weekdays),
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);

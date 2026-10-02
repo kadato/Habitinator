@@ -63,7 +63,8 @@ public sealed class UserDataExportService(
             e.CreatedAtUtc,
             e.SortOrder,
             e.IsArchived,
-            anchor);
+            anchor,
+            DailyWeekdays.Normalize(e.DailyWeekdays));
         return BoardItemMapper.WithLocalDay(raw, e.Section, today);
     }
 }

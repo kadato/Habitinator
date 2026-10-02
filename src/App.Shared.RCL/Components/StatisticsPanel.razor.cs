@@ -44,6 +44,12 @@ public partial class StatisticsPanel : IDisposable
     private bool _shouldScrollToEnd;
     private DateOnly _heatmapToday;
 
+    private const int InitialVisibleConsistencyCount = 6;
+    private int _visibleConsistencyCount = InitialVisibleConsistencyCount;
+    private int _loadVersion;
+    private bool _disposed;
+    private readonly Dictionary<Guid, (string Label, string Tooltip)> _dailyRatioCache = [];
+
     [Inject] public IServiceProvider ServiceProvider { get; set; } = default!;
 
     private void LogFallback(Exception ex, string message) =>
@@ -179,6 +185,8 @@ public partial class StatisticsPanel : IDisposable
 
     public void Dispose()
     {
+        _disposed = true;
+        _loadVersion++;
         _subscription.Dispose();
         GC.SuppressFinalize(this);
     }
@@ -190,8 +198,51 @@ public partial class StatisticsPanel : IDisposable
         _habitView = overview.HabitContributions;
 
         _selectedPeriodKey = _data.PeriodKey;
-        var tagList = _data.AvailableTags ?? [];
+        PruneTagFilter(_data.AvailableTags);
 
+        _periodOptions = _dailyView.PeriodOptions;
+        _cellIndex = _data.Heatmap.ToDictionary(x => (x.DayRow, x.WeekCol));
+        _dailyCellIndices.Clear();
+        _habitCellIndices.Clear();
+        _dailyRatioCache.Clear();
+        _weekBarMax = _data.WeekBars.Count == 0
+            ? 0
+            : _data.WeekBars.Max(x => x.EventCount);
+        _shouldScrollToEnd = true;
+    }
+
+    private void ApplyDashboard(ActivityDashboardDto dashboard)
+    {
+        _data = dashboard;
+        _selectedPeriodKey = dashboard.PeriodKey;
+        PruneTagFilter(dashboard.AvailableTags);
+
+        _cellIndex = dashboard.Heatmap.ToDictionary(x => (x.DayRow, x.WeekCol));
+        _weekBarMax = dashboard.WeekBars.Count == 0
+            ? 0
+            : dashboard.WeekBars.Max(x => x.EventCount);
+        _shouldScrollToEnd = true;
+    }
+
+    private void ApplyDailyContributions(DailyContributionsViewDto dailyView)
+    {
+        _dailyView = dailyView;
+        _periodOptions = dailyView.PeriodOptions;
+        _selectedPeriodKey = dailyView.PeriodKey;
+        _dailyCellIndices.Clear();
+        _dailyRatioCache.Clear();
+    }
+
+    private void ApplyHabitContributions(HabitContributionsViewDto habitView)
+    {
+        _habitView = habitView;
+        _periodOptions ??= habitView.PeriodOptions;
+        _habitCellIndices.Clear();
+    }
+
+    private void PruneTagFilter(IReadOnlyList<string>? tagList)
+    {
+        tagList ??= [];
         if (!string.IsNullOrEmpty(_tagFilter))
         {
             var splitFilter = _tagFilter.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -204,47 +255,200 @@ public partial class StatisticsPanel : IDisposable
             _selectedTags = Array.Empty<string>();
             _tagFilter = "";
         }
-
-        _periodOptions = _dailyView.PeriodOptions;
-        _cellIndex = _data.Heatmap.ToDictionary(x => (x.DayRow, x.WeekCol));
-        _dailyCellIndices.Clear();
-        _habitCellIndices.Clear();
-        _weekBarMax = _data.WeekBars.Count == 0
-            ? 0
-            : _data.WeekBars.Max(x => x.EventCount);
-        _shouldScrollToEnd = true;
     }
 
     private async Task LoadStatisticsAsync(string periodKey)
     {
+        var version = ++_loadVersion;
+
         _heatmapToday = DailySchedule.LocalToday(TimeZoneService);
+        _visibleConsistencyCount = InitialVisibleConsistencyCount;
         if (_dailyView is null)
         {
             _loadingDailies = true;
         }
+
         _dailyError = null;
         if (_habitView is null)
         {
             _loadingHabits = true;
         }
+
         _habitError = null;
         var tag = string.IsNullOrEmpty(_tagFilter) ? null : _tagFilter;
-        var streaksTask = BoardData.GetStreakMapAsync();
+        var streaksTask = BoardData.GetStreakMapAsync(CancellationToken.None);
+
+        // A cached overview paints the hero and all grids with no network call.
+        if (Stats.TryGetCachedOverview(periodKey, tag, out var cachedOverview) && cachedOverview is not null)
+        {
+            ApplyOverview(cachedOverview);
+            _loading = false;
+            _loadingDailies = false;
+            _loadingHabits = false;
+            await ApplyBestStreakAsync(streaksTask);
+            return;
+        }
+
+        // A cached dashboard with cached contributions needs no network call.
+        // This covers an earlier progressive load.
+        if (Stats.TryGetCachedDashboard(periodKey, tag, out var cachedDashboard) && cachedDashboard is not null &&
+            Stats.TryGetCachedDailyContributions(periodKey, tag, out var cachedDaily) && cachedDaily is not null &&
+            Stats.TryGetCachedHabitContributions(periodKey, tag, out var cachedHabit) && cachedHabit is not null)
+        {
+            ApplyDashboard(cachedDashboard);
+            ApplyDailyContributions(cachedDaily);
+            ApplyHabitContributions(cachedHabit);
+            _loading = false;
+            _loadingDailies = false;
+            _loadingHabits = false;
+            await ApplyBestStreakAsync(streaksTask);
+            return;
+        }
+
         try
         {
-            var overview = await ResolveOverviewAsync(periodKey, tag);
-            ApplyOverview(overview);
+            // No cache hit, so fetch the small dashboard first.
+            // The hero then paints before the heavy per-item grids.
+            var dashboard = await ResolveDashboardAsync(periodKey, tag);
+            if (version != _loadVersion || _disposed)
+            {
+                return;
+            }
+
+            ApplyDashboard(dashboard);
+            _loading = false;
+            await InvokeAsync(StateHasChanged);
+
+            var dailyTask = Stats.GetDailyContributionsAsync(periodKey, tag, CancellationToken.None);
+            var habitTask = Stats.GetHabitContributionsAsync(periodKey, tag, CancellationToken.None);
+
+            try
+            {
+                var daily = await dailyTask;
+                if (version == _loadVersion && !_disposed)
+                {
+                    ApplyDailyContributions(daily);
+                }
+            }
+            catch (Exception dex)
+            {
+                if (version == _loadVersion)
+                {
+                    _dailyError = dex.Message;
+                    LogFallback(dex, "Daily contributions failed. The hero still shows.");
+                }
+            }
+            finally
+            {
+                if (version == _loadVersion)
+                {
+                    _loadingDailies = false;
+                }
+            }
+
+            try
+            {
+                var habit = await habitTask;
+                if (version == _loadVersion && !_disposed)
+                {
+                    ApplyHabitContributions(habit);
+                }
+            }
+            catch (Exception hex)
+            {
+                if (version == _loadVersion)
+                {
+                    _habitError = hex.Message;
+                    LogFallback(hex, "Habit contributions failed. The hero still shows.");
+                }
+            }
+            finally
+            {
+                if (version == _loadVersion)
+                {
+                    _loadingHabits = false;
+                }
+            }
+
+            if (version != _loadVersion || _disposed)
+            {
+                return;
+            }
+
+            await InvokeAsync(StateHasChanged);
             await ApplyBestStreakAsync(streaksTask);
         }
         catch (Exception dex)
         {
-            await HandleLoadErrorAsync(dex, periodKey, tag, streaksTask);
+            if (version == _loadVersion)
+            {
+                await HandleLoadErrorAsync(dex, periodKey, tag, streaksTask);
+            }
         }
         finally
         {
-            _loadingDailies = false;
-            _loadingHabits = false;
+            if (version == _loadVersion)
+            {
+                _loadingDailies = false;
+                _loadingHabits = false;
+            }
         }
+    }
+
+    private async Task<ActivityDashboardDto> ResolveDashboardAsync(string periodKey, string? tag)
+    {
+        if (ApplicationState.TryTakeFromJson<ActivityOverviewDto>("stats_overview_data", out var restoredOverview) && restoredOverview?.Dashboard is not null)
+        {
+            if (restoredOverview.DailyContributions is not null)
+            {
+                ApplyDailyContributions(restoredOverview.DailyContributions);
+                _loadingDailies = false;
+            }
+
+            if (restoredOverview.HabitContributions is not null)
+            {
+                ApplyHabitContributions(restoredOverview.HabitContributions);
+                _loadingHabits = false;
+            }
+
+            return restoredOverview.Dashboard;
+        }
+
+        if (ApplicationState.TryTakeFromJson<ActivityDashboardDto>("stats_dashboard_data", out var d) && d is not null)
+        {
+            if (ApplicationState.TryTakeFromJson<DailyContributionsViewDto>("stats_daily_view_data", out var dv) && dv is not null)
+            {
+                ApplyDailyContributions(dv);
+                _loadingDailies = false;
+            }
+
+            if (ApplicationState.TryTakeFromJson<HabitContributionsViewDto>("stats_habit_view_data", out var hv) && hv is not null)
+            {
+                ApplyHabitContributions(hv);
+                _loadingHabits = false;
+            }
+
+            return d;
+        }
+
+        if (Stats.TryGetCachedDashboard(periodKey, tag, out var cached) && cached is not null)
+        {
+            if (Stats.TryGetCachedDailyContributions(periodKey, tag, out var cachedDaily) && cachedDaily is not null)
+            {
+                ApplyDailyContributions(cachedDaily);
+                _loadingDailies = false;
+            }
+
+            if (Stats.TryGetCachedHabitContributions(periodKey, tag, out var cachedHabit) && cachedHabit is not null)
+            {
+                ApplyHabitContributions(cachedHabit);
+                _loadingHabits = false;
+            }
+
+            return cached;
+        }
+
+        return await Stats.GetDashboardAsync(periodKey, tag);
     }
 
     private async Task<ActivityOverviewDto> ResolveOverviewAsync(string periodKey, string? tag)
@@ -289,6 +493,7 @@ public partial class StatisticsPanel : IDisposable
         _cellIndex = [];
         _dailyCellIndices.Clear();
         _habitCellIndices.Clear();
+        _dailyRatioCache.Clear();
         await SafeNotifyAsync("Could not load statistics. Please try again.", Severity.Error);
     }
 
@@ -352,6 +557,42 @@ public partial class StatisticsPanel : IDisposable
         return $"{activeDays} of {periodDays} days · {percent}%";
     }
 
+    private (string Label, string Tooltip) GetDailyRatio(DailyContributionGraphDto daily)
+    {
+        if (_dailyRatioCache.TryGetValue(daily.BoardItemId, out var cached))
+        {
+            return cached;
+        }
+
+        var active = 0;
+        var total = 0;
+        foreach (var c in daily.Heatmap)
+        {
+            if (!c.InDataRange)
+            {
+                continue;
+            }
+
+            total++;
+            if (c.Count > 0)
+            {
+                active++;
+            }
+        }
+
+        var percent = total <= 0 ? 0 : (int)Math.Round(100.0 * active / total);
+        var label = $"{active} of {total} days · {percent}%";
+        var dayWord = active == 1 ? "day" : "days";
+        var tooltip = $"{active} active {dayWord} of {total} in this period";
+        var result = (label, tooltip);
+        _dailyRatioCache[daily.BoardItemId] = result;
+        return result;
+    }
+
+    private string GetDailyRatioLabel(DailyContributionGraphDto daily) => GetDailyRatio(daily).Label;
+
+    private string GetDailyRatioTooltip(DailyContributionGraphDto daily) => GetDailyRatio(daily).Tooltip;
+
     private static string DailyActiveRatioLabel(DailyContributionGraphDto daily)
     {
         var active = daily.Heatmap.Count(c => c.InDataRange && c.Count > 0);
@@ -366,6 +607,16 @@ public partial class StatisticsPanel : IDisposable
         var total = daily.Heatmap.Count(c => c.InDataRange);
         var label = active == 1 ? "day" : "days";
         return $"{active} active {label} of {total} in this period";
+    }
+
+    private void ShowAllConsistency()
+    {
+        _visibleConsistencyCount = int.MaxValue;
+    }
+
+    private void ShowFewerConsistency()
+    {
+        _visibleConsistencyCount = InitialVisibleConsistencyCount;
     }
 
     private string ActivityHeatmapCellClass(ActivityHeatmapCellDto cell)

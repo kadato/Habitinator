@@ -25,6 +25,24 @@ public interface IActivityStatisticsReader
         return false;
     }
 
+    bool TryGetCachedDashboard(string? periodKey, string? tag, out ActivityDashboardDto? dashboard)
+    {
+        dashboard = null;
+        return false;
+    }
+
+    bool TryGetCachedDailyContributions(string? periodKey, string? tag, out DailyContributionsViewDto? view)
+    {
+        view = null;
+        return false;
+    }
+
+    bool TryGetCachedHabitContributions(string? periodKey, string? tag, out HabitContributionsViewDto? view)
+    {
+        view = null;
+        return false;
+    }
+
     void InvalidateCache()
     {
     }

@@ -148,6 +148,11 @@
                         var habitCount = _habitView?.Graphs.Count ?? 0;
                         var dailyCount = _dailyView?.Graphs.Count ?? 0;
                         var totalVisible = (showHabits ? habitCount : 0) + (showDailies ? dailyCount : 0);
+                        var allDailies = showDailies && _dailyView is not null ? _dailyView.Graphs : (IReadOnlyList<DailyContributionGraphDto>)Array.Empty<DailyContributionGraphDto>();
+                        var allHabits = showHabits && _habitView is not null ? _habitView.Graphs : (IReadOnlyList<HabitContributionGraphDto>)Array.Empty<HabitContributionGraphDto>();
+                        var visibleDailies = allDailies.Take(_visibleConsistencyCount).ToList();
+                        var visibleHabits = allHabits.Take(_visibleConsistencyCount).ToList();
+                        var hiddenCount = (allDailies.Count - visibleDailies.Count) + (allHabits.Count - visibleHabits.Count);
 
                         @if (totalVisible == 0)
                         {
@@ -162,14 +167,14 @@
                             <MudGrid Spacing="3" Class="mt-3 stats-consistency-grid">
                                 @if (showDailies && _dailyView is not null)
                                 {
-                                    @foreach (var daily in _dailyView.Graphs)
+                                    @foreach (var daily in visibleDailies)
                                     {
                                         var cellIx = GetDailyCellIndex(daily);
                                         <MudItem xs="12" md="6">
                                             <div class="stats-daily-block pa-3 border rounded stats-block-bg">
                                                 <div class="d-flex align-center justify-space-between gap-2 mb-2">
                                                     <span class="stats-daily-title">@daily.Title</span>
-                                                    <span class="stats-habit-ratio" title="@DailyActiveRatioTooltip(daily)">@DailyActiveRatioLabel(daily)</span>
+                                                    <span class="stats-habit-ratio" title="@GetDailyRatioTooltip(daily)">@GetDailyRatioLabel(daily)</span>
                                                 </div>
                                                 <StatsHeatmapGrid Columns="daily.GridWeekColumns"
                                                                    RegionLabel="@($"Activity heatmap for {daily.Title}")"
@@ -185,7 +190,7 @@
                                 }
                                 @if (showHabits && _habitView is not null)
                                 {
-                                    @foreach (var habit in _habitView.Graphs)
+                                    @foreach (var habit in visibleHabits)
                                     {
                                         var cellIx = GetHabitCellIndex(habit);
                                         <MudItem xs="12" md="6">
@@ -223,6 +228,18 @@
                                     </MudItem>
                                 }
                             </MudGrid>
+                            @if (hiddenCount > 0)
+                            {
+                                <div class="d-flex justify-center mt-3">
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="ShowAllConsistency">Show all @totalVisible graphs</MudButton>
+                                </div>
+                            }
+                            else if (totalVisible > InitialVisibleConsistencyCount)
+                            {
+                                <div class="d-flex justify-center mt-3">
+                                    <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small" OnClick="ShowFewerConsistency">Show fewer</MudButton>
+                                </div>
+                            }
                         }
                     }
                 </MudPaper>

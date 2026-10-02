@@ -363,6 +363,89 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         return false;
     }
 
+    public bool TryGetCachedDashboard(string? periodKey, string? tag, out ActivityDashboardDto? dashboard)
+    {
+        var path = "api/activity/dashboard" + BuildActivityQuery(periodKey, tag);
+        if (_cache.TryGetValue(path, out var entry) && entry.Value is ActivityDashboardDto cached)
+        {
+            dashboard = cached;
+            return true;
+        }
+
+        if (TryReadPersistent(path, out ActivityDashboardDto? persisted) && persisted != null)
+        {
+            dashboard = persisted;
+            _cache[path] = (persisted, DateTime.UtcNow.AddMinutes(15));
+            return true;
+        }
+
+        // A cached overview already holds the dashboard.
+        // The method reuses it for the hero heatmap.
+        if (TryGetCachedOverview(periodKey, tag, out var overview) && overview?.Dashboard is not null)
+        {
+            dashboard = overview.Dashboard;
+            _cache[path] = (dashboard, DateTime.UtcNow.AddMinutes(15));
+            return true;
+        }
+
+        dashboard = null;
+        return false;
+    }
+
+    public bool TryGetCachedDailyContributions(string? periodKey, string? tag, out DailyContributionsViewDto? view)
+    {
+        var path = "api/activity/daily-contributions" + BuildActivityQuery(periodKey, tag);
+        if (_cache.TryGetValue(path, out var entry) && entry.Value is DailyContributionsViewDto cached)
+        {
+            view = cached;
+            return true;
+        }
+
+        if (TryReadPersistent(path, out DailyContributionsViewDto? persisted) && persisted != null)
+        {
+            view = persisted;
+            _cache[path] = (persisted, DateTime.UtcNow.AddMinutes(15));
+            return true;
+        }
+
+        if (TryGetCachedOverview(periodKey, tag, out var overview) && overview?.DailyContributions is not null)
+        {
+            view = overview.DailyContributions;
+            _cache[path] = (view, DateTime.UtcNow.AddMinutes(15));
+            return true;
+        }
+
+        view = null;
+        return false;
+    }
+
+    public bool TryGetCachedHabitContributions(string? periodKey, string? tag, out HabitContributionsViewDto? view)
+    {
+        var path = "api/activity/habit-contributions" + BuildActivityQuery(periodKey, tag);
+        if (_cache.TryGetValue(path, out var entry) && entry.Value is HabitContributionsViewDto cached)
+        {
+            view = cached;
+            return true;
+        }
+
+        if (TryReadPersistent(path, out HabitContributionsViewDto? persisted) && persisted != null)
+        {
+            view = persisted;
+            _cache[path] = (persisted, DateTime.UtcNow.AddMinutes(15));
+            return true;
+        }
+
+        if (TryGetCachedOverview(periodKey, tag, out var overview) && overview?.HabitContributions is not null)
+        {
+            view = overview.HabitContributions;
+            _cache[path] = (view, DateTime.UtcNow.AddMinutes(15));
+            return true;
+        }
+
+        view = null;
+        return false;
+    }
+
     private bool TryReadLegacyOverview(string? periodKey, string? tag, out ActivityOverviewDto? overview)
     {
         overview = null;

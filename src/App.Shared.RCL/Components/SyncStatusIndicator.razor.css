@@ -20,6 +20,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    align-self: center;
+    vertical-align: middle;
     width: var(--space-8);
     height: var(--space-8);
     flex-shrink: 0;
@@ -43,6 +45,15 @@
 
 .sync-icon-btn ::deep .sync-icon {
     font-size: 1.25rem;
+}
+
+/* MudBadge renders an inline wrapper around the icon. The mud-badge-root rule keeps
+   the wrapper on the flex line. */
+.sync-icon-btn ::deep .mud-badge-root {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
 }
 
 /* Row inside the profile menu and Settings. */

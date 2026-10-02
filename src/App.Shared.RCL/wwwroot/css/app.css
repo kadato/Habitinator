@@ -547,6 +547,17 @@ input[type="number"].mud-input-slot {
     color: var(--mud-palette-text-secondary) !important;
 }
 
+/* Header status icons sit in plain spans next to MudIconButtons. This rule centers
+   the sync button on the flex line. The scope is the sync wrapper only, so the
+   .app-show-desktop-only hide behavior keeps working. */
+.app-header-user-rail > span.sync-indicator-wrap {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center;
+    align-self: center;
+    line-height: 0;
+}
+
 .github-repo-link.mud-icon-button:hover {
     color: var(--mud-palette-primary) !important;
     background-color: color-mix(in srgb, var(--mud-palette-primary) 10%, transparent) !important;

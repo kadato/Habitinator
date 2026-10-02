@@ -84,6 +84,7 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
             if (_status.IsOffline)
             {
                 _status.SetProblem("Offline - board changes stay on this device until you reconnect.");
+                await RefreshPendingCountAsync(cancellationToken);
                 return;
             }
 
@@ -114,6 +115,7 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
 
             var stuck = await _board.TryGetStuckOutboxHintAsync(StuckAfterAttempts, cancellationToken);
             _status.SetProblem(stuck);
+            await RefreshPendingCountAsync(cancellationToken);
 
             if (progressed)
             {
@@ -154,6 +156,22 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
         finally
         {
             _status.SetSyncing(false);
+        }
+    }
+
+    private async Task RefreshPendingCountAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            _status.SetPendingCount(await _board.GetPendingOutboxCountAsync(cancellationToken));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogTrace(ex, "Could not refresh sync pending count.");
         }
     }
 

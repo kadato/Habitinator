@@ -38,6 +38,17 @@ public sealed class LocalFirstBoardSyncTests
     }
 
     [Fact]
+    public async Task GetPendingOutboxCountAsync_CountsQueuedOperations()
+    {
+        var harness = new Harness();
+        (await harness.Board.GetPendingOutboxCountAsync(CancellationToken.None)).Should().Be(0);
+
+        await harness.Board.CreateItemAsync(BoardSection.Habit, "Queued", Guid.NewGuid(), CancellationToken.None);
+
+        (await harness.Board.GetPendingOutboxCountAsync(CancellationToken.None)).Should().Be(1);
+    }
+
+    [Fact]
     public async Task PullMirrorAsync_SnapshotThenDeltaAppliesUpsertsDeletesAndCursor()
     {
         var harness = new Harness();

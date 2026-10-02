@@ -81,6 +81,10 @@
     text-overflow: ellipsis;
 }
 
+.sync-row__retry {
+    flex-shrink: 0;
+}
+
 /* Soft pulse while a sync is in flight. The global reduced-motion rule stops it. */
 .sync-icon-btn.sync-state--syncing ::deep .sync-icon,
 .sync-row.sync-state--syncing ::deep .sync-row__icon {

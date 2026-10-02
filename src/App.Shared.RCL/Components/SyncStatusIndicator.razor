@@ -1,4 +1,6 @@
+@using App.Shared.RCL.Services.Board.Local
 @inject IBoardSyncStatus BoardSync
+@inject IBoardSyncRequestor SyncRequestor
 @inject IUserDateFormatService DateFormatService
 @inject IUserNotifier Notifier
 @implements IDisposable
@@ -10,12 +12,15 @@
     var icon = GetStateIcon(state);
     var label = GetSyncStatusText();
     var tooltip = GetSyncStatusTooltip();
+    var pending = BoardSync.PendingCount;
 }
 
 @if (IconOnly)
 {
-    <button type="button" class="sync-icon-btn @stateClass" title="@tooltip" aria-label="@label. Show sync details." @onclick="ShowDetailsAsync">
-        <MudIcon Icon="@icon" Class="sync-icon" aria-hidden="true" />
+    <button type="button" class="sync-icon-btn @stateClass" title="@tooltip" aria-label="@GetIconAriaLabel(label, pending)" @onclick="ShowDetailsAsync">
+        <MudBadge Content="@pending" Visible="@(pending > 0)" Overlap="true" Bordered="true" Color="Color.Primary" Class="sync-badge">
+            <MudIcon Icon="@icon" Class="sync-icon" aria-hidden="true" />
+        </MudBadge>
     </button>
 }
 else
@@ -23,9 +28,17 @@ else
     <div class="sync-row @flushClass @stateClass" role="status">
         <MudIcon Icon="@icon" Class="sync-row__icon" aria-hidden="true" />
         <span class="sync-row__label">@label</span>
-        @if (BoardSync.LastSyncedUtc is { } syncedAt && state == SyncState.Synced)
+        @if (pending > 0)
+        {
+            <span class="sync-row__meta">@PendingText(pending) pending</span>
+        }
+        else if (BoardSync.LastSyncedUtc is { } syncedAt && state == SyncState.Synced)
         {
             <span class="sync-row__meta">@DateFormatService.Format(syncedAt.LocalDateTime)</span>
+        }
+        @if (CanRetry(state))
+        {
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="sync-row__retry" OnClick="RetryNow">Retry now</MudButton>
         }
     </div>
     <MudDivider Class="my-1"/>
@@ -102,15 +115,36 @@ else
 
     private string GetSyncStatusTooltip()
     {
+        var pending = PendingSuffix(BoardSync.PendingCount);
         if (BoardSync.IsOffline)
-            return "Working offline. Changes will sync when you reconnect.";
+            return $"Working offline. Changes will sync when you reconnect.{pending}";
         if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage))
-            return $"Sync issue: {BoardSync.SyncProblemMessage}";
+            return $"Sync issue: {BoardSync.SyncProblemMessage}.{pending}";
         if (BoardSync.IsSyncing)
-            return "Syncing with server...";
+            return $"Syncing with server...{pending}";
         if (BoardSync.LastSyncedUtc is { } syncedAt)
-            return $"Synced. Last sync: {DateFormatService.Format(syncedAt.LocalDateTime)}";
-        return "Not synced yet";
+            return $"Synced. Last sync: {DateFormatService.Format(syncedAt.LocalDateTime)}.{pending}";
+        return $"Not synced yet.{pending}";
+    }
+
+    private static string GetIconAriaLabel(string label, int pending)
+    {
+        if (pending > 0)
+        {
+            return $"{label}, {PendingText(pending)} pending. Show sync details.";
+        }
+
+        return $"{label}. Show sync details.";
+    }
+
+    private static string PendingSuffix(int pending)
+    {
+        if (pending <= 0)
+        {
+            return string.Empty;
+        }
+
+        return pending == 1 ? " 1 change waiting to sync." : $" {pending} changes waiting to sync.";
     }
 
     private string GetSyncStatusText()
@@ -124,5 +158,22 @@ else
         if (BoardSync.LastSyncedUtc is not null)
             return "Synced";
         return "Not synced";
+    }
+
+    private static string PendingText(int pending) => pending.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    private bool CanRetry(SyncState state) =>
+        !BoardSync.IsSyncing && (state is SyncState.Offline or SyncState.Error || BoardSync.PendingCount > 0);
+
+    private void RetryNow()
+    {
+        try
+        {
+            SyncRequestor.RequestSync();
+        }
+        catch
+        {
+            // Best effort. The indicator still shows the state.
+        }
     }
 }

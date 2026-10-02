@@ -65,6 +65,21 @@ public sealed class BoardSyncStatus : IBoardSyncStatus
         }
     }
 
+    public int PendingCount
+    {
+        get;
+        private set
+        {
+            if (field == value)
+            {
+                return;
+            }
+
+            field = value;
+            OnChanged();
+        }
+    }
+
     public event EventHandler? Changed;
 
     internal void SetSyncing(bool value) => IsSyncing = value;
@@ -73,10 +88,13 @@ public sealed class BoardSyncStatus : IBoardSyncStatus
 
     public void SetProblem(string? value) => SyncProblemMessage = value;
 
+    public void SetPendingCount(int value) => PendingCount = Math.Max(0, value);
+
     public void ClearSyncState()
     {
         SetLastSynced(null);
         SetProblem(null);
+        SetPendingCount(0);
     }
 
     public void UpdateOffline(bool isOffline) => IsOffline = isOffline;

@@ -161,6 +161,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         public bool IsOffline { get; set; }
         public bool IsSyncing { get; set; }
         public DateTimeOffset? LastSyncedUtc { get; set; }
+        public int PendingCount { get; set; }
         public string? SyncProblemMessage { get; set; }
 
         public event EventHandler? Changed;

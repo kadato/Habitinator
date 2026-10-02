@@ -9,6 +9,9 @@ public interface IBoardSyncStatus
 
     DateTimeOffset? LastSyncedUtc { get; }
 
+    /// <summary>Queued local writes the server has not acknowledged yet.</summary>
+    int PendingCount { get; }
+
     /// <summary>Non-null when the last sync try failed or operations are stuck after retries.</summary>
     string? SyncProblemMessage { get; }
 
@@ -21,6 +24,7 @@ public sealed class NoOpBoardSyncStatus : IBoardSyncStatus
     public bool IsOffline => false;
     public bool IsSyncing => false;
     public DateTimeOffset? LastSyncedUtc => null;
+    public int PendingCount => 0;
     public string? SyncProblemMessage => null;
 
     public event EventHandler? Changed

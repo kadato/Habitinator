@@ -334,6 +334,28 @@ public sealed partial class LocalFirstBoardDataService
         }
     }
 
+    /// <summary>Queued writes the server has not acknowledged yet. Zero when signed out.</summary>
+    public async Task<int> GetPendingOutboxCountAsync(CancellationToken cancellationToken = default)
+    {
+        await store.EnsureReadyAsync(cancellationToken);
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var userKey = await ResolveAuthedUserKeyAsync(cancellationToken);
+            if (userKey is null)
+            {
+                return 0;
+            }
+
+            return (await store.ListOutboxAsync(userKey, cancellationToken)).Count;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     private async Task ExecuteOutboxRemoteByIdAsync(Guid operationId, RemoteBoardDataService api,
         CancellationToken cancellationToken)
     {

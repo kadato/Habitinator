@@ -272,7 +272,8 @@ public static class ActivityStatisticsCalculator
         var dailyIds = dailyItemRows.Select(x => x.Id).ToHashSet();
         var byItem = BuildItemCompletionMap(eventRowsInRange, dailyIds, range.TimeZone, range.DayStartLocalTime);
         var (commonStart, commonEnd) = FindCommonDates(dailyItemRows, byItem, range.RangeStart, range.RangeEnd, range.TodayCutoff);
-        var graphs = BuildDailyContributionGraphs(dailyItemRows, byItem, commonStart, commonEnd, range.TodayCutoff, range.Options);
+        var streaksByItem = BuildDailyStreakDetailsMap(eventRowsInRange, dailyItemRows, range);
+        var graphs = BuildDailyContributionGraphs(dailyItemRows, byItem, commonStart, commonEnd, range.TodayCutoff, range.Options, streaksByItem);
 
         return new DailyContributionsViewDto(
             range.PeriodKey,
@@ -323,6 +324,52 @@ public static class ActivityStatisticsCalculator
         return byItem;
     }
 
+    private static Dictionary<Guid, DailyStreakDetails> BuildDailyStreakDetailsMap(
+        IReadOnlyList<UserActivityEventRecord> eventRowsInRange,
+        IReadOnlyList<DailyItemStatsDto> dailyItemRows,
+        ContributionsRangeContext range)
+    {
+        var byItemEvents = new Dictionary<Guid, List<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)>>();
+        foreach (var e in eventRowsInRange)
+        {
+            if (e.BoardItemId is not { } bid)
+            {
+                continue;
+            }
+
+            if (e.EventType is not (ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete or ActivityEventType.DailySkip))
+            {
+                continue;
+            }
+
+            if (!byItemEvents.TryGetValue(bid, out var list))
+            {
+                list = [];
+                byItemEvents[bid] = list;
+            }
+
+            list.Add((e.OccurredAtUtc, e.EventType));
+        }
+
+        var result = new Dictionary<Guid, DailyStreakDetails>(dailyItemRows.Count);
+        foreach (var di in dailyItemRows)
+        {
+            byItemEvents.TryGetValue(di.Id, out var evList);
+            var grouped = DailyStreakCalculator.GroupDailyEventsByLocalDay(evList ?? [], range.TimeZone, range.DayStartLocalTime);
+            var details = DailyStreakCalculator.ComputeStreakDetails(
+                di.DailyStartDate,
+                di.DailyRepeat,
+                di.DailyRepeatInterval,
+                range.TodayCutoff,
+                grouped,
+                di.DailyLastCompletedOn,
+                di.DailyWeekdays);
+            result[di.Id] = details;
+        }
+
+        return result;
+    }
+
     private static (DateOnly commonStart, DateOnly commonEnd) FindCommonDates(
         IReadOnlyList<DailyItemStatsDto> dailyItemRows,
         Dictionary<Guid, Dictionary<DateOnly, int>> byItem,
@@ -361,7 +408,8 @@ public static class ActivityStatisticsCalculator
         DateOnly commonStart,
         DateOnly commonEnd,
         DateOnly todayCutoff,
-        IReadOnlyList<DailyGraphPeriodOption> options)
+        IReadOnlyList<DailyGraphPeriodOption> options,
+        Dictionary<Guid, DailyStreakDetails>? streaksByItem = null)
     {
         List<DailyContributionGraphDto> graphs = [with(capacity: dailyItemRows.Count)];
         foreach (var di in dailyItemRows)
@@ -387,13 +435,30 @@ public static class ActivityStatisticsCalculator
 
             var columns = WeekGridColumns(commonStart, commonEnd);
 
+            DailyStreakDetails? streakDetails = null;
+            if (streaksByItem is not null && streaksByItem.TryGetValue(di.Id, out var found))
+            {
+                streakDetails = found;
+            }
+
+            var current = streakDetails?.Current ?? 0;
+            var longest = streakDetails?.Longest ?? 0;
+            var previous = streakDetails?.Previous ?? 0;
+            if (longest < current)
+            {
+                longest = current;
+            }
+
             graphs.Add(new DailyContributionGraphDto(
                 di.Id,
                 di.Title,
                 graphHeat,
                 columns,
                 maxInRange,
-                AvailablePeriodKeys(di, options, todayCutoff)));
+                AvailablePeriodKeys(di, options, todayCutoff),
+                current,
+                longest,
+                previous));
         }
         return graphs;
     }

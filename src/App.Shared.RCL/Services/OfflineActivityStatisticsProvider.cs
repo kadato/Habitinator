@@ -221,7 +221,15 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
 
     private static IReadOnlyList<DailyItemStatsDto> GetDailyItems(BoardSnapshot snapshot)
     {
-        return [.. snapshot.Dailies.Select(b => new DailyItemStatsDto(b.Id, b.Title, b.DailyStartDate, b.CreatedAtUtc is { } c ? DateOnly.FromDateTime(c.DateTime) : DateOnly.FromDateTime(DateTime.UtcNow)))];
+        return [.. snapshot.Dailies.Select(b => new DailyItemStatsDto(
+            b.Id,
+            b.Title,
+            b.DailyStartDate,
+            b.CreatedAtUtc is { } c ? DateOnly.FromDateTime(c.DateTime) : DateOnly.FromDateTime(DateTime.UtcNow),
+            b.DailyRepeat,
+            b.DailyRepeatInterval < 1 ? 1 : Math.Min(999, b.DailyRepeatInterval),
+            DailyWeekdays.Normalize(b.DailyWeekdays),
+            b.DailyLastCompletedOn))];
     }
 
     private static IReadOnlyList<HabitItemStatsDto> GetHabitItems(BoardSnapshot snapshot)

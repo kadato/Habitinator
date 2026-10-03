@@ -105,7 +105,7 @@ public sealed class ActivityStatisticsService(
 
         var allItems = await itemQ
             .OrderBy(b => b.Title)
-            .Select(b => new { b.Id, b.Title, b.Section, b.DailyStartDate, b.CreatedAtUtc })
+            .Select(b => new { b.Id, b.Title, b.Section, b.DailyStartDate, b.CreatedAtUtc, b.DailyRepeatType, b.DailyRepeatInterval, b.DailyWeekdays, b.DailyLastCompletedOn })
             .ToListAsync(cancellationToken);
 
         var builtDashboard = ActivityStatisticsCalculator.BuildDashboard(
@@ -118,7 +118,11 @@ public sealed class ActivityStatisticsService(
                 b.Id,
                 b.Title,
                 b.DailyStartDate != null ? DateOnly.FromDateTime(b.DailyStartDate.Value) : null,
-                DateOnly.FromDateTime(timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime)))];
+                DateOnly.FromDateTime(timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime),
+                Enum.IsDefined((DailyRepeatType)b.DailyRepeatType) ? (DailyRepeatType)b.DailyRepeatType : DailyRepeatType.Daily,
+                b.DailyRepeatInterval < 1 ? 1 : Math.Min(999, b.DailyRepeatInterval),
+                DailyWeekdays.Normalize(b.DailyWeekdays),
+                b.DailyLastCompletedOn != null ? DateOnly.FromDateTime(b.DailyLastCompletedOn.Value) : null))];
 
         var dailyResult = ActivityStatisticsCalculator.BuildDailyContributions(
             eventRows,
@@ -220,7 +224,11 @@ public sealed class ActivityStatisticsService(
             b.Id,
             b.Title,
             b.DailyStartDate != null ? DateOnly.FromDateTime(b.DailyStartDate.Value) : null,
-            DateOnly.FromDateTime(timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime)
+            DateOnly.FromDateTime(timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime),
+            Enum.IsDefined((DailyRepeatType)b.DailyRepeatType) ? (DailyRepeatType)b.DailyRepeatType : DailyRepeatType.Daily,
+            b.DailyRepeatInterval < 1 ? 1 : Math.Min(999, b.DailyRepeatInterval),
+            DailyWeekdays.Normalize(b.DailyWeekdays),
+            b.DailyLastCompletedOn != null ? DateOnly.FromDateTime(b.DailyLastCompletedOn.Value) : null
         ))];
 
         var result = ActivityStatisticsCalculator.BuildDailyContributions(
@@ -321,7 +329,7 @@ public sealed class ActivityStatisticsService(
 
         var itemRows = await itemQ
             .OrderBy(b => b.Title)
-            .Select(b => new BoardItemRef(b.Id, b.Title, b.DailyStartDate, b.CreatedAtUtc))
+            .Select(b => new BoardItemRef(b.Id, b.Title, b.DailyStartDate, b.CreatedAtUtc, b.DailyRepeatType, b.DailyRepeatInterval, b.DailyWeekdays, b.DailyLastCompletedOn))
             .ToListAsync(cancellationToken);
 
         var eventRows = await EventsInRange(db, userId, fromUtc, toUtc, allowedIds)
@@ -331,7 +339,7 @@ public sealed class ActivityStatisticsService(
         return new ContributionsQueryContext(periodOptions, key, rangeStart, rangeEnd, options.UtcToday, eventRows, itemRows);
     }
 
-    private sealed record BoardItemRef(Guid Id, string Title, DateTime? DailyStartDate, DateTimeOffset CreatedAtUtc);
+    private sealed record BoardItemRef(Guid Id, string Title, DateTime? DailyStartDate, DateTimeOffset CreatedAtUtc, int DailyRepeatType, int DailyRepeatInterval, int DailyWeekdays, DateTime? DailyLastCompletedOn);
 
     private sealed record ContributionsQueryOptions(
         BoardSection Section,

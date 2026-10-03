@@ -30,11 +30,22 @@ public sealed record DailyContributionGraphDto(
     IReadOnlyList<ActivityHeatmapCellDto> Heatmap,
     int GridWeekColumns,
     int MaxDayCountInRange,
-    IReadOnlyList<string> AvailablePeriodKeys);
+    IReadOnlyList<string> AvailablePeriodKeys,
+    int CurrentStreak = 0,
+    int LongestStreak = 0,
+    int PreviousStreak = 0);
 
 public sealed record DailyGraphPeriodOption(string Key, string Label);
 
-public sealed record DailyItemStatsDto(Guid Id, string Title, DateOnly? DailyStartDate, DateOnly CreatedAt);
+public sealed record DailyItemStatsDto(
+    Guid Id,
+    string Title,
+    DateOnly? DailyStartDate,
+    DateOnly CreatedAt,
+    DailyRepeatType DailyRepeat = DailyRepeatType.Daily,
+    int DailyRepeatInterval = 1,
+    int DailyWeekdays = 0,
+    DateOnly? DailyLastCompletedOn = null);
 
 public sealed record HabitItemStatsDto(Guid Id, string Title, DateOnly CreatedAt);
 

@@ -2,6 +2,9 @@ using App.Shared.RCL.Models;
 
 namespace App.Shared.RCL.Services;
 
+/// <summary>The current streak, the previous streak, and the longest streak for one daily.</summary>
+public sealed record DailyStreakDetails(int Current, int Previous, int Longest);
+
 /// <summary>
 ///     Consecutive daily streak from UTC completion history, per calendar day, and the daily schedule.
 /// </summary>
@@ -86,7 +89,7 @@ public static class DailyStreakCalculator
         var todayDone = todayOnSchedule &&
             IsCalendarDayNetCompleted(today, GetDayListOrNull(eventsByDay, today), dailyLastCompletedOn);
 
-        // Do not count today until it is done. Count only through prior days when it is not.
+        // Do not count today until today is done. When today is not done, count only through yesterday.
         var end = todayDone ? today : today.AddDays(-1);
 
         var historyStart =
@@ -98,7 +101,7 @@ public static class DailyStreakCalculator
             var dayEvents = GetDayListOrNull(eventsByDay, d);
             if (IsCalendarDaySkipped(dayEvents))
             {
-                // Skipped days are neutral: they bridge the streak without adding to it.
+                // Skipped days keep the streak unbroken without adding to the streak.
                 continue;
             }
 
@@ -111,6 +114,104 @@ public static class DailyStreakCalculator
         }
 
         return Math.Min(MaxStreak, n);
+    }
+
+    /// <summary>
+    ///     The current streak, the previous streak, and the longest streak over scheduled days.
+    ///     Skipped days keep a streak unbroken without adding to the streak. This matches <see cref="ComputeStreak" />.
+    ///     The current streak counts back from today. Today counts only when today is done.
+    ///     The longest streak is the best streak so far.
+    ///     The previous streak is the finished streak right before the current streak.
+    ///     When no streak is active, the previous streak is the most recent finished streak.
+    /// </summary>
+    public static DailyStreakDetails ComputeStreakDetails(
+        DateOnly? dailyStart,
+        DailyRepeatType repeat,
+        int repeatInterval,
+        DateOnly today,
+        IReadOnlyDictionary<DateOnly, List<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)>> eventsByDay,
+        DateOnly? dailyLastCompletedOn,
+        int weekdays = 0)
+    {
+        var effectiveWeekdays = DailyWeekdays.Normalize(weekdays);
+        var effectiveRepeat = dailyStart is null ? DailyRepeatType.Daily : repeat;
+        var effectiveInterval = dailyStart is null ? 1 : repeatInterval;
+        if (dailyStart is null)
+        {
+            effectiveWeekdays = DailyWeekdays.None;
+        }
+
+        var todayOnSchedule = DailySchedule.IsScheduledOn(dailyStart, effectiveRepeat, effectiveInterval, today, effectiveWeekdays);
+        var todayDone = todayOnSchedule &&
+            IsCalendarDayNetCompleted(today, GetDayListOrNull(eventsByDay, today), dailyLastCompletedOn);
+
+        // Do not count today until today is done. When today is not done, count only through yesterday.
+        var end = todayDone ? today : today.AddDays(-1);
+
+        var historyStart =
+            DailySchedule.StreakHistoryScheduleStart(dailyStart, end, effectiveRepeat, effectiveInterval, MaxStreak);
+
+        // The walk collects scheduled days newest first. The walk then reverses the list to walk oldest days first.
+        var scheduledBackward = new List<DateOnly>();
+        foreach (var d in DailySchedule.WalkScheduledDaysBackward(end, historyStart, effectiveRepeat, effectiveInterval, DailySchedule.MaxScheduledStepCap, effectiveWeekdays))
+        {
+            scheduledBackward.Add(d);
+        }
+
+        scheduledBackward.Reverse();
+
+        var streakLengths = new List<int>();
+        var currentLength = 0;
+        foreach (var d in scheduledBackward)
+        {
+            var dayEvents = GetDayListOrNull(eventsByDay, d);
+            if (IsCalendarDaySkipped(dayEvents))
+            {
+                continue;
+            }
+
+            if (IsCalendarDayNetCompleted(d, dayEvents, dailyLastCompletedOn))
+            {
+                currentLength++;
+            }
+            else if (currentLength > 0)
+            {
+                streakLengths.Add(currentLength);
+                currentLength = 0;
+            }
+        }
+
+        if (currentLength > 0)
+        {
+            streakLengths.Add(currentLength);
+        }
+
+        var longest = streakLengths.Count == 0 ? 0 : streakLengths.Max();
+
+        // The previous streak is the finished streak right before the current streak.
+        // When no streak is active, the previous streak is the most recent finished streak.
+        // The walk ends at `end`. `end` is today when today is done and yesterday otherwise.
+        // A trailing streak is active.
+        int previous;
+        if (streakLengths.Count == 0)
+        {
+            previous = 0;
+        }
+        else if (currentLength > 0)
+        {
+            previous = streakLengths.Count >= 2 ? Math.Min(MaxStreak, streakLengths[^2]) : 0;
+        }
+        else
+        {
+            previous = Math.Min(MaxStreak, streakLengths[^1]);
+        }
+
+        var current = ComputeStreak(dailyStart, repeat, repeatInterval, today, eventsByDay, dailyLastCompletedOn, weekdays);
+
+        return new DailyStreakDetails(
+            Math.Min(MaxStreak, current),
+            Math.Min(MaxStreak, previous),
+            Math.Min(MaxStreak, longest));
     }
 
     private static List<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)>? GetDayListOrNull(

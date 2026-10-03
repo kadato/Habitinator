@@ -123,7 +123,7 @@ public sealed class UpcomingScheduleTests
             DailyWeekdays.From(DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday))).Should().Be("Mon, Wed, Fri");
         UpcomingSchedule.DescribeDaily(NewDaily(
             "D", null, DailyRepeatType.Weekly, 2,
-            DailyWeekdays.From(DayOfWeek.Monday, DayOfWeek.Wednesday))).Should().Be("Mon, Wed · every 2 weeks");
+            DailyWeekdays.From(DayOfWeek.Monday, DayOfWeek.Wednesday))).Should().Be("Mon, Wed, every 2 weeks");
         UpcomingSchedule.DescribeDaily(NewDaily("D", null, DailyRepeatType.Monthly, 1)).Should().Be("Monthly");
         UpcomingSchedule.DescribeDaily(NewDaily("D", null, DailyRepeatType.Yearly, 2)).Should().Be("Every 2 years");
     }

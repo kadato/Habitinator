@@ -260,6 +260,41 @@ public sealed class ActivityStatisticsCalculatorTests
     }
 
     [Fact]
+    public void BuildDailyContributions_computes_current_previous_and_longest_streaks()
+    {
+        var todayCutoff = new DateOnly(2026, 5, 16);
+        var dailyId = Guid.NewGuid();
+        var daily = new DailyItemStatsDto(dailyId, "Daily", new DateOnly(2026, 5, 1), new DateOnly(2026, 5, 1));
+
+        static UserActivityEventRecord Row(Guid id, DateOnly day, ActivityEventType type) =>
+            new(new DateTimeOffset(day.Year, day.Month, day.Day, 12, 0, 0, TimeSpan.Zero), type, id, null, null);
+
+        var rows = new[]
+        {
+            Row(dailyId, new DateOnly(2026, 5, 15), ActivityEventType.DailyComplete),
+            Row(dailyId, new DateOnly(2026, 5, 14), ActivityEventType.DailyComplete),
+            Row(dailyId, new DateOnly(2026, 5, 12), ActivityEventType.DailyComplete),
+            Row(dailyId, new DateOnly(2026, 5, 11), ActivityEventType.DailyComplete),
+            Row(dailyId, new DateOnly(2026, 5, 10), ActivityEventType.DailyComplete),
+        };
+
+        var view = ActivityStatisticsCalculator.BuildDailyContributions(
+            rows,
+            [daily],
+            new ContributionsRangeContext(
+                DailyGraphPeriods.Rolling370Days,
+                [],
+                new DateOnly(2026, 5, 1),
+                todayCutoff,
+                todayCutoff));
+
+        var graph = view.Graphs.Should().ContainSingle().Subject;
+        graph.CurrentStreak.Should().Be(2);
+        graph.PreviousStreak.Should().Be(3);
+        graph.LongestStreak.Should().Be(3);
+    }
+
+    [Fact]
     public void BuildDashboard_boundary_event_counts_on_local_day_not_utc_day()
     {
         var tz = new FixedOffsetTimeZoneService(TimeSpan.FromHours(2));

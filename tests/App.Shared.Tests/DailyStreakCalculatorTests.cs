@@ -296,7 +296,7 @@ public class DailyStreakCalculatorTests
         var today = new DateOnly(2026, 4, 16);
         var tz = new FixedOffsetTimeZoneService(TimeSpan.FromHours(2));
 
-        // Retro check-in for yesterday, logged at the fixed 15:00 UTC marker hour.
+        // Retroactive check-in for yesterday, logged at the fixed 15:00 UTC marker hour.
         var marker = DailyStreakCalculator.BackdatedDailyEventOccurredAt(today.AddDays(-1));
         var events = new[]
         {
@@ -358,7 +358,7 @@ public class DailyStreakCalculatorTests
     }
 
     [Fact]
-    public void ComputeStreak_SkippedDay_BridgesWithoutCounting()
+    public void ComputeStreak_SkippedDay_KeepsStreakUnbrokenWithoutCounting()
     {
         var start = new DateOnly(2024, 5, 18);
         var today = new DateOnly(2024, 5, 20);
@@ -387,5 +387,63 @@ public class DailyStreakCalculatorTests
 
         DailyStreakCalculator.ComputeStreak(start, DailyRepeatType.Daily, 1, today, events, null)
             .Should().Be(2);
+    }
+
+    [Fact]
+    public void ComputeStreakDetails_CurrentPreviousLongest_TracksStreaks()
+    {
+        var start = new DateOnly(2024, 5, 1);
+        var today = new DateOnly(2024, 5, 16);
+
+        Dictionary<DateOnly, List<(DateTimeOffset, ActivityEventType)>> events = new()
+        {
+            { new DateOnly(2024, 5, 15), [(new DateTimeOffset(2024, 5, 15, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)] },
+            { new DateOnly(2024, 5, 14), [(new DateTimeOffset(2024, 5, 14, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)] },
+            { new DateOnly(2024, 5, 12), [(new DateTimeOffset(2024, 5, 12, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)] },
+            { new DateOnly(2024, 5, 11), [(new DateTimeOffset(2024, 5, 11, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)] },
+            { new DateOnly(2024, 5, 10), [(new DateTimeOffset(2024, 5, 10, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)] },
+        };
+
+        var details = DailyStreakCalculator.ComputeStreakDetails(start, DailyRepeatType.Daily, 1, today, events, null);
+        details.Current.Should().Be(2);
+        details.Previous.Should().Be(3);
+        details.Longest.Should().Be(3);
+    }
+
+    [Fact]
+    public void ComputeStreakDetails_WhenBroken_CurrentZeroPreviousIsMostRecentStreak()
+    {
+        var start = new DateOnly(2024, 5, 1);
+        var today = new DateOnly(2024, 5, 16);
+
+        Dictionary<DateOnly, List<(DateTimeOffset, ActivityEventType)>> events = new()
+        {
+            { new DateOnly(2024, 5, 14), [(new DateTimeOffset(2024, 5, 14, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)] },
+            { new DateOnly(2024, 5, 13), [(new DateTimeOffset(2024, 5, 13, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)] },
+            { new DateOnly(2024, 5, 10), [(new DateTimeOffset(2024, 5, 10, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)] },
+        };
+
+        var details = DailyStreakCalculator.ComputeStreakDetails(start, DailyRepeatType.Daily, 1, today, events, null);
+        details.Current.Should().Be(0);
+        details.Previous.Should().Be(2);
+        details.Longest.Should().Be(2);
+    }
+
+    [Fact]
+    public void ComputeStreakDetails_SkipKeepsStreakUnbroken_WithoutCounting()
+    {
+        var start = new DateOnly(2024, 5, 18);
+        var today = new DateOnly(2024, 5, 20);
+        Dictionary<DateOnly, List<(DateTimeOffset, ActivityEventType)>> events = new()
+        {
+            { new DateOnly(2024, 5, 20), [(new DateTimeOffset(2024, 5, 20, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)] },
+            { new DateOnly(2024, 5, 19), [(new DateTimeOffset(2024, 5, 19, 15, 0, 0, TimeSpan.Zero), ActivityEventType.DailySkip)] },
+            { new DateOnly(2024, 5, 18), [(new DateTimeOffset(2024, 5, 18, 12, 0, 0, TimeSpan.Zero), ActivityEventType.DailyComplete)] },
+        };
+
+        var details = DailyStreakCalculator.ComputeStreakDetails(start, DailyRepeatType.Daily, 1, today, events, null);
+        details.Current.Should().Be(2);
+        details.Longest.Should().Be(2);
+        details.Previous.Should().Be(0);
     }
 }

@@ -158,4 +158,53 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         provider.Markup.Should().Contain("stats-day-event__icon--timer");
         provider.Markup.Should().Contain("Focus");
     }
+
+    [Fact]
+    public async Task RetroactiveActions_RenderInPinnedFooter_WhenActionable()
+    {
+        var itemId = Guid.NewGuid();
+        var daily = new BoardItem(
+            itemId,
+            "Meditate",
+            DailyStartDate: new DateOnly(2026, 8, 1),
+            DailyRepeat: DailyRepeatType.Daily,
+            DailyRepeatInterval: 1);
+        _boardData.GetItemAsync(itemId, Arg.Any<CancellationToken>()).Returns(Task.FromResult<BoardItem?>(daily));
+        _stats.GetActivityDayDetailAsync(Arg.Any<DateOnly>(), Arg.Any<string?>())
+            .Returns(Task.FromResult(new ActivityDayDetailDto(new DateOnly(2026, 8, 11), [], 0)));
+
+        var provider = _ctx.Render<MudDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+        var parameters = new DialogParameters<ActivityDayDetailDialog>
+        {
+            { x => x.Date, new DateOnly(2026, 8, 11) },
+            { x => x.BoardItemId, itemId }
+        };
+
+        await provider.InvokeAsync(async () => await dialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Skip this day"), TimeSpan.FromSeconds(5));
+
+        provider.Markup.Should().Contain("hab-modal__footer--end");
+        provider.Markup.Should().Contain("Skip this day");
+        provider.Markup.Should().Contain("Mark done for this day");
+    }
+
+    [Fact]
+    public async Task HidesFooterActions_WhenNotActionable()
+    {
+        _stats.GetActivityDayDetailAsync(Arg.Any<DateOnly>(), Arg.Any<string?>())
+            .Returns(Task.FromResult(new ActivityDayDetailDto(new DateOnly(2026, 8, 12), [], 0)));
+
+        var provider = _ctx.Render<MudDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+        var parameters = new DialogParameters<ActivityDayDetailDialog>
+        {
+            { x => x.Date, new DateOnly(2026, 8, 12) }
+        };
+
+        await provider.InvokeAsync(async () => await dialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Day details"), TimeSpan.FromSeconds(5));
+
+        provider.Markup.Should().NotContain("hab-modal__footer--end");
+    }
 }

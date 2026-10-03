@@ -101,7 +101,7 @@
                             };
                             var metaText = section switch
                             {
-                                BoardSection.Habit => $"Resets {item.ResetPeriod} · {item.Counter} logged · -{item.NegativeCounter} missed",
+                                BoardSection.Habit => $"Resets {item.ResetPeriod}, {item.Counter} logged, -{item.NegativeCounter} missed",
                                 BoardSection.Daily => $"Streak {item.Counter} days",
                                 _ => item.TodoDueDate is { } due ? $"Due {DateFormatService.Format(due)}" : "No due date"
                             };

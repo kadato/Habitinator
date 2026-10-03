@@ -15,7 +15,7 @@
 
 <MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content">
     <DialogContent>
-        <div class="hab-modal hab-modal--daily hab-modal--wide" data-dialog-label="Daily heatmap" @onclick:stopPropagation="true">
+        <div class="hab-modal hab-modal--daily hab-modal--wide hab-modal--heatmap" data-dialog-label="Daily heatmap" @onclick:stopPropagation="true">
             <div class="hab-modal__header">
                 <div class="hab-modal__topbar hab-modal__topbar--minimal">
                     <DialogCloseButton OnClose="() => MudDialog.Close()" />
@@ -108,7 +108,7 @@
             var active = _graph.Heatmap.Count(x => x.InDataRange && x.Count > 0);
             var total = _graph.Heatmap.Count(x => x.InDataRange);
             var pct = total == 0 ? 0 : (int)Math.Round(100.0 * active / total);
-            return $"{active} of {total} · {pct}%";
+            return $"{active} of {total}, {pct}%";
         }
     }
     private string RatioTooltip
@@ -121,7 +121,6 @@
             return $"{active} active of {total} in this period";
         }
     }
-
     protected override async Task OnInitializedAsync()
     {
         await DateFormatService.InitializeAsync();
@@ -259,8 +258,8 @@
     {
         var status = count > 0 ? "Done" : "Not done";
         var dateStr = DateFormatService.Format(date);
-        var baseTitle = $"{dateStr} · {status}";
-        return IsHeatmapToday(date) ? $"Today · {baseTitle}" : baseTitle;
+        var baseTitle = $"{dateStr}, {status}";
+        return IsHeatmapToday(date) ? $"Today, {baseTitle}" : baseTitle;
     }
     private async Task OnCellClickAsync(int row, int col)
     {

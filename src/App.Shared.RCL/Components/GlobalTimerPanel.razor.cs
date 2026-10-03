@@ -183,16 +183,16 @@ public partial class GlobalTimerPanel : IDisposable
             {
                 var st = section.ToString();
                 var key = disambiguate
-                    ? item.Title + " · " + st
+                    ? item.Title + ", " + st
                     : item.Title;
                 if (_sessionLabelToTarget.ContainsKey(key))
                 {
                     var detail = DuplicateDetail(section, item);
-                    var candidate = detail is null ? key : key + " · " + detail;
+                    var candidate = detail is null ? key : key + ", " + detail;
                     var n = 2;
                     while (_sessionLabelToTarget.ContainsKey(candidate))
                     {
-                        candidate = key + " · " + n;
+                        candidate = key + ", " + n;
                         n++;
                     }
 

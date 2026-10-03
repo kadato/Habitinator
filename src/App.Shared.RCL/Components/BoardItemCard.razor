@@ -173,7 +173,7 @@
                     <div class="@TodoDueCssClass(due)" title="@TodoDueTitle()">
                         <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Class="me-1" Size="Size.Small" aria-hidden="true" />
                         <span class="board-todo-due__date">@DateFormatService.Format(due)</span>
-                        <span class="board-todo-due__sep" aria-hidden="true">·</span>
+                        <span class="board-todo-due__sep" aria-hidden="true">,</span>
                         <span class="board-todo-due__relative">@TodoDueRelativeLabel(due)</span>
                     </div>
                 }

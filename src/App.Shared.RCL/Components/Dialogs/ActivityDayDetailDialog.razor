@@ -13,7 +13,7 @@
 
 <MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content">
     <DialogContent>
-        <div class="hab-modal hab-modal--neutral hab-modal--wide" data-dialog-label="Day details">
+        <div class="hab-modal hab-modal--neutral hab-modal--wide hab-modal--day-details" data-dialog-label="Day details">
             <div class="hab-modal__grabber" aria-hidden="true"></div>
             <div class="hab-modal__header" @ref="_headerRef">
                 <div class="hab-modal__topbar hab-modal__topbar--minimal">
@@ -25,7 +25,7 @@
                                    aria-label="Previous day"
                                    OnClick="() => StepDayAsync(-1)"
                                    Class="day-stepper__btn" />
-                    <div class="day-stepper__date" aria-live="polite" aria-atomic="true">@_shownDateLabel</div>
+                    <div class="day-stepper__date" aria-live="polite" aria-atomic="true" title="Scroll to change the day" @onwheel="OnDateWheelAsync" @onwheel:preventDefault="true">@_shownDateLabel</div>
                     <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
                                    aria-label="Next day"
                                    Disabled="@IsNextDisabled"
@@ -97,9 +97,10 @@
                 }
             </div>
         }
+            </div>
         @if (_canCompleteShownDate && _dailyItem is not null)
         {
-            <div class="d-flex justify-end gap-2 mt-3">
+            <div class="hab-modal__footer hab-modal__footer--end">
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Default"
                            Size="Size.Small"
@@ -118,7 +119,6 @@
                 </MudButton>
             </div>
         }
-            </div>
         </div>
     </DialogContent>
 </MudDialog>
@@ -234,6 +234,31 @@
         UpdateShownDateLabel();
         await LoadAsync();
         await InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnDateWheelAsync(WheelEventArgs e)
+    {
+        var offset = 0;
+        if (e.DeltaY > 0 || e.DeltaX > 0)
+        {
+            offset = 1;
+        }
+        else if (e.DeltaY < 0 || e.DeltaX < 0)
+        {
+            offset = -1;
+        }
+
+        if (offset == 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (offset > 0 && IsNextDisabled)
+        {
+            return Task.CompletedTask;
+        }
+
+        return StepDayAsync(offset);
     }
 
 
@@ -409,7 +434,7 @@
     {
         if (e.EventType != ActivityEventType.TimerSession || e.DurationSeconds is not int s || s <= 0) return string.Empty;
         var m = (s + 30) / 60;
-        return m < 1 ? " · under 1 min" : $" · {m} min";
+        return m < 1 ? ", under 1 min" : $", {m} min";
     }
 
     private static string GetEventIcon(ActivityEventType t) => t switch

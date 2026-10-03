@@ -652,6 +652,40 @@
 .edit-daily-streak-input__field .mud-input-outlined-border { border: none !important; }
 .edit-daily-streak-input__field .mud-input-slot { font-family: var(--hab-font-mono) !important; font-size: 0.9rem; }
 
+.edit-daily-streak-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;
+    margin-top: 0.45rem;
+}
+.edit-daily-streak-stat {
+    display: flex; flex-direction: column; align-items: center; gap: 0.1rem;
+    padding: 0.5rem 0.25rem;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--mud-palette-background-gray) 45%, var(--mud-palette-surface));
+}
+.edit-daily-streak-stat__value {
+    font-family: var(--hab-font-mono);
+    font-size: 1.05rem; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+}
+.edit-daily-streak-stat__label {
+    font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--mud-palette-text-secondary);
+}
+
+.stats-daily-title--btn {
+    background: none; border: none; padding: 0;
+    font: inherit; font-weight: 600;
+    color: inherit; text-align: left; cursor: pointer;
+}
+.stats-daily-title--btn:hover { text-decoration: underline; text-underline-offset: 2px; }
+.stats-daily-title--btn:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
 .edit-daily-repeat-every { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
 .edit-daily-repeat-every__n { width: 4.6rem; flex-shrink: 0; }
 .edit-daily-repeat-every__n .mud-input-slot { font-family: var(--hab-font-mono) !important; }
@@ -991,6 +1025,42 @@
 .hab-modal--wide .stats-day-empty,
 .hab-modal--wide .dialog-inline-fallback {
     min-height: 14rem;
+}
+
+/* hab-modal--day-details keeps a fixed frame so short and busy days do not move the dialog. */
+.hab-modal--day-details {
+    height: min(34rem, calc(100dvh - 1.5rem));
+    max-height: min(85dvh, calc(100dvh - 1.5rem));
+}
+.hab-modal--day-details .hab-modal__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+.hab-modal--day-details .hab-modal__footer {
+    flex-shrink: 0;
+}
+.hab-modal--day-details .stats-day-timeline {
+    overflow-y: auto;
+    min-height: 0;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+.mud-dialog:has(.hab-modal--day-details) .mud-dialog-content {
+    min-height: 0;
+}
+.hab-modal--day-details .day-stepper__date {
+    cursor: ns-resize;
+}
+.hab-modal__footer--end {
+    justify-content: flex-end;
+}
+
+/* hab-modal--heatmap sizes to its grid instead of holding the wide min-height. */
+.hab-modal--heatmap.hab-modal--wide .hab-modal__body {
+    min-height: 0;
 }
 
 /* Shared primary action: single solid button for Save, Get started, Copy. */

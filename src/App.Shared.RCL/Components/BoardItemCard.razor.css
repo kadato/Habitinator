@@ -265,7 +265,7 @@
 }
 
 .board-todo-due__sep {
-    margin: 0 var(--space-1);
+    margin-right: var(--space-1);
     opacity: 0.65;
 }
 

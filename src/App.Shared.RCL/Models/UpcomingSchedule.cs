@@ -74,7 +74,7 @@ public static class UpcomingSchedule
     {
         var names = DailyWeekdays.ToDays(mask).Select(ShortName);
         var days = string.Join(", ", names);
-        return interval == 1 ? days : $"{days} · every {interval} weeks";
+        return interval == 1 ? days : $"{days}, every {interval} weeks";
     }
 
     private static string ShortName(DayOfWeek day) => day switch

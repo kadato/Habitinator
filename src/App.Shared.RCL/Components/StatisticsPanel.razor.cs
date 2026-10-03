@@ -532,9 +532,15 @@ public partial class StatisticsPanel : IDisposable
             {
                 foreach (var graph in _dailyView.Graphs)
                 {
-                    if (streaks.TryGetValue(graph.BoardItemId, out var streak) && streak > _bestStreakDays)
+                    var longest = graph.LongestStreak;
+                    if (longest <= 0 && streaks.TryGetValue(graph.BoardItemId, out var current))
                     {
-                        _bestStreakDays = streak;
+                        longest = current;
+                    }
+
+                    if (longest > _bestStreakDays)
+                    {
+                        _bestStreakDays = longest;
                         _bestStreakTitle = graph.Title;
                     }
                 }
@@ -554,7 +560,7 @@ public partial class StatisticsPanel : IDisposable
     private static string HabitActiveRatioLabel(int activeDays, int periodDays)
     {
         var percent = periodDays <= 0 ? 0 : (int)Math.Round(100.0 * activeDays / periodDays);
-        return $"{activeDays} of {periodDays} days · {percent}%";
+        return $"{activeDays} of {periodDays} days, {percent}%";
     }
 
     private (string Label, string Tooltip) GetDailyRatio(DailyContributionGraphDto daily)
@@ -581,7 +587,7 @@ public partial class StatisticsPanel : IDisposable
         }
 
         var percent = total <= 0 ? 0 : (int)Math.Round(100.0 * active / total);
-        var label = $"{active} of {total} days · {percent}%";
+        var label = $"{active} of {total} days, {percent}%";
         var dayWord = active == 1 ? "day" : "days";
         var tooltip = $"{active} active {dayWord} of {total} in this period";
         var result = (label, tooltip);
@@ -598,7 +604,7 @@ public partial class StatisticsPanel : IDisposable
         var active = daily.Heatmap.Count(c => c.InDataRange && c.Count > 0);
         var total = daily.Heatmap.Count(c => c.InDataRange);
         var percent = total <= 0 ? 0 : (int)Math.Round(100.0 * active / total);
-        return $"{active} of {total} days · {percent}%";
+        return $"{active} of {total} days, {percent}%";
     }
 
     private static string DailyActiveRatioTooltip(DailyContributionGraphDto daily)
@@ -612,11 +618,6 @@ public partial class StatisticsPanel : IDisposable
     private void ShowAllConsistency()
     {
         _visibleConsistencyCount = int.MaxValue;
-    }
-
-    private void ShowFewerConsistency()
-    {
-        _visibleConsistencyCount = InitialVisibleConsistencyCount;
     }
 
     private string ActivityHeatmapCellClass(ActivityHeatmapCellDto cell)
@@ -636,7 +637,7 @@ public partial class StatisticsPanel : IDisposable
 
     private string TitleWithTodayPrefix(DateOnly date, string baseTitle)
     {
-        return IsHeatmapToday(date) ? $"Today · {baseTitle}" : baseTitle;
+        return IsHeatmapToday(date) ? $"Today, {baseTitle}" : baseTitle;
     }
 
     private string HabitHeatmapDayTitle(DateOnly date, int count)
@@ -747,11 +748,39 @@ public partial class StatisticsPanel : IDisposable
         await DialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters, options);
     }
 
+    private async Task OpenDailyHeatmapAsync(DailyContributionGraphDto daily)
+    {
+        var parameters = new DialogParameters<DailyHeatmapDialog>
+        {
+            { x => x.BoardItemId, daily.BoardItemId },
+            { x => x.Title, daily.Title }
+        };
+        await DialogService.ShowAsync<DailyHeatmapDialog>(string.Empty, parameters, DialogDefaults.Wide);
+    }
+
+    private async Task OpenDailyDayDetailAsync(DailyContributionGraphDto daily, int row, int col)
+    {
+        if (!GetDailyCellIndex(daily).TryGetValue((row, col), out var cell) || !cell.InDataRange)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ActivityDayDetailDialog>
+        {
+            { x => x.Date, cell.Date },
+            { x => x.BoardItemId, daily.BoardItemId }
+        };
+        await DialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters, DialogDefaults.Wide);
+    }
+
+    private static string GetDailyStreakTooltip(DailyContributionGraphDto daily) =>
+        $"Current streak: {daily.CurrentStreak} days. Previous streak: {daily.PreviousStreak} days. Longest streak: {daily.LongestStreak} days.";
+
     private static string FormatBusiestDayDetail(DateOnly day, int eventCount)
     {
         var weekday = day.ToString("dddd", CultureInfo.InvariantCulture);
         var eventsLabel = eventCount == 1 ? "1 event" : $"{eventCount} events";
-        return $"{weekday} · {eventsLabel}";
+        return $"{weekday}, {eventsLabel}";
     }
 
     private static string FormatFocus(int totalMinutes)

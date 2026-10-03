@@ -64,6 +64,7 @@
             <div class="stats-hero-head">
                 <div class="stats-hero-head__titles">
                     <MudText Typo="Typo.h6" HtmlTag="h2" Class="stats-hero-title">Activity heatmap</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="stats-hero-subtitle">@FormatRange(_data.RangeStart, _data.RangeEnd), @_data.TotalEvents events</MudText>
                 </div>
             </div>
 
@@ -172,18 +173,34 @@
                                         var cellIx = GetDailyCellIndex(daily);
                                         <MudItem xs="12" md="6">
                                             <div class="stats-daily-block pa-3 border rounded stats-block-bg">
-                                                <div class="d-flex align-center justify-space-between gap-2 mb-2">
-                                                    <span class="stats-daily-title">@daily.Title</span>
-                                                    <span class="stats-habit-ratio" title="@GetDailyRatioTooltip(daily)">@GetDailyRatioLabel(daily)</span>
+                                                <div class="d-flex align-center justify-space-between gap-2 mb-1">
+                                                    <button type="button" class="stats-daily-title stats-daily-title--btn" title="View streaks and heatmap for @daily.Title" aria-label="View streaks and heatmap for @daily.Title" @onclick="() => OpenDailyHeatmapAsync(daily)">@daily.Title</button>
+                                                    <span class="stats-habit-ratio stats-habit-ratio--daily" title="@GetDailyRatioTooltip(daily)">@GetDailyRatioLabel(daily)</span>
+                                                </div>
+                                                <div class="stats-daily-streak-stats" title="@GetDailyStreakTooltip(daily)" aria-label="@GetDailyStreakTooltip(daily)">
+                                                    <div class="stats-daily-streak-stat">
+                                                        <span class="stats-daily-streak-stat__value">@daily.CurrentStreak</span>
+                                                        <span class="stats-daily-streak-stat__label">Current</span>
+                                                    </div>
+                                                    <div class="stats-daily-streak-stat">
+                                                        <span class="stats-daily-streak-stat__value">@daily.PreviousStreak</span>
+                                                        <span class="stats-daily-streak-stat__label">Previous</span>
+                                                    </div>
+                                                    <div class="stats-daily-streak-stat">
+                                                        <span class="stats-daily-streak-stat__value">@daily.LongestStreak</span>
+                                                        <span class="stats-daily-streak-stat__label">Longest</span>
+                                                    </div>
                                                 </div>
                                                 <StatsHeatmapGrid Columns="daily.GridWeekColumns"
                                                                    RegionLabel="@($"Activity heatmap for {daily.Title}")"
                                                                    Cells="cellIx"
                                                                    ShowMonthLabels="false"
+                                                                   IncludeRovingTabindex="true"
                                                                    IsTodayFunc="IsHeatmapToday"
                                                                    CellClassFunc="DailyHeatmapCellClass"
                                                                    CellTitleFunc="@(c => DailyHeatmapDayTitle(c.Date, c.Count))"
-                                                                   CellAriaLabelFunc="@(c => DailyHeatmapDayTitle(c.Date, c.Count))"/>
+                                                                   CellAriaLabelFunc="@(c => DailyHeatmapDayTitle(c.Date, c.Count))"
+                                                                   OnCellClick="@((r, c) => OpenDailyDayDetailAsync(daily, r, c))"/>
                                             </div>
                                         </MudItem>
                                     }
@@ -232,12 +249,6 @@
                             {
                                 <div class="d-flex justify-center mt-3">
                                     <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="ShowAllConsistency">Show all @totalVisible graphs</MudButton>
-                                </div>
-                            }
-                            else if (totalVisible > InitialVisibleConsistencyCount)
-                            {
-                                <div class="d-flex justify-center mt-3">
-                                    <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small" OnClick="ShowFewerConsistency">Show fewer</MudButton>
                                 </div>
                             }
                         }

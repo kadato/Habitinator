@@ -1,6 +1,7 @@
 @inherits AutosaveEditDialogBase<EditDailyDialogResult>
 @inject IUserDateFormatService DateFormatService
 @inject IDialogService DialogService
+@inject IActivityStatisticsReader StatsReader
 
 <MudDialog Class="edit-daily-dialog hab-modal-dialog"
            ContentClass="edit-daily-dialog__content"
@@ -18,12 +19,6 @@
         <div class="hab-modal__body edit-daily-body">
             <EditDialogNotes @bind-Notes="_notes"
                              @bind-Notes:after="OnNotesEdited"/>
-
-            <button type="button" class="edit-daily-heatmap-btn" @onclick="OpenHeatmapDialogAsync">
-                <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" Class="edit-daily-heatmap-btn__icon"  aria-hidden="true" />
-                <span>View Heatmap</span>
-                <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none" style="margin-left:auto; opacity:0.55;"><polyline points="9 18 15 12 9 6"></polyline></svg>
-            </button>
 
             <div class="hab-checklist">
                 <div class="hab-checklist__head">
@@ -101,11 +96,53 @@
             <div class="hab-modal__section" style="padding:0.7rem 0.75rem;">
                 <span class="hab-modal__section-label">
                     <MudIcon Icon="@Icons.Material.Filled.Whatshot" Size="Size.Small" Style="color:var(--hab-accent-streak); margin-right: 4px;" aria-hidden="true" />
-                    Streak count
+                    Streaks
                 </span>
-                <div class="edit-daily-streak-input">
-                    <MudNumericField @bind-Value="_counter" @bind-Value:after="OnCounterEdited" Variant="Variant.Outlined" Class="edit-daily-streak-input__field" Min="0" Max="9999" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Streak count"/>
+                <div class="edit-daily-streak-stats" aria-live="polite" title="@StreakTooltip">
+                    @if (_streaksLoading)
+                    {
+                        <MudSkeleton Width="100%" Height="44px" SkeletonType="SkeletonType.Rectangle" />
+                    }
+                    else if (_streaksAvailable)
+                    {
+                        <div class="edit-daily-streak-stat">
+                            <span class="edit-daily-streak-stat__value">@_currentStreak</span>
+                            <span class="edit-daily-streak-stat__label">Current</span>
+                        </div>
+                        <div class="edit-daily-streak-stat">
+                            <span class="edit-daily-streak-stat__value">@_previousStreak</span>
+                            <span class="edit-daily-streak-stat__label">Previous</span>
+                        </div>
+                        <div class="edit-daily-streak-stat">
+                            <span class="edit-daily-streak-stat__value">@_longestStreak</span>
+                            <span class="edit-daily-streak-stat__label">Longest</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="edit-daily-streak-stat">
+                            <span class="edit-daily-streak-stat__value">@_counter</span>
+                            <span class="edit-daily-streak-stat__label">Current</span>
+                        </div>
+                        <div class="edit-daily-streak-stat">
+                            <span class="edit-daily-streak-stat__value">-</span>
+                            <span class="edit-daily-streak-stat__label">Previous</span>
+                        </div>
+                        <div class="edit-daily-streak-stat">
+                            <span class="edit-daily-streak-stat__value">-</span>
+                            <span class="edit-daily-streak-stat__label">Longest</span>
+                        </div>
+                    }
                 </div>
+                <span class="hab-modal__section-label" style="margin-top:0.6rem;">Adjust the streak</span>
+                <div class="edit-daily-streak-input">
+                    <MudNumericField @bind-Value="_counter" @bind-Value:after="OnCounterEdited" Variant="Variant.Outlined" Class="edit-daily-streak-input__field" Min="0" Max="9999" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Adjust the streak"/>
+                </div>
+                <button type="button" class="edit-daily-heatmap-btn" style="margin-top:0.6rem;" @onclick="OpenHeatmapDialogAsync">
+                    <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" Class="edit-daily-heatmap-btn__icon" aria-hidden="true" />
+                    <span>View heatmap</span>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none" style="margin-left:auto; opacity:0.55;"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
             </div>
 
             <EditDialogFooterActions OnArchive="ArchiveAsync" OnDelete="DeleteAsync"/>
@@ -127,6 +164,11 @@
     private int _weekdays;
     private List<ChecklistRow> _checklistRows = [];
     private int _counter;
+    private int _currentStreak;
+    private int _previousStreak;
+    private int _longestStreak;
+    private bool _streaksLoading = true;
+    private bool _streaksAvailable;
 
     private static readonly DayOfWeek[] WeekdayOrder =
     [
@@ -160,11 +202,47 @@
         _notes = Item.Notes;
         _tags = EditDialogHelpers.FormatTags(Item.Tags);
         _counter = Item.Counter;
+        _currentStreak = Item.Counter;
         _startDate = Item.DailyStartDate?.ToDateTime(TimeOnly.MinValue) ?? DateTime.Today;
         _repeat = Item.DailyRepeat;
         _repeatInterval = Item.DailyRepeatInterval < 1 ? 1 : Item.DailyRepeatInterval;
         _weekdays = DailyWeekdays.Normalize(Item.DailyWeekdays);
         _checklistRows = EditDialogHelpers.ParseChecklistRows(Item.ChecklistJson);
+        await LoadStreaksAsync();
+    }
+
+    private string StreakTooltip =>
+        $"Current streak: {_currentStreak} days. Previous streak: {_previousStreak} days. Longest streak: {_longestStreak} days.";
+
+    private async Task LoadStreaksAsync()
+    {
+        _streaksLoading = true;
+        try
+        {
+            var view = await StatsReader.GetDailyContributionsAsync(DailyGraphPeriods.Rolling370Days);
+            var graph = view.Graphs.FirstOrDefault(g => g.BoardItemId == Item.Id);
+            if (graph is not null)
+            {
+                _currentStreak = graph.CurrentStreak;
+                _previousStreak = graph.PreviousStreak;
+                _longestStreak = Math.Max(graph.LongestStreak, graph.CurrentStreak);
+                _streaksAvailable = true;
+            }
+            else
+            {
+                _currentStreak = Item.Counter;
+                _streaksAvailable = false;
+            }
+        }
+        catch
+        {
+            _currentStreak = Item.Counter;
+            _streaksAvailable = false;
+        }
+        finally
+        {
+            _streaksLoading = false;
+        }
     }
 
     private void OnShellClick() => _tagPicker?.Dismiss();

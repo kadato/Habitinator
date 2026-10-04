@@ -18,6 +18,7 @@ public sealed partial class LocalBoardDbContext(DbContextOptions<LocalBoardDbCon
             e.HasKey(x => x.Id);
             e.Property(x => x.BoundUserKey).HasMaxLength(512);
             e.Property(x => x.LastSyncCursorUtc).HasMaxLength(64);
+            e.Property(x => x.LastFullMirrorUtc).HasMaxLength(64);
         });
 
         modelBuilder.Entity<LocalBoardItemRow>(e =>

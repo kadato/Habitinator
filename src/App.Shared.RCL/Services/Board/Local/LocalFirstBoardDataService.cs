@@ -144,6 +144,34 @@ public sealed partial class LocalFirstBoardDataService(
     {
         await store.EnsureReadyAsync(cancellationToken);
 
+        var row = await FindScopedRowAsync(itemId, cancellationToken);
+        if (row is null)
+        {
+            // Fresh scopes start with an empty mirror. Pull once under the same rule as GetSnapshotAsync.
+            var userKey = await ResolveAuthedUserKeyAsync(cancellationToken);
+            if (userKey is not null)
+            {
+                await TryFetchAndReplaceIfEmptyAsync(userKey, cancellationToken);
+                row = await FindScopedRowAsync(itemId, cancellationToken);
+            }
+        }
+
+        if (row is null || row.IsArchived)
+        {
+            return null;
+        }
+
+        if (row.Section == BoardSection.Habit)
+        {
+            var today = await TodayAsync(cancellationToken);
+            return ToEffectiveModel(row, today);
+        }
+
+        return row.ToModel();
+    }
+
+    private async Task<BoardLocalRow?> FindScopedRowAsync(Guid itemId, CancellationToken cancellationToken)
+    {
         await _gate.WaitAsync(cancellationToken);
         try
         {
@@ -154,19 +182,7 @@ public sealed partial class LocalFirstBoardDataService(
             }
 
             await EnsureUserScopeAsync(userKey, cancellationToken);
-            var row = await store.FindItemAsync(userKey, itemId, cancellationToken);
-            if (row is null || row.IsArchived)
-            {
-                return null;
-            }
-
-            if (row.Section == BoardSection.Habit)
-            {
-                var today = await TodayAsync(cancellationToken);
-                return ToEffectiveModel(row, today);
-            }
-
-            return row.ToModel();
+            return await store.FindItemAsync(userKey, itemId, cancellationToken);
         }
         finally
         {

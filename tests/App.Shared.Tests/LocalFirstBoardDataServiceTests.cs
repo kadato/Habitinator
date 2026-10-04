@@ -95,15 +95,40 @@ public sealed class LocalFirstBoardDataServiceTests
         updated.NegativeCounter.Should().Be(0);
     }
 
+    [Fact]
+    public async Task GetItemAsync_FetchesRemoteWhenMirrorEmpty()
+    {
+        var ct = CancellationToken.None;
+        var itemId = Guid.NewGuid();
+        var daily = new BoardItem(itemId, "Water", DailyStartDate: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-3));
+        var harness = new Harness(new SnapshotHandler(new BoardSnapshot([], [daily], [])));
+
+        var found = await harness.Board.GetItemAsync(itemId, ct);
+
+        Assert.NotNull(found);
+        found.Title.Should().Be("Water");
+    }
+
+    [Fact]
+    public async Task GetItemAsync_ReturnsNullForUnknownIdWithoutNetwork()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+
+        var found = await harness.Board.GetItemAsync(Guid.NewGuid(), ct);
+
+        found.Should().BeNull();
+    }
+
     private sealed class Harness
     {
         public const string UserKey = "WEBTEST@LOCAL";
 
-        public Harness()
+        public Harness(HttpMessageHandler? handler = null)
         {
             Users = new FakeUserKeys();
             Store = new InMemoryBoardLocalStore();
-            var remote = new RemoteBoardDataService(new FailingHttpFactory());
+            var remote = new RemoteBoardDataService(new FixedHttpFactory(handler ?? new FailingHandler()));
             var services = new FakeServices();
             Board = new LocalFirstBoardDataService(
                 Store,
@@ -182,9 +207,25 @@ public sealed class LocalFirstBoardDataServiceTests
         public string GetTimeZoneAbbreviation() => "UTC";
     }
 
-    private sealed class FailingHttpFactory : IHttpClientFactory
+    private sealed class FixedHttpFactory(HttpMessageHandler handler) : IHttpClientFactory
     {
-        public HttpClient CreateClient(string name) => new(new FailingHandler());
+        public HttpClient CreateClient(string name) => new(handler) { BaseAddress = new Uri("http://localhost/") };
+    }
+
+    private sealed class SnapshotHandler(BoardSnapshot snapshot) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.RequestUri?.AbsolutePath.EndsWith("/api/board", StringComparison.Ordinal) == true)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = JsonContent.Create(snapshot, options: JsonDefaults.Api)
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
     }
 
     private sealed class FailingHandler : HttpMessageHandler

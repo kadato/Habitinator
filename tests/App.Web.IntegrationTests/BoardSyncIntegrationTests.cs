@@ -482,6 +482,79 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
     }
 
     [Fact]
+    public async Task Recorded_conflict_is_reexecuted_not_replayed()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (_, email) = await RegisterAndLoginAsync(client);
+
+        var dbFactory = factory.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        await using var lookup = await dbFactory.CreateDbContextAsync();
+        var userId = await lookup.Users.Where(x => x.Email == email).Select(x => x.Id).SingleAsync();
+
+        var key = Guid.NewGuid().ToString();
+        var fingerprint = BoardIdempotencyService.ComputeFingerprintHex("POST", "/p", "{}");
+        await using (var seed = await dbFactory.CreateDbContextAsync())
+        {
+            seed.BoardRequestIdempotencies.Add(new BoardRequestIdempotencyEntity
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                IdempotencyKey = key,
+                RequestFingerprintHex = fingerprint,
+                ResponseStatusCode = 409,
+                ResponseBody = "{\"problem\":\"version_conflict\"}",
+                CreatedAtUtc = DateTimeOffset.UtcNow
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        using var scope = factory.Services.CreateScope();
+        var idem = scope.ServiceProvider.GetRequiredService<BoardIdempotencyService>();
+        var calls = 0;
+        var (statusCode, body, _) = await idem.RunAsync(
+            userId,
+            key,
+            fingerprint,
+            () =>
+            {
+                calls++;
+                return Task.FromResult<(int statusCode, string body, string? contentType)>((200, "ok", "application/json"));
+            },
+            CancellationToken.None);
+
+        statusCode.Should().Be(200);
+        body.Should().Be("ok");
+        calls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Conflict_outcome_is_not_recorded_for_replay()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (_, email) = await RegisterAndLoginAsync(client);
+
+        var dbFactory = factory.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        await using var lookup = await dbFactory.CreateDbContextAsync();
+        var userId = await lookup.Users.Where(x => x.Email == email).Select(x => x.Id).SingleAsync();
+
+        using var scope = factory.Services.CreateScope();
+        var idem = scope.ServiceProvider.GetRequiredService<BoardIdempotencyService>();
+
+        var key = Guid.NewGuid().ToString();
+        var (statusCode, _, _) = await idem.RunAsync(
+            userId,
+            key,
+            BoardIdempotencyService.ComputeFingerprintHex("POST", "/p", "{}"),
+            () => Task.FromResult<(int statusCode, string body, string? contentType)>((409, "{}", "application/json")),
+            CancellationToken.None);
+
+        statusCode.Should().Be(409);
+        await using var verify = await dbFactory.CreateDbContextAsync();
+        (await verify.BoardRequestIdempotencies.AnyAsync(x => x.UserId == userId && x.IdempotencyKey == key))
+            .Should().BeFalse();
+    }
+
+    [Fact]
     public async Task Stale_update_from_second_context_throws_concurrency_exception()
     {
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });

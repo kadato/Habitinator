@@ -190,19 +190,18 @@ public class DailyScheduleTests
     [Fact]
     public void CanCompleteForDate_MatchesServerGuards()
     {
-        var start = new DateOnly(2026, 4, 1);
         var today = new DateOnly(2026, 4, 27);
         var yesterday = today.AddDays(-1);
 
-        DailySchedule.CanCompleteForDate(start, DailyRepeatType.Daily, 1, null, yesterday, today).Should().BeTrue();
+        DailySchedule.CanCompleteForDate(null, yesterday, today).Should().BeTrue();
         // Not a past date.
-        DailySchedule.CanCompleteForDate(start, DailyRepeatType.Daily, 1, null, today, today).Should().BeFalse();
-        // Already checked today.
-        DailySchedule.CanCompleteForDate(start, DailyRepeatType.Daily, 1, today, yesterday, today).Should().BeFalse();
+        DailySchedule.CanCompleteForDate(null, today, today).Should().BeFalse();
+        // Already checked today. The past check-in is recorded without losing the check from today.
+        DailySchedule.CanCompleteForDate(today, yesterday, today).Should().BeTrue();
         // Already completed for the target day.
-        DailySchedule.CanCompleteForDate(start, DailyRepeatType.Daily, 1, yesterday, yesterday, today).Should().BeFalse();
-        // Day not scheduled for the item.
-        DailySchedule.CanCompleteForDate(start, DailyRepeatType.Weekly, 1, null, today.AddDays(-2), today).Should().BeFalse();
+        DailySchedule.CanCompleteForDate(yesterday, yesterday, today).Should().BeFalse();
+        // Schedule no longer gates retro check-ins. Any past day works.
+        DailySchedule.CanCompleteForDate(null, today.AddDays(-2), today).Should().BeTrue();
     }
 
     private static DateTimeOffset Utc(DateOnly day) =>
@@ -284,13 +283,11 @@ public class DailyScheduleTests
     }
 
     [Fact]
-    public void CanCompleteForDate_RespectsWeekdayMask()
+    public void CanCompleteForDate_AcceptsAnyPastDayRegardlessOfSchedule()
     {
-        var start = new DateOnly(2024, 1, 1); // Monday
         var today = new DateOnly(2024, 1, 10); // Wednesday
-        var mask = DailyWeekdays.From(DayOfWeek.Monday, DayOfWeek.Wednesday);
-        DailySchedule.CanCompleteForDate(start, DailyRepeatType.Weekly, 1, null, new DateOnly(2024, 1, 8), today, mask).Should().BeTrue();
-        DailySchedule.CanCompleteForDate(start, DailyRepeatType.Weekly, 1, null, new DateOnly(2024, 1, 9), today, mask).Should().BeFalse();
+        DailySchedule.CanCompleteForDate(null, new DateOnly(2024, 1, 8), today).Should().BeTrue();
+        DailySchedule.CanCompleteForDate(null, new DateOnly(2024, 1, 9), today).Should().BeTrue();
     }
 
     [Fact]

@@ -30,6 +30,7 @@ public partial class BoardColumn : IAsyncDisposable
 
     private string _draft = string.Empty;
     private bool _draftError;
+    private bool _isAdding;
 
     private void ClearDraftError() => _draftError = false;
 
@@ -631,24 +632,37 @@ public partial class BoardColumn : IAsyncDisposable
 
     private async Task AddFromDraftAsync()
     {
+        if (_isAdding)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(_draft))
         {
             _draftError = true;
             return;
         }
 
-        _draftError = false;
-        var title = _draft.Trim();
-        var newId = Guid.NewGuid();
-        BoardItem tempItem = new(
-            Id: newId,
-            Title: title,
-            CreatedAtUtc: DateTimeOffset.UtcNow,
-            SortOrder: GetInitialSortOrderForOptimisticCreation()
-        );
-        _draft = string.Empty;
+        _isAdding = true;
+        try
+        {
+            _draftError = false;
+            var title = _draft.Trim();
+            var newId = Guid.NewGuid();
+            BoardItem tempItem = new(
+                Id: newId,
+                Title: title,
+                CreatedAtUtc: DateTimeOffset.UtcNow,
+                SortOrder: GetInitialSortOrderForOptimisticCreation()
+            );
+            _draft = string.Empty;
 
-        await ApplyCreationAsync(newId, tempItem, () => BoardData.CreateItemAsync(Section, title, newId));
+            await ApplyCreationAsync(newId, tempItem, () => BoardData.CreateItemAsync(Section, title, newId));
+        }
+        finally
+        {
+            _isAdding = false;
+        }
     }
 
     private Task HabitUpAsync(BoardItem item)

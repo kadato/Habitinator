@@ -1,4 +1,5 @@
 @using Microsoft.Extensions.DependencyInjection
+@using App.Shared.RCL.Services.Board.Local
 @using Microsoft.JSInterop
 @inject IActivityStatisticsReader Stats
 @inject IBoardDataService BoardData
@@ -17,7 +18,7 @@
             <div class="hab-modal__grabber" aria-hidden="true"></div>
             <div class="hab-modal__header" @ref="_headerRef">
                 <div class="hab-modal__topbar hab-modal__topbar--minimal">
-                    <DialogCloseButton OnClose="() => MudDialog.Close()" />
+                    <DialogCloseButton OnClose="CloseDialog" />
                 </div>
                 <MudText Typo="Typo.h6" Class="font-weight-bold">Day details</MudText>
                 <div class="day-stepper" role="group" aria-label="Change day">
@@ -97,26 +98,107 @@
                 }
             </div>
         }
-            </div>
-        @if (_canCompleteShownDate && _dailyItem is not null)
+        @if (_showDayDailies)
         {
-            <div class="hab-modal__footer hab-modal__footer--end">
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Default"
-                           Size="Size.Small"
-                           Disabled="@_completing"
-                           StartIcon="@Icons.Material.Filled.NextPlan"
-                           OnClick="SkipShownDateAsync">
-                    Skip this day
-                </MudButton>
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           Size="Size.Small"
-                           Disabled="@_completing"
-                           StartIcon="@Icons.Material.Filled.Check"
-                           OnClick="CompleteShownDateAsync">
-                    Mark done for this day
-                </MudButton>
+            var isTodayShown = _shownDate == DailySchedule.LocalToday(TimeZoneService);
+            <div class="stats-day-dailies">
+                <div class="stats-day-dailies__title">Dailies this day</div>
+                <ul class="stats-day-dailies__list">
+                    @foreach (var daily in _dayDailies)
+                    {
+                        var busy = IsDayDailyBusy(daily.Id);
+                        <li class="stats-day-daily" @key="daily.Id">
+                            <MudIcon Icon="@Icons.Material.Filled.Repeat" Size="Size.Small" Class="stats-day-daily__icon" aria-hidden="true" />
+                            <div class="stats-day-daily__text">
+                                <span class="stats-day-daily__title">@daily.Title</span>
+                                <span class="stats-day-daily__meta">@DayDailyStatus(daily, isTodayShown)</span>
+                            </div>
+                            <div class="stats-day-daily__actions">
+                                @if (isTodayShown)
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Primary"
+                                               Size="Size.Small"
+                                               Disabled="@busy"
+                                               StartIcon="@Icons.Material.Filled.Check"
+                                               OnClick="@(() => ToggleDayDailyAsync(daily))">
+                                        @(DailySchedule.IsCompletedForToday(daily.DailyLastCompletedOn, daily.IsCompleted, _shownDate) ? "Mark not done" : "Mark done")
+                                    </MudButton>
+                                }
+                                else
+                                {
+                                    <MudButton Variant="Variant.Text"
+                                               Color="Color.Default"
+                                               Size="Size.Small"
+                                               Disabled="@busy"
+                                               StartIcon="@Icons.Material.Filled.NextPlan"
+                                               OnClick="@(() => SkipDayDailyAsync(daily))">
+                                        Skip
+                                    </MudButton>
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Primary"
+                                               Size="Size.Small"
+                                               Disabled="@(busy || !DayDailyCanMark(daily))"
+                                               StartIcon="@Icons.Material.Filled.Check"
+                                               OnClick="@(() => CompleteDayDailyAsync(daily))">
+                                        Mark done
+                                    </MudButton>
+                                }
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+            </div>
+        @if (_showDailyFooter && _dailyItem is not null)
+        {
+            <div class="hab-modal__footer hab-modal__footer--end hab-modal__footer--daily">
+                <span class="hab-modal__footer-note">@DueNoteFor(_dailyItem)</span>
+                @if (_canToggleToday || _shownDate == DailySchedule.LocalToday(TimeZoneService))
+                {
+                    @if (_isDoneToday)
+                    {
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Default"
+                                   Size="Size.Small"
+                                   Disabled="@_completing"
+                                   StartIcon="@Icons.Material.Filled.Close"
+                                   OnClick="ToggleTodayAsync">
+                            Mark not done
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   Disabled="@(_completing || !_canToggleToday)"
+                                   StartIcon="@Icons.Material.Filled.Check"
+                                   OnClick="ToggleTodayAsync">
+                            Mark done for today
+                        </MudButton>
+                    }
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Default"
+                               Size="Size.Small"
+                               Disabled="@_completing"
+                               StartIcon="@Icons.Material.Filled.NextPlan"
+                               OnClick="SkipShownDateAsync">
+                        Skip this day
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               Disabled="@(_completing || !_canCompleteShownDate)"
+                               StartIcon="@Icons.Material.Filled.Check"
+                               OnClick="CompleteShownDateAsync">
+                        Mark done for this day
+                    </MudButton>
+                }
             </div>
         }
         </div>
@@ -145,7 +227,14 @@
     private bool _swipeStarted;
     private BoardItem? _dailyItem;
     private bool _canCompleteShownDate;
+    private bool _canToggleToday;
+    private bool _isDoneToday;
+    private bool _showDailyFooter;
     private bool _completing;
+    private bool _mutated;
+    private IReadOnlyList<BoardItem> _dayDailies = [];
+    private bool _showDayDailies;
+    private readonly HashSet<Guid> _dayDailyBusy = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -200,16 +289,28 @@
     [JSInvokable]
     public Task OnModalSwipeDownAsync()
     {
+        CloseDialog();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Closes the dialog and reports whether a check-in changed anything so parents can reload.</summary>
+    private void CloseDialog()
+    {
         try
         {
-            MudDialog.Close();
+            if (_mutated)
+            {
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                MudDialog.Cancel();
+            }
         }
         catch
         {
             // Dialog already closed.
         }
-
-        return Task.CompletedTask;
     }
 
     public async ValueTask DisposeAsync()
@@ -233,7 +334,7 @@
         _shownDate = _shownDate.AddDays(offset);
         UpdateShownDateLabel();
         await LoadAsync();
-        await InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged); // Plain reload. Stepping days never mutates.
     }
 
     private Task OnDateWheelAsync(WheelEventArgs e)
@@ -313,6 +414,7 @@
         {
             _loading = false;
             await RefreshCompletionStateAsync();
+            await RefreshDayDailiesAsync();
         }
     }
 
@@ -320,6 +422,9 @@
     private async Task RefreshCompletionStateAsync()
     {
         _canCompleteShownDate = false;
+        _canToggleToday = false;
+        _isDoneToday = false;
+        _showDailyFooter = false;
         _dailyItem = null;
         if (BoardItemId is not { } itemId)
         {
@@ -336,19 +441,208 @@
 
             var today = DailySchedule.LocalToday(TimeZoneService);
             _dailyItem = item;
-            _canCompleteShownDate = DailySchedule.CanCompleteForDate(
-                item.DailyStartDate,
-                item.DailyRepeat,
-                item.DailyRepeatInterval,
-                item.DailyLastCompletedOn,
-                _shownDate,
-                today,
-                item.DailyWeekdays);
+            _showDailyFooter = _shownDate <= today;
+            if (_shownDate == today)
+            {
+                _canToggleToday = DailySchedule.IsScheduledOn(item, today);
+                _isDoneToday = DailySchedule.IsCompletedForToday(item.DailyLastCompletedOn, item.IsCompleted, today);
+            }
+            else if (_shownDate < today)
+            {
+                _canCompleteShownDate = DailySchedule.CanCompleteForDate(
+                    item.DailyLastCompletedOn,
+                    _shownDate,
+                    today);
+            }
         }
         catch
         {
-            // The action is an extra. Failures leave it hidden.
+            // This action is optional. On failure the dialog hides the action.
         }
+    }
+
+    /// <summary>Describes the due state of the selected daily on the shown date with its repeat schedule.</summary>
+    private string DueNoteFor(BoardItem item)
+    {
+        var today = DailySchedule.LocalToday(TimeZoneService);
+        var due = DailySchedule.IsScheduledOn(item.DailyStartDate, item.DailyRepeat, item.DailyRepeatInterval, _shownDate, item.DailyWeekdays);
+        var when = _shownDate == today ? "today" : "this day";
+        return $"{(due ? "Due" : "Not due")} {when}, {UpcomingSchedule.DescribeDaily(item)}";
+    }
+
+    /// <summary>Lists dailies scheduled on the shown date for retro actions when the single-daily footer stays hidden.</summary>
+    private async Task RefreshDayDailiesAsync()
+    {
+        _dayDailies = [];
+        _showDayDailies = false;
+        if (_showDailyFooter)
+        {
+            return;
+        }
+
+        try
+        {
+            var snapshot = await BoardData.GetSnapshotAsync();
+            if (snapshot is null)
+            {
+                return;
+            }
+
+            var today = DailySchedule.LocalToday(TimeZoneService);
+            if (_shownDate > today)
+            {
+                return;
+            }
+
+            _dayDailies = [.. snapshot.Dailies
+                .Where(d => DailySchedule.IsScheduledOn(d, _shownDate) || HasDailyEventThatDay(d))
+                .OrderBy(d => d.Title, StringComparer.Ordinal)];
+            _showDayDailies = _dayDailies.Count > 0;
+        }
+        catch
+        {
+            // These actions are optional. On failure the dialog hides the actions.
+            _dayDailies = [];
+            _showDayDailies = false;
+        }
+    }
+
+    private bool IsDayDailyBusy(Guid id) => _dayDailyBusy.Contains(id);
+
+    private bool DayDailyCanMark(BoardItem daily)
+    {
+        var today = DailySchedule.LocalToday(TimeZoneService);
+        return DailySchedule.CanCompleteForDate(
+            daily.DailyLastCompletedOn,
+            _shownDate,
+            today);
+    }
+
+    private string DayDailyStatus(BoardItem daily, bool isTodayShown)
+    {
+        string state;
+        if (isTodayShown)
+        {
+            state = DailySchedule.IsCompletedForToday(daily.DailyLastCompletedOn, daily.IsCompleted, _shownDate)
+                ? "Done today"
+                : "Due today";
+        }
+        else
+        {
+            state = IsDoneOnShownDate(daily) ? "Done this day" : "Not done this day";
+        }
+
+        return $"{state}, {UpcomingSchedule.DescribeDaily(daily)}";
+    }
+
+    private bool IsDoneOnShownDate(BoardItem daily)
+    {
+        if (DailySchedule.IsCompleteForDate(daily, _shownDate))
+        {
+            return true;
+        }
+
+        return HasDailyEventThatDay(daily)
+            && _detail?.Events.Any(e => e.EventType == ActivityEventType.DailyComplete
+                && DailyTitleMatches(e, daily.Title)) == true;
+    }
+
+    /// <summary>Tells whether the day timeline holds a check-in or skip for this daily as evidence that the daily was actionable that day.</summary>
+    private bool HasDailyEventThatDay(BoardItem daily) =>
+        _detail?.Events.Any(e => (e.EventType == ActivityEventType.DailyComplete || e.EventType == ActivityEventType.DailySkip)
+            && DailyTitleMatches(e, daily.Title)) == true;
+
+    /// <summary>Old event titles stay in the custom label when the board title lookup missed.</summary>
+    private static bool DailyTitleMatches(ActivityDayEventDto e, string title) =>
+        string.Equals(e.BoardItemTitle, title, StringComparison.Ordinal)
+        || string.Equals(e.CustomLabel, title, StringComparison.Ordinal);
+
+    private async Task ToggleDayDailyAsync(BoardItem daily)
+    {
+        if (!_dayDailyBusy.Add(daily.Id))
+        {
+            return;
+        }
+
+        try
+        {
+            await BoardData.ToggleItemAsync(BoardSection.Daily, daily.Id);
+            _mutated = true;
+        }
+        catch
+        {
+            await Notifier.NotifyAsync("Could not update this daily. Try again.", MudBlazor.Severity.Error);
+        }
+        finally
+        {
+            _dayDailyBusy.Remove(daily.Id);
+        }
+
+        await ReloadAfterMutationAsync();
+    }
+
+    private async Task CompleteDayDailyAsync(BoardItem daily)
+    {
+        if (!_dayDailyBusy.Add(daily.Id))
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await BoardData.CompleteDailyForDateAsync(daily.Id, _shownDate);
+            if (result is not null)
+            {
+                _mutated = true;
+                await Notifier.NotifyAsync($"Marked {daily.Title} done for {_shownDateLabel}.", MudBlazor.Severity.Success);
+            }
+            else
+            {
+                await Notifier.NotifyAsync("This day can't be marked done.", MudBlazor.Severity.Error);
+            }
+        }
+        catch
+        {
+            await Notifier.NotifyAsync("Could not mark this day done. Try again.", MudBlazor.Severity.Error);
+        }
+        finally
+        {
+            _dayDailyBusy.Remove(daily.Id);
+        }
+
+        await ReloadAfterMutationAsync();
+    }
+
+    private async Task SkipDayDailyAsync(BoardItem daily)
+    {
+        if (!_dayDailyBusy.Add(daily.Id))
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await BoardData.SkipDailyForDateAsync(daily.Id, _shownDate);
+            if (result is not null)
+            {
+                _mutated = true;
+                await Notifier.NotifyAsync($"Skipped {daily.Title} for {_shownDateLabel}. Streak continues.", MudBlazor.Severity.Success);
+            }
+            else
+            {
+                await Notifier.NotifyAsync("This day can't be skipped.", MudBlazor.Severity.Error);
+            }
+        }
+        catch
+        {
+            await Notifier.NotifyAsync("Could not skip this day. Try again.", MudBlazor.Severity.Error);
+        }
+        finally
+        {
+            _dayDailyBusy.Remove(daily.Id);
+        }
+
+        await ReloadAfterMutationAsync();
     }
 
     private async Task CompleteShownDateAsync()
@@ -364,7 +658,12 @@
             var result = await BoardData.CompleteDailyForDateAsync(_dailyItem.Id, _shownDate);
             if (result is not null)
             {
+                _mutated = true;
                 await Notifier.NotifyAsync($"Marked done for {_shownDateLabel}.", MudBlazor.Severity.Success);
+            }
+            else
+            {
+                await Notifier.NotifyAsync("This day can't be marked done.", MudBlazor.Severity.Error);
             }
         }
         catch
@@ -376,8 +675,32 @@
             _completing = false;
         }
 
-        await LoadAsync();
-        await InvokeAsync(StateHasChanged);
+        await ReloadAfterMutationAsync();
+    }
+
+    private async Task ToggleTodayAsync()
+    {
+        if (_dailyItem is null || _completing)
+        {
+            return;
+        }
+
+        _completing = true;
+        try
+        {
+            await BoardData.ToggleItemAsync(BoardSection.Daily, _dailyItem.Id);
+            _mutated = true;
+        }
+        catch
+        {
+            await Notifier.NotifyAsync("Could not update this daily. Try again.", MudBlazor.Severity.Error);
+        }
+        finally
+        {
+            _completing = false;
+        }
+
+        await ReloadAfterMutationAsync();
     }
 
     private async Task SkipShownDateAsync()
@@ -393,7 +716,12 @@
             var result = await BoardData.SkipDailyForDateAsync(_dailyItem.Id, _shownDate);
             if (result is not null)
             {
+                _mutated = true;
                 await Notifier.NotifyAsync($"Skipped {_shownDateLabel}. Streak continues.", MudBlazor.Severity.Success);
+            }
+            else
+            {
+                await Notifier.NotifyAsync("This day can't be skipped.", MudBlazor.Severity.Error);
             }
         }
         catch
@@ -405,8 +733,7 @@
             _completing = false;
         }
 
-        await LoadAsync();
-        await InvokeAsync(StateHasChanged);
+        await ReloadAfterMutationAsync();
     }
 
     private async Task ReloadAsync()
@@ -414,6 +741,43 @@
         await LoadAsync();
         UpdateShownDateLabel();
         StateHasChanged();
+    }
+
+    /// <summary>Drains synced operations and clears cached stats first, so the reloaded details include the latest change instead of a stale cached day.</summary>
+    private async Task ReloadAfterMutationAsync()
+    {
+        await DrainBoardSyncAsync();
+        try
+        {
+            Stats.InvalidateCache();
+        }
+        catch
+        {
+            // Best-effort cleanup. A stale cache entry makes the next load retry.
+        }
+
+        await LoadAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Tries an immediate sync. Stats read from the server right after.</summary>
+    private async Task DrainBoardSyncAsync()
+    {
+        try
+        {
+            var sync = ServiceProvider.GetService<IBoardSyncRequestor>();
+            if (sync is null)
+            {
+                return;
+            }
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            await sync.SyncNowAsync(cts.Token);
+        }
+        catch
+        {
+            // If offline or slow, the periodic sync delivers the change. Reads use last known data.
+        }
     }
 
     private void UpdateShownDateLabel()

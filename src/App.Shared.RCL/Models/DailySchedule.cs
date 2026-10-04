@@ -376,22 +376,17 @@ public static class DailySchedule
     }
 
     /// <summary>
-    ///     Whether a retro check-in for <paramref name="completedOn" /> is accepted, mirroring the
-    ///     server's <c>complete-for-date</c> guards: a past date that is scheduled for the item and
-    ///     not already completed for that day, and the item not already checked for today.
+    ///     Whether a retro check-in for <paramref name="completedOn" /> is accepted and mirrors the
+    ///     server's <c>complete-for-date</c> guards. Any past date not already completed for that
+    ///     day passes. A check already recorded for today stays, and the past check-in is recorded
+    ///     alongside it.
     /// </summary>
     public static bool CanCompleteForDate(
-        DateOnly? dailyStart,
-        DailyRepeatType repeat,
-        int interval,
         DateOnly? dailyLastCompletedOn,
         DateOnly completedOn,
-        DateOnly today,
-        int weekdays = 0) =>
+        DateOnly today) =>
         completedOn < today
-        && dailyLastCompletedOn != today
-        && dailyLastCompletedOn != completedOn
-        && IsScheduledOn(dailyStart, repeat, interval, completedOn, weekdays);
+        && dailyLastCompletedOn != completedOn;
 
     /// <summary>Due = scheduled for <paramref name="on" /> and not yet completed for that day.</summary>
     public static bool IsDueOnDate(BoardItem daily, DateOnly on)
@@ -400,9 +395,9 @@ public static class DailySchedule
     }
 
     /// <summary>
-    ///     Dailies that were due on the previous calendar day in the local timezone and not completed for that day, excluding
-    ///     items already checked for <paramref name="today" /> to avoid clobbering a same-day check when backfilling.
-    ///     Null-start dailies are "due from today" on the board, so one created on the local
+    ///     Lists dailies due yesterday in the local timezone and not completed for that day.
+    ///     Skips items already checked for <paramref name="today" /> to avoid clobbering a same-day check when backfilling.
+    ///     Null-start dailies are "due from today" on the board, so a daily created on the local
     ///     <paramref name="today" /> did not exist yesterday and is not offered in the catch-up dialog.
     /// </summary>
     public static IReadOnlyList<BoardItem> GetYesterdayUncompletedDailies(

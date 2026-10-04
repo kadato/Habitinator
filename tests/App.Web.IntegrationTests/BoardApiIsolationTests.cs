@@ -204,6 +204,50 @@ public sealed class BoardApiIsolationTests(PostgresWebAppFactory factory)
     }
 
     [Fact]
+    public async Task CompleteDailyForDate_WhenTodayChecked_KeepsTodayCheck()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var email = $"daily-retro-{suffix}@integration.test";
+        const string password = "TestUser1!Aa";
+
+        (await client.PostAsJsonAsync("/api/auth/register",
+            new RegisterRequest(email, password))).IsSuccessStatusCode.Should().BeTrue();
+
+        var login = await client.PostAsJsonAsync("/api/auth/login",
+            new LoginRequest(email, password, RememberMe: false));
+        login.EnsureSuccessStatusCode();
+        var token = (await login.Content.ReadFromJsonAsync<LoginResponse>(s_json))!.AccessToken;
+
+        using var requestCreate = new HttpRequestMessage(HttpMethod.Post, "/api/board/Daily");
+        requestCreate.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        requestCreate.Content = JsonContent.Create(new ItemTitleRequest("Daily Retro Test"));
+        var createRes = await client.SendAsync(requestCreate);
+        createRes.EnsureSuccessStatusCode();
+        var created = await createRes.Content.ReadFromJsonAsync<BoardItem>(s_json);
+        created.Should().NotBeNull();
+
+        using var requestToggle = new HttpRequestMessage(HttpMethod.Post, $"/api/board/Daily/{created.Id}/toggle");
+        requestToggle.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var toggleRes = await client.SendAsync(requestToggle);
+        toggleRes.EnsureSuccessStatusCode();
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var yesterday = today.AddDays(-1);
+        using var requestComplete = new HttpRequestMessage(HttpMethod.Post, $"/api/board/dailies/{created.Id}/complete-for-date");
+        requestComplete.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        requestComplete.Content = JsonContent.Create(new DailyCompleteForDateRequest(yesterday), options: JsonDefaults.Api);
+        var completeRes = await client.SendAsync(requestComplete);
+        var body = await completeRes.Content.ReadAsStringAsync();
+        completeRes.StatusCode.Should().Be(HttpStatusCode.OK, $"response body was: {body}");
+        var completed = await completeRes.Content.ReadFromJsonAsync<BoardItem>(s_json);
+        completed.Should().NotBeNull();
+        completed.DailyLastCompletedOn.Should().Be(today);
+        completed.IsCompleted.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task SkipDailyForDate_WithValidRequest_StoresSkipAndKeepsStreakNeutral()
     {
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });

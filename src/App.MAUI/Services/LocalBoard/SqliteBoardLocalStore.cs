@@ -61,7 +61,8 @@ public sealed class SqliteBoardLocalStore(
         return new BoardStoreMeta
         {
             BoundUserKey = meta?.BoundUserKey,
-            LastSyncCursorUtc = meta?.LastSyncCursorUtc
+            LastSyncCursorUtc = meta?.LastSyncCursorUtc,
+            LastFullMirrorUtc = TryParseMirrorUtc(meta?.LastFullMirrorUtc)
         };
     }
 
@@ -75,17 +76,27 @@ public sealed class SqliteBoardLocalStore(
             {
                 Id = 1,
                 BoundUserKey = meta.BoundUserKey,
-                LastSyncCursorUtc = meta.LastSyncCursorUtc
+                LastSyncCursorUtc = meta.LastSyncCursorUtc,
+                LastFullMirrorUtc = FormatMirrorUtc(meta.LastFullMirrorUtc)
             });
         }
         else
         {
             row.BoundUserKey = meta.BoundUserKey;
             row.LastSyncCursorUtc = meta.LastSyncCursorUtc;
+            row.LastFullMirrorUtc = FormatMirrorUtc(meta.LastFullMirrorUtc);
         }
 
         await db.SaveChangesAsync(cancellationToken);
     }
+
+    private static DateTimeOffset? TryParseMirrorUtc(string? raw) =>
+        DateTimeOffset.TryParse(raw, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsed)
+            ? parsed
+            : null;
+
+    private static string? FormatMirrorUtc(DateTimeOffset? value) =>
+        value?.ToString("O", System.Globalization.CultureInfo.InvariantCulture);
 
     public async Task<IReadOnlyList<BoardLocalRow>> ListItemsAsync(string userKey, bool includeArchived, CancellationToken cancellationToken = default)
     {
@@ -422,6 +433,13 @@ public sealed class SqliteBoardLocalStore(
         {
             await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE Meta ADD COLUMN LastSyncCursorUtc TEXT NULL;",
+                cancellationToken);
+        }
+
+        if (!metaColumns.Contains("LastFullMirrorUtc"))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE Meta ADD COLUMN LastFullMirrorUtc TEXT NULL;",
                 cancellationToken);
         }
     }

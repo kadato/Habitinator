@@ -20,7 +20,11 @@ internal static class PipelineExtensions
 
         if (!app.Environment.IsEnvironment(AppEnvironment.Testing))
         {
-            app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+            // API clients need true status codes. A missing row returns 404, not a re-executed
+            // page. Re-executing /api 404s as the /not-found page turns them into 405s.
+            app.UseWhen(
+                static ctx => !ctx.Request.Path.StartsWithSegments("/api"),
+                static a => a.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true));
             app.UseHttpsRedirection();
         }
 

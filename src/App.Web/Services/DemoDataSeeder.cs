@@ -163,6 +163,13 @@ public static class DemoDataSeeder
         CancellationToken cancellationToken)
     {
         await DemoGuestSeeder.RemoveAllActivityEventsAsync(db, guestUserId, cancellationToken);
-        await db.BoardItems.Where(b => b.UserId == guestUserId).ExecuteDeleteAsync(cancellationToken);
+        // Soft-delete so delta sync tombstones prune client mirrors. A hard delete would leave
+        // stale rows on mirrors that synced before the wipe. Those rows would show as ghost duplicates.
+        var now = DateTimeOffset.UtcNow;
+        await db.BoardItems
+            .Where(b => b.UserId == guestUserId && b.DeletedAtUtc == null)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(b => b.DeletedAtUtc, now).SetProperty(b => b.UpdatedAtUtc, now),
+                cancellationToken);
     }
 }

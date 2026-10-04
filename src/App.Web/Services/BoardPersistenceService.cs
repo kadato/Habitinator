@@ -498,18 +498,17 @@ public sealed class BoardPersistenceService(
         }
 
         var model = ToModelForDailyCheck(entity, today);
-        if (!DailySchedule.IsDueOnDate(model, completedOn))
+        if (completedOn >= today || model.DailyLastCompletedOn == completedOn)
         {
             return new BoardMutationResult(BoardMutationStatus.NotFound, null);
         }
 
-        if (model.DailyLastCompletedOn == today)
+        var keepsTodayCheck = model.DailyLastCompletedOn == today;
+        if (!keepsTodayCheck)
         {
-            return new BoardMutationResult(BoardMutationStatus.NotFound, null);
+            entity.DailyLastCompletedOn = completedOn.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+            entity.IsCompleted = false;
         }
-
-        entity.DailyLastCompletedOn = completedOn.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        entity.IsCompleted = false;
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
         AddActivityEvent(userId, ActivityEventType.DailyComplete, itemId, null, entity.Title,
             DailyStreakCalculator.BackdatedDailyEventOccurredAt(completedOn));
@@ -546,12 +545,6 @@ public sealed class BoardPersistenceService(
         if (entity is null || conflict is not null)
         {
             return conflict ?? new BoardMutationResult(BoardMutationStatus.NotFound, null);
-        }
-
-        var model = ToModelForDailyCheck(entity, today);
-        if (!DailySchedule.IsScheduledOn(model.DailyStartDate, model.DailyRepeat, model.DailyRepeatInterval, skippedOn, model.DailyWeekdays))
-        {
-            return new BoardMutationResult(BoardMutationStatus.NotFound, null);
         }
 
         entity.IsCompleted = false;

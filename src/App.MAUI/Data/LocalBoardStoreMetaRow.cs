@@ -10,4 +10,7 @@ public sealed class LocalBoardStoreMetaRow
 
     /// <summary>ISO-8601 exclusive watermark for <c>GET /api/board/sync?cursor=</c>. Null after login until first successful incremental pull or full snapshot.</summary>
     public string? LastSyncCursorUtc { get; set; }
+
+    /// <summary>ISO-8601 timestamp of the last full snapshot mirror replace. Null means never.</summary>
+    public string? LastFullMirrorUtc { get; set; }
 }

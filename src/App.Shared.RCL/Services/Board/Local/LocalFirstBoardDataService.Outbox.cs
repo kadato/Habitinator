@@ -229,8 +229,10 @@ public sealed partial class LocalFirstBoardDataService
                     opRow.Kind,
                     opRow.PayloadJson,
                     serverItem.ServerUpdatedAtUtc ?? DateTimeOffset.UtcNow);
-                opRow.AttemptCount = 0;
-                opRow.LastError = null;
+                // Record the attempt so backoff spaces retries instead of hot-looping.
+                opRow.AttemptCount++;
+                opRow.LastAttemptUtc = DateTime.UtcNow;
+                opRow.LastError = "409 Conflict. Remapped onto the server version.";
                 await store.UpdateOutboxAsync(opRow, cancellationToken);
             }
         }
@@ -238,6 +240,8 @@ public sealed partial class LocalFirstBoardDataService
         {
             _gate.Release();
         }
+
+        RequestSyncSoon();
     }
 
     private async Task ResolveConflictKeepServerAsync(
@@ -661,6 +665,9 @@ public sealed partial class LocalFirstBoardDataService
     {
         if (serverItem is null)
         {
+            // The server no longer has this row. Another client hard deleted the row, or a demo reseed wiped it.
+            // Drop the ghost locally and pull a full mirror so the mirror rows converge too.
+            await DropGhostAndRefreshMirrorAsync(itemId, userKey, cancellationToken);
             return;
         }
 
@@ -678,10 +685,55 @@ public sealed partial class LocalFirstBoardDataService
             var updated = BoardLocalRow.FromModel(section, userKey, serverItem, awaiting);
             updated.UserKey = row.UserKey;
             await store.UpsertItemAsync(updated, cancellationToken);
+
+            // Later pending operations for the same item were built against the version
+            // that this one replaced. Rebase them onto the new version so sequential
+            // edits on one item apply on top instead of conflicting one after another.
+            if (serverItem.ServerUpdatedAtUtc is { } serverVersion)
+            {
+                await RebasePendingOperationsAsync(userKey, itemId, serverVersion, cancellationToken);
+            }
         }
         finally
         {
             _gate.Release();
+        }
+    }
+
+    private async Task DropGhostAndRefreshMirrorAsync(Guid itemId, string userKey, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (await store.FindItemAsync(userKey, itemId, cancellationToken) is null)
+            {
+                return;
+            }
+
+            await store.DeleteItemAsync(userKey, itemId, cancellationToken);
+            _cachedSnapshot = null;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        try
+        {
+            var snapshot = await remote.GetSnapshotAsync(cancellationToken);
+            await _gate.WaitAsync(cancellationToken);
+            try
+            {
+                await ReplaceMirrorAsync(userKey, snapshot, cancellationToken);
+            }
+            finally
+            {
+                _gate.Release();
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Ghost mirror refresh skipped after dropping {ItemId}.", itemId);
         }
     }
 

@@ -70,6 +70,16 @@ public sealed class BoardIdempotencyService(
                     throw new BoardIdempotencyFingerprintMismatchException();
                 }
 
+                if (row.ResponseStatusCode == StatusCodes.Status409Conflict)
+                {
+                    // Version conflicts depend on current row state. Replaying a recorded
+                    // 409 pins version-remapped retries on a stale outcome forever.
+                    // Drop the recorded 409 so this attempt re-executes against the live version.
+                    db.BoardRequestIdempotencies.Remove(row);
+                    await db.SaveChangesAsync(cancellationToken);
+                    continue;
+                }
+
                 if (row.ResponseStatusCode != PendingResponseCode)
                 {
                     return (row.ResponseStatusCode, row.ResponseBody, "application/json");
@@ -126,6 +136,15 @@ public sealed class BoardIdempotencyService(
         try
         {
             var outcome = await execute();
+            if (outcome.statusCode == StatusCodes.Status409Conflict)
+            {
+                // Never record version conflicts. The next retry remaps onto the live
+                // version, and replaying that outcome would pin the retry on stale state.
+                db.BoardRequestIdempotencies.Remove(claim);
+                await db.SaveChangesAsync(cancellationToken);
+                return outcome;
+            }
+
             claim.ResponseStatusCode = outcome.statusCode;
             claim.ResponseBody = outcome.body;
             await db.SaveChangesAsync(cancellationToken);

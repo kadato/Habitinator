@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -35,6 +36,100 @@ public sealed class LocalFirstBoardSyncTests
         Assert.NotNull(row);
         row.ServerUpdatedAtUtc.Should().Be(serverTime);
         row.AwaitingServerCreate.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task PullMirrorAsync_StaleFullMirror_PullsSnapshotAndDropsGhosts()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var ghostId = Guid.NewGuid();
+        var current = new BoardItem(Guid.NewGuid(), "Current");
+        await harness.Store.UpsertItemAsync(
+            BoardLocalRow.FromModel(BoardSection.Habit, Harness.UserKey, new BoardItem(ghostId, "Ghost"), false), ct);
+        await harness.Store.SetMetaAsync(new BoardStoreMeta
+        {
+            BoundUserKey = Harness.UserKey,
+            LastSyncCursorUtc = DateTimeOffset.UtcNow.AddHours(-1).ToString("O")
+        }, ct);
+        var hitPaths = new List<string>();
+        harness.Server.Responder = request =>
+        {
+            hitPaths.Add(request.RequestUri!.AbsolutePath);
+            return JsonResponse(HttpStatusCode.OK, new BoardSnapshot([current], [], []));
+        };
+
+        var ok = await harness.Board.TryPullRemoteMirrorAsync(ct);
+
+        ok.Should().BeTrue();
+        hitPaths.Should().NotContain(p => p.EndsWith("/api/board/sync", StringComparison.Ordinal));
+        (await harness.Store.FindItemAsync(Harness.UserKey, ghostId, ct)).Should().BeNull();
+        (await harness.Board.GetSnapshotAsync(ct)).Habits.Should().ContainSingle(x => x.Id == current.Id);
+    }
+
+    [Fact]
+    public async Task PullMirrorAsync_FreshFullMirror_UsesDelta()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var current = new BoardItem(Guid.NewGuid(), "Current");
+        await harness.Store.UpsertItemAsync(
+            BoardLocalRow.FromModel(BoardSection.Habit, Harness.UserKey, current, false), ct);
+        await harness.Store.SetMetaAsync(new BoardStoreMeta
+        {
+            BoundUserKey = Harness.UserKey,
+            LastSyncCursorUtc = DateTimeOffset.UtcNow.AddHours(-1).ToString("O"),
+            LastFullMirrorUtc = DateTimeOffset.UtcNow
+        }, ct);
+        var hitPaths = new List<string>();
+        var nextCursor = DateTimeOffset.UtcNow.ToString("O");
+        harness.Server.Responder = request =>
+        {
+            hitPaths.Add(request.RequestUri!.AbsolutePath);
+            return JsonResponse(
+                HttpStatusCode.OK,
+                new BoardSyncDelta([], [], nextCursor));
+        };
+
+        var ok = await harness.Board.TryPullRemoteMirrorAsync(ct);
+
+        ok.Should().BeTrue();
+        hitPaths.Should().ContainSingle().Which.Should().EndWith("/api/board/sync");
+        (await harness.Board.GetSnapshotAsync(ct)).Habits.Should().ContainSingle(x => x.Id == current.Id);
+    }
+
+    [Fact]
+    public async Task DrainUpdateAsync_ServerGone_DropsGhostRowAndRefreshesMirror()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var ghostId = Guid.NewGuid();
+        var current = new BoardItem(Guid.NewGuid(), "Current");
+        await harness.Store.UpsertItemAsync(
+            BoardLocalRow.FromModel(BoardSection.Habit, Harness.UserKey, new BoardItem(ghostId, "Ghost"), false), ct);
+        await harness.Store.UpsertItemAsync(
+            BoardLocalRow.FromModel(BoardSection.Habit, Harness.UserKey, current, false), ct);
+        var payload = JsonSerializer.Serialize(
+            new UpdateHabitOutboxPayload(ghostId, "Ghost", null, null, true, true, HabitResetPeriod.Daily, 0, 0, null),
+            BoardOutboxJson.Options);
+        await harness.Store.EnqueueOutboxAsync(new BoardOutboxEntry
+        {
+            OperationId = Guid.NewGuid(),
+            UserKey = Harness.UserKey,
+            Kind = BoardOutboxOperationKind.UpdateHabit,
+            PayloadJson = payload,
+            CreatedAtUtc = DateTime.UtcNow,
+        }, ct);
+        harness.Server.Responder = request => request.RequestUri!.AbsolutePath.Contains("/api/board/habits/", StringComparison.Ordinal)
+            ? new HttpResponseMessage(HttpStatusCode.NotFound)
+            : JsonResponse(HttpStatusCode.OK, new BoardSnapshot([current], [], []));
+
+        var drained = await harness.Board.TryDrainOneOutboxOperationAsync(ct);
+
+        drained.Should().BeTrue();
+        (await harness.Store.FindItemAsync(Harness.UserKey, ghostId, ct)).Should().BeNull();
+        (await harness.Board.GetSnapshotAsync(ct)).Habits.Should().ContainSingle(x => x.Id == current.Id);
+        (await harness.Store.ListOutboxAsync(Harness.UserKey)).Should().BeEmpty();
     }
 
     [Fact]
@@ -101,12 +196,17 @@ public sealed class LocalFirstBoardSyncTests
         conflicted.Should().BeFalse();
         var pending = await harness.Store.ListOutboxAsync(Harness.UserKey);
         pending.Should().ContainSingle();
-        pending[0].AttemptCount.Should().Be(0);
+        pending[0].AttemptCount.Should().Be(1);
+
+        // The remapped retry waits out backoff instead of hot-looping.
+        (await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None)).Should().BeFalse();
 
         var serverTime = DateTimeOffset.UtcNow;
         harness.Server.Responder = _ => JsonResponse(
             HttpStatusCode.OK,
             new BoardItem(id, "Read", ServerUpdatedAtUtc: serverTime, CreatedAtUtc: serverTime, SortOrder: 1));
+        pending[0].LastAttemptUtc = DateTime.UtcNow.AddMinutes(-10);
+        await harness.Store.UpdateOutboxAsync(pending[0], CancellationToken.None);
         var retried = await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None);
 
         retried.Should().BeTrue();
@@ -284,7 +384,7 @@ public sealed class LocalFirstBoardSyncTests
         conflicted.Should().BeFalse();
         var pending = await harness.Store.ListOutboxAsync(Harness.UserKey);
         pending.Should().ContainSingle(x => x.Kind == BoardOutboxOperationKind.Create);
-        pending[0].AttemptCount.Should().Be(0);
+        pending[0].AttemptCount.Should().Be(1);
     }
 
     [Fact]
@@ -368,6 +468,60 @@ public sealed class LocalFirstBoardSyncTests
         };
         (await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None)).Should().BeTrue();
         expectedHeaders.Should().Contain(v2.ToString("O"));
+        (await harness.Store.ListOutboxAsync(Harness.UserKey)).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DrainSequentialDailyOps_SecondOpUsesFirstAckVersionWithoutConflict()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var id = Guid.NewGuid();
+        var v0 = DateTimeOffset.UtcNow.AddMinutes(-10);
+        var v1 = v0.AddMinutes(1);
+        var v2 = v0.AddMinutes(2);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var yesterday = today.AddDays(-1);
+        await harness.Store.UpsertItemAsync(
+            BoardLocalRow.FromModel(BoardSection.Daily, Harness.UserKey,
+                new BoardItem(id, "Water", DailyStartDate: today.AddDays(-10), ServerUpdatedAtUtc: v0, CreatedAtUtc: v0), false), ct);
+
+        var serverVersion = v0;
+        var conflicts = 0;
+        var expectedHeaders = new List<string?>();
+        BoardItem ServerItem(DateTimeOffset v, DateOnly? lastCompleted, bool completed) =>
+            new(id, "Water", IsCompleted: completed, DailyStartDate: today.AddDays(-10),
+                DailyLastCompletedOn: lastCompleted, ServerUpdatedAtUtc: v, CreatedAtUtc: v0);
+        harness.Server.Responder = request =>
+        {
+            expectedHeaders.Add(request.Headers.TryGetValues("X-Board-Expected-Updated-At-Utc", out var values)
+                ? values.FirstOrDefault()
+                : null);
+            var path = request.RequestUri!.AbsolutePath;
+            if (!DateTimeOffset.TryParse(expectedHeaders[^1], CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var expected) || expected != serverVersion)
+            {
+                conflicts++;
+                return ConflictResponse(ServerItem(serverVersion, null, false));
+            }
+
+            if (path.EndsWith("/toggle", StringComparison.Ordinal))
+            {
+                serverVersion = v1;
+                return JsonResponse(HttpStatusCode.OK, ServerItem(v1, today, true));
+            }
+
+            serverVersion = v2;
+            return JsonResponse(HttpStatusCode.OK, ServerItem(v2, today, true));
+        };
+
+        await harness.Board.ToggleItemAsync(BoardSection.Daily, id, ct);
+        await harness.Board.CompleteDailyForDateAsync(id, yesterday, ct);
+
+        (await harness.Board.TryDrainOneOutboxOperationAsync(ct)).Should().BeTrue();
+        (await harness.Board.TryDrainOneOutboxOperationAsync(ct)).Should().BeTrue();
+
+        conflicts.Should().Be(0);
+        expectedHeaders.Should().Contain(v1.ToString("O"));
         (await harness.Store.ListOutboxAsync(Harness.UserKey)).Should().BeEmpty();
     }
 

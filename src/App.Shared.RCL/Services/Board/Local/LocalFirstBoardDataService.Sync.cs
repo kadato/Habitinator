@@ -6,6 +6,10 @@ namespace App.Shared.RCL.Services.Board.Local;
 
 public sealed partial class LocalFirstBoardDataService
 {
+    /// <summary>How long a full snapshot mirror stays fresh. Older mirrors fall back to a full
+    /// pull instead of a delta, so rows deleted without tombstones cannot linger as ghosts.</summary>
+    private static readonly TimeSpan FullMirrorMaxAge = TimeSpan.FromHours(24);
+
     public async Task<bool> TryPullRemoteMirrorAsync(CancellationToken cancellationToken = default)
     {
         var userKey = await users.GetUserKeyAsync(cancellationToken);
@@ -17,18 +21,22 @@ public sealed partial class LocalFirstBoardDataService
         await store.EnsureReadyAsync(cancellationToken);
 
         string? cursor;
+        bool fullMirrorStale;
         await _gate.WaitAsync(cancellationToken);
         try
         {
             await EnsureUserScopeAsync(userKey, cancellationToken);
-            cursor = (await store.GetMetaAsync(cancellationToken)).LastSyncCursorUtc;
+            var meta = await store.GetMetaAsync(cancellationToken);
+            cursor = meta.LastSyncCursorUtc;
+            fullMirrorStale = meta.LastFullMirrorUtc is not { } stamped
+                || DateTimeOffset.UtcNow - stamped >= FullMirrorMaxAge;
         }
         finally
         {
             _gate.Release();
         }
 
-        if (!string.IsNullOrWhiteSpace(cursor))
+        if (!string.IsNullOrWhiteSpace(cursor) && !fullMirrorStale)
         {
             (var hasResult, var success) = await TryPullDeltaMirrorAsync(userKey, cursor, cancellationToken);
             if (hasResult)
@@ -136,6 +144,9 @@ public sealed partial class LocalFirstBoardDataService
             .. snap.Dailies.Select(d => BoardLocalRow.FromModel(BoardSection.Daily, userKey, d, false)),
             .. snap.Todos.Select(t => BoardLocalRow.FromModel(BoardSection.Todo, userKey, t, false))];
         await store.ReplaceAllItemsAsync(userKey, rows, ComputeMirrorCursor(snap), cancellationToken);
+        var meta = await store.GetMetaAsync(cancellationToken);
+        meta.LastFullMirrorUtc = DateTimeOffset.UtcNow;
+        await store.SetMetaAsync(meta, cancellationToken);
         _cachedSnapshot = null;
     }
 

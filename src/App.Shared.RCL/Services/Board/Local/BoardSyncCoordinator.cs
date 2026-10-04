@@ -55,6 +55,9 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
         _syncChannel.Writer.TryWrite(notifyOnProgress);
     }
 
+    public Task SyncNowAsync(CancellationToken cancellationToken = default) =>
+        RunPullAndDrainAsync(false, cancellationToken);
+
     public async Task RunPullAndDrainAsync(bool notifyOnProgress, CancellationToken cancellationToken)
     {
         await _run.WaitAsync(cancellationToken);

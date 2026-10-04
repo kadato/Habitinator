@@ -19,7 +19,8 @@ public sealed class InMemoryBoardLocalStore : IBoardLocalStore
             return Task.FromResult(new BoardStoreMeta
             {
                 BoundUserKey = _meta.BoundUserKey,
-                LastSyncCursorUtc = _meta.LastSyncCursorUtc
+                LastSyncCursorUtc = _meta.LastSyncCursorUtc,
+                LastFullMirrorUtc = _meta.LastFullMirrorUtc
             });
         }
     }
@@ -31,7 +32,8 @@ public sealed class InMemoryBoardLocalStore : IBoardLocalStore
             _meta = new BoardStoreMeta
             {
                 BoundUserKey = meta.BoundUserKey,
-                LastSyncCursorUtc = meta.LastSyncCursorUtc
+                LastSyncCursorUtc = meta.LastSyncCursorUtc,
+                LastFullMirrorUtc = meta.LastFullMirrorUtc
             };
         }
 
@@ -225,7 +227,8 @@ public sealed class InMemoryBoardLocalStore : IBoardLocalStore
                 new BoardStoreMeta
                 {
                     BoundUserKey = _meta.BoundUserKey,
-                    LastSyncCursorUtc = _meta.LastSyncCursorUtc
+                    LastSyncCursorUtc = _meta.LastSyncCursorUtc,
+                    LastFullMirrorUtc = _meta.LastFullMirrorUtc
                 });
         }
     }
@@ -249,7 +252,8 @@ public sealed class InMemoryBoardLocalStore : IBoardLocalStore
             _meta = new BoardStoreMeta
             {
                 BoundUserKey = state.Meta?.BoundUserKey,
-                LastSyncCursorUtc = state.Meta?.LastSyncCursorUtc
+                LastSyncCursorUtc = state.Meta?.LastSyncCursorUtc,
+                LastFullMirrorUtc = state.Meta?.LastFullMirrorUtc
             };
         }
     }

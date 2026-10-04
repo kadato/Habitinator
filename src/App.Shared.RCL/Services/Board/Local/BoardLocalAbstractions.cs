@@ -10,6 +10,9 @@ public interface ICurrentUserKeyProvider
 public interface IBoardSyncRequestor
 {
     void RequestSync(bool notifyOnProgress = true);
+
+    /// <summary>Drains pending operations and pulls the mirror now, so reads after a mutation see the mirror.</summary>
+    Task SyncNowAsync(CancellationToken cancellationToken = default);
 }
 
 public interface IBoardLocalStoreLifecycle
@@ -35,4 +38,6 @@ public sealed class NoOpBoardSyncRequestor : IBoardSyncRequestor
     public void RequestSync(bool notifyOnProgress = true)
     {
     }
+
+    public Task SyncNowAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

@@ -171,8 +171,12 @@ public sealed partial class LocalFirstBoardDataService
                     new RowUpdateOp(itemId, BoardSection.Daily, BoardOutboxOperationKind.CompleteDailyForDate, (row, expected) => new CompleteDailyOutboxPayload(itemId, completedOn, expected)),
                     row =>
                     {
-                        row.DailyLastCompletedOn = completedOn;
-                        row.IsCompleted = false;
+                        if (row.DailyLastCompletedOn != today)
+                        {
+                            row.DailyLastCompletedOn = completedOn;
+                            row.IsCompleted = false;
+                        }
+
                         row.Counter = Math.Max(1, row.Counter + 1);
                         return Task.CompletedTask;
                     },
@@ -181,7 +185,8 @@ public sealed partial class LocalFirstBoardDataService
 
                 if (result != null)
                 {
-                    await AppendLocalActivityAsync(ActivityEventType.DailyComplete, itemId, result.Title, cancellationToken);
+                    await AppendLocalActivityAsync(ActivityEventType.DailyComplete, itemId, result.Title, cancellationToken,
+                        DailyStreakCalculator.BackdatedDailyEventOccurredAt(completedOn));
                 }
 
                 return result;
@@ -210,7 +215,8 @@ public sealed partial class LocalFirstBoardDataService
 
                 if (result != null)
                 {
-                    await AppendLocalActivityAsync(ActivityEventType.DailySkip, itemId, result.Title, cancellationToken);
+                    await AppendLocalActivityAsync(ActivityEventType.DailySkip, itemId, result.Title, cancellationToken,
+                        DailyStreakCalculator.BackdatedDailyEventOccurredAt(skippedOn));
                 }
 
                 return result;
@@ -219,8 +225,7 @@ public sealed partial class LocalFirstBoardDataService
     }
 
     private static bool CanCompleteDailyForDate(BoardLocalRow row, DateOnly completedOn, DateOnly today) =>
-        DailySchedule.CanCompleteForDate(
-            row.DailyStartDate, row.DailyRepeat, row.DailyRepeatInterval, row.DailyLastCompletedOn, completedOn, today, row.DailyWeekdays);
+        DailySchedule.CanCompleteForDate(row.DailyLastCompletedOn, completedOn, today);
 
     public Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
@@ -503,7 +508,7 @@ public sealed partial class LocalFirstBoardDataService
         }
     }
 
-    private async Task AppendLocalActivityAsync(ActivityEventType type, Guid? boardItemId, string? titleSnapshot, CancellationToken cancellationToken)
+    private async Task AppendLocalActivityAsync(ActivityEventType type, Guid? boardItemId, string? titleSnapshot, CancellationToken cancellationToken, DateTimeOffset? occurredAtUtc = null)
     {
         try
         {
@@ -514,7 +519,7 @@ public sealed partial class LocalFirstBoardDataService
                 return;
             }
 
-            var rec = new UserActivityEventRecord(clock.UtcNow, type, boardItemId, null, titleSnapshot);
+            var rec = new UserActivityEventRecord(occurredAtUtc ?? clock.UtcNow, type, boardItemId, null, titleSnapshot);
             await storeService.AppendAsync(rec, cancellationToken);
         }
         catch

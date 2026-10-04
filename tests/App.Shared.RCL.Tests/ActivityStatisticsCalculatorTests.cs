@@ -295,6 +295,112 @@ public sealed class ActivityStatisticsCalculatorTests
     }
 
     [Fact]
+    public void BuildDailyContributions_marks_due_days_per_schedule()
+    {
+        var start = new DateOnly(2026, 8, 3); // Monday
+        var mask = DailyWeekdays.From(DayOfWeek.Monday);
+        var daily = new DailyItemStatsDto(
+            Guid.NewGuid(), "Weekly", start, start, DailyRepeatType.Weekly, 1, mask);
+
+        var view = ActivityStatisticsCalculator.BuildDailyContributions(
+            [],
+            [daily],
+            new ContributionsRangeContext(
+                DailyGraphPeriods.Rolling370Days,
+                [],
+                new DateOnly(2026, 8, 1),
+                new DateOnly(2026, 8, 12),
+                new DateOnly(2026, 8, 12)));
+
+        var graph = view.Graphs.Should().ContainSingle().Subject;
+        graph.Heatmap.Single(c => c.Date == new DateOnly(2026, 8, 3)).Due.Should().BeTrue();
+        graph.Heatmap.Single(c => c.Date == new DateOnly(2026, 8, 4)).Due.Should().BeFalse();
+        graph.Heatmap.Single(c => c.Date == new DateOnly(2026, 8, 10)).Due.Should().BeTrue();
+    }
+
+    [Fact]
+    public void BuildDailyContributions_shows_every_retro_completed_past_date_not_just_yesterday()
+    {
+        var todayCutoff = new DateOnly(2026, 8, 12);
+        var dailyId = Guid.NewGuid();
+        var daily = new DailyItemStatsDto(dailyId, "Daily", new DateOnly(2026, 8, 1), new DateOnly(2026, 8, 1));
+
+        // The store saves retro check-ins as backdated events, one per date, like the server records them.
+        var rows = new[]
+        {
+            new UserActivityEventRecord(DailyStreakCalculator.BackdatedDailyEventOccurredAt(new DateOnly(2026, 8, 5)), ActivityEventType.DailyComplete, dailyId, null, null),
+            new UserActivityEventRecord(DailyStreakCalculator.BackdatedDailyEventOccurredAt(new DateOnly(2026, 8, 8)), ActivityEventType.DailyComplete, dailyId, null, null),
+            new UserActivityEventRecord(DailyStreakCalculator.BackdatedDailyEventOccurredAt(new DateOnly(2026, 8, 11)), ActivityEventType.DailyComplete, dailyId, null, null),
+        };
+
+        var view = ActivityStatisticsCalculator.BuildDailyContributions(
+            rows,
+            [daily],
+            new ContributionsRangeContext(
+                DailyGraphPeriods.Rolling370Days,
+                [],
+                new DateOnly(2026, 8, 1),
+                todayCutoff,
+                todayCutoff));
+
+        var graph = view.Graphs.Should().ContainSingle().Subject;
+        graph.Heatmap.Single(c => c.Date == new DateOnly(2026, 8, 5)).Count.Should().BeGreaterThan(0);
+        graph.Heatmap.Single(c => c.Date == new DateOnly(2026, 8, 8)).Count.Should().BeGreaterThan(0);
+        graph.Heatmap.Single(c => c.Date == new DateOnly(2026, 8, 11)).Count.Should().BeGreaterThan(0);
+        graph.Heatmap.Single(c => c.Date == new DateOnly(2026, 8, 9)).Count.Should().Be(0);
+    }
+
+    [Fact]
+    public void BuildDailyContributions_marks_weekly_legacy_due_every_week_on_start_weekday()
+    {
+        // A weekly daily with no weekday mask repeats on the start date's weekday.
+        var start = new DateOnly(2026, 1, 7); // Wednesday
+        var todayCutoff = new DateOnly(2026, 12, 30);
+        var daily = new DailyItemStatsDto(Guid.NewGuid(), "Weekly", start, start, DailyRepeatType.Weekly, 1, DailyWeekdays.None);
+
+        var view = ActivityStatisticsCalculator.BuildDailyContributions(
+            [],
+            [daily],
+            new ContributionsRangeContext(
+                DailyGraphPeriods.Rolling370Days,
+                [],
+                new DateOnly(2026, 1, 1),
+                todayCutoff,
+                todayCutoff));
+
+        var graph = view.Graphs.Should().ContainSingle().Subject;
+        var dueDates = graph.Heatmap.Where(c => c is { InDataRange: true, Due: true }).Select(c => c.Date).ToList();
+        dueDates.Should().HaveCount(52);
+        dueDates.Should().OnlyContain(d => d.DayOfWeek == DayOfWeek.Wednesday);
+        dueDates.Should().Contain(new DateOnly(2026, 1, 7));
+        dueDates.Should().Contain(new DateOnly(2026, 12, 30));
+    }
+
+    [Fact]
+    public void BuildDailyContributions_marks_weekly_mask_due_every_week_on_selected_days()
+    {
+        var start = new DateOnly(2026, 1, 5); // Monday
+        var mask = DailyWeekdays.From(DayOfWeek.Saturday);
+        var todayCutoff = new DateOnly(2026, 3, 28); // Saturday
+        var daily = new DailyItemStatsDto(Guid.NewGuid(), "Weekly", start, start, DailyRepeatType.Weekly, 1, mask);
+
+        var view = ActivityStatisticsCalculator.BuildDailyContributions(
+            [],
+            [daily],
+            new ContributionsRangeContext(
+                DailyGraphPeriods.Rolling370Days,
+                [],
+                new DateOnly(2026, 1, 1),
+                todayCutoff,
+                todayCutoff));
+
+        var graph = view.Graphs.Should().ContainSingle().Subject;
+        var dueDates = graph.Heatmap.Where(c => c is { InDataRange: true, Due: true }).Select(c => c.Date).ToList();
+        dueDates.Should().HaveCount(12);
+        dueDates.Should().OnlyContain(d => d.DayOfWeek == DayOfWeek.Saturday);
+    }
+
+    [Fact]
     public void BuildDashboard_boundary_event_counts_on_local_day_not_utc_day()
     {
         var tz = new FixedOffsetTimeZoneService(TimeSpan.FromHours(2));

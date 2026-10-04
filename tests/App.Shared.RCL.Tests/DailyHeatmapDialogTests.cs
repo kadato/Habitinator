@@ -128,4 +128,100 @@ public sealed class DailyHeatmapDialogTests : IAsyncDisposable
         provider.Markup.Should().Contain("2026");
         provider.Markup.Should().NotContain("2025");
     }
+
+    [Fact]
+    public async Task Marks_due_open_days_as_missed()
+    {
+        var itemId = Guid.NewGuid();
+        var date = new DateOnly(2026, 8, 11);
+        var cells = new List<ActivityHeatmapCellDto>
+        {
+            new(0, 0, date, 0, 0, true, Due: true)
+        };
+        var graphs = new List<DailyContributionGraphDto>
+        {
+            new(itemId, "Morning Run", cells, 52, 0, ["r370"])
+        };
+        var dto = new DailyContributionsViewDto("r370", [new("r370", "Last 370 days")], graphs, date.AddDays(-30), date);
+        _stats.GetDailyContributionsAsync("r370", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(dto));
+
+        var provider = _ctx.Render<MudDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+        var parameters = new DialogParameters<DailyHeatmapDialog>
+        {
+            { x => x.BoardItemId, itemId },
+            { x => x.Title, "Morning Run" }
+        };
+
+        await provider.InvokeAsync(async () => await dialogService.ShowAsync<DailyHeatmapDialog>(string.Empty, parameters));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("stats-daily-due"), TimeSpan.FromSeconds(5));
+
+        provider.Markup.Should().Contain("Due, not done");
+        provider.Markup.Should().Contain("daily-heatmap-legend");
+    }
+
+    [Fact]
+    public async Task Leaves_non_due_days_plain()
+    {
+        var itemId = Guid.NewGuid();
+        var date = new DateOnly(2026, 8, 11);
+        var cells = new List<ActivityHeatmapCellDto>
+        {
+            new(0, 0, date, 0, 0, true, Due: false)
+        };
+        var graphs = new List<DailyContributionGraphDto>
+        {
+            new(itemId, "Monthly review", cells, 52, 0, ["r370"])
+        };
+        var dto = new DailyContributionsViewDto("r370", [new("r370", "Last 370 days")], graphs, date.AddDays(-30), date);
+        _stats.GetDailyContributionsAsync("r370", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(dto));
+
+        var provider = _ctx.Render<MudDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+        var parameters = new DialogParameters<DailyHeatmapDialog>
+        {
+            { x => x.BoardItemId, itemId },
+            { x => x.Title, "Monthly review" }
+        };
+
+        await provider.InvokeAsync(async () => await dialogService.ShowAsync<DailyHeatmapDialog>(string.Empty, parameters));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Monthly review"), TimeSpan.FromSeconds(5));
+        provider.Render();
+
+        provider.Markup.Should().NotContain("stats-daily-due");
+        provider.Markup.Should().Contain("Not due");
+    }
+
+    [Fact]
+    public async Task Marks_completed_due_days()
+    {
+        var itemId = Guid.NewGuid();
+        var date = new DateOnly(2026, 8, 11);
+        var cells = new List<ActivityHeatmapCellDto>
+        {
+            new(0, 0, date, 1, 2, true, Due: true)
+        };
+        var graphs = new List<DailyContributionGraphDto>
+        {
+            new(itemId, "Morning Run", cells, 52, 1, ["r370"])
+        };
+        var dto = new DailyContributionsViewDto("r370", [new("r370", "Last 370 days")], graphs, date.AddDays(-30), date);
+        _stats.GetDailyContributionsAsync("r370", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(dto));
+
+        var provider = _ctx.Render<MudDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+        var parameters = new DialogParameters<DailyHeatmapDialog>
+        {
+            { x => x.BoardItemId, itemId },
+            { x => x.Title, "Morning Run" }
+        };
+
+        await provider.InvokeAsync(async () => await dialogService.ShowAsync<DailyHeatmapDialog>(string.Empty, parameters));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("stats-daily-due"), TimeSpan.FromSeconds(5));
+
+        provider.Markup.Should().Contain("Done");
+    }
 }

@@ -630,6 +630,44 @@
     flex-wrap: wrap;
     margin-bottom: 0.15rem;
 }
+
+.stats-daily-legend {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin: 0.5rem 0 0.25rem;
+    font-size: 0.72rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.stats-daily-legend__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.stats-daily-legend__sw {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.stats-daily-legend__sw--done {
+    background: color-mix(in srgb, var(--mud-palette-primary) 48%, var(--mud-palette-surface) 52%);
+}
+
+.stats-daily-legend__sw--due {
+    background: color-mix(in srgb, var(--mud-palette-primary) 38%, var(--mud-palette-surface));
+    border: 2px solid color-mix(in srgb, var(--mud-palette-primary) 80%, transparent);
+}
+
+.stats-daily-legend__sw--open {
+    background: color-mix(in srgb, var(--mud-palette-background-gray) 85%, var(--mud-palette-surface));
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 50%, transparent);
+}
 .stats-segment {
     display: inline-flex;
     gap: 0.2rem;

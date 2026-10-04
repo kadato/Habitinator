@@ -1255,6 +1255,16 @@ input[type="number"].mud-input-slot {
 .stats-day-event__meta { font-size: 0.72rem; color: var(--mud-palette-text-secondary); line-height: 1.3; }
 .stats-day-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem 1.5rem; border: 1px dashed color-mix(in srgb, var(--mud-palette-divider) 65%, transparent); border-radius: var(--radius-xl); background: color-mix(in srgb, var(--mud-palette-background-gray) 22%, transparent); }
 .stats-day-empty__icon { color: var(--mud-palette-text-disabled); opacity: 0.7; margin-bottom: 0.5rem; }
+.stats-day-dailies { margin-top: 1rem; border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 55%, transparent); border-radius: var(--radius-lg); overflow: hidden; background: var(--mud-palette-surface); }
+.stats-day-dailies__title { font-size: 0.72rem; font-weight: 750; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mud-palette-text-secondary); padding: 0.7rem 0.85rem 0.35rem; }
+.stats-day-dailies__list { list-style: none; margin: 0; padding: 0 0.35rem 0.35rem; }
+.stats-day-daily { display: flex; align-items: center; gap: 0.65rem; padding: 0.6rem 0.5rem; border-top: 1px solid color-mix(in srgb, var(--mud-palette-divider) 40%, transparent); }
+.stats-day-daily:first-child { border-top: none; }
+.stats-day-daily__icon { color: var(--mud-palette-primary); flex-shrink: 0; }
+.stats-day-daily__text { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; flex: 1 1 auto; }
+.stats-day-daily__title { font-size: 0.875rem; font-weight: 650; letter-spacing: -0.01em; color: var(--mud-palette-text-primary); overflow-wrap: break-word; line-height: 1.3; }
+.stats-day-daily__meta { font-size: 0.72rem; color: var(--mud-palette-text-secondary); line-height: 1.3; }
+.stats-day-daily__actions { display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0; margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
 @media (max-width: 480px) {
     .stats-day-event { grid-template-columns: 56px 24px 1fr; padding: 0.6rem 0.7rem; gap: 0.5rem; }
     .stats-day-event__time { font-size: 0.72rem; }

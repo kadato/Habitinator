@@ -11,9 +11,9 @@ namespace App.Shared.RCL.Services.Remote;
 
 public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
 {
-    private const string StatsOverviewCacheKeyPrefix = "habitinator_stats_overview_cache_v1";
-    private const string StatsPersistentPrefix = "habitinator_stats_v2_";
-    private const string StatsIndexKey = "habitinator_stats_index_v2";
+    private const string StatsOverviewCacheKeyPrefix = "habitinator_stats_overview_cache_v2";
+    private const string StatsPersistentPrefix = "habitinator_stats_v3_";
+    private const string StatsIndexKey = "habitinator_stats_index_v3";
     private const string OverviewEndpoint = "api/activity/overview";
     private static readonly JsonSerializerOptions Serializer = JsonDefaults.Api;
 

@@ -64,6 +64,10 @@ public partial class StatisticsPanel : IDisposable
             _shouldScrollToEnd = false;
             try
             {
+                // Ensure the helper exists first. On cold load this render can win the race
+                // against the page script loader, and a missed snap is never retried.
+                // The loader dedupes, so this call is free once loaded.
+                await JSRuntime.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/statisticsScrolling.js");
                 await JSRuntime.InvokeVoidAsync("scrollHeatmapsToEnd");
                 await JSRuntime.InvokeVoidAsync("initializeHeatmapRovingTabindex");
             }
@@ -231,6 +235,8 @@ public partial class StatisticsPanel : IDisposable
         _selectedPeriodKey = dailyView.PeriodKey;
         _dailyCellIndices.Clear();
         _dailyRatioCache.Clear();
+        // Fresh grids mount with this paint. Cold load renders skeletons first, so snap them too.
+        _shouldScrollToEnd = true;
     }
 
     private void ApplyHabitContributions(HabitContributionsViewDto habitView)
@@ -238,6 +244,8 @@ public partial class StatisticsPanel : IDisposable
         _habitView = habitView;
         _periodOptions ??= habitView.PeriodOptions;
         _habitCellIndices.Clear();
+        // Fresh grids mount with this paint. Cold load renders skeletons first, so snap them too.
+        _shouldScrollToEnd = true;
     }
 
     private void PruneTagFilter(IReadOnlyList<string>? tagList)
@@ -278,7 +286,8 @@ public partial class StatisticsPanel : IDisposable
         var tag = string.IsNullOrEmpty(_tagFilter) ? null : _tagFilter;
         var streaksTask = BoardData.GetStreakMapAsync(CancellationToken.None);
 
-        // A cached overview paints the hero and all grids with no network call.
+        // A cached overview paints the hero and all grids instantly. The load below
+        // then revalidates over the network so a check-in never paints stale.
         if (Stats.TryGetCachedOverview(periodKey, tag, out var cachedOverview) && cachedOverview is not null)
         {
             ApplyOverview(cachedOverview);
@@ -286,12 +295,11 @@ public partial class StatisticsPanel : IDisposable
             _loadingDailies = false;
             _loadingHabits = false;
             await ApplyBestStreakAsync(streaksTask);
-            return;
+            await InvokeAsync(StateHasChanged);
         }
 
-        // A cached dashboard with cached contributions needs no network call.
-        // This covers an earlier progressive load.
-        if (Stats.TryGetCachedDashboard(periodKey, tag, out var cachedDashboard) && cachedDashboard is not null &&
+        // A cached dashboard with cached contributions paints instantly. The same revalidation runs below.
+        else if (Stats.TryGetCachedDashboard(periodKey, tag, out var cachedDashboard) && cachedDashboard is not null &&
             Stats.TryGetCachedDailyContributions(periodKey, tag, out var cachedDaily) && cachedDaily is not null &&
             Stats.TryGetCachedHabitContributions(periodKey, tag, out var cachedHabit) && cachedHabit is not null)
         {
@@ -302,25 +310,39 @@ public partial class StatisticsPanel : IDisposable
             _loadingDailies = false;
             _loadingHabits = false;
             await ApplyBestStreakAsync(streaksTask);
-            return;
+            await InvokeAsync(StateHasChanged);
         }
 
         try
         {
-            // No cache hit, so fetch the small dashboard first.
-            // The hero then paints before the heavy per-item grids.
-            var dashboard = await ResolveDashboardAsync(periodKey, tag);
+            // Fire all three reads at once so the grids do not wait an extra round trip
+            // behind the dashboard. The hero still paints first for progressive load.
+            var dashboardTask = ResolveDashboardAsync(periodKey, tag);
+            var dailyTask = Stats.GetDailyContributionsAsync(periodKey, tag, CancellationToken.None);
+            var habitTask = Stats.GetHabitContributionsAsync(periodKey, tag, CancellationToken.None);
+
+            ActivityDashboardDto dashboard;
+            try
+            {
+                dashboard = await dashboardTask;
+            }
+            catch
+            {
+                // The sibling reads are no longer needed on this path. Observe their
+                // faults so failures do not go unobserved.
+                ObserveFaults(dailyTask, habitTask);
+                throw;
+            }
+
             if (version != _loadVersion || _disposed)
             {
+                ObserveFaults(dailyTask, habitTask);
                 return;
             }
 
             ApplyDashboard(dashboard);
             _loading = false;
             await InvokeAsync(StateHasChanged);
-
-            var dailyTask = Stats.GetDailyContributionsAsync(periodKey, tag, CancellationToken.None);
-            var habitTask = Stats.GetHabitContributionsAsync(periodKey, tag, CancellationToken.None);
 
             try
             {
@@ -627,7 +649,13 @@ public partial class StatisticsPanel : IDisposable
 
     private string DailyHeatmapCellClass(ActivityHeatmapCellDto cell)
     {
-        return $"stats-cell stats-lvl-{cell.Intensity}{(IsHeatmapToday(cell.Date) ? " stats-heatmap-day--today" : "")}";
+        var cls = $"stats-cell stats-lvl-{cell.Intensity}{(IsHeatmapToday(cell.Date) ? " stats-heatmap-day--today" : "")}";
+        if (cell.InDataRange && cell.Due)
+        {
+            cls += " stats-daily-due";
+        }
+
+        return cls;
     }
 
     private string HabitHeatmapCellClass(ActivityHeatmapCellDto cell)
@@ -745,7 +773,9 @@ public partial class StatisticsPanel : IDisposable
             { x => x.Date, date },
             { x => x.TagFilter, filterTag }
         };
-        await DialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters, options);
+        var dialog = await DialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters, options);
+        _ = await dialog.Result;
+        await RefreshAfterDialogAsync();
     }
 
     private async Task OpenDailyHeatmapAsync(DailyContributionGraphDto daily)
@@ -755,7 +785,9 @@ public partial class StatisticsPanel : IDisposable
             { x => x.BoardItemId, daily.BoardItemId },
             { x => x.Title, daily.Title }
         };
-        await DialogService.ShowAsync<DailyHeatmapDialog>(string.Empty, parameters, DialogDefaults.Wide);
+        var dialog = await DialogService.ShowAsync<DailyHeatmapDialog>(string.Empty, parameters, DialogDefaults.Wide);
+        _ = await dialog.Result;
+        await RefreshAfterDialogAsync();
     }
 
     private async Task OpenDailyDayDetailAsync(DailyContributionGraphDto daily, int row, int col)
@@ -770,7 +802,62 @@ public partial class StatisticsPanel : IDisposable
             { x => x.Date, cell.Date },
             { x => x.BoardItemId, daily.BoardItemId }
         };
-        await DialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters, DialogDefaults.Wide);
+        var dialog = await DialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters, DialogDefaults.Wide);
+        _ = await dialog.Result;
+        await RefreshAfterDialogAsync();
+    }
+
+    /// <summary>
+    ///     Reloads stats after a stats dialog closes so heatmaps show retro check-ins.
+    ///     The dialog can report Cancel with no mutation flag when dismissed by clicking away.
+    ///     Drain and invalidate first so the reload reads the synced state.
+    /// </summary>
+    private async Task RefreshAfterDialogAsync()
+    {
+        await DrainBoardSyncAsync();
+        try
+        {
+            Stats.InvalidateCache();
+        }
+        catch
+        {
+            // Best-effort cleanup. A stale cache entry makes the next load retry.
+        }
+
+        await RefreshAsync(() => LoadStatisticsAsync(_selectedPeriodKey));
+    }
+
+    /// <summary>Marks already-started reads as observed so a fault never escapes unobserved when their results are discarded on a stale load or a failed sibling.</summary>
+    private static void ObserveFaults(params Task[] tasks)
+    {
+        foreach (var t in tasks)
+        {
+            _ = t.ContinueWith(
+                static inner => _ = inner.Exception,
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
+        }
+    }
+
+    /// <summary>Tries an immediate sync. Stats read from the server right after.</summary>
+    private async Task DrainBoardSyncAsync()
+    {
+        try
+        {
+            var sync = ServiceProvider.GetService<App.Shared.RCL.Services.Board.Local.IBoardSyncRequestor>();
+            if (sync is null)
+            {
+                return;
+            }
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            await sync.SyncNowAsync(cts.Token);
+        }
+        catch
+        {
+            // If offline or slow, the periodic sync delivers the change. Reads use last known data.
+        }
     }
 
     private static string GetDailyStreakTooltip(DailyContributionGraphDto daily) =>
@@ -832,11 +919,17 @@ public partial class StatisticsPanel : IDisposable
         return TitleWithTodayPrefix(date, baseTitle);
     }
 
-    private string DailyHeatmapDayTitle(DateOnly date, int count)
+    private string DailyHeatmapDayTitle(ActivityHeatmapCellDto cell)
     {
-        var status = count > 0 ? $"{count} complete(s)" : "not completed";
-        var baseTitle = $"{DateFormatService.Format(date)}: {status}";
-        return TitleWithTodayPrefix(date, baseTitle);
+        if (cell.Count > 0)
+        {
+            var done = $"{cell.Count} complete(s)";
+            var doneTitle = cell.Due ? done : $"{done}, not due";
+            return TitleWithTodayPrefix(cell.Date, $"{DateFormatService.Format(cell.Date)}: {doneTitle}");
+        }
+
+        var status = cell.Due ? "due, not done" : "not due";
+        return TitleWithTodayPrefix(cell.Date, $"{DateFormatService.Format(cell.Date)}: {status}");
     }
 
     private sealed record KpiDescriptor(

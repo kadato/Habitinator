@@ -433,6 +433,12 @@ public static class ActivityStatisticsCalculator
                 countByDay,
                 maxInRange);
 
+            graphHeat = [.. graphHeat.Select(c => c with
+            {
+                Due = DailySchedule.IsScheduledOn(
+                    di.DailyStartDate, di.DailyRepeat, di.DailyRepeatInterval, c.Date, di.DailyWeekdays)
+            })];
+
             var columns = WeekGridColumns(commonStart, commonEnd);
 
             DailyStreakDetails? streakDetails = null;

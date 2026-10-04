@@ -1057,6 +1057,16 @@
 .hab-modal__footer--end {
     justify-content: flex-end;
 }
+.hab-modal__footer--daily {
+    flex-wrap: wrap;
+}
+.hab-modal__footer-note {
+    flex: 1 1 12rem;
+    margin-right: auto;
+    font-size: 0.76rem;
+    color: var(--mud-palette-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
 
 /* hab-modal--heatmap sizes to its grid instead of holding the wide min-height. */
 .hab-modal--heatmap.hab-modal--wide .hab-modal__body {

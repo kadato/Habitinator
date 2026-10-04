@@ -12,7 +12,7 @@ public record EditDailyDialogResult(
     string Title,
     string? Notes,
     string? Tags,
-    DateOnly StartDate,
+    DateOnly? StartDate,
     DailyRepeatType Repeat,
     int RepeatInterval,
     string? ChecklistJson,

@@ -18,7 +18,7 @@
         <div class="hab-modal hab-modal--daily hab-modal--wide hab-modal--heatmap" data-dialog-label="Daily heatmap" @onclick:stopPropagation="true">
             <div class="hab-modal__header">
                 <div class="hab-modal__topbar hab-modal__topbar--minimal">
-                    <DialogCloseButton OnClose="() => MudDialog.Close()" />
+                    <DialogCloseButton OnClose="CloseDialog" />
                 </div>
                 <div class="d-flex align-center gap-2 flex-wrap">
                     <MudText Typo="Typo.subtitle1" Class="font-weight-bold" Style="letter-spacing:-0.02em;">@DisplayTitle</MudText>
@@ -39,14 +39,14 @@
             </div>
 
             <div class="hab-modal__body">
-                @if (_loading)
+                @if (_loading && _graph is null)
                 {
                     <div class="pa-2">
                         <MudSkeleton Width="100%" Height="110px" SkeletonType="SkeletonType.Rectangle" />
                         <MudSkeleton Width="60%" Height="14px" Class="mt-3" />
                     </div>
                 }
-                else if (_error is not null)
+                else if (_error is not null && _graph is null)
                 {
                     <div class="dialog-inline-fallback">
                         <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" Class="dialog-inline-fallback__icon"  aria-hidden="true" />
@@ -65,10 +65,15 @@
                                            Cells="_cellIndex"
                                            IsToday="@((r, c) => _cellIndex.TryGetValue((r, c), out var cell) && IsHeatmapToday(cell.Date))"
                                            GetCellClass="@((r, c) => DailyHeatmapCellClass(_cellIndex[(r, c)]))"
-                                           GetCellTitle="@((r, c) => DailyHeatmapDayTitle(_cellIndex[(r, c)].Date, _cellIndex[(r, c)].Count))"
-                                           GetCellAriaLabel="@((r, c) => DailyHeatmapDayTitle(_cellIndex[(r, c)].Date, _cellIndex[(r, c)].Count))"
+                                           GetCellTitle="@((r, c) => DailyHeatmapDayTitle(_cellIndex[(r, c)]))"
+                                           GetCellAriaLabel="@((r, c) => DailyHeatmapDayTitle(_cellIndex[(r, c)]))"
                                            IncludeRovingTabindex="true"
                                            OnCellClick="OnCellClickAsync"/>
+                    </div>
+                    <div class="daily-heatmap-legend">
+                        <span class="daily-heatmap-legend__item"><span class="daily-heatmap-legend__sw daily-heatmap-legend__sw--done"></span>Done</span>
+                        <span class="daily-heatmap-legend__item"><span class="daily-heatmap-legend__sw daily-heatmap-legend__sw--due"></span>Due</span>
+                        <span class="daily-heatmap-legend__item"><span class="daily-heatmap-legend__sw daily-heatmap-legend__sw--open"></span>Not due</span>
                     </div>
                 }
                 else
@@ -98,6 +103,7 @@
     private bool _loading = true;
     private string? _error;
     private DateOnly _heatmapToday;
+    private bool _mutatedBelow;
 
     private string DisplayTitle => string.IsNullOrWhiteSpace(Title) ? "Daily" : Title;
     private string RatioLabel
@@ -138,6 +144,9 @@
         _shouldScrollToEnd = false;
         try
         {
+            // Ensure the helper exists first. On cold open this render can win the race
+            // against the page script loader, and a missed snap is never retried.
+            await JSRuntime.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/statisticsScrolling.js");
             await JSRuntime.InvokeVoidAsync("scrollHeatmapsToEnd");
             await JSRuntime.InvokeVoidAsync("initializeHeatmapRovingTabindex");
         }
@@ -253,13 +262,31 @@
         { "aria-selected", _selectedPeriodKey == key ? "true" : "false" }
     };
     private bool IsHeatmapToday(DateOnly date) => date == _heatmapToday;
-    private string DailyHeatmapCellClass(ActivityHeatmapCellDto cell) => $"stats-cell stats-lvl-{cell.Intensity}{(IsHeatmapToday(cell.Date) ? " stats-heatmap-day--today" : "")}";
-    private string DailyHeatmapDayTitle(DateOnly date, int count)
+    private string DailyHeatmapCellClass(ActivityHeatmapCellDto cell)
     {
-        var status = count > 0 ? "Done" : "Not done";
-        var dateStr = DateFormatService.Format(date);
+        var cls = $"stats-cell stats-lvl-{cell.Intensity}{(IsHeatmapToday(cell.Date) ? " stats-heatmap-day--today" : "")}";
+        if (cell.InDataRange && cell.Due)
+        {
+            cls += " stats-daily-due";
+        }
+
+        return cls;
+    }
+    private string DailyHeatmapDayTitle(ActivityHeatmapCellDto cell)
+    {
+        string status;
+        if (cell.Count > 0)
+        {
+            status = cell.Due ? "Done" : "Done, not due";
+        }
+        else
+        {
+            status = cell.Due ? "Due, not done" : "Not due";
+        }
+
+        var dateStr = DateFormatService.Format(cell.Date);
         var baseTitle = $"{dateStr}, {status}";
-        return IsHeatmapToday(date) ? $"Today, {baseTitle}" : baseTitle;
+        return IsHeatmapToday(cell.Date) ? $"Today, {baseTitle}" : baseTitle;
     }
     private async Task OnCellClickAsync(int row, int col)
     {
@@ -271,7 +298,74 @@
                 { x => x.Date, cell.Date },
                 { x => x.BoardItemId, BoardItemId }
             };
-            await DialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters, options);
+            var dialog = await DialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters, options);
+            var result = await dialog.Result;
+            if (result is { Canceled: false } && result.Data is true)
+            {
+                _mutatedBelow = true;
+            }
+
+            // Reload on every close, not on reported mutations alone. Dismissing by clicking
+            // away reports Cancel with no payload, so the result alone cannot prove that
+            // nothing changed. Drain and invalidate first so the grid reads fresh state.
+            await ReloadAfterMutationAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    /// <summary>Drains synced operations first, so the reloaded heatmap includes the latest change.</summary>
+    private async Task ReloadAfterMutationAsync()
+    {
+        await DrainBoardSyncAsync();
+        try
+        {
+            Stats.InvalidateCache();
+        }
+        catch
+        {
+            // Best-effort cleanup. A stale cache entry makes the next load retry.
+        }
+
+        await LoadDataAsync();
+    }
+
+    /// <summary>Tries an immediate sync. Stats read from the server right after.</summary>
+    private async Task DrainBoardSyncAsync()
+    {
+        try
+        {
+            var sync = ServiceProvider.GetService<App.Shared.RCL.Services.Board.Local.IBoardSyncRequestor>();
+            if (sync is null)
+            {
+                return;
+            }
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            await sync.SyncNowAsync(cts.Token);
+        }
+        catch
+        {
+            // If offline or slow, the periodic sync delivers the change. Reads use last known data.
+        }
+    }
+
+    /// <summary>Closes the dialog and reports check-ins made below so parents can reload.</summary>
+    private void CloseDialog()
+    {
+        try
+        {
+            if (_mutatedBelow)
+            {
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                MudDialog.Cancel();
+            }
+        }
+        catch
+        {
+            // Dialog already closed.
         }
     }
 }

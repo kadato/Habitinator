@@ -203,7 +203,7 @@
         _tags = EditDialogHelpers.FormatTags(Item.Tags);
         _counter = Item.Counter;
         _currentStreak = Item.Counter;
-        _startDate = Item.DailyStartDate?.ToDateTime(TimeOnly.MinValue) ?? DateTime.Today;
+        _startDate = Item.DailyStartDate?.ToDateTime(TimeOnly.MinValue);
         _repeat = Item.DailyRepeat;
         _repeatInterval = Item.DailyRepeatInterval < 1 ? 1 : Item.DailyRepeatInterval;
         _weekdays = DailyWeekdays.Normalize(Item.DailyWeekdays);
@@ -289,7 +289,7 @@
         var title = string.IsNullOrWhiteSpace(_title) ? Item.Title : _title.Trim();
         var tagsPayload = EditDialogHelpers.CleanStringPayload(_tags);
         var checklistPayload = EditDialogHelpers.SerializeChecklistRows(_checklistRows);
-        var start = _startDate is { } d ? DateOnly.FromDateTime(d.Date) : Item.DailyStartDate ?? DateOnly.FromDateTime(DateTime.Today);
+        var start = _startDate is { } d ? DateOnly.FromDateTime(d.Date) : Item.DailyStartDate;
         var interval = _repeatInterval < 1 ? 1 : Math.Min(999, _repeatInterval);
         var weekdays = _repeat == DailyRepeatType.Weekly ? DailyWeekdays.Normalize(_weekdays) : DailyWeekdays.None;
         await BoardData.UpdateDailyAsync(Item.Id, new UpdateDailyArgs(title, EditDialogHelpers.CleanStringPayload(_notes), tagsPayload, start, _repeat, interval, checklistPayload, _counter, null, null, weekdays), cancellationToken);
@@ -297,7 +297,7 @@
 
     protected override EditDailyDialogResult BuildResult(EditDialogAction action)
     {
-        var start = _startDate is { } d ? DateOnly.FromDateTime(d.Date) : Item.DailyStartDate ?? DateOnly.FromDateTime(DateTime.Today);
+        var start = _startDate is { } d ? DateOnly.FromDateTime(d.Date) : Item.DailyStartDate;
         var interval = _repeatInterval < 1 ? 1 : Math.Min(999, _repeatInterval);
         var weekdays = _repeat == DailyRepeatType.Weekly ? DailyWeekdays.Normalize(_weekdays) : DailyWeekdays.None;
         return new EditDailyDialogResult(action, _title.Trim(), EditDialogHelpers.CleanStringPayload(_notes), EditDialogHelpers.CleanStringPayload(_tags), start, _repeat, interval, EditDialogHelpers.SerializeChecklistRows(_checklistRows), _counter, weekdays);
@@ -308,6 +308,8 @@
     private async Task OpenHeatmapDialogAsync()
     {
         var parameters = new DialogParameters<DailyHeatmapDialog> { { x => x.BoardItemId, Item.Id }, { x => x.Title, string.IsNullOrWhiteSpace(_title) ? Item.Title : _title } };
-        await DialogService.ShowAsync<DailyHeatmapDialog>(string.Empty, parameters, DialogDefaults.Wide);
+        var dialog = await DialogService.ShowAsync<DailyHeatmapDialog>(string.Empty, parameters, DialogDefaults.Wide);
+        _ = await dialog.Result;
+        await LoadStreaksAsync();
     }
 }

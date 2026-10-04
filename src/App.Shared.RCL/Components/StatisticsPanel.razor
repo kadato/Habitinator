@@ -120,6 +120,14 @@
                             <button type="button" role="tab" @attributes='GetConsistencyTabAttrs("habit")' class="stats-segment__btn @(_consistencyTab == "habit" ? "stats-segment__btn--active" : string.Empty)" @onclick='() => _consistencyTab = "habit"'>Habits</button>
                         </div>
                     </div>
+                    @if (_consistencyTab is "all" or "daily")
+                    {
+                        <div class="stats-daily-legend">
+                            <span class="stats-daily-legend__item"><span class="stats-daily-legend__sw stats-daily-legend__sw--done"></span>Done</span>
+                            <span class="stats-daily-legend__item"><span class="stats-daily-legend__sw stats-daily-legend__sw--due"></span>Due</span>
+                            <span class="stats-daily-legend__item"><span class="stats-daily-legend__sw stats-daily-legend__sw--open"></span>Not due</span>
+                        </div>
+                    }
 
                     @if ((_loadingDailies && _dailyView is null) || (_loadingHabits && _habitView is null))
                     {
@@ -198,8 +206,8 @@
                                                                    IncludeRovingTabindex="true"
                                                                    IsTodayFunc="IsHeatmapToday"
                                                                    CellClassFunc="DailyHeatmapCellClass"
-                                                                   CellTitleFunc="@(c => DailyHeatmapDayTitle(c.Date, c.Count))"
-                                                                   CellAriaLabelFunc="@(c => DailyHeatmapDayTitle(c.Date, c.Count))"
+                                                                   CellTitleFunc="DailyHeatmapDayTitle"
+                                                                   CellAriaLabelFunc="DailyHeatmapDayTitle"
                                                                    OnCellClick="@((r, c) => OpenDailyDayDetailAsync(daily, r, c))"/>
                                             </div>
                                         </MudItem>

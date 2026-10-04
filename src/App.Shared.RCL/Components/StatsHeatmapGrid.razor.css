@@ -123,9 +123,13 @@ button.stats-cell:focus-visible, button.stats-cell:focus {
 .stats-lvl-4 { background: var(--mud-palette-primary); }
 .stats-lvl-na { background: transparent; opacity: 0.18; border: 1px dashed color-mix(in srgb, var(--mud-palette-divider) 60%, transparent); }
 
-.stats-daily-missed {
-    background: var(--mud-palette-background-gray);
-    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 70%, transparent);
+.stats-cell.stats-daily-due {
+    border: 2px solid color-mix(in srgb, var(--mud-palette-primary) 80%, transparent);
+    border-radius: 4px;
+}
+
+.stats-cell.stats-daily-due.stats-lvl-0 {
+    background: color-mix(in srgb, var(--mud-palette-primary) 38%, var(--mud-palette-surface));
 }
 .stats-daily-done {
     background: var(--mud-palette-primary);

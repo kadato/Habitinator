@@ -1,20 +1,32 @@
-// JavaScript helper to scroll heatmap and week bar wrappers to the end, the rightmost edge, on load and filter changes
+// Snaps heatmap and week bar wrappers to the end, the rightmost edge, on load and filter changes.
+// Snaps instantly. The wraps use CSS smooth scrolling for user gestures. That smoothing would turn
+// a programmatic scrollLeft assignment into a slow crawl across the whole grid.
 globalThis.scrollHeatmapsToEnd = function () {
     requestAnimationFrame(() => {
-        setTimeout(() => {
-            const wraps = document.querySelectorAll('.stats-heatmap-wrap');
-            wraps.forEach(wrap => {
+        const wraps = document.querySelectorAll('.stats-heatmap-wrap');
+        wraps.forEach(wrap => {
+            const max = wrap.scrollWidth - wrap.clientWidth;
+            if (wrap.scrollLeft < max - 2) {
+                const prev = wrap.style.scrollBehavior;
+                wrap.style.scrollBehavior = 'auto';
                 wrap.scrollLeft = wrap.scrollWidth;
-            });
-            const weekBars = document.querySelectorAll('.stats-week-bars');
-            weekBars.forEach(bar => {
+                wrap.style.scrollBehavior = prev;
+            }
+        });
+        const weekBars = document.querySelectorAll('.stats-week-bars');
+        weekBars.forEach(bar => {
+            const max = bar.scrollWidth - bar.clientWidth;
+            if (bar.scrollLeft < max - 2) {
+                const prev = bar.style.scrollBehavior;
+                bar.style.scrollBehavior = 'auto';
                 bar.scrollLeft = bar.scrollWidth;
-            });
-        }, 50);
+                bar.style.scrollBehavior = prev;
+            }
+        });
     });
 };
 
-// JavaScript helper to initialize roving tabindex for every Activity Heatmap on load/reload
+// Initializes roving tabindex for every Activity Heatmap on load and reload.
 globalThis.initializeHeatmapRovingTabindex = function (root) {
     const scope = root && typeof root.querySelectorAll === 'function' ? root : document;
     const grids = scope.querySelectorAll('.stats-heatmap-grid');

@@ -10,7 +10,8 @@ public sealed record ActivityHeatmapCellDto(
     DateOnly Date,
     int Count,
     int Intensity,
-    bool InDataRange);
+    bool InDataRange,
+    bool Due = false);
 
 public static class DailyGraphPeriods
 {

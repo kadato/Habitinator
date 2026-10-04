@@ -23,6 +23,7 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
     private readonly IUserTimeZoneService _timeZone = Substitute.For<IUserTimeZoneService>();
     private readonly IUserDateFormatService _dateFormat = Substitute.For<IUserDateFormatService>();
     private readonly IUserNotifier _notifier = Substitute.For<IUserNotifier>();
+    private readonly IUpcomingViewStateStore _viewState = Substitute.For<IUpcomingViewStateStore>();
 
     public UpcomingPanelTests()
     {
@@ -32,6 +33,8 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
         _ctx.Services.AddSingleton(_timeZone);
         _ctx.Services.AddSingleton(_dateFormat);
         _ctx.Services.AddSingleton(_notifier);
+        _ctx.Services.AddSingleton(_viewState);
+        _viewState.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<UpcomingViewState?>(null));
         _dateFormat.Format(Arg.Any<DateOnly>()).Returns(x => ((DateOnly)x[0]!).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
     }
 
@@ -97,5 +100,59 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
         checkbox.Change(true);
 
         _boardData.Received(1).ToggleItemAsync(BoardSection.Daily, daily.Id, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public void Restores_Persisted_View_And_Filter()
+    {
+        _boardData.GetSnapshotAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new BoardSnapshot([], [], [])));
+        _viewState.GetAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<UpcomingViewState?>(new UpcomingViewState("Week", "Dailies")));
+
+        var cut = _ctx.Render<UpcomingPanel>();
+        cut.WaitForState(() => cut.Markup.Contains("Nothing scheduled"), TimeSpan.FromSeconds(5));
+
+        var weekBtn = cut.FindAll("button").Single(b => b.TextContent.Trim() == "Week");
+        var dailiesBtn = cut.FindAll("button").Single(b => b.TextContent.Trim() == "Dailies");
+        weekBtn.ClassList.Should().Contain("cal-seg__btn--active");
+        dailiesBtn.ClassList.Should().Contain("cal-seg__btn--active");
+    }
+
+    [Fact]
+    public void Persists_View_And_Filter_On_Tab_Click()
+    {
+        _boardData.GetSnapshotAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new BoardSnapshot([], [], [])));
+
+        var cut = _ctx.Render<UpcomingPanel>();
+        cut.WaitForState(() => cut.Markup.Contains("Nothing scheduled"), TimeSpan.FromSeconds(5));
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Week").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Dailies").Click();
+
+        cut.WaitForAssertion(() =>
+            _viewState.Received().SetAsync(
+                Arg.Is<UpcomingViewState>(s => s.View == "Week" && s.Filter == "Dailies"),
+                Arg.Any<CancellationToken>()),
+            TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public void Ignores_Invalid_Persisted_Values()
+    {
+        _boardData.GetSnapshotAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new BoardSnapshot([], [], [])));
+        _viewState.GetAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<UpcomingViewState?>(new UpcomingViewState("Nope", "Bogus")));
+
+        var cut = _ctx.Render<UpcomingPanel>();
+        cut.WaitForState(() => cut.Markup.Contains("Nothing scheduled"), TimeSpan.FromSeconds(5));
+
+        // Defaults are Month and All.
+        var monthBtn = cut.FindAll("button").Single(b => b.TextContent.Trim() == "Month");
+        var allBtn = cut.FindAll("button").Single(b => b.TextContent.Trim() == "All");
+        monthBtn.ClassList.Should().Contain("cal-seg__btn--active");
+        allBtn.ClassList.Should().Contain("cal-seg__btn--active");
     }
 }

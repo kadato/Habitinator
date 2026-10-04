@@ -92,6 +92,7 @@ builder.Services.AddScoped<IAccountActionsService, RemoteAccountActionsService>(
 builder.Services.AddScoped<IUserDataExportService, RemoteUserDataExportService>();
 builder.Services.AddScoped<IUserDataImportService, RemoteUserDataImportService>();
 builder.Services.AddScoped<IBoardColumnStateStore, JsBoardColumnStateStore>();
+builder.Services.AddScoped<IUpcomingViewStateStore, UpcomingViewStateStore>();
 builder.Services.AddScoped<IOnboardingStore, JsOnboardingStore>();
 builder.Services.AddScoped<BoardUiSessionState>();
 builder.Services.AddScoped<ICommandPaletteService, CommandPaletteService>();

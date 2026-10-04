@@ -1,119 +1,523 @@
 @using App.Shared.RCL.Models
+@using App.Shared.RCL.Services
 @inject IBoardDataService BoardData
 @inject IUserTimeZoneService TimeZoneService
 @inject IUserDateFormatService DateFormatService
 @inject IUserNotifier Notifier
+@inject IUpcomingViewStateStore ViewState
 
-<MudStack Spacing="2" Class="upcoming-panel">
+<div class="cal upcoming-panel">
     @if (_error is not null)
     {
-        <div class="upcoming-load-fallback">
-            <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Large" Class="upcoming-load-fallback__icon" aria-hidden="true" />
-            <MudText Typo="Typo.subtitle2" Class="upcoming-load-fallback__title">Upcoming unavailable</MudText>
+        <div class="cal-fallback">
+            <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Large" Class="cal-fallback__icon" aria-hidden="true" />
+            <MudText Typo="Typo.subtitle2" Class="cal-fallback__title">Upcoming unavailable</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary">We couldn't load your upcoming schedule. Try again in a moment.</MudText>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="ReloadAsync">Retry</MudButton>
         </div>
     }
     else if (_loading)
     {
-        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-            <MudSkeleton Width="180px" Height="24px" Class="mb-2" />
-            <MudSkeleton Width="90%" Height="20px" Class="mb-1" />
-            <MudSkeleton Width="80%" Height="20px" Class="mb-1" />
-            <MudSkeleton Width="85%" Height="20px" />
-        </MudPaper>
-        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-            <MudSkeleton Width="160px" Height="24px" Class="mb-2" />
-            <MudSkeleton Width="70%" Height="20px" />
-        </MudPaper>
+        <div class="cal-top" aria-hidden="true">
+            <MudSkeleton Width="220px" Height="28px" Class="mb-2" />
+            <MudSkeleton Width="60%" Height="18px" />
+        </div>
+        <div class="cal-skel-grid" aria-hidden="true">
+            @for (var i = 0; i < 14; i++)
+            {
+                <MudSkeleton Height="72px" Class="cal-skel-cell" />
+            }
+        </div>
     }
     else
     {
-        @if (_overdue.Count > 0)
-        {
-            <MudPaper Class="pa-4 upcoming-day-card" Elevation="0" Outlined="true">
-                <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="mb-1">Overdue</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">@_overdue.Count overdue to-do(s)</MudText>
-                <MudStack Spacing="1">
-                    @foreach (var todo in _overdue)
-                    {
-                        <div class="upcoming-row" @key="todo.Id">
-                            <MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Small" Class="me-2" aria-hidden="true" />
-                            <div class="upcoming-row__text">
-                                <MudText Typo="Typo.body2">@todo.Title</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@TodoDueRelativeText.Format(todo.TodoDueDate!.Value, _today)</MudText>
+        <section class="cal-top" aria-label="Upcoming calendar summary">
+            <div class="cal-top__row">
+                <div class="cal-nav" role="group" aria-label="Move in calendar">
+                    <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Size="Size.Medium" Class="cal-navbtn" aria-label="@PrevLabel" OnClick="Prev" />
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" Class="cal-todaybtn" OnClick="GoToday">Today</MudButton>
+                    <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Medium" Class="cal-navbtn" aria-label="@NextLabel" OnClick="Next" />
+                </div>
+                <div class="cal-titles">
+                    <div class="cal-month">@HeaderTitle</div>
+                    <div class="cal-sub">@HeadlineText</div>
+                </div>
+                <div class="cal-stats" role="list">
+                    <div class="cal-stat @(OverdueCount > 0 ? "cal-stat--alert" : "")" role="listitem">
+                        <span class="cal-stat__num">@OverdueCount</span>
+                        <span class="cal-stat__label">overdue</span>
+                    </div>
+                    <div class="cal-stat cal-stat--today" role="listitem">
+                        <span class="cal-stat__num">@TodayRemaining</span>
+                        <span class="cal-stat__label">due today</span>
+                    </div>
+                    <div class="cal-stat" role="listitem">
+                        <span class="cal-stat__num">@MonthTotal</span>
+                        <span class="cal-stat__label">in @MonthShort</span>
+                    </div>
+                </div>
+            </div>
+            @if (_todayScheduled > 0)
+            {
+                <div class="cal-progress" aria-label="@($"{_todayDone} of {_todayScheduled} dailies done today")">
+                    <div class="cal-progress__top">
+                        <span>Today: @_todayDone of @_todayScheduled dailies done</span>
+                        <span class="cal-progress__pct">@TodayPct%</span>
+                    </div>
+                    <div class="cal-progress__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@TodayPct">
+                        <div class="cal-progress__fill" style="width: @(TodayPct)%"></div>
+                    </div>
+                </div>
+            }
+            <div class="cal-controls">
+                <div class="cal-seg" role="group" aria-label="Calendar view">
+                    <button type="button" class="@ViewBtnClass(CalView.Day)" aria-pressed="@(_view == CalView.Day)" @onclick="() => SetView(CalView.Day)">Day</button>
+                    <button type="button" class="@ViewBtnClass(CalView.Week)" aria-pressed="@(_view == CalView.Week)" @onclick="() => SetView(CalView.Week)">Week</button>
+                    <button type="button" class="@ViewBtnClass(CalView.Next7)" aria-pressed="@(_view == CalView.Next7)" @onclick="() => SetView(CalView.Next7)">7 days</button>
+                    <button type="button" class="@ViewBtnClass(CalView.Month)" aria-pressed="@(_view == CalView.Month)" @onclick="() => SetView(CalView.Month)">Month</button>
+                </div>
+                <div class="cal-seg" role="group" aria-label="Show items">
+                    <button type="button" class="@FilterBtnClass(UpcomingFilter.All)" aria-pressed="@(_filter == UpcomingFilter.All)" @onclick="() => SetFilter(UpcomingFilter.All)">All</button>
+                    <button type="button" class="@FilterBtnClass(UpcomingFilter.Dailies)" aria-pressed="@(_filter == UpcomingFilter.Dailies)" @onclick="() => SetFilter(UpcomingFilter.Dailies)">Dailies</button>
+                    <button type="button" class="@FilterBtnClass(UpcomingFilter.Todos)" aria-pressed="@(_filter == UpcomingFilter.Todos)" @onclick="() => SetFilter(UpcomingFilter.Todos)">To-dos</button>
+                </div>
+            </div>
+        </section>
+
+        <div class="cal-body">
+            <div class="cal-side">
+                @if (ShowTodos && _overdue.Count > 0)
+                {
+                    <MudPaper Class="cal-card cal-card--overdue" Elevation="0" Outlined="true" id="upcoming-overdue">
+                        <div class="cal-card__head">
+                            <span class="cal-card__icon cal-card__icon--overdue" aria-hidden="true">
+                                <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Size="Size.Small" />
+                            </span>
+                            <div class="cal-card__titles">
+                                <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="cal-card__title">Overdue</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">@_overdue.Count overdue to-do(s)</MudText>
+                            </div>
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Class="text-transform-none" OnClick="MoveOverdueToTodayAsync" Disabled="_bulkMoving">Move all to today</MudButton>
+                        </div>
+                        <ul class="cal-list">
+                            @foreach (var todo in _overdue)
+                            {
+                                <li class="cal-row" @key="todo.Id">
+                                    <span class="cal-row__icon cal-row__icon--todo" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Small" /></span>
+                                    <div class="cal-row__text">
+                                        <div class="cal-row__title">@todo.Title</div>
+                                        <div class="cal-row__meta">@TodoDueRelativeText.Format(todo.TodoDueDate!.Value, _today)</div>
+                                    </div>
+                                    <div class="cal-row__actions">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="cal-iconbtn" aria-label="@TodoCompleteLabel(todo)" OnClick="@(() => ToggleTodoAsync(todo))" Disabled="@IsBusy(todo.Id)" />
+                                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Class="text-transform-none cal-pushbtn" OnClick="@(() => MoveTodoToTodayAsync(todo))" Disabled="@IsBusy(todo.Id)">Today</MudButton>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    </MudPaper>
+                }
+
+                <MudPaper Class="cal-card cal-card--agenda" Elevation="0" Outlined="true" id="@SelectedAnchorId">
+                    <div class="cal-card__head">
+                        <span class="cal-card__icon cal-card__icon--agenda" aria-hidden="true">
+                            <MudIcon Icon="@Icons.Material.Filled.Event" Size="Size.Small" />
+                        </span>
+                        <div class="cal-card__titles">
+                            <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="cal-card__title">@SelectedLabel</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">@FormatDate(_selected)</MudText>
+                        </div>
+                        <div class="cal-agenda__side">
+                            @if (SelectedVisibleCount > 0)
+                            {
+                                <span class="cal-pill" aria-label="@SelectedVisibleCount items">@SelectedVisibleCount</span>
+                            }
+                            <div class="cal-agenda__nav" role="group" aria-label="Move selected day">
+                                <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Size="Size.Small" Class="cal-daystep" aria-label="Previous day" OnClick="PrevDay" />
+                                <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="cal-daystep" aria-label="Next day" OnClick="NextDay" />
                             </div>
                         </div>
+                    </div>
+                    @if (SelectedVisibleCount == 0)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Nothing scheduled.</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="cal-hint">A clear day. Use the board to add a daily or to-do.</MudText>
                     }
-                </MudStack>
-            </MudPaper>
-        }
+                    else
+                    {
+                        <div class="cal-agenda-cols">
+                        @if (ShowDailies && SelectedDailies.Count > 0)
+                        {
+                            <div class="cal-agenda-col">
+                            <div class="cal-group">Dailies</div>
+                            <ul class="cal-list">
+                                @foreach (var daily in SelectedDailies)
+                                {
+                                    @if (_selected == _today)
+                                    {
+                                        <li class="cal-row" @key="daily.Id">
+                                            <MudCheckBox T="bool"
+                                                         Value="@IsCheckedToday(daily)"
+                                                         ValueChanged="@(v => ToggleTodayAsync(daily))"
+                                                         Label="@daily.Title"
+                                                         Class="ma-0 upcoming-check"
+                                                         Color="Color.Primary"
+                                                         Dense="true" />
+                                            @if (daily.Counter > 0)
+                                            {
+                                                <span class="cal-streak" title="Daily streak: @daily.Counter days">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Whatshot" Size="Size.Small" aria-hidden="true" />
+                                                    @daily.Counter
+                                                </span>
+                                            }
+                                        </li>
+                                        <li class="cal-row__sub" @key="@($"sub-{daily.Id}")">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@UpcomingSchedule.DescribeDaily(daily)</MudText>
+                                        </li>
+                                    }
+                                    else
+                                    {
+                                        <li class="cal-row" @key="daily.Id">
+                                            <span class="cal-row__icon cal-row__icon--daily" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Repeat" Size="Size.Small" /></span>
+                                            <div class="cal-row__text">
+                                                <div class="cal-row__title">@daily.Title</div>
+                                                <div class="cal-row__meta">@UpcomingSchedule.DescribeDaily(daily)</div>
+                                            </div>
+                                        </li>
+                                    }
+                                }
+                            </ul>
+                            </div>
+                        }
+                        @if (ShowTodos && SelectedTodos.Count > 0)
+                        {
+                            <div class="cal-agenda-col">
+                            <div class="cal-group">To-dos</div>
+                            <ul class="cal-list">
+                                @foreach (var todo in SelectedTodos)
+                                {
+                                    <li class="cal-row" @key="todo.Id">
+                                        <span class="cal-row__icon cal-row__icon--todo" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Small" /></span>
+                                        <div class="cal-row__text">
+                                            <div class="cal-row__title">@todo.Title</div>
+                                            <div class="cal-row__meta">@TodoDueRelativeText.Format(todo.TodoDueDate!.Value, _today)</div>
+                                        </div>
+                                        <div class="cal-row__actions">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="cal-iconbtn" aria-label="@TodoCompleteLabel(todo)" OnClick="@(() => ToggleTodoAsync(todo))" Disabled="@IsBusy(todo.Id)" />
+                                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Class="text-transform-none cal-pushbtn" OnClick="@(() => ShiftTodoAsync(todo, 1))" Disabled="@IsBusy(todo.Id)">+1 day</MudButton>
+                                            @if (todo.TodoDueDate != _today)
+                                            {
+                                                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Class="text-transform-none cal-pushbtn" OnClick="@(() => MoveTodoToDateAsync(todo, _today))" Disabled="@IsBusy(todo.Id)">Today</MudButton>
+                                            }
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                            </div>
+                        }
+                        </div>
+                    }
+                </MudPaper>
+            </div>
 
-        @foreach (var day in _days)
-        {
-            <MudPaper Class="pa-4 upcoming-day-card" Elevation="0" Outlined="true" @key="day.Date">
-                <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="mb-1">@DayLabel(day)</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">@FormatDate(day.Date)</MudText>
-                @if (day.Dailies.Count == 0 && day.TodosDue.Count == 0)
-                {
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">Nothing scheduled.</MudText>
-                }
-                else
-                {
-                    <MudStack Spacing="1">
-                        @foreach (var daily in day.Dailies)
+            @if (_view == CalView.Month)
+            {
+                <section class="cal-grid-card cal-grid-card--month" aria-label="@($"{MonthTitle} calendar")">
+                    <div class="cal-week" aria-hidden="true">
+                        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                    </div>
+                    <div class="cal-grid">
+                        @foreach (var date in GridCells())
                         {
-                            <div class="upcoming-row" @key="daily.Id">
-                                @if (day.IsToday)
-                                {
-                                    <MudCheckBox T="bool"
-                                                 Value="@IsCheckedToday(daily)"
-                                                 ValueChanged="@(v => ToggleTodayAsync(daily))"
-                                                 Label="@daily.Title"
-                                                 Class="ma-0 upcoming-check"
-                                                 Color="Color.Primary"
-                                                 Dense="true" />
-                                }
-                                else
-                                {
-                                    <MudIcon Icon="@Icons.Material.Filled.Repeat" Size="Size.Small" Class="me-2" aria-hidden="true" />
-                                    <div class="upcoming-row__text">
-                                        <MudText Typo="Typo.body2">@daily.Title</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@UpcomingSchedule.DescribeDaily(daily)</MudText>
-                                    </div>
-                                }
-                            </div>
-                            @if (day.IsToday)
-                            {
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ms-8">@UpcomingSchedule.DescribeDaily(daily)</MudText>
-                            }
+                            var dailies = CellDailies(date);
+                            var todos = CellTodos(date);
+                            var total = dailies.Count + todos.Count;
+                            var chips = MonthChips(dailies, todos);
+                            var shown = chips.Take(3).ToList();
+                            var extra = chips.Count - shown.Count;
+                            <button type="button"
+                                    class="@CellClass(date)"
+                                    aria-label="@CellAria(date, total)"
+                                    aria-pressed="@(date == _selected)"
+                                    @onclick="() => SelectDay(date)"
+                                    @key="date">
+                                <span class="cal-cell__top">
+                                    <span class="cal-cell__num">@date.Day</span>
+                                    @if (date == _today)
+                                    {
+                                        <span class="cal-cell__todaydot" aria-hidden="true"></span>
+                                    }
+                                </span>
+                                <span class="cal-cell__chips">
+                                    @foreach (var chip in shown)
+                                    {
+                                        <span class="cal-chip @ChipClass(chip)" title="@chip.Hint">@ChipLabel(chip)</span>
+                                    }
+                                    @if (extra > 0)
+                                    {
+                                        <span class="cal-more">+@extra more</span>
+                                    }
+                                </span>
+                                <span class="cal-cell__dots" aria-hidden="true">
+                                    @if (ShowDailies && dailies.Count > 0)
+                                    {
+                                        <span class="cal-dot cal-dot--daily">@dailies.Count</span>
+                                    }
+                                    @if (ShowTodos && todos.Count > 0)
+                                    {
+                                        <span class="cal-dot cal-dot--todo">@todos.Count</span>
+                                    }
+                                </span>
+                            </button>
                         }
-                        @foreach (var todo in day.TodosDue)
+                    </div>
+                </section>
+            }
+            else if (_view == CalView.Week || _view == CalView.Next7)
+            {
+                <section class="cal-grid-card cal-grid-card--week" aria-label="@GridAriaLabel">
+                    <div class="cal-grid cal-week-grid">
+                        @foreach (var date in RangeCells())
                         {
-                            <div class="upcoming-row" @key="todo.Id">
-                                <MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Small" Class="me-2" aria-hidden="true" />
-                                <div class="upcoming-row__text">
-                                    <MudText Typo="Typo.body2">@todo.Title</MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@TodoDueRelativeText.Format(todo.TodoDueDate!.Value, _today)</MudText>
-                                </div>
-                            </div>
+                            var dailies = CellDailies(date);
+                            var todos = CellTodos(date);
+                            var total = dailies.Count + todos.Count;
+                            var chips = CellChips(dailies, todos);
+                            var shown = chips.Take(5).ToList();
+                            var extra = chips.Count - shown.Count;
+                            <button type="button"
+                                    class="@(CellClass(date) + " cal-cell--week")"
+                                    aria-label="@CellAria(date, total)"
+                                    aria-pressed="@(date == _selected)"
+                                    @onclick="() => SelectDay(date)"
+                                    @key="date">
+                                <span class="cal-cell__top">
+                                    <span class="cal-cell__dow">@date.ToString("ddd")</span>
+                                    <span class="cal-cell__num">@date.Day</span>
+                                </span>
+                                <span class="cal-cell__chips">
+                                    @foreach (var chip in shown)
+                                    {
+                                        <span class="cal-chip @ChipClass(chip)" title="@chip.Hint">@ChipLabel(chip)</span>
+                                    }
+                                    @if (extra > 0)
+                                    {
+                                        <span class="cal-more">+@extra more</span>
+                                    }
+                                </span>
+                                <span class="cal-cell__dots" aria-hidden="true">
+                                    @if (ShowDailies && dailies.Count > 0)
+                                    {
+                                        <span class="cal-dot cal-dot--daily">@dailies.Count</span>
+                                    }
+                                    @if (ShowTodos && todos.Count > 0)
+                                    {
+                                        <span class="cal-dot cal-dot--todo">@todos.Count</span>
+                                    }
+                                </span>
+                            </button>
                         }
-                    </MudStack>
-                }
-            </MudPaper>
-        }
+                    </div>
+                </section>
+            }
+            else if (_view == CalView.Day)
+            {
+                <section class="cal-grid-card cal-grid-card--strip" aria-label="@($"Days around {FormatDate(_selected)}")">
+                    <div class="cal-strip" role="listbox" aria-label="Choose a day">
+                        @foreach (var date in DayStripCells())
+                        {
+                            var dailies = CellDailies(date);
+                            var todos = CellTodos(date);
+                            var total = dailies.Count + todos.Count;
+                            <button type="button"
+                                    role="option"
+                                    aria-selected="@(date == _selected)"
+                                    class="@(CellClass(date) + " cal-cell--strip")"
+                                    aria-label="@CellAria(date, total)"
+                                    @onclick="() => SelectDay(date)"
+                                    @key="date">
+                                <span class="cal-cell__dow">@date.ToString("ddd")</span>
+                                <span class="cal-cell__num">@date.Day</span>
+                                <span class="cal-cell__dots" aria-hidden="true">
+                                    @if (ShowDailies && dailies.Count > 0)
+                                    {
+                                        <span class="cal-dot cal-dot--daily">@dailies.Count</span>
+                                    }
+                                    @if (ShowTodos && todos.Count > 0)
+                                    {
+                                        <span class="cal-dot cal-dot--todo">@todos.Count</span>
+                                    }
+                                    @if (total == 0)
+                                    {
+                                        <span class="cal-dot cal-dot--empty" aria-hidden="true"></span>
+                                    }
+                                </span>
+                            </button>
+                        }
+                    </div>
+                </section>
+            }
+        </div>
     }
-</MudStack>
+</div>
 
 @code {
+    private enum UpcomingFilter { All, Dailies, Todos }
+    private enum CalView { Day, Week, Next7, Month }
+
+    private sealed record CalChip(string Title, string Hint, bool IsTodo, bool Done, bool IsRoutine);
+
     private bool _loading = true;
     private string? _error;
     private DateOnly _today;
-    private IReadOnlyList<UpcomingDay> _days = [];
+    private BoardSnapshot? _snapshot;
     private IReadOnlyList<BoardItem> _overdue = [];
+    private UpcomingFilter _filter = UpcomingFilter.All;
+    private CalView _view = CalView.Month;
+    private bool _bulkMoving;
+    private readonly HashSet<Guid> _busy = [];
+    private int _todayScheduled;
+    private int _todayDone;
+    private int _visibleYear;
+    private int _visibleMonth;
+    private DateOnly _selected;
+    private bool _calInit;
+
+    private bool ShowDailies => _filter != UpcomingFilter.Todos;
+    private bool ShowTodos => _filter != UpcomingFilter.Dailies;
+    private int OverdueCount => _overdue.Count;
+
+    private int TodayRemaining
+    {
+        get
+        {
+            if (_snapshot is null)
+            {
+                return 0;
+            }
+            var count = 0;
+            if (ShowDailies)
+            {
+                count += _snapshot.Dailies.Count(d => DailySchedule.IsDueOnDate(d, _today));
+            }
+            if (ShowTodos)
+            {
+                count += _snapshot.Todos.Count(t => !t.IsCompleted && t.TodoDueDate == _today);
+            }
+            return count;
+        }
+    }
+
+    private int MonthTotal
+    {
+        get
+        {
+            if (_snapshot is null)
+            {
+                return 0;
+            }
+            var total = 0;
+            var days = DateTime.DaysInMonth(_visibleYear, _visibleMonth);
+            for (var d = 1; d <= days; d++)
+            {
+                var date = new DateOnly(_visibleYear, _visibleMonth, d);
+                if (ShowDailies)
+                {
+                    total += _snapshot.Dailies.Count(x => DailySchedule.IsScheduledOn(x, date));
+                }
+                if (ShowTodos)
+                {
+                    total += _snapshot.Todos.Count(t => !t.IsCompleted && t.TodoDueDate == date);
+                }
+            }
+            if (ShowTodos)
+            {
+                total += _overdue.Count;
+            }
+            return total;
+        }
+    }
+
+    private int TodayPct => _todayScheduled == 0 ? 100 : (int)Math.Round(100.0 * _todayDone / _todayScheduled);
+
+    private string MonthTitle => new DateOnly(_visibleYear, _visibleMonth, 1).ToString("MMMM yyyy");
+    private string MonthShort => new DateOnly(_visibleYear, _visibleMonth, 1).ToString("MMM");
+    private DateOnly WeekStart => _selected.AddDays(-(((int)_selected.DayOfWeek + 6) % 7));
+    private string WeekRangeTitle
+    {
+        get
+        {
+            var s = WeekStart;
+            var e = s.AddDays(6);
+            return s.Year != e.Year
+                ? $"{s:MMM d, yyyy} - {e:MMM d, yyyy}"
+                : $"{s:MMM d} - {e:MMM d}, {e:yyyy}";
+        }
+    }
+    private string HeaderTitle => _view switch
+    {
+        CalView.Day => SelectedLabel,
+        CalView.Week => WeekRangeTitle,
+        CalView.Next7 => SevenRangeTitle,
+        _ => MonthTitle,
+    };
+    private string PrevLabel => _view switch
+    {
+        CalView.Day => "Previous day",
+        CalView.Week => "Previous week",
+        CalView.Next7 => "Previous 7 days",
+        _ => "Previous month",
+    };
+    private string NextLabel => _view switch
+    {
+        CalView.Day => "Next day",
+        CalView.Week => "Next week",
+        CalView.Next7 => "Next 7 days",
+        _ => "Next month",
+    };
+    private string SelectedAnchorId => $"upcoming-day-{_selected:yyyy-MM-dd}";
+
+    private string HeadlineText
+    {
+        get
+        {
+            if (OverdueCount > 0 && TodayRemaining > 0)
+            {
+                return $"{OverdueCount} overdue, {TodayRemaining} due today";
+            }
+            if (OverdueCount > 0)
+            {
+                return $"{OverdueCount} overdue to catch up on";
+            }
+            if (TodayRemaining > 0)
+            {
+                return $"{TodayRemaining} to do today";
+            }
+            return "Nothing due today";
+        }
+    }
+
+    private IReadOnlyList<BoardItem> SelectedDailies =>
+        _snapshot is null || !ShowDailies
+            ? []
+            : [.. _snapshot.Dailies
+                .Where(d => DailySchedule.IsScheduledOn(d, _selected))
+                .OrderBy(d => d.Title, StringComparer.Ordinal)];
+
+    private IReadOnlyList<BoardItem> SelectedTodos =>
+        _snapshot is null || !ShowTodos
+            ? []
+            : [.. _snapshot.Todos
+                .Where(t => !t.IsCompleted && t.TodoDueDate == _selected)
+                .OrderBy(t => t.Title, StringComparer.Ordinal)];
+
+    private int SelectedVisibleCount => SelectedDailies.Count + SelectedTodos.Count;
+
+    private string SelectedLabel => DayLabel(_selected);
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadPersistedViewStateAsync();
         await LoadAsync();
     }
 
@@ -125,15 +529,41 @@
         await LoadAsync();
     }
 
+    private async Task RefreshAsync()
+    {
+        if (_snapshot is null)
+        {
+            await LoadAsync();
+            return;
+        }
+        var snapshot = await BoardData.GetSnapshotAsync();
+        ApplySnapshot(snapshot);
+    }
+
+    private void ApplySnapshot(BoardSnapshot snapshot)
+    {
+        _snapshot = snapshot;
+        _today = DailySchedule.LocalToday(TimeZoneService);
+        _overdue = UpcomingSchedule.GetOverdueTodos(snapshot, _today);
+        _todayScheduled = snapshot.Dailies.Count(d => DailySchedule.IsScheduledOn(d, _today));
+        var todayDue = snapshot.Dailies.Count(d => DailySchedule.IsDueOnDate(d, _today));
+        _todayDone = Math.Max(0, _todayScheduled - todayDue);
+        if (!_calInit)
+        {
+            _visibleYear = _today.Year;
+            _visibleMonth = _today.Month;
+            _selected = _today;
+            _calInit = true;
+        }
+    }
+
     private async Task LoadAsync()
     {
         try
         {
             await DateFormatService.InitializeAsync();
             var snapshot = await BoardData.GetSnapshotAsync();
-            _today = DailySchedule.LocalToday(TimeZoneService);
-            _days = UpcomingSchedule.GetUpcomingDays(snapshot, _today);
-            _overdue = UpcomingSchedule.GetOverdueTodos(snapshot, _today);
+            ApplySnapshot(snapshot);
         }
         catch (Exception ex)
         {
@@ -146,6 +576,248 @@
         }
     }
 
+    private void SetFilter(UpcomingFilter filter)
+    {
+        _filter = filter;
+        _ = PersistViewStateAsync();
+    }
+
+    private void SetView(CalView view)
+    {
+        _view = view;
+        _ = PersistViewStateAsync();
+    }
+
+    private async Task LoadPersistedViewStateAsync()
+    {
+        UpcomingViewState? state;
+        try
+        {
+            state = await ViewState.GetAsync();
+        }
+        catch (Exception)
+        {
+            return;
+        }
+
+        if (state is null)
+        {
+            return;
+        }
+
+        if (Enum.TryParse<CalView>(state.View, ignoreCase: true, out var view))
+        {
+            _view = view;
+        }
+
+        if (Enum.TryParse<UpcomingFilter>(state.Filter, ignoreCase: true, out var filter))
+        {
+            _filter = filter;
+        }
+    }
+
+    private async Task PersistViewStateAsync()
+    {
+        try
+        {
+            await ViewState.SetAsync(new UpcomingViewState(_view.ToString(), _filter.ToString()));
+        }
+        catch (Exception)
+        {
+            // Ignored. The view does not persist.
+        }
+    }
+
+    private void SelectDay(DateOnly date)
+    {
+        _selected = date;
+        _visibleYear = date.Year;
+        _visibleMonth = date.Month;
+    }
+
+    private void PrevDay() => SelectDay(_selected.AddDays(-1));
+    private void NextDay() => SelectDay(_selected.AddDays(1));
+
+    private void Prev()
+    {
+        if (_view == CalView.Month)
+        {
+            PrevMonth();
+        }
+        else
+        {
+            SelectDay(_selected.AddDays(_view == CalView.Day ? -1 : -7));
+        }
+    }
+
+    private void Next()
+    {
+        if (_view == CalView.Month)
+        {
+            NextMonth();
+        }
+        else
+        {
+            SelectDay(_selected.AddDays(_view == CalView.Day ? 1 : 7));
+        }
+    }
+
+    private void PrevMonth()
+    {
+        var first = new DateOnly(_visibleYear, _visibleMonth, 1).AddMonths(-1);
+        _visibleYear = first.Year;
+        _visibleMonth = first.Month;
+    }
+
+    private void NextMonth()
+    {
+        var first = new DateOnly(_visibleYear, _visibleMonth, 1).AddMonths(1);
+        _visibleYear = first.Year;
+        _visibleMonth = first.Month;
+    }
+
+    private void GoToday()
+    {
+        _visibleYear = _today.Year;
+        _visibleMonth = _today.Month;
+        _selected = _today;
+    }
+
+    private static string TodoCompleteLabel(BoardItem todo) => $"Mark {todo.Title} complete";
+
+    private bool IsBusy(Guid id) => _busy.Contains(id);
+
+    private List<DateOnly> GridCells()
+    {
+        var first = new DateOnly(_visibleYear, _visibleMonth, 1);
+        var lead = ((int)first.DayOfWeek + 6) % 7;
+        var start = first.AddDays(-lead);
+        return Enumerable.Range(0, 42).Select(i => start.AddDays(i)).ToList();
+    }
+
+    private List<DateOnly> WeekCells() => Enumerable.Range(0, 7).Select(i => WeekStart.AddDays(i)).ToList();
+
+    private List<DateOnly> Next7Cells() => Enumerable.Range(0, 7).Select(i => _selected.AddDays(i)).ToList();
+
+    private List<DateOnly> DayStripCells() => Enumerable.Range(-3, 7).Select(i => _selected.AddDays(i)).ToList();
+
+    private List<DateOnly> RangeCells() => _view == CalView.Next7 ? Next7Cells() : WeekCells();
+
+    private static string RangeTitle(DateOnly start, DateOnly end) =>
+        start.Year != end.Year
+            ? $"{start:MMM d, yyyy} - {end:MMM d, yyyy}"
+            : $"{start:MMM d} - {end:MMM d}, {end:yyyy}";
+
+    private string SevenRangeTitle => RangeTitle(_selected, _selected.AddDays(6));
+
+    private string GridAriaLabel => _view == CalView.Next7
+        ? $"Next 7 days {SevenRangeTitle} calendar"
+        : $"Week of {WeekRangeTitle} calendar";
+
+    private IReadOnlyList<BoardItem> CellDailies(DateOnly date) =>
+        _snapshot is null || !ShowDailies
+            ? []
+            : [.. _snapshot.Dailies
+                .Where(d => DailySchedule.IsScheduledOn(d, date))
+                .OrderBy(d => d.Title, StringComparer.Ordinal)];
+
+    private IReadOnlyList<BoardItem> CellTodos(DateOnly date) =>
+        _snapshot is null || !ShowTodos
+            ? []
+            : [.. _snapshot.Todos
+                .Where(t => !t.IsCompleted && t.TodoDueDate == date)
+                .OrderBy(t => t.Title, StringComparer.Ordinal)];
+
+    private static string DailyHint(BoardItem d) => $"{d.Title} ({UpcomingSchedule.DescribeDaily(d)})";
+
+    private List<CalChip> CellChips(IReadOnlyList<BoardItem> dailies, IReadOnlyList<BoardItem> todos)
+    {
+        List<CalChip> chips = [];
+        chips.AddRange(dailies.Select(d => new CalChip(d.Title, DailyHint(d), false, d.DailyLastCompletedOn == _today, false)));
+        chips.AddRange(todos.Select(t => new CalChip(t.Title, t.TodoDueDate is { } due ? $"{t.Title} ({TodoDueRelativeText.Format(due, _today)})" : t.Title, true, false, false)));
+        return chips;
+    }
+
+    /// <summary>
+    /// Month cells collapse repeating dailies into one routine chip so the same
+    /// habits do not repeat on every day. Week cells keep every item.
+    /// </summary>
+    private List<CalChip> MonthChips(IReadOnlyList<BoardItem> dailies, IReadOnlyList<BoardItem> todos)
+    {
+        if (_filter == UpcomingFilter.Dailies)
+        {
+            return CellChips(dailies, []);
+        }
+        List<CalChip> chips = [];
+        if (ShowDailies && dailies.Count > 0)
+        {
+            if (dailies.Count == 1)
+            {
+                var d = dailies[0];
+                chips.Add(new CalChip(d.Title, DailyHint(d), false, d.DailyLastCompletedOn == _today, false));
+            }
+            else
+            {
+                var hint = string.Join(", ", dailies.Take(6).Select(d => $"{d.Title} ({UpcomingSchedule.DescribeDaily(d)})"));
+                chips.Add(new CalChip($"{dailies.Count} dailies", hint, false, false, true));
+            }
+        }
+        chips.AddRange(todos.Select(t => new CalChip(t.Title, t.TodoDueDate is { } due ? $"{t.Title} ({TodoDueRelativeText.Format(due, _today)})" : t.Title, true, false, false)));
+        return chips;
+    }
+
+    private static string ChipClass(CalChip chip)
+    {
+        var cls = chip.IsTodo ? "cal-chip--todo" : "cal-chip--daily";
+        if (chip.Done)
+        {
+            cls += " cal-chip--done";
+        }
+        if (chip.IsRoutine)
+        {
+            cls += " cal-chip--routine";
+        }
+        return cls;
+    }
+
+    private static string ChipLabel(CalChip chip) => chip.Title;
+
+    private string CellClass(DateOnly date)
+    {
+        var cls = "cal-cell";
+        if (_view == CalView.Month && date.Month != _visibleMonth)
+        {
+            cls += " cal-cell--outside";
+        }
+        if (date == _today)
+        {
+            cls += " cal-cell--today";
+        }
+        if (date == _selected)
+        {
+            cls += " cal-cell--selected";
+        }
+        if (date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+        {
+            cls += " cal-cell--weekend";
+        }
+        return cls;
+    }
+
+    private string DayLabel(DateOnly date)
+    {
+        var offset = date.DayNumber - _today.DayNumber;
+        return offset switch
+        {
+            0 => "Today",
+            1 => "Tomorrow",
+            -1 => "Yesterday",
+            _ => date.ToString("dddd"),
+        };
+    }
+
+    private string CellAria(DateOnly date, int total) => $"{DayLabel(date)}, {FormatDate(date)}, {total} items";
+
     private bool IsCheckedToday(BoardItem daily) =>
         DailySchedule.IsCompletedForToday(daily.DailyLastCompletedOn, daily.IsCompleted, _today);
 
@@ -154,10 +826,7 @@
         try
         {
             await BoardData.ToggleItemAsync(BoardSection.Daily, daily.Id);
-            var snapshot = await BoardData.GetSnapshotAsync();
-            _today = DailySchedule.LocalToday(TimeZoneService);
-            _days = UpcomingSchedule.GetUpcomingDays(snapshot, _today);
-            _overdue = UpcomingSchedule.GetOverdueTodos(snapshot, _today);
+            await RefreshAsync();
         }
         catch (Exception)
         {
@@ -165,16 +834,102 @@
         }
     }
 
-    private string DayLabel(UpcomingDay day)
+    private async Task ToggleTodoAsync(BoardItem todo)
     {
-        var offset = day.Date.DayNumber - _today.DayNumber;
-        return offset switch
+        if (!_busy.Add(todo.Id))
         {
-            0 => "Today",
-            1 => "Tomorrow",
-            _ => day.Date.ToString("dddd"),
-        };
+            return;
+        }
+        try
+        {
+            await BoardData.ToggleItemAsync(BoardSection.Todo, todo.Id);
+            await RefreshAsync();
+        }
+        catch (Exception)
+        {
+            await Notifier.NotifyAsync("Could not update this to-do. Check your connection. Try again.", Severity.Error);
+        }
+        finally
+        {
+            _busy.Remove(todo.Id);
+        }
     }
+
+    private async Task ShiftTodoAsync(BoardItem todo, int days)
+    {
+        if (todo.TodoDueDate is null || !_busy.Add(todo.Id))
+        {
+            return;
+        }
+        try
+        {
+            var next = todo.TodoDueDate.Value.AddDays(days);
+            var args = UpdateTodoArgs.From(todo) with { DueDate = next };
+            await BoardData.UpdateTodoAsync(todo.Id, args);
+            await RefreshAsync();
+        }
+        catch (Exception)
+        {
+            await Notifier.NotifyAsync("Could not reschedule this to-do. Try again.", Severity.Error);
+        }
+        finally
+        {
+            _busy.Remove(todo.Id);
+        }
+    }
+
+    private async Task MoveTodoToTodayAsync(BoardItem todo) => await MoveTodoToDateAsync(todo, _today);
+
+    private async Task MoveTodoToDateAsync(BoardItem todo, DateOnly date)
+    {
+        if (!_busy.Add(todo.Id))
+        {
+            return;
+        }
+        try
+        {
+            var args = UpdateTodoArgs.From(todo) with { DueDate = date };
+            await BoardData.UpdateTodoAsync(todo.Id, args);
+            await RefreshAsync();
+        }
+        catch (Exception)
+        {
+            await Notifier.NotifyAsync("Could not reschedule this to-do. Try again.", Severity.Error);
+        }
+        finally
+        {
+            _busy.Remove(todo.Id);
+        }
+    }
+
+    private async Task MoveOverdueToTodayAsync()
+    {
+        if (_bulkMoving || _overdue.Count == 0)
+        {
+            return;
+        }
+        _bulkMoving = true;
+        try
+        {
+            foreach (var todo in _overdue)
+            {
+                var args = UpdateTodoArgs.From(todo) with { DueDate = _today };
+                await BoardData.UpdateTodoAsync(todo.Id, args);
+            }
+            await RefreshAsync();
+        }
+        catch (Exception)
+        {
+            await Notifier.NotifyAsync("Could not move overdue to-dos. Try again.", Severity.Error);
+        }
+        finally
+        {
+            _bulkMoving = false;
+        }
+    }
+
+    private string FilterBtnClass(UpcomingFilter f) => _filter == f ? "cal-seg__btn cal-seg__btn--active" : "cal-seg__btn";
+    private string ViewBtnClass(CalView v) => _view == v ? "cal-seg__btn cal-seg__btn--active" : "cal-seg__btn";
 
     private string FormatDate(DateOnly date)
     {

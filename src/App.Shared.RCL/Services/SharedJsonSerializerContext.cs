@@ -47,6 +47,7 @@ namespace App.Shared.RCL.Services;
 [JsonSerializable(typeof(UserDataExportDto))]
 [JsonSerializable(typeof(UserDataImportResult))]
 [JsonSerializable(typeof(BoardColumnFilterState))]
+[JsonSerializable(typeof(UpcomingViewState))]
 [JsonSerializable(typeof(BoardLocalRow))]
 [JsonSerializable(typeof(List<BoardLocalRow>))]
 [JsonSerializable(typeof(BoardOutboxEntry))]

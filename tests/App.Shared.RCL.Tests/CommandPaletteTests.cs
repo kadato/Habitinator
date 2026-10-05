@@ -106,7 +106,7 @@ public sealed class CommandPaletteTests : IAsyncDisposable
         item.Category.Should().Be("Habits");
         item.ChildrenProvider.Should().NotBeNull();
 
-        var subActions = await item.ChildrenProvider!();
+        var subActions = await item.ChildrenProvider();
         subActions.Should().Contain(a => a.Title.Contains("Increment"));
         subActions.Should().Contain(a => a.Title.Contains("Decrement"));
         subActions.Should().Contain(a => a.Title.Contains("Edit"));
@@ -331,7 +331,7 @@ public sealed class CommandPaletteTests : IAsyncDisposable
         manageCmd.Should().NotBeNull();
         manageCmd.ChildrenProvider.Should().NotBeNull();
 
-        var items = await manageCmd.ChildrenProvider!();
+        var items = await manageCmd.ChildrenProvider();
         items.Should().HaveCount(3);
         items.Should().Contain(i => i.Title == "Habit 1");
         items.Should().Contain(i => i.Title == "Daily 1");

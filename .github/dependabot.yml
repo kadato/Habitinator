@@ -27,3 +27,17 @@ updates:
       dotnet:
         patterns:
           - "*"
+
+  - package-ecosystem: npm
+    directory: /scripts/lighthouse-audit
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "build"
+      prefix-development: "build"
+      include: "scope"
+    groups:
+      lighthouse:
+        patterns:
+          - "*"

@@ -7,6 +7,8 @@ namespace App.Web;
 
 internal static class PipelineExtensions
 {
+    private const string PlainTextContentType = "text/plain";
+
     internal static void ConfigurePipeline(this WebApplication app)
     {
         // Configure the HTTP request pipeline.
@@ -46,7 +48,7 @@ internal static class PipelineExtensions
 
         // Used by AppHost WithHttpHealthCheck. Anonymous, no auth required.
         // Liveness: process is up. Readiness below checks Postgres.
-        app.MapGet("/health", () => Results.Text("OK", "text/plain"));
+        app.MapGet("/health", () => Results.Text("OK", PlainTextContentType));
         app.MapGet("/health/ready", async (IServiceProvider services, CancellationToken cancellationToken) =>
         {
             try
@@ -55,18 +57,18 @@ internal static class PipelineExtensions
                 var factory = scope.ServiceProvider.GetService<IDbContextFactory<App.Web.Data.ApplicationDbContext>>();
                 if (factory is null)
                 {
-                    return Results.Text("OK", "text/plain");
+                    return Results.Text("OK", PlainTextContentType);
                 }
 
                 await using var db = await factory.CreateDbContextAsync(cancellationToken);
                 var canConnect = await db.Database.CanConnectAsync(cancellationToken);
                 return canConnect
-                    ? Results.Text("OK", "text/plain")
-                    : Results.Text("DB unavailable", "text/plain", statusCode: 503);
+                    ? Results.Text("OK", PlainTextContentType)
+                    : Results.Text("DB unavailable", PlainTextContentType, statusCode: 503);
             }
             catch (Exception)
             {
-                return Results.Text("DB unavailable", "text/plain", statusCode: 503);
+                return Results.Text("DB unavailable", PlainTextContentType, statusCode: 503);
             }
         });
 

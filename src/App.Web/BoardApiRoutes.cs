@@ -13,6 +13,7 @@ internal static class BoardApiRoutes
 {
     private const string IdempotencyKeyHeader = "Idempotency-Key";
     private const string JsonContentType = "application/json";
+    private const string BoardProtocolVersionHeader = "X-Board-Protocol-Version";
 
     internal static JsonSerializerOptions Json => JsonDefaults.Api;
 
@@ -41,7 +42,7 @@ internal static class BoardApiRoutes
                     return Results.BadRequest(new { detail = limitError });
                 }
 
-                http.Response.Headers["X-Board-Protocol-Version"] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                http.Response.Headers[BoardProtocolVersionHeader] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 var snapshot = await boardPersistenceService.GetSnapshotAsync(user.Value, limit);
                 return Results.Json(snapshot, Json);
             });
@@ -50,7 +51,7 @@ internal static class BoardApiRoutes
             async (HttpRequest request, CurrentUserId user, BoardPersistenceService boardPersistenceService,
                 CancellationToken cancellationToken) =>
             {
-                request.HttpContext.Response.Headers["X-Board-Protocol-Version"] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                request.HttpContext.Response.Headers[BoardProtocolVersionHeader] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 var cursorRaw = request.Query["cursor"].FirstOrDefault();
                 if (string.IsNullOrWhiteSpace(cursorRaw))
                 {
@@ -92,7 +93,7 @@ internal static class BoardApiRoutes
                     return Results.BadRequest(new { detail = limitError });
                 }
 
-                http.Response.Headers["X-Board-Protocol-Version"] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                http.Response.Headers[BoardProtocolVersionHeader] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 var snapshot = await boardPersistenceService.GetArchivedSnapshotAsync(user.Value, limit);
                 return Results.Json(snapshot, Json);
             });
@@ -101,7 +102,7 @@ internal static class BoardApiRoutes
             async (HttpContext http, CurrentUserId user, BoardPersistenceService boardPersistenceService,
                 CancellationToken cancellationToken) =>
             {
-                http.Response.Headers["X-Board-Protocol-Version"] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                http.Response.Headers[BoardProtocolVersionHeader] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 var streaks = await boardPersistenceService.GetDailyStreakMapAsync(user.Value, cancellationToken);
                 return Results.Json(streaks, Json);
             });
@@ -347,7 +348,7 @@ internal static class BoardApiRoutes
                 BoardIdempotencyService.ComputeFingerprintHex(method, path, bodyJson),
                 () => execute(cancellationToken),
                 cancellationToken);
-            http.Response.Headers["X-Board-Protocol-Version"] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            http.Response.Headers[BoardProtocolVersionHeader] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
             return ToHttpResult(outcome);
         }
         catch (BoardIdempotencyFingerprintMismatchException)

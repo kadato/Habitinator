@@ -1,3 +1,4 @@
+#pragma warning disable S4487, S2325, S3459 // Flagged fields are read/assigned by the Razor markup part (@if bindings, @ref), flagged methods use services injected there or ComponentBase members; Sonar sees this code-behind file in isolation.
 using App.Shared.RCL.Components.Dialogs;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;

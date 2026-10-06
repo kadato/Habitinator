@@ -64,6 +64,25 @@ public partial class CommandPalette : IDisposable
 
     private async Task RecomputeVisibleItemsAsync()
     {
+        var token = await ResetSearchAsync();
+        var items = _currentSubItems is not null
+            ? FilterSubItems(_query)
+            : await BuildRootItemsAsync(_query, token);
+        if (items is null)
+        {
+            return;
+        }
+
+        ApplyGrouping(items);
+
+        if (_selectedIndex >= _flatVisibleItems.Count)
+        {
+            _selectedIndex = Math.Max(0, _flatVisibleItems.Count - 1);
+        }
+    }
+
+    private async Task<CancellationToken> ResetSearchAsync()
+    {
         if (_searchCts is not null)
         {
             await _searchCts.CancelAsync();
@@ -71,77 +90,78 @@ public partial class CommandPalette : IDisposable
         }
 
         _searchCts = new CancellationTokenSource();
-        var token = _searchCts.Token;
+        return _searchCts.Token;
+    }
 
-        var items = new List<CommandItem>();
-
-        if (_currentSubItems is not null)
+    private List<CommandItem> FilterSubItems(string query)
+    {
+        if (_currentSubItems is null || string.IsNullOrWhiteSpace(query))
         {
-            // Drilled down into sub-actions
-            if (string.IsNullOrWhiteSpace(_query))
-            {
-                items.AddRange(_currentSubItems);
-            }
-            else
-            {
-                items.AddRange(_currentSubItems.Where(i =>
-                    i.Title.Contains(_query, StringComparison.OrdinalIgnoreCase) ||
-                    (i.Subtitle is not null && i.Subtitle.Contains(_query, StringComparison.OrdinalIgnoreCase)) ||
-                    (i.Keywords is not null && i.Keywords.Any(k => k.Contains(_query, StringComparison.OrdinalIgnoreCase)))));
-            }
-        }
-        else
-        {
-            // Root level: progressive disclosure
-            if (string.IsNullOrWhiteSpace(_query))
-            {
-                // Initial state: show Suggested, Navigation, and top Actions
-                items.AddRange(_rootItems.Where(i => i.Category is "Suggested" or "Navigation" or "Actions"));
-            }
-            else
-            {
-                var q = _query.Trim();
-
-                // 1. Matching root commands
-                var matchingRoot = _rootItems.Where(i =>
-                    i.Title.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-                    i.Category.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-                    (i.Subtitle is not null && i.Subtitle.Contains(q, StringComparison.OrdinalIgnoreCase)) ||
-                    (i.Keywords is not null && i.Keywords.Any(k => k.Contains(q, StringComparison.OrdinalIgnoreCase))))
-                    .ToList();
-
-                items.AddRange(matchingRoot);
-
-                // 2. Search board items
-                try
-                {
-                    var boardResults = await PaletteService.SearchBoardItemsAsync(q, token);
-                    if (!token.IsCancellationRequested)
-                    {
-                        items.AddRange(boardResults);
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    return;
-                }
-            }
+            return _currentSubItems is null ? [] : [.. _currentSubItems];
         }
 
+        return _currentSubItems.Where(MatchesSubItemQuery).ToList();
+    }
+
+    private bool MatchesSubItemQuery(CommandItem i) =>
+        i.Title.Contains(_query, StringComparison.OrdinalIgnoreCase) ||
+        (i.Subtitle is not null && i.Subtitle.Contains(_query, StringComparison.OrdinalIgnoreCase)) ||
+        (i.Keywords is not null && i.Keywords.Any(k => k.Contains(_query, StringComparison.OrdinalIgnoreCase)));
+
+    private async Task<List<CommandItem>?> BuildRootItemsAsync(string query, CancellationToken token)
+    {
+        // Initial state: show Suggested, Navigation, and top Actions
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return _rootItems.Where(i => i.Category is "Suggested" or "Navigation" or "Actions").ToList();
+        }
+
+        var q = query.Trim();
+
+        // 1. Matching root commands
+        var items = FindMatchingRootCommands(q);
+
+        // 2. Search board items
+        var boardResults = await SearchBoardItemsSafeAsync(q, token);
+        if (boardResults is null)
+        {
+            return null;
+        }
+
+        if (!token.IsCancellationRequested)
+        {
+            items.AddRange(boardResults);
+        }
+
+        return items;
+    }
+
+    private List<CommandItem> FindMatchingRootCommands(string q)
+    {
+        return _rootItems.Where(i =>
+            i.Title.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+            i.Category.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+            (i.Subtitle is not null && i.Subtitle.Contains(q, StringComparison.OrdinalIgnoreCase)) ||
+            (i.Keywords is not null && i.Keywords.Any(k => k.Contains(q, StringComparison.OrdinalIgnoreCase))))
+            .ToList();
+    }
+
+    private async Task<List<CommandItem>?> SearchBoardItemsSafeAsync(string query, CancellationToken token)
+    {
+        try
+        {
+            return await PaletteService.SearchBoardItemsAsync(query, token);
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+    }
+
+    private void ApplyGrouping(List<CommandItem> items)
+    {
         // Group with capped items per category when browsing root, but never truncate sub-actions
-        int maxItemsPerCategory;
-        if (_currentSubItems is not null)
-        {
-            maxItemsPerCategory = 100;
-        }
-        else if (string.IsNullOrWhiteSpace(_query))
-        {
-            maxItemsPerCategory = 4;
-        }
-        else
-        {
-            maxItemsPerCategory = 8;
-        }
+        var maxItemsPerCategory = GetMaxItemsPerCategory();
         _groupedItems = items
             .GroupBy(i => i.Category)
             .Select(g => new CappedGrouping(g.Key, g.Take(maxItemsPerCategory)))
@@ -149,11 +169,16 @@ public partial class CommandPalette : IDisposable
             .ToList();
 
         _flatVisibleItems = _groupedItems.SelectMany(g => g).ToList();
+    }
 
-        if (_selectedIndex >= _flatVisibleItems.Count)
+    private int GetMaxItemsPerCategory()
+    {
+        if (_currentSubItems is not null)
         {
-            _selectedIndex = Math.Max(0, _flatVisibleItems.Count - 1);
+            return 100;
         }
+
+        return string.IsNullOrWhiteSpace(_query) ? 4 : 8;
     }
 
     public CommandItem? SelectedItem =>
@@ -189,49 +214,23 @@ public partial class CommandPalette : IDisposable
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (e.CtrlKey && e.Key.Equals("h", StringComparison.OrdinalIgnoreCase))
+        if (await HandleCreationShortcutAsync(e))
         {
-            await PaletteService.CreateItemAsync(BoardSection.Habit);
-            return;
-        }
-
-        if (e.CtrlKey && e.Key.Equals("d", StringComparison.OrdinalIgnoreCase))
-        {
-            await PaletteService.CreateItemAsync(BoardSection.Daily);
-            return;
-        }
-
-        if (e.AltKey && e.Key.Equals("t", StringComparison.OrdinalIgnoreCase))
-        {
-            await PaletteService.CreateItemAsync(BoardSection.Todo);
             return;
         }
 
         switch (e.Key)
         {
             case "ArrowDown":
-                if (_flatVisibleItems.Count > 0)
-                {
-                    _selectedIndex = (_selectedIndex + 1) % _flatVisibleItems.Count;
-                    StateHasChanged();
-                    await SafeInvokeVoidAsync("HabitinatorCommandPalette.scrollSelectedIntoView", SelectedItemId);
-                }
+                await MoveSelectionAsync(1);
                 break;
 
             case "ArrowUp":
-                if (_flatVisibleItems.Count > 0)
-                {
-                    _selectedIndex = (_selectedIndex - 1 + _flatVisibleItems.Count) % _flatVisibleItems.Count;
-                    StateHasChanged();
-                    await SafeInvokeVoidAsync("HabitinatorCommandPalette.scrollSelectedIntoView", SelectedItemId);
-                }
+                await MoveSelectionAsync(-1);
                 break;
 
             case "Enter":
-                if (SelectedItem is not null)
-                {
-                    await ExecuteItemAsync(SelectedItem);
-                }
+                await ExecuteSelectedAsync();
                 break;
 
             case "Backspace" when string.IsNullOrEmpty(_query) && _breadcrumbStack.Count > 0:
@@ -239,21 +238,68 @@ public partial class CommandPalette : IDisposable
                 break;
 
             case "Escape":
-                if (!string.IsNullOrEmpty(_query))
-                {
-                    _query = string.Empty;
-                    _selectedIndex = 0;
-                    await RecomputeVisibleItemsAsync();
-                }
-                else if (_breadcrumbStack.Count > 0)
-                {
-                    await PopBreadcrumbAsync();
-                }
-                else
-                {
-                    PaletteService.Close();
-                }
+                await HandleEscapeAsync();
                 break;
+        }
+    }
+
+    private async Task<bool> HandleCreationShortcutAsync(KeyboardEventArgs e)
+    {
+        BoardSection? section = null;
+        if (e.CtrlKey && e.Key.Equals("h", StringComparison.OrdinalIgnoreCase))
+        {
+            section = BoardSection.Habit;
+        }
+        else if (e.CtrlKey && e.Key.Equals("d", StringComparison.OrdinalIgnoreCase))
+        {
+            section = BoardSection.Daily;
+        }
+        else if (e.AltKey && e.Key.Equals("t", StringComparison.OrdinalIgnoreCase))
+        {
+            section = BoardSection.Todo;
+        }
+
+        if (section is null)
+        {
+            return false;
+        }
+
+        await PaletteService.CreateItemAsync(section.Value);
+        return true;
+    }
+
+    private async Task MoveSelectionAsync(int delta)
+    {
+        if (_flatVisibleItems.Count == 0)
+        {
+            return;
+        }
+
+        _selectedIndex = (_selectedIndex + delta + _flatVisibleItems.Count) % _flatVisibleItems.Count;
+        StateHasChanged();
+        await SafeInvokeVoidAsync("HabitinatorCommandPalette.scrollSelectedIntoView", SelectedItemId);
+    }
+
+    private Task ExecuteSelectedAsync()
+    {
+        return SelectedItem is not null ? ExecuteItemAsync(SelectedItem) : Task.CompletedTask;
+    }
+
+    private async Task HandleEscapeAsync()
+    {
+        if (!string.IsNullOrEmpty(_query))
+        {
+            _query = string.Empty;
+            _selectedIndex = 0;
+            await RecomputeVisibleItemsAsync();
+        }
+        else if (_breadcrumbStack.Count > 0)
+        {
+            await PopBreadcrumbAsync();
+        }
+        else
+        {
+            PaletteService.Close();
         }
     }
 

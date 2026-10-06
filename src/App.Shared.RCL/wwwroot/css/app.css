@@ -181,9 +181,9 @@ a {
 }
 
 .dark-theme .undo-toast-btn:hover {
-    background: color-mix(in srgb, #60a5fa 22%, transparent);
-    border-color: color-mix(in srgb, #60a5fa 60%, transparent);
-    color: #60a5fa;
+    background: color-mix(in srgb, #60a5fa 22%, #0f172a);
+    border-color: color-mix(in srgb, #60a5fa 60%, #0f172a);
+    color: #bfdbfe;
 }
 
 .dark-theme .undo-toast-btn:active {

@@ -24,37 +24,66 @@ internal sealed class BoardPaletteCommands(
     private readonly Action _close = close;
     private readonly Func<Task> _notifyRefresh = notifyRefresh;
 
+    private const string SuggestedCategory = "Suggested";
+    private const string ActionsCategory = "Actions";
+    private const string DeleteItemsCategory = "Delete Items";
+    private const string StartTimerSubtitle = "Set timer target and start stopwatch";
+    private const string MoveToArchiveSubtitle = "Move item to archive";
+    private const string KwDelete = "delete";
+    private const string KwRemove = "remove";
+    private const string KwTrash = "trash";
+    private const string KwDestroy = "destroy";
+    private const string KwArchive = "archive";
+    private const string KwHide = "hide";
+    private const string KwAdd = "add";
+    private const string KwDone = "done";
+    private const string KwComplete = "complete";
+    private const string KwCreate = "create";
+    private const string KwNew = "new";
+    private const string KwTodos = "todos";
+    private const string KwTodoDash = "to-do";
+    private const string KwTodoDashes = "to-dos";
+    private const string KwTimer = "timer";
+    private const string KwStart = "start";
+    private const string KwFocus = "focus";
+    private const string KwStopwatch = "stopwatch";
+    private const string KwEdit = "edit";
+    private const string KwRename = "rename";
+    private const string KwChange = "change";
+    private const string KwNotes = "notes";
+    private const string KwChecklist = "checklist";
+
     public List<CommandItem> GetSuggestedCreateCommands() =>
     [
             new(
                 Id: "create-todo",
                 Title: "New to-do",
                 Subtitle: "Add a single task to your board",
-                Category: "Suggested",
+                Category: SuggestedCategory,
                 Icon: Icons.Material.Filled.CheckBoxOutlineBlank,
                 ShortcutBadge: "Alt+T",
                 Action: () => CreateItemAsync(BoardSection.Todo),
-                Keywords: ["todo", "task", "create", "new", "add"]),
+                Keywords: ["todo", "task", KwCreate, KwNew, KwAdd]),
 
             new(
                 Id: "create-habit",
                 Title: "New habit",
                 Subtitle: "Add a countable positive or negative habit",
-                Category: "Suggested",
+                Category: SuggestedCategory,
                 Icon: Icons.Material.Filled.Repeat,
                 ShortcutBadge: "Ctrl+H",
                 Action: () => CreateItemAsync(BoardSection.Habit),
-                Keywords: ["habit", "create", "new", "add", "streak"]),
+                Keywords: ["habit", KwCreate, KwNew, KwAdd, "streak"]),
 
             new(
                 Id: "create-daily",
                 Title: "New daily",
                 Subtitle: "Add a recurring daily habit",
-                Category: "Suggested",
+                Category: SuggestedCategory,
                 Icon: Icons.Material.Filled.CalendarToday,
                 ShortcutBadge: "Ctrl+D",
                 Action: () => CreateItemAsync(BoardSection.Daily),
-                Keywords: ["daily", "recurring", "schedule", "create", "new", "add"])
+                Keywords: ["daily", "recurring", "schedule", KwCreate, KwNew, KwAdd])
     ];
 
     public void AddBoardCleanupCommands(List<CommandItem> list)
@@ -63,29 +92,29 @@ internal sealed class BoardPaletteCommands(
             Id: "action-delete-completed-todos",
             Title: "Delete completed to-dos",
             Subtitle: "Permanently remove all completed to-do items",
-            Category: "Actions",
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.DeleteSweep,
             IsDanger: true,
             Action: DeleteCompletedTodosAsync,
-            Keywords: ["delete", "remove", "clear", "completed", "done", "todos", "clean", "trash"]));
+            Keywords: [KwDelete, KwRemove, "clear", "completed", KwDone, KwTodos, "clean", KwTrash]));
 
         list.Add(new(
             Id: "action-archive-completed-todos",
             Title: "Archive completed to-dos",
             Subtitle: "Move all completed to-do tasks to archive",
-            Category: "Actions",
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.Archive,
             Action: ArchiveCompletedTodosAsync,
-            Keywords: ["archive", "completed", "done", "todos", "hide"]));
+            Keywords: [KwArchive, "completed", KwDone, KwTodos, KwHide]));
 
         list.Add(new(
             Id: "action-manage-items",
             Title: "Manage and delete items",
             Subtitle: "Browse active items to quickly delete, archive, or edit",
-            Category: "Actions",
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.DeleteOutline,
             ChildrenProvider: GetManageItemsSubActionsAsync,
-            Keywords: ["delete", "remove", "manage", "items", "browse", "habits", "dailies", "todos", "trash"]));
+            Keywords: [KwDelete, KwRemove, "manage", "items", "browse", "habits", "dailies", KwTodos, KwTrash]));
     }
 
     public void AddUndoCommand(List<CommandItem> list)
@@ -94,7 +123,7 @@ internal sealed class BoardPaletteCommands(
             Id: "action-undo",
             Title: "Undo last action",
             Subtitle: "Revert the most recent change",
-            Category: "Actions",
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.Undo,
             ShortcutBadge: "Ctrl+Z",
             Action: UndoAsync,
@@ -128,7 +157,7 @@ internal sealed class BoardPaletteCommands(
                     Id: $"direct-delete-habit-{h.Id}",
                     Title: $"Delete habit: {h.Title}",
                     Subtitle: "Permanently delete this habit",
-                    Category: "Delete Items",
+                    Category: DeleteItemsCategory,
                     Icon: Icons.Material.Filled.Delete,
                     IsDanger: true,
                     Action: () => DeleteItemAsync(BoardSection.Habit, h.Id)));
@@ -140,7 +169,7 @@ internal sealed class BoardPaletteCommands(
                     Id: $"direct-delete-daily-{d.Id}",
                     Title: $"Delete daily: {d.Title}",
                     Subtitle: "Permanently delete this daily",
-                    Category: "Delete Items",
+                    Category: DeleteItemsCategory,
                     Icon: Icons.Material.Filled.Delete,
                     IsDanger: true,
                     Action: () => DeleteItemAsync(BoardSection.Daily, d.Id)));
@@ -152,7 +181,7 @@ internal sealed class BoardPaletteCommands(
                     Id: $"direct-delete-todo-{t.Id}",
                     Title: $"Delete to-do: {t.Title}",
                     Subtitle: "Permanently delete this to-do",
-                    Category: "Delete Items",
+                    Category: DeleteItemsCategory,
                     Icon: Icons.Material.Filled.Delete,
                     IsDanger: true,
                     Action: () => DeleteItemAsync(BoardSection.Todo, t.Id)));
@@ -237,7 +266,7 @@ internal sealed class BoardPaletteCommands(
             Id: $"habit-{h.Id}-plus",
             Title: "+1 Increment count",
             Subtitle: "Log positive completion",
-            Category: "Actions",
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.Add,
             Action: async () =>
             {
@@ -245,12 +274,12 @@ internal sealed class BoardPaletteCommands(
                 await _boardData.IncrementHabitPlusAsync(h.Id);
                 await _notifyRefresh();
             },
-            Keywords: ["plus", "increment", "+1", "add"]),
+            Keywords: ["plus", "increment", "+1", KwAdd]),
         new(
             Id: $"habit-{h.Id}-minus",
             Title: "-1 Decrement count",
             Subtitle: "Log setback count",
-            Category: "Actions",
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.Remove,
             Action: async () =>
             {
@@ -263,7 +292,7 @@ internal sealed class BoardPaletteCommands(
             Id: $"habit-{h.Id}-reset",
             Title: "Reset counters",
             Subtitle: "Set positive and negative counters back to 0",
-            Category: "Actions",
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.RestartAlt,
             Action: async () =>
             {
@@ -276,8 +305,8 @@ internal sealed class BoardPaletteCommands(
         new(
             Id: $"habit-{h.Id}-timer",
             Title: "Start focus timer on this habit",
-            Subtitle: "Set timer target and start stopwatch",
-            Category: "Actions",
+            Subtitle: StartTimerSubtitle,
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.Timer,
             Action: () =>
             {
@@ -285,12 +314,12 @@ internal sealed class BoardPaletteCommands(
                 _startTimerOn("Habit", h.Title, h.Id);
                 return Task.CompletedTask;
             },
-            Keywords: ["timer", "start", "focus", "stopwatch"]),
+            Keywords: [KwTimer, KwStart, KwFocus, KwStopwatch]),
         new(
             Id: $"habit-{h.Id}-edit",
             Title: "Edit habit details",
             Subtitle: "Open editor for title, notes, and checklist",
-            Category: "Actions",
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.Edit,
             Action: async () =>
             {
@@ -300,12 +329,12 @@ internal sealed class BoardPaletteCommands(
                 await dialog.Result;
                 await _notifyRefresh();
             },
-            Keywords: ["edit", "rename", "change", "modify", "notes", "checklist"]),
+            Keywords: [KwEdit, KwRename, KwChange, "modify", KwNotes, KwChecklist]),
         new(
             Id: $"habit-{h.Id}-archive",
             Title: "Archive habit",
-            Subtitle: "Move item to archive",
-            Category: "Actions",
+            Subtitle: MoveToArchiveSubtitle,
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.Archive,
             Action: async () =>
             {
@@ -313,16 +342,16 @@ internal sealed class BoardPaletteCommands(
                 await _boardData.ArchiveItemAsync(BoardSection.Habit, h.Id);
                 await _notifyRefresh();
             },
-            Keywords: ["archive", "hide"]),
+            Keywords: [KwArchive, KwHide]),
         new(
             Id: $"habit-{h.Id}-delete",
             Title: "Delete habit",
             Subtitle: "Permanently delete this habit",
-            Category: "Actions",
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.Delete,
             IsDanger: true,
             Action: () => DeleteItemAsync(BoardSection.Habit, h.Id),
-            Keywords: ["delete", "remove", "trash", "destroy"])
+            Keywords: [KwDelete, KwRemove, KwTrash, KwDestroy])
     ];
 
     private List<CommandItem> GetDailySubActions(BoardItem d, bool isDone)
@@ -333,7 +362,7 @@ internal sealed class BoardPaletteCommands(
                 Id: $"daily-{d.Id}-toggle",
                 Title: isDone ? "Unmark completed" : "Mark completed today",
                 Subtitle: isDone ? "Reopen this daily for today" : "Record daily streak progression",
-                Category: "Actions",
+                Category: ActionsCategory,
                 Icon: isDone ? Icons.Material.Filled.RadioButtonUnchecked : Icons.Material.Filled.CheckCircle,
                 Action: async () =>
                 {
@@ -341,12 +370,12 @@ internal sealed class BoardPaletteCommands(
                     await _boardData.ToggleItemAsync(BoardSection.Daily, d.Id);
                     await _notifyRefresh();
                 },
-                Keywords: ["toggle", "done", "complete", "check"]),
+                Keywords: ["toggle", KwDone, KwComplete, "check"]),
             new(
                 Id: $"daily-{d.Id}-yesterday",
                 Title: "Mark completed for yesterday",
                 Subtitle: "Backdate completion to yesterday",
-                Category: "Actions",
+                Category: ActionsCategory,
                 Icon: Icons.Material.Filled.History,
                 Action: async () =>
                 {
@@ -356,12 +385,12 @@ internal sealed class BoardPaletteCommands(
                     await _notifyRefresh();
                     await _notifier.NotifyAsync($"Marked '{d.Title}' completed for yesterday.", Severity.Success);
                 },
-                Keywords: ["yesterday", "retro", "backdate", "complete"]),
+                Keywords: ["yesterday", "retro", "backdate", KwComplete]),
             new(
                 Id: $"daily-{d.Id}-heatmap",
                 Title: "View completion heatmap",
                 Subtitle: "Show historical completions and streak calendar",
-                Category: "Actions",
+                Category: ActionsCategory,
                 Icon: Icons.Material.Filled.CalendarMonth,
                 Action: async () =>
                 {
@@ -377,8 +406,8 @@ internal sealed class BoardPaletteCommands(
             new(
                 Id: $"daily-{d.Id}-timer",
                 Title: "Start focus timer on this daily",
-                Subtitle: "Set timer target and start stopwatch",
-                Category: "Actions",
+                Subtitle: StartTimerSubtitle,
+                Category: ActionsCategory,
                 Icon: Icons.Material.Filled.Timer,
                 Action: () =>
                 {
@@ -386,12 +415,12 @@ internal sealed class BoardPaletteCommands(
                     _startTimerOn("Daily", d.Title, d.Id);
                     return Task.CompletedTask;
                 },
-                Keywords: ["timer", "start", "focus", "stopwatch"]),
+                Keywords: [KwTimer, KwStart, KwFocus, KwStopwatch]),
             new(
                 Id: $"daily-{d.Id}-edit",
                 Title: "Edit daily details",
                 Subtitle: "Open editor for schedule, checklist, and repeat settings",
-                Category: "Actions",
+                Category: ActionsCategory,
                 Icon: Icons.Material.Filled.Edit,
                 Action: async () =>
                 {
@@ -401,12 +430,12 @@ internal sealed class BoardPaletteCommands(
                     await dialog.Result;
                     await _notifyRefresh();
                 },
-                Keywords: ["edit", "rename", "change", "schedule", "repeat", "notes", "checklist"]),
+                Keywords: [KwEdit, KwRename, KwChange, "schedule", "repeat", KwNotes, KwChecklist]),
             new(
                 Id: $"daily-{d.Id}-archive",
                 Title: "Archive daily",
-                Subtitle: "Move item to archive",
-                Category: "Actions",
+                Subtitle: MoveToArchiveSubtitle,
+                Category: ActionsCategory,
                 Icon: Icons.Material.Filled.Archive,
                 Action: async () =>
                 {
@@ -414,16 +443,16 @@ internal sealed class BoardPaletteCommands(
                     await _boardData.ArchiveItemAsync(BoardSection.Daily, d.Id);
                     await _notifyRefresh();
                 },
-                Keywords: ["archive", "hide"]),
+                Keywords: [KwArchive, KwHide]),
             new(
                 Id: $"daily-{d.Id}-delete",
                 Title: "Delete daily",
                 Subtitle: "Permanently delete this daily",
-                Category: "Actions",
+                Category: ActionsCategory,
                 Icon: Icons.Material.Filled.Delete,
                 IsDanger: true,
                 Action: () => DeleteItemAsync(BoardSection.Daily, d.Id),
-                Keywords: ["delete", "remove", "trash", "destroy"])
+                Keywords: [KwDelete, KwRemove, KwTrash, KwDestroy])
         };
 
         return actions;
@@ -437,7 +466,7 @@ internal sealed class BoardPaletteCommands(
                 Id: $"todo-{t.Id}-toggle",
                 Title: t.IsCompleted ? "Mark as incomplete" : "Mark as done",
                 Subtitle: t.IsCompleted ? "Reopen this to-do" : "Complete task",
-                Category: "Actions",
+                Category: ActionsCategory,
                 Icon: t.IsCompleted ? Icons.Material.Filled.RadioButtonUnchecked : Icons.Material.Filled.CheckCircle,
                 Action: async () =>
                 {
@@ -445,12 +474,12 @@ internal sealed class BoardPaletteCommands(
                     await _boardData.ToggleItemAsync(BoardSection.Todo, t.Id);
                     await _notifyRefresh();
                 },
-                Keywords: ["toggle", "done", "complete", "finish", "reopen"]),
+                Keywords: ["toggle", KwDone, KwComplete, "finish", "reopen"]),
             new(
                 Id: $"todo-{t.Id}-due-today",
                 Title: "Set due date to today",
                 Subtitle: "Set deadline to today",
-                Category: "Actions",
+                Category: ActionsCategory,
                 Icon: Icons.Material.Filled.Today,
                 Action: async () =>
                 {
@@ -465,7 +494,7 @@ internal sealed class BoardPaletteCommands(
                 Id: $"todo-{t.Id}-due-tomorrow",
                 Title: "Set due date to tomorrow",
                 Subtitle: "Set deadline to tomorrow",
-                Category: "Actions",
+                Category: ActionsCategory,
                 Icon: Icons.Material.Filled.Event,
                 Action: async () =>
                 {
@@ -484,7 +513,7 @@ internal sealed class BoardPaletteCommands(
                 Id: $"todo-{t.Id}-clear-due",
                 Title: "Clear due date",
                 Subtitle: $"Remove deadline, currently {t.TodoDueDate.Value:MMM d}",
-                Category: "Actions",
+                Category: ActionsCategory,
                 Icon: Icons.Material.Filled.EventBusy,
                 Action: async () =>
                 {
@@ -499,8 +528,8 @@ internal sealed class BoardPaletteCommands(
         actions.Add(new(
             Id: $"todo-{t.Id}-timer",
             Title: "Start focus timer on this to-do",
-            Subtitle: "Set timer target and start stopwatch",
-            Category: "Actions",
+            Subtitle: StartTimerSubtitle,
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.Timer,
             Action: () =>
             {
@@ -508,13 +537,13 @@ internal sealed class BoardPaletteCommands(
                 _startTimerOn("Todo", t.Title, t.Id);
                 return Task.CompletedTask;
             },
-            Keywords: ["timer", "start", "focus", "stopwatch"]));
+            Keywords: [KwTimer, KwStart, KwFocus, KwStopwatch]));
 
         actions.Add(new(
             Id: $"todo-{t.Id}-edit",
             Title: "Edit to-do details",
             Subtitle: "Open editor for title, notes, and checklist",
-            Category: "Actions",
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.Edit,
             Action: async () =>
             {
@@ -524,13 +553,13 @@ internal sealed class BoardPaletteCommands(
                 await dialog.Result;
                 await _notifyRefresh();
             },
-            Keywords: ["edit", "rename", "change", "modify", "notes", "checklist"]));
+            Keywords: [KwEdit, KwRename, KwChange, "modify", KwNotes, KwChecklist]));
 
         actions.Add(new(
             Id: $"todo-{t.Id}-archive",
             Title: "Archive to-do",
-            Subtitle: "Move item to archive",
-            Category: "Actions",
+            Subtitle: MoveToArchiveSubtitle,
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.Archive,
             Action: async () =>
             {
@@ -538,17 +567,17 @@ internal sealed class BoardPaletteCommands(
                 await _boardData.ArchiveItemAsync(BoardSection.Todo, t.Id);
                 await _notifyRefresh();
             },
-            Keywords: ["archive", "hide"]));
+            Keywords: [KwArchive, KwHide]));
 
         actions.Add(new(
             Id: $"todo-{t.Id}-delete",
             Title: "Delete to-do",
             Subtitle: "Permanently delete this to-do",
-            Category: "Actions",
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.Delete,
             IsDanger: true,
             Action: () => DeleteItemAsync(BoardSection.Todo, t.Id),
-            Keywords: ["delete", "remove", "trash", "destroy"]));
+            Keywords: [KwDelete, KwRemove, KwTrash, KwDestroy]));
 
         return actions;
     }
@@ -583,58 +612,14 @@ internal sealed class BoardPaletteCommands(
 
         _isCreatingItem = true;
         _close();
-        var defaultTitle = section switch
-        {
-            BoardSection.Habit => "New Habit",
-            BoardSection.Daily => "New Daily",
-            BoardSection.Todo => "New To-do",
-            _ => "New Item"
-        };
         try
         {
-            var item = await _boardData.CreateItemAsync(section, defaultTitle);
+            var item = await _boardData.CreateItemAsync(section, GetDefaultTitle(section));
             await _notifyRefresh();
             if (item is not null)
             {
-                var options = DialogDefaults.SmallEditor;
-                var dialog = section switch
-                {
-                    BoardSection.Habit => await _dialogs.ShowAsync<EditHabitDialog>(
-                        string.Empty, new DialogParameters<EditHabitDialog> { { x => x.Item, item } }, options),
-                    BoardSection.Daily => await _dialogs.ShowAsync<EditDailyDialog>(
-                        string.Empty, new DialogParameters<EditDailyDialog> { { x => x.Item, item } }, options),
-                    _ => await _dialogs.ShowAsync<EditTodoDialog>(
-                        string.Empty, new DialogParameters<EditTodoDialog> { { x => x.Item, item } }, options)
-                };
-
-                var result = await dialog.Result;
-                if (result is { Canceled: false, Data: not null })
-                {
-                    EditDialogAction? action = result.Data switch
-                    {
-                        EditHabitDialogResult h => h.Action,
-                        EditDailyDialogResult d => d.Action,
-                        EditTodoDialogResult t => t.Action,
-                        _ => null
-                    };
-
-                    if (action == EditDialogAction.Archive)
-                    {
-                        await _boardData.ArchiveItemAsync(section, item.Id);
-                    }
-                    else if (action == EditDialogAction.Delete)
-                    {
-                        await _boardData.DeleteItemAsync(section, item.Id);
-                    }
-                }
-
-                // If unchanged, prune empty item
-                var current = await _boardData.GetItemAsync(item.Id);
-                if (current is not null && current == item)
-                {
-                    await _boardData.DeleteItemAsync(section, item.Id);
-                }
-
+                await ShowCreateDialogAsync(section, item);
+                await PruneUnchangedItemAsync(section, item);
                 await _notifyRefresh();
             }
         }
@@ -647,6 +632,67 @@ internal sealed class BoardPaletteCommands(
             _isCreatingItem = false;
         }
     }
+
+    private static string GetDefaultTitle(BoardSection section) =>
+        section switch
+        {
+            BoardSection.Habit => "New Habit",
+            BoardSection.Daily => "New Daily",
+            BoardSection.Todo => "New To-do",
+            _ => "New Item"
+        };
+
+    private async Task ShowCreateDialogAsync(BoardSection section, BoardItem item)
+    {
+        var options = DialogDefaults.SmallEditor;
+        var dialog = section switch
+        {
+            BoardSection.Habit => await _dialogs.ShowAsync<EditHabitDialog>(
+                string.Empty, new DialogParameters<EditHabitDialog> { { x => x.Item, item } }, options),
+            BoardSection.Daily => await _dialogs.ShowAsync<EditDailyDialog>(
+                string.Empty, new DialogParameters<EditDailyDialog> { { x => x.Item, item } }, options),
+            _ => await _dialogs.ShowAsync<EditTodoDialog>(
+                string.Empty, new DialogParameters<EditTodoDialog> { { x => x.Item, item } }, options)
+        };
+
+        var result = await dialog.Result;
+        await HandleCreateDialogResultAsync(section, item, result);
+    }
+
+    private async Task HandleCreateDialogResultAsync(BoardSection section, BoardItem item, DialogResult? result)
+    {
+        if (result is not { Canceled: false, Data: not null })
+        {
+            return;
+        }
+
+        EditDialogAction? action = result.Data switch
+        {
+            EditHabitDialogResult h => h.Action,
+            EditDailyDialogResult d => d.Action,
+            EditTodoDialogResult t => t.Action,
+            _ => null
+        };
+
+        if (action == EditDialogAction.Archive)
+        {
+            await _boardData.ArchiveItemAsync(section, item.Id);
+        }
+        else if (action == EditDialogAction.Delete)
+        {
+            await _boardData.DeleteItemAsync(section, item.Id);
+        }
+    }
+
+    private async Task PruneUnchangedItemAsync(BoardSection section, BoardItem item)
+    {
+        var current = await _boardData.GetItemAsync(item.Id);
+        if (current is not null && current == item)
+        {
+            await _boardData.DeleteItemAsync(section, item.Id);
+        }
+    }
+
     public async Task UndoAsync()
     {
         _close();
@@ -703,12 +749,12 @@ internal sealed class BoardPaletteCommands(
             await _notifyRefresh();
             if (deleted < completed.Count)
             {
-                var itemWord = completed.Count == 1 ? "to-do" : "to-dos";
+                var itemWord = completed.Count == 1 ? KwTodoDash : KwTodoDashes;
                 await _notifier.NotifyAsync($"Removed {deleted} of {completed.Count} {itemWord}. Some could not be deleted.", Severity.Warning);
             }
             else
             {
-                var itemWord = deleted == 1 ? "to-do" : "to-dos";
+                var itemWord = deleted == 1 ? KwTodoDash : KwTodoDashes;
                 await _notifier.NotifyAsync($"Deleted {deleted} completed {itemWord}.", Severity.Success);
             }
         }
@@ -747,12 +793,12 @@ internal sealed class BoardPaletteCommands(
             await _notifyRefresh();
             if (archived < completed.Count)
             {
-                var itemWord = completed.Count == 1 ? "to-do" : "to-dos";
+                var itemWord = completed.Count == 1 ? KwTodoDash : KwTodoDashes;
                 await _notifier.NotifyAsync($"Archived {archived} of {completed.Count} {itemWord}. Some could not be archived.", Severity.Warning);
             }
             else
             {
-                var itemWord = archived == 1 ? "to-do" : "to-dos";
+                var itemWord = archived == 1 ? KwTodoDash : KwTodoDashes;
                 await _notifier.NotifyAsync($"Archived {archived} completed {itemWord}.", Severity.Success);
             }
         }

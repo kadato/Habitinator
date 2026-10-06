@@ -92,7 +92,7 @@ public sealed partial class LocalFirstBoardDataService(
             _gate.Release();
         }
 
-        if (shouldFetchRemote && userKey is not null)
+        if (shouldFetchRemote)
         {
             snap = await TryFetchAndReplaceIfEmptyAsync(userKey, cancellationToken) ?? snap;
         }
@@ -204,10 +204,30 @@ public sealed partial class LocalFirstBoardDataService(
         // the old Counter until a full snapshot replaces it. Use the
         // remote map when online so the board keeps the correct
         // prerendered snapshot instead of flipping back to stale values.
-        Dictionary<Guid, int>? remoteMap = null;
+        var remoteMap = await TryGetRemoteStreakMapAsync(cancellationToken);
+
+        await _gate.WaitAsync(cancellationToken);
         try
         {
-            remoteMap = await remote.GetStreakMapAsync(cancellationToken);
+            var items = await store.ListItemsAsync(userKey, includeArchived: false, cancellationToken);
+            if (remoteMap is null)
+            {
+                return BuildLocalStreakMap(items);
+            }
+
+            return await MergeStreakMapsAsync(userKey, items, remoteMap, cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private async Task<Dictionary<Guid, int>?> TryGetRemoteStreakMapAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await remote.GetStreakMapAsync(cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -216,76 +236,78 @@ public sealed partial class LocalFirstBoardDataService(
         catch (Exception ex)
         {
             logger.LogDebug(ex, "Remote streak map unavailable. Use local counters.");
+            return null;
         }
+    }
 
-        await _gate.WaitAsync(cancellationToken);
+    private static Dictionary<Guid, int> BuildLocalStreakMap(IReadOnlyList<BoardLocalRow> items) =>
+        items
+            .Where(x => x.Section == BoardSection.Daily)
+            .ToDictionary(x => x.Id, x => x.Counter);
+
+    private async Task<HashSet<Guid>> CollectPendingStreakIdsAsync(string userKey, CancellationToken cancellationToken)
+    {
         try
         {
-            var items = await store.ListItemsAsync(userKey, includeArchived: false, cancellationToken);
-            if (remoteMap is null)
-            {
-                return items
-                    .Where(x => x.Section == BoardSection.Daily)
-                    .ToDictionary(x => x.Id, x => x.Counter);
-            }
-
-            // Pending outbox ops mean the server has not seen our latest optimistic
-            // streak yet. Keep the local Counter for those items so a retro check-in
-            // does not flicker back to the pre-sync value.
-            var pendingIds = new HashSet<Guid>();
-            try
-            {
-                var pending = await store.ListOutboxAsync(userKey, cancellationToken);
-                pendingIds = BoardOutboxReferencedIds.CollectFromPayloads(
-                    pending.Select(p => (p.Kind, p.PayloadJson)));
-            }
-            catch (Exception ex)
-            {
-                logger.LogDebug(ex, "Could not list outbox for streak merge.");
-            }
-
-            var merged = new Dictionary<Guid, int>(remoteMap.Count);
-            var changed = false;
-            foreach (var row in items.Where(x => x.Section == BoardSection.Daily))
-            {
-                if (pendingIds.Contains(row.Id))
-                {
-                    merged[row.Id] = row.Counter;
-                    continue;
-                }
-
-                if (remoteMap.TryGetValue(row.Id, out var streak))
-                {
-                    merged[row.Id] = streak;
-                    if (row.Counter != streak)
-                    {
-                        row.Counter = streak;
-                        await store.UpsertItemAsync(row, cancellationToken);
-                        changed = true;
-                    }
-                }
-                else
-                {
-                    merged[row.Id] = row.Counter;
-                }
-            }
-
-            foreach (var kvp in remoteMap.Where(kvp => !merged.ContainsKey(kvp.Key)))
-            {
-                merged[kvp.Key] = kvp.Value;
-            }
-
-            if (changed)
-            {
-                _cachedSnapshot = null;
-            }
-
-            return merged;
+            var pending = await store.ListOutboxAsync(userKey, cancellationToken);
+            return BoardOutboxReferencedIds.CollectFromPayloads(
+                pending.Select(p => (p.Kind, p.PayloadJson)));
         }
-        finally
+        catch (Exception ex)
         {
-            _gate.Release();
+            logger.LogDebug(ex, "Could not list outbox for streak merge.");
+            return [];
         }
+    }
+
+    private async Task<Dictionary<Guid, int>> MergeStreakMapsAsync(
+        string userKey,
+        IReadOnlyList<BoardLocalRow> items,
+        Dictionary<Guid, int> remoteMap,
+        CancellationToken cancellationToken)
+    {
+        // Pending outbox ops mean the server has not seen our latest optimistic
+        // streak yet. Keep the local Counter for those items so a retro check-in
+        // does not flicker back to the pre-sync value.
+        var pendingIds = await CollectPendingStreakIdsAsync(userKey, cancellationToken);
+
+        var merged = new Dictionary<Guid, int>(remoteMap.Count);
+        var changed = false;
+        foreach (var row in items.Where(x => x.Section == BoardSection.Daily))
+        {
+            if (pendingIds.Contains(row.Id))
+            {
+                merged[row.Id] = row.Counter;
+                continue;
+            }
+
+            if (remoteMap.TryGetValue(row.Id, out var streak))
+            {
+                merged[row.Id] = streak;
+                if (row.Counter != streak)
+                {
+                    row.Counter = streak;
+                    await store.UpsertItemAsync(row, cancellationToken);
+                    changed = true;
+                }
+            }
+            else
+            {
+                merged[row.Id] = row.Counter;
+            }
+        }
+
+        foreach (var kvp in remoteMap.Where(kvp => !merged.ContainsKey(kvp.Key)))
+        {
+            merged[kvp.Key] = kvp.Value;
+        }
+
+        if (changed)
+        {
+            _cachedSnapshot = null;
+        }
+
+        return merged;
     }
 
     private async Task EnsureUserScopeAsync(string userKey, CancellationToken cancellationToken)

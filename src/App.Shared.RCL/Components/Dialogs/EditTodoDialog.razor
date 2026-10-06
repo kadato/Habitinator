@@ -57,6 +57,7 @@
 </MudDialog>
 
 @code {
+#pragma warning disable S2325 // Callbacks use instance autosave helpers from the dialog base class; Sonar sees this Razor part in isolation.
     [Parameter] [EditorRequired] public required BoardItem Item { get; set; }
 
     private string _title = string.Empty;

@@ -26,13 +26,18 @@ internal sealed class NavigationPaletteCommands(
     private readonly Action _close = close;
     private readonly Func<Task> _notifyRefresh = notifyRefresh;
 
+    private const string NavigationCategory = "Navigation";
+    private const string AppearanceCategory = "Appearance";
+    private const string SettingsPath = "/settings";
+    private const string KwTheme = "theme";
+
     public void AddNavigationCommands(List<CommandItem> list)
     {
         list.Add(new(
             Id: "nav-board",
             Title: "Board",
             Subtitle: "Overview of habits, dailies, and to-dos",
-            Category: "Navigation",
+            Category: NavigationCategory,
             Icon: Icons.Material.Filled.SpaceDashboard,
             ShortcutBadge: "G B",
             Action: () => NavigateAsync("/"),
@@ -42,7 +47,7 @@ internal sealed class NavigationPaletteCommands(
             Id: "nav-stats",
             Title: "Statistics",
             Subtitle: "Activity heatmap, history, and completions",
-            Category: "Navigation",
+            Category: NavigationCategory,
             Icon: Icons.Material.Filled.BarChart,
             ShortcutBadge: "G S",
             Action: () => NavigateAsync("/stats"),
@@ -52,7 +57,7 @@ internal sealed class NavigationPaletteCommands(
             Id: "nav-upcoming",
             Title: "Upcoming",
             Subtitle: "Dailies and to-dos due over the next 7 days",
-            Category: "Navigation",
+            Category: NavigationCategory,
             Icon: Icons.Material.Filled.CalendarMonth,
             ShortcutBadge: "G U",
             Action: () => NavigateAsync("/upcoming"),
@@ -62,28 +67,28 @@ internal sealed class NavigationPaletteCommands(
             Id: "nav-settings",
             Title: "Settings",
             Subtitle: "Preferences, appearance, notifications",
-            Category: "Navigation",
+            Category: NavigationCategory,
             Icon: Icons.Material.Filled.Settings,
             ShortcutBadge: "G P",
-            Action: () => NavigateAsync("/settings"),
+            Action: () => NavigateAsync(SettingsPath),
             Keywords: ["settings", "preferences", "config", "account", "profile"]));
 
         list.Add(new(
             Id: "nav-settings-account",
             Title: "Account and data settings",
             Subtitle: "Profile, export, password, and account management",
-            Category: "Navigation",
+            Category: NavigationCategory,
             Icon: Icons.Material.Filled.ManageAccounts,
-            Action: () => NavigateAsync("/settings"),
+            Action: () => NavigateAsync(SettingsPath),
             Keywords: ["account", "password", "profile", "export", "backup"]));
 
         list.Add(new(
             Id: "nav-settings-notifications",
             Title: "Notification settings",
             Subtitle: "Reminders, alerts, and quiet hours",
-            Category: "Navigation",
+            Category: NavigationCategory,
             Icon: Icons.Material.Filled.Notifications,
-            Action: () => NavigateAsync("/settings"),
+            Action: () => NavigateAsync(SettingsPath),
             Keywords: ["notifications", "alerts", "reminders", "sound"]));
     }
 
@@ -117,34 +122,34 @@ internal sealed class NavigationPaletteCommands(
             Id: "theme-dark",
             Title: "Dark theme",
             Subtitle: "Switch app appearance to dark mode",
-            Category: "Appearance",
+            Category: AppearanceCategory,
             Icon: Icons.Material.Filled.DarkMode,
             Action: () => SetThemeAsync(AppTheme.Dark),
-            Keywords: ["theme", "dark", "mode", "color", "night"]));
+            Keywords: [KwTheme, "dark", "mode", "color", "night"]));
 
         list.Add(new(
             Id: "theme-light",
             Title: "Light theme",
             Subtitle: "Switch app appearance to light mode",
-            Category: "Appearance",
+            Category: AppearanceCategory,
             Icon: Icons.Material.Filled.LightMode,
             Action: () => SetThemeAsync(AppTheme.Light),
-            Keywords: ["theme", "light", "mode", "color", "day"]));
+            Keywords: [KwTheme, "light", "mode", "color", "day"]));
 
         list.Add(new(
             Id: "theme-system",
             Title: "System theme",
             Subtitle: "Sync app appearance with operating system",
-            Category: "Appearance",
+            Category: AppearanceCategory,
             Icon: Icons.Material.Filled.SettingsBrightness,
             Action: () => SetThemeAsync(AppTheme.System),
-            Keywords: ["theme", "system", "auto", "os"]));
+            Keywords: [KwTheme, "system", "auto", "os"]));
 
         list.Add(new(
             Id: "pref-toggle-shortcuts",
             Title: "Toggle keyboard shortcuts",
             Subtitle: "Enable or disable global hotkeys across the app",
-            Category: "Appearance",
+            Category: AppearanceCategory,
             Icon: Icons.Material.Filled.Keyboard,
             Action: ToggleKeyboardShortcutsAsync,
             Keywords: ["keyboard", "shortcuts", "hotkeys", "keys"]));

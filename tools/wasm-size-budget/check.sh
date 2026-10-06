@@ -12,7 +12,7 @@ budget="$(tr -d ' \r\n' < "$script_dir/budget.txt")"
 actual="$(du -sb "$dir" | cut -f1)"
 
 echo "WASM _framework bytes: $actual (budget $budget)"
-if [ "$actual" -gt "$budget" ]; then
+if [[ "$actual" -gt "$budget" ]]; then
   echo "WASM payload exceeds budget by $((actual - budget)) bytes."
   echo "Largest 10 artifacts:"
   find "$dir" -type f -exec du -b {} + | sort -rn | head -10

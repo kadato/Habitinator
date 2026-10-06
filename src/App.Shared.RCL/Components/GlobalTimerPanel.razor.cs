@@ -1,3 +1,4 @@
+#pragma warning disable S2325 // Flagged methods use the injected TimerService, parameters, or fields declared in the Razor part; Sonar sees this code-behind file in isolation.
 using System.Globalization;
 
 using App.Shared.RCL.Models;

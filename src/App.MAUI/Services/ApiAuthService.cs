@@ -8,6 +8,8 @@ namespace App.MAUI.Services;
 
 public sealed class ApiAuthService
 {
+    private const string ApiAuthClientName = "apiAuth";
+
     private static readonly JsonSerializerOptions Serializer = JsonDefaults.Api;
 
     private readonly IHttpClientFactory _http;
@@ -19,7 +21,7 @@ public sealed class ApiAuthService
 
     public Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
-        var client = _http.CreateClient("apiAuth");
+        var client = _http.CreateClient(ApiAuthClientName);
         return PostLoginAsync(
             () => client.PostAsJsonAsync("api/auth/login", request, Serializer, cancellationToken),
             cancellationToken);
@@ -28,7 +30,7 @@ public sealed class ApiAuthService
     /// <summary>Sign in as the server-configured demo guest via JWT, same user as web guest-login.</summary>
     public Task<LoginResponse?> GuestJwtLoginAsync(CancellationToken cancellationToken = default)
     {
-        var client = _http.CreateClient("apiAuth");
+        var client = _http.CreateClient(ApiAuthClientName);
         return PostLoginAsync(
             () => client.PostAsync("api/auth/guest-jwt", null, cancellationToken),
             cancellationToken);
@@ -51,7 +53,7 @@ public sealed class ApiAuthService
         RegisterRequest request,
         CancellationToken cancellationToken = default)
     {
-        var client = _http.CreateClient("apiAuth");
+        var client = _http.CreateClient(ApiAuthClientName);
         HttpResponseMessage res;
         try
         {
@@ -107,7 +109,7 @@ public sealed class ApiAuthService
 
     public async Task<bool> ForgotPasswordAsync(string email, CancellationToken cancellationToken = default)
     {
-        var client = _http.CreateClient("apiAuth");
+        var client = _http.CreateClient(ApiAuthClientName);
         try
         {
             using var res = await client.PostAsJsonAsync(
@@ -125,7 +127,7 @@ public sealed class ApiAuthService
 
     public async Task<bool> ResetPasswordAsync(string email, string token, string newPassword, CancellationToken cancellationToken = default)
     {
-        var client = _http.CreateClient("apiAuth");
+        var client = _http.CreateClient(ApiAuthClientName);
         try
         {
             using var res = await client.PostAsJsonAsync(

@@ -133,6 +133,26 @@ public static class DailyStreakCalculator
         DateOnly? dailyLastCompletedOn,
         int weekdays = 0)
     {
+        var schedule = ResolveEffectiveSchedule(dailyStart, repeat, repeatInterval, weekdays);
+        var end = ResolveStreakEnd(dailyStart, today, eventsByDay, dailyLastCompletedOn, schedule);
+        var scheduledForward = CollectScheduledDaysForward(dailyStart, end, schedule);
+
+        var (streakLengths, trailingActive) = BuildStreakLengths(scheduledForward, eventsByDay, dailyLastCompletedOn);
+        var longest = streakLengths.Count == 0 ? 0 : streakLengths.Max();
+        var previous = ResolvePreviousStreak(streakLengths, trailingActive);
+
+        var current = ComputeStreak(dailyStart, repeat, repeatInterval, today, eventsByDay, dailyLastCompletedOn, weekdays);
+
+        return new DailyStreakDetails(
+            Math.Min(MaxStreak, current),
+            Math.Min(MaxStreak, previous),
+            Math.Min(MaxStreak, longest));
+    }
+
+    private readonly record struct EffectiveSchedule(DailyRepeatType Repeat, int Interval, int Weekdays);
+
+    private static EffectiveSchedule ResolveEffectiveSchedule(DateOnly? dailyStart, DailyRepeatType repeat, int repeatInterval, int weekdays)
+    {
         var effectiveWeekdays = DailyWeekdays.Normalize(weekdays);
         var effectiveRepeat = dailyStart is null ? DailyRepeatType.Daily : repeat;
         var effectiveInterval = dailyStart is null ? 1 : repeatInterval;
@@ -141,28 +161,48 @@ public static class DailyStreakCalculator
             effectiveWeekdays = DailyWeekdays.None;
         }
 
-        var todayOnSchedule = DailySchedule.IsScheduledOn(dailyStart, effectiveRepeat, effectiveInterval, today, effectiveWeekdays);
+        return new EffectiveSchedule(effectiveRepeat, effectiveInterval, effectiveWeekdays);
+    }
+
+    private static DateOnly ResolveStreakEnd(
+        DateOnly? dailyStart,
+        DateOnly today,
+        IReadOnlyDictionary<DateOnly, List<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)>> eventsByDay,
+        DateOnly? dailyLastCompletedOn,
+        EffectiveSchedule schedule)
+    {
+        var todayOnSchedule = DailySchedule.IsScheduledOn(dailyStart, schedule.Repeat, schedule.Interval, today, schedule.Weekdays);
         var todayDone = todayOnSchedule &&
             IsCalendarDayNetCompleted(today, GetDayListOrNull(eventsByDay, today), dailyLastCompletedOn);
 
         // Do not count today until today is done. When today is not done, count only through yesterday.
-        var end = todayDone ? today : today.AddDays(-1);
+        return todayDone ? today : today.AddDays(-1);
+    }
 
+    private static List<DateOnly> CollectScheduledDaysForward(DateOnly? dailyStart, DateOnly end, EffectiveSchedule schedule)
+    {
         var historyStart =
-            DailySchedule.StreakHistoryScheduleStart(dailyStart, end, effectiveRepeat, effectiveInterval, MaxStreak);
+            DailySchedule.StreakHistoryScheduleStart(dailyStart, end, schedule.Repeat, schedule.Interval, MaxStreak);
 
         // The walk collects scheduled days newest first. The walk then reverses the list to walk oldest days first.
         var scheduledBackward = new List<DateOnly>();
-        foreach (var d in DailySchedule.WalkScheduledDaysBackward(end, historyStart, effectiveRepeat, effectiveInterval, DailySchedule.MaxScheduledStepCap, effectiveWeekdays))
+        foreach (var d in DailySchedule.WalkScheduledDaysBackward(end, historyStart, schedule.Repeat, schedule.Interval, DailySchedule.MaxScheduledStepCap, schedule.Weekdays))
         {
             scheduledBackward.Add(d);
         }
 
         scheduledBackward.Reverse();
+        return scheduledBackward;
+    }
 
+    private static (List<int> Lengths, bool TrailingActive) BuildStreakLengths(
+        List<DateOnly> scheduledForward,
+        IReadOnlyDictionary<DateOnly, List<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)>> eventsByDay,
+        DateOnly? dailyLastCompletedOn)
+    {
         var streakLengths = new List<int>();
         var currentLength = 0;
-        foreach (var d in scheduledBackward)
+        foreach (var d in scheduledForward)
         {
             var dayEvents = GetDayListOrNull(eventsByDay, d);
             if (IsCalendarDaySkipped(dayEvents))
@@ -181,37 +221,32 @@ public static class DailyStreakCalculator
             }
         }
 
-        if (currentLength > 0)
+        var trailingActive = currentLength > 0;
+        if (trailingActive)
         {
             streakLengths.Add(currentLength);
         }
 
-        var longest = streakLengths.Count == 0 ? 0 : streakLengths.Max();
+        return (streakLengths, trailingActive);
+    }
 
+    private static int ResolvePreviousStreak(List<int> streakLengths, bool trailingActive)
+    {
         // The previous streak is the finished streak right before the current streak.
         // When no streak is active, the previous streak is the most recent finished streak.
         // The walk ends at `end`. `end` is today when today is done and yesterday otherwise.
         // A trailing streak is active.
-        int previous;
         if (streakLengths.Count == 0)
         {
-            previous = 0;
-        }
-        else if (currentLength > 0)
-        {
-            previous = streakLengths.Count >= 2 ? Math.Min(MaxStreak, streakLengths[^2]) : 0;
-        }
-        else
-        {
-            previous = Math.Min(MaxStreak, streakLengths[^1]);
+            return 0;
         }
 
-        var current = ComputeStreak(dailyStart, repeat, repeatInterval, today, eventsByDay, dailyLastCompletedOn, weekdays);
+        if (trailingActive)
+        {
+            return streakLengths.Count >= 2 ? Math.Min(MaxStreak, streakLengths[^2]) : 0;
+        }
 
-        return new DailyStreakDetails(
-            Math.Min(MaxStreak, current),
-            Math.Min(MaxStreak, previous),
-            Math.Min(MaxStreak, longest));
+        return Math.Min(MaxStreak, streakLengths[^1]);
     }
 
     private static List<(DateTimeOffset OccurredAtUtc, ActivityEventType Type)>? GetDayListOrNull(

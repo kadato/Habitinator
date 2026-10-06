@@ -159,7 +159,7 @@
     @if (_initialLoadComplete && _loadError is null)
     {
         <div class="board-columns-stage">
-            @if (_isMobileViewport is true)
+            @if (_isMobileViewport.GetValueOrDefault())
             {
                 <div class="board-columns-mobile" @ref="_swipeAreaRef">
                 <div class="board-section-switcher" role="group" aria-label="Board sections">
@@ -230,7 +230,7 @@
     else if (_isLoading && !_initialLoadComplete)
     {
         <div class="board-columns-stage">
-            @if (_isMobileViewport is true)
+            @if (_isMobileViewport.GetValueOrDefault())
             {
                 <div class="board-columns-mobile">
                     <div class="board-section-switcher" role="group" aria-label="Loading board sections" aria-busy="true">

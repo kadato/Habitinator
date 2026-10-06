@@ -14,6 +14,8 @@ namespace App.Web;
 
 internal static class AuthApiRoutes
 {
+    private const string BoardOrJwtPolicy = "BoardOrJwt";
+
     internal static void MapAuthApi(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapRegisterEndpoints();
@@ -41,10 +43,10 @@ internal static class AuthApiRoutes
 
     private static void MapAccountEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/account/change-password", ChangePasswordAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery().RequireRateLimiting("api").WithDtoValidation();
-        endpoints.MapPost("/api/account/delete", DeleteAccountAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery().RequireRateLimiting("api");
-        endpoints.MapGet("/api/account/export", ExportDataAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery().RequireRateLimiting("api");
-        endpoints.MapPost("/api/account/import", ImportDataAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery().RequireRateLimiting("api");
+        endpoints.MapPost("/api/account/change-password", ChangePasswordAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api").WithDtoValidation();
+        endpoints.MapPost("/api/account/delete", DeleteAccountAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api");
+        endpoints.MapGet("/api/account/export", ExportDataAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api");
+        endpoints.MapPost("/api/account/import", ImportDataAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api");
     }
 
     // Endpoint handlers

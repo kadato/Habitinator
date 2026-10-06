@@ -158,6 +158,7 @@
 </div>
 
 @code {
+#pragma warning disable S3459, S2933 // _expanded and _sessionTargetText are assigned from the code-behind part; Sonar sees this Razor part in isolation.
     private Dictionary<string, object> MobileHeaderAttributes => new()
     {
         ["aria-expanded"] = _expanded ? "true" : "false",

@@ -216,10 +216,32 @@ public sealed class BoardPersistenceService(
         using var activity = AppTelemetry.Activity.StartActivity("board.sync_delta");
         await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
 
+        var newer = await FetchNewerRowsAsync(readDb, userId, cursorTs, limit, cancellationToken);
+        var boundary = await FetchBoundaryRowsAsync(readDb, userId, cursorTs, cursorId, cancellationToken);
+        var (changed, truncated) = BuildChangedPage(newer, boundary, limit);
+
+        var (today, dayStart) = await TodayAndDayStartAsync(userId, cancellationToken);
+        var dailyRows = changed.Where(x => x.DeletedAtUtc is null && x.Section == BoardSection.Daily).ToList();
+        var dailyStreaks = await streakCalculator.BuildDailyStreakMapAsync(userId, dailyRows, today, dayStart, readDb, cancellationToken);
+
+        var (upserts, deletedIds, next) = PartitionSyncRows(changed, today, dailyStreaks);
+        var nextCursor = ResolveNextCursor(truncated, next, cursorTs, changed);
+
+        AppTelemetry.RecordSyncDelta(upserts.Count, deletedIds.Count);
+        return new BoardSyncDelta(upserts, deletedIds, nextCursor);
+    }
+
+    private static async Task<List<BoardItemEntity>> FetchNewerRowsAsync(
+        ApplicationDbContext readDb,
+        Guid userId,
+        DateTimeOffset cursorTs,
+        int limit,
+        CancellationToken cancellationToken)
+    {
         // Watermark per row: deletion time for tombstones, update time otherwise.
         // Same-watermark rows are resolved in memory by id so no Guid ordering
         // comparison is pushed to the database provider.
-        var newer = await readDb.BoardItems
+        return await readDb.BoardItems
             .AsNoTracking()
             .Where(x => x.UserId == userId
                         && (x.DeletedAtUtc != null ? x.DeletedAtUtc.Value : x.UpdatedAtUtc) > cursorTs)
@@ -227,36 +249,55 @@ public sealed class BoardPersistenceService(
             .ThenBy(x => x.Id)
             .Take(limit + 1)
             .ToListAsync(cancellationToken);
+    }
 
-        List<BoardItemEntity> boundary = [];
-        if (cursorId is { } lastId)
+    private static async Task<List<BoardItemEntity>> FetchBoundaryRowsAsync(
+        ApplicationDbContext readDb,
+        Guid userId,
+        DateTimeOffset cursorTs,
+        Guid? cursorId,
+        CancellationToken cancellationToken)
+    {
+        if (cursorId is not { } lastId)
         {
-            boundary = (await readDb.BoardItems
-                    .AsNoTracking()
-                    .Where(x => x.UserId == userId
-                                && (x.DeletedAtUtc != null ? x.DeletedAtUtc.Value : x.UpdatedAtUtc) == cursorTs)
-                    .OrderBy(x => x.Id)
-                    .ToListAsync(cancellationToken))
-                .Where(x => x.Id.CompareTo(lastId) > 0)
-                .ToList();
+            return [];
         }
 
+        var sameWatermark = await readDb.BoardItems
+            .AsNoTracking()
+            .Where(x => x.UserId == userId
+                        && (x.DeletedAtUtc != null ? x.DeletedAtUtc.Value : x.UpdatedAtUtc) == cursorTs)
+            .OrderBy(x => x.Id)
+            .ToListAsync(cancellationToken);
+        return sameWatermark
+            .Where(x => x.Id.CompareTo(lastId) > 0)
+            .ToList();
+    }
+
+    private static (List<BoardItemEntity> Changed, bool Truncated) BuildChangedPage(
+        List<BoardItemEntity> newer,
+        List<BoardItemEntity> boundary,
+        int limit)
+    {
         var merged = newer
             .Concat(boundary)
-            .OrderBy(x => x.DeletedAtUtc != null ? x.DeletedAtUtc.Value : x.UpdatedAtUtc)
-            .ThenBy(x => x.Id)
+            .OrderBy(static x => x.DeletedAtUtc ?? x.UpdatedAtUtc)
+            .ThenBy(static x => x.Id)
             .Take(limit + 1)
             .ToList();
         var truncated = merged.Count > limit;
         var changed = truncated ? merged.Take(limit).ToList() : merged;
+        return (changed, truncated);
+    }
 
+    private static (List<BoardSyncItem> Upserts, List<Guid> DeletedIds, DateTimeOffset? Next) PartitionSyncRows(
+        List<BoardItemEntity> changed,
+        DateOnly today,
+        IReadOnlyDictionary<Guid, int> dailyStreaks)
+    {
         var upserts = new List<BoardSyncItem>();
         var deletedIds = new List<Guid>();
         DateTimeOffset? next = null;
-
-        var (today, dayStart) = await TodayAndDayStartAsync(userId, cancellationToken);
-        var dailyRows = changed.Where(x => x.DeletedAtUtc is null && x.Section == BoardSection.Daily).ToList();
-        var dailyStreaks = await streakCalculator.BuildDailyStreakMapAsync(userId, dailyRows, today, dayStart, readDb, cancellationToken);
 
         foreach (var row in changed)
         {
@@ -271,20 +312,23 @@ public sealed class BoardPersistenceService(
             next = MaxCursor(next, row.UpdatedAtUtc);
         }
 
-        string nextCursor;
+        return (upserts, deletedIds, next);
+    }
+
+    private static string ResolveNextCursor(
+        bool truncated,
+        DateTimeOffset? next,
+        DateTimeOffset cursorTs,
+        List<BoardItemEntity> changed)
+    {
         if (!truncated)
         {
-            nextCursor = (next ?? cursorTs).ToString("O");
-        }
-        else
-        {
-            var last = changed[^1];
-            var lastWatermark = last.DeletedAtUtc ?? last.UpdatedAtUtc;
-            nextCursor = $"{lastWatermark:O}|{last.Id:D}";
+            return (next ?? cursorTs).ToString("O");
         }
 
-        AppTelemetry.RecordSyncDelta(upserts.Count, deletedIds.Count);
-        return new BoardSyncDelta(upserts, deletedIds, nextCursor);
+        var last = changed[^1];
+        var lastWatermark = last.DeletedAtUtc ?? last.UpdatedAtUtc;
+        return $"{lastWatermark:O}|{last.Id:D}";
     }
 
     private static (DateTimeOffset Watermark, Guid? LastId) ParseSyncCursor(string cursorRaw)
@@ -962,7 +1006,8 @@ public sealed class BoardPersistenceService(
                 await streakCalculator.ReconcileDailyStreakBackfillAsync(dbContext, userId, itemId,
                     new DailyBackfillArgs(newStartD, args.Repeat, n, streakClamped, weekdays),
                     streakNotAfter, cancellationToken);
-                DailyStreakCalculationService.ApplyManualStreakToEntity(entity, newStartD, args.Repeat, n, streakClamped, today, wasCompleteForToday, weekdays);
+                DailyStreakCalculationService.ApplyManualStreakToEntity(entity,
+                    new ManualStreakArgs(newStartD, args.Repeat, n, streakClamped, today, wasCompleteForToday, weekdays));
                 return true;
             },
             entity => ToModelWithDailyStreaksAsync(userId, entity, cancellationToken),

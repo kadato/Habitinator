@@ -39,24 +39,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApiDocument();
 
 var otlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
-builder.Services.AddOpenTelemetry()
-    .ConfigureResource(resource => resource.AddService("habitinator-web"))
-    .WithTracing(tracing =>
-    {
-        tracing.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddSource(App.Web.Services.AppTelemetry.SourceName);
-        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
-        {
-            tracing.AddOtlpExporter();
-        }
-    })
-    .WithMetrics(metrics =>
-    {
-        metrics.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddMeter(App.Web.Services.AppTelemetry.MeterName);
-        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
-        {
-            metrics.AddOtlpExporter();
-        }
-    });
+Program.ConfigureTelemetry(builder.Services, otlpEndpoint);
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);
@@ -88,47 +71,7 @@ builder.Services.AddHsts(options =>
     options.IncludeSubDomains = true;
 });
 
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.OnRejected = async (context, token) =>
-    {
-        context.HttpContext.Response.ContentType = "application/json";
-        await context.HttpContext.Response.WriteAsJsonAsync(new { detail = "Too many requests. Please try again later." }, token);
-    };
-
-    options.AddPolicy("auth", context =>
-    {
-        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown-ip";
-        var isDevOrTest = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment(AppEnvironment.Testing);
-        var limit = isDevOrTest ? 100 : 20;
-        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = limit,
-            Window = TimeSpan.FromSeconds(10),
-            QueueLimit = 0
-        });
-    });
-
-    options.AddPolicy("api", context =>
-    {
-        var key = AuthenticatedUserId.TryGet(context.User)?.ToString()
-                  ?? context.Connection.RemoteIpAddress?.ToString()
-                  ?? "unknown";
-
-        var isDevOrTest = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment(AppEnvironment.Testing);
-        var limit = isDevOrTest ? 1000 : 300;
-        var queueLimit = isDevOrTest ? 50 : 10;
-
-        return RateLimitPartition.GetSlidingWindowLimiter(key, _ => new SlidingWindowRateLimiterOptions
-        {
-            PermitLimit = limit,
-            Window = TimeSpan.FromMinutes(1),
-            SegmentsPerWindow = 6,
-            QueueLimit = queueLimit
-        });
-    });
-});
+Program.ConfigureRateLimiting(builder.Services, builder.Environment);
 var app = builder.Build();
 
 if (app.Environment.IsEnvironment(AppEnvironment.Testing))
@@ -152,4 +95,80 @@ public partial class Program
     protected Program() { }
 
     internal static readonly string[] ResponseCompressionMimeTypes = ["application/octet-stream", "application/wasm"];
+
+    internal static void ConfigureTelemetry(IServiceCollection services, string? otlpEndpoint)
+    {
+        services.AddOpenTelemetry()
+            .ConfigureResource(resource => resource.AddService("habitinator-web"))
+            .WithTracing(tracing => ConfigureTracing(tracing, otlpEndpoint))
+            .WithMetrics(metrics => ConfigureMetrics(metrics, otlpEndpoint));
+    }
+
+    private static void ConfigureTracing(TracerProviderBuilder tracing, string? otlpEndpoint)
+    {
+        tracing.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddSource(App.Web.Services.AppTelemetry.SourceName);
+        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+        {
+            tracing.AddOtlpExporter();
+        }
+    }
+
+    private static void ConfigureMetrics(MeterProviderBuilder metrics, string? otlpEndpoint)
+    {
+        metrics.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddMeter(App.Web.Services.AppTelemetry.MeterName);
+        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+        {
+            metrics.AddOtlpExporter();
+        }
+    }
+
+    internal static void ConfigureRateLimiting(IServiceCollection services, IWebHostEnvironment environment)
+    {
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.OnRejected = async (context, token) =>
+            {
+                context.HttpContext.Response.ContentType = "application/json";
+                await context.HttpContext.Response.WriteAsJsonAsync(new { detail = "Too many requests. Please try again later." }, token);
+            };
+
+            options.AddPolicy("auth", context => CreateAuthPolicy(context, environment));
+            options.AddPolicy("api", context => CreateApiPolicy(context, environment));
+        });
+    }
+
+    private static RateLimitPartition<string> CreateAuthPolicy(HttpContext context, IWebHostEnvironment environment)
+    {
+        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown-ip";
+        var limit = IsDevOrTest(environment) ? 100 : 20;
+        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = limit,
+            Window = TimeSpan.FromSeconds(10),
+            QueueLimit = 0
+        });
+    }
+
+    private static RateLimitPartition<string> CreateApiPolicy(HttpContext context, IWebHostEnvironment environment)
+    {
+        var key = AuthenticatedUserId.TryGet(context.User)?.ToString()
+                  ?? context.Connection.RemoteIpAddress?.ToString()
+                  ?? "unknown";
+
+        var isDevOrTest = IsDevOrTest(environment);
+        var limit = isDevOrTest ? 1000 : 300;
+        var queueLimit = isDevOrTest ? 50 : 10;
+
+        return RateLimitPartition.GetSlidingWindowLimiter(key, _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = limit,
+            Window = TimeSpan.FromMinutes(1),
+            SegmentsPerWindow = 6,
+            QueueLimit = queueLimit
+        });
+    }
+
+    private static bool IsDevOrTest(IWebHostEnvironment environment) =>
+        environment.IsDevelopment() || environment.IsEnvironment(AppEnvironment.Testing);
 }

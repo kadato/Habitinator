@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace App.Shared.RCL.Services.Board.Local;
 
 /// <summary>Shared periodic drain and pull. Resume, hub events, visibility changes, and a timer trigger it.</summary>
+#pragma warning disable S107 // Coordinator joins board store, user keys, sync status, refresh, logging, and scope factory; grouping would hide DI wiring.
 public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposable
 {
     private const int StuckAfterAttempts = 8;
@@ -263,3 +264,4 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
         _run.Dispose();
     }
 }
+#pragma warning restore S107

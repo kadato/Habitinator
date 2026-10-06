@@ -1,5 +1,5 @@
 #pragma warning disable S3881 // Dispose is implemented in the generated Razor part
-#pragma warning disable S1144, S4487, IDE0051, IDE0052
+#pragma warning disable S1144, S4487, S2325, IDE0051, IDE0052 // Unused/private members are used by the Razor markup part; flagged methods use services injected there.
 using System.Globalization;
 
 using App.Shared.RCL.Components.Dialogs;
@@ -45,6 +45,10 @@ public partial class StatisticsPanel : IDisposable
     private DateOnly _heatmapToday;
 
     private const int InitialVisibleConsistencyCount = 6;
+    private const string OverviewStateKey = "stats_overview_data";
+    private const string DashboardStateKey = "stats_dashboard_data";
+    private const string DailyViewStateKey = "stats_daily_view_data";
+    private const string HabitViewStateKey = "stats_habit_view_data";
     private int _visibleConsistencyCount = InitialVisibleConsistencyCount;
     private int _loadVersion;
     private bool _disposed;
@@ -108,7 +112,7 @@ public partial class StatisticsPanel : IDisposable
 
     private bool TryRestoreInitialOverview()
     {
-        if (ApplicationState.TryTakeFromJson<ActivityOverviewDto>("stats_overview_data", out var restoredOverview) && restoredOverview is not null)
+        if (ApplicationState.TryTakeFromJson<ActivityOverviewDto>(OverviewStateKey, out var restoredOverview) && restoredOverview is not null)
         {
             ApplyOverview(restoredOverview);
             return true;
@@ -182,7 +186,7 @@ public partial class StatisticsPanel : IDisposable
         if (_data is not null && _dailyView is not null && _habitView is not null)
         {
             var overview = new ActivityOverviewDto(_data, _dailyView, _habitView);
-            ApplicationState.PersistAsJson("stats_overview_data", overview);
+            ApplicationState.PersistAsJson(OverviewStateKey, overview);
         }
         return Task.CompletedTask;
     }
@@ -268,137 +272,14 @@ public partial class StatisticsPanel : IDisposable
     private async Task LoadStatisticsAsync(string periodKey)
     {
         var version = ++_loadVersion;
-
-        _heatmapToday = DailySchedule.LocalToday(TimeZoneService);
-        _visibleConsistencyCount = InitialVisibleConsistencyCount;
-        if (_dailyView is null)
-        {
-            _loadingDailies = true;
-        }
-
-        _dailyError = null;
-        if (_habitView is null)
-        {
-            _loadingHabits = true;
-        }
-
-        _habitError = null;
-        var tag = string.IsNullOrEmpty(_tagFilter) ? null : _tagFilter;
+        var tag = PrepareLoadState();
         var streaksTask = BoardData.GetStreakMapAsync(CancellationToken.None);
 
-        // A cached overview paints the hero and all grids instantly. The load below
-        // then revalidates over the network so a check-in never paints stale.
-        if (Stats.TryGetCachedOverview(periodKey, tag, out var cachedOverview) && cachedOverview is not null)
-        {
-            ApplyOverview(cachedOverview);
-            _loading = false;
-            _loadingDailies = false;
-            _loadingHabits = false;
-            await ApplyBestStreakAsync(streaksTask);
-            await InvokeAsync(StateHasChanged);
-        }
-
-        // A cached dashboard with cached contributions paints instantly. The same revalidation runs below.
-        else if (Stats.TryGetCachedDashboard(periodKey, tag, out var cachedDashboard) && cachedDashboard is not null &&
-            Stats.TryGetCachedDailyContributions(periodKey, tag, out var cachedDaily) && cachedDaily is not null &&
-            Stats.TryGetCachedHabitContributions(periodKey, tag, out var cachedHabit) && cachedHabit is not null)
-        {
-            ApplyDashboard(cachedDashboard);
-            ApplyDailyContributions(cachedDaily);
-            ApplyHabitContributions(cachedHabit);
-            _loading = false;
-            _loadingDailies = false;
-            _loadingHabits = false;
-            await ApplyBestStreakAsync(streaksTask);
-            await InvokeAsync(StateHasChanged);
-        }
+        await PaintCachedStateIfAvailableAsync(periodKey, tag, streaksTask);
 
         try
         {
-            // Fire all three reads at once so the grids do not wait an extra round trip
-            // behind the dashboard. The hero still paints first for progressive load.
-            var dashboardTask = ResolveDashboardAsync(periodKey, tag);
-            var dailyTask = Stats.GetDailyContributionsAsync(periodKey, tag, CancellationToken.None);
-            var habitTask = Stats.GetHabitContributionsAsync(periodKey, tag, CancellationToken.None);
-
-            ActivityDashboardDto dashboard;
-            try
-            {
-                dashboard = await dashboardTask;
-            }
-            catch
-            {
-                // The sibling reads are no longer needed on this path. Observe their
-                // faults so failures do not go unobserved.
-                ObserveFaults(dailyTask, habitTask);
-                throw;
-            }
-
-            if (version != _loadVersion || _disposed)
-            {
-                ObserveFaults(dailyTask, habitTask);
-                return;
-            }
-
-            ApplyDashboard(dashboard);
-            _loading = false;
-            await InvokeAsync(StateHasChanged);
-
-            try
-            {
-                var daily = await dailyTask;
-                if (version == _loadVersion && !_disposed)
-                {
-                    ApplyDailyContributions(daily);
-                }
-            }
-            catch (Exception dex)
-            {
-                if (version == _loadVersion)
-                {
-                    _dailyError = dex.Message;
-                    LogFallback(dex, "Daily contributions failed. The hero still shows.");
-                }
-            }
-            finally
-            {
-                if (version == _loadVersion)
-                {
-                    _loadingDailies = false;
-                }
-            }
-
-            try
-            {
-                var habit = await habitTask;
-                if (version == _loadVersion && !_disposed)
-                {
-                    ApplyHabitContributions(habit);
-                }
-            }
-            catch (Exception hex)
-            {
-                if (version == _loadVersion)
-                {
-                    _habitError = hex.Message;
-                    LogFallback(hex, "Habit contributions failed. The hero still shows.");
-                }
-            }
-            finally
-            {
-                if (version == _loadVersion)
-                {
-                    _loadingHabits = false;
-                }
-            }
-
-            if (version != _loadVersion || _disposed)
-            {
-                return;
-            }
-
-            await InvokeAsync(StateHasChanged);
-            await ApplyBestStreakAsync(streaksTask);
+            await RevalidateFromNetworkAsync(periodKey, tag, version, streaksTask);
         }
         catch (Exception dex)
         {
@@ -417,72 +298,288 @@ public partial class StatisticsPanel : IDisposable
         }
     }
 
+    private string? PrepareLoadState()
+    {
+        _heatmapToday = DailySchedule.LocalToday(TimeZoneService);
+        _visibleConsistencyCount = InitialVisibleConsistencyCount;
+        if (_dailyView is null)
+        {
+            _loadingDailies = true;
+        }
+
+        _dailyError = null;
+        if (_habitView is null)
+        {
+            _loadingHabits = true;
+        }
+
+        _habitError = null;
+        return string.IsNullOrEmpty(_tagFilter) ? null : _tagFilter;
+    }
+
+    private async Task PaintCachedStateIfAvailableAsync(string periodKey, string? tag, Task<Dictionary<Guid, int>> streaksTask)
+    {
+        // A cached overview paints the hero and all grids instantly. The load below
+        // then revalidates over the network so a check-in never paints stale.
+        if (Stats.TryGetCachedOverview(periodKey, tag, out var cachedOverview) && cachedOverview is not null)
+        {
+            ApplyOverview(cachedOverview);
+            await MarkCachePaintedAsync(streaksTask);
+            return;
+        }
+
+        // A cached dashboard with cached contributions paints instantly. The same revalidation runs below.
+        if (TryGetCachedDashboardParts(periodKey, tag, out var cachedDashboard, out var cachedDaily, out var cachedHabit))
+        {
+            ApplyDashboard(cachedDashboard);
+            ApplyDailyContributions(cachedDaily);
+            ApplyHabitContributions(cachedHabit);
+            await MarkCachePaintedAsync(streaksTask);
+        }
+    }
+
+    private bool TryGetCachedDashboardParts(string periodKey, string? tag, out ActivityDashboardDto dashboard, out DailyContributionsViewDto daily, out HabitContributionsViewDto habit)
+    {
+        dashboard = null!;
+        daily = null!;
+        habit = null!;
+        if (!Stats.TryGetCachedDashboard(periodKey, tag, out var cachedDashboard) || cachedDashboard is null)
+        {
+            return false;
+        }
+
+        if (!Stats.TryGetCachedDailyContributions(periodKey, tag, out var cachedDaily) || cachedDaily is null)
+        {
+            return false;
+        }
+
+        if (!Stats.TryGetCachedHabitContributions(periodKey, tag, out var cachedHabit) || cachedHabit is null)
+        {
+            return false;
+        }
+
+        dashboard = cachedDashboard;
+        daily = cachedDaily;
+        habit = cachedHabit;
+        return true;
+    }
+
+    private async Task MarkCachePaintedAsync(Task<Dictionary<Guid, int>> streaksTask)
+    {
+        _loading = false;
+        _loadingDailies = false;
+        _loadingHabits = false;
+        await ApplyBestStreakAsync(streaksTask);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RevalidateFromNetworkAsync(string periodKey, string? tag, int version, Task<Dictionary<Guid, int>> streaksTask)
+    {
+        // Fire all three reads at once so the grids do not wait an extra round trip
+        // behind the dashboard. The hero still paints first for progressive load.
+        var dashboardTask = ResolveDashboardAsync(periodKey, tag);
+        var dailyTask = Stats.GetDailyContributionsAsync(periodKey, tag, CancellationToken.None);
+        var habitTask = Stats.GetHabitContributionsAsync(periodKey, tag, CancellationToken.None);
+
+        ActivityDashboardDto dashboard;
+        try
+        {
+            dashboard = await dashboardTask;
+        }
+        catch
+        {
+            // The sibling reads are no longer needed on this path. Observe their
+            // faults so failures do not go unobserved.
+            ObserveFaults(dailyTask, habitTask);
+            throw;
+        }
+
+        if (version != _loadVersion || _disposed)
+        {
+            ObserveFaults(dailyTask, habitTask);
+            return;
+        }
+
+        ApplyDashboard(dashboard);
+        _loading = false;
+        await InvokeAsync(StateHasChanged);
+
+        await ApplyDailyResultAsync(dailyTask, version);
+        await ApplyHabitResultAsync(habitTask, version);
+
+        if (version != _loadVersion || _disposed)
+        {
+            return;
+        }
+
+        await InvokeAsync(StateHasChanged);
+        await ApplyBestStreakAsync(streaksTask);
+    }
+
+    private async Task ApplyDailyResultAsync(Task<DailyContributionsViewDto> dailyTask, int version)
+    {
+        try
+        {
+            var daily = await dailyTask;
+            if (version == _loadVersion && !_disposed)
+            {
+                ApplyDailyContributions(daily);
+            }
+        }
+        catch (Exception dex)
+        {
+            if (version == _loadVersion)
+            {
+                _dailyError = dex.Message;
+                LogFallback(dex, "Daily contributions failed. The hero still shows.");
+            }
+        }
+        finally
+        {
+            if (version == _loadVersion)
+            {
+                _loadingDailies = false;
+            }
+        }
+    }
+
+    private async Task ApplyHabitResultAsync(Task<HabitContributionsViewDto> habitTask, int version)
+    {
+        try
+        {
+            var habit = await habitTask;
+            if (version == _loadVersion && !_disposed)
+            {
+                ApplyHabitContributions(habit);
+            }
+        }
+        catch (Exception hex)
+        {
+            if (version == _loadVersion)
+            {
+                _habitError = hex.Message;
+                LogFallback(hex, "Habit contributions failed. The hero still shows.");
+            }
+        }
+        finally
+        {
+            if (version == _loadVersion)
+            {
+                _loadingHabits = false;
+            }
+        }
+    }
+
     private async Task<ActivityDashboardDto> ResolveDashboardAsync(string periodKey, string? tag)
     {
-        if (ApplicationState.TryTakeFromJson<ActivityOverviewDto>("stats_overview_data", out var restoredOverview) && restoredOverview?.Dashboard is not null)
+        if (TryRestorePersistedOverview(out var persistedOverview))
         {
-            if (restoredOverview.DailyContributions is not null)
-            {
-                ApplyDailyContributions(restoredOverview.DailyContributions);
-                _loadingDailies = false;
-            }
-
-            if (restoredOverview.HabitContributions is not null)
-            {
-                ApplyHabitContributions(restoredOverview.HabitContributions);
-                _loadingHabits = false;
-            }
-
-            return restoredOverview.Dashboard;
+            return persistedOverview;
         }
 
-        if (ApplicationState.TryTakeFromJson<ActivityDashboardDto>("stats_dashboard_data", out var d) && d is not null)
+        if (TryRestorePersistedDashboard(out var persistedDashboard))
         {
-            if (ApplicationState.TryTakeFromJson<DailyContributionsViewDto>("stats_daily_view_data", out var dv) && dv is not null)
-            {
-                ApplyDailyContributions(dv);
-                _loadingDailies = false;
-            }
-
-            if (ApplicationState.TryTakeFromJson<HabitContributionsViewDto>("stats_habit_view_data", out var hv) && hv is not null)
-            {
-                ApplyHabitContributions(hv);
-                _loadingHabits = false;
-            }
-
-            return d;
+            return persistedDashboard;
         }
 
-        if (Stats.TryGetCachedDashboard(periodKey, tag, out var cached) && cached is not null)
+        if (TryRestoreCachedDashboard(periodKey, tag, out var cachedDashboard))
         {
-            if (Stats.TryGetCachedDailyContributions(periodKey, tag, out var cachedDaily) && cachedDaily is not null)
-            {
-                ApplyDailyContributions(cachedDaily);
-                _loadingDailies = false;
-            }
-
-            if (Stats.TryGetCachedHabitContributions(periodKey, tag, out var cachedHabit) && cachedHabit is not null)
-            {
-                ApplyHabitContributions(cachedHabit);
-                _loadingHabits = false;
-            }
-
-            return cached;
+            return cachedDashboard;
         }
 
         return await Stats.GetDashboardAsync(periodKey, tag);
     }
 
+    private bool TryRestorePersistedOverview(out ActivityDashboardDto dashboard)
+    {
+        dashboard = null!;
+        if (!ApplicationState.TryTakeFromJson<ActivityOverviewDto>(OverviewStateKey, out var restoredOverview) || restoredOverview?.Dashboard is null)
+        {
+            return false;
+        }
+
+        ApplyRestoredContributions(restoredOverview.DailyContributions, restoredOverview.HabitContributions);
+        dashboard = restoredOverview.Dashboard;
+        return true;
+    }
+
+    private bool TryRestorePersistedDashboard(out ActivityDashboardDto dashboard)
+    {
+        dashboard = null!;
+        if (!ApplicationState.TryTakeFromJson<ActivityDashboardDto>(DashboardStateKey, out var d))
+        {
+            return false;
+        }
+
+        if (!ApplicationState.TryTakeFromJson<DailyContributionsViewDto>(DailyViewStateKey, out var dv))
+        {
+            return false;
+        }
+
+        if (!ApplicationState.TryTakeFromJson<HabitContributionsViewDto>(HabitViewStateKey, out var hv))
+        {
+            return false;
+        }
+
+        if (d is null || dv is null || hv is null)
+        {
+            return false;
+        }
+
+        ApplyRestoredContributions(dv, hv);
+        dashboard = d;
+        return true;
+    }
+
+    private bool TryRestoreCachedDashboard(string periodKey, string? tag, out ActivityDashboardDto dashboard)
+    {
+        dashboard = null!;
+        if (!Stats.TryGetCachedDashboard(periodKey, tag, out var cached) || cached is null)
+        {
+            return false;
+        }
+
+        if (Stats.TryGetCachedDailyContributions(periodKey, tag, out var cachedDaily) && cachedDaily is not null)
+        {
+            ApplyDailyContributions(cachedDaily);
+            _loadingDailies = false;
+        }
+
+        if (Stats.TryGetCachedHabitContributions(periodKey, tag, out var cachedHabit) && cachedHabit is not null)
+        {
+            ApplyHabitContributions(cachedHabit);
+            _loadingHabits = false;
+        }
+
+        dashboard = cached;
+        return true;
+    }
+
+    private void ApplyRestoredContributions(DailyContributionsViewDto? daily, HabitContributionsViewDto? habit)
+    {
+        if (daily is not null)
+        {
+            ApplyDailyContributions(daily);
+            _loadingDailies = false;
+        }
+
+        if (habit is not null)
+        {
+            ApplyHabitContributions(habit);
+            _loadingHabits = false;
+        }
+    }
+
     private async Task<ActivityOverviewDto> ResolveOverviewAsync(string periodKey, string? tag)
     {
-        if (ApplicationState.TryTakeFromJson<ActivityOverviewDto>("stats_overview_data", out var restoredOverview) && restoredOverview is not null)
+        if (ApplicationState.TryTakeFromJson<ActivityOverviewDto>(OverviewStateKey, out var restoredOverview) && restoredOverview is not null)
         {
             return restoredOverview;
         }
 
-        if (ApplicationState.TryTakeFromJson<ActivityDashboardDto>("stats_dashboard_data", out var d) &&
-            ApplicationState.TryTakeFromJson<DailyContributionsViewDto>("stats_daily_view_data", out var dv) &&
-            ApplicationState.TryTakeFromJson<HabitContributionsViewDto>("stats_habit_view_data", out var hv) &&
+        if (ApplicationState.TryTakeFromJson<ActivityDashboardDto>(DashboardStateKey, out var d) &&
+            ApplicationState.TryTakeFromJson<DailyContributionsViewDto>(DailyViewStateKey, out var dv) &&
+            ApplicationState.TryTakeFromJson<HabitContributionsViewDto>(HabitViewStateKey, out var hv) &&
             d is not null && dv is not null && hv is not null)
         {
             return new ActivityOverviewDto(d, dv, hv);

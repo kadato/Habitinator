@@ -1,4 +1,5 @@
 #pragma warning disable S3881 // Dispose is implemented in the generated Razor part
+#pragma warning disable S4487, S2325 // Flagged fields are read by the Razor markup part and flagged methods use services injected there; Sonar sees this code-behind file in isolation.
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 

@@ -27,10 +27,10 @@ globalThis.HabitinatorBoardViewport = (function () {
       dotNetHelper = dotNetRef;
       if (typeof globalThis.matchMedia === "function") {
         media = globalThis.matchMedia(query);
-        if (media.addEventListener) {
+        if (media && typeof media.addEventListener === "function") {
           media.addEventListener("change", onChange);
-        } else if (media.addListener) {
-          media.addListener(onChange);
+        } else {
+          globalThis.addEventListener("resize", onChange);
         }
       } else {
         globalThis.addEventListener("resize", onChange);
@@ -38,15 +38,12 @@ globalThis.HabitinatorBoardViewport = (function () {
     },
     unwatch: function () {
       if (media) {
-        if (media.removeEventListener) {
+        if (typeof media.removeEventListener === "function") {
           media.removeEventListener("change", onChange);
-        } else if (media.removeListener) {
-          media.removeListener(onChange);
         }
         media = null;
-      } else {
-        globalThis.removeEventListener("resize", onChange);
       }
+      globalThis.removeEventListener("resize", onChange);
       dotNetHelper = null;
     }
   };

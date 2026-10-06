@@ -58,74 +58,124 @@ public sealed class BoardIdempotencyService(
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var row = await db.BoardRequestIdempotencies.AsNoTracking()
-                .FirstOrDefaultAsync(
-                    x => x.UserId == userId && x.IdempotencyKey == idempotencyKey,
-                    cancellationToken);
+            var row = await FindExistingRowAsync(userId, idempotencyKey, cancellationToken);
 
             if (row is not null)
             {
-                if (!string.Equals(row.RequestFingerprintHex, fingerprintHex, StringComparison.OrdinalIgnoreCase))
+                var replay = await TryReplayExistingRowAsync(row, userId, idempotencyKey, fingerprintHex, cancellationToken);
+                if (replay is not null)
                 {
-                    AppTelemetry.RecordIdempotencyMismatch();
-                    throw new BoardIdempotencyFingerprintMismatchException();
+                    return replay.Value;
                 }
 
-                if (row.ResponseStatusCode == StatusCodes.Status409Conflict)
-                {
-                    // Version conflicts depend on current row state. Replaying a recorded
-                    // 409 pins version-remapped retries on a stale outcome forever.
-                    // Drop the recorded 409 so this attempt re-executes against the live version.
-                    db.BoardRequestIdempotencies.Remove(row);
-                    await db.SaveChangesAsync(cancellationToken);
-                    continue;
-                }
-
-                if (row.ResponseStatusCode != PendingResponseCode)
-                {
-                    AppTelemetry.RecordIdempotencyReplay();
-                    return (row.ResponseStatusCode, row.ResponseBody, "application/json");
-                }
-
-                await WaitForOtherAsync(userId, idempotencyKey, fingerprintHex, cancellationToken);
                 continue;
             }
 
-            var claim = new BoardRequestIdempotencyEntity
-            {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                IdempotencyKey = idempotencyKey,
-                RequestFingerprintHex = fingerprintHex,
-                ResponseStatusCode = PendingResponseCode,
-                ResponseBody = "",
-                CreatedAtUtc = DateTimeOffset.UtcNow
-            };
+            var claim = CreateClaim(userId, idempotencyKey, fingerprintHex);
             db.BoardRequestIdempotencies.Add(claim);
 
-            try
+            var (claimed, attempts) = await TrySaveClaimAsync(claim, userId, claimAttempts, cancellationToken);
+            claimAttempts = attempts;
+            if (!claimed)
             {
-                await db.SaveChangesAsync(cancellationToken);
-            }
-            catch (DbUpdateException ex) when (PostgresErrors.IsUniqueViolation(ex))
-            {
-                db.Entry(claim).State = EntityState.Detached; // Detach failed entry from change tracker
-                claimAttempts++;
-                if (claimAttempts >= MaxClaimAttempts)
-                {
-                    logger.LogError(
-                        ex,
-                        "Could not claim idempotency key for user {UserId} after {Attempts} attempts.",
-                        userId,
-                        claimAttempts);
-                    throw;
-                }
-
-                await Task.Delay(25, cancellationToken);
                 continue;
             }
 
             return await ExecuteAndSaveOutcomeAsync(claim, execute, idempotencyKey, cancellationToken);
+        }
+    }
+
+    private Task<BoardRequestIdempotencyEntity?> FindExistingRowAsync(
+        Guid userId,
+        string idempotencyKey,
+        CancellationToken cancellationToken) =>
+        db.BoardRequestIdempotencies.AsNoTracking()
+            .FirstOrDefaultAsync(
+                x => x.UserId == userId && x.IdempotencyKey == idempotencyKey,
+                cancellationToken);
+
+    private static BoardRequestIdempotencyEntity CreateClaim(Guid userId, string idempotencyKey, string fingerprintHex) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            IdempotencyKey = idempotencyKey,
+            RequestFingerprintHex = fingerprintHex,
+            ResponseStatusCode = PendingResponseCode,
+            ResponseBody = "",
+            CreatedAtUtc = DateTimeOffset.UtcNow
+        };
+
+    private async Task<(int statusCode, string body, string? contentType)?> TryReplayExistingRowAsync(
+        BoardRequestIdempotencyEntity row,
+        Guid userId,
+        string idempotencyKey,
+        string fingerprintHex,
+        CancellationToken cancellationToken)
+    {
+        EnsureFingerprintMatches(row.RequestFingerprintHex, fingerprintHex);
+
+        if (row.ResponseStatusCode == StatusCodes.Status409Conflict)
+        {
+            await DropStaleConflictAsync(row, cancellationToken);
+            return null;
+        }
+
+        if (row.ResponseStatusCode != PendingResponseCode)
+        {
+            AppTelemetry.RecordIdempotencyReplay();
+            return (row.ResponseStatusCode, row.ResponseBody, "application/json");
+        }
+
+        await WaitForOtherAsync(userId, idempotencyKey, fingerprintHex, cancellationToken);
+        return null;
+    }
+
+    private static void EnsureFingerprintMatches(string actualHex, string expectedHex)
+    {
+        if (!string.Equals(actualHex, expectedHex, StringComparison.OrdinalIgnoreCase))
+        {
+            AppTelemetry.RecordIdempotencyMismatch();
+            throw new BoardIdempotencyFingerprintMismatchException();
+        }
+    }
+
+    private async Task DropStaleConflictAsync(BoardRequestIdempotencyEntity row, CancellationToken cancellationToken)
+    {
+        // Version conflicts depend on current row state. Replaying a recorded
+        // 409 pins version-remapped retries on a stale outcome forever.
+        // Drop the recorded 409 so this attempt re-executes against the live version.
+        db.BoardRequestIdempotencies.Remove(row);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<(bool Claimed, int Attempts)> TrySaveClaimAsync(
+        BoardRequestIdempotencyEntity claim,
+        Guid userId,
+        int claimAttempts,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            return (true, claimAttempts);
+        }
+        catch (DbUpdateException ex) when (PostgresErrors.IsUniqueViolation(ex))
+        {
+            db.Entry(claim).State = EntityState.Detached; // Detach failed entry from change tracker
+            var attempts = claimAttempts + 1;
+            if (attempts >= MaxClaimAttempts)
+            {
+                logger.LogError(
+                    ex,
+                    "Could not claim idempotency key for user {UserId} after {Attempts} attempts.",
+                    userId,
+                    attempts);
+                throw;
+            }
+
+            await Task.Delay(25, cancellationToken);
+            return (false, attempts);
         }
     }
 

@@ -6,6 +6,7 @@ using MudBlazor;
 namespace App.Shared.RCL.Services.CommandPalette;
 
 /// <summary>Focus timer catalog, search shortcuts, sessions, and the start wizard.</summary>
+#pragma warning disable S107 // Palette fragment needs timer, board, dialogs, notifier, log, and navigation callbacks together.
 internal sealed class TimerPaletteCommands(
     GlobalTimerService timer,
     IBoardDataService boardData,
@@ -25,210 +26,277 @@ internal sealed class TimerPaletteCommands(
     private readonly Action _close = close;
     private readonly Func<Task> _notifyRefresh = notifyRefresh;
 
+    private const string SuggestedCategory = "Suggested";
+    private const string ActionsCategory = "Actions";
+    private const string TimerCategory = "Timer";
+    private const string DurationCategory = "Duration";
+    private const string ModeCategory = "Mode";
+    private const string GeneralSessionLabel = "General Session";
+    private const string ResetFocusTimerTitle = "Reset focus timer";
+    private const string ResetPomodoroIdleSubtitle = "Reset Pomodoro intervals and return to idle";
+    private const string ResetSessionZeroSubtitle = "Reset session timer to zero";
+    private const string PomodoroResetIdleMessage = "Pomodoro session reset to idle.";
+    private const string StopwatchResetZeroMessage = "Stopwatch timer reset to zero.";
+    private const string KwTimer = "timer";
+    private const string KwSession = "session";
+    private const string KwVirtualSession = "virtual session";
+    private const string KwFocus = "focus";
+    private const string KwBreak = "break";
+    private const string KwReset = "reset";
+    private const string KwClear = "clear";
+    private const string KwStart = "start";
+    private const string KwTarget = "target";
+    private const string KwDuration = "duration";
+    private const string KwEmpty = "empty";
+    private const string KwModraw = "modraw";
+    private const string KwComodoro = "comodoro";
+    private const string KwPomodoro = "pomodoro";
+    private const string KwStopwatch = "stopwatch";
+    private const string KwCustom = "custom";
+    private const string KwContinuous = "continuous";
+    private const string KwOpen = "open";
+    private const string KwHabit = "habit";
+    private const string KwDaily = "daily";
+    private const string KwMinutes = "minutes";
+    private const string KwTodo = "todo";
+    private const string ShortcutS = "S";
+    private const string TimerResetId = "timer-reset";
+    private const string TimerStopId = "timer-stop";
+    private const string StopFocusSessionTitle = "Stop focus session";
+    private const string KwStop = "stop";
+    private const string KwLog = "log";
+    private const string KwLock = "lock";
+    private const string KwEnd = "end";
+    private const string KwZero = "zero";
+    private const string KwWork = "work";
+    private const string KwLabel = "label";
+    private const string KwInterval = "interval";
+    private const string Kw15 = "15";
+    private const string Kw15M = "15m";
+    private const string Kw25 = "25";
+    private const string Kw25M = "25m";
+    private const string Kw30 = "30";
+    private const string Kw30M = "30m";
+    private const string Kw45 = "45";
+    private const string Kw45M = "45m";
+
     public void AddSuggestedTimerCommands(List<CommandItem> list)
     {
-        // Timer action based on current state
         if (_timer.IsRunning)
         {
-            list.Add(new(
-                Id: "timer-stop",
-                Title: "Stop focus session",
-                Subtitle: $"Stop and log session of {GlobalTimerService.FormatTimeSpan(_timer.Elapsed)}",
-                Category: "Suggested",
-                Icon: Icons.Material.Filled.Stop,
-                ShortcutBadge: "S",
-                Action: StopTimerSessionAsync,
-                Keywords: ["timer", "stop", "session", "virtual session", "focus", "log", "lock", "end"]));
+            AddRunningTimerCommands(list);
+            return;
+        }
 
-            list.Add(new(
-                Id: "timer-pause",
-                Title: "Pause focus timer",
-                Subtitle: _timer.PomodoroModeEnabled ? $"Pause active {_timer.StatusLabel}" : "Temporarily pause the running session",
-                Category: "Suggested",
-                Icon: Icons.Material.Filled.Pause,
-                Action: () =>
-                {
-                    _close();
-                    _timer.Pause();
-                    return Task.CompletedTask;
-                },
-                Keywords: ["timer", "pause", "session", "virtual session", "focus", "break"]));
+        if (IsOnBreak())
+        {
+            AddPausedBreakCommands(list);
+            return;
+        }
 
-            list.Add(new(
-                Id: "timer-reset",
-                Title: "Reset focus timer",
-                Subtitle: _timer.PomodoroModeEnabled ? "Reset Pomodoro intervals and return to idle" : "Reset session timer to zero",
-                Category: "Suggested",
-                Icon: Icons.Material.Filled.Refresh,
-                Action: async () =>
-                {
-                    _close();
-                    _timer.ResetSession();
-                    await _notifier.NotifyAsync(_timer.PomodoroModeEnabled ? "Pomodoro session reset to idle." : "Stopwatch timer reset to zero.", Severity.Info);
-                },
-                Keywords: ["timer", "reset", "clear", "zero"]));
+        if (HasResumableSession())
+        {
+            AddPausedResumeCommands(list);
+            return;
+        }
 
-            if (_timer.PomodoroModeEnabled && (_timer.CurrentPomodoroState == PomodoroState.ShortBreak || _timer.CurrentPomodoroState == PomodoroState.LongBreak))
+        AddIdleTimerCommands(list);
+    }
+
+    private bool IsOnBreak() =>
+        _timer.PomodoroModeEnabled &&
+        (_timer.CurrentPomodoroState == PomodoroState.ShortBreak || _timer.CurrentPomodoroState == PomodoroState.LongBreak);
+
+    private bool HasResumableSession() =>
+        _timer.Elapsed > TimeSpan.Zero || (_timer.PomodoroModeEnabled && _timer.CurrentPomodoroState != PomodoroState.Idle);
+
+    private void AddRunningTimerCommands(List<CommandItem> list)
+    {
+        list.Add(new(
+            Id: TimerStopId,
+            Title: StopFocusSessionTitle,
+            Subtitle: $"Stop and log session of {GlobalTimerService.FormatTimeSpan(_timer.Elapsed)}",
+            Category: SuggestedCategory,
+            Icon: Icons.Material.Filled.Stop,
+            ShortcutBadge: ShortcutS,
+            Action: StopTimerSessionAsync,
+            Keywords: [KwTimer, KwStop, KwSession, KwVirtualSession, KwFocus, KwLog, KwLock, KwEnd]));
+
+        list.Add(new(
+            Id: "timer-pause",
+            Title: "Pause focus timer",
+            Subtitle: _timer.PomodoroModeEnabled ? $"Pause active {_timer.StatusLabel}" : "Temporarily pause the running session",
+            Category: SuggestedCategory,
+            Icon: Icons.Material.Filled.Pause,
+            Action: () =>
             {
-                list.Add(new(
-                    Id: "timer-skip-break",
-                    Title: "Skip break and resume work",
-                    Subtitle: "End break early and start next Pomodoro work interval",
-                    Category: "Suggested",
-                    Icon: Icons.Material.Filled.SkipNext,
-                    Action: async () =>
-                    {
-                        _close();
-                        _timer.TransitionToWork();
-                        _timer.Start();
-                        var targetName = string.IsNullOrWhiteSpace(_timer.TargetId) ? "General Session" : _timer.TargetId;
-                        await _notifier.NotifyAsync($"Break skipped. Work started for '{targetName}'.", Severity.Info);
-                    },
-                    Keywords: ["skip", "break", "work", "pomodoro"]));
-            }
-        }
-        else if (_timer.PomodoroModeEnabled && (_timer.CurrentPomodoroState == PomodoroState.ShortBreak || _timer.CurrentPomodoroState == PomodoroState.LongBreak))
+                _close();
+                _timer.Pause();
+                return Task.CompletedTask;
+            },
+            Keywords: [KwTimer, "pause", KwSession, KwVirtualSession, KwFocus, KwBreak]));
+
+        AddResetSuggestedCommand(list);
+
+        if (IsOnBreak())
         {
-            list.Add(new(
-                Id: "timer-start-break",
-                Title: "Start break countdown",
-                Subtitle: $"Begin {_timer.StatusLabel}, {GlobalTimerService.FormatTimeSpan(_timer.FocusAlertAfter ?? _timer.ShortBreakDuration)}",
-                Category: "Suggested",
-                Icon: Icons.Material.Filled.Coffee,
-                ShortcutBadge: "S",
-                Action: () =>
-                {
-                    _close();
-                    _timer.Start();
-                    return Task.CompletedTask;
-                },
-                Keywords: ["break", "start", "timer", "coffee", "rest"]));
-
-            list.Add(new(
-                Id: "timer-skip-break",
-                Title: "Skip break and start work",
-                Subtitle: "Skip break and start next Pomodoro work interval immediately",
-                Category: "Suggested",
-                Icon: Icons.Material.Filled.SkipNext,
-                Action: async () =>
-                {
-                    _close();
-                    _timer.TransitionToWork();
-                    _timer.Start();
-                    var targetName = string.IsNullOrWhiteSpace(_timer.TargetId) ? "General Session" : _timer.TargetId;
-                    await _notifier.NotifyAsync($"Break skipped. Work started for '{targetName}'.", Severity.Info);
-                },
-                Keywords: ["skip", "break", "work", "pomodoro"]));
-
-            list.Add(new(
-                Id: "timer-stop",
-                Title: "Stop focus session",
-                Subtitle: "Reset and end the active Pomodoro cycle",
-                Category: "Suggested",
-                Icon: Icons.Material.Filled.Stop,
-                Action: StopTimerSessionAsync,
-                Keywords: ["timer", "stop", "session", "virtual session", "end", "log", "lock"]));
-
-            list.Add(new(
-                Id: "timer-reset",
-                Title: "Reset focus timer",
-                Subtitle: "Reset Pomodoro intervals and return to idle",
-                Category: "Suggested",
-                Icon: Icons.Material.Filled.Refresh,
-                Action: async () =>
-                {
-                    _close();
-                    _timer.ResetSession();
-                    await _notifier.NotifyAsync("Pomodoro session reset to idle.", Severity.Info);
-                },
-                Keywords: ["timer", "reset", "clear", "zero"]));
+            AddSkipBreakCommand(list, "Skip break and resume work", "End break early and start next Pomodoro work interval");
         }
-        else if (_timer.Elapsed > TimeSpan.Zero || (_timer.PomodoroModeEnabled && _timer.CurrentPomodoroState != PomodoroState.Idle))
-        {
-            var resumeLabel = _timer.PomodoroModeEnabled
-                ? $"Resume Pomodoro, {_timer.GetDisplayTime()} remaining"
-                : $"Resume focus session, {GlobalTimerService.FormatTimeSpan(_timer.Elapsed)} elapsed";
+    }
 
-            list.Add(new(
-                Id: "timer-resume",
-                Title: "Resume focus session",
-                Subtitle: resumeLabel,
-                Category: "Suggested",
-                Icon: Icons.Material.Filled.PlayArrow,
-                ShortcutBadge: "S",
-                Action: () =>
-                {
-                    _close();
-                    _timer.Start();
-                    return Task.CompletedTask;
-                },
-                Keywords: ["timer", "resume", "start", "focus", "session", "virtual session"]));
+    private void AddPausedBreakCommands(List<CommandItem> list)
+    {
+        list.Add(new(
+            Id: "timer-start-break",
+            Title: "Start break countdown",
+            Subtitle: $"Begin {_timer.StatusLabel}, {GlobalTimerService.FormatTimeSpan(_timer.FocusAlertAfter ?? _timer.ShortBreakDuration)}",
+            Category: SuggestedCategory,
+            Icon: Icons.Material.Filled.Coffee,
+            ShortcutBadge: ShortcutS,
+            Action: () =>
+            {
+                _close();
+                _timer.Start();
+                return Task.CompletedTask;
+            },
+            Keywords: [KwBreak, KwStart, KwTimer, "coffee", "rest"]));
 
-            list.Add(new(
-                Id: "timer-stop",
-                Title: "Stop focus session",
-                Subtitle: $"Stop and log session of {GlobalTimerService.FormatTimeSpan(_timer.Elapsed)}",
-                Category: "Suggested",
-                Icon: Icons.Material.Filled.Stop,
-                Action: StopTimerSessionAsync,
-                Keywords: ["timer", "stop", "session", "virtual session", "focus", "log", "lock", "end"]));
+        AddSkipBreakCommand(list, "Skip break and start work", "Skip break and start next Pomodoro work interval immediately");
 
-            list.Add(new(
-                Id: "timer-reset",
-                Title: "Reset focus timer",
-                Subtitle: _timer.PomodoroModeEnabled ? "Reset Pomodoro intervals and return to idle" : "Reset session timer to zero",
-                Category: "Suggested",
-                Icon: Icons.Material.Filled.Refresh,
-                Action: async () =>
-                {
-                    _close();
-                    _timer.ResetSession();
-                    await _notifier.NotifyAsync(_timer.PomodoroModeEnabled ? "Pomodoro session reset to idle." : "Stopwatch timer reset to zero.", Severity.Info);
-                },
-                Keywords: ["timer", "reset", "clear", "zero"]));
-        }
-        else
-        {
-            var targetDesc = string.IsNullOrWhiteSpace(_timer.TargetId)
-                ? "empty session"
-                : $"target: {_timer.TargetId}";
+        list.Add(new(
+            Id: TimerStopId,
+            Title: StopFocusSessionTitle,
+            Subtitle: "Reset and end the active Pomodoro cycle",
+            Category: SuggestedCategory,
+            Icon: Icons.Material.Filled.Stop,
+            Action: StopTimerSessionAsync,
+            Keywords: [KwTimer, KwStop, KwSession, KwVirtualSession, KwEnd, KwLog, KwLock]));
 
-            list.Add(new(
-                Id: "timer-setup-and-start",
-                Title: "Start focus session...",
-                Subtitle: "Choose Stopwatch or Pomodoro, then select target and duration",
-                Category: "Suggested",
-                Icon: Icons.Material.Filled.PlayCircleOutline,
-                ChildrenProvider: GetTimerModeSelectionCommandsAsync,
-                Keywords: ["timer", "session", "virtual session", "start", "target", "focus", "duration", "explore", "empty", "modraw", "pomodoro", "comodoro", "stopwatch"]));
+        list.Add(new(
+            Id: TimerResetId,
+            Title: ResetFocusTimerTitle,
+            Subtitle: ResetPomodoroIdleSubtitle,
+            Category: SuggestedCategory,
+            Icon: Icons.Material.Filled.Refresh,
+            Action: async () =>
+            {
+                _close();
+                _timer.ResetSession();
+                await _notifier.NotifyAsync(PomodoroResetIdleMessage, Severity.Info);
+            },
+            Keywords: [KwTimer, KwReset, KwClear, KwZero]));
+    }
 
-            list.Add(new(
-                Id: "timer-start-pomodoro",
-                Title: "Quick start Pomodoro",
-                Subtitle: $"Start {_timer.WorkDuration.TotalMinutes:0}m Pomodoro work interval, {targetDesc}",
-                Category: "Suggested",
-                Icon: Icons.Material.Filled.Timelapse,
-                ShortcutBadge: "P",
-                Action: StartPomodoroSessionAsync,
-                Keywords: ["pomodoro", "comodoro", "modraw", "quick start pomodoro", "start", "focus", "virtual session"]));
+    private void AddPausedResumeCommands(List<CommandItem> list)
+    {
+        var resumeLabel = _timer.PomodoroModeEnabled
+            ? $"Resume Pomodoro, {_timer.GetDisplayTime()} remaining"
+            : $"Resume focus session, {GlobalTimerService.FormatTimeSpan(_timer.Elapsed)} elapsed";
 
-            list.Add(new(
-                Id: "timer-start",
-                Title: "Start Stopwatch session",
-                Subtitle: $"Start open stopwatch focus session, {targetDesc}",
-                Category: "Suggested",
-                Icon: Icons.Material.Filled.PlayArrow,
-                ShortcutBadge: "S",
-                Action: async () =>
-                {
-                    _close();
-                    _timer.PomodoroModeEnabled = false;
-                    _timer.Start();
-                    var tName = string.IsNullOrWhiteSpace(_timer.TargetId) ? "General Session" : _timer.TargetId;
-                    await _notifier.NotifyAsync($"Stopwatch session started for '{tName}'.", Severity.Info);
-                },
-                Keywords: ["timer", "start", "stopwatch", "open", "focus", "session"]));
-        }
+        list.Add(new(
+            Id: "timer-resume",
+            Title: "Resume focus session",
+            Subtitle: resumeLabel,
+            Category: SuggestedCategory,
+            Icon: Icons.Material.Filled.PlayArrow,
+            ShortcutBadge: ShortcutS,
+            Action: () =>
+            {
+                _close();
+                _timer.Start();
+                return Task.CompletedTask;
+            },
+            Keywords: [KwTimer, "resume", KwStart, KwFocus, KwSession, KwVirtualSession]));
+
+        list.Add(new(
+            Id: TimerStopId,
+            Title: StopFocusSessionTitle,
+            Subtitle: $"Stop and log session of {GlobalTimerService.FormatTimeSpan(_timer.Elapsed)}",
+            Category: SuggestedCategory,
+            Icon: Icons.Material.Filled.Stop,
+            Action: StopTimerSessionAsync,
+            Keywords: [KwTimer, KwStop, KwSession, KwVirtualSession, KwFocus, KwLog, KwLock, KwEnd]));
+
+        AddResetSuggestedCommand(list);
+    }
+
+    private void AddIdleTimerCommands(List<CommandItem> list)
+    {
+        var targetDesc = string.IsNullOrWhiteSpace(_timer.TargetId)
+            ? "empty session"
+            : $"target: {_timer.TargetId}";
+
+        list.Add(new(
+            Id: "timer-setup-and-start",
+            Title: "Start focus session...",
+            Subtitle: "Choose Stopwatch or Pomodoro, then select target and duration",
+            Category: SuggestedCategory,
+            Icon: Icons.Material.Filled.PlayCircleOutline,
+            ChildrenProvider: GetTimerModeSelectionCommandsAsync,
+            Keywords: [KwTimer, KwSession, KwVirtualSession, KwStart, KwTarget, KwFocus, KwDuration, "explore", KwEmpty, KwModraw, KwPomodoro, KwComodoro, KwStopwatch]));
+
+        list.Add(new(
+            Id: "timer-start-pomodoro",
+            Title: "Quick start Pomodoro",
+            Subtitle: $"Start {_timer.WorkDuration.TotalMinutes:0}m Pomodoro work interval, {targetDesc}",
+            Category: SuggestedCategory,
+            Icon: Icons.Material.Filled.Timelapse,
+            ShortcutBadge: "P",
+            Action: StartPomodoroSessionAsync,
+            Keywords: [KwPomodoro, KwComodoro, KwModraw, "quick start pomodoro", KwStart, KwFocus, KwVirtualSession]));
+
+        list.Add(new(
+            Id: "timer-start",
+            Title: "Start Stopwatch session",
+            Subtitle: $"Start open stopwatch focus session, {targetDesc}",
+            Category: SuggestedCategory,
+            Icon: Icons.Material.Filled.PlayArrow,
+            ShortcutBadge: ShortcutS,
+            Action: async () =>
+            {
+                _close();
+                _timer.PomodoroModeEnabled = false;
+                _timer.Start();
+                var tName = string.IsNullOrWhiteSpace(_timer.TargetId) ? GeneralSessionLabel : _timer.TargetId;
+                await _notifier.NotifyAsync($"Stopwatch session started for '{tName}'.", Severity.Info);
+            },
+            Keywords: [KwTimer, KwStart, KwStopwatch, KwOpen, KwFocus, KwSession]));
+    }
+
+    private void AddResetSuggestedCommand(List<CommandItem> list)
+    {
+        list.Add(new(
+            Id: TimerResetId,
+            Title: ResetFocusTimerTitle,
+            Subtitle: _timer.PomodoroModeEnabled ? ResetPomodoroIdleSubtitle : ResetSessionZeroSubtitle,
+            Category: SuggestedCategory,
+            Icon: Icons.Material.Filled.Refresh,
+            Action: async () =>
+            {
+                _close();
+                _timer.ResetSession();
+                await _notifier.NotifyAsync(_timer.PomodoroModeEnabled ? PomodoroResetIdleMessage : StopwatchResetZeroMessage, Severity.Info);
+            },
+            Keywords: [KwTimer, KwReset, KwClear, KwZero]));
+    }
+
+    private void AddSkipBreakCommand(List<CommandItem> list, string title, string subtitle)
+    {
+        list.Add(new(
+            Id: "timer-skip-break",
+            Title: title,
+            Subtitle: subtitle,
+            Category: SuggestedCategory,
+            Icon: Icons.Material.Filled.SkipNext,
+            Action: async () =>
+            {
+                _close();
+                _timer.TransitionToWork();
+                _timer.Start();
+                var targetName = string.IsNullOrWhiteSpace(_timer.TargetId) ? GeneralSessionLabel : _timer.TargetId;
+                await _notifier.NotifyAsync($"Break skipped. Work started for '{targetName}'.", Severity.Info);
+            },
+            Keywords: ["skip", KwBreak, KwWork, KwPomodoro]));
     }
 
     public void AddTimerActionCommands(List<CommandItem> list)
@@ -239,10 +307,10 @@ internal sealed class TimerPaletteCommands(
                 Id: "timer-setup-and-start",
                 Title: "Start new focus session...",
                 Subtitle: "Choose Stopwatch or Pomodoro mode, then select target and duration",
-                Category: "Actions",
+                Category: ActionsCategory,
                 Icon: Icons.Material.Filled.PlayCircleOutline,
                 ChildrenProvider: GetTimerModeSelectionCommandsAsync,
-                Keywords: ["timer", "session", "virtual session", "start", "target", "focus", "duration", "explore", "empty", "modraw", "pomodoro", "comodoro", "stopwatch", "habit", "daily", "todo"]));
+                Keywords: [KwTimer, KwSession, KwVirtualSession, KwStart, KwTarget, KwFocus, KwDuration, "explore", KwEmpty, KwModraw, KwPomodoro, KwComodoro, KwStopwatch, KwHabit, KwDaily, KwTodo]));
         }
 
         var targetDisplay = string.IsNullOrWhiteSpace(_timer.TargetId) ? "None" : _timer.TargetId;
@@ -250,10 +318,10 @@ internal sealed class TimerPaletteCommands(
             Id: "timer-set-target",
             Title: "Set session target...",
             Subtitle: $"Target: {targetDisplay} - Assign habit, daily, to-do, or custom label",
-            Category: "Actions",
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.AdsClick,
             ChildrenProvider: GetTimerTargetConfigurationCommandsAsync,
-            Keywords: ["timer", "target", "focus", "item", "habit", "daily", "todo", "custom target", "label", "set target"]));
+            Keywords: [KwTimer, KwTarget, KwFocus, "item", KwHabit, KwDaily, KwTodo, "custom target", KwLabel, "set target"]));
 
         string durationSubtitle;
         if (_timer.PomodoroModeEnabled)
@@ -273,16 +341,16 @@ internal sealed class TimerPaletteCommands(
             Id: "timer-set-duration",
             Title: "Set focus duration...",
             Subtitle: durationSubtitle,
-            Category: "Actions",
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.HourglassTop,
             ChildrenProvider: GetDurationConfigurationCommandsAsync,
-            Keywords: ["timer", "duration", "alert", "time's up", "focus", "minutes", "length", "custom duration"]));
+            Keywords: [KwTimer, KwDuration, "alert", "time's up", KwFocus, KwMinutes, "length", "custom duration"]));
 
         list.Add(new(
-            Id: "timer-reset",
-            Title: "Reset focus timer",
-            Subtitle: _timer.PomodoroModeEnabled ? "Reset Pomodoro intervals and return to idle" : "Reset session timer to zero",
-            Category: "Actions",
+            Id: TimerResetId,
+            Title: ResetFocusTimerTitle,
+            Subtitle: _timer.PomodoroModeEnabled ? ResetPomodoroIdleSubtitle : ResetSessionZeroSubtitle,
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.Refresh,
             Action: async () =>
             {
@@ -290,7 +358,7 @@ internal sealed class TimerPaletteCommands(
                 _timer.ResetSession();
                 await _notifier.NotifyAsync("Focus timer reset.", Severity.Info);
             },
-            Keywords: ["timer", "reset", "clear"]));
+            Keywords: [KwTimer, KwReset, KwClear]));
 
         if (_timer.TargetId is not null)
         {
@@ -298,7 +366,7 @@ internal sealed class TimerPaletteCommands(
                 Id: "timer-clear-target",
                 Title: "Clear timer target",
                 Subtitle: $"Active target: {_timer.TargetId}",
-                Category: "Actions",
+                Category: ActionsCategory,
                 Icon: Icons.Material.Filled.TimerOff,
                 Action: async () =>
                 {
@@ -306,144 +374,184 @@ internal sealed class TimerPaletteCommands(
                     _timer.SetManualTarget(null);
                     await _notifier.NotifyAsync("Timer target cleared.", Severity.Info);
                 },
-                Keywords: ["timer", "clear target", "target", "stop"]));
+                Keywords: [KwTimer, "clear target", KwTarget, KwStop]));
         }
 
         list.Add(new(
             Id: "timer-toggle-pomodoro",
             Title: _timer.PomodoroModeEnabled ? "Disable Pomodoro mode" : "Enable Pomodoro mode",
             Subtitle: _timer.PomodoroModeEnabled ? "Switch to open Stopwatch focus mode" : "Switch to interval focus sessions with scheduled breaks",
-            Category: "Actions",
+            Category: ActionsCategory,
             Icon: Icons.Material.Filled.Timelapse,
             Action: TogglePomodoroModeAsync,
-            Keywords: ["pomodoro", "modraw", "timer", "interval", "break", "virtual session", "mode"]));
+            Keywords: [KwPomodoro, KwModraw, KwTimer, KwInterval, KwBreak, KwVirtualSession, "mode"]));
     }
 
     public void AddTimerShortcutCommands(string q, List<CommandItem> results)
     {
-        // Direct timer controls: resume, pause, stop, log, and reset
-        if (q.Equals("resume", StringComparison.OrdinalIgnoreCase) && !_timer.IsRunning &&
-            (_timer.Elapsed > TimeSpan.Zero || (_timer.PomodoroModeEnabled && _timer.CurrentPomodoroState != PomodoroState.Idle)))
+        AddResumeShortcutCommand(q, results);
+        AddPauseShortcutCommand(q, results);
+        AddStopShortcutCommand(q, results);
+        AddResetShortcutCommand(q, results);
+        AddPomodoroShortcutCommand(q, results);
+        AddDurationShortcutCommands(q, results);
+    }
+
+    private void AddResumeShortcutCommand(string q, List<CommandItem> results)
+    {
+        if (!q.Equals("resume", StringComparison.OrdinalIgnoreCase) || _timer.IsRunning || !HasResumableSession())
         {
-            var resumeLabel = _timer.PomodoroModeEnabled
-                ? $"Resume Pomodoro, {_timer.GetDisplayTime()} remaining"
-                : $"Resume focus session, {GlobalTimerService.FormatTimeSpan(_timer.Elapsed)} elapsed";
-            results.Add(new CommandItem(
-                Id: "timer-resume-search",
-                Title: "Resume focus session",
-                Subtitle: resumeLabel,
-                Category: "Timer",
-                Icon: Icons.Material.Filled.PlayArrow,
-                Action: () =>
-                {
-                    _close();
-                    _timer.Start();
-                    return Task.CompletedTask;
-                }));
+            return;
         }
 
-        if (q.Equals("pause", StringComparison.OrdinalIgnoreCase) && _timer.IsRunning)
+        var resumeLabel = _timer.PomodoroModeEnabled
+            ? $"Resume Pomodoro, {_timer.GetDisplayTime()} remaining"
+            : $"Resume focus session, {GlobalTimerService.FormatTimeSpan(_timer.Elapsed)} elapsed";
+        results.Add(new CommandItem(
+            Id: "timer-resume-search",
+            Title: "Resume focus session",
+            Subtitle: resumeLabel,
+            Category: TimerCategory,
+            Icon: Icons.Material.Filled.PlayArrow,
+            Action: () =>
+            {
+                _close();
+                _timer.Start();
+                return Task.CompletedTask;
+            }));
+    }
+
+    private void AddPauseShortcutCommand(string q, List<CommandItem> results)
+    {
+        if (!q.Equals("pause", StringComparison.OrdinalIgnoreCase) || !_timer.IsRunning)
         {
-            results.Add(new CommandItem(
-                Id: "timer-pause-search",
-                Title: "Pause focus timer",
-                Subtitle: _timer.PomodoroModeEnabled ? $"Pause active {_timer.StatusLabel}" : "Temporarily pause the running session",
-                Category: "Timer",
-                Icon: Icons.Material.Filled.Pause,
-                Action: () =>
-                {
-                    _close();
-                    _timer.Pause();
-                    return Task.CompletedTask;
-                }));
+            return;
         }
 
-        if ((q.Equals("stop", StringComparison.OrdinalIgnoreCase) ||
-             q.Equals("log", StringComparison.OrdinalIgnoreCase) ||
-             q.Equals("lock", StringComparison.OrdinalIgnoreCase)) &&
-            (_timer.IsRunning || _timer.Elapsed > TimeSpan.Zero || (_timer.PomodoroModeEnabled && _timer.CurrentPomodoroState != PomodoroState.Idle)))
+        results.Add(new CommandItem(
+            Id: "timer-pause-search",
+            Title: "Pause focus timer",
+            Subtitle: _timer.PomodoroModeEnabled ? $"Pause active {_timer.StatusLabel}" : "Temporarily pause the running session",
+            Category: TimerCategory,
+            Icon: Icons.Material.Filled.Pause,
+            Action: () =>
+            {
+                _close();
+                _timer.Pause();
+                return Task.CompletedTask;
+            }));
+    }
+
+    private void AddStopShortcutCommand(string q, List<CommandItem> results)
+    {
+        if (!IsStopQuery(q) || !HasActiveOrResumableSession())
         {
-            results.Add(new CommandItem(
-                Id: "timer-stop-search",
-                Title: "Stop and log focus session",
-                Subtitle: $"Stop and log session of {GlobalTimerService.FormatTimeSpan(_timer.Elapsed)} to target",
-                Category: "Timer",
-                Icon: Icons.Material.Filled.Stop,
-                Action: StopTimerSessionAsync));
+            return;
         }
 
-        if (q.Equals("reset", StringComparison.OrdinalIgnoreCase) &&
-            (_timer.IsRunning || _timer.Elapsed > TimeSpan.Zero || (_timer.PomodoroModeEnabled && _timer.CurrentPomodoroState != PomodoroState.Idle)))
+        results.Add(new CommandItem(
+            Id: "timer-stop-search",
+            Title: "Stop and log focus session",
+            Subtitle: $"Stop and log session of {GlobalTimerService.FormatTimeSpan(_timer.Elapsed)} to target",
+            Category: TimerCategory,
+            Icon: Icons.Material.Filled.Stop,
+            Action: StopTimerSessionAsync));
+    }
+
+    private void AddResetShortcutCommand(string q, List<CommandItem> results)
+    {
+        if (!q.Equals("reset", StringComparison.OrdinalIgnoreCase) || !HasActiveOrResumableSession())
         {
-            results.Add(new CommandItem(
-                Id: "timer-reset-search",
-                Title: "Reset focus timer",
-                Subtitle: _timer.PomodoroModeEnabled ? "Reset Pomodoro intervals and return to idle" : "Reset session timer to zero",
-                Category: "Timer",
-                Icon: Icons.Material.Filled.Refresh,
-                Action: async () =>
-                {
-                    _close();
-                    _timer.ResetSession();
-                    await _notifier.NotifyAsync(_timer.PomodoroModeEnabled ? "Pomodoro session reset to idle." : "Stopwatch timer reset to zero.", Severity.Info, CancellationToken.None);
-                }));
+            return;
         }
 
-        // Direct Pomodoro quick-trigger
-        if (q.Equals("pomodoro", StringComparison.OrdinalIgnoreCase) ||
-            q.Equals("comodoro", StringComparison.OrdinalIgnoreCase) ||
-            q.Equals("modraw", StringComparison.OrdinalIgnoreCase) ||
-            q.Equals("pomo", StringComparison.OrdinalIgnoreCase))
+        results.Add(new CommandItem(
+            Id: "timer-reset-search",
+            Title: ResetFocusTimerTitle,
+            Subtitle: _timer.PomodoroModeEnabled ? ResetPomodoroIdleSubtitle : ResetSessionZeroSubtitle,
+            Category: TimerCategory,
+            Icon: Icons.Material.Filled.Refresh,
+            Action: async () =>
+            {
+                _close();
+                _timer.ResetSession();
+                await _notifier.NotifyAsync(_timer.PomodoroModeEnabled ? PomodoroResetIdleMessage : StopwatchResetZeroMessage, Severity.Info, CancellationToken.None);
+            }));
+    }
+
+    private void AddPomodoroShortcutCommand(string q, List<CommandItem> results)
+    {
+        if (!IsPomodoroQuery(q))
         {
-            var targetName = string.IsNullOrWhiteSpace(_timer.TargetId) ? "General Session" : _timer.TargetId;
-            results.Add(new CommandItem(
-                Id: "quick-start-pomodoro-search",
-                Title: "Start Pomodoro session",
-                Subtitle: $"Start {_timer.WorkDuration.TotalMinutes:0}m work interval for {targetName}",
-                Category: "Timer",
-                Icon: Icons.Material.Filled.Timelapse,
-                Action: StartPomodoroSessionAsync));
+            return;
         }
 
-        // Direct duration intent like "timer 25", "focus 45m", "session 30", or "start 25"
+        var targetName = string.IsNullOrWhiteSpace(_timer.TargetId) ? GeneralSessionLabel : _timer.TargetId;
+        results.Add(new CommandItem(
+            Id: "quick-start-pomodoro-search",
+            Title: "Start Pomodoro session",
+            Subtitle: $"Start {_timer.WorkDuration.TotalMinutes:0}m work interval for {targetName}",
+            Category: TimerCategory,
+            Icon: Icons.Material.Filled.Timelapse,
+            Action: StartPomodoroSessionAsync));
+    }
+
+    private void AddDurationShortcutCommands(string q, List<CommandItem> results)
+    {
         var durationMatch = System.Text.RegularExpressions.Regex.Match(
             q,
             @"^(?:timer|focus|start|session)\s+(\d{1,3})(?:m|min)?$",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase,
             TimeSpan.FromMilliseconds(250));
-        if (durationMatch.Success && int.TryParse(durationMatch.Groups[1].Value, out var parsedMinutes) && parsedMinutes > 0)
+        if (!durationMatch.Success || !int.TryParse(durationMatch.Groups[1].Value, out var parsedMinutes) || parsedMinutes <= 0)
         {
-            var targetName = string.IsNullOrWhiteSpace(_timer.TargetId) ? "General Session" : _timer.TargetId;
-            results.Add(new CommandItem(
-                Id: $"quick-start-duration-{parsedMinutes}",
-                Title: $"Start {parsedMinutes}-minute focus session",
-                Subtitle: $"Start focus timer immediately with alert after {parsedMinutes} minutes for '{targetName}'",
-                Category: "Timer",
-                Icon: Icons.Material.Filled.PlayArrow,
-                Action: async () =>
-                {
-                    _close();
-                    _timer.PomodoroModeEnabled = false;
-                    _timer.FocusAlertAfter = TimeSpan.FromMinutes(parsedMinutes);
-                    _timer.Start();
-                    await _notifier.NotifyAsync($"Started {parsedMinutes}-minute focus session for '{targetName}'.", Severity.Info, CancellationToken.None);
-                }));
-
-            results.Add(new CommandItem(
-                Id: $"quick-set-alert-{parsedMinutes}",
-                Title: $"Set alert milestone to {parsedMinutes} minutes",
-                Subtitle: "Configure time's up alert milestone without starting timer",
-                Category: "Timer",
-                Icon: Icons.Material.Filled.HourglassTop,
-                Action: async () =>
-                {
-                    _close();
-                    _timer.PomodoroModeEnabled = false;
-                    _timer.FocusAlertAfter = TimeSpan.FromMinutes(parsedMinutes);
-                    await _notifier.NotifyAsync($"Focus duration set to {parsedMinutes} minutes.", Severity.Info, CancellationToken.None);
-                }));
+            return;
         }
+
+        var targetName = string.IsNullOrWhiteSpace(_timer.TargetId) ? GeneralSessionLabel : _timer.TargetId;
+        results.Add(new CommandItem(
+            Id: $"quick-start-duration-{parsedMinutes}",
+            Title: $"Start {parsedMinutes}-minute focus session",
+            Subtitle: $"Start focus timer immediately with alert after {parsedMinutes} minutes for '{targetName}'",
+            Category: TimerCategory,
+            Icon: Icons.Material.Filled.PlayArrow,
+            Action: async () =>
+            {
+                _close();
+                _timer.PomodoroModeEnabled = false;
+                _timer.FocusAlertAfter = TimeSpan.FromMinutes(parsedMinutes);
+                _timer.Start();
+                await _notifier.NotifyAsync($"Started {parsedMinutes}-minute focus session for '{targetName}'.", Severity.Info, CancellationToken.None);
+            }));
+
+        results.Add(new CommandItem(
+            Id: $"quick-set-alert-{parsedMinutes}",
+            Title: $"Set alert milestone to {parsedMinutes} minutes",
+            Subtitle: "Configure time's up alert milestone without starting timer",
+            Category: TimerCategory,
+            Icon: Icons.Material.Filled.HourglassTop,
+            Action: async () =>
+            {
+                _close();
+                _timer.PomodoroModeEnabled = false;
+                _timer.FocusAlertAfter = TimeSpan.FromMinutes(parsedMinutes);
+                await _notifier.NotifyAsync($"Focus duration set to {parsedMinutes} minutes.", Severity.Info, CancellationToken.None);
+            }));
     }
+
+    private static bool IsStopQuery(string q) =>
+        q.Equals("stop", StringComparison.OrdinalIgnoreCase) ||
+        q.Equals("log", StringComparison.OrdinalIgnoreCase) ||
+        q.Equals("lock", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsPomodoroQuery(string q) =>
+        q.Equals("pomodoro", StringComparison.OrdinalIgnoreCase) ||
+        q.Equals("comodoro", StringComparison.OrdinalIgnoreCase) ||
+        q.Equals("modraw", StringComparison.OrdinalIgnoreCase) ||
+        q.Equals("pomo", StringComparison.OrdinalIgnoreCase);
+
+    private bool HasActiveOrResumableSession() =>
+        _timer.IsRunning || HasResumableSession();
 
     public async Task TogglePomodoroModeAsync()
     {
@@ -489,7 +597,7 @@ internal sealed class TimerPaletteCommands(
         {
             _timer.Start();
         }
-        var targetName = string.IsNullOrWhiteSpace(_timer.TargetId) ? "General Session" : _timer.TargetId;
+        var targetName = string.IsNullOrWhiteSpace(_timer.TargetId) ? GeneralSessionLabel : _timer.TargetId;
         await _notifier.NotifyAsync($"Pomodoro session started for '{targetName}'.", Severity.Info);
     }
     private async Task PromptCustomDurationAndStartAsync(string? targetType, string? targetTitle, Guid? boardItemId, string displayLabel)
@@ -506,22 +614,11 @@ internal sealed class TimerPaletteCommands(
         if (result is not null && !result.Canceled)
         {
             var duration = result.Data as TimeSpan?;
-            if (targetType is not null && targetTitle is not null)
-            {
-                _timer.SelectTarget(targetType, targetTitle, boardItemId);
-            }
-            else if (displayLabel != "General Session")
-            {
-                _timer.SetManualTarget(displayLabel);
-            }
-            else
-            {
-                _timer.SetManualTarget(null);
-            }
+            ApplyTarget(targetType, targetTitle, boardItemId, displayLabel);
             _timer.PomodoroModeEnabled = false;
             _timer.FocusAlertAfter = duration;
             _timer.Start();
-            var durLabel = duration.HasValue ? GlobalTimerService.FormatTimeSpan(duration.Value) : "continuous";
+            var durLabel = duration.HasValue ? GlobalTimerService.FormatTimeSpan(duration.Value) : KwContinuous;
             await _notifier.NotifyAsync($"Started {durLabel} focus session for '{displayLabel}'.", Severity.Info);
         }
     }
@@ -546,18 +643,7 @@ internal sealed class TimerPaletteCommands(
                 _timer.WorkDuration = duration.Value;
                 _timer.FocusAlertAfter = duration.Value;
             }
-            if (targetType is not null && targetTitle is not null)
-            {
-                _timer.SelectTarget(targetType, targetTitle, boardItemId);
-            }
-            else if (displayLabel != "General Session")
-            {
-                _timer.SetManualTarget(displayLabel);
-            }
-            else
-            {
-                _timer.SetManualTarget(null);
-            }
+            ApplyTarget(targetType, targetTitle, boardItemId, displayLabel);
             _timer.Start();
             var durLabel = duration.HasValue ? GlobalTimerService.FormatTimeSpan(duration.Value) : GlobalTimerService.FormatTimeSpan(_timer.WorkDuration);
             await _notifier.NotifyAsync($"Pomodoro session of {durLabel} work started for '{displayLabel}'.", Severity.Info);
@@ -621,7 +707,7 @@ internal sealed class TimerPaletteCommands(
             var duration = result.Data as TimeSpan?;
             _timer.PomodoroModeEnabled = false;
             _timer.FocusAlertAfter = duration;
-            var label = duration.HasValue ? GlobalTimerService.FormatTimeSpan(duration.Value) : "continuous";
+            var label = duration.HasValue ? GlobalTimerService.FormatTimeSpan(duration.Value) : KwContinuous;
             await _notifier.NotifyAsync($"Focus duration milestone set to {label}.", Severity.Info);
         }
     }
@@ -634,10 +720,10 @@ internal sealed class TimerPaletteCommands(
                 Subtitle: !_timer.PomodoroModeEnabled
                     ? "Currently active mode. Open count-up focus with optional duration milestone"
                     : "Open count-up focus with optional duration milestone",
-                Category: "Mode",
+                Category: ModeCategory,
                 Icon: !_timer.PomodoroModeEnabled ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Timer,
                 ChildrenProvider: () => GetTargetsForModeAsync(isPomodoro: false),
-                Keywords: ["stopwatch", "timer", "open", "continuous", "count-up"]),
+                Keywords: [KwStopwatch, KwTimer, KwOpen, KwContinuous, "count-up"]),
 
             new(
                 Id: "mode-pomodoro",
@@ -645,10 +731,10 @@ internal sealed class TimerPaletteCommands(
                 Subtitle: _timer.PomodoroModeEnabled
                     ? "Currently active mode. Interval focus with scheduled work and break periods"
                     : "Interval focus with scheduled work and break periods",
-                Category: "Mode",
+                Category: ModeCategory,
                 Icon: _timer.PomodoroModeEnabled ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Timelapse,
                 ChildrenProvider: () => GetTargetsForModeAsync(isPomodoro: true),
-                Keywords: ["pomodoro", "comodoro", "modraw", "interval", "work", "break"])
+                Keywords: [KwPomodoro, KwComodoro, KwModraw, KwInterval, KwWork, KwBreak])
         ]);
     }
     private async Task<List<CommandItem>> GetTargetsForModeAsync(bool isPomodoro)
@@ -662,8 +748,8 @@ internal sealed class TimerPaletteCommands(
                 Subtitle: $"Start {modeName} session without an item target",
                 Category: "Session Target",
                 Icon: Icons.Material.Outlined.HourglassEmpty,
-                ChildrenProvider: () => Task.FromResult(GetDurationsForTargetAndMode(isPomodoro, null, null, null, "General Session")),
-                Keywords: ["empty", "none", "general", "open", "free", "session"]),
+                ChildrenProvider: () => Task.FromResult(GetDurationsForTargetAndMode(isPomodoro, null, null, null, GeneralSessionLabel)),
+                Keywords: [KwEmpty, "none", "general", KwOpen, "free", KwSession]),
 
             new(
                 Id: "timer-target-custom",
@@ -672,7 +758,7 @@ internal sealed class TimerPaletteCommands(
                 Category: "Session Target",
                 Icon: Icons.Material.Filled.Edit,
                 Action: () => PromptCustomTargetAndDurationFlowAsync(isPomodoro),
-                Keywords: ["custom", "target", "label", "text", "manual"])
+                Keywords: [KwCustom, KwTarget, KwLabel, "text", "manual"])
         };
 
         try
@@ -688,7 +774,7 @@ internal sealed class TimerPaletteCommands(
                     Category: "Habits",
                     Icon: Icons.Material.Filled.Repeat,
                     ChildrenProvider: () => Task.FromResult(GetDurationsForTargetAndMode(isPomodoro, "Habit", h.Title, h.Id, h.Title)),
-                    Keywords: ["habit", h.Title]));
+                    Keywords: [KwHabit, h.Title]));
             }
 
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -703,7 +789,7 @@ internal sealed class TimerPaletteCommands(
                     Category: "Dailies",
                     Icon: isDone ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.CalendarToday,
                     ChildrenProvider: () => Task.FromResult(GetDurationsForTargetAndMode(isPomodoro, "Daily", d.Title, d.Id, d.Title)),
-                    Keywords: ["daily", d.Title]));
+                    Keywords: [KwDaily, d.Title]));
             }
 
             foreach (var t in snapshot.Todos.Where(todo => !todo.IsCompleted))
@@ -716,7 +802,7 @@ internal sealed class TimerPaletteCommands(
                     Category: "To-dos",
                     Icon: Icons.Material.Filled.CheckBoxOutlineBlank,
                     ChildrenProvider: () => Task.FromResult(GetDurationsForTargetAndMode(isPomodoro, "Todo", t.Title, t.Id, t.Title)),
-                    Keywords: ["todo", t.Title]));
+                    Keywords: [KwTodo, t.Title]));
             }
         }
         catch
@@ -729,231 +815,120 @@ internal sealed class TimerPaletteCommands(
     private List<CommandItem> GetDurationsForTargetAndMode(bool isPomodoro, string? targetType, string? targetTitle, Guid? boardItemId, string displayLabel)
     {
         var targetSlug = targetTitle is not null ? targetTitle.Replace(" ", "-", StringComparison.Ordinal).ToLowerInvariant() : "empty";
+        return isPomodoro
+            ? GetPomodoroDurations(targetSlug, targetType, targetTitle, boardItemId, displayLabel)
+            : GetStopwatchDurations(targetSlug, targetType, targetTitle, boardItemId, displayLabel);
+    }
 
-        if (isPomodoro)
-        {
-            return
-            [
-                new(
-                    Id: $"start-{targetSlug}-custom",
-                    Title: "Custom work duration and start...",
-                    Subtitle: "Enter custom minutes like 35m and start immediately",
-                    Category: "Duration",
-                    Icon: Icons.Material.Filled.EditCalendar,
-                    Action: () => PromptCustomPomodoroDurationAndStartAsync(targetType, targetTitle, boardItemId, displayLabel),
-                    Keywords: ["custom", "duration", "pomodoro", "minutes"]),
+    private List<CommandItem> GetPomodoroDurations(string targetSlug, string? targetType, string? targetTitle, Guid? boardItemId, string displayLabel) =>
+    [
+        new(
+            Id: $"start-{targetSlug}-custom",
+            Title: "Custom work duration and start...",
+            Subtitle: "Enter custom minutes like 35m and start immediately",
+            Category: DurationCategory,
+            Icon: Icons.Material.Filled.EditCalendar,
+            Action: () => PromptCustomPomodoroDurationAndStartAsync(targetType, targetTitle, boardItemId, displayLabel),
+            Keywords: [KwCustom, KwDuration, KwPomodoro, KwMinutes]),
+        new(
+            Id: $"start-{targetSlug}-pomodoro",
+            Title: $"Default interval, {_timer.WorkDuration.TotalMinutes:0}m work",
+            Subtitle: $"Currently configured. Start standard {GlobalTimerService.FormatTimeSpan(_timer.WorkDuration)} work session",
+            Category: DurationCategory,
+            Icon: Icons.Material.Filled.CheckCircle,
+            Action: () => StartPomodoroWithWorkDurationAsync(targetType, targetTitle, boardItemId, displayLabel, _timer.WorkDuration),
+            Keywords: [KwPomodoro, "default", "standard"]),
+        BuildPomodoroIntervalCommand(targetSlug, targetType, targetTitle, boardItemId, displayLabel, 15),
+        BuildPomodoroIntervalCommand(targetSlug, targetType, targetTitle, boardItemId, displayLabel, 20),
+        BuildPomodoroIntervalCommand(targetSlug, targetType, targetTitle, boardItemId, displayLabel, 25),
+        BuildPomodoroIntervalCommand(targetSlug, targetType, targetTitle, boardItemId, displayLabel, 30),
+        BuildPomodoroIntervalCommand(targetSlug, targetType, targetTitle, boardItemId, displayLabel, 45),
+        BuildPomodoroIntervalCommand(targetSlug, targetType, targetTitle, boardItemId, displayLabel, 50),
+    ];
 
-                new(
-                    Id: $"start-{targetSlug}-pomodoro",
-                    Title: $"Default interval, {_timer.WorkDuration.TotalMinutes:0}m work",
-                    Subtitle: isPomodoro
-                        ? $"Currently configured. Start standard {GlobalTimerService.FormatTimeSpan(_timer.WorkDuration)} work session"
-                        : "Start standard Pomodoro work session",
-                    Category: "Duration",
-                    Icon: isPomodoro ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.PlayArrow,
-                    Action: () => StartPomodoroWithWorkDurationAsync(targetType, targetTitle, boardItemId, displayLabel, _timer.WorkDuration),
-                    Keywords: ["pomodoro", "default", "standard"]),
+    private CommandItem BuildPomodoroIntervalCommand(string targetSlug, string? targetType, string? targetTitle, Guid? boardItemId, string displayLabel, int minutes)
+    {
+        var workDuration = TimeSpan.FromMinutes(minutes);
+        var isCurrent = _timer.WorkDuration == workDuration;
+        return new(
+            Id: $"start-{targetSlug}-pomo-{minutes}m",
+            Title: $"{minutes}-minute work interval",
+            Subtitle: isCurrent
+                ? $"Currently configured. Start {minutes}-minute Pomodoro work session"
+                : $"Start {minutes}-minute Pomodoro work session",
+            Category: DurationCategory,
+            Icon: isCurrent ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Timer,
+            Action: () => StartPomodoroWithWorkDurationAsync(targetType, targetTitle, boardItemId, displayLabel, workDuration),
+            Keywords: [$"{minutes}", $"{minutes}m"]);
+    }
 
-                new(
-                    Id: $"start-{targetSlug}-pomo-15m",
-                    Title: "15-minute work interval",
-                    Subtitle: isPomodoro && _timer.WorkDuration == TimeSpan.FromMinutes(15)
-                        ? "Currently configured. Start 15-minute Pomodoro work session"
-                        : "Start 15-minute Pomodoro work session",
-                    Category: "Duration",
-                    Icon: isPomodoro && _timer.WorkDuration == TimeSpan.FromMinutes(15)
-                        ? Icons.Material.Filled.CheckCircle
-                        : Icons.Material.Filled.Timer,
-                    Action: () => StartPomodoroWithWorkDurationAsync(targetType, targetTitle, boardItemId, displayLabel, TimeSpan.FromMinutes(15)),
-                    Keywords: ["15", "15m"]),
-
-                new(
-                    Id: $"start-{targetSlug}-pomo-20m",
-                    Title: "20-minute work interval",
-                    Subtitle: isPomodoro && _timer.WorkDuration == TimeSpan.FromMinutes(20)
-                        ? "Currently configured. Start 20-minute Pomodoro work session"
-                        : "Start 20-minute Pomodoro work session",
-                    Category: "Duration",
-                    Icon: isPomodoro && _timer.WorkDuration == TimeSpan.FromMinutes(20)
-                        ? Icons.Material.Filled.CheckCircle
-                        : Icons.Material.Filled.Timer,
-                    Action: () => StartPomodoroWithWorkDurationAsync(targetType, targetTitle, boardItemId, displayLabel, TimeSpan.FromMinutes(20)),
-                    Keywords: ["20", "20m"]),
-
-                new(
-                    Id: $"start-{targetSlug}-pomo-25m",
-                    Title: "25-minute work interval",
-                    Subtitle: isPomodoro && _timer.WorkDuration == TimeSpan.FromMinutes(25)
-                        ? "Currently configured. Start 25-minute Pomodoro work session"
-                        : "Start 25-minute Pomodoro work session",
-                    Category: "Duration",
-                    Icon: isPomodoro && _timer.WorkDuration == TimeSpan.FromMinutes(25)
-                        ? Icons.Material.Filled.CheckCircle
-                        : Icons.Material.Filled.Timer,
-                    Action: () => StartPomodoroWithWorkDurationAsync(targetType, targetTitle, boardItemId, displayLabel, TimeSpan.FromMinutes(25)),
-                    Keywords: ["25", "25m"]),
-
-                new(
-                    Id: $"start-{targetSlug}-pomo-30m",
-                    Title: "30-minute work interval",
-                    Subtitle: isPomodoro && _timer.WorkDuration == TimeSpan.FromMinutes(30)
-                        ? "Currently configured. Start 30-minute Pomodoro work session"
-                        : "Start 30-minute Pomodoro work session",
-                    Category: "Duration",
-                    Icon: isPomodoro && _timer.WorkDuration == TimeSpan.FromMinutes(30)
-                        ? Icons.Material.Filled.CheckCircle
-                        : Icons.Material.Filled.Timer,
-                    Action: () => StartPomodoroWithWorkDurationAsync(targetType, targetTitle, boardItemId, displayLabel, TimeSpan.FromMinutes(30)),
-                    Keywords: ["30", "30m"]),
-
-                new(
-                    Id: $"start-{targetSlug}-pomo-45m",
-                    Title: "45-minute work interval",
-                    Subtitle: isPomodoro && _timer.WorkDuration == TimeSpan.FromMinutes(45)
-                        ? "Currently configured. Start 45-minute Pomodoro work session"
-                        : "Start 45-minute Pomodoro work session",
-                    Category: "Duration",
-                    Icon: isPomodoro && _timer.WorkDuration == TimeSpan.FromMinutes(45)
-                        ? Icons.Material.Filled.CheckCircle
-                        : Icons.Material.Filled.Timer,
-                    Action: () => StartPomodoroWithWorkDurationAsync(targetType, targetTitle, boardItemId, displayLabel, TimeSpan.FromMinutes(45)),
-                    Keywords: ["45", "45m"]),
-
-                new(
-                    Id: $"start-{targetSlug}-pomo-50m",
-                    Title: "50-minute work interval",
-                    Subtitle: isPomodoro && _timer.WorkDuration == TimeSpan.FromMinutes(50)
-                        ? "Currently configured. Start 50-minute Pomodoro work session"
-                        : "Start 50-minute Pomodoro work session",
-                    Category: "Duration",
-                    Icon: isPomodoro && _timer.WorkDuration == TimeSpan.FromMinutes(50)
-                        ? Icons.Material.Filled.CheckCircle
-                        : Icons.Material.Filled.Timer,
-                    Action: () => StartPomodoroWithWorkDurationAsync(targetType, targetTitle, boardItemId, displayLabel, TimeSpan.FromMinutes(50)),
-                    Keywords: ["50", "50m"])
-            ];
-        }
-
-        return
+    private List<CommandItem> GetStopwatchDurations(string targetSlug, string? targetType, string? targetTitle, Guid? boardItemId, string displayLabel)
+    {
+        List<CommandItem> list =
         [
             new(
                 Id: $"start-{targetSlug}-custom",
                 Title: "Custom duration and start...",
                 Subtitle: "Enter custom minutes or mm:ss and start immediately",
-                Category: "Duration",
+                Category: DurationCategory,
                 Icon: Icons.Material.Filled.EditCalendar,
                 Action: () => PromptCustomDurationAndStartAsync(targetType, targetTitle, boardItemId, displayLabel),
-                Keywords: ["custom", "duration", "time", "minutes"]),
-
+                Keywords: [KwCustom, KwDuration, "time", KwMinutes]),
             new(
                 Id: $"start-{targetSlug}-open",
                 Title: "Continuous count-up without limit",
-                Subtitle: !isPomodoro && _timer.FocusAlertAfter is null
+                Subtitle: _timer.FocusAlertAfter is null
                     ? "Currently selected. Run stopwatch with no time alert"
                     : "Run stopwatch with no time alert",
-                Category: "Duration",
-                Icon: !isPomodoro && _timer.FocusAlertAfter is null
+                Category: DurationCategory,
+                Icon: _timer.FocusAlertAfter is null
                     ? Icons.Material.Filled.CheckCircle
                     : Icons.Material.Filled.AllInclusive,
-                Action: async () =>
-                {
-                    _close();
-                    _timer.PomodoroModeEnabled = false;
-                    _timer.FocusAlertAfter = null;
-                    if (targetType is not null && targetTitle is not null)
-                    {
-                        _timer.SelectTarget(targetType, targetTitle, boardItemId);
-                    }
-                    else if (displayLabel != "General Session")
-                    {
-                        _timer.SetManualTarget(displayLabel);
-                    }
-                    else
-                    {
-                        _timer.SetManualTarget(null);
-                    }
-                    _timer.Start();
-                    await _notifier.NotifyAsync($"Started open stopwatch session for '{displayLabel}'.", Severity.Info);
-                },
-                Keywords: ["open", "continuous", "stopwatch", "unlimited"]),
-
-            new(
-                Id: $"start-{targetSlug}-15m",
-                Title: "15 minutes",
-                Subtitle: !isPomodoro && _timer.FocusAlertAfter == TimeSpan.FromMinutes(15)
-                    ? "Currently selected. Start stopwatch with alert after 15 minutes"
-                    : "Start stopwatch with alert after 15 minutes",
-                Category: "Duration",
-                Icon: !isPomodoro && _timer.FocusAlertAfter == TimeSpan.FromMinutes(15)
-                    ? Icons.Material.Filled.CheckCircle
-                    : Icons.Material.Filled.Timer,
-                Action: () => StartStopwatchWithDurationAsync(targetType, targetTitle, boardItemId, displayLabel, TimeSpan.FromMinutes(15)),
-                Keywords: ["15", "15m", "15 min", "quarter"]),
-
-            new(
-                Id: $"start-{targetSlug}-25m",
-                Title: "25 minutes",
-                Subtitle: !isPomodoro && _timer.FocusAlertAfter == TimeSpan.FromMinutes(25)
-                    ? "Currently selected. Start stopwatch with alert after 25 minutes"
-                    : "Start stopwatch with alert after 25 minutes",
-                Category: "Duration",
-                Icon: !isPomodoro && _timer.FocusAlertAfter == TimeSpan.FromMinutes(25)
-                    ? Icons.Material.Filled.CheckCircle
-                    : Icons.Material.Filled.Timer,
-                Action: () => StartStopwatchWithDurationAsync(targetType, targetTitle, boardItemId, displayLabel, TimeSpan.FromMinutes(25)),
-                Keywords: ["25", "25m", "25 min"]),
-
-            new(
-                Id: $"start-{targetSlug}-30m",
-                Title: "30 minutes",
-                Subtitle: !isPomodoro && _timer.FocusAlertAfter == TimeSpan.FromMinutes(30)
-                    ? "Currently selected. Start stopwatch with alert after 30 minutes"
-                    : "Start stopwatch with alert after 30 minutes",
-                Category: "Duration",
-                Icon: !isPomodoro && _timer.FocusAlertAfter == TimeSpan.FromMinutes(30)
-                    ? Icons.Material.Filled.CheckCircle
-                    : Icons.Material.Filled.Timer,
-                Action: () => StartStopwatchWithDurationAsync(targetType, targetTitle, boardItemId, displayLabel, TimeSpan.FromMinutes(30)),
-                Keywords: ["30", "30m", "30 min", "half hour"]),
-
-            new(
-                Id: $"start-{targetSlug}-45m",
-                Title: "45 minutes",
-                Subtitle: !isPomodoro && _timer.FocusAlertAfter == TimeSpan.FromMinutes(45)
-                    ? "Currently selected. Start stopwatch with alert after 45 minutes"
-                    : "Start stopwatch with alert after 45 minutes",
-                Category: "Duration",
-                Icon: !isPomodoro && _timer.FocusAlertAfter == TimeSpan.FromMinutes(45)
-                    ? Icons.Material.Filled.CheckCircle
-                    : Icons.Material.Filled.Timer,
-                Action: () => StartStopwatchWithDurationAsync(targetType, targetTitle, boardItemId, displayLabel, TimeSpan.FromMinutes(45)),
-                Keywords: ["45", "45m", "45 min"]),
-
-            new(
-                Id: $"start-{targetSlug}-60m",
-                Title: "60 minutes, 1 hour",
-                Subtitle: !isPomodoro && _timer.FocusAlertAfter == TimeSpan.FromMinutes(60)
-                    ? "Currently selected. Start stopwatch with alert after 60 minutes"
-                    : "Start stopwatch with alert after 60 minutes",
-                Category: "Duration",
-                Icon: !isPomodoro && _timer.FocusAlertAfter == TimeSpan.FromMinutes(60)
-                    ? Icons.Material.Filled.CheckCircle
-                    : Icons.Material.Filled.Timer,
-                Action: () => StartStopwatchWithDurationAsync(targetType, targetTitle, boardItemId, displayLabel, TimeSpan.FromMinutes(60)),
-                Keywords: ["60", "60m", "60 min", "hour", "1h"])
+                Action: () => StartOpenStopwatchAsync(targetType, targetTitle, boardItemId, displayLabel),
+                Keywords: [KwOpen, KwContinuous, KwStopwatch, "unlimited"]),
+            BuildStopwatchDurationCommand(targetSlug, targetType, targetTitle, boardItemId, displayLabel, 15, [Kw15, Kw15M, "15 min", "quarter"]),
+            BuildStopwatchDurationCommand(targetSlug, targetType, targetTitle, boardItemId, displayLabel, 25, [Kw25, Kw25M, "25 min"]),
+            BuildStopwatchDurationCommand(targetSlug, targetType, targetTitle, boardItemId, displayLabel, 30, [Kw30, Kw30M, "30 min", "half hour"]),
+            BuildStopwatchDurationCommand(targetSlug, targetType, targetTitle, boardItemId, displayLabel, 45, [Kw45, Kw45M, "45 min"]),
+            BuildStopwatchDurationCommand(targetSlug, targetType, targetTitle, boardItemId, displayLabel, 60, ["60", "60m", "60 min", "hour", "1h"]),
         ];
+        return list;
     }
-    private async Task StartPomodoroWithWorkDurationAsync(string? targetType, string? targetTitle, Guid? boardItemId, string displayLabel, TimeSpan workDuration)
+
+    private CommandItem BuildStopwatchDurationCommand(string targetSlug, string? targetType, string? targetTitle, Guid? boardItemId, string displayLabel, int minutes, string[] keywords)
+    {
+        var duration = TimeSpan.FromMinutes(minutes);
+        var isCurrent = _timer.FocusAlertAfter == duration;
+        var title = minutes == 60 ? "60 minutes, 1 hour" : $"{minutes} minutes";
+        return new(
+            Id: $"start-{targetSlug}-{minutes}m",
+            Title: title,
+            Subtitle: isCurrent
+                ? $"Currently selected. Start stopwatch with alert after {minutes} minutes"
+                : $"Start stopwatch with alert after {minutes} minutes",
+            Category: DurationCategory,
+            Icon: isCurrent ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Timer,
+            Action: () => StartStopwatchWithDurationAsync(targetType, targetTitle, boardItemId, displayLabel, duration),
+            Keywords: keywords);
+    }
+
+    private async Task StartOpenStopwatchAsync(string? targetType, string? targetTitle, Guid? boardItemId, string displayLabel)
     {
         _close();
-        _timer.PomodoroModeEnabled = true;
-        _timer.WorkDuration = workDuration;
-        _timer.FocusAlertAfter = workDuration;
+        _timer.PomodoroModeEnabled = false;
+        _timer.FocusAlertAfter = null;
+        ApplyTarget(targetType, targetTitle, boardItemId, displayLabel);
+        _timer.Start();
+        await _notifier.NotifyAsync($"Started open stopwatch session for '{displayLabel}'.", Severity.Info);
+    }
+
+    private void ApplyTarget(string? targetType, string? targetTitle, Guid? boardItemId, string displayLabel)
+    {
         if (targetType is not null && targetTitle is not null)
         {
             _timer.SelectTarget(targetType, targetTitle, boardItemId);
         }
-        else if (displayLabel != "General Session")
+        else if (displayLabel != GeneralSessionLabel)
         {
             _timer.SetManualTarget(displayLabel);
         }
@@ -961,6 +936,15 @@ internal sealed class TimerPaletteCommands(
         {
             _timer.SetManualTarget(null);
         }
+    }
+
+    private async Task StartPomodoroWithWorkDurationAsync(string? targetType, string? targetTitle, Guid? boardItemId, string displayLabel, TimeSpan workDuration)
+    {
+        _close();
+        _timer.PomodoroModeEnabled = true;
+        _timer.WorkDuration = workDuration;
+        _timer.FocusAlertAfter = workDuration;
+        ApplyTarget(targetType, targetTitle, boardItemId, displayLabel);
         _timer.Start();
         await _notifier.NotifyAsync($"Pomodoro work session of {GlobalTimerService.FormatTimeSpan(workDuration)} started for '{displayLabel}'.", Severity.Info);
     }
@@ -970,18 +954,7 @@ internal sealed class TimerPaletteCommands(
         _close();
         _timer.PomodoroModeEnabled = false;
         _timer.FocusAlertAfter = duration;
-        if (targetType is not null && targetTitle is not null)
-        {
-            _timer.SelectTarget(targetType, targetTitle, boardItemId);
-        }
-        else if (displayLabel != "General Session")
-        {
-            _timer.SetManualTarget(displayLabel);
-        }
-        else
-        {
-            _timer.SetManualTarget(null);
-        }
+        ApplyTarget(targetType, targetTitle, boardItemId, displayLabel);
         _timer.Start();
         await _notifier.NotifyAsync($"Started {GlobalTimerService.FormatTimeSpan(duration)} focus session for '{displayLabel}'.", Severity.Info);
     }
@@ -1004,7 +977,7 @@ internal sealed class TimerPaletteCommands(
                         _timer.SetManualTarget(null);
                         await _notifier.NotifyAsync("Timer target cleared.", Severity.Info);
                     },
-                    Keywords: ["clear", "none", "empty", "remove"]));
+                    Keywords: [KwClear, "none", KwEmpty, "remove"]));
             }
 
             items.Add(new CommandItem(
@@ -1014,7 +987,7 @@ internal sealed class TimerPaletteCommands(
                 Category: "Target",
                 Icon: Icons.Material.Filled.Edit,
                 Action: PromptSetCustomTargetAsync,
-                Keywords: ["custom", "target", "label", "text", "manual"]));
+                Keywords: [KwCustom, KwTarget, KwLabel, "text", "manual"]));
 
             var snapshot = await _boardData.GetSnapshotAsync();
 
@@ -1032,7 +1005,7 @@ internal sealed class TimerPaletteCommands(
                         _timer.SelectTarget("Habit", h.Title, h.Id);
                         await _notifier.NotifyAsync($"Session target set to habit '{h.Title}'.", Severity.Info);
                     },
-                    Keywords: ["habit", h.Title]));
+                    Keywords: [KwHabit, h.Title]));
             }
 
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -1052,7 +1025,7 @@ internal sealed class TimerPaletteCommands(
                         _timer.SelectTarget("Daily", d.Title, d.Id);
                         await _notifier.NotifyAsync($"Session target set to daily '{d.Title}'.", Severity.Info);
                     },
-                    Keywords: ["daily", d.Title]));
+                    Keywords: [KwDaily, d.Title]));
             }
 
             foreach (var t in snapshot.Todos.Where(todo => !todo.IsCompleted))
@@ -1070,7 +1043,7 @@ internal sealed class TimerPaletteCommands(
                         _timer.SelectTarget("Todo", t.Title, t.Id);
                         await _notifier.NotifyAsync($"Session target set to to-do '{t.Title}'.", Severity.Info);
                     },
-                    Keywords: ["todo", t.Title]));
+                    Keywords: [KwTodo, t.Title]));
             }
         }
         catch
@@ -1082,34 +1055,32 @@ internal sealed class TimerPaletteCommands(
     }
     private Task<List<CommandItem>> GetDurationConfigurationCommandsAsync()
     {
-        var targetDisplay = string.IsNullOrWhiteSpace(_timer.TargetId) ? "General Session" : _timer.TargetId;
-        var list = new List<CommandItem>
-        {
+        var targetDisplay = string.IsNullOrWhiteSpace(_timer.TargetId) ? GeneralSessionLabel : _timer.TargetId;
+        List<CommandItem> list =
+        [
             new(
                 Id: "duration-config-custom",
                 Title: "Custom duration and start...",
                 Subtitle: $"Enter custom duration and immediately start session for '{targetDisplay}'",
-                Category: "Duration",
+                Category: DurationCategory,
                 Icon: Icons.Material.Filled.EditCalendar,
                 Action: () => PromptCustomDurationAndStartAsync(_timer.TargetType, _timer.TargetId, _timer.BoardItemId, targetDisplay),
-                Keywords: ["custom", "duration", "start", "minutes"]),
-
+                Keywords: [KwCustom, KwDuration, KwStart, KwMinutes]),
             new(
                 Id: "duration-config-custom-milestone",
                 Title: "Set custom duration milestone...",
                 Subtitle: "Set time's up alert milestone without starting timer",
-                Category: "Duration",
+                Category: DurationCategory,
                 Icon: Icons.Material.Filled.HourglassTop,
                 Action: PromptSetCustomDurationAsync,
-                Keywords: ["custom", "duration", "alert", "milestone"]),
-
+                Keywords: [KwCustom, KwDuration, "alert", "milestone"]),
             new(
                 Id: "duration-config-open",
                 Title: "Continuous count-up without alert",
                 Subtitle: _timer.FocusAlertAfter is null
                     ? "Currently selected. Stopwatch will run until manually paused or stopped"
                     : "Stopwatch will run until manually paused or stopped",
-                Category: "Duration",
+                Category: DurationCategory,
                 Icon: _timer.FocusAlertAfter is null ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.AllInclusive,
                 Action: async () =>
                 {
@@ -1117,104 +1088,14 @@ internal sealed class TimerPaletteCommands(
                     _timer.FocusAlertAfter = null;
                     await _notifier.NotifyAsync("Focus duration cleared for continuous session.", Severity.Info);
                 },
-                Keywords: ["open", "continuous", "clear", "stopwatch"]),
-
-            new(
-                Id: "duration-config-15m",
-                Title: "15 minutes",
-                Subtitle: _timer.FocusAlertAfter == TimeSpan.FromMinutes(15)
-                    ? "Currently selected. Set time's up alert milestone to 15 minutes"
-                    : "Set time's up alert milestone to 15 minutes",
-                Category: "Duration",
-                Icon: _timer.FocusAlertAfter == TimeSpan.FromMinutes(15) ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Timer,
-                Action: async () =>
-                {
-                    _close();
-                    _timer.FocusAlertAfter = TimeSpan.FromMinutes(15);
-                    await _notifier.NotifyAsync("Focus duration set to 15 minutes.", Severity.Info);
-                },
-                Keywords: ["15", "15m", "quarter"]),
-
-            new(
-                Id: "duration-config-25m",
-                Title: "25 minutes",
-                Subtitle: _timer.FocusAlertAfter == TimeSpan.FromMinutes(25)
-                    ? "Currently selected. Set time's up alert milestone to 25 minutes"
-                    : "Set time's up alert milestone to 25 minutes",
-                Category: "Duration",
-                Icon: _timer.FocusAlertAfter == TimeSpan.FromMinutes(25) ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Timer,
-                Action: async () =>
-                {
-                    _close();
-                    _timer.FocusAlertAfter = TimeSpan.FromMinutes(25);
-                    await _notifier.NotifyAsync("Focus duration set to 25 minutes.", Severity.Info);
-                },
-                Keywords: ["25", "25m"]),
-
-            new(
-                Id: "duration-config-30m",
-                Title: "30 minutes",
-                Subtitle: _timer.FocusAlertAfter == TimeSpan.FromMinutes(30)
-                    ? "Currently selected. Set time's up alert milestone to 30 minutes"
-                    : "Set time's up alert milestone to 30 minutes",
-                Category: "Duration",
-                Icon: _timer.FocusAlertAfter == TimeSpan.FromMinutes(30) ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Timer,
-                Action: async () =>
-                {
-                    _close();
-                    _timer.FocusAlertAfter = TimeSpan.FromMinutes(30);
-                    await _notifier.NotifyAsync("Focus duration set to 30 minutes.", Severity.Info);
-                },
-                Keywords: ["30", "30m", "half hour"]),
-
-            new(
-                Id: "duration-config-45m",
-                Title: "45 minutes",
-                Subtitle: _timer.FocusAlertAfter == TimeSpan.FromMinutes(45)
-                    ? "Currently selected. Set time's up alert milestone to 45 minutes"
-                    : "Set time's up alert milestone to 45 minutes",
-                Category: "Duration",
-                Icon: _timer.FocusAlertAfter == TimeSpan.FromMinutes(45) ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Timer,
-                Action: async () =>
-                {
-                    _close();
-                    _timer.FocusAlertAfter = TimeSpan.FromMinutes(45);
-                    await _notifier.NotifyAsync("Focus duration set to 45 minutes.", Severity.Info);
-                },
-                Keywords: ["45", "45m"]),
-
-            new(
-                Id: "duration-config-60m",
-                Title: "60 minutes, 1 hour",
-                Subtitle: _timer.FocusAlertAfter == TimeSpan.FromMinutes(60)
-                    ? "Currently selected. Set time's up alert milestone to 60 minutes"
-                    : "Set time's up alert milestone to 60 minutes",
-                Category: "Duration",
-                Icon: _timer.FocusAlertAfter == TimeSpan.FromMinutes(60) ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Timer,
-                Action: async () =>
-                {
-                    _close();
-                    _timer.FocusAlertAfter = TimeSpan.FromMinutes(60);
-                    await _notifier.NotifyAsync("Focus duration set to 60 minutes.", Severity.Info);
-                },
-                Keywords: ["60", "60m", "hour", "1h"]),
-
-            new(
-                Id: "duration-config-90m",
-                Title: "90 minutes, 1.5 hours",
-                Subtitle: _timer.FocusAlertAfter == TimeSpan.FromMinutes(90)
-                    ? "Currently selected. Set time's up alert milestone to 90 minutes"
-                    : "Set time's up alert milestone to 90 minutes",
-                Category: "Duration",
-                Icon: _timer.FocusAlertAfter == TimeSpan.FromMinutes(90) ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Timer,
-                Action: async () =>
-                {
-                    _close();
-                    _timer.FocusAlertAfter = TimeSpan.FromMinutes(90);
-                    await _notifier.NotifyAsync("Focus duration set to 90 minutes.", Severity.Info);
-                },
-                Keywords: ["90", "90m", "1.5h"])
-        };
+                Keywords: [KwOpen, KwContinuous, KwClear, KwStopwatch]),
+            BuildDurationMilestoneCommand(15, "15 minutes", [Kw15, Kw15M, "quarter"]),
+            BuildDurationMilestoneCommand(25, "25 minutes", [Kw25, Kw25M]),
+            BuildDurationMilestoneCommand(30, "30 minutes", [Kw30, Kw30M, "half hour"]),
+            BuildDurationMilestoneCommand(45, "45 minutes", [Kw45, Kw45M]),
+            BuildDurationMilestoneCommand(60, "60 minutes, 1 hour", ["60", "60m", "hour", "1h"]),
+            BuildDurationMilestoneCommand(90, "90 minutes, 1.5 hours", ["90", "90m", "1.5h"]),
+        ];
 
         if (_timer.PomodoroModeEnabled)
         {
@@ -1222,12 +1103,36 @@ internal sealed class TimerPaletteCommands(
                 Id: "duration-pomodoro-info",
                 Title: $"Pomodoro interval: {GlobalTimerService.FormatTimeSpan(_timer.WorkDuration)} work and {GlobalTimerService.FormatTimeSpan(_timer.ShortBreakDuration)} break",
                 Subtitle: "Configured in Settings. Setting a custom duration above switches to Stopwatch mode.",
-                Category: "Duration",
+                Category: DurationCategory,
                 Icon: Icons.Material.Filled.Settings,
                 Action: () => _navigate("/settings"),
-                Keywords: ["pomodoro", "settings", "interval", "duration"]));
+                Keywords: [KwPomodoro, "settings", KwInterval, KwDuration]));
         }
 
         return Task.FromResult(list);
     }
+
+    private CommandItem BuildDurationMilestoneCommand(int minutes, string title, string[] keywords)
+    {
+        var duration = TimeSpan.FromMinutes(minutes);
+        var isCurrent = _timer.FocusAlertAfter == duration;
+        return new(
+            Id: $"duration-config-{minutes}m",
+            Title: title,
+            Subtitle: isCurrent
+                ? $"Currently selected. Set time's up alert milestone to {minutes} minutes"
+                : $"Set time's up alert milestone to {minutes} minutes",
+            Category: DurationCategory,
+            Icon: isCurrent ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Timer,
+            Action: () => SetDurationMilestoneAsync(duration, minutes),
+            Keywords: keywords);
+    }
+
+    private async Task SetDurationMilestoneAsync(TimeSpan duration, int minutes)
+    {
+        _close();
+        _timer.FocusAlertAfter = duration;
+        await _notifier.NotifyAsync($"Focus duration set to {minutes} minutes.", Severity.Info);
+    }
 }
+#pragma warning restore S107

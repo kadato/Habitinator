@@ -1,3 +1,4 @@
+#pragma warning disable S4487 // Flagged fields are read by the Razor markup part; Sonar sees this code-behind file in isolation.
 using System.Globalization;
 
 using App.Shared.RCL.Models;

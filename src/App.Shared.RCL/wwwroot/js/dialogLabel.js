@@ -29,7 +29,7 @@
         dialogs.forEach(function (dialog) {
             if (!dialog.hasAttribute('aria-label') && !dialog.hasAttribute('aria-labelledby')) {
                 var inner = dialog.querySelector('[data-dialog-label]');
-                if (inner && inner.dataset.dialogLabel) {
+                if (inner?.dataset.dialogLabel) {
                     dialog.setAttribute('aria-label', inner.dataset.dialogLabel);
                 }
             }

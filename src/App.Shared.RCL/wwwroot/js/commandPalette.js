@@ -29,7 +29,7 @@ globalThis.HabitinatorCommandPalette = (function () {
     }
 
     const first = focusable[0];
-    const last = focusable[focusable.length - 1];
+    const last = focusable.at(-1);
     const active = document.activeElement;
     const inside = dialog.contains(active);
 

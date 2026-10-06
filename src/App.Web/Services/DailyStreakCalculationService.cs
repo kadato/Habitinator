@@ -6,33 +6,36 @@ using Microsoft.EntityFrameworkCore;
 
 namespace App.Web.Services;
 
+public sealed record ManualStreakArgs(
+    DateOnly? Start,
+    DailyRepeatType Repeat,
+    int Interval,
+    int Streak,
+    DateOnly Today,
+    bool WasCompleteForToday,
+    int Weekdays = 0);
+
 public sealed class DailyStreakCalculationService(IUserTimeZoneService timeZone)
 {
     public static void ApplyManualStreakToEntity(
         BoardItemEntity entity,
-        DateOnly? start,
-        DailyRepeatType repeat,
-        int interval,
-        int streak,
-        DateOnly today,
-        bool wasCompleteForToday,
-        int weekdays = 0)
+        ManualStreakArgs args)
     {
-        if (streak <= 0)
+        if (args.Streak <= 0)
         {
             entity.DailyLastCompletedOn = null;
             entity.IsCompleted = false;
             return;
         }
 
-        var notAfterPrevDays = today.AddDays(-1);
+        var notAfterPrevDays = args.Today.AddDays(-1);
         var days = DailyStreakBackfill.GetLastNScheduledCompletionDays(
-            start, repeat, interval, streak, notAfterPrevDays, weekdays);
+            args.Start, args.Repeat, args.Interval, args.Streak, notAfterPrevDays, args.Weekdays);
         if (days.Count == 0)
         {
-            if (wasCompleteForToday)
+            if (args.WasCompleteForToday)
             {
-                entity.DailyLastCompletedOn = today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+                entity.DailyLastCompletedOn = args.Today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
                 entity.IsCompleted = true;
             }
             else
@@ -45,9 +48,9 @@ public sealed class DailyStreakCalculationService(IUserTimeZoneService timeZone)
         }
 
         var newest = days[0];
-        if (wasCompleteForToday)
+        if (args.WasCompleteForToday)
         {
-            entity.DailyLastCompletedOn = today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+            entity.DailyLastCompletedOn = args.Today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
             entity.IsCompleted = true;
         }
         else

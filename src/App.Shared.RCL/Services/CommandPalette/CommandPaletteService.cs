@@ -11,6 +11,7 @@ namespace App.Shared.RCL.Services.CommandPalette;
 /// Command palette entry point. State and cross-area composition live here;
 /// board, timer, navigation, and export commands live in their own classes.
 /// </summary>
+#pragma warning disable S107 // Palette aggregator wires board, timer, navigation, and export collaborators; splitting it would scatter one composition root.
 public sealed class CommandPaletteService : ICommandPaletteService
 {
     private readonly IBoardDataService _boardData;
@@ -173,3 +174,4 @@ public sealed class CommandPaletteService : ICommandPaletteService
     public Task StartPomodoroSessionAsync() =>
         _timers.StartPomodoroSessionAsync();
 }
+#pragma warning restore S107

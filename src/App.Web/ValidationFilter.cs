@@ -29,19 +29,22 @@ internal sealed class DtoValidationFilter : IEndpointFilter
 
             var results = new List<ValidationResult>();
             var validationContext = new ValidationContext(argument);
-            await Validator.TryValidateObjectAsync(argument, validationContext, results, validateAllProperties: true);
+            var isValid = await Validator.TryValidateObjectAsync(argument, validationContext, results, validateAllProperties: true);
 
-            foreach (var result in results)
+            if (!isValid)
             {
-                var key = result.MemberNames.FirstOrDefault() ?? type.Name;
-                var messages = new[] { result.ErrorMessage ?? "Invalid value." };
-                if (failures.TryGetValue(key, out var existing))
+                foreach (var result in results)
                 {
-                    failures[key] = [.. existing, .. messages];
-                }
-                else
-                {
-                    failures[key] = messages;
+                    var key = result.MemberNames.FirstOrDefault() ?? type.Name;
+                    var messages = new[] { result.ErrorMessage ?? "Invalid value." };
+                    if (failures.TryGetValue(key, out var existing))
+                    {
+                        failures[key] = [.. existing, .. messages];
+                    }
+                    else
+                    {
+                        failures[key] = messages;
+                    }
                 }
             }
         }

@@ -31,7 +31,7 @@ globalThis.habitinatorSetTheme = function (theme) {
                 root.style.colorScheme = "light";
             }
             // Set cookie so the server knows the theme on next load
-            const secureSuffix = globalThis.location && globalThis.location.protocol === "https:" ? "; Secure" : "";
+            const secureSuffix = globalThis.location?.protocol === "https:" ? "; Secure" : "";
             document.cookie = "habitinator_theme=" + theme + "; path=/; max-age=31536000; SameSite=Lax" + secureSuffix;
         };
 

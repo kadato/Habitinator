@@ -351,201 +351,170 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
   let pendingChord = null;
   let chordTimeout = null;
 
+  var chordActions = {
+    g: { b: "nav-board", u: "nav-upcoming", s: "nav-stats", p: "nav-settings" },
+    c: { h: "create-habit", d: "create-daily", t: "create-todo" }
+  };
+
+  var singleKeyActions = { h: "create-habit", d: "create-daily", t: "create-todo", s: "toggle-timer" };
+
+  function invokeShortcutAction(action) {
+    var helper = layoutHelper || boardHelper;
+    if (helper) {
+      helper.invokeMethodAsync("OnShortcutAction", action).catch(function () {});
+    }
+  }
+
+  function handlePendingChord(e, key) {
+    var prefix = pendingChord;
+    clearTimeout(chordTimeout);
+    pendingChord = null;
+    var actions = chordActions[prefix];
+    var action = actions ? actions[key] : null;
+    if (action) {
+      e.preventDefault();
+      invokeShortcutAction(action);
+      return true;
+    }
+    return false;
+  }
+
+  function startChord(prefix, timeoutMs, onTimeout) {
+    pendingChord = prefix;
+    chordTimeout = setTimeout(function () {
+      if (pendingChord === prefix) {
+        pendingChord = null;
+        if (onTimeout) {
+          onTimeout();
+        }
+      }
+    }, timeoutMs);
+  }
+
+  function handleSingleKey(e, key) {
+    if (key === 'n') {
+      return focusAddInput(e);
+    }
+    var action = singleKeyActions[key];
+    if (action) {
+      e.preventDefault();
+      invokeShortcutAction(action);
+      return true;
+    }
+    if (key === '/') {
+      return focusSearchInput(e);
+    }
+    if (key === '1' || key === '2' || key === '3') {
+      return switchBoardTab(e);
+    }
+    return false;
+  }
+
   function handleDirectShortcuts(e) {
     if (e.ctrlKey || e.metaKey || e.altKey) {
       return false;
     }
 
     const key = e.key.toLowerCase();
-    const helper = layoutHelper || boardHelper;
 
     // Handle second key of two-key sequences (e.g. 'g b', 'c h')
-    if (pendingChord) {
-      const prefix = pendingChord;
-      clearTimeout(chordTimeout);
-      pendingChord = null;
-
-      if (prefix === 'g') {
-        if (key === 'b') {
-          e.preventDefault();
-          helper?.invokeMethodAsync("OnShortcutAction", "nav-board").catch(function () {});
-          return true;
-        }
-        if (key === 'u') {
-          e.preventDefault();
-          helper?.invokeMethodAsync("OnShortcutAction", "nav-upcoming").catch(function () {});
-          return true;
-        }
-        if (key === 's') {
-          e.preventDefault();
-          helper?.invokeMethodAsync("OnShortcutAction", "nav-stats").catch(function () {});
-          return true;
-        }
-        if (key === 'p') {
-          e.preventDefault();
-          helper?.invokeMethodAsync("OnShortcutAction", "nav-settings").catch(function () {});
-          return true;
-        }
-      } else if (prefix === 'c') {
-        if (key === 'h') {
-          e.preventDefault();
-          helper?.invokeMethodAsync("OnShortcutAction", "create-habit").catch(function () {});
-          return true;
-        }
-        if (key === 'd') {
-          e.preventDefault();
-          helper?.invokeMethodAsync("OnShortcutAction", "create-daily").catch(function () {});
-          return true;
-        }
-        if (key === 't') {
-          e.preventDefault();
-          helper?.invokeMethodAsync("OnShortcutAction", "create-todo").catch(function () {});
-          return true;
-        }
-      }
+    if (pendingChord && handlePendingChord(e, key)) {
+      return true;
     }
 
     // Start chord: 'g' prefix for navigation shortcuts
     if (key === 'g') {
-      pendingChord = 'g';
-      chordTimeout = setTimeout(function () { pendingChord = null; }, 1200);
+      startChord('g', 1200);
       return true;
     }
 
     // Start chord: 'c' prefix for create shortcuts, or focus the add input
     if (key === 'c') {
-      pendingChord = 'c';
-      chordTimeout = setTimeout(function () {
-        if (pendingChord === 'c') {
-          pendingChord = null;
-          focusAddInput(e);
-        }
-      }, 350);
+      startChord('c', 350, function () { focusAddInput(e); });
       return true;
     }
 
-    if (key === 'n') {
-      return focusAddInput(e);
-    }
-
-    if (key === 'h') {
-      e.preventDefault();
-      helper?.invokeMethodAsync("OnShortcutAction", "create-habit").catch(function () {});
-      return true;
-    }
-
-    if (key === 'd') {
-      e.preventDefault();
-      helper?.invokeMethodAsync("OnShortcutAction", "create-daily").catch(function () {});
-      return true;
-    }
-
-    if (key === 't') {
-      e.preventDefault();
-      helper?.invokeMethodAsync("OnShortcutAction", "create-todo").catch(function () {});
-      return true;
-    }
-
-    if (key === 's') {
-      e.preventDefault();
-      helper?.invokeMethodAsync("OnShortcutAction", "toggle-timer").catch(function () {});
-      return true;
-    }
-
-    if (key === '/') {
-      return focusSearchInput(e);
-    }
-
-    if (['1', '2', '3'].includes(key)) {
-      return switchBoardTab(e);
-    }
-
-    return false;
+    return handleSingleKey(e, key);
   }
 
-  function onKeyDown(e) {
-    const helper = layoutHelper || boardHelper;
-    const modalOpen = isModalOpen();
+  function matchesKey(e, code, keyLower) {
+    return e.code === code || e.key === keyLower || e.key === keyLower.toUpperCase();
+  }
 
-    // 1. Command palette toggle: Ctrl+K / Cmd+K
-    const isCmdK = (e.ctrlKey || e.metaKey) && (e.code === 'KeyK' || e.key === 'k' || e.key === 'K');
-    if (isCmdK) {
-      if (!modalOpen) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (helper) {
-          helper.invokeMethodAsync("OnCmdKPressed").catch(function () {});
-        }
-      }
-      return;
+  function handleCmdK(e, helper, modalOpen) {
+    var isCmdK = (e.ctrlKey || e.metaKey) && matchesKey(e, 'KeyK', 'k');
+    if (!isCmdK) {
+      return false;
     }
-
-    // 2. Intercept Ctrl+H / Cmd+H before the browser opens history
-    const isCtrlH = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.code === 'KeyH' || e.key === 'h' || e.key === 'H');
-    if (isCtrlH) {
+    if (!modalOpen) {
       e.preventDefault();
       e.stopPropagation();
-      if (!modalOpen && helper) {
-        helper.invokeMethodAsync("OnShortcutAction", "create-habit").catch(function () {});
+      if (helper) {
+        helper.invokeMethodAsync("OnCmdKPressed").catch(function () {});
       }
-      return;
     }
+    return true;
+  }
 
-    // 3. Intercept Ctrl+D / Cmd+D before the browser bookmarks the page
-    const isCtrlD = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.code === 'KeyD' || e.key === 'd' || e.key === 'D');
-    if (isCtrlD) {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!modalOpen && helper) {
-        helper.invokeMethodAsync("OnShortcutAction", "create-daily").catch(function () {});
-      }
-      return;
+  function handleCtrlShortcut(e, helper, modalOpen, code, keyLower, action) {
+    var isMatch = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && matchesKey(e, code, keyLower);
+    if (!isMatch) {
+      return false;
     }
-
-    // 4. Alt+T for New To-do
-    const isAltT = e.altKey && !e.ctrlKey && !e.metaKey && (e.code === 'KeyT' || e.key === 't' || e.key === 'T');
-    if (isAltT) {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!modalOpen && helper) {
-        helper.invokeMethodAsync("OnShortcutAction", "create-todo").catch(function () {});
-      }
-      return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (!modalOpen && helper) {
+      helper.invokeMethodAsync("OnShortcutAction", action).catch(function () {});
     }
+    return true;
+  }
 
-    // 5. Global shortcut: Ctrl+Z / Cmd+Z, undo
-    const isUndo = (e.ctrlKey || e.metaKey) && !e.shiftKey && (e.code === 'KeyZ' || e.key === 'z' || e.key === 'Z');
-    if (isUndo) {
-      if (isEditing() || modalOpen) {
-        return;
-      }
-      e.preventDefault();
-      e.stopPropagation();
-      const undoHelper = boardHelper || layoutHelper;
-      if (undoHelper) {
-        undoHelper.invokeMethodAsync("OnCtrlZPressed").catch(function () {});
-      }
-      return;
+  function handleAltT(e, helper, modalOpen) {
+    var isAltT = e.altKey && !e.ctrlKey && !e.metaKey && matchesKey(e, 'KeyT', 't');
+    if (!isAltT) {
+      return false;
     }
+    e.preventDefault();
+    e.stopPropagation();
+    if (!modalOpen && helper) {
+      helper.invokeMethodAsync("OnShortcutAction", "create-todo").catch(function () {});
+    }
+    return true;
+  }
 
-    if (preventPopoverScroll(e)) return;
+  function handleUndo(e, modalOpen) {
+    var isUndo = (e.ctrlKey || e.metaKey) && !e.shiftKey && matchesKey(e, 'KeyZ', 'z');
+    if (!isUndo) {
+      return false;
+    }
+    if (isEditing() || modalOpen) {
+      return true;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    const undoHelper = boardHelper || layoutHelper;
+    if (undoHelper) {
+      undoHelper.invokeMethodAsync("OnCtrlZPressed").catch(function () {});
+    }
+    return true;
+  }
 
-    const activeElement = document.activeElement;
-    const isEdit = isEditing();
-    
+  function handleEscapeOrModalKeys(e, helper, modalOpen, activeElement, isEdit) {
     if (e.code === 'Escape' || e.key === 'Escape') {
       if (isCommandPaletteOpen()) {
         e.preventDefault();
         e.stopPropagation();
-        helper?.invokeMethodAsync("OnEscapePressed").catch(function () {});
-        return;
+        if (helper) {
+          helper.invokeMethodAsync("OnEscapePressed").catch(function () {});
+        }
+        return true;
       }
       handleEscapeKey(e, activeElement, isEdit);
-      return;
+      return true;
     }
 
     if (isCommandPaletteOpen()) {
-      return;
+      return true;
     }
 
     if (modalOpen) {
@@ -554,6 +523,46 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
       if (!isEdit && scrollKeys.includes(e.key)) {
         handleScrolling(e, activeElement);
       }
+      return true;
+    }
+    return false;
+  }
+
+  function onKeyDown(e) {
+    const helper = layoutHelper || boardHelper;
+    const modalOpen = isModalOpen();
+
+    // 1. Command palette toggle: Ctrl+K / Cmd+K
+    if (handleCmdK(e, helper, modalOpen)) {
+      return;
+    }
+
+    // 2. Intercept Ctrl+H / Cmd+H before the browser opens history
+    if (handleCtrlShortcut(e, helper, modalOpen, 'KeyH', 'h', "create-habit")) {
+      return;
+    }
+
+    // 3. Intercept Ctrl+D / Cmd+D before the browser bookmarks the page
+    if (handleCtrlShortcut(e, helper, modalOpen, 'KeyD', 'd', "create-daily")) {
+      return;
+    }
+
+    // 4. Alt+T for New To-do
+    if (handleAltT(e, helper, modalOpen)) {
+      return;
+    }
+
+    // 5. Global shortcut: Ctrl+Z / Cmd+Z, undo
+    if (handleUndo(e, modalOpen)) {
+      return;
+    }
+
+    if (preventPopoverScroll(e)) return;
+
+    const activeElement = document.activeElement;
+    const isEdit = isEditing();
+
+    if (handleEscapeOrModalKeys(e, helper, modalOpen, activeElement, isEdit)) {
       return;
     }
 
@@ -571,7 +580,6 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     const scrollKeys = ['ArrowDown', 'ArrowUp', 'Space', ' ', 'PageDown', 'PageUp', 'Home', 'End', 'j', 'J', 'k', 'K'];
     if (scrollKeys.includes(e.key)) {
       handleScrolling(e, activeElement);
-      return;
     }
   }
 

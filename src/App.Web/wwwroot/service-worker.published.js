@@ -87,21 +87,18 @@ globalThis.addEventListener('fetch', event => {
 
     // Framework assets are cache-first because they are immutable and fingerprinted.
     if (FRAMEWORK_ASSET_PATTERN.test(url.pathname) || CONTENT_ASSET_PATTERN.test(url.pathname)) {
-        event.respondWith(
-            caches.open(FRAMEWORK_CACHE).then(cache =>
-                cache.match(event.request).then(cached => {
-                    if (cached) {
-                        return cached;
-                    }
-                    return fetch(event.request).then(response => {
-                        if (response?.status === 200) {
-                            event.waitUntil(cache.put(event.request, response.clone()));
-                        }
-                        return response;
-                    });
-                })
-            )
-        );
+        event.respondWith((async () => {
+            const cache = await caches.open(FRAMEWORK_CACHE);
+            const cached = await cache.match(event.request);
+            if (cached) {
+                return cached;
+            }
+            const response = await fetch(event.request);
+            if (response?.status === 200) {
+                event.waitUntil(cache.put(event.request, response.clone()));
+            }
+            return response;
+        })());
         return;
     }
 
@@ -116,19 +113,20 @@ globalThis.addEventListener('fetch', event => {
     }
 
     // Other assets use cache-first.
-    event.respondWith(
-        caches.match(event.request).then(cachedResponse => {
-            if (cachedResponse) {
-                return cachedResponse;
-            }
+    event.respondWith((async () => {
+        const cachedResponse = await caches.match(event.request);
+        if (cachedResponse) {
+            return cachedResponse;
+        }
 
-            return fetch(event.request).then(networkResponse => {
-                if (networkResponse?.status === 200 && networkResponse?.type === 'basic') {
-                    const responseToCache = networkResponse.clone();
-                    event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache)));
-                }
-                return networkResponse;
-            });
-        })
-    );
+        const networkResponse = await fetch(event.request);
+        if (networkResponse?.status === 200 && networkResponse?.type === 'basic') {
+            const responseToCache = networkResponse.clone();
+            event.waitUntil((async () => {
+                const cache = await caches.open(CACHE_NAME);
+                await cache.put(event.request, responseToCache);
+            })());
+        }
+        return networkResponse;
+    })());
 });

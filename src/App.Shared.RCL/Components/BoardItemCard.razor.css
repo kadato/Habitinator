@@ -257,6 +257,16 @@
     color: var(--mud-palette-text-secondary);
 }
 
+.board-daily-overdue {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--mud-palette-error);
+}
+
 .board-todo-due__date,
 .board-todo-due__relative {
     font-family: var(--hab-font-mono);

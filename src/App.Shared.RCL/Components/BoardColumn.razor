@@ -73,14 +73,14 @@
                     All
                 </button>
                 <button type="button"
-                        title="Due in the current period"
+                        title="Due today, including overdue"
                         aria-pressed="@(_dailyFilter == DailyListFilter.Due)"
                         class="@GetFilterBtnClass(_dailyFilter == DailyListFilter.Due)"
                         @onclick="@(() => SetDailyFilter(DailyListFilter.Due))">
                     Due
                 </button>
                 <button type="button"
-                        title="Not due in the current period"
+                        title="Neither due nor overdue"
                         aria-pressed="@(_dailyFilter == DailyListFilter.NotDue)"
                         class="@GetFilterBtnClass(_dailyFilter == DailyListFilter.NotDue)"
                         @onclick="@(() => SetDailyFilter(DailyListFilter.NotDue))">
@@ -218,6 +218,7 @@
         <BoardItemCard Item="item"
                        Section="Section"
                        CanReorder="IsItemDraggable()"
+                       OverdueSince="@GetDailyOverdueSince(item)"
                        OnHabitUp="@(() => HabitUpAsync(item))"
                        OnHabitDown="@(() => HabitDownAsync(item))"
                        OnToggle="@(() => ToggleAsync(item))"

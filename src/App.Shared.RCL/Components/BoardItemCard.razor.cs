@@ -24,6 +24,9 @@ public partial class BoardItemCard
     [Parameter] public EventCallback OnDelete { get; set; }
     [Parameter] public EventCallback<(Guid ChecklistItemId, bool IsDone)> OnSetChecklistItemDone { get; set; }
 
+    /// <summary>Oldest missed scheduled day. Set for dailies with past misses in the catch-up window.</summary>
+    [Parameter] public DateOnly? OverdueSince { get; set; }
+
     private bool _subtasksExpanded = true;
     private BoardItem? _parsedForItem;
     private IReadOnlyList<DailyChecklistItem> _checklist = [];
@@ -55,13 +58,15 @@ public partial class BoardItemCard
     private BoardSection? _lastRenderedSection;
     private bool? _lastRenderedCanReorder;
     private bool? _lastRenderedSubtasksExpanded;
+    private DateOnly? _lastRenderedOverdueSince;
 
     protected override bool ShouldRender()
     {
         return !Equals(_lastRenderedItem, Item)
                || _lastRenderedSection != Section
                || _lastRenderedCanReorder != CanReorder
-               || _lastRenderedSubtasksExpanded != _subtasksExpanded;
+               || _lastRenderedSubtasksExpanded != _subtasksExpanded
+               || _lastRenderedOverdueSince != OverdueSince;
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -70,6 +75,7 @@ public partial class BoardItemCard
         _lastRenderedSection = Section;
         _lastRenderedCanReorder = CanReorder;
         _lastRenderedSubtasksExpanded = _subtasksExpanded;
+        _lastRenderedOverdueSince = OverdueSince;
     }
 
     private void ToggleSubtasksExpand()

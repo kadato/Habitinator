@@ -4,7 +4,7 @@
         <div class="board-card__habit-btns board-card__left">
             @if (Item.TrackPlus)
             {
-                <button type="button" class="board-sq board-sq--good" title="Log +" draggable="false" @onclick="OnHabitUp" @onclick:stopPropagation="true">
+                <button type="button" class="board-sq board-sq--good" title="Log positive" aria-label="@($"Log positive for {Item.Title}")" draggable="false" @onclick="OnHabitUp" @onclick:stopPropagation="true">
                     <svg aria-hidden="true" class="board-habit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
                         <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -13,7 +13,7 @@
             }
             @if (Item.TrackMinus)
             {
-                <button type="button" class="board-sq board-sq--bad" title="Log −" draggable="false" @onclick="OnHabitDown" @onclick:stopPropagation="true">
+                <button type="button" class="board-sq board-sq--bad" title="Log negative" aria-label="@($"Log negative for {Item.Title}")" draggable="false" @onclick="OnHabitDown" @onclick:stopPropagation="true">
                     <svg aria-hidden="true" class="board-habit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
@@ -26,7 +26,8 @@
         <div class="board-card__check-col board-card__left">
             <button type="button"
                     class="board-check @CheckClass"
-                    title="Toggle"
+                    title="Toggle complete"
+                    aria-label="@($"Toggle complete for {Item.Title}")"
                     draggable="false"
                     @onclick="OnToggle"
                     @onclick:stopPropagation="true"
@@ -52,9 +53,9 @@
         </div>
     }
     <div class="board-card__head">
-        <div class="board-card__title" role="button" tabindex="0" @onclick="OnOpenEditor" @onkeydown="OnTitleKeyDown">
+        <button type="button" class="board-card__title" @onclick="OnOpenEditor" @onkeydown="OnTitleKeyDown" aria-label="@($"Open details for {Item.Title}")">
             <span class="board-card__title-text">@Item.Title</span>
-        </div>
+        </button>
         <div class="board-card__head-actions">
             <MudMenu AnchorOrigin="Origin.BottomRight"
                      TransformOrigin="Origin.TopRight"
@@ -124,7 +125,7 @@
                                 <span class="board-card__tag-badge__text">@tag</span>
                             </span>
                         }
-                        <span class="board-card__tag-badge board-card__tag-badge--more" title='@(string.Join(", ", TagsList.Skip(2)))'>+@(TagsList.Count - 2)</span>
+                        <span class="board-card__tag-badge board-card__tag-badge--more" title='@(string.Join(", ", TagsList.Skip(2)))' tabindex="0" role="img" aria-label="@($"More tags: {string.Join(", ", TagsList.Skip(2))}")">+@(TagsList.Count - 2)</span>
                     }
                 </div>
             }
@@ -177,9 +178,16 @@
                         <span class="board-todo-due__relative">@TodoDueRelativeLabel(due)</span>
                     </div>
                 }
+                @if (Section == BoardSection.Daily && OverdueSince is { } overdueSince)
+                {
+                    <div class="board-daily-overdue" role="img" aria-label="@($"Overdue since {DateFormatService.Format(overdueSince)}")">
+                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Class="me-1" Size="Size.Small" aria-hidden="true" />
+                        <span>Overdue since @DateFormatService.Format(overdueSince)</span>
+                    </div>
+                }
                 @if (Section == BoardSection.Habit)
                 {
-                    <div class="board-habit-counters" title="@HabitCounterTitle()">
+                    <div class="board-habit-counters" title="@HabitCounterTitle()" role="img" aria-label="@HabitCounterTitle()">
                         @if (Item.TrackPlus)
                         {
                             <span class="board-habit-badge board-habit-badge--plus" title="Positive logs">
@@ -206,14 +214,14 @@
                 {
                     @if (Item.Counter > 0)
                     {
-                        <div class="board-streak board-streak--active" title="Daily streak: @Item.Counter days">
+                        <div class="board-streak board-streak--active" title="Daily streak: @Item.Counter days" role="img" aria-label="@($"Daily streak {Item.Counter} days")">
                             <MudIcon Icon="@Icons.Material.Filled.Whatshot" Size="Size.Small" Class="me-1 streak-flame-icon" aria-hidden="true" />
                             <span class="board-streak__text">@Item.Counter</span>
                         </div>
                     }
                     else
                     {
-                        <div class="board-streak board-streak--inactive" title="No current streak">
+                        <div class="board-streak board-streak--inactive" title="No current streak" role="img" aria-label="No current streak">
                             <MudIcon Icon="@Icons.Material.Outlined.Whatshot" Size="Size.Small" Class="me-1 streak-flame-icon-inactive" aria-hidden="true" />
                             <span class="board-streak__text">0</span>
                         </div>

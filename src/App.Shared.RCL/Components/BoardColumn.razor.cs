@@ -370,12 +370,23 @@ public partial class BoardColumn : IAsyncDisposable
     private List<BoardItem> FilterDailies()
     {
         var today = DailySchedule.LocalToday(TimeZoneService);
+        var overdue = DailyRollover.GetOverdueSince([.. EffectiveItems], today, TimeZoneService);
         return _dailyFilter switch
         {
-            DailyListFilter.Due => [.. EffectiveItems.Where(d => DailySchedule.IsDueOnDate(d, today))],
-            DailyListFilter.NotDue => [.. EffectiveItems.Where(d => !DailySchedule.IsDueOnDate(d, today))],
+            DailyListFilter.Due => [.. EffectiveItems.Where(d => DailySchedule.IsDueOnDate(d, today) || overdue.ContainsKey(d.Id))],
+            DailyListFilter.NotDue => [.. EffectiveItems.Where(d => !DailySchedule.IsDueOnDate(d, today) && !overdue.ContainsKey(d.Id))],
             _ => [.. EffectiveItems]
         };
+    }
+
+    private DateOnly? GetDailyOverdueSince(BoardItem item)
+    {
+        if (Section != BoardSection.Daily)
+        {
+            return null;
+        }
+
+        return DailyRollover.GetOldestMiss(item, DailySchedule.LocalToday(TimeZoneService), TimeZoneService);
     }
 
     private List<BoardItem> FilterTodos()

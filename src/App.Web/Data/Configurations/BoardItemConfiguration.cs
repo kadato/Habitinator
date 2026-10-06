@@ -25,6 +25,9 @@ public sealed class BoardItemConfiguration : IEntityTypeConfiguration<BoardItemE
         builder.HasIndex(x => new { x.UserId, x.Section });
         builder.HasIndex(x => new { x.UserId, x.DeletedAtUtc });
         builder.HasIndex(x => new { x.UserId, x.UpdatedAtUtc });
+        // Trigram index for case-insensitive tag matching (ILIKE with % wildcards).
+        // Requires the pg_trgm extension, registered on the model in ApplicationDbContext.
+        builder.HasIndex(x => x.Tags).HasMethod("GIN").HasOperators("gin_trgm_ops");
         builder.HasOne(x => x.User)
             .WithMany()
             .HasForeignKey(x => x.UserId)

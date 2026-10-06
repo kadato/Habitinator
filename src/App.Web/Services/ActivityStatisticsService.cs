@@ -399,13 +399,17 @@ public sealed class ActivityStatisticsService(
                 return null;
             }
 
+            // Case-insensitive match on the CSV column, mirroring the OrdinalIgnoreCase
+            // in-memory path used for multi-tag filters. LIKE wildcards in the tag
+            // are escaped so they match literally.
+            var escaped = EscapeLikePattern(t);
             var ids = await db.BoardItems.AsNoTracking()
                 .Where(b => b.UserId == userId && b.DeletedAtUtc == null
                     && b.Tags != null
-                    && (b.Tags == t
-                        || b.Tags.StartsWith(t + ",")
-                        || b.Tags.Contains("," + t + ",")
-                        || b.Tags.EndsWith("," + t)))
+                    && (EF.Functions.ILike(b.Tags, escaped)
+                        || EF.Functions.ILike(b.Tags, escaped + ",%")
+                        || EF.Functions.ILike(b.Tags, "%," + escaped + ",%")
+                        || EF.Functions.ILike(b.Tags, "%," + escaped)))
                 .Select(b => b.Id)
                 .ToListAsync(cancellationToken);
 
@@ -423,6 +427,11 @@ public sealed class ActivityStatisticsService(
             .Where(r => BoardTagUtil.ParseTags(r.Tags).Any(t => wantedSet.Contains(t)))
             .Select(r => r.Id)];
     }
+
+    private static string EscapeLikePattern(string value) =>
+        value.Replace(@"\", @"\\", StringComparison.Ordinal)
+            .Replace("%", @"\%", StringComparison.Ordinal)
+            .Replace("_", @"\_", StringComparison.Ordinal);
 
     private async Task<IReadOnlyList<DailyGraphPeriodOption>> BuildDailyPeriodOptionsAsync(
         ApplicationDbContext db,

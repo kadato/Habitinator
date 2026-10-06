@@ -1,6 +1,5 @@
-<div class="settings-section-switcher" role="tablist" aria-label="Settings sections">
+<div class="settings-section-switcher" role="group" aria-label="Settings sections">
     <button type="button"
-            role="tab"
             @attributes="GetTabAria(0)"
             class="@GetSwitcherClass(0)"
             @onclick="() => OnTabSelected(0)">
@@ -8,7 +7,6 @@
         <span class="settings-section-switcher__label">Profile</span>
     </button>
     <button type="button"
-            role="tab"
             @attributes="GetTabAria(1)"
             class="@GetSwitcherClass(1)"
             @onclick="() => OnTabSelected(1)">
@@ -16,7 +14,6 @@
         <span class="settings-section-switcher__label">Alerts</span>
     </button>
     <button type="button"
-            role="tab"
             @attributes="GetTabAria(2)"
             class="@GetSwitcherClass(2)"
             @onclick="() => OnTabSelected(2)">
@@ -36,7 +33,7 @@
 
     private Dictionary<string, object> GetTabAria(int index) => new()
     {
-        { "aria-selected", ActiveIndex == index ? "true" : "false" }
+        { "aria-pressed", ActiveIndex == index ? "true" : "false" }
     };
 
     private Task OnTabSelected(int index)

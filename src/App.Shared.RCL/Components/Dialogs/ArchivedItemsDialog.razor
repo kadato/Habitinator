@@ -10,7 +10,7 @@
 
 <MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content">
     <DialogContent>
-        <div class="hab-modal hab-modal--neutral hab-modal--wide" data-dialog-label="Archive">
+        <div class="hab-modal hab-modal--neutral hab-modal--wide" data-dialog-label="Archive" aria-label="Archive" role="group">
             <div class="hab-modal__grabber" aria-hidden="true"></div>
             <div class="hab-modal__header" @ref="_headerRef">
                 <div class="hab-modal__topbar hab-modal__topbar--minimal">
@@ -54,17 +54,17 @@
                                       Immediate="true" />
                     </div>
 
-                    <div class="filter-tabs" role="tablist" aria-label="Filter archived items">
-                        <button type="button" role="tab" aria-selected="@AriaSelected(_selectedSection == null)" class="@FilterTabClass(null)" @onclick="() => SetFilter(null)">
+                    <div class="filter-tabs" role="group" aria-label="Filter archived items">
+                        <button type="button" aria-pressed="@AriaPressed(_selectedSection == null)" class="@FilterTabClass(null)" @onclick="() => SetFilter(null)">
                             All <span class="filter-tab-count">@TotalCount</span>
                         </button>
-                        <button type="button" role="tab" aria-selected="@AriaSelected(_selectedSection == BoardSection.Habit)" class="@FilterTabClass(BoardSection.Habit)" @onclick="() => SetFilter(BoardSection.Habit)">
+                        <button type="button" aria-pressed="@AriaPressed(_selectedSection == BoardSection.Habit)" class="@FilterTabClass(BoardSection.Habit)" @onclick="() => SetFilter(BoardSection.Habit)">
                             Habits <span class="filter-tab-count">@HabitsCount</span>
                         </button>
-                        <button type="button" role="tab" aria-selected="@AriaSelected(_selectedSection == BoardSection.Daily)" class="@FilterTabClass(BoardSection.Daily)" @onclick="() => SetFilter(BoardSection.Daily)">
+                        <button type="button" aria-pressed="@AriaPressed(_selectedSection == BoardSection.Daily)" class="@FilterTabClass(BoardSection.Daily)" @onclick="() => SetFilter(BoardSection.Daily)">
                             Dailies <span class="filter-tab-count">@DailiesCount</span>
                         </button>
-                        <button type="button" role="tab" aria-selected="@AriaSelected(_selectedSection == BoardSection.Todo)" class="@FilterTabClass(BoardSection.Todo)" @onclick="() => SetFilter(BoardSection.Todo)">
+                        <button type="button" aria-pressed="@AriaPressed(_selectedSection == BoardSection.Todo)" class="@FilterTabClass(BoardSection.Todo)" @onclick="() => SetFilter(BoardSection.Todo)">
                             To-dos <span class="filter-tab-count">@TodosCount</span>
                         </button>
                     </div>
@@ -316,7 +316,7 @@
     private string FilterTabClass(BoardSection? section) =>
         _selectedSection == section ? "filter-tab active" : "filter-tab";
 
-    private static string AriaSelected(bool condition) => condition ? "true" : "false";
+    private static string AriaPressed(bool condition) => condition ? "true" : "false";
 
     private delegate Task<bool> AsyncPredicate();
 

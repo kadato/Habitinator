@@ -5,7 +5,7 @@
            ContentClass="edit-daily-dialog__content"
            Style="width: min(26rem, calc(100vw - 1rem));">
     <DialogContent>
-        <div class="hab-modal hab-modal--todo edit-daily-shell edit-daily-shell--todo" data-dialog-label="Edit todo" @onclick="OnShellClick">
+        <div class="hab-modal hab-modal--todo edit-daily-shell edit-daily-shell--todo" data-dialog-label="Edit todo" aria-label="Edit todo" role="group" @onclick="OnShellClick">
             <EditDialogHeader TitleText="Edit todo"
                               TitlePlaceholder="To-do title"
                               @bind-Title="_title"

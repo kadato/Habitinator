@@ -576,7 +576,7 @@ public partial class StatisticsPanel : IDisposable
 
     private Dictionary<string, object> GetConsistencyTabAttrs(string tab) => new()
     {
-        ["aria-selected"] = _consistencyTab == tab ? "true" : "false"
+        ["aria-pressed"] = _consistencyTab == tab ? "true" : "false"
     };
 
     private static string HabitActiveRatioLabel(int activeDays, int periodDays)

@@ -66,6 +66,8 @@
     private static bool IsAuthPath(string path) =>
         path.Equals("/auth/login", StringComparison.OrdinalIgnoreCase) ||
         path.Equals("/auth/register", StringComparison.OrdinalIgnoreCase) ||
+        path.Equals("/auth/forgot-password", StringComparison.OrdinalIgnoreCase) ||
+        path.Equals("/auth/reset-password", StringComparison.OrdinalIgnoreCase) ||
         path.Equals("/login", StringComparison.OrdinalIgnoreCase) ||
         path.Equals("/register", StringComparison.OrdinalIgnoreCase);
 

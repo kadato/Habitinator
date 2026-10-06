@@ -89,7 +89,8 @@
 
 .hab-modal__close,
 .edit-daily-header__close {
-    width: 32px; height: 32px;
+    width: 36px; height: 36px;
+    min-width: 36px; min-height: 36px;
     display: inline-flex; align-items: center; justify-content: center;
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
     background: color-mix(in srgb, var(--mud-palette-surface) 92%, transparent);

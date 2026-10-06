@@ -3,15 +3,16 @@
 
 <div class="stats-heatmap-container @ContainerClass">
     <div class="stats-heatmap-rowlabels" aria-hidden="true">
-        <span>M</span>
+        <span>Mon</span>
         <span></span>
-        <span>W</span>
+        <span>Wed</span>
         <span></span>
-        <span>F</span>
+        <span>Fri</span>
         <span></span>
-        <span>S</span>
+        <span>Sun</span>
     </div>
     <div class="stats-heatmap-wrap" tabindex="0" role="region" aria-label="@RegionLabel">
+        <span class="hab-visually-hidden">Rows are Monday to Sunday, columns are weeks. Press Tab to reach days, then use arrow keys to move between days.</span>
         @if (ShowMonthLabels)
         {
             <div class="stats-heatmap-months" aria-hidden="true" style="--stats-cols: @Columns;">
@@ -47,7 +48,7 @@
                                         aria-current="@(isToday ? "date" : null)"
                                         data-row="@(IncludeRovingTabindex ? row : null)"
                                         data-col="@(IncludeRovingTabindex ? col : null)"
-                                        tabindex="@(IncludeRovingTabindex ? "-1" : null)"
+                                        tabindex="0"
                                         @onclick="() => OnCellClickAsync(row, col)">
                                 </button>
                             }

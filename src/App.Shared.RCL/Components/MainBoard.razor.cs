@@ -26,7 +26,6 @@ public partial class MainBoard : IAsyncDisposable
     private readonly HashSet<string> _selectedFilterTags = [];
     private bool _dailyRetroSessionOffered;
     private bool _dailyRetroClientReady;
-    private bool _onboardingOffered;
     private bool _boardClientScriptsStarted;
     private bool _shortcutsEnabled = true;
     private DotNetObjectReference<BoardRemoteNotifyBridge>? _visibilityRef;
@@ -72,8 +71,7 @@ public partial class MainBoard : IAsyncDisposable
 
     private Dictionary<string, object> GetTabAttributes(int index) => new()
     {
-        ["aria-selected"] = _mobileSectionIndex == index ? "true" : "false",
-        ["tabindex"] = _mobileSectionIndex == index ? 0 : -1,
+        ["aria-pressed"] = _mobileSectionIndex == index ? "true" : "false",
     };
 
     private string GetTagsTriggerClass() =>
@@ -339,7 +337,6 @@ public partial class MainBoard : IAsyncDisposable
             _dailyRetroClientReady = true;
             _ = RefreshStreaksAsync();
             await TryOpenDailyYesterdayRetroIfNeededAsync();
-            await TryOpenOnboardingIfNeededAsync();
         }
         catch (JSDisconnectedException)
         {
@@ -647,34 +644,6 @@ public partial class MainBoard : IAsyncDisposable
         catch (Exception)
         {
             _dailyRetroSessionOffered = false;
-        }
-    }
-
-    private async Task TryOpenOnboardingIfNeededAsync()
-    {
-        if (_onboardingOffered)
-        {
-            return;
-        }
-
-        _onboardingOffered = true;
-        try
-        {
-            if (await OnboardingStore.IsCompletedAsync())
-            {
-                return;
-            }
-
-            // Registration seeds a starter board, so item count is not a signal that the user has
-            // seen the welcome. Mark completion for every dismissal path, including Escape and
-            // backdrop click, by waiting for the dialog result.
-            var dialog = await DialogService.ShowAsync<OnboardingDialog>(string.Empty, DialogDefaults.SmallEditor);
-            await dialog.Result;
-            await OnboardingStore.MarkCompletedAsync();
-        }
-        catch (Exception)
-        {
-            _onboardingOffered = false;
         }
     }
 

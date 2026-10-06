@@ -20,7 +20,7 @@
 
 
 <MudStack Class="board-shell w-100" Spacing="1">
-    <h1 class="hab-visually-hidden">Board</h1>
+    <h1 class="hab-visually-hidden" tabindex="-1">Board</h1>
     @if (_isLoading && _initialLoadComplete)
     {
         <MudProgressLinear Color="Color.Primary" Indeterminate="true"/>
@@ -163,9 +163,8 @@
             @if (_isMobileViewport is true)
             {
                 <div class="board-columns-mobile" @ref="_swipeAreaRef">
-                <div class="board-section-switcher" role="tablist" aria-label="Board sections">
+                <div class="board-section-switcher" role="group" aria-label="Board sections">
                     <button type="button"
-                            role="tab"
                             id="board-tab-0"
                             @attributes="GetTabAttributes(0)"
                             aria-controls="board-tab-panel-0"
@@ -176,7 +175,6 @@
                         <span class="board-section-switcher__count" title="@FilteredHabits.Count habits">@FilteredHabits.Count</span>
                     </button>
                     <button type="button"
-                            role="tab"
                             id="board-tab-1"
                             @attributes="GetTabAttributes(1)"
                             aria-controls="board-tab-panel-1"
@@ -187,7 +185,6 @@
                         <span class="board-section-switcher__count" title="@DailiesDueOpenCount due and open">@DailiesDueOpenCount</span>
                     </button>
                     <button type="button"
-                            role="tab"
                             id="board-tab-2"
                             @attributes="GetTabAttributes(2)"
                             aria-controls="board-tab-panel-2"
@@ -199,7 +196,7 @@
                     </button>
                 </div>
 
-                <div class="board-section-tab-content" id="board-tab-panel-@_mobileSectionIndex" role="tabpanel" aria-labelledby="board-tab-@_mobileSectionIndex">
+                <div class="board-section-tab-content" id="board-tab-panel-@_mobileSectionIndex" role="region" aria-labelledby="board-tab-@_mobileSectionIndex">
                     @foreach (var col in BoardColumns)
                     {
                         if (col.Section == (BoardSection)_mobileSectionIndex)
@@ -237,14 +234,14 @@
             @if (_isMobileViewport is true)
             {
                 <div class="board-columns-mobile">
-                    <div class="board-section-switcher" role="tablist" aria-label="Loading board sections">
-                        <button type="button" role="tab" aria-selected="true" class="board-section-switcher__btn board-section-switcher__btn--active" disabled>
+                    <div class="board-section-switcher" role="group" aria-label="Loading board sections" aria-busy="true">
+                        <button type="button" class="board-section-switcher__btn board-section-switcher__btn--active" disabled aria-pressed="true">
                             <span class="board-section-switcher__label">Habits</span>
                         </button>
-                        <button type="button" role="tab" aria-selected="false" class="board-section-switcher__btn" disabled>
+                        <button type="button" class="board-section-switcher__btn" disabled aria-pressed="false">
                             <span class="board-section-switcher__label">Dailies</span>
                         </button>
-                        <button type="button" role="tab" aria-selected="false" class="board-section-switcher__btn" disabled>
+                        <button type="button" class="board-section-switcher__btn" disabled aria-pressed="false">
                             <span class="board-section-switcher__label">To-dos</span>
                         </button>
                     </div>

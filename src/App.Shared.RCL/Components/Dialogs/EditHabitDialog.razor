@@ -4,7 +4,7 @@
            ContentClass="edit-daily-dialog__content"
            Style="width: min(26rem, calc(100vw - 1rem));">
 <DialogContent>
-<div class="hab-modal hab-modal--habit edit-daily-shell edit-daily-shell--habit" data-dialog-label="Edit habit" @onclick="OnShellClick">
+<div class="hab-modal hab-modal--habit edit-daily-shell edit-daily-shell--habit" data-dialog-label="Edit habit" aria-label="Edit habit" role="group" @onclick="OnShellClick">
     <EditDialogHeader TitleText="Edit habit"
                       TitlePlaceholder="Habit title"
                       @bind-Title="_title"

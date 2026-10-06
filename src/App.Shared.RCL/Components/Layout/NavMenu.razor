@@ -27,9 +27,12 @@ else if (BottomBar)
 {
     <nav class="app-bottom-nav" role="navigation" aria-label="Main navigation">
         @BottomNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
-        @BottomNavItem("/upcoming", "upcoming", NavLinkMatch.Prefix, Icons.Material.Filled.CalendarMonth, "Upcoming")
-        @BottomNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Stats")
-        @BottomNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Settings, "Settings")
+        @if (Session.IsLoggedIn)
+        {
+            @BottomNavItem("/upcoming", "upcoming", NavLinkMatch.Prefix, Icons.Material.Filled.CalendarMonth, "Upcoming")
+            @BottomNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Stats")
+            @BottomNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Settings, "Settings")
+        }
     </nav>
 }
 else

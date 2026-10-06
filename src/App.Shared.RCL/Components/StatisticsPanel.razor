@@ -114,10 +114,10 @@
                         <div>
                             <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Consistency by item</MudText>
                         </div>
-                        <div class="stats-segment" role="tablist" aria-label="Filter consistency graphs">
-                            <button type="button" role="tab" @attributes='GetConsistencyTabAttrs("all")' class="stats-segment__btn @(_consistencyTab == "all" ? "stats-segment__btn--active" : string.Empty)" @onclick='() => _consistencyTab = "all"'>All</button>
-                            <button type="button" role="tab" @attributes='GetConsistencyTabAttrs("daily")' class="stats-segment__btn @(_consistencyTab == "daily" ? "stats-segment__btn--active" : string.Empty)" @onclick='() => _consistencyTab = "daily"'>Dailies</button>
-                            <button type="button" role="tab" @attributes='GetConsistencyTabAttrs("habit")' class="stats-segment__btn @(_consistencyTab == "habit" ? "stats-segment__btn--active" : string.Empty)" @onclick='() => _consistencyTab = "habit"'>Habits</button>
+                        <div class="stats-segment" role="group" aria-label="Filter consistency graphs">
+                            <button type="button" @attributes='GetConsistencyTabAttrs("all")' class="stats-segment__btn @(_consistencyTab == "all" ? "stats-segment__btn--active" : string.Empty)" @onclick='() => _consistencyTab = "all"'>All</button>
+                            <button type="button" @attributes='GetConsistencyTabAttrs("daily")' class="stats-segment__btn @(_consistencyTab == "daily" ? "stats-segment__btn--active" : string.Empty)" @onclick='() => _consistencyTab = "daily"'>Dailies</button>
+                            <button type="button" @attributes='GetConsistencyTabAttrs("habit")' class="stats-segment__btn @(_consistencyTab == "habit" ? "stats-segment__btn--active" : string.Empty)" @onclick='() => _consistencyTab = "habit"'>Habits</button>
                         </div>
                     </div>
                     @if (_consistencyTab is "all" or "daily")

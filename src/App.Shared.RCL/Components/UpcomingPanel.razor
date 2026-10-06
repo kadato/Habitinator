@@ -38,7 +38,7 @@
                     <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" Class="cal-todaybtn" OnClick="GoToday">Today</MudButton>
                     <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Medium" Class="cal-navbtn" aria-label="@NextLabel" OnClick="Next" />
                 </div>
-                <div class="cal-titles">
+                <div class="cal-titles" aria-live="polite" aria-atomic="true">
                     <div class="cal-month">@HeaderTitle</div>
                     <div class="cal-sub">@HeadlineText</div>
                 </div>
@@ -118,7 +118,7 @@
                     </MudPaper>
                 }
 
-                <MudPaper Class="cal-card cal-card--agenda" Elevation="0" Outlined="true" id="@SelectedAnchorId">
+                <MudPaper Class="cal-card cal-card--agenda" Elevation="0" Outlined="true" id="@SelectedAnchorId" aria-live="polite" aria-atomic="false">
                     <div class="cal-card__head">
                         <span class="cal-card__icon cal-card__icon--agenda" aria-hidden="true">
                             <MudIcon Icon="@Icons.Material.Filled.Event" Size="Size.Small" />
@@ -238,7 +238,7 @@
                             <button type="button"
                                     class="@CellClass(date)"
                                     aria-label="@CellAria(date, total)"
-                                    aria-pressed="@(date == _selected)"
+                                    aria-current="@(date == _selected ? "date" : null)"
                                     @onclick="() => SelectDay(date)"
                                     @key="date">
                                 <span class="cal-cell__top">
@@ -288,7 +288,7 @@
                             <button type="button"
                                     class="@(CellClass(date) + " cal-cell--week")"
                                     aria-label="@CellAria(date, total)"
-                                    aria-pressed="@(date == _selected)"
+                                    aria-current="@(date == _selected ? "date" : null)"
                                     @onclick="() => SelectDay(date)"
                                     @key="date">
                                 <span class="cal-cell__top">

@@ -16,37 +16,7 @@ internal sealed class DtoValidationFilter : IEndpointFilter
 
         foreach (var argument in context.Arguments)
         {
-            if (argument is null)
-            {
-                continue;
-            }
-
-            var type = argument.GetType();
-            if (!IsDtoType(type))
-            {
-                continue;
-            }
-
-            var results = new List<ValidationResult>();
-            var validationContext = new ValidationContext(argument);
-            var isValid = await Validator.TryValidateObjectAsync(argument, validationContext, results, validateAllProperties: true);
-
-            if (!isValid)
-            {
-                foreach (var result in results)
-                {
-                    var key = result.MemberNames.FirstOrDefault() ?? type.Name;
-                    var messages = new[] { result.ErrorMessage ?? "Invalid value." };
-                    if (failures.TryGetValue(key, out var existing))
-                    {
-                        failures[key] = [.. existing, .. messages];
-                    }
-                    else
-                    {
-                        failures[key] = messages;
-                    }
-                }
-            }
+            await CollectFailuresAsync(argument, failures);
         }
 
         if (failures.Count > 0)
@@ -55,6 +25,43 @@ internal sealed class DtoValidationFilter : IEndpointFilter
         }
 
         return await next(context);
+    }
+
+    private static async Task CollectFailuresAsync(object? argument, Dictionary<string, string[]> failures)
+    {
+        if (argument is null)
+        {
+            return;
+        }
+
+        var type = argument.GetType();
+        if (!IsDtoType(type))
+        {
+            return;
+        }
+
+#pragma warning disable S4158, S2583 // Validator.TryValidateObjectAsync populates results via its ICollection<ValidationResult> parameter; symbolic execution models the list as still empty.
+        var results = new List<ValidationResult>();
+        var validationContext = new ValidationContext(argument);
+        var isValid = await Validator.TryValidateObjectAsync(argument, validationContext, results, validateAllProperties: true);
+
+        if (!isValid)
+        {
+            foreach (var result in results)
+            {
+                var key = result.MemberNames.FirstOrDefault() ?? type.Name;
+                var messages = new[] { result.ErrorMessage ?? "Invalid value." };
+                if (failures.TryGetValue(key, out var existing))
+                {
+                    failures[key] = [.. existing, .. messages];
+                }
+                else
+                {
+                    failures[key] = messages;
+                }
+            }
+        }
+#pragma warning restore S4158, S2583
     }
 
     private static bool IsDtoType(Type type)

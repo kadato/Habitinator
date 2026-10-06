@@ -181,13 +181,14 @@ a {
 }
 
 .dark-theme .undo-toast-btn:hover {
-    background: color-mix(in srgb, #60a5fa 22%, #0f172a);
-    border-color: color-mix(in srgb, #60a5fa 60%, #0f172a);
+    background: #213657;
+    border-color: #5b8fd6;
     color: #bfdbfe;
 }
 
 .dark-theme .undo-toast-btn:active {
-    background: color-mix(in srgb, #60a5fa 32%, transparent);
+    background: #2a4569;
+    color: #bfdbfe;
 }
 
 /* Dark theme: tinted active pills and badges use theme colors that are too

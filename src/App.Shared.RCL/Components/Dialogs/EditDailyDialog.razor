@@ -11,14 +11,14 @@
         <EditDialogHeader TitleText="Edit daily"
                           TitlePlaceholder="Daily title"
                           @bind-Title="_title"
-                          @bind-Title:after="OnTitleEdited"
+                          @bind-Title:after="() => ScheduleSave()"
                           OnClose="CloseAsync"
                           SaveStatus="SaveStatus"
                           Section="BoardSection.Daily"/>
 
         <div class="hab-modal__body edit-daily-body">
             <EditDialogNotes @bind-Notes="_notes"
-                             @bind-Notes:after="OnNotesEdited"/>
+                             @bind-Notes:after="() => ScheduleSave()"/>
 
             <div class="hab-checklist">
                 <div class="hab-checklist__head">
@@ -32,7 +32,7 @@
                     }
                 </div>
                 <div class="hab-checklist__list">
-                    <ChecklistEditor @bind-Value="_checklistRows" @bind-Value:after="OnChecklistEdited"/>
+                    <ChecklistEditor @bind-Value="_checklistRows" @bind-Value:after="() => ScheduleSave(300)"/>
                 </div>
             </div>
 
@@ -41,12 +41,12 @@
                     <svg aria-hidden="true" viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                     Start date
                 </span>
-                <MudDatePicker @bind-Date="_startDate" @bind-Date:after="OnDiscreteEdited" Variant="Variant.Outlined" Editable="true" Class="hab-modal__field" DateFormat="@DateFormatService.DateFormat" Margin="Margin.Dense" aria-label="Start date"/>
+                <MudDatePicker @bind-Date="_startDate" @bind-Date:after="() => { _ = SaveNowAsync(); }" Variant="Variant.Outlined" Editable="true" Class="hab-modal__field" DateFormat="@DateFormatService.DateFormat" Margin="Margin.Dense" aria-label="Start date"/>
             </div>
 
             <div class="hab-modal__section" style="padding:0.7rem 0.75rem;">
                 <span class="hab-modal__section-label">Repeats</span>
-                <MudSelect T="DailyRepeatType" @bind-Value="_repeat" @bind-Value:after="OnDiscreteEdited" Variant="Variant.Outlined" Class="hab-modal__field" Margin="Margin.Dense" Dense="true" aria-label="Repeats" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+                <MudSelect T="DailyRepeatType" @bind-Value="_repeat" @bind-Value:after="() => SaveNowAsync()" Variant="Variant.Outlined" Class="hab-modal__field" Margin="Margin.Dense" Dense="true" aria-label="Repeats" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
                     <MudSelectItem T="DailyRepeatType" Value="DailyRepeatType.Daily">Daily</MudSelectItem>
                     <MudSelectItem T="DailyRepeatType" Value="DailyRepeatType.Weekly">Weekly</MudSelectItem>
                     <MudSelectItem T="DailyRepeatType" Value="DailyRepeatType.Monthly">Monthly</MudSelectItem>
@@ -57,7 +57,7 @@
             <div class="hab-modal__section">
                 <span class="hab-modal__section-label">Repeat every</span>
                 <div class="edit-daily-repeat-every">
-                    <MudNumericField @bind-Value="_repeatInterval" @bind-Value:after="OnIntervalEdited" Variant="Variant.Outlined" Class="edit-daily-repeat-every__n" Min="1" Max="999" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Repeat every"/>
+                    <MudNumericField @bind-Value="_repeatInterval" @bind-Value:after="() => ScheduleSave(400)" Variant="Variant.Outlined" Class="edit-daily-repeat-every__n" Min="1" Max="999" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Repeat every"/>
                     <span class="edit-daily-repeat-every__unit">@RepeatUnitLabel()</span>
                 </div>
             </div>
@@ -90,7 +90,7 @@
                     <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path></svg>
                     Tags
                 </span>
-                <TagPicker @bind-Tags="_tags" @bind-Tags:after="OnTagsEdited" TriggerId="edit-daily-tags-trigger" @ref="_tagPicker"/>
+                <TagPicker @bind-Tags="_tags" @bind-Tags:after="() => SaveNowAsync()" TriggerId="edit-daily-tags-trigger" @ref="_tagPicker"/>
             </div>
 
             <div class="hab-modal__section" style="padding:0.7rem 0.75rem;">
@@ -136,7 +136,7 @@
                 </div>
                 <span class="hab-modal__section-label" style="margin-top:0.6rem;">Adjust the streak</span>
                 <div class="edit-daily-streak-input">
-                    <MudNumericField @bind-Value="_counter" @bind-Value:after="OnCounterEdited" Variant="Variant.Outlined" Class="edit-daily-streak-input__field" Min="0" Max="9999" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Adjust the streak"/>
+                    <MudNumericField @bind-Value="_counter" @bind-Value:after="() => ScheduleSave(400)" Variant="Variant.Outlined" Class="edit-daily-streak-input__field" Min="0" Max="9999" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Adjust the streak"/>
                 </div>
                 <button type="button" class="edit-daily-heatmap-btn" style="margin-top:0.6rem;" @onclick="OpenHeatmapDialogAsync">
                     <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" Class="edit-daily-heatmap-btn__icon" aria-hidden="true" />
@@ -145,14 +145,13 @@
                 </button>
             </div>
 
-            <EditDialogFooterActions OnArchive="ArchiveAsync" OnDelete="DeleteAsync"/>
+            <EditDialogFooterActions OnArchive="() => CloseWithAction(EditDialogAction.Archive)" OnDelete="() => CloseWithAction(EditDialogAction.Delete)"/>
         </div>
     </div>
 </DialogContent>
 </MudDialog>
 
 @code {
-#pragma warning disable S2325 // Callbacks use instance autosave helpers from the dialog base class; Sonar sees this Razor part in isolation.
     [Parameter] [EditorRequired] public required BoardItem Item { get; set; }
 
     private string _title = string.Empty;
@@ -270,14 +269,6 @@
 
         return $"Due on the selected days every {_repeatInterval} weeks.";
     }
-    private void OnTitleEdited() => ScheduleSave();
-    private void OnNotesEdited() => ScheduleSave();
-    private Task OnTagsEdited() => SaveNowAsync();
-    private void OnChecklistEdited() => ScheduleSave(300);
-    private void OnDiscreteEdited() => _ = SaveNowAsync();
-    private void OnIntervalEdited() => ScheduleSave(400);
-    private void OnCounterEdited() => ScheduleSave(400);
-
     private Task ToggleWeekday(DayOfWeek day)
     {
         _weekdays ^= 1 << (int)day;
@@ -304,8 +295,6 @@
         return new EditDailyDialogResult(action, _title.Trim(), EditDialogHelpers.CleanStringPayload(_notes), EditDialogHelpers.CleanStringPayload(_tags), start, _repeat, interval, EditDialogHelpers.SerializeChecklistRows(_checklistRows), _counter, weekdays);
     }
 
-    private void ArchiveAsync() => CloseWithAction(EditDialogAction.Archive);
-    private void DeleteAsync() => CloseWithAction(EditDialogAction.Delete);
     private async Task OpenHeatmapDialogAsync()
     {
         var parameters = new DialogParameters<DailyHeatmapDialog> { { x => x.BoardItemId, Item.Id }, { x => x.Title, string.IsNullOrWhiteSpace(_title) ? Item.Title : _title } };

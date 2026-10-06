@@ -351,26 +351,26 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
   let pendingChord = null;
   let chordTimeout = null;
 
-  var chordActions = {
+  const chordActions = {
     g: { b: "nav-board", u: "nav-upcoming", s: "nav-stats", p: "nav-settings" },
     c: { h: "create-habit", d: "create-daily", t: "create-todo" }
   };
 
-  var singleKeyActions = { h: "create-habit", d: "create-daily", t: "create-todo", s: "toggle-timer" };
+  const singleKeyActions = { h: "create-habit", d: "create-daily", t: "create-todo", s: "toggle-timer" };
 
   function invokeShortcutAction(action) {
-    var helper = layoutHelper || boardHelper;
+    const helper = layoutHelper || boardHelper;
     if (helper) {
       helper.invokeMethodAsync("OnShortcutAction", action).catch(function () {});
     }
   }
 
   function handlePendingChord(e, key) {
-    var prefix = pendingChord;
+    const prefix = pendingChord;
     clearTimeout(chordTimeout);
     pendingChord = null;
-    var actions = chordActions[prefix];
-    var action = actions ? actions[key] : null;
+    const actions = chordActions[prefix];
+    const action = actions ? actions[key] : null;
     if (action) {
       e.preventDefault();
       invokeShortcutAction(action);
@@ -395,7 +395,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     if (key === 'n') {
       return focusAddInput(e);
     }
-    var action = singleKeyActions[key];
+    const action = singleKeyActions[key];
     if (action) {
       e.preventDefault();
       invokeShortcutAction(action);
@@ -442,7 +442,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
   }
 
   function handleCmdK(e, helper, modalOpen) {
-    var isCmdK = (e.ctrlKey || e.metaKey) && matchesKey(e, 'KeyK', 'k');
+    const isCmdK = (e.ctrlKey || e.metaKey) && matchesKey(e, 'KeyK', 'k');
     if (!isCmdK) {
       return false;
     }
@@ -457,7 +457,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
   }
 
   function handleCtrlShortcut(e, helper, modalOpen, code, keyLower, action) {
-    var isMatch = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && matchesKey(e, code, keyLower);
+    const isMatch = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && matchesKey(e, code, keyLower);
     if (!isMatch) {
       return false;
     }
@@ -470,7 +470,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
   }
 
   function handleAltT(e, helper, modalOpen) {
-    var isAltT = e.altKey && !e.ctrlKey && !e.metaKey && matchesKey(e, 'KeyT', 't');
+    const isAltT = e.altKey && !e.ctrlKey && !e.metaKey && matchesKey(e, 'KeyT', 't');
     if (!isAltT) {
       return false;
     }
@@ -483,7 +483,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
   }
 
   function handleUndo(e, modalOpen) {
-    var isUndo = (e.ctrlKey || e.metaKey) && !e.shiftKey && matchesKey(e, 'KeyZ', 'z');
+    const isUndo = (e.ctrlKey || e.metaKey) && !e.shiftKey && matchesKey(e, 'KeyZ', 'z');
     if (!isUndo) {
       return false;
     }

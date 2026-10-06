@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Globalization;
 
 using App.Shared.RCL;
 using App.Shared.RCL.Models;
@@ -83,12 +84,20 @@ public sealed class BoardPersistenceService(
         var (entity, conflict) = await LoadAndCheckAsync(userId, section, itemId, expectedUpdatedAtUtc, cancellationToken);
         if (entity is null || conflict is not null)
         {
+            var outcome = conflict is not null ? "conflict" : "not_found";
+            AppTelemetry.RecordMutation(section.ToString(), outcome);
+            if (conflict is not null)
+            {
+                AppTelemetry.RecordConflict(section.ToString());
+            }
+
             return conflict ?? new BoardMutationResult(BoardMutationStatus.NotFound, null);
         }
 
         entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
         if (!await mutate(entity))
         {
+            AppTelemetry.RecordMutation(section.ToString(), "not_found");
             return new BoardMutationResult(BoardMutationStatus.NotFound, null);
         }
 
@@ -99,11 +108,14 @@ public sealed class BoardPersistenceService(
         catch (DbUpdateConcurrencyException)
         {
             DiscardPendingMutationChanges();
+            AppTelemetry.RecordMutation(section.ToString(), "conflict");
+            AppTelemetry.RecordConflict(section.ToString());
             return await BuildConflictFromDatabaseAsync(userId, section, itemId, cancellationToken);
         }
 
         var model = toModel is null ? null : await toModel(entity);
         await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+        AppTelemetry.RecordMutation(section.ToString(), "ok");
         return new BoardMutationResult(BoardMutationStatus.Ok, model);
     }
 
@@ -174,20 +186,69 @@ public sealed class BoardPersistenceService(
         return (entity, null);
     }
 
+    public const int SyncDefaultPageSize = 1000;
+    public const int SyncMaxPageSize = 5000;
+    public const int SnapshotMaxLimit = 10000;
+
     public async Task<BoardSyncDelta> GetSyncDeltaAsync(
         Guid userId,
         DateTimeOffset cursorExclusive,
         CancellationToken cancellationToken = default)
     {
+        return await GetSyncDeltaAsync(userId, cursorExclusive.ToString("O"), null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Paged incremental changes. <paramref name="cursorRaw"/> is either a legacy ISO-8601
+    /// watermark or a <c>watermark|id</c> composite returned for a truncated page.
+    /// Pages hold at most <paramref name="limitRaw"/> rows (default 1000, max 5000).
+    /// A truncated page returns a composite cursor; a complete page returns a plain watermark.
+    /// </summary>
+    public async Task<BoardSyncDelta> GetSyncDeltaAsync(
+        Guid userId,
+        string cursorRaw,
+        int? limitRaw,
+        CancellationToken cancellationToken = default)
+    {
+        var (cursorTs, cursorId) = ParseSyncCursor(cursorRaw);
+        var limit = Math.Clamp(limitRaw ?? SyncDefaultPageSize, 1, SyncMaxPageSize);
+
+        using var activity = AppTelemetry.Activity.StartActivity("board.sync_delta");
         await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var changed = await readDb.BoardItems
+
+        // Watermark per row: deletion time for tombstones, update time otherwise.
+        // Same-watermark rows are resolved in memory by id so no Guid ordering
+        // comparison is pushed to the database provider.
+        var newer = await readDb.BoardItems
             .AsNoTracking()
             .Where(x => x.UserId == userId
-                        && ((x.DeletedAtUtc == null && x.UpdatedAtUtc > cursorExclusive)
-                            || (x.DeletedAtUtc != null && x.DeletedAtUtc > cursorExclusive)))
-            .OrderBy(x => x.UpdatedAtUtc)
+                        && (x.DeletedAtUtc != null ? x.DeletedAtUtc.Value : x.UpdatedAtUtc) > cursorTs)
+            .OrderBy(x => x.DeletedAtUtc != null ? x.DeletedAtUtc.Value : x.UpdatedAtUtc)
             .ThenBy(x => x.Id)
+            .Take(limit + 1)
             .ToListAsync(cancellationToken);
+
+        List<BoardItemEntity> boundary = [];
+        if (cursorId is { } lastId)
+        {
+            boundary = (await readDb.BoardItems
+                    .AsNoTracking()
+                    .Where(x => x.UserId == userId
+                                && (x.DeletedAtUtc != null ? x.DeletedAtUtc.Value : x.UpdatedAtUtc) == cursorTs)
+                    .OrderBy(x => x.Id)
+                    .ToListAsync(cancellationToken))
+                .Where(x => x.Id.CompareTo(lastId) > 0)
+                .ToList();
+        }
+
+        var merged = newer
+            .Concat(boundary)
+            .OrderBy(x => x.DeletedAtUtc != null ? x.DeletedAtUtc.Value : x.UpdatedAtUtc)
+            .ThenBy(x => x.Id)
+            .Take(limit + 1)
+            .ToList();
+        var truncated = merged.Count > limit;
+        var changed = truncated ? merged.Take(limit).ToList() : merged;
 
         var upserts = new List<BoardSyncItem>();
         var deletedIds = new List<Guid>();
@@ -210,8 +271,33 @@ public sealed class BoardPersistenceService(
             next = MaxCursor(next, row.UpdatedAtUtc);
         }
 
-        var nextCursor = (next ?? cursorExclusive).ToString("O");
+        string nextCursor;
+        if (!truncated)
+        {
+            nextCursor = (next ?? cursorTs).ToString("O");
+        }
+        else
+        {
+            var last = changed[^1];
+            var lastWatermark = last.DeletedAtUtc ?? last.UpdatedAtUtc;
+            nextCursor = $"{lastWatermark:O}|{last.Id:D}";
+        }
+
+        AppTelemetry.RecordSyncDelta(upserts.Count, deletedIds.Count);
         return new BoardSyncDelta(upserts, deletedIds, nextCursor);
+    }
+
+    private static (DateTimeOffset Watermark, Guid? LastId) ParseSyncCursor(string cursorRaw)
+    {
+        var separator = cursorRaw.IndexOf('|');
+        if (separator < 0)
+        {
+            return (DateTimeOffset.Parse(cursorRaw, CultureInfo.InvariantCulture), null);
+        }
+
+        var watermark = DateTimeOffset.Parse(cursorRaw[..separator], CultureInfo.InvariantCulture);
+        var lastId = Guid.Parse(cursorRaw[(separator + 1)..]);
+        return (watermark, lastId);
     }
 
     private static DateTimeOffset? MaxCursor(DateTimeOffset? a, DateTimeOffset b) => a is null || b > a ? b : a;
@@ -237,26 +323,46 @@ public sealed class BoardPersistenceService(
 
     public async Task<BoardSnapshot> GetSnapshotAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        if (snapshotCache.TryGet(userId, out var cached))
+        return await GetSnapshotAsync(userId, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Full board mirror. An explicit <paramref name="limit"/> caps rows for paged
+    /// consumers and bypasses the per-user cache; callers without a limit get the
+    /// cached full mirror as before.
+    /// </summary>
+    public async Task<BoardSnapshot> GetSnapshotAsync(Guid userId, int? limit, CancellationToken cancellationToken = default)
+    {
+        using var activity = AppTelemetry.Activity.StartActivity("board.snapshot");
+        if (limit is null && snapshotCache.TryGet(userId, out var cached))
         {
+            AppTelemetry.RecordSnapshotCache(hit: true);
             return cached;
         }
 
+        AppTelemetry.RecordSnapshotCache(hit: false);
         await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var items = await LiveBoardItems(readDb, userId)
+        var query = LiveBoardItems(readDb, userId)
             .AsNoTracking()
             .OrderBy(x => x.SortOrder)
             .ThenBy(x => x.CreatedAtUtc)
-            .ThenBy(x => x.Id)
-            .ToListAsync(cancellationToken);
+            .ThenBy(x => x.Id);
+        var items = limit is { } take
+            ? await query.Take(Math.Clamp(take, 1, SnapshotMaxLimit)).ToListAsync(cancellationToken)
+            : await query.ToListAsync(cancellationToken);
 
         var (today, dayStart) = await TodayAndDayStartAsync(userId, cancellationToken);
         var dailies = items.Where(x => x.Section == BoardSection.Daily).ToList();
         var dailyStreaks = await streakCalculator.BuildDailyStreakMapAsync(userId, dailies, today, dayStart, readDb, cancellationToken);
         var snapshot = BuildSnapshot(items, today, dailyStreaks);
-        snapshotCache.Set(userId, snapshot);
-        var streakMap = new Dictionary<Guid, int>(dailyStreaks);
-        streakCache.Set(userId, streakMap);
+        if (limit is null)
+        {
+            snapshotCache.Set(userId, snapshot);
+            var streakMap = new Dictionary<Guid, int>(dailyStreaks);
+            streakCache.Set(userId, streakMap);
+        }
+
+        AppTelemetry.RecordSnapshot(snapshot.Habits.Count + snapshot.Dailies.Count + snapshot.Todos.Count);
         return snapshot;
     }
 
@@ -435,14 +541,21 @@ public sealed class BoardPersistenceService(
 
     public async Task<BoardSnapshot> GetArchivedSnapshotAsync(Guid userId, CancellationToken cancellationToken = default)
     {
+        return await GetArchivedSnapshotAsync(userId, null, cancellationToken);
+    }
+
+    public async Task<BoardSnapshot> GetArchivedSnapshotAsync(Guid userId, int? limit, CancellationToken cancellationToken = default)
+    {
         await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var items = await readDb.BoardItems
+        var query = readDb.BoardItems
             .AsNoTracking()
             .Where(x => x.UserId == userId && x.DeletedAtUtc == null && x.IsArchived)
             .OrderBy(x => x.SortOrder)
             .ThenBy(x => x.CreatedAtUtc)
-            .ThenBy(x => x.Id)
-            .ToListAsync(cancellationToken);
+            .ThenBy(x => x.Id);
+        var items = limit is { } take
+            ? await query.Take(Math.Clamp(take, 1, SnapshotMaxLimit)).ToListAsync(cancellationToken)
+            : await query.ToListAsync(cancellationToken);
 
         var today = await TodayAsync(userId, cancellationToken);
         return BuildSnapshot(items, today, EmptyDailyStreaks);

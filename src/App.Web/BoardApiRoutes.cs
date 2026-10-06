@@ -21,7 +21,8 @@ internal static class BoardApiRoutes
         var boardApi = app.MapGroup("/api/board")
             .DisableAntiforgery()
             .RequireAuthorization("BoardOrJwt")
-            .RequireRateLimiting("api");
+            .RequireRateLimiting("api")
+            .WithDtoValidation();
 
         MapReadRoutes(boardApi);
         MapGeneralMutationRoutes(boardApi);
@@ -35,8 +36,13 @@ internal static class BoardApiRoutes
         boardApi.MapGet("/",
             async (HttpContext http, CurrentUserId user, BoardPersistenceService boardPersistenceService) =>
             {
+                if (!TryParseLimit(http.Request, out var limit, out var limitError))
+                {
+                    return Results.BadRequest(new { detail = limitError });
+                }
+
                 http.Response.Headers["X-Board-Protocol-Version"] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                var snapshot = await boardPersistenceService.GetSnapshotAsync(user.Value);
+                var snapshot = await boardPersistenceService.GetSnapshotAsync(user.Value, limit);
                 return Results.Json(snapshot, Json);
             });
 
@@ -51,20 +57,43 @@ internal static class BoardApiRoutes
                     return Results.BadRequest(new { detail = "Query parameter 'cursor' is required (ISO 8601 watermark)." });
                 }
 
-                if (!DateTimeOffset.TryParse(cursorRaw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var cursor))
+                int? limit = null;
+                var limitRaw = request.Query["limit"].FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(limitRaw))
                 {
-                    return Results.BadRequest(new { detail = "Invalid cursor; expected ISO-8601 DateTimeOffset." });
+                    if (!int.TryParse(limitRaw, CultureInfo.InvariantCulture, out var parsed)
+                        || parsed < 1
+                        || parsed > BoardPersistenceService.SyncMaxPageSize)
+                    {
+                        return Results.BadRequest(new { detail = $"Invalid limit; expected an integer between 1 and {BoardPersistenceService.SyncMaxPageSize}." });
+                    }
+
+                    limit = parsed;
                 }
 
-                var delta = await boardPersistenceService.GetSyncDeltaAsync(user.Value, cursor, cancellationToken);
+                BoardSyncDelta delta;
+                try
+                {
+                    delta = await boardPersistenceService.GetSyncDeltaAsync(user.Value, cursorRaw, limit, cancellationToken);
+                }
+                catch (FormatException)
+                {
+                    return Results.BadRequest(new { detail = "Invalid cursor; expected ISO-8601 DateTimeOffset or a server-issued page cursor." });
+                }
+
                 return Results.Json(delta, Json);
             });
 
         boardApi.MapGet("/archived",
             async (HttpContext http, CurrentUserId user, BoardPersistenceService boardPersistenceService) =>
             {
+                if (!TryParseLimit(http.Request, out var limit, out var limitError))
+                {
+                    return Results.BadRequest(new { detail = limitError });
+                }
+
                 http.Response.Headers["X-Board-Protocol-Version"] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                var snapshot = await boardPersistenceService.GetArchivedSnapshotAsync(user.Value);
+                var snapshot = await boardPersistenceService.GetArchivedSnapshotAsync(user.Value, limit);
                 return Results.Json(snapshot, Json);
             });
 
@@ -76,6 +105,28 @@ internal static class BoardApiRoutes
                 var streaks = await boardPersistenceService.GetDailyStreakMapAsync(user.Value, cancellationToken);
                 return Results.Json(streaks, Json);
             });
+    }
+
+    private static bool TryParseLimit(HttpRequest request, out int? limit, out string? error)
+    {
+        limit = null;
+        error = null;
+        var raw = request.Query["limit"].FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return true;
+        }
+
+        if (!int.TryParse(raw, CultureInfo.InvariantCulture, out var parsed)
+            || parsed < 1
+            || parsed > BoardPersistenceService.SnapshotMaxLimit)
+        {
+            error = $"Invalid limit; expected an integer between 1 and {BoardPersistenceService.SnapshotMaxLimit}.";
+            return false;
+        }
+
+        limit = parsed;
+        return true;
     }
 
     private static void MapGeneralMutationRoutes(RouteGroupBuilder boardApi)

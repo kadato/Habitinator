@@ -68,6 +68,47 @@ public sealed class LocalFirstBoardSyncTests
     }
 
     [Fact]
+    public async Task PullMirrorAsync_PagedDelta_MergesPagesAndStoresFinalCursor()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        await harness.Store.SetMetaAsync(new BoardStoreMeta
+        {
+            BoundUserKey = Harness.UserKey,
+            LastSyncCursorUtc = DateTimeOffset.UtcNow.AddHours(-1).ToString("O"),
+            LastFullMirrorUtc = DateTimeOffset.UtcNow
+        }, ct);
+
+        var pageSize = RemoteBoardDataService.SyncPageSize;
+        var firstPage = Enumerable.Range(0, pageSize)
+            .Select(i => new BoardSyncItem(BoardSection.Todo, new BoardItem(Guid.NewGuid(), $"Paged {i}")))
+            .ToList();
+        var lastItem = new BoardItem(Guid.NewGuid(), "Paged last");
+        var cursor1 = DateTimeOffset.UtcNow.ToString("O");
+        var cursor2 = DateTimeOffset.UtcNow.AddMinutes(1).ToString("O");
+        var calls = 0;
+        harness.Server.Responder = request =>
+        {
+            if (!request.RequestUri!.AbsolutePath.EndsWith("/api/board/sync", StringComparison.Ordinal))
+            {
+                return JsonResponse(HttpStatusCode.OK, new BoardSnapshot([], [], []));
+            }
+
+            calls++;
+            return calls == 1
+                ? JsonResponse(HttpStatusCode.OK, new BoardSyncDelta(firstPage, [], cursor1))
+                : JsonResponse(HttpStatusCode.OK, new BoardSyncDelta([new BoardSyncItem(BoardSection.Todo, lastItem)], [], cursor2));
+        };
+
+        var ok = await harness.Board.TryPullRemoteMirrorAsync(ct);
+
+        ok.Should().BeTrue();
+        calls.Should().Be(2);
+        (await harness.Board.GetSnapshotAsync(ct)).Todos.Should().HaveCount(pageSize + 1);
+        (await harness.Store.GetMetaAsync()).LastSyncCursorUtc.Should().Be(cursor2);
+    }
+
+    [Fact]
     public async Task PullMirrorAsync_FreshFullMirror_UsesDelta()
     {
         var harness = new Harness();

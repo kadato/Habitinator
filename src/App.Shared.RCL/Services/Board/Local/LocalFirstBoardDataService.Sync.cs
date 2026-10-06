@@ -1,4 +1,5 @@
 using App.Shared.RCL.Models;
+using App.Shared.RCL.Services.Remote;
 
 using Microsoft.Extensions.Logging;
 
@@ -50,37 +51,65 @@ public sealed partial class LocalFirstBoardDataService
 
     private async Task<(bool HasResult, bool Success)> TryPullDeltaMirrorAsync(string userKey, string cursor, CancellationToken cancellationToken)
     {
-        BoardSyncDelta? delta;
-        try
-        {
-            delta = await remote.TryGetSyncDeltaAsync(cursor, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogDebug(ex, "Sync delta pull failed; falling back to a full snapshot.");
-            return (true, false);
-        }
+        // Pull paged deltas and merge them before applying so a large backlog
+        // never arrives as one huge payload. Pages share one apply so skip-id
+        // filtering and the stored cursor stay consistent.
+        var items = new List<BoardSyncItem>();
+        var deleted = new List<Guid>();
+        var finalCursor = cursor;
+        string? pageCursor = cursor;
 
-        if (delta is null)
+        for (var page = 0; page < RemoteBoardDataService.SyncMaxPages; page++)
         {
-            await _gate.WaitAsync(cancellationToken);
+            BoardSyncDelta? pageDelta;
             try
             {
-                var meta = await store.GetMetaAsync(cancellationToken);
-                meta.LastSyncCursorUtc = null;
-                await store.SetMetaAsync(meta, cancellationToken);
+                pageDelta = await remote.TryGetSyncDeltaAsync(pageCursor, RemoteBoardDataService.SyncPageSize, cancellationToken);
             }
-            finally
+            catch (OperationCanceledException)
             {
-                _gate.Release();
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Sync delta pull failed; falling back to a full snapshot.");
+                return (true, false);
             }
 
-            return (false, false);
+            if (pageDelta is null)
+            {
+                if (page == 0)
+                {
+                    await _gate.WaitAsync(cancellationToken);
+                    try
+                    {
+                        var meta = await store.GetMetaAsync(cancellationToken);
+                        meta.LastSyncCursorUtc = null;
+                        await store.SetMetaAsync(meta, cancellationToken);
+                    }
+                    finally
+                    {
+                        _gate.Release();
+                    }
+
+                    return (false, false);
+                }
+
+                break;
+            }
+
+            items.AddRange(pageDelta.Items);
+            deleted.AddRange(pageDelta.DeletedItemIds);
+            finalCursor = pageDelta.NextCursor;
+            if (pageDelta.Items.Count + pageDelta.DeletedItemIds.Count < RemoteBoardDataService.SyncPageSize)
+            {
+                break;
+            }
+
+            pageCursor = pageDelta.NextCursor;
         }
+
+        var delta = new BoardSyncDelta(items, deleted, finalCursor);
 
         await _gate.WaitAsync(cancellationToken);
         try

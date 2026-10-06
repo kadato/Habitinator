@@ -78,10 +78,18 @@ public sealed class RemoteBoardDataService : IBoardDataService
         throw new BoardRemoteConflictException(body, res.Headers.Date);
     }
 
+    public const int SyncPageSize = 500;
+    public const int SyncMaxPages = 10;
+
     public async Task<BoardSyncDelta?> TryGetSyncDeltaAsync(string cursor, CancellationToken cancellationToken = default)
     {
+        return await TryGetSyncDeltaAsync(cursor, SyncPageSize, cancellationToken);
+    }
+
+    public async Task<BoardSyncDelta?> TryGetSyncDeltaAsync(string cursor, int limit, CancellationToken cancellationToken = default)
+    {
         using var res = await Client.GetAsync(
-            $"api/board/sync?cursor={Uri.EscapeDataString(cursor)}",
+            $"api/board/sync?cursor={Uri.EscapeDataString(cursor)}&limit={limit}",
             cancellationToken);
         if (res.StatusCode == HttpStatusCode.BadRequest)
         {
@@ -160,7 +168,7 @@ public sealed class RemoteBoardDataService : IBoardDataService
         catch (HttpRequestException ex)
         {
             throw new InvalidOperationException(
-                "Could not reach the API. Start App.Web, then try again. On the Android emulator use base URL http://10.0.2.2:5033 because 127.0.0.1 is the emulator itself.",
+                "Could not reach the API. Start App.Web, then try again. On the Android emulator use base URL http://10.0.2.2:5050 because 127.0.0.1 is the emulator itself.",
                 ex);
         }
     }

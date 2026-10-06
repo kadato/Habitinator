@@ -114,7 +114,6 @@ public sealed class CommandPaletteService : ICommandPaletteService
         _timers.AddTimerActionCommands(list);
         _navigation.AddYesterdayRetroCommand(list);
         _exportCommands.AddExportCommand(list);
-        _navigation.AddOnboardingCommand(list);
         _navigation.AddAppearanceCommands(list);
         return Task.FromResult(list);
     }

@@ -111,18 +111,6 @@ internal sealed class NavigationPaletteCommands(
             Keywords: ["yesterday", "retro", "dailies", "checkin", "backdate", "review"]));
     }
 
-    public void AddOnboardingCommand(List<CommandItem> list)
-    {
-        list.Add(new(
-            Id: "action-onboarding",
-            Title: "Getting started guide",
-            Subtitle: "View welcome tutorial and key shortcuts",
-            Category: "Actions",
-            Icon: Icons.Material.Filled.HelpOutline,
-            Action: OpenOnboardingAsync,
-            Keywords: ["guide", "help", "tutorial", "onboarding", "welcome", "shortcuts"]));
-    }
-
     public void AddAppearanceCommands(List<CommandItem> list)
     {
         list.Add(new(
@@ -223,11 +211,6 @@ internal sealed class NavigationPaletteCommands(
         }
     }
 
-    private async Task OpenOnboardingAsync()
-    {
-        _close();
-        await _dialogs.ShowAsync<OnboardingDialog>(string.Empty, DialogDefaults.SmallEditor);
-    }
     private async Task ToggleKeyboardShortcutsAsync()
     {
         _close();

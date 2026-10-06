@@ -1,4 +1,4 @@
-// Column filter state + onboarding flags + data export download, persisted in localStorage.
+// Column filter state + data export download, persisted in localStorage.
 globalThis.habitinatorGetColumnFilterState = function (key) {
     try {
         const raw = window.localStorage.getItem(key);
@@ -14,27 +14,6 @@ globalThis.habitinatorSetColumnFilterState = function (key, value) {
             window.localStorage.removeItem(key);
         } else {
             window.localStorage.setItem(key, JSON.stringify(value));
-        }
-        return true;
-    } catch {
-        return false;
-    }
-};
-
-globalThis.habitinatorGetOnboardingDone = function (key) {
-    try {
-        return window.localStorage.getItem(key) === '1';
-    } catch {
-        return false;
-    }
-};
-
-globalThis.habitinatorSetOnboardingDone = function (key, done) {
-    try {
-        if (done) {
-            window.localStorage.setItem(key, '1');
-        } else {
-            window.localStorage.removeItem(key);
         }
         return true;
     } catch {

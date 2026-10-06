@@ -200,7 +200,6 @@ public sealed class CommandPaletteTests : IAsyncDisposable
         rootCommands.Should().Contain(c => c.Id == "action-manage-items");
         rootCommands.Should().Contain(c => c.Id == "action-export-data");
         rootCommands.Should().Contain(c => c.Id == "action-yesterday-retro");
-        rootCommands.Should().Contain(c => c.Id == "action-onboarding");
         rootCommands.Should().Contain(c => c.Id == "timer-toggle-pomodoro");
         rootCommands.Should().Contain(c => c.Id == "nav-settings-account");
         rootCommands.Should().Contain(c => c.Id == "nav-settings-notifications");

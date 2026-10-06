@@ -3,6 +3,7 @@
 using System.Globalization;
 
 using App.Shared.RCL.Components.Dialogs;
+using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 
 using Bunit;
@@ -25,6 +26,7 @@ public sealed class DailyHeatmapDialogTests : IAsyncDisposable
     private readonly IUserTimeZoneService _timeZoneService = Substitute.For<IUserTimeZoneService>();
     private readonly IUserDateFormatService _dateFormatService = Substitute.For<IUserDateFormatService>();
     private readonly IUserNotifier _notifier = Substitute.For<IUserNotifier>();
+    private readonly IBoardDataService _boardData = Substitute.For<IBoardDataService>();
 
     public DailyHeatmapDialogTests()
     {
@@ -34,6 +36,7 @@ public sealed class DailyHeatmapDialogTests : IAsyncDisposable
         _ctx.Services.AddSingleton(_timeZoneService);
         _ctx.Services.AddSingleton(_dateFormatService);
         _ctx.Services.AddSingleton<IUserNotifier>(_notifier);
+        _ctx.Services.AddSingleton(_boardData);
 
         _timeZoneService.LocalToday.Returns(new DateOnly(2026, 8, 12));
         _dateFormatService.DateFormat.Returns("yyyy-MM-dd");
@@ -191,7 +194,46 @@ public sealed class DailyHeatmapDialogTests : IAsyncDisposable
         provider.Render();
 
         provider.Markup.Should().NotContain("stats-daily-due");
-        provider.Markup.Should().Contain("Not due");
+        provider.Markup.Should().Contain("Not scheduled");
+        provider.Markup.Should().NotContain("Not due");
+    }
+
+    [Fact]
+    public async Task Labels_non_due_days_with_repeat_cadence()
+    {
+        var itemId = Guid.NewGuid();
+        var date = new DateOnly(2026, 8, 11);
+        var cells = new List<ActivityHeatmapCellDto>
+        {
+            new(0, 0, date, 0, 0, true, Due: false)
+        };
+        var graphs = new List<DailyContributionGraphDto>
+        {
+            new(itemId, "Gym", cells, 52, 0, ["r370"])
+        };
+        var dto = new DailyContributionsViewDto("r370", [new("r370", "Last 370 days")], graphs, date.AddDays(-30), date);
+        _stats.GetDailyContributionsAsync("r370", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(dto));
+        _boardData.GetItemAsync(itemId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<BoardItem?>(new BoardItem(
+                itemId,
+                "Gym",
+                DailyStartDate: new DateOnly(2026, 8, 3),
+                DailyRepeat: DailyRepeatType.Weekly)));
+
+        var provider = _ctx.Render<MudDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+        var parameters = new DialogParameters<DailyHeatmapDialog>
+        {
+            { x => x.BoardItemId, itemId },
+            { x => x.Title, "Gym" }
+        };
+
+        await provider.InvokeAsync(async () => await dialogService.ShowAsync<DailyHeatmapDialog>(string.Empty, parameters));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Not scheduled (weekly)"), TimeSpan.FromSeconds(5));
+
+        provider.Markup.Should().Contain("Not scheduled");
+        provider.Markup.Should().NotContain("Not due");
     }
 
     [Fact]

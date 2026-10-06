@@ -323,7 +323,7 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task Lists_scheduled_dailies_with_retro_actions_when_no_item_selected()
+    public async Task Omits_day_section_when_no_item_selected()
     {
         var today = DailySchedule.LocalToday(_timeZoneService);
         var past = today.AddDays(-2);
@@ -347,17 +347,15 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         };
 
         await provider.InvokeAsync(async () => await dialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters));
-        await provider.WaitForStateAsync(() => provider.Markup.Contains("Dailies this day"), TimeSpan.FromSeconds(5));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("No activity this day"), TimeSpan.FromSeconds(5));
 
-        provider.Markup.Should().Contain("Workout");
-        var mark = provider.FindAll("button").First(b => b.TextContent.Contains("Mark done"));
-        await provider.InvokeAsync(() => mark.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
-
-        await _boardData.Received(1).CompleteDailyForDateAsync(itemId, past, Arg.Any<CancellationToken>());
+        provider.Markup.Should().NotContain("Dailies this day");
+        provider.Markup.Should().NotContain("Workout");
+        await _boardData.DidNotReceive().CompleteDailyForDateAsync(Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Skips_scheduled_daily_from_day_section_when_no_item_selected()
+    public async Task Shows_no_day_section_actions_without_item_selected()
     {
         var today = DailySchedule.LocalToday(_timeZoneService);
         var past = today.AddDays(-3);
@@ -381,12 +379,10 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         };
 
         await provider.InvokeAsync(async () => await dialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters));
-        await provider.WaitForStateAsync(() => provider.Markup.Contains("Dailies this day"), TimeSpan.FromSeconds(5));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("No activity this day"), TimeSpan.FromSeconds(5));
 
-        var skip = provider.FindAll("button").First(b => b.TextContent.Contains("Skip"));
-        await provider.InvokeAsync(() => skip.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
-
-        await _boardData.Received(1).SkipDailyForDateAsync(itemId, past, Arg.Any<CancellationToken>());
+        provider.Markup.Should().NotContain("Dailies this day");
+        await _boardData.DidNotReceive().SkipDailyForDateAsync(Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -435,7 +431,7 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task Shows_day_section_when_item_lookup_fails()
+    public async Task Omits_day_section_when_item_lookup_fails()
     {
         var today = DailySchedule.LocalToday(_timeZoneService);
         var past = today.AddDays(-4);
@@ -461,11 +457,10 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         };
 
         await provider.InvokeAsync(async () => await dialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters));
-        await provider.WaitForStateAsync(() => provider.Markup.Contains("Dailies this day"), TimeSpan.FromSeconds(5));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("No activity this day"), TimeSpan.FromSeconds(5));
 
-        provider.Markup.Should().Contain("Workout");
-        provider.Markup.Should().Contain("Mark done");
-        provider.Markup.Should().Contain("Skip");
+        provider.Markup.Should().NotContain("Dailies this day");
+        provider.Markup.Should().NotContain("Workout");
     }
 
     [Fact]

@@ -4,6 +4,7 @@
 @using Microsoft.JSInterop
 @using Microsoft.Extensions.DependencyInjection
 @inject IActivityStatisticsReader Stats
+@inject IBoardDataService BoardData
 @inject IUserTimeZoneService TimeZoneService
 @inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
@@ -15,7 +16,7 @@
 
 <MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content">
     <DialogContent>
-        <div class="hab-modal hab-modal--daily hab-modal--wide hab-modal--heatmap" data-dialog-label="Daily heatmap" @onclick:stopPropagation="true">
+        <div class="hab-modal hab-modal--daily hab-modal--wide hab-modal--heatmap" data-dialog-label="Daily heatmap" aria-label="Daily heatmap" role="group" @onclick:stopPropagation="true">
             <div class="hab-modal__header">
                 <div class="hab-modal__topbar hab-modal__topbar--minimal">
                     <DialogCloseButton OnClose="CloseDialog" />
@@ -29,10 +30,10 @@
                 </div>
                 @if (_periodOptions.Count > 1)
                 {
-                    <div class="stats-segment mt-3" role="tablist" aria-label="Period">
+                    <div class="stats-segment mt-3" role="group" aria-label="Period">
                         @foreach (var opt in _periodOptions)
                         {
-                            <button type="button" role="tab" @attributes="GetPeriodTabAttrs(opt.Key)" class="stats-segment__btn @(_selectedPeriodKey == opt.Key ? "stats-segment__btn--active" : string.Empty)" @onclick="() => OnPeriodChangedAsync(opt.Key)">@opt.Label</button>
+                            <button type="button" @attributes="GetPeriodTabAttrs(opt.Key)" class="stats-segment__btn @(_selectedPeriodKey == opt.Key ? "stats-segment__btn--active" : string.Empty)" @onclick="() => OnPeriodChangedAsync(opt.Key)">@opt.Label</button>
                         }
                     </div>
                 }
@@ -73,7 +74,7 @@
                     <div class="daily-heatmap-legend">
                         <span class="daily-heatmap-legend__item"><span class="daily-heatmap-legend__sw daily-heatmap-legend__sw--done"></span>Done</span>
                         <span class="daily-heatmap-legend__item"><span class="daily-heatmap-legend__sw daily-heatmap-legend__sw--due"></span>Due</span>
-                        <span class="daily-heatmap-legend__item"><span class="daily-heatmap-legend__sw daily-heatmap-legend__sw--open"></span>Not due</span>
+                        <span class="daily-heatmap-legend__item"><span class="daily-heatmap-legend__sw daily-heatmap-legend__sw--open"></span>Not scheduled</span>
                     </div>
                 }
                 else
@@ -104,8 +105,29 @@
     private string? _error;
     private DateOnly _heatmapToday;
     private bool _mutatedBelow;
+    private BoardItem? _scheduleItem;
 
     private string DisplayTitle => string.IsNullOrWhiteSpace(Title) ? "Daily" : Title;
+
+    /// <summary>Repeat cadence for non scheduled day labels, like weekly. Null when the item cannot be loaded.</summary>
+    private string? ScheduleCadence
+    {
+        get
+        {
+            if (_scheduleItem is null)
+            {
+                return null;
+            }
+
+            return _scheduleItem.DailyRepeat switch
+            {
+                DailyRepeatType.Weekly => "weekly",
+                DailyRepeatType.Monthly => "monthly",
+                DailyRepeatType.Yearly => "yearly",
+                _ => _scheduleItem.DailyRepeatInterval <= 1 ? "daily" : $"every {_scheduleItem.DailyRepeatInterval} days"
+            };
+        }
+    }
     private string RatioLabel
     {
         get
@@ -131,7 +153,21 @@
     {
         await DateFormatService.InitializeAsync();
         _heatmapToday = DailySchedule.LocalToday(TimeZoneService);
+        await LoadScheduleItemAsync();
         await LoadDataAsync();
+    }
+
+    private async Task LoadScheduleItemAsync()
+    {
+        try
+        {
+            _scheduleItem = await BoardData.GetItemAsync(BoardItemId);
+        }
+        catch
+        {
+            // Labels fall back to generic wording when the item cannot be loaded.
+            _scheduleItem = null;
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -259,7 +295,7 @@
 
     private Dictionary<string, object> GetPeriodTabAttrs(string key) => new()
     {
-        { "aria-selected", _selectedPeriodKey == key ? "true" : "false" }
+        { "aria-pressed", _selectedPeriodKey == key ? "true" : "false" }
     };
     private bool IsHeatmapToday(DateOnly date) => date == _heatmapToday;
     private string DailyHeatmapCellClass(ActivityHeatmapCellDto cell)
@@ -277,16 +313,21 @@
         string status;
         if (cell.Count > 0)
         {
-            status = cell.Due ? "Done" : "Done, not due";
+            status = cell.Due ? "Done" : NotScheduledLabel("Done, not scheduled");
         }
         else
         {
-            status = cell.Due ? "Due, not done" : "Not due";
+            status = cell.Due ? "Due, not done" : NotScheduledLabel("Not scheduled");
         }
 
         var dateStr = DateFormatService.Format(cell.Date);
         var baseTitle = $"{dateStr}, {status}";
         return IsHeatmapToday(cell.Date) ? $"Today, {baseTitle}" : baseTitle;
+    }
+
+    private string NotScheduledLabel(string plain)
+    {
+        return ScheduleCadence is { } cadence ? $"{plain} ({cadence})" : plain;
     }
     private async Task OnCellClickAsync(int row, int col)
     {

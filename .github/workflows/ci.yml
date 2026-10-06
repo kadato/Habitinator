@@ -60,6 +60,11 @@ jobs:
       - name: Build
         run: dotnet build Habitinator.slnx --configuration Release
 
+      - name: WASM size budget
+        run: |
+          dotnet publish src/App.Web.Client/App.Web.Client.csproj --configuration Release -o "${{ runner.temp }}/wasm-budget"
+          bash tools/wasm-size-budget/check.sh "${{ runner.temp }}/wasm-budget/wwwroot/_framework"
+
       - name: Test App.Shared.Tests
         id: test_shared
         continue-on-error: true

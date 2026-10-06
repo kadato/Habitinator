@@ -1,7 +1,32 @@
 <linker>
-  <!-- MudBlazor uses reflection for component discovery -->
+  <!-- MudBlazor renders components dynamically (dialogs, menus, snackbars) via
+       reflection-based discovery. Keep the assembly root until MudBlazor ships
+       full trimming annotations for these paths. -->
   <assembly fullname="MudBlazor" />
-  <!-- Keep all app types -->
-  <assembly fullname="App.Web.Client" />
-  <assembly fullname="App.Shared.RCL" />
+  <!-- Blazor Router discovers @page components by reflection over the app
+       assembly. Root each page explicitly instead of the whole assembly so the
+       trimmer can drop the rest. Add new pages here. -->
+  <assembly fullname="App.Web.Client">
+    <type fullname="App.Web.Client.Pages.Home" preserve="all" />
+    <type fullname="App.Web.Client.Pages.Upcoming" preserve="all" />
+    <type fullname="App.Web.Client.Pages.Statistics" preserve="all" />
+    <type fullname="App.Web.Client.Pages.Settings" preserve="all" />
+    <type fullname="App.Web.Client.Pages.AuthLogin" preserve="all" />
+    <type fullname="App.Web.Client.Pages.AuthRegister" preserve="all" />
+    <type fullname="App.Web.Client.Pages.AuthForgotPassword" preserve="all" />
+    <type fullname="App.Web.Client.Pages.AuthResetPassword" preserve="all" />
+    <type fullname="App.Web.Client.Pages.Privacy" preserve="all" />
+    <type fullname="App.Web.Client.Pages.NotFound" preserve="all" />
+    <type fullname="Program" preserve="all" />
+  </assembly>
+  <!-- Source-generated JSON covers the wire types, but prerender state
+       persistence serializes the board snapshot through the framework path.
+       Root the shared context plus the snapshot graph explicitly. -->
+  <assembly fullname="App.Shared.RCL">
+    <type fullname="App.Shared.RCL.Services.SharedJsonSerializerContext" preserve="all" />
+    <type fullname="App.Shared.RCL.Models.BoardSnapshot" preserve="all" />
+    <type fullname="App.Shared.RCL.Models.BoardItem" preserve="all" />
+    <type fullname="App.Shared.RCL.Models.BoardSyncDelta" preserve="all" />
+    <type fullname="App.Shared.RCL.Models.BoardSyncItem" preserve="all" />
+  </assembly>
 </linker>

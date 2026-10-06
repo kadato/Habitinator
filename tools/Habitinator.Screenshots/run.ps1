@@ -8,7 +8,7 @@
 
   Example:
     pwsh ./tools/Habitinator.Screenshots/run.ps1
-    pwsh ./tools/Habitinator.Screenshots/run.ps1 -BaseUrl "http://127.0.0.1:5033"
+    pwsh ./tools/Habitinator.Screenshots/run.ps1 -BaseUrl "http://127.0.0.1:5050"
 #>
 [CmdletBinding()]
 param(

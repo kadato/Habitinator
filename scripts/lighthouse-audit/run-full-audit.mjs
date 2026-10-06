@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-const BASE_URL = process.env.LIGHTHOUSE_BASE_URL ?? 'http://127.0.0.1:5033';
+const BASE_URL = process.env.LIGHTHOUSE_BASE_URL ?? 'http://127.0.0.1:5050';
 const OUT_DIR = process.env.LIGHTHOUSE_OUT_DIR
   ?? new URL('../../docs/lighthouse', import.meta.url).pathname;
 const DEBUG_PORT = 9333;

@@ -155,7 +155,7 @@ The application seeds a guest account on startup:
 ### Regenerate screenshots
 To regenerate the mobile screenshots in the [Preview](#preview) section, first start the web app via AppHost, then run:
 ```powershell
-pwsh ./tools/Habitinator.Screenshots/run.ps1 -BaseUrl "http://127.0.0.1:5033"
+pwsh ./tools/Habitinator.Screenshots/run.ps1 -BaseUrl "http://127.0.0.1:5050"
 ```
 
 ---

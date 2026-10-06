@@ -12,7 +12,8 @@ internal static class ActivityApiRoutes
         var activityApi = endpoints.MapGroup("/api/activity")
             .DisableAntiforgery()
             .RequireAuthorization("BoardOrJwt")
-            .RequireRateLimiting("api");
+            .RequireRateLimiting("api")
+            .WithDtoValidation();
 
         activityApi.MapGet("overview", GetOverviewAsync);
         activityApi.MapGet("dashboard", GetDashboardAsync);

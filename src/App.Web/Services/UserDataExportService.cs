@@ -11,9 +11,19 @@ public sealed class UserDataExportService(
     IDbContextFactory<ApplicationDbContext> dbFactory,
     IUserTimeZoneService timeZone)
 {
+    /// <summary>Hard cap so one export cannot OOM the server on pathological accounts.</summary>
+    public const int MaxExportRows = 50000;
+
     public async Task<UserDataExportDto> BuildAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+
+        var rowCount = await db.BoardItems.AsNoTracking().CountAsync(x => x.UserId == userId, cancellationToken)
+            + await db.UserActivityEvents.AsNoTracking().CountAsync(x => x.UserId == userId, cancellationToken);
+        if (rowCount > MaxExportRows)
+        {
+            throw new UserDataExportTooLargeException(rowCount, MaxExportRows);
+        }
 
         var (today, _) = await UserDayContext.LoadAsync(db, userId, timeZone, cancellationToken);
 
@@ -83,4 +93,10 @@ public sealed class UserDataExportService(
             DailyWeekdays.Normalize(e.DailyWeekdays));
         return BoardItemMapper.WithLocalDay(raw, e.Section, today);
     }
+}
+
+/// <summary>Export refused: the account exceeds <see cref="UserDataExportService.MaxExportRows"/> rows.</summary>
+public sealed class UserDataExportTooLargeException(int rows, int max) : Exception(
+    $"Export holds {rows} rows, above the {max} row limit. Contact support for an assisted export.")
+{
 }

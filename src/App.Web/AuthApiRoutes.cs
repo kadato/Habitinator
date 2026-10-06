@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
@@ -22,15 +23,15 @@ internal static class AuthApiRoutes
 
     private static void MapRegisterEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/register", RegisterAsync).DisableAntiforgery().RequireRateLimiting("auth");
+        endpoints.MapPost("/api/auth/register", RegisterAsync).DisableAntiforgery().RequireRateLimiting("auth").WithDtoValidation();
         endpoints.MapPost("/api/auth/register-form", RegisterFormAsync).DisableAntiforgery().RequireRateLimiting("auth");
-        endpoints.MapPost("/api/auth/forgot-password", ForgotPasswordAsync).DisableAntiforgery().RequireRateLimiting("auth");
-        endpoints.MapPost("/api/auth/reset-password", ResetPasswordAsync).DisableAntiforgery().RequireRateLimiting("auth");
+        endpoints.MapPost("/api/auth/forgot-password", ForgotPasswordAsync).DisableAntiforgery().RequireRateLimiting("auth").WithDtoValidation();
+        endpoints.MapPost("/api/auth/reset-password", ResetPasswordAsync).DisableAntiforgery().RequireRateLimiting("auth").WithDtoValidation();
     }
 
     private static void MapLoginEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/login", LoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
+        endpoints.MapPost("/api/auth/login", LoginAsync).DisableAntiforgery().RequireRateLimiting("auth").WithDtoValidation();
         endpoints.MapPost("/api/auth/guest-jwt", GuestJwtLoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapPost("/api/auth/guest-login", GuestLoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapPost("/api/auth/cookie-login", CookieLoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
@@ -40,7 +41,7 @@ internal static class AuthApiRoutes
 
     private static void MapAccountEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/account/change-password", ChangePasswordAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery().RequireRateLimiting("api");
+        endpoints.MapPost("/api/account/change-password", ChangePasswordAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery().RequireRateLimiting("api").WithDtoValidation();
         endpoints.MapPost("/api/account/delete", DeleteAccountAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery().RequireRateLimiting("api");
         endpoints.MapGet("/api/account/export", ExportDataAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery().RequireRateLimiting("api");
         endpoints.MapPost("/api/account/import", ImportDataAsync).RequireAuthorization("BoardOrJwt").DisableAntiforgery().RequireRateLimiting("api");
@@ -321,7 +322,17 @@ internal static class AuthApiRoutes
         UserDataExportService exportService,
         CancellationToken cancellationToken)
     {
-        return Results.Ok(await exportService.BuildAsync(user.Value, cancellationToken));
+        try
+        {
+            return Results.Ok(await exportService.BuildAsync(user.Value, cancellationToken));
+        }
+        catch (UserDataExportTooLargeException ex)
+        {
+            return Results.Text(
+                JsonSerializer.Serialize(new { detail = ex.Message }),
+                "application/json",
+                statusCode: StatusCodes.Status413PayloadTooLarge);
+        }
     }
 
     private static async Task<IResult> ImportDataAsync(

@@ -1,6 +1,8 @@
 using App.Web.Hubs;
 using App.Web.Middleware;
 
+using Microsoft.EntityFrameworkCore;
+
 namespace App.Web;
 
 internal static class PipelineExtensions
@@ -43,7 +45,30 @@ internal static class PipelineExtensions
         }
 
         // Used by AppHost WithHttpHealthCheck. Anonymous, no auth required.
+        // Liveness: process is up. Readiness below checks Postgres.
         app.MapGet("/health", () => Results.Text("OK", "text/plain"));
+        app.MapGet("/health/ready", async (IServiceProvider services, CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                using var scope = services.CreateScope();
+                var factory = scope.ServiceProvider.GetService<IDbContextFactory<App.Web.Data.ApplicationDbContext>>();
+                if (factory is null)
+                {
+                    return Results.Text("OK", "text/plain");
+                }
+
+                await using var db = await factory.CreateDbContextAsync(cancellationToken);
+                var canConnect = await db.Database.CanConnectAsync(cancellationToken);
+                return canConnect
+                    ? Results.Text("OK", "text/plain")
+                    : Results.Text("DB unavailable", "text/plain", statusCode: 503);
+            }
+            catch (Exception)
+            {
+                return Results.Text("DB unavailable", "text/plain", statusCode: 503);
+            }
+        });
 
         app.MapGet("/.well-known/change-password", () => Results.Redirect("/settings", permanent: false));
         app.UseOpenApi(options =>

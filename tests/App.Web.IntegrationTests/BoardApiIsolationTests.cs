@@ -138,7 +138,7 @@ public sealed class BoardApiIsolationTests(PostgresWebAppFactory factory)
         logRes.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var body = await logRes.Content.ReadAsStringAsync();
-        body.Should().Contain("Duration must be between 0 and 86,400 seconds (24 hours).");
+        body.Should().Contain("DurationSeconds");
     }
 
     [Fact]

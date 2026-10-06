@@ -16,7 +16,8 @@ internal static class SettingsApiRoutes
         var settingsApi = endpoints.MapGroup("/api/settings")
             .DisableAntiforgery()
             .RequireAuthorization("BoardOrJwt")
-            .RequireRateLimiting("api");
+            .RequireRateLimiting("api")
+            .WithDtoValidation();
 
         settingsApi.MapNotificationSettingsEndpoints();
         settingsApi.MapPreferencesSettingsEndpoints();

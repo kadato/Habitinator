@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
 using App.Shared.RCL.Models;
@@ -249,6 +250,6 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
 public sealed record ActivityLogRequest(
     ActivityEventType EventType,
     Guid? BoardItemId,
-    int? DurationSeconds,
-    string? CustomLabel,
+    [Range(0, 86400)] int? DurationSeconds,
+    [StringLength(200)] string? CustomLabel,
     Guid EventId = default);

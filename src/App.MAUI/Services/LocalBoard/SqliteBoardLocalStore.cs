@@ -34,6 +34,8 @@ public sealed class SqliteBoardLocalStore(
             try
             {
                 await db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;", cancellationToken);
+                await db.Database.ExecuteSqlRawAsync("PRAGMA synchronous=NORMAL;", cancellationToken);
+                await db.Database.ExecuteSqlRawAsync("PRAGMA cache_size=-64000;", cancellationToken);
             }
             catch (Exception ex)
             {
@@ -118,14 +120,20 @@ public sealed class SqliteBoardLocalStore(
     public async Task UpsertItemAsync(BoardLocalRow row, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-        var existing = await db.BoardItems.FirstOrDefaultAsync(x => x.Id == row.Id, cancellationToken);
+        var existing = await db.BoardItems.FirstOrDefaultAsync(x => x.Id == row.Id && x.UserKey == row.UserKey, cancellationToken);
         if (existing is null)
         {
+            // Guard against a stale row from another user reusing the same id.
+            var foreign = await db.BoardItems.FirstOrDefaultAsync(x => x.Id == row.Id, cancellationToken);
+            if (foreign is not null)
+            {
+                db.BoardItems.Remove(foreign);
+            }
+
             db.BoardItems.Add(ToRow(row));
         }
         else
         {
-            existing.UserKey = row.UserKey;
             existing.Section = row.Section;
             existing.CopyFrom(ToRow(row));
             existing.AwaitingServerCreate = row.AwaitingServerCreate;
@@ -153,12 +161,11 @@ public sealed class SqliteBoardLocalStore(
         try
         {
             await db.BoardItems.Where(x => x.UserKey == userKey).ExecuteDeleteAsync(cancellationToken);
-            foreach (var item in rows)
+            if (rows.Count > 0)
             {
-                db.BoardItems.Add(ToRow(item));
+                db.BoardItems.AddRange(rows.Select(ToRow));
+                await db.SaveChangesAsync(cancellationToken);
             }
-
-            await db.SaveChangesAsync(cancellationToken);
 
             var meta = await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken);
             if (meta is not null)
@@ -186,19 +193,27 @@ public sealed class SqliteBoardLocalStore(
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         try
         {
-            if (deletedIds.Count > 0)
+            foreach (var idChunk in Chunk(deletedIds, 500))
             {
                 await db.BoardItems
-                    .Where(x => x.UserKey == userKey && deletedIds.Contains(x.Id))
+                    .Where(x => x.UserKey == userKey && idChunk.Contains(x.Id))
                     .ExecuteDeleteAsync(cancellationToken);
             }
 
             if (upserts.Count > 0)
             {
-                var ids = upserts.Select(u => u.Item.Id).ToList();
-                var existingById = await db.BoardItems
-                    .Where(x => ids.Contains(x.Id))
-                    .ToDictionaryAsync(x => x.Id, cancellationToken);
+                var ids = upserts.Select(u => u.Item.Id).Distinct().ToList();
+                var existingById = new Dictionary<Guid, LocalBoardItemRow>();
+                foreach (var idChunk in Chunk(ids, 500))
+                {
+                    var chunkRows = await db.BoardItems
+                        .Where(x => x.UserKey == userKey && idChunk.Contains(x.Id))
+                        .ToDictionaryAsync(x => x.Id, cancellationToken);
+                    foreach (var kv in chunkRows)
+                    {
+                        existingById[kv.Key] = kv.Value;
+                    }
+                }
 
                 foreach (var (section, item) in upserts)
                 {
@@ -441,6 +456,21 @@ public sealed class SqliteBoardLocalStore(
             await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE Meta ADD COLUMN LastFullMirrorUtc TEXT NULL;",
                 cancellationToken);
+        }
+
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS IX_BoardItems_UserKey_Section ON BoardItems (UserKey, Section);",
+            cancellationToken);
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS IX_Outbox_UserKey_Created ON Outbox (UserKey, CreatedAtUtc);",
+            cancellationToken);
+    }
+
+    private static IEnumerable<IReadOnlyList<T>> Chunk<T>(IReadOnlyList<T> source, int size)
+    {
+        for (var i = 0; i < source.Count; i += size)
+        {
+            yield return source.Skip(i).Take(Math.Min(size, source.Count - i)).ToList();
         }
     }
 

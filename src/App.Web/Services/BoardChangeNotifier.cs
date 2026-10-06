@@ -35,6 +35,7 @@ public sealed class BoardChangeNotifier(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "SignalR board change notification failed for user {UserId}.", userId);
+            AppTelemetry.RecordFanoutFailure();
         }
     }
 }

@@ -10,6 +10,10 @@ using Microsoft.AspNetCore.Components.Authorization;
 using MudBlazor;
 using MudBlazor.Services;
 
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -33,6 +37,26 @@ builder.Services.AddApplicationServices(builder.Environment);
 builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApiDocument();
+
+var otlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService("habitinator-web"))
+    .WithTracing(tracing =>
+    {
+        tracing.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddSource(App.Web.Services.AppTelemetry.SourceName);
+        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+        {
+            tracing.AddOtlpExporter();
+        }
+    })
+    .WithMetrics(metrics =>
+    {
+        metrics.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddMeter(App.Web.Services.AppTelemetry.MeterName);
+        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+        {
+            metrics.AddOtlpExporter();
+        }
+    });
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);

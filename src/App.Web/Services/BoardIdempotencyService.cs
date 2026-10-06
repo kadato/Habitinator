@@ -67,6 +67,7 @@ public sealed class BoardIdempotencyService(
             {
                 if (!string.Equals(row.RequestFingerprintHex, fingerprintHex, StringComparison.OrdinalIgnoreCase))
                 {
+                    AppTelemetry.RecordIdempotencyMismatch();
                     throw new BoardIdempotencyFingerprintMismatchException();
                 }
 
@@ -82,6 +83,7 @@ public sealed class BoardIdempotencyService(
 
                 if (row.ResponseStatusCode != PendingResponseCode)
                 {
+                    AppTelemetry.RecordIdempotencyReplay();
                     return (row.ResponseStatusCode, row.ResponseBody, "application/json");
                 }
 
@@ -220,6 +222,7 @@ public sealed class BoardIdempotencyService(
         }
 
         logger.LogWarning("Idempotency wait timed out for user {UserId} key {Key}.", userId, idempotencyKey);
+        AppTelemetry.RecordIdempotencyTimeout();
         throw new TimeoutException("Idempotency replay wait timed out.");
     }
 

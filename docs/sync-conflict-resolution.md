@@ -1,8 +1,8 @@
 # Sync conflict resolution strategy
 
-Habitinator uses a local-first architecture with an outbound outbox queue. MAUI persists the local mirror in SQLite. The web app persists it in IndexedDB with an in-memory read cache. Both hosts run the same data service, `LocalFirstBoardDataService`, over the `IBoardLocalStore` contract. The system coordinates syncing in the background. If the server returns a version conflict, HTTP 409, the system resolves it without blocking or prompting you.
+Habitinator is local-first with an outbound outbox queue. MAUI keeps the local mirror in SQLite. The web app keeps it in IndexedDB with an in-memory read cache. Both hosts run the same data service, `LocalFirstBoardDataService`, over the `IBoardLocalStore` contract. Sync runs in the background. On a version conflict, HTTP 409, the client resolves it without blocking you and without prompting you.
 
-The conflict resolution algorithm runs in the background and applies two stages of resolution:
+Resolution runs in two stages:
 
 ## Content-aware verification
 
@@ -17,21 +17,21 @@ Before comparing timestamps, the system checks if the local version's contents m
 * Drag-and-drop ordering, `SortOrder`
 * Archive status, `IsArchived`
 
-If all user-facing content fields match exactly, the system treats the conflict as a trivial metadata collision. The system selects the server version. This updates the local database tracking timestamp to align with the server and discards the duplicate outbox operation.
+If all user-facing content fields match exactly, the conflict is a trivial metadata collision. The client keeps the server version. It moves the local tracking timestamp to the server value and drops the duplicate outbox operation.
 
-## Last-write-wins, LWW
+## Last-Write-Wins (LWW)
 
-If content differs, the system applies Last-Write-Wins, LWW, using the most accurate timestamps:
+If content differs, the client applies Last-Write-Wins using two timestamps:
 
-* **Local timestamp.** The time when the edit was enqueued in the local outbox, `BoardOutboxEntry.CreatedAtUtc`. The system converts this value into the server's clock before comparing, using the offset implied by the `Date` header of the 409 response. The conversion removes device clock skew. A device clock that is hours fast or slow no longer decides the winner. If the header is missing, the raw local time is used.
+* **Local timestamp.** The time the edit entered the local outbox, `BoardOutboxEntry.CreatedAtUtc`. The client converts this value into the server clock before comparing. The offset comes from the `Date` header of the 409 response. The conversion removes device clock skew. A device clock that runs hours fast or slow no longer decides the winner. If the header is missing, the client compares the raw local time.
 * **Server timestamp.** The time when the item was last updated on the server, `BoardItem.ServerUpdatedAtUtc`.
 
-The conversion is accurate to one network round trip, a few seconds. Two edits within that window still resolve by the raw comparison.
+The conversion is accurate to one network round trip. Two edits within that window still resolve by the raw comparison.
 
 ### Resolution paths
 
-* **Local edit is newer, `LocalTime >= ServerTime`.** The system keeps the local device version. The system updates the outbox entry with the server's newer concurrency version and the expected version header and retries it. The server accepts it on the next attempt.
-* **Server edit is newer, `LocalTime < ServerTime`.** The system keeps the server version. The system deletes the conflicting local outbox operation and updates the local mirror with the server's newer properties.
+* **Local edit is newer, `LocalTime >= ServerTime`.** The client keeps the local device version. It rewrites the outbox entry with the server concurrency version and retries it. The server accepts the retry.
+* **Server edit is newer, `LocalTime < ServerTime`.** The client keeps the server version. It deletes the conflicting local outbox operation and writes the server properties into the local mirror.
 
 ## Why SQLite and IndexedDB can mirror PostgreSQL
 
@@ -47,6 +47,6 @@ The sync protocol enforces correctness: `Idempotency-Key` headers, `X-Board-Expe
 
 ## Protocol versioning
 
-`BoardSnapshot.ProtocolVersion`, `BoardSyncDelta.ProtocolVersion`, and `UserDataExportDto.FormatVersion` all carry `BoardProtocolVersion.Current`. That value is 1. Every board read and mutation response also sends `X-Board-Protocol-Version: 1`.
+`BoardSnapshot.ProtocolVersion`, `BoardSyncDelta.ProtocolVersion`, and `UserDataExportDto.FormatVersion` all carry `BoardProtocolVersion.Current`. Every board read and mutation response also sends it in `X-Board-Protocol-Version`. Read the current value in `src/App.Shared.RCL/Models/BoardProtocolVersion.cs`.
 
-If the delta version is newer than the client understands, the client discards the delta. The client then loads a full snapshot. Snapshots cached before versioning deserialize to 0. The client treats them as version 1. The import service accepts export files without a version as version 1.
+If the delta version is newer than the client understands, the client discards the delta and loads a full snapshot. Snapshots cached before versioning deserialize to 0, and the client reads them as version 1. The import service reads export files without a version as version 1.

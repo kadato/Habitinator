@@ -36,6 +36,7 @@
             <MudText Typo="Typo.subtitle1" Class="mb-1">Export your data</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
                 Download everything Habitinator stores for your account as a JSON file, including board items, activity history, preferences, and notification settings.
+                Exports cover up to 50,000 rows. Bigger accounts fail with an error instead of a partial file.
             </MudText>
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="_exporting" OnClick="ExportDataAsync">
                 Export data
@@ -60,6 +61,7 @@
             <MudText Typo="Typo.subtitle1" Class="mb-1">Delete account</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
                 Permanently delete your account and all of your data. This cannot be undone.
+                Deleted items leave sync at once. The server purges soft-deleted rows after its retention period.
             </MudText>
             <MudButton Variant="Variant.Outlined" Color="Color.Error" Disabled="_deleting" OnClick="DeleteAccountAsync">
                 Delete account

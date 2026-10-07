@@ -140,7 +140,9 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
       family: 'A'
       name: 'standard'
     }
-    enableRbacAuthorization: true
+    // Access policies (not RBAC) so deployers do not need
+    // Microsoft.Authorization/roleAssignments/write.
+    enableRbacAuthorization: false
   }
 }
 
@@ -168,16 +170,25 @@ resource demoPasswordSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
-// Lets the web app read the three secrets above. Key Vault RBAC can lag a few
-// minutes, so the first start after provisioning may need one restart.
-resource vaultReaderRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVault.id, web.id, '4633458b-17de-408a-b874-0445c86b69e6')
-  scope: keyVault
+// Lets the web app read the three secrets above via a vault access policy.
+// This lives under the Key Vault resource provider, so unlike a
+// Microsoft.Authorization/roleAssignments resource it does not require the
+// deployer to hold roleAssignments/write.
+resource vaultAccess 'Microsoft.KeyVault/vaults/accessPolicies@2023-07-01' = {
+  parent: keyVault
+  name: 'add'
   properties: {
-    // Key Vault Secrets User
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
-    principalId: web.identity.principalId
-    principalType: 'ServicePrincipal'
+    accessPolicies: [
+      {
+        tenantId: tenant().tenantId
+        objectId: web.identity.principalId
+        permissions: {
+          secrets: [
+            'get'
+          ]
+        }
+      }
+    ]
   }
 }
 

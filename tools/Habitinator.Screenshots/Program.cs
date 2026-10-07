@@ -4,7 +4,7 @@ using Microsoft.Playwright;
 
 // Local dev default. Overridable via CLI argument or the E2E_BASE_URL environment variable.
 #pragma warning disable S1075 // URIs are configuration defaults here, not hardcoded paths
-const string DefaultBaseUrl = "http://localhost:5050";
+const string DefaultBaseUrl = "http://localhost:5950";
 #pragma warning restore S1075
 
 if (args.Length > 0 && (args[0] == "-h" || args[0] == "--help"))

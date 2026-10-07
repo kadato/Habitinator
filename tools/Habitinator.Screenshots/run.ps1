@@ -8,11 +8,11 @@
 
   Example:
     pwsh ./tools/Habitinator.Screenshots/run.ps1
-    pwsh ./tools/Habitinator.Screenshots/run.ps1 -BaseUrl "http://127.0.0.1:5050"
+    pwsh ./tools/Habitinator.Screenshots/run.ps1 -BaseUrl "http://127.0.0.1:5950"
 #>
 [CmdletBinding()]
 param(
-    [string] $BaseUrl = "http://127.0.0.1:5050"
+    [string] $BaseUrl = "http://127.0.0.1:5950"
 )
 
 $ErrorActionPreference = "Stop"

@@ -9,7 +9,7 @@ public sealed class WebSmokeTests
 {
     private static string BaseUrl =>
         Environment.GetEnvironmentVariable("E2E_BASE_URL")?.TrimEnd('/')
-        ?? "http://127.0.0.1:5050";
+        ?? "http://127.0.0.1:5950";
 
     private static bool? _isBaseUrlReachable;
 

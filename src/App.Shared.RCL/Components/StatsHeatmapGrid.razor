@@ -1,5 +1,6 @@
 @namespace App.Shared.RCL.Components
 @using App.Shared.RCL.Services
+@inject IJSRuntime JS
 
 <div class="stats-heatmap-container @ContainerClass">
     <div class="stats-heatmap-rowlabels" aria-hidden="true">
@@ -23,7 +24,7 @@
                 }
             </div>
         }
-        <div class="stats-heatmap-grid" style="--stats-cols: @Columns;">
+        <div class="stats-heatmap-grid" style="--stats-cols: @Columns;" data-grid="@_gridId" @onkeydown="OnGridKeyDown">
             @for (var r = 0; r < 7; r++)
             {
                 @for (var c = 0; c < Columns; c++)
@@ -42,13 +43,13 @@
                             {
                                 <button type="button"
                                         @key="(row, col)"
-                                        class="@cellClass @(IncludeRovingTabindex ? "stats-heatmap-day-btn" : null)"
+                                        class="@cellClass stats-heatmap-day-btn"
                                         title="@cellTitle"
                                         aria-label="@cellAria"
                                         aria-current="@(isToday ? "date" : null)"
-                                        data-row="@(IncludeRovingTabindex ? row : null)"
-                                        data-col="@(IncludeRovingTabindex ? col : null)"
-                                        tabindex="0"
+                                        data-row="@row"
+                                        data-col="@col"
+                                        tabindex="@CellTabindex(row, col)"
                                         @onclick="() => OnCellClickAsync(row, col)">
                                 </button>
                             }
@@ -80,7 +81,6 @@
 @code {
     [Parameter] public int Columns { get; set; }
     [Parameter] public string ContainerClass { get; set; } = string.Empty;
-    [Parameter] public bool IncludeRovingTabindex { get; set; }
     [Parameter] public bool ShowMonthLabels { get; set; } = true;
     [Parameter] public IReadOnlyDictionary<(int R, int C), ActivityHeatmapCellDto> Cells { get; set; } = new Dictionary<(int, int), ActivityHeatmapCellDto>();
     [Parameter] public Func<int, int, bool> IsToday { get; set; } = (_, _) => false;
@@ -97,6 +97,9 @@
     [Parameter] public string RegionLabel { get; set; } = "Activity heatmap";
 
     private string[]? _monthLabels;
+    private readonly string _gridId = Guid.NewGuid().ToString("N");
+    private int _focusRow = -1;
+    private int _focusCol = -1;
 
     protected override void OnParametersSet()
     {
@@ -112,6 +115,91 @@
         {
             _monthLabels = null;
         }
+
+        if (!IsInRange(_focusRow, _focusCol))
+        {
+            var (row, col) = FindInitialFocus();
+            _focusRow = row;
+            _focusCol = col;
+        }
+    }
+
+    private bool IsInRange(int row, int col) =>
+        Cells.TryGetValue((row, col), out var cell) && cell.InDataRange;
+
+    private (int Row, int Col) FindInitialFocus()
+    {
+        (int Row, int Col)? today = null;
+        (int Row, int Col) last = (-1, -1);
+        foreach (var ((row, col), cell) in Cells)
+        {
+            if (!cell.InDataRange)
+            {
+                continue;
+            }
+
+            var isToday = IsTodayFunc is not null ? IsTodayFunc(cell.Date) : IsToday(row, col);
+            if (isToday)
+            {
+                today = (row, col);
+            }
+
+            if (col > last.Col || (col == last.Col && row > last.Row))
+            {
+                last = (row, col);
+            }
+        }
+
+        return today ?? (last.Row >= 0 ? last : (-1, -1));
+    }
+
+    private string CellTabindex(int row, int col) =>
+        row == _focusRow && col == _focusCol ? "0" : "-1";
+
+    private async Task OnGridKeyDown(KeyboardEventArgs e)
+    {
+        var (row, col) = e.Key switch
+        {
+            "ArrowLeft" => StepTo(_focusRow, _focusCol, 0, -1),
+            "ArrowRight" => StepTo(_focusRow, _focusCol, 0, 1),
+            "ArrowUp" => StepTo(_focusRow, _focusCol, -1, 0),
+            "ArrowDown" => StepTo(_focusRow, _focusCol, 1, 0),
+            _ => (-1, -1)
+        };
+
+        if (row < 0)
+        {
+            return;
+        }
+
+        _focusRow = row;
+        _focusCol = col;
+        try
+        {
+            await JS.InvokeVoidAsync("focusHeatmapCell", _gridId, row, col);
+        }
+        catch (Exception)
+        {
+            // Ignored. Roving state still updates, so Tab order stays correct.
+        }
+    }
+
+    private (int Row, int Col) StepTo(int row, int col, int dRow, int dCol)
+    {
+        var r = row + dRow;
+        var c = col + dCol;
+        while (r >= 0 && r < 7 && c >= 0 && c < Columns)
+        {
+            if (IsInRange(r, c))
+            {
+                return (r, c);
+            }
+
+            r += dRow;
+            c += dCol;
+        }
+
+        return (-1, -1);
     }
 
     private Task OnCellClickAsync(int r, int c) => OnCellClick is null ? Task.CompletedTask : OnCellClick(r, c);

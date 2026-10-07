@@ -68,7 +68,6 @@
                                            GetCellClass="@((r, c) => DailyHeatmapCellClass(_cellIndex[(r, c)]))"
                                            GetCellTitle="@((r, c) => DailyHeatmapDayTitle(_cellIndex[(r, c)]))"
                                            GetCellAriaLabel="@((r, c) => DailyHeatmapDayTitle(_cellIndex[(r, c)]))"
-                                           IncludeRovingTabindex="true"
                                            OnCellClick="OnCellClickAsync"/>
                     </div>
                     <div class="daily-heatmap-legend">
@@ -184,7 +183,6 @@
             // against the page script loader, and a missed snap is never retried.
             await JSRuntime.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/statisticsScrolling.js");
             await JSRuntime.InvokeVoidAsync("scrollHeatmapsToEnd");
-            await JSRuntime.InvokeVoidAsync("initializeHeatmapRovingTabindex");
         }
         catch (Exception ex)
         {

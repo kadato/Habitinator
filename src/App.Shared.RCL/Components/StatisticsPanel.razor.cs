@@ -73,7 +73,6 @@ public partial class StatisticsPanel : IDisposable
                 // The loader dedupes, so this call is free once loaded.
                 await JSRuntime.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/statisticsScrolling.js");
                 await JSRuntime.InvokeVoidAsync("scrollHeatmapsToEnd");
-                await JSRuntime.InvokeVoidAsync("initializeHeatmapRovingTabindex");
             }
             catch (Exception)
             {

@@ -29,6 +29,9 @@ param demoUserEmail string = 'guest@habitinator.local'
 @description('Seeded demo user password.')
 param demoUserPassword string
 
+@description('OTLP endpoint for OpenTelemetry. Empty disables export.')
+param otlpEndpoint string = ''
+
 var normalizedEnv = toLower(replace(environmentName, '_', '-'))
 // App Service app names are globally unique. Delete any other site using this name before provisioning.
 var webAppName = 'app-habitinator-${normalizedEnv}'
@@ -67,10 +70,13 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
     httpsOnly: true
     clientCertEnabled: false
     siteConfig: {
+      // Stay on 10.0 until Azure adds DOTNETCORE|11.0 after .NET 11 GA, expected Nov 2026.
+      // The app ships self-contained, so the platform version is metadata only.
       linuxFxVersion: 'DOTNETCORE|10.0'
       appCommandLine: 'chmod +x App.Web && ./App.Web'
       minTlsVersion: '1.2'
       alwaysOn: true
+      healthCheckPath: '/health/ready'
       appSettings: [
         {
           name: 'ASPNETCORE_ENVIRONMENT'
@@ -99,6 +105,10 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
         {
           name: 'DemoUser__Password'
           value: demoUserPassword
+        }
+        {
+          name: 'OTEL_EXPORTER_OTLP_ENDPOINT'
+          value: otlpEndpoint
         }
       ]
     }

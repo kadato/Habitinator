@@ -122,8 +122,14 @@ jobs:
           dotnet workload install wasm-tools
           dotnet workload restore Habitinator.slnx
 
-      - name: Provision + deploy with azd
-        run: azd up --no-prompt
+      - name: Register Key Vault resource provider
+        run: az provider register --namespace Microsoft.KeyVault --wait
+
+      - name: Provision with azd
+        run: azd provision --no-prompt
+
+      - name: Deploy with azd
+        run: azd deploy --no-prompt
 
       - name: Capture deployment outputs
         shell: bash

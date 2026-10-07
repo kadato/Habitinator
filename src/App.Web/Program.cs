@@ -114,7 +114,11 @@ public partial class Program
 
     private static void ConfigureTracing(TracerProviderBuilder tracing, string? otlpEndpoint)
     {
-        tracing.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddSource(App.Web.Services.AppTelemetry.SourceName);
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddEntityFrameworkCoreInstrumentation()
+            .AddSource(App.Web.Services.AppTelemetry.SourceName);
         if (!string.IsNullOrWhiteSpace(otlpEndpoint))
         {
             tracing.AddOtlpExporter();
@@ -123,7 +127,11 @@ public partial class Program
 
     private static void ConfigureMetrics(MeterProviderBuilder metrics, string? otlpEndpoint)
     {
-        metrics.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddMeter(App.Web.Services.AppTelemetry.MeterName);
+        metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddMeter(App.Web.Services.AppTelemetry.MeterName);
         if (!string.IsNullOrWhiteSpace(otlpEndpoint))
         {
             metrics.AddOtlpExporter();

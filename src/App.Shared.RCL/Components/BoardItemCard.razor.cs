@@ -21,6 +21,8 @@ public partial class BoardItemCard
     [Parameter] public EventCallback OnOpenEditor { get; set; }
     [Parameter] public EventCallback OnMoveToTop { get; set; }
     [Parameter] public EventCallback OnMoveToBottom { get; set; }
+    [Parameter] public EventCallback OnMoveUp { get; set; }
+    [Parameter] public EventCallback OnMoveDown { get; set; }
     [Parameter] public EventCallback OnDelete { get; set; }
     [Parameter] public EventCallback<(Guid ChecklistItemId, bool IsDone)> OnSetChecklistItemDone { get; set; }
 

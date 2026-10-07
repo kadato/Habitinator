@@ -79,15 +79,27 @@
                     </MudMenuItem>
                     @if (CanReorder)
                     {
-                        <MudMenuItem OnClick="OnMoveToTop">
+                        <MudMenuItem OnClick="OnMoveUp">
                             <div class="d-flex align-center gap-2">
                                 <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-hidden="true" />
+                                <MudText Typo="Typo.body2">Move up</MudText>
+                            </div>
+                        </MudMenuItem>
+                        <MudMenuItem OnClick="OnMoveDown">
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" aria-hidden="true" />
+                                <MudText Typo="Typo.body2">Move down</MudText>
+                            </div>
+                        </MudMenuItem>
+                        <MudMenuItem OnClick="OnMoveToTop">
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.VerticalAlignTop" Size="Size.Small" aria-hidden="true" />
                                 <MudText Typo="Typo.body2">Move to top</MudText>
                             </div>
                         </MudMenuItem>
                         <MudMenuItem OnClick="OnMoveToBottom">
                             <div class="d-flex align-center gap-2">
-                                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" aria-hidden="true" />
+                                <MudIcon Icon="@Icons.Material.Filled.VerticalAlignBottom" Size="Size.Small" aria-hidden="true" />
                                 <MudText Typo="Typo.body2">Move to bottom</MudText>
                             </div>
                         </MudMenuItem>

@@ -709,21 +709,31 @@ internal sealed class BoardPaletteCommands(
     public async Task DeleteItemAsync(BoardSection section, Guid itemId)
     {
         _close();
-        try
+        await TryNotifyAsync(async () =>
         {
             await _boardData.DeleteItemAsync(section, itemId);
             await _notifyRefresh();
+        }, "Could not delete item.");
+    }
+
+    private async Task<bool> TryNotifyAsync(Func<Task> work, string errorMessage)
+    {
+        try
+        {
+            await work();
+            return true;
         }
         catch
         {
-            await _notifier.NotifyAsync("Could not delete item.", Severity.Error);
+            await _notifier.NotifyAsync(errorMessage, Severity.Error);
+            return false;
         }
     }
 
     public async Task DeleteCompletedTodosAsync()
     {
         _close();
-        try
+        await TryNotifyAsync(async () =>
         {
             var snapshot = await _boardData.GetSnapshotAsync();
             var completed = snapshot.Todos.Where(t => t.IsCompleted).ToList();
@@ -757,17 +767,13 @@ internal sealed class BoardPaletteCommands(
                 var itemWord = deleted == 1 ? KwTodoDash : KwTodoDashes;
                 await _notifier.NotifyAsync($"Deleted {deleted} completed {itemWord}.", Severity.Success);
             }
-        }
-        catch
-        {
-            await _notifier.NotifyAsync("Could not delete completed to-dos.", Severity.Error);
-        }
+        }, "Could not delete completed to-dos.");
     }
 
     public async Task ArchiveCompletedTodosAsync()
     {
         _close();
-        try
+        await TryNotifyAsync(async () =>
         {
             var snapshot = await _boardData.GetSnapshotAsync();
             var completed = snapshot.Todos.Where(t => t.IsCompleted).ToList();
@@ -801,11 +807,7 @@ internal sealed class BoardPaletteCommands(
                 var itemWord = archived == 1 ? KwTodoDash : KwTodoDashes;
                 await _notifier.NotifyAsync($"Archived {archived} completed {itemWord}.", Severity.Success);
             }
-        }
-        catch
-        {
-            await _notifier.NotifyAsync("Could not archive completed to-dos.", Severity.Error);
-        }
+        }, "Could not archive completed to-dos.");
     }
     private async Task<List<CommandItem>> GetManageItemsSubActionsAsync()
     {

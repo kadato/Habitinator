@@ -766,11 +766,35 @@ public partial class BoardColumn : IAsyncDisposable
 
     private Task MoveToBottomAsync(BoardItem item) => MoveToIndexAsync(item, VisibleItems().Count - 1);
 
+    private Task MoveUpAsync(BoardItem item)
+    {
+        List<BoardItem> visible = [.. VisibleItems()];
+        var sourceIndex = visible.FindIndex(x => x.Id == item.Id);
+        if (sourceIndex <= 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        return MoveToIndexAsync(item, sourceIndex - 1);
+    }
+
+    private Task MoveDownAsync(BoardItem item)
+    {
+        List<BoardItem> visible = [.. VisibleItems()];
+        var sourceIndex = visible.FindIndex(x => x.Id == item.Id);
+        if (sourceIndex < 0 || sourceIndex >= visible.Count - 1)
+        {
+            return Task.CompletedTask;
+        }
+
+        return MoveToIndexAsync(item, sourceIndex + 1);
+    }
+
     private async Task MoveToIndexAsync(BoardItem item, int targetIndex)
     {
         List<BoardItem> visible = [.. VisibleItems()];
         var sourceIndex = visible.FindIndex(x => x.Id == item.Id);
-        if (sourceIndex < 0 || sourceIndex == targetIndex)
+        if (sourceIndex < 0 || sourceIndex == targetIndex || targetIndex < 0 || targetIndex >= visible.Count)
         {
             return;
         }

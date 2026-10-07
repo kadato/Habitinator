@@ -186,10 +186,10 @@
             }
             else if (canReorder)
             {
-                <div @ref="_containerRef" class="board-sortable-list mud-width-full">
+                <div @ref="_containerRef" class="board-sortable-list mud-width-full" role="list" aria-label="@($"{GetTitle()} items. Drag to reorder, or use Options menu Move commands for keyboard reorder.")">
                     @foreach (var item in visibleItems)
                     {
-                        <div @key="item.Id" data-id="@item.Id" class="board-sortable-item">
+                        <div @key="item.Id" data-id="@item.Id" class="board-sortable-item" role="listitem">
                             @ItemCard(item)
                         </div>
                     }
@@ -197,12 +197,14 @@
             }
             else
             {
-                @foreach (var item in visibleItems)
-                {
-                    <div @key="item.Id">
-                        @ItemCard(item)
-                    </div>
-                }
+                <div role="list" aria-label="@($"{GetTitle()} items")">
+                    @foreach (var item in visibleItems)
+                    {
+                        <div @key="item.Id" role="listitem">
+                            @ItemCard(item)
+                        </div>
+                    }
+                </div>
             }
         </div>
     </MudCardContent>
@@ -223,6 +225,8 @@
                        OnHabitDown="@(() => HabitDownAsync(item))"
                        OnToggle="@(() => ToggleAsync(item))"
                        OnOpenEditor="@(() => OpenItemEditorAsync(item))"
+                       OnMoveUp="@(() => MoveUpAsync(item))"
+                       OnMoveDown="@(() => MoveDownAsync(item))"
                        OnMoveToTop="@(() => MoveToTopAsync(item))"
                        OnMoveToBottom="@(() => MoveToBottomAsync(item))"
                        OnDelete="@(() => DeleteAsync(item.Id, item.Title))"

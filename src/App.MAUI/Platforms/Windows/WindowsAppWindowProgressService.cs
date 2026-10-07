@@ -1,5 +1,4 @@
 #if WINDOWS
-#pragma warning disable SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute'
 #pragma warning disable SYSLIB1096 // Use 'GeneratedComInterfaceAttribute' instead of 'ComImportAttribute'
 
 using System.Drawing;
@@ -43,7 +42,7 @@ public interface ITaskbarList3
 [Guid("56fdf344-fd6d-11d0-958a-006097c9a090")]
 public class TaskbarList { }
 
-public class WindowsAppWindowProgressService : MauiAppWindowProgressService
+public partial class WindowsAppWindowProgressService : MauiAppWindowProgressService
 {
     private ITaskbarList3? _taskbarList;
     private bool _isInitialized;
@@ -146,7 +145,8 @@ public class WindowsAppWindowProgressService : MauiAppWindowProgressService
         _taskbarList.SetOverlayIcon(hwnd, IntPtr.Zero, string.Empty);
     }
 
-    [DllImport("user32.dll", CharSet = CharSet.Auto)]
-    private static extern bool DestroyIcon(IntPtr handle);
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool DestroyIcon(IntPtr handle);
 }
 #endif

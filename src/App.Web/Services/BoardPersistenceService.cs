@@ -217,7 +217,7 @@ public sealed class BoardPersistenceService(
         await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
 
         var newer = await FetchNewerRowsAsync(readDb, userId, cursorTs, limit, cancellationToken);
-        var boundary = await FetchBoundaryRowsAsync(readDb, userId, cursorTs, cursorId, cancellationToken);
+        var boundary = await FetchBoundaryRowsAsync(readDb, userId, cursorTs, cursorId, limit, cancellationToken);
         var (changed, truncated) = BuildChangedPage(newer, boundary, limit);
 
         var (today, dayStart) = await TodayAndDayStartAsync(userId, cancellationToken);
@@ -256,6 +256,7 @@ public sealed class BoardPersistenceService(
         Guid userId,
         DateTimeOffset cursorTs,
         Guid? cursorId,
+        int limit,
         CancellationToken cancellationToken)
     {
         if (cursorId is not { } lastId)
@@ -263,11 +264,15 @@ public sealed class BoardPersistenceService(
             return [];
         }
 
+        // Same-watermark rows share one timestamp, usually from a bulk rebalance.
+        // Cap the scan so one skewed watermark cannot pull the whole table.
+        var take = Math.Clamp(limit + 1, 1, SyncMaxPageSize + 1);
         var sameWatermark = await readDb.BoardItems
             .AsNoTracking()
             .Where(x => x.UserId == userId
                         && (x.DeletedAtUtc != null ? x.DeletedAtUtc.Value : x.UpdatedAtUtc) == cursorTs)
             .OrderBy(x => x.Id)
+            .Take(take)
             .ToListAsync(cancellationToken);
         return sameWatermark
             .Where(x => x.Id.CompareTo(lastId) > 0)
@@ -348,15 +353,6 @@ public sealed class BoardPersistenceService(
 
     public async Task<BoardItem?> GetItemAsync(Guid userId, Guid itemId, CancellationToken cancellationToken = default)
     {
-        var cached = await GetSnapshotAsync(userId, cancellationToken);
-        var item = cached.Habits.FirstOrDefault(x => x.Id == itemId)
-            ?? cached.Dailies.FirstOrDefault(x => x.Id == itemId)
-            ?? cached.Todos.FirstOrDefault(x => x.Id == itemId);
-        if (item is not null)
-        {
-            return item;
-        }
-
         await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var entity = await readDb.BoardItems.AsNoTracking()
             .FirstOrDefaultAsync(
@@ -938,10 +934,22 @@ public sealed class BoardPersistenceService(
         else if (newCount > currentCount)
         {
             var addCount = newCount - currentCount;
+            var now = DateTimeOffset.UtcNow;
+            var events = new List<UserActivityEventEntity>(addCount);
             for (var i = 0; i < addCount; i++)
             {
-                AddActivityEvent(userId, eventType, itemId, customLabel: title);
+                events.Add(new UserActivityEventEntity
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    OccurredAtUtc = now,
+                    EventType = eventType,
+                    BoardItemId = itemId,
+                    CustomLabel = title
+                });
             }
+
+            dbContext.UserActivityEvents.AddRange(events);
         }
     }
 
@@ -1264,8 +1272,14 @@ public sealed class BoardPersistenceService(
         var utcNow = DateTimeOffset.UtcNow;
         foreach (var item in items)
         {
-            item.SortOrder = seq;
-            item.UpdatedAtUtc = utcNow;
+            // Only dirty rows that actually move. Touching every row bumps
+            // UpdatedAtUtc for the whole section and forces a full-section sync.
+            if (Math.Abs(item.SortOrder - seq) > 1e-9)
+            {
+                item.SortOrder = seq;
+                item.UpdatedAtUtc = utcNow;
+            }
+
             seq += 1.0;
         }
     }

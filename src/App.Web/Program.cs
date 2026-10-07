@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using MudBlazor;
 using MudBlazor.Services;
 
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -101,7 +102,14 @@ public partial class Program
         services.AddOpenTelemetry()
             .ConfigureResource(resource => resource.AddService("habitinator-web"))
             .WithTracing(tracing => ConfigureTracing(tracing, otlpEndpoint))
-            .WithMetrics(metrics => ConfigureMetrics(metrics, otlpEndpoint));
+            .WithMetrics(metrics => ConfigureMetrics(metrics, otlpEndpoint))
+            .WithLogging(logging =>
+            {
+                if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+                {
+                    logging.AddOtlpExporter();
+                }
+            });
     }
 
     private static void ConfigureTracing(TracerProviderBuilder tracing, string? otlpEndpoint)

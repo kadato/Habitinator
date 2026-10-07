@@ -48,7 +48,7 @@ internal static class BoardApiRoutes
             });
 
         boardApi.MapGet("/sync",
-            async (HttpRequest request, CurrentUserId user, BoardPersistenceService boardPersistenceService,
+            async (HttpRequest request, CurrentUserId user, BoardSyncDeltaService boardSyncDeltaService,
                 CancellationToken cancellationToken) =>
             {
                 request.HttpContext.Response.Headers[BoardProtocolVersionHeader] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -64,9 +64,9 @@ internal static class BoardApiRoutes
                 {
                     if (!int.TryParse(limitRaw, CultureInfo.InvariantCulture, out var parsed)
                         || parsed < 1
-                        || parsed > BoardPersistenceService.SyncMaxPageSize)
+                        || parsed > BoardSyncDeltaService.SyncMaxPageSize)
                     {
-                        return Results.BadRequest(new { detail = $"Invalid limit; expected an integer between 1 and {BoardPersistenceService.SyncMaxPageSize}." });
+                        return Results.BadRequest(new { detail = $"Invalid limit; expected an integer between 1 and {BoardSyncDeltaService.SyncMaxPageSize}." });
                     }
 
                     limit = parsed;
@@ -75,7 +75,7 @@ internal static class BoardApiRoutes
                 BoardSyncDelta delta;
                 try
                 {
-                    delta = await boardPersistenceService.GetSyncDeltaAsync(user.Value, cursorRaw, limit, cancellationToken);
+                    delta = await boardSyncDeltaService.GetSyncDeltaAsync(user.Value, cursorRaw, limit, cancellationToken);
                 }
                 catch (FormatException)
                 {

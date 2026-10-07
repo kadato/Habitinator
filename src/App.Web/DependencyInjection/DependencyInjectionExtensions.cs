@@ -133,6 +133,7 @@ public static class DependencyInjectionExtensions
         services.AddSingleton<IBoardChangeNotifier, BoardChangeNotifier>();
         services.AddScoped<DailyStreakCalculationService>();
         services.AddScoped<BoardPersistenceService>();
+        services.AddScoped<BoardSyncDeltaService>();
         services.AddScoped<IInitialBoardLoadGate, InitialBoardLoadGate>();
         services.AddScoped<BoardIdempotencyService>();
 

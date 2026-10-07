@@ -1,0 +1,67 @@
+@using Microsoft.JSInterop
+@inject App.Shared.RCL.Services.Board.Local.IBoardLocalStore Store
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@code {
+    private DotNetObjectReference<BoardPersistOnHide>? _selfRef;
+    private bool _hooked;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _hooked)
+        {
+            return;
+        }
+
+        _hooked = true;
+        try
+        {
+            await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardLocalStore.js");
+            _selfRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("habBoardStore.onHidden", _selfRef);
+        }
+        catch (JSDisconnectedException)
+        {
+            // Ignored during page navigation or hot reload.
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignored during page navigation or hot reload.
+        }
+    }
+
+    /// <summary>Flushes the debounced in-memory mirror when the tab hides.</summary>
+    [JSInvokable]
+    public Task OnHidden() => Store.FlushAsync();
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("habBoardStore.clearHidden");
+        }
+        catch (JSDisconnectedException)
+        {
+            // Ignored during page navigation or hot reload.
+        }
+        catch (JSException)
+        {
+            // Ignored during page navigation or hot reload.
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignored during page navigation or hot reload.
+        }
+        catch (InvalidOperationException)
+        {
+            // Ignored during page navigation or hot reload.
+        }
+        finally
+        {
+            _selfRef?.Dispose();
+        }
+
+        GC.SuppressFinalize(this);
+    }
+}

@@ -2,8 +2,11 @@ globalThis.habBoardStore = (function () {
   var DB_NAME = "habitinator-board";
   var STORE_NAME = "kv";
   var STATE_KEY = "board-state-v1";
+  var STATE_TS_KEY = "board-state-v1-ts";
   var LS_KEY = "habitinator_board_state_v1";
+  var LS_TS_KEY = "habitinator_board_state_v1_ts";
   var dbPromise = null;
+  var hiddenHandler = null;
 
   function openDb() {
     if (dbPromise) {
@@ -30,13 +33,13 @@ globalThis.habBoardStore = (function () {
     return dbPromise;
   }
 
-  function idbGet() {
+  function idbGet(key) {
     return openDb().then(function (db) {
       return new Promise(function (resolve, reject) {
         try {
           var tx = db.transaction(STORE_NAME, "readonly");
           var store = tx.objectStore(STORE_NAME);
-          var q = store.get(STATE_KEY);
+          var q = store.get(key);
           q.onsuccess = function () {
             resolve(q.result == null ? null : q.result);
           };
@@ -50,13 +53,13 @@ globalThis.habBoardStore = (function () {
     });
   }
 
-  function idbSet(raw) {
+  function idbSet(key, val) {
     return openDb().then(function (db) {
       return new Promise(function (resolve, reject) {
         try {
           var tx = db.transaction(STORE_NAME, "readwrite");
           var store = tx.objectStore(STORE_NAME);
-          var q = store.put(raw, STATE_KEY);
+          var q = store.put(val, key);
           q.onsuccess = function () {
             resolve();
           };
@@ -78,9 +81,29 @@ globalThis.habBoardStore = (function () {
     }
   }
 
+  function toTs(val) {
+    var n = parseInt(val, 10);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function lsGetTs() {
+    try {
+      return toTs(localStorage.getItem(LS_TS_KEY));
+    } catch (err) {
+      return 0;
+    }
+  }
+
   function lsSet(raw) {
     try {
       localStorage.setItem(LS_KEY, raw);
+    } catch (err) {
+    }
+  }
+
+  function lsSetTs(ts) {
+    try {
+      localStorage.setItem(LS_TS_KEY, String(ts));
     } catch (err) {
     }
   }
@@ -90,19 +113,60 @@ globalThis.habBoardStore = (function () {
       return navigator.onLine !== false;
     },
     load: function () {
-      return idbGet().then(function (val) {
-        if (val != null) {
-          return val;
+      // IndexedDB writes are async, localStorage writes are sync. After a crash
+      // the two copies can disagree, so load both timestamps and keep the newest.
+      var idbRaw = idbGet(STATE_KEY).catch(function () {
+        return null;
+      });
+      var idbTs = idbGet(STATE_TS_KEY).catch(function () {
+        return 0;
+      });
+      return Promise.all([idbRaw, idbTs]).then(function (vals) {
+        var raw = vals[0];
+        var ts = toTs(vals[1]);
+        var lsRaw = lsGet();
+        var lsTs = lsGetTs();
+        if (lsRaw != null && (raw == null || lsTs > ts)) {
+          return lsRaw;
         }
 
-        return lsGet();
+        if (raw != null) {
+          return raw;
+        }
+
+        return lsRaw;
       }).catch(function () {
         return lsGet();
       });
     },
     save: function (raw) {
+      var ts = Date.now();
       lsSet(raw);
-      return idbSet(raw).catch(function () {});
+      lsSetTs(ts);
+      return idbSet(STATE_KEY, raw).then(function () {
+        return idbSet(STATE_TS_KEY, ts);
+      }).catch(function () {});
+    },
+    onHidden: function (dotNetRef) {
+      if (hiddenHandler) {
+        return;
+      }
+
+      hiddenHandler = function () {
+        if (document.visibilityState === "hidden") {
+          try {
+            dotNetRef.invokeMethodAsync("OnHidden");
+          } catch (err) {
+          }
+        }
+      };
+      document.addEventListener("visibilitychange", hiddenHandler);
+    },
+    clearHidden: function () {
+      if (hiddenHandler) {
+        document.removeEventListener("visibilitychange", hiddenHandler);
+        hiddenHandler = null;
+      }
     }
   };
 })();

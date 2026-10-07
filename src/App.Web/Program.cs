@@ -5,6 +5,8 @@ using App.Web.Auth;
 using App.Web.DependencyInjection;
 using App.Web.Services;
 
+using Azure.Monitor.OpenTelemetry.AspNetCore;
+
 using Microsoft.AspNetCore.Components.Authorization;
 
 using MudBlazor;
@@ -40,7 +42,17 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApiDocument();
 
 var otlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
-Program.ConfigureTelemetry(builder.Services, otlpEndpoint);
+var aiConnection = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+if (!string.IsNullOrWhiteSpace(aiConnection))
+{
+    // Application Insights replaces the OTLP pipeline. It brings its own
+    // ASP.NET Core, HTTP, and Entity Framework Core instrumentation.
+    builder.Services.AddOpenTelemetry().UseAzureMonitor();
+}
+else
+{
+    Program.ConfigureTelemetry(builder.Services, otlpEndpoint);
+}
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);

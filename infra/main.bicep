@@ -112,6 +112,10 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
           name: 'OTEL_EXPORTER_OTLP_ENDPOINT'
           value: otlpEndpoint
         }
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: insights.properties.ConnectionString
+        }
       ]
     }
   }
@@ -177,6 +181,27 @@ resource vaultReaderRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = 
   }
 }
 
+
+resource workspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
+  name: 'log-habitinator-${normalizedEnv}'
+  location: location
+  properties: {
+    sku: {
+      name: 'PerGB2018'
+    }
+    retentionInDays: 30
+  }
+}
+
+resource insights 'Microsoft.Insights/components@2020-02-02' = {
+  name: 'appi-habitinator-${normalizedEnv}'
+  location: location
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+    WorkspaceResourceId: workspace.id
+  }
+}
 
 output AZURE_WEBAPP_NAME string = web.name
 output AZURE_WEBAPP_URL string = 'https://${web.properties.defaultHostName}'

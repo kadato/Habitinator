@@ -3,6 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <DotNetVersion>11.0.0-rc.1.26425.128</DotNetVersion>
     <WebAssemblyVersion>$(DotNetVersion)</WebAssemblyVersion>
+    <MauiVersion>11.0.0-rc.1.26451.6</MauiVersion>
   </PropertyGroup>
 
   <ItemGroup>

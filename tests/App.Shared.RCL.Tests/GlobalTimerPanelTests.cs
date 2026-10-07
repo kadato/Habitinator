@@ -29,6 +29,7 @@ public sealed class GlobalTimerPanelTests : IAsyncDisposable
         _ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         _ctx.Services.AddMudServices();
         _ctx.Services.AddSingleton<IUserPreferencesService>(_preferencesService);
+        _ctx.Services.AddSingleton<ILocalSettingsStore>(new MemoryLocalSettingsStore());
         _ctx.Services.AddSingleton(_timerService);
 
         _preferencesService.GetAsync(Arg.Any<CancellationToken>())
@@ -40,6 +41,16 @@ public sealed class GlobalTimerPanelTests : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await _ctx.DisposeAsync();
+    }
+
+    private sealed class MemoryLocalSettingsStore : ILocalSettingsStore
+    {
+        private readonly Dictionary<string, string> _values = [];
+
+        public string? Read(string key, string? defaultValue = null) =>
+            _values.TryGetValue(key, out var value) ? value : defaultValue;
+
+        public void Write(string key, string value) => _values[key] = value;
     }
 
     [Fact]

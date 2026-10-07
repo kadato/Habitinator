@@ -131,6 +131,58 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
     }
 
     /// <summary>
+    ///     Captures the current session for the local store. The snapshot holds the
+    ///     live elapsed time, so call this before the app suspends or closes.
+    /// </summary>
+    public TimerSessionSnapshot CaptureState() =>
+        new(
+            Elapsed.Ticks,
+            TargetType,
+            TargetId,
+            BoardItemId,
+            FocusAlertAfter?.Ticks,
+            _clock.UtcNow);
+
+    /// <summary>
+    ///     Restores a saved session paused. A running timer never resumes on its own
+    ///     after a restart. The user starts it again with one tap.
+    /// </summary>
+    /// <returns>True when the snapshot held a session worth restoring.</returns>
+    public bool RestoreState(TimerSessionSnapshot? snapshot)
+    {
+        if (snapshot is null || (snapshot.ElapsedTicks <= 0 && snapshot.TargetId is null && snapshot.FocusAlertAfterTicks is null))
+        {
+            return false;
+        }
+
+        if (IsRunning)
+        {
+            return false;
+        }
+
+        lock (_sync)
+        {
+            _accumulated = TimeSpan.FromTicks(Math.Max(0, snapshot.ElapsedTicks));
+            _runningSince = null;
+            _nextFocusMilestoneAtElapsed = null;
+        }
+
+        if (snapshot.TargetType is null or "Session")
+        {
+            SetManualTarget(snapshot.TargetId);
+        }
+        else if (snapshot.TargetId is not null)
+        {
+            SelectTarget(snapshot.TargetType, snapshot.TargetId, snapshot.BoardItemId);
+        }
+
+        FocusAlertAfter = snapshot.FocusAlertAfterTicks is { } ticks && ticks > 0
+            ? TimeSpan.FromTicks(ticks)
+            : null;
+        return true;
+    }
+
+    /// <summary>
     ///     Returns <see langword="true" /> when the timer is <see cref="IsRunning">running</see>,
     ///     a positive <see cref="FocusAlertAfter" /> is set, and <see cref="Elapsed" /> has reached the next milestone.
     ///     The caller should <see cref="PauseForFocusTimeUp" /> and show a prompt, then

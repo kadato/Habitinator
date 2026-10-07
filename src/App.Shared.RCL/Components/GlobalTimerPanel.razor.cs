@@ -15,6 +15,10 @@ namespace App.Shared.RCL.Components;
 public partial class GlobalTimerPanel : IDisposable
 {
     [Inject] public ILogger<GlobalTimerPanel>? Logger { get; set; }
+
+    [Inject] public ILocalSettingsStore SettingsStore { get; set; } = null!;
+
+    private TimerSessionStore? _sessionStore;
     private Task<IEnumerable<string>> SearchSessionTargetsAsync(string value, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
@@ -43,6 +47,14 @@ public partial class GlobalTimerPanel : IDisposable
         {
             Logger?.LogDebug(ex, "Timer preferences load failed. The panel uses defaults.");
         }
+
+        _sessionStore = new TimerSessionStore(SettingsStore, null);
+        if (_sessionStore.TryRestore(TimerService))
+        {
+            _expanded = true;
+        }
+
+        TimerService.StateChanged += PersistTimerSession;
     }
 
     protected override void OnParametersSet()
@@ -428,6 +440,8 @@ public partial class GlobalTimerPanel : IDisposable
         GC.SuppressFinalize(this);
     }
 
+    private void PersistTimerSession() => _sessionStore?.Save(TimerService);
+
     protected virtual void Dispose(bool disposing)
     {
         if (!disposing)
@@ -437,5 +451,6 @@ public partial class GlobalTimerPanel : IDisposable
 
         TimerService.Ticked -= OnTimerTicked;
         TimerService.StateChanged -= OnTimerStateChanged;
+        TimerService.StateChanged -= PersistTimerSession;
     }
 }

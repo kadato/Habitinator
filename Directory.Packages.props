@@ -20,7 +20,7 @@
     <PackageVersion Include="Microsoft.Extensions.Http" Version="$(DotNetVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.10.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="$(DotNetVersion)" />
-    <PackageVersion Include="MudBlazor" Version="9.10.0" />
+    <PackageVersion Include="MudBlazor" Version="9.11.0" />
     <PackageVersion Include="Plugin.LocalNotification" Version="14.1.2" />
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
 

@@ -38,6 +38,8 @@ var webAppName = 'app-habitinator-${normalizedEnv}'
 // Must match the App Service default hostname so tokens validate for this deployment.
 var jwtIssuerUrl = 'https://${webAppName}.azurewebsites.net'
 var appServicePlanName = 'asp-habitinator-${normalizedEnv}'
+// Vault names are globally unique with a 24 character cap.
+var keyVaultName = 'kvhab${uniqueString(resourceGroup().id, environmentName)}'
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: appServicePlanName
@@ -84,7 +86,7 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'ConnectionStrings__DefaultConnection'
-          value: postgresConnectionString
+          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/postgres-connection/)'
         }
         {
           name: 'Jwt__Issuer'
@@ -96,7 +98,7 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'Jwt__SigningKey'
-          value: jwtSigningKey
+          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/jwt-signing-key/)'
         }
         {
           name: 'DemoUser__Email'
@@ -104,7 +106,7 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'DemoUser__Password'
-          value: demoUserPassword
+          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/demo-user-password/)'
         }
         {
           name: 'OTEL_EXPORTER_OTLP_ENDPOINT'
@@ -122,6 +124,56 @@ resource authSettings 'Microsoft.Web/sites/config@2023-12-01' = {
     platform: {
       enabled: false
     }
+  }
+}
+
+resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
+  name: keyVaultName
+  location: location
+  properties: {
+    tenantId: tenant().tenantId
+    sku: {
+      family: 'A'
+      name: 'standard'
+    }
+    enableRbacAuthorization: true
+  }
+}
+
+resource postgresSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'postgres-connection'
+  properties: {
+    value: postgresConnectionString
+  }
+}
+
+resource jwtSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'jwt-signing-key'
+  properties: {
+    value: jwtSigningKey
+  }
+}
+
+resource demoPasswordSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'demo-user-password'
+  properties: {
+    value: demoUserPassword
+  }
+}
+
+// Lets the web app read the three secrets above. Key Vault RBAC can lag a few
+// minutes, so the first start after provisioning may need one restart.
+resource vaultReaderRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, web.id, '4633458b-17de-408a-b874-0445c86b69e6')
+  scope: keyVault
+  properties: {
+    // Key Vault Secrets User
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
+    principalId: web.identity.principalId
+    principalType: 'ServicePrincipal'
   }
 }
 

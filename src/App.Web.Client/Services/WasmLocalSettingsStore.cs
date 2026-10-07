@@ -7,10 +7,12 @@ namespace App.Web.Client.Services;
 internal sealed class WasmLocalSettingsStore : ILocalSettingsStore
 {
     private readonly IJSInProcessRuntime? _js;
+    private readonly ILogger<WasmLocalSettingsStore> _logger;
 
-    public WasmLocalSettingsStore(IJSRuntime js)
+    public WasmLocalSettingsStore(IJSRuntime js, ILogger<WasmLocalSettingsStore> logger)
     {
         _js = js as IJSInProcessRuntime;
+        _logger = logger;
     }
 
     public string? Read(string key, string? defaultValue = null)
@@ -25,8 +27,9 @@ internal sealed class WasmLocalSettingsStore : ILocalSettingsStore
             var val = _js.Invoke<string?>("localStorage.getItem", key);
             return val ?? defaultValue;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogDebug(ex, "Local settings read failed for {Key}. The store returns the default.", key);
             return defaultValue;
         }
     }
@@ -42,9 +45,9 @@ internal sealed class WasmLocalSettingsStore : ILocalSettingsStore
         {
             _js.InvokeVoid("localStorage.setItem", key, value);
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore storage errors in browser, e.g. private browsing storage limits
+            _logger.LogDebug(ex, "Local settings write failed for {Key}. Private browsing quota is a common cause.", key);
         }
     }
 }

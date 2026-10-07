@@ -11,12 +11,17 @@ internal sealed class WasmAuthenticationStateProvider : AuthenticationStateProvi
 {
     private readonly IHttpClientFactory _http;
     private readonly PersistentComponentState _state;
+    private readonly ILogger<WasmAuthenticationStateProvider> _logger;
     private AuthenticationState? _cache;
 
-    public WasmAuthenticationStateProvider(IHttpClientFactory http, PersistentComponentState state)
+    public WasmAuthenticationStateProvider(
+        IHttpClientFactory http,
+        PersistentComponentState state,
+        ILogger<WasmAuthenticationStateProvider> logger)
     {
         _http = http;
         _state = state;
+        _logger = logger;
     }
 
     private HttpClient Client => _http.CreateClient("api");
@@ -45,9 +50,9 @@ internal sealed class WasmAuthenticationStateProvider : AuthenticationStateProvi
                 return _cache;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore and fall back to anonymous
+            _logger.LogDebug(ex, "Auth status check failed. The app falls back to anonymous.");
         }
 
         _cache = CreateAuthenticationState(new AuthStatusDto(false, null));

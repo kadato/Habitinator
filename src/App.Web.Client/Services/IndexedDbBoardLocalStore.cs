@@ -49,9 +49,9 @@ public sealed class IndexedDbBoardLocalStore : IBoardLocalStore
             {
                 await _js.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardLocalStore.js");
             }
-            catch
+            catch (Exception ex)
             {
-                // Prerender or loader unavailable. Memory mirror still works.
+                _logger.LogDebug(ex, "Board store loader unavailable. Memory mirror still works.");
             }
 
             try
@@ -88,9 +88,9 @@ public sealed class IndexedDbBoardLocalStore : IBoardLocalStore
                 return sync.Invoke<bool>("habBoardStore.isOnline");
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Prerender or JS unavailable. Assume online so sync can try.
+            _logger.LogDebug(ex, "Online probe failed. The probe assumes online so sync can try.");
         }
 
         return true;
@@ -193,9 +193,9 @@ public sealed class IndexedDbBoardLocalStore : IBoardLocalStore
             {
                 await pending.CancelAsync();
             }
-            catch
+            catch (Exception ex)
             {
-                // Ignore cancel races on rapid writes.
+                _logger.LogTrace(ex, "The flush ignores cancel races on rapid writes.");
             }
 
             pending.Dispose();
@@ -211,9 +211,9 @@ public sealed class IndexedDbBoardLocalStore : IBoardLocalStore
             _pendingPersist?.Cancel();
             _pendingPersist?.Dispose();
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore cancel races on rapid writes.
+            _logger.LogTrace(ex, "The scheduler ignores cancel races on rapid writes.");
         }
 
         var cts = new CancellationTokenSource();

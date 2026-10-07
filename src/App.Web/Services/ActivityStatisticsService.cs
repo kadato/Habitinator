@@ -393,39 +393,45 @@ public sealed class ActivityStatisticsService(
 
         if (wantedTags.Length == 1)
         {
-            var t = wantedTags[0].Trim();
-            if (t.Length == 0)
-            {
-                return null;
-            }
-
-            // Case-insensitive match on the CSV column, mirroring the OrdinalIgnoreCase
-            // in-memory path used for multi-tag filters. LIKE wildcards in the tag
-            // are escaped so they match literally.
-            var escaped = EscapeLikePattern(t);
-            var ids = await db.BoardItems.AsNoTracking()
-                .Where(b => b.UserId == userId && b.DeletedAtUtc == null
-                    && b.Tags != null
-                    && (EF.Functions.ILike(b.Tags, escaped)
-                        || EF.Functions.ILike(b.Tags, escaped + ",%")
-                        || EF.Functions.ILike(b.Tags, "%," + escaped + ",%")
-                        || EF.Functions.ILike(b.Tags, "%," + escaped)))
-                .Select(b => b.Id)
-                .ToListAsync(cancellationToken);
-
-            return [.. ids];
+            return await GetBoardItemIdsMatchingSingleTagAsync(db, userId, wantedTags[0], cancellationToken);
         }
 
-        HashSet<string> wantedSet = new(wantedTags, StringComparer.OrdinalIgnoreCase);
+        HashSet<Guid> union = [];
+        foreach (var wanted in wantedTags)
+        {
+            union.UnionWith(await GetBoardItemIdsMatchingSingleTagAsync(db, userId, wanted, cancellationToken));
+        }
 
-        var rows = await db.BoardItems.AsNoTracking()
-            .Where(b => b.UserId == userId && b.DeletedAtUtc == null)
-            .Select(b => new { b.Id, b.Tags })
+        return union;
+    }
+
+    private static async Task<HashSet<Guid>> GetBoardItemIdsMatchingSingleTagAsync(
+        ApplicationDbContext db,
+        Guid userId,
+        string tag,
+        CancellationToken cancellationToken)
+    {
+        var t = tag.Trim();
+        if (t.Length == 0)
+        {
+            return [];
+        }
+
+        // Case-insensitive match on the CSV column, mirroring the OrdinalIgnoreCase
+        // in-memory semantics. LIKE wildcards in the tag are escaped so they match
+        // literally. Only the id column loads, never the full row.
+        var escaped = EscapeLikePattern(t);
+        var ids = await db.BoardItems.AsNoTracking()
+            .Where(b => b.UserId == userId && b.DeletedAtUtc == null
+                && b.Tags != null
+                && (EF.Functions.ILike(b.Tags, escaped)
+                    || EF.Functions.ILike(b.Tags, escaped + ",%")
+                    || EF.Functions.ILike(b.Tags, "%," + escaped + ",%")
+                    || EF.Functions.ILike(b.Tags, "%," + escaped)))
+            .Select(b => b.Id)
             .ToListAsync(cancellationToken);
 
-        return [.. rows
-            .Where(r => BoardTagUtil.ParseTags(r.Tags).Any(t => wantedSet.Contains(t)))
-            .Select(r => r.Id)];
+        return [.. ids];
     }
 
     private static string EscapeLikePattern(string value) =>

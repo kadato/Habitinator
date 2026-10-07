@@ -1,4 +1,3 @@
-using App.Shared.RCL.Components.Dialogs;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 
@@ -159,6 +158,7 @@ public partial class BoardColumn : IAsyncDisposable
     }
 
     private readonly string _columnInstanceId = Guid.NewGuid().ToString("N");
+    private BoardItemEditor? _editor;
     private ElementReference _containerRef;
     private DotNetObjectReference<BoardColumn>? _selfRef;
     private bool _needRefresh;
@@ -697,67 +697,16 @@ public partial class BoardColumn : IAsyncDisposable
         return ApplyOverrideAsync(item.Id, optimistic, () => BoardData.ToggleItemAsync(Section, item.Id));
     }
 
-    private async Task HandleEditResultAsync(BoardItem item, EditDialogAction? action)
+    private Task OpenItemEditorAsync(BoardItem item)
     {
-        switch (action)
-        {
-            case EditDialogAction.Archive:
-                await ArchiveItemAsync(item);
-                break;
-            case EditDialogAction.Delete:
-                await DeleteItemAsync(item);
-                break;
-        }
-    }
-
-    private async Task OpenEditHabitAsync(BoardItem item)
-    {
-        DialogParameters<EditHabitDialog> parameters = new() { { x => x.Item, item } };
-        var dialog = await DialogService.ShowAsync<EditHabitDialog>(string.Empty, parameters, DialogDefaults.SmallEditor);
-        var result = await dialog.Result;
-        if (result is { Canceled: false, Data: EditHabitDialogResult r })
-        {
-            await HandleEditResultAsync(item, r.Action);
-        }
-    }
-
-    private async Task OpenEditDailyAsync(BoardItem item)
-    {
-        DialogParameters<EditDailyDialog> parameters = new() { { x => x.Item, item } };
-        var dialog = await DialogService.ShowAsync<EditDailyDialog>(string.Empty, parameters, DialogDefaults.SmallEditor);
-        var result = await dialog.Result;
-        if (result is { Canceled: false, Data: EditDailyDialogResult r })
-        {
-            await HandleEditResultAsync(item, r.Action);
-        }
-    }
-
-    private async Task OpenEditTodoAsync(BoardItem item)
-    {
-        DialogParameters<EditTodoDialog> parameters = new() { { x => x.Item, item } };
-        var dialog = await DialogService.ShowAsync<EditTodoDialog>(string.Empty, parameters, DialogDefaults.SmallEditor);
-        var result = await dialog.Result;
-        if (result is { Canceled: false, Data: EditTodoDialogResult r })
-        {
-            await HandleEditResultAsync(item, r.Action);
-        }
+        _editor ??= new BoardItemEditor(DialogService, ArchiveItemAsync, DeleteItemAsync);
+        return _editor.OpenAsync(Section, item);
     }
 
     private Task ArchiveItemAsync(BoardItem item) =>
         ApplyDeletionAsync(item.Id, () => BoardData.ArchiveItemAsync(Section, item.Id), item.Title);
 
     private Task DeleteItemAsync(BoardItem item) => DeleteAsync(item.Id, item.Title);
-
-    private Task OpenItemEditorAsync(BoardItem item)
-    {
-        return Section switch
-        {
-            BoardSection.Habit => OpenEditHabitAsync(item),
-            BoardSection.Daily => OpenEditDailyAsync(item),
-            BoardSection.Todo => OpenEditTodoAsync(item),
-            _ => Task.CompletedTask
-        };
-    }
 
     private Task DeleteAsync(Guid id, string? title = null) =>
         ApplyDeletionAsync(id, () => BoardData.DeleteItemAsync(Section, id), title);

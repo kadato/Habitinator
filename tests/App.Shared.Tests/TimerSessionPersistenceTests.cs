@@ -63,6 +63,54 @@ public sealed class TimerSessionPersistenceTests
     }
 
     [Fact]
+    public void PomodoroCycle_RoundTripsThroughStore()
+    {
+        var clock = new TestClock(new DateTimeOffset(2026, 4, 24, 10, 0, 0, TimeSpan.Zero));
+        var timer = new GlobalTimerService(clock);
+        var settings = new MemoryLocalSettingsStore();
+        var store = new TimerSessionStore(settings);
+
+        timer.PomodoroModeEnabled = true;
+        timer.Start();
+        timer.IncrementCompletedIntervals();
+        timer.IncrementCompletedIntervals();
+        clock.Advance(TimeSpan.FromMinutes(10));
+        timer.Pause();
+        store.Save(timer);
+
+        var fresh = new GlobalTimerService(clock);
+
+        Assert.True(store.TryRestore(fresh));
+        Assert.True(fresh.PomodoroModeEnabled);
+        Assert.Equal(PomodoroState.Work, fresh.CurrentPomodoroState);
+        Assert.Equal(2, fresh.CompletedWorkIntervalsCount);
+        Assert.Equal(TimeSpan.FromMinutes(10), fresh.Elapsed);
+        Assert.False(fresh.IsRunning);
+    }
+
+    [Fact]
+    public void Restore_UnknownStateName_FallsBackToIdle()
+    {
+        var clock = new TestClock(new DateTimeOffset(2026, 4, 24, 10, 0, 0, TimeSpan.Zero));
+        var timer = new GlobalTimerService(clock);
+        var snapshot = new TimerSessionSnapshot(
+            TimeSpan.FromMinutes(1).Ticks,
+            null,
+            null,
+            null,
+            null,
+            clock.UtcNow,
+            true,
+            "Bogus",
+            3);
+
+        Assert.True(timer.RestoreState(snapshot));
+        Assert.True(timer.PomodoroModeEnabled);
+        Assert.Equal(PomodoroState.Idle, timer.CurrentPomodoroState);
+        Assert.Equal(3, timer.CompletedWorkIntervalsCount);
+    }
+
+    [Fact]
     public void Store_RoundTrip_PreservesSession()
     {
         var clock = new TestClock(new DateTimeOffset(2026, 4, 24, 10, 0, 0, TimeSpan.Zero));

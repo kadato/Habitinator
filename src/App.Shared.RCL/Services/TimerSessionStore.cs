@@ -22,7 +22,7 @@ public sealed class TimerSessionStore(
         try
         {
             var snapshot = timer.CaptureState();
-            if (snapshot.ElapsedTicks <= 0 && snapshot.TargetId is null && snapshot.FocusAlertAfterTicks is null)
+            if (IsIdle(snapshot))
             {
                 settings.Write(Key, string.Empty);
                 return;
@@ -35,6 +35,13 @@ public sealed class TimerSessionStore(
             logger?.LogDebug(ex, "Timer session save failed. The session restarts empty.");
         }
     }
+
+    private static bool IsIdle(TimerSessionSnapshot snapshot) =>
+        snapshot.ElapsedTicks <= 0
+        && snapshot.TargetId is null
+        && snapshot.FocusAlertAfterTicks is null
+        && snapshot.CompletedIntervals <= 0
+        && (snapshot.PomodoroStateName is null || snapshot.PomodoroStateName == nameof(PomodoroState.Idle));
 
     /// <summary>Restores the saved session paused. Returns false when nothing was saved.</summary>
     public bool TryRestore(GlobalTimerService timer)

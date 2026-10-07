@@ -141,7 +141,10 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
             TargetId,
             BoardItemId,
             FocusAlertAfter?.Ticks,
-            _clock.UtcNow);
+            _clock.UtcNow,
+            PomodoroModeEnabled,
+            CurrentPomodoroState.ToString(),
+            CompletedWorkIntervalsCount);
 
     /// <summary>
     ///     Restores a saved session paused. A running timer never resumes on its own
@@ -150,7 +153,7 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
     /// <returns>True when the snapshot held a session worth restoring.</returns>
     public bool RestoreState(TimerSessionSnapshot? snapshot)
     {
-        if (snapshot is null || (snapshot.ElapsedTicks <= 0 && snapshot.TargetId is null && snapshot.FocusAlertAfterTicks is null))
+        if (snapshot is null || IsEmptySnapshot(snapshot))
         {
             return false;
         }
@@ -167,6 +170,14 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
             _nextFocusMilestoneAtElapsed = null;
         }
 
+        // Bypass the mode setter. It resets the session, which would wipe the
+        // elapsed time restored above.
+        _pomodoroModeEnabled = snapshot.PomodoroModeEnabled;
+        CurrentPomodoroState = Enum.TryParse<PomodoroState>(snapshot.PomodoroStateName, out var state)
+            ? state
+            : PomodoroState.Idle;
+        CompletedWorkIntervalsCount = Math.Max(0, snapshot.CompletedIntervals);
+
         if (snapshot.TargetType is null or "Session")
         {
             SetManualTarget(snapshot.TargetId);
@@ -181,6 +192,13 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
             : null;
         return true;
     }
+
+    private static bool IsEmptySnapshot(TimerSessionSnapshot snapshot) =>
+        snapshot.ElapsedTicks <= 0
+        && snapshot.TargetId is null
+        && snapshot.FocusAlertAfterTicks is null
+        && snapshot.CompletedIntervals <= 0
+        && (snapshot.PomodoroStateName is null || snapshot.PomodoroStateName == nameof(PomodoroState.Idle));
 
     /// <summary>
     ///     Returns <see langword="true" /> when the timer is <see cref="IsRunning">running</see>,

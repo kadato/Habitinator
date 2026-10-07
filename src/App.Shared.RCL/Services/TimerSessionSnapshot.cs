@@ -7,10 +7,16 @@ namespace App.Shared.RCL.Services;
 /// <param name="BoardItemId">Board row id when the target is a board item.</param>
 /// <param name="FocusAlertAfterTicks">Pending time's up alert, if any.</param>
 /// <param name="SavedAtUtc">When the snapshot was captured.</param>
+/// <param name="PomodoroModeEnabled">Whether pomodoro mode was on.</param>
+/// <param name="PomodoroStateName">Cycle position: Idle, Work, ShortBreak, or LongBreak.</param>
+/// <param name="CompletedIntervals">Work intervals done in the current cycle.</param>
 public sealed record TimerSessionSnapshot(
     long ElapsedTicks,
     string? TargetType,
     string? TargetId,
     Guid? BoardItemId,
     long? FocusAlertAfterTicks,
-    DateTimeOffset SavedAtUtc);
+    DateTimeOffset SavedAtUtc,
+    bool PomodoroModeEnabled = false,
+    string? PomodoroStateName = null,
+    int CompletedIntervals = 0);

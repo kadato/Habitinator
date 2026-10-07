@@ -38,8 +38,6 @@ var webAppName = 'app-habitinator-${normalizedEnv}'
 // Must match the App Service default hostname so tokens validate for this deployment.
 var jwtIssuerUrl = 'https://${webAppName}.azurewebsites.net'
 var appServicePlanName = 'asp-habitinator-${normalizedEnv}'
-// Vault names are globally unique with a 24 character cap.
-var keyVaultName = 'kvhab${uniqueString(resourceGroup().id, environmentName)}'
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: appServicePlanName
@@ -86,7 +84,7 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'ConnectionStrings__DefaultConnection'
-          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/postgres-connection/)'
+          value: postgresConnectionString
         }
         {
           name: 'Jwt__Issuer'
@@ -98,7 +96,7 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'Jwt__SigningKey'
-          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/jwt-signing-key/)'
+          value: jwtSigningKey
         }
         {
           name: 'DemoUser__Email'
@@ -106,7 +104,7 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'DemoUser__Password'
-          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/demo-user-password/)'
+          value: demoUserPassword
         }
         {
           name: 'OTEL_EXPORTER_OTLP_ENDPOINT'
@@ -130,68 +128,6 @@ resource authSettings 'Microsoft.Web/sites/config@2023-12-01' = {
     }
   }
 }
-
-resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
-  name: keyVaultName
-  location: location
-  properties: {
-    tenantId: tenant().tenantId
-    sku: {
-      family: 'A'
-      name: 'standard'
-    }
-    // Access policies (not RBAC) so deployers do not need
-    // Microsoft.Authorization/roleAssignments/write.
-    enableRbacAuthorization: false
-  }
-}
-
-resource postgresSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  parent: keyVault
-  name: 'postgres-connection'
-  properties: {
-    value: postgresConnectionString
-  }
-}
-
-resource jwtSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  parent: keyVault
-  name: 'jwt-signing-key'
-  properties: {
-    value: jwtSigningKey
-  }
-}
-
-resource demoPasswordSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  parent: keyVault
-  name: 'demo-user-password'
-  properties: {
-    value: demoUserPassword
-  }
-}
-
-// Lets the web app read the three secrets above via a vault access policy.
-// This lives under the Key Vault resource provider, so unlike a
-// Microsoft.Authorization/roleAssignments resource it does not require the
-// deployer to hold roleAssignments/write.
-resource vaultAccess 'Microsoft.KeyVault/vaults/accessPolicies@2023-07-01' = {
-  parent: keyVault
-  name: 'add'
-  properties: {
-    accessPolicies: [
-      {
-        tenantId: tenant().tenantId
-        objectId: web.identity.principalId
-        permissions: {
-          secrets: [
-            'get'
-          ]
-        }
-      }
-    ]
-  }
-}
-
 
 resource workspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: 'log-habitinator-${normalizedEnv}'

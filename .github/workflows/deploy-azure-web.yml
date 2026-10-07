@@ -122,9 +122,6 @@ jobs:
           dotnet workload install wasm-tools
           dotnet workload restore Habitinator.slnx
 
-      - name: Register Key Vault resource provider
-        run: az provider register --namespace Microsoft.KeyVault --wait
-
       - name: Provision with azd
         run: azd provision --no-prompt
 

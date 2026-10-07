@@ -159,6 +159,12 @@ public sealed partial class LocalFirstBoardDataService
         if (AreItemsContentEqual(localItem, serverItem))
         {
             logger.LogInformation("Conflict detected but items are content-identical. Auto-resolving by keeping Server version silently.");
+            syncStatus.RecordConflict(new BoardSyncConflict(
+                DateTimeOffset.UtcNow,
+                serverItem.Id,
+                localItem.Title,
+                BoardSyncConflictOutcome.Identical,
+                string.Empty));
             await ResolveConflictKeepServerAsync(operationId, serverItem, section, cancellationToken);
             return false;
         }
@@ -180,6 +186,12 @@ public sealed partial class LocalFirstBoardDataService
                 localTime,
                 localTimeInServerClock,
                 serverTime);
+            syncStatus.RecordConflict(new BoardSyncConflict(
+                DateTimeOffset.UtcNow,
+                serverItem.Id,
+                localItem.Title,
+                BoardSyncConflictOutcome.KeptDevice,
+                DescribeChangedFields(localItem, serverItem)));
             await ResolveConflictKeepMineAsync(operationId, serverItem, cancellationToken);
         }
         else
@@ -189,10 +201,86 @@ public sealed partial class LocalFirstBoardDataService
                 localTime,
                 localTimeInServerClock,
                 serverTime);
+            syncStatus.RecordConflict(new BoardSyncConflict(
+                DateTimeOffset.UtcNow,
+                serverItem.Id,
+                localItem.Title,
+                BoardSyncConflictOutcome.KeptServer,
+                DescribeChangedFields(localItem, serverItem)));
             await ResolveConflictKeepServerAsync(operationId, serverItem, section, cancellationToken);
         }
 
         return false;
+    }
+
+    private static string DescribeChangedFields(BoardItem a, BoardItem b)
+    {
+        List<string> fields = [];
+        if (!string.Equals(a.Title, b.Title, StringComparison.Ordinal))
+        {
+            fields.Add("title");
+        }
+
+        if (a.IsCompleted != b.IsCompleted)
+        {
+            fields.Add("completed");
+        }
+
+        if (a.Counter != b.Counter || a.NegativeCounter != b.NegativeCounter)
+        {
+            fields.Add("counter");
+        }
+
+        if (!string.Equals(a.Notes ?? string.Empty, b.Notes ?? string.Empty, StringComparison.Ordinal))
+        {
+            fields.Add("notes");
+        }
+
+        if (!string.Equals(a.Tags ?? string.Empty, b.Tags ?? string.Empty, StringComparison.Ordinal))
+        {
+            fields.Add("tags");
+        }
+
+        if (a.TrackPlus != b.TrackPlus || a.TrackMinus != b.TrackMinus)
+        {
+            fields.Add("tracking");
+        }
+
+        if (a.ResetPeriod != b.ResetPeriod || a.HabitPeriodStart != b.HabitPeriodStart)
+        {
+            fields.Add("reset schedule");
+        }
+
+        if (a.DailyStartDate != b.DailyStartDate
+            || a.DailyRepeat != b.DailyRepeat
+            || a.DailyRepeatInterval != b.DailyRepeatInterval
+            || a.DailyWeekdays != b.DailyWeekdays
+            || a.DailyLastCompletedOn != b.DailyLastCompletedOn)
+        {
+            fields.Add("daily schedule");
+        }
+
+        if (!string.Equals(a.ChecklistJson ?? string.Empty, b.ChecklistJson ?? string.Empty, StringComparison.Ordinal))
+        {
+            fields.Add("checklist");
+        }
+
+        if (a.TodoDueDate != b.TodoDueDate)
+        {
+            fields.Add("due date");
+        }
+
+        if (!NullableDoubleEquals(a.SortOrder, b.SortOrder))
+        {
+            fields.Add("order");
+        }
+
+        if (a.IsArchived != b.IsArchived)
+        {
+            fields.Add("archived");
+        }
+
+        return string.Join(", ", fields);
     }
 
     private async Task<BoardLocalRow?> FindItemAnyUserAsync(Guid id, CancellationToken cancellationToken)

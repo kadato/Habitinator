@@ -1,0 +1,48 @@
+@using App.Shared.RCL.Services.Board.Local
+@inject IUserDateFormatService DateFormatService
+
+<MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content">
+    <DialogContent>
+        <div class="hab-modal hab-modal--neutral" data-dialog-label="Sync conflicts" aria-label="Sync conflicts" role="group">
+            <div class="hab-modal__grabber" aria-hidden="true"></div>
+            <div class="hab-modal__header">
+                <div class="hab-modal__topbar hab-modal__topbar--minimal">
+                    <DialogCloseButton OnClose="Close" />
+                </div>
+                <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Sync conflicts</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Each row kept one side automatically. Newest first.</MudText>
+            </div>
+            <div class="hab-modal__body">
+                <ul class="sync-conflict-list">
+                    @foreach (var conflict in Conflicts)
+                    {
+                        <li class="sync-conflict-row" @key="conflict.ItemId">
+                            <MudText Typo="Typo.body2" Class="font-weight-bold">@conflict.Title</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@DateFormatService.Format(conflict.OccurredAtUtc.LocalDateTime)</MudText>
+                            <MudText Typo="Typo.caption">@OutcomeText(conflict.Outcome)</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@FieldsText(conflict.ChangedFields)</MudText>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public IReadOnlyList<BoardSyncConflict> Conflicts { get; set; } = [];
+
+    private void Close() => MudDialog.Close();
+
+    private static string OutcomeText(BoardSyncConflictOutcome outcome) => outcome switch
+    {
+        BoardSyncConflictOutcome.KeptDevice => "Kept this device",
+        BoardSyncConflictOutcome.KeptServer => "Kept server",
+        _ => "Same on both sides"
+    };
+
+    private static string FieldsText(string changedFields) =>
+        string.IsNullOrWhiteSpace(changedFields) ? "No field differences" : $"Changed: {changedFields}";
+}

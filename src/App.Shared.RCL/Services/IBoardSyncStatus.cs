@@ -1,3 +1,5 @@
+using App.Shared.RCL.Services.Board.Local;
+
 namespace App.Shared.RCL.Services;
 
 /// <summary>Local-first sync surface for UI. Both MAUI and Web report live sync state.</summary>
@@ -15,6 +17,9 @@ public interface IBoardSyncStatus
     /// <summary>Non-null when the last sync try failed or operations are stuck after retries.</summary>
     string? SyncProblemMessage { get; }
 
+    /// <summary>Newest first. Holds the last auto-resolved sync conflicts.</summary>
+    IReadOnlyList<BoardSyncConflict> RecentConflicts { get; }
+
     event EventHandler? Changed;
 }
 
@@ -26,6 +31,7 @@ public sealed class NoOpBoardSyncStatus : IBoardSyncStatus
     public DateTimeOffset? LastSyncedUtc => null;
     public int PendingCount => 0;
     public string? SyncProblemMessage => null;
+    public IReadOnlyList<BoardSyncConflict> RecentConflicts => [];
 
     public event EventHandler? Changed
     {

@@ -1,6 +1,7 @@
 using App.Shared.RCL.Components;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+using App.Shared.RCL.Services.Board.Local;
 
 using Bunit;
 
@@ -163,6 +164,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         public DateTimeOffset? LastSyncedUtc { get; set; }
         public int PendingCount { get; set; }
         public string? SyncProblemMessage { get; set; }
+        public IReadOnlyList<BoardSyncConflict> RecentConflicts { get; set; } = [];
 
         public event EventHandler? Changed;
 

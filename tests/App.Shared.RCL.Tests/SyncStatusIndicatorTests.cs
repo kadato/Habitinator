@@ -10,6 +10,7 @@ using FluentAssertions;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using MudBlazor;
 using MudBlazor.Services;
 
 using NSubstitute;
@@ -77,6 +78,30 @@ public sealed class SyncStatusIndicatorTests : IAsyncDisposable
         button.GetAttribute("aria-label").Should().Contain("3 pending");
     }
 
+    [Fact]
+    public async Task IconOnly_WithConflicts_OpensDialog_InsteadOfToast()
+    {
+        _boardSync.RecentConflicts =
+        [
+            new BoardSyncConflict(
+                new DateTimeOffset(2026, 10, 3, 8, 0, 0, TimeSpan.Zero),
+                Guid.NewGuid(),
+                "Run",
+                BoardSyncConflictOutcome.KeptDevice,
+                "title")
+        ];
+
+        var provider = _ctx.Render<MudDialogProvider>();
+        var cut = _ctx.Render<SyncStatusIndicator>(p => p.Add(x => x.IconOnly, true));
+
+        await cut.InvokeAsync(() => cut.Find(".sync-icon-btn").Click());
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Sync conflicts"), TimeSpan.FromSeconds(5));
+
+        provider.Markup.Should().Contain("Run");
+        provider.Markup.Should().Contain("Kept this device");
+        await _notifier.DidNotReceive().NotifyAsync(Arg.Any<string>(), Arg.Any<Severity>());
+    }
+
     private sealed class TestBoardSyncStatus : IBoardSyncStatus
     {
         public bool IsOffline { get; set; }
@@ -84,6 +109,7 @@ public sealed class SyncStatusIndicatorTests : IAsyncDisposable
         public DateTimeOffset? LastSyncedUtc { get; set; }
         public int PendingCount { get; set; }
         public string? SyncProblemMessage { get; set; }
+        public IReadOnlyList<BoardSyncConflict> RecentConflicts { get; set; } = [];
 
 #pragma warning disable CS0067
         public event EventHandler? Changed;

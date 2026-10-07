@@ -1,8 +1,10 @@
 @using App.Shared.RCL.Services.Board.Local
+@using App.Shared.RCL.Components.Dialogs
 @inject IBoardSyncStatus BoardSync
 @inject IBoardSyncRequestor SyncRequestor
 @inject IUserDateFormatService DateFormatService
 @inject IUserNotifier Notifier
+@inject IDialogService DialogService
 @implements IDisposable
 
 @{
@@ -69,6 +71,20 @@ else
 
     private async Task ShowDetailsAsync()
     {
+        if (BoardSync.RecentConflicts.Count > 0)
+        {
+            try
+            {
+                DialogParameters<SyncConflictsDialog> parameters = new() { { x => x.Conflicts, BoardSync.RecentConflicts } };
+                await DialogService.ShowAsync<SyncConflictsDialog>(string.Empty, parameters, DialogDefaults.Wide);
+                return;
+            }
+            catch
+            {
+                // Fall through to the toast. The indicator still shows the state.
+            }
+        }
+
         var severity = GetState() switch
         {
             SyncState.Error => MudBlazor.Severity.Error,

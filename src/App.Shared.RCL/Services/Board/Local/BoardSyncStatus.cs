@@ -80,6 +80,35 @@ public sealed class BoardSyncStatus : IBoardSyncStatus
         }
     }
 
+    private const int MaxConflicts = 20;
+    private readonly Queue<BoardSyncConflict> _conflicts = [];
+
+    /// <summary>Newest first. Holds the last resolutions so the UI can show them.</summary>
+    public IReadOnlyList<BoardSyncConflict> RecentConflicts
+    {
+        get
+        {
+            lock (_conflicts)
+            {
+                return [.. _conflicts.Reverse()];
+            }
+        }
+    }
+
+    public void RecordConflict(BoardSyncConflict conflict)
+    {
+        lock (_conflicts)
+        {
+            _conflicts.Enqueue(conflict);
+            while (_conflicts.Count > MaxConflicts)
+            {
+                _conflicts.Dequeue();
+            }
+        }
+
+        OnChanged();
+    }
+
     public event EventHandler? Changed;
 
     internal void SetSyncing(bool value) => IsSyncing = value;
@@ -95,6 +124,12 @@ public sealed class BoardSyncStatus : IBoardSyncStatus
         SetLastSynced(null);
         SetProblem(null);
         SetPendingCount(0);
+        lock (_conflicts)
+        {
+            _conflicts.Clear();
+        }
+
+        OnChanged();
     }
 
     public void UpdateOffline(bool isOffline) => IsOffline = isOffline;

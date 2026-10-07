@@ -73,11 +73,11 @@
     <PackageVersion Include="Microsoft.Playwright" Version="1.63.0" />
 
     <!-- BrandExporter script dependencies -->
-    <PackageVersion Include="SkiaSharp" Version="3.119.4" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="3.119.4" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.macOS" Version="3.119.4" />
-    <PackageVersion Include="Svg.Skia" Version="3.7.0" />
+    <PackageVersion Include="SkiaSharp" Version="4.153.1" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="4.153.1" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="4.153.1" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.macOS" Version="4.153.1" />
+    <PackageVersion Include="Svg.Skia" Version="5.2.3" />
     <PackageVersion Include="System.Drawing.Common" Version="$(DotNetVersion)" />
   </ItemGroup>
 </Project>

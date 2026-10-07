@@ -14,6 +14,7 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
 {
     private readonly IClock _clock = clock;
     private readonly ILogger<GlobalTimerService>? _logger = logger;
+    private readonly Lock _sync = new();
     private TimeSpan _accumulated = TimeSpan.Zero;
 
     /// <summary>Total <see cref="Elapsed" /> at which the next "time's up" event fires, when focus duration is set.</summary>
@@ -99,7 +100,16 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
         }
     }
 
-    public bool IsRunning => _runningSince.HasValue;
+    public bool IsRunning
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _runningSince.HasValue;
+            }
+        }
+    }
 
     /// <summary>
     ///     A "time's up" dialog is showing. The stopwatch keeps running. The user must log, pick not done, or, if
@@ -107,10 +117,18 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
     /// </summary>
     public bool AwaitingFocusTimeUpPrompt { get; private set; }
 
-    public TimeSpan Elapsed =>
-        _runningSince.HasValue
-            ? _accumulated + (_clock.UtcNow - _runningSince.Value)
-            : _accumulated;
+    public TimeSpan Elapsed
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _runningSince.HasValue
+                    ? _accumulated + (_clock.UtcNow - _runningSince.Value)
+                    : _accumulated;
+            }
+        }
+    }
 
     /// <summary>
     ///     Returns <see langword="true" /> when the timer is <see cref="IsRunning">running</see>,
@@ -209,6 +227,10 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
             {
                 // Heartbeat cancelled normally when timer stopped or paused.
             }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Timer heartbeat stopped unexpectedly.");
+            }
         }, token);
     }
 
@@ -247,10 +269,17 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
             && FocusAlertAfter is { } f
             && f > TimeSpan.Zero)
         {
-            _nextFocusMilestoneAtElapsed = _accumulated + f;
+            lock (_sync)
+            {
+                _nextFocusMilestoneAtElapsed ??= _accumulated + f;
+            }
         }
 
-        _runningSince = _clock.UtcNow;
+        lock (_sync)
+        {
+            _runningSince = _clock.UtcNow;
+        }
+
         StartHeartbeat();
         Ticked?.Invoke();
         NotifyStateChanged();
@@ -268,7 +297,10 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
         }
 
         AwaitingFocusTimeUpPrompt = false;
-        _nextFocusMilestoneAtElapsed = null;
+        lock (_sync)
+        {
+            _nextFocusMilestoneAtElapsed = null;
+        }
 
         if (!IsRunning)
         {
@@ -298,13 +330,29 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
     public void Pause()
     {
         StopHeartbeat();
-        if (_runningSince is not { } runningSince)
+        DateTimeOffset? runningSince;
+        lock (_sync)
+        {
+            runningSince = _runningSince;
+        }
+
+        if (runningSince is not { } started)
         {
             return;
         }
 
-        _accumulated += _clock.UtcNow - runningSince;
-        _runningSince = null;
+        lock (_sync)
+        {
+            // Re-check under lock so a concurrent Start cannot lose time.
+            if (_runningSince is not { } current || current != started)
+            {
+                return;
+            }
+
+            _accumulated += _clock.UtcNow - current;
+            _runningSince = null;
+        }
+
         Ticked?.Invoke();
         NotifyStateChanged();
     }
@@ -314,10 +362,15 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
         StopHeartbeat();
         AwaitingFocusTimeUpPrompt = false;
         Pause();
-        var duration = _accumulated;
-        _accumulated = TimeSpan.Zero;
-        _runningSince = null;
-        _nextFocusMilestoneAtElapsed = null;
+        TimeSpan duration;
+        lock (_sync)
+        {
+            duration = _accumulated;
+            _accumulated = TimeSpan.Zero;
+            _runningSince = null;
+            _nextFocusMilestoneAtElapsed = null;
+        }
+
         Ticked?.Invoke();
         NotifyStateChanged();
         return duration;
@@ -331,9 +384,13 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
         StopHeartbeat();
         AwaitingFocusTimeUpPrompt = false;
         Pause();
-        _accumulated = TimeSpan.Zero;
-        _runningSince = null;
-        _nextFocusMilestoneAtElapsed = null;
+        lock (_sync)
+        {
+            _accumulated = TimeSpan.Zero;
+            _runningSince = null;
+            _nextFocusMilestoneAtElapsed = null;
+        }
+
         Ticked?.Invoke();
         NotifyStateChanged();
     }
@@ -344,7 +401,10 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
     public void ClearTargetAndFocus()
     {
         FocusAlertAfter = null;
-        _nextFocusMilestoneAtElapsed = null;
+        lock (_sync)
+        {
+            _nextFocusMilestoneAtElapsed = null;
+        }
         if (!PomodoroModeEnabled)
         {
             TargetType = null;
@@ -406,17 +466,18 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
     {
         if (!FocusAlertAfter.HasValue || FocusAlertAfter <= TimeSpan.Zero)
         {
-            _nextFocusMilestoneAtElapsed = null;
+            lock (_sync)
+            {
+                _nextFocusMilestoneAtElapsed = null;
+            }
+
             return;
         }
 
-        if (IsRunning)
+        var elapsed = Elapsed;
+        lock (_sync)
         {
-            _nextFocusMilestoneAtElapsed = Elapsed + FocusAlertAfter.Value;
-        }
-        else
-        {
-            _nextFocusMilestoneAtElapsed = _accumulated + FocusAlertAfter.Value;
+            _nextFocusMilestoneAtElapsed = elapsed + FocusAlertAfter.Value;
         }
     }
 

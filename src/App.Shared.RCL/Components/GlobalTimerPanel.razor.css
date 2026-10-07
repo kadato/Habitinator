@@ -403,6 +403,16 @@
     background: transparent;
     border: none;
     border-bottom: 1px solid transparent;
+    width: 100%;
+    padding: 0;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+}
+
+.timer-mobile-header:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
 }
 
 .timer-mobile-header--expanded {

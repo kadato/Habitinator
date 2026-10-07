@@ -4,7 +4,9 @@ using System.Globalization;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Logging;
 
 using MudBlazor;
 
@@ -12,6 +14,7 @@ namespace App.Shared.RCL.Components;
 
 public partial class GlobalTimerPanel : IDisposable
 {
+    [Inject] public ILogger<GlobalTimerPanel>? Logger { get; set; }
     private Task<IEnumerable<string>> SearchSessionTargetsAsync(string value, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
@@ -36,9 +39,9 @@ public partial class GlobalTimerPanel : IDisposable
             TimerService.LongBreakDuration = TimeSpan.FromMinutes(prefs.PomodoroLongBreakMinutes);
             TimerService.IntervalsBeforeLongBreak = prefs.PomodoroCyclesBeforeLongBreak;
         }
-        catch
+        catch (Exception ex)
         {
-            // fallback to defaults already defined
+            Logger?.LogDebug(ex, "Timer preferences load failed. The panel uses defaults.");
         }
     }
 
@@ -414,14 +417,6 @@ public partial class GlobalTimerPanel : IDisposable
     private void ToggleExpanded()
     {
         _expanded = !_expanded;
-    }
-
-    private void OnMobileHeaderKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key is " " or "Enter")
-        {
-            ToggleExpanded();
-        }
     }
 
     private string GetCompletedPomodoroTitle() =>

@@ -1,15 +1,26 @@
 @using Microsoft.JSInterop
-@inject App.Shared.RCL.Services.Board.Local.IBoardLocalStore Store
+@using Microsoft.Extensions.DependencyInjection
+@using App.Shared.RCL.Services.Board.Local
+@inject IServiceProvider Services
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
 @code {
+    private IBoardLocalStore? _store;
     private DotNetObjectReference<BoardPersistOnHide>? _selfRef;
     private bool _hooked;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender || _hooked)
+        {
+            return;
+        }
+
+        // The server renders without a local store. It writes straight to the
+        // database, so there is nothing to flush.
+        _store = Services.GetService<IBoardLocalStore>();
+        if (_store is null)
         {
             return;
         }
@@ -33,7 +44,15 @@
 
     /// <summary>Flushes the debounced in-memory mirror when the tab hides.</summary>
     [JSInvokable]
-    public Task OnHidden() => Store.FlushAsync();
+    public Task OnHidden()
+    {
+        if (_store is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        return _store.FlushAsync();
+    }
 
     public async ValueTask DisposeAsync()
     {

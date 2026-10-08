@@ -63,15 +63,38 @@ public sealed class DailyRolloverTests
     }
 
     [Fact]
-    public void GetOverdueSince_CompletedYesterday_ReportsOldestMissNotYesterday()
+    public void GetOverdueSince_CompletedYesterday_IsNotOverdue()
     {
-        var item = NewDaily("Stale", Utc(s_today.AddDays(-10))) with
+        var item = NewDaily("Done yesterday", Utc(s_today.AddDays(-10))) with
         {
             DailyLastCompletedOn = s_today.AddDays(-1)
         };
 
-        DailyRollover.GetOverdueSince([item], s_today, maxDaysBack: 3)
-            .Should().ContainKey(item.Id).WhoseValue.Should().Be(s_today.AddDays(-3));
+        DailyRollover.GetOverdueSince([item], s_today, maxDaysBack: 3).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void GetOverdueSince_CompletedThreeDaysAgo_ReportsFirstMissAfterCompletion()
+    {
+        var item = NewDaily("Stale", Utc(s_today.AddDays(-10))) with
+        {
+            DailyLastCompletedOn = s_today.AddDays(-3)
+        };
+
+        DailyRollover.GetOverdueSince([item], s_today, maxDaysBack: 7)
+            .Should().ContainKey(item.Id).WhoseValue.Should().Be(s_today.AddDays(-2));
+    }
+
+    [Fact]
+    public void GetOverdueSince_LegacyCompletedWithoutDate_IsNotOverdue()
+    {
+        var item = NewDaily("Legacy done", Utc(s_today.AddDays(-10))) with
+        {
+            IsCompleted = true,
+            DailyLastCompletedOn = null
+        };
+
+        DailyRollover.GetOverdueSince([item], s_today).Should().BeEmpty();
     }
 
     [Fact]

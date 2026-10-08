@@ -8,7 +8,9 @@ namespace App.Shared.RCL.Models;
 /// up as overdue rows. This helper flags the misses that still deserve attention.
 /// A miss from yesterday on an item due again today is normal rollover and stays
 /// clean. Anything older, or anything that would otherwise vanish until its next
-/// scheduled day, counts as overdue. Misses outside the window expire silently.
+/// scheduled day, counts as overdue. Only consecutive misses since the last
+/// completed scheduled day count. Days before that completion are unknown history,
+/// not misses. Misses outside the window expire silently.
 /// </summary>
 public static class DailyRollover
 {
@@ -46,18 +48,33 @@ public static class DailyRollover
         int maxDaysBack = MaxCatchUpDays)
     {
         ArgumentNullException.ThrowIfNull(daily);
+        if (DailySchedule.IsCompletedForToday(daily.DailyLastCompletedOn, daily.IsCompleted, today))
+        {
+            return null;
+        }
+
         var yesterday = today.AddDays(-1);
         var window = Math.Clamp(maxDaysBack, 1, MaxCatchUpDays);
         DateOnly? oldest = null;
         for (var back = 1; back <= window; back++)
         {
             var day = today.AddDays(-back);
-            if (daily.DailyLastCompletedOn != today
-                && !DidNotExistOnDay(daily, day, tz)
-                && DailySchedule.IsDueOnDate(daily, day))
+            if (DidNotExistOnDay(daily, day, tz))
             {
-                oldest = day;
+                continue;
             }
+
+            if (!DailySchedule.IsScheduledOn(daily, day))
+            {
+                continue;
+            }
+
+            if (DailySchedule.IsCompleteForDate(daily, day))
+            {
+                break;
+            }
+
+            oldest = day;
         }
 
         if (oldest == yesterday && DailySchedule.IsScheduledOn(daily, today))

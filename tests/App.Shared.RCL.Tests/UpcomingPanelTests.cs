@@ -139,6 +139,55 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
     }
 
     [Fact]
+    public void Next7_Selecting_Day_Keeps_Window_And_Moves_Agenda()
+    {
+        _boardData.GetSnapshotAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new BoardSnapshot([], [], [])));
+        _viewState.GetAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<UpcomingViewState?>(new UpcomingViewState("Next7", "All")));
+
+        var cut = _ctx.Render<UpcomingPanel>();
+        cut.WaitForState(() => cut.FindAll(".cal-week-grid button").Count == 7, TimeSpan.FromSeconds(5));
+        var before = cut.FindAll(".cal-week-grid button")
+            .Select(b => b.GetAttribute("aria-label")).ToList();
+
+        // Tap the third visible day. The grid window must not move, only the agenda.
+        cut.FindAll(".cal-week-grid button")[2].Click();
+
+        var afterCells = cut.FindAll(".cal-week-grid button");
+        afterCells.Select(b => b.GetAttribute("aria-label")).Should().BeEquivalentTo(before);
+        afterCells[2].GetAttribute("aria-current").Should().Be("date");
+    }
+
+    [Fact]
+    public void Next7_Top_Nav_Moves_Window()
+    {
+        _boardData.GetSnapshotAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new BoardSnapshot([], [], [])));
+        _viewState.GetAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<UpcomingViewState?>(new UpcomingViewState("Next7", "All")));
+
+        var cut = _ctx.Render<UpcomingPanel>();
+        cut.WaitForState(() => cut.FindAll(".cal-week-grid button").Count == 7, TimeSpan.FromSeconds(5));
+        var firstBefore = ExtractDate(cut.FindAll(".cal-week-grid button")[0].GetAttribute("aria-label"));
+
+        cut.Find("button[aria-label='Next 7 days']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var firstAfter = ExtractDate(cut.FindAll(".cal-week-grid button")[0].GetAttribute("aria-label"));
+            firstAfter.Should().Be(firstBefore.AddDays(7));
+        }, TimeSpan.FromSeconds(5));
+    }
+
+    private static DateOnly ExtractDate(string? ariaLabel)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(ariaLabel ?? string.Empty, @"\d{4}-\d{2}-\d{2}");
+        match.Success.Should().BeTrue("cell aria-label should contain the formatted date");
+        return DateOnly.Parse(match.Value, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    [Fact]
     public void Ignores_Invalid_Persisted_Values()
     {
         _boardData.GetSnapshotAsync(Arg.Any<CancellationToken>())

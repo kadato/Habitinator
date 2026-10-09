@@ -85,8 +85,8 @@
         </section>
 
         <div class="cal-body">
-            <div class="cal-side">
-                @if (ShowTodos && _overdue.Count > 0)
+            <div class="@SideClass">
+                @if (HasOverdueCard)
                 {
                     <MudPaper Class="cal-card cal-card--overdue" Elevation="0" Outlined="true" id="upcoming-overdue">
                         <div class="cal-card__head">

@@ -29,10 +29,13 @@ public partial class UpcomingPanel
     private int _visibleYear;
     private int _visibleMonth;
     private DateOnly _selected;
+    private DateOnly _next7Anchor;
     private bool _calInit;
 
     private bool ShowDailies => _filter != UpcomingFilter.Todos;
     private bool ShowTodos => _filter != UpcomingFilter.Dailies;
+    private bool HasOverdueCard => ShowTodos && _overdue.Count > 0;
+    private string SideClass => HasOverdueCard ? "cal-side" : "cal-side cal-side--solo";
     private int OverdueCount => _overdue.Count;
 
     private int TodayRemaining
@@ -201,6 +204,7 @@ public partial class UpcomingPanel
             _visibleYear = _today.Year;
             _visibleMonth = _today.Month;
             _selected = _today;
+            _next7Anchor = _today;
             _calInit = true;
         }
     }
@@ -281,6 +285,19 @@ public partial class UpcomingPanel
         _selected = date;
         _visibleYear = date.Year;
         _visibleMonth = date.Month;
+        if (_view == CalView.Next7)
+        {
+            // Tapping a visible day only moves the agenda selection. The 7-day
+            // window follows only when the selection leaves it (day steppers).
+            if (_selected < _next7Anchor)
+            {
+                _next7Anchor = _selected;
+            }
+            else if (_selected > _next7Anchor.AddDays(6))
+            {
+                _next7Anchor = _selected.AddDays(-6);
+            }
+        }
     }
 
     private void PrevDay() => SelectDay(_selected.AddDays(-1));
@@ -291,6 +308,13 @@ public partial class UpcomingPanel
         if (_view == CalView.Month)
         {
             PrevMonth();
+        }
+        else if (_view == CalView.Next7)
+        {
+            // Top navigation moves the whole 7-day window, keeping the agenda
+            // selection at the same offset inside it.
+            _next7Anchor = _next7Anchor.AddDays(-7);
+            SelectDay(_selected.AddDays(-7));
         }
         else
         {
@@ -303,6 +327,11 @@ public partial class UpcomingPanel
         if (_view == CalView.Month)
         {
             NextMonth();
+        }
+        else if (_view == CalView.Next7)
+        {
+            _next7Anchor = _next7Anchor.AddDays(7);
+            SelectDay(_selected.AddDays(7));
         }
         else
         {
@@ -329,6 +358,7 @@ public partial class UpcomingPanel
         _visibleYear = _today.Year;
         _visibleMonth = _today.Month;
         _selected = _today;
+        _next7Anchor = _today;
     }
 
     private static string TodoCompleteLabel(BoardItem todo) => $"Mark {todo.Title} complete";
@@ -345,7 +375,7 @@ public partial class UpcomingPanel
 
     private List<DateOnly> WeekCells() => Enumerable.Range(0, 7).Select(WeekStart.AddDays).ToList();
 
-    private List<DateOnly> Next7Cells() => Enumerable.Range(0, 7).Select(_selected.AddDays).ToList();
+    private List<DateOnly> Next7Cells() => Enumerable.Range(0, 7).Select(_next7Anchor.AddDays).ToList();
 
     private List<DateOnly> DayStripCells() => Enumerable.Range(-3, 7).Select(_selected.AddDays).ToList();
 
@@ -356,7 +386,7 @@ public partial class UpcomingPanel
             ? $"{start:MMM d, yyyy} - {end:MMM d, yyyy}"
             : $"{start:MMM d} - {end:MMM d}, {end:yyyy}";
 
-    private string SevenRangeTitle => RangeTitle(_selected, _selected.AddDays(6));
+    private string SevenRangeTitle => RangeTitle(_next7Anchor, _next7Anchor.AddDays(6));
 
     private string GridAriaLabel => _view == CalView.Next7
         ? $"Next 7 days {SevenRangeTitle} calendar"

@@ -4,47 +4,92 @@
     <MudCardHeader Class="pb-1">
         <CardHeaderContent>
             <div class="board-column-header-row">
-                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
-                    <MudSkeleton Width="24px" Height="24px" SkeletonType="SkeletonType.Rectangle" Class="rounded" />
+                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="board-title-stack">
+                    <MudSkeleton Width="28px" Height="28px" SkeletonType="SkeletonType.Circle" Class="board-skel-badge" />
                     <MudText Typo="Typo.subtitle1" Class="board-title">@GetTitle()</MudText>
+                    <MudSkeleton Width="20px" Height="20px" SkeletonType="SkeletonType.Circle" Class="board-skel-info" />
                 </MudStack>
             </div>
         </CardHeaderContent>
     </MudCardHeader>
 
     <MudCardContent Class="pt-0">
-        <div class="board-filter-toolbar mb-2">
-            <MudSkeleton Height="26px" Class="board-filter-btn" />
-            <MudSkeleton Height="26px" Class="board-filter-btn" />
-            <MudSkeleton Height="26px" Class="board-filter-btn" />
+        <div class="board-filter-toolbar mb-2" aria-hidden="true">
+            <MudSkeleton Height="32px" SkeletonType="SkeletonType.Rectangle" Class="board-skel-filter-btn" />
+            <MudSkeleton Height="32px" SkeletonType="SkeletonType.Rectangle" Class="board-skel-filter-btn" />
+            <MudSkeleton Height="32px" SkeletonType="SkeletonType.Rectangle" Class="board-skel-filter-btn" />
         </div>
 
-        <div class="board-add-wrap mb-3">
-            <MudSkeleton Width="100%" Height="40px" />
+        <div class="board-add-wrap mb-2" aria-hidden="true">
+            <MudSkeleton Width="100%" Height="40px" SkeletonType="SkeletonType.Rectangle" Class="board-skel-add" />
         </div>
 
-        <div class="board-list">
+        <div class="board-list mt-2" aria-hidden="true">
             @for (int cardIdx = 0; cardIdx < 3; cardIdx++)
             {
-                <div class="@($"board-card {GetRowClass()} pa-2 mb-1.5 d-flex align-center gap-3")" style="min-height: 48px;">
-                    <div class="board-card__left d-flex gap-1 align-center">
-                        <MudSkeleton Width="26px" Height="26px" SkeletonType="SkeletonType.Rectangle" Class="rounded" />
-                        @if (Section == BoardSection.Habit)
+                if (Section == BoardSection.Habit)
+                {
+                    <div class="board-card board-row--habit">
+                        <div class="board-card__habit-btns board-card__left">
+                            <MudSkeleton Width="36px" Height="36px" SkeletonType="SkeletonType.Rectangle" Class="board-skel-sq" />
+                            <MudSkeleton Width="36px" Height="36px" SkeletonType="SkeletonType.Rectangle" Class="board-skel-sq" />
+                        </div>
+                        <div class="board-card__head">
+                            <div class="flex-grow-1 min-w-0">
+                                <MudSkeleton Width="@GetTitleWidth(cardIdx)" Height="16px" Class="mb-1" />
+                                <MudSkeleton Width="@GetSubWidth(cardIdx)" Height="12px" />
+                            </div>
+                            <div class="board-card__head-actions">
+                                <MudSkeleton Width="24px" Height="24px" SkeletonType="SkeletonType.Circle" />
+                            </div>
+                        </div>
+                        <div class="board-card__extra">
+                        </div>
+                        <div class="board-card__foot">
+                            <div class="board-card__foot-left">
+                                <div class="board-habit-counters">
+                                    <MudSkeleton Width="48px" Height="18px" SkeletonType="SkeletonType.Rectangle" Class="board-skel-pill" />
+                                    <MudSkeleton Width="48px" Height="18px" SkeletonType="SkeletonType.Rectangle" Class="board-skel-pill" />
+                                </div>
+                            </div>
+                            <div class="board-card__foot-right"></div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="@($"board-card {GetRowClass()}")">
+                        <div class="board-card__check-col board-card__left">
+                            <MudSkeleton Width="26px" Height="26px" SkeletonType="SkeletonType.Rectangle" Class="board-skel-check" />
+                        </div>
+                        <div class="board-card__head">
+                            <div class="flex-grow-1 min-w-0">
+                                <MudSkeleton Width="@GetTitleWidth(cardIdx)" Height="16px" Class="mb-1" />
+                                <MudSkeleton Width="@GetSubWidth(cardIdx)" Height="12px" />
+                            </div>
+                            <div class="board-card__head-actions">
+                                <MudSkeleton Width="24px" Height="24px" SkeletonType="SkeletonType.Circle" />
+                            </div>
+                        </div>
+                        @if (Section == BoardSection.Daily)
                         {
-                            <MudSkeleton Width="26px" Height="26px" SkeletonType="SkeletonType.Rectangle" Class="rounded" />
+                            <div class="board-card__extra">
+                            </div>
+                            <div class="board-card__foot">
+                                <div class="board-card__foot-left"></div>
+                                <div class="board-card__foot-right">
+                                    <MudSkeleton Width="40px" Height="16px" SkeletonType="SkeletonType.Rectangle" Class="board-skel-pill" />
+                                </div>
+                            </div>
                         }
                     </div>
-                    <div class="flex-grow-1">
-                        <MudSkeleton Width="60%" Height="16px" Class="mb-1" />
-                        <MudSkeleton Width="40%" Height="12px" />
-                    </div>
-                </div>
+                }
             }
         </div>
     </MudCardContent>
 
     <MudCardActions Class="board-col-foot px-4 pb-3 pt-0">
-        <MudSkeleton Width="100%" Height="16px" />
+        <MudSkeleton Width="70%" Height="14px" />
     </MudCardActions>
 </MudCard>
 
@@ -74,5 +119,19 @@
         BoardSection.Daily => "board-row--daily-open",
         BoardSection.Todo => "board-row--todo-open",
         _ => string.Empty
+    };
+
+    private static string GetTitleWidth(int cardIdx) => cardIdx switch
+    {
+        0 => "68%",
+        1 => "52%",
+        _ => "61%"
+    };
+
+    private static string GetSubWidth(int cardIdx) => cardIdx switch
+    {
+        0 => "42%",
+        1 => "34%",
+        _ => "46%"
     };
 }

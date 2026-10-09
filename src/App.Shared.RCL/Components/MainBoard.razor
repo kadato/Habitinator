@@ -5,6 +5,8 @@
 @inject IRemoteBoardRefreshService RemoteBoardRefresh
 @inject BoardRemoteNotifyBridge BoardNotifyBridge
 @inject IBoardSyncStatus BoardSync
+@inject App.Shared.RCL.Services.Board.Local.IBoardSyncRequestor BoardSyncRequestor
+@inject IClientSessionProvider ClientSession
 @inject IJSRuntime JS
 @inject IUserTimeZoneService TimeZoneService
 @inject IUserPreferencesService PreferencesService
@@ -148,9 +150,10 @@
         <MudPaper Class="px-3 py-2 board-stat-strip" Outlined="false" Elevation="0">
             <div class="board-stat-strip-row">
 
-                <div class="board-stat-filters d-flex gap-2">
-                    <MudSkeleton Width="160px" Height="32px" Class="rounded-pill" />
-                    <MudSkeleton Width="80px" Height="32px" Class="rounded-pill" />
+                <div class="board-stat-filters d-flex gap-2 w-100">
+                    <MudSkeleton Height="36px" SkeletonType="SkeletonType.Rectangle" Class="board-skel-search" />
+                    <MudSkeleton Width="90px" Height="36px" SkeletonType="SkeletonType.Rectangle" Class="board-skel-trigger" />
+                    <MudSkeleton Width="90px" Height="36px" SkeletonType="SkeletonType.Rectangle" Class="board-skel-trigger" />
                 </div>
             </div>
         </MudPaper>
@@ -237,12 +240,15 @@
                     <div class="board-section-switcher" role="group" aria-label="Loading board sections" aria-busy="true">
                         <button type="button" class="board-section-switcher__btn board-section-switcher__btn--active" disabled aria-pressed="true">
                             <span class="board-section-switcher__label">Habits</span>
+                            <MudSkeleton Width="24px" Height="20px" SkeletonType="SkeletonType.Rectangle" Class="rounded-pill" />
                         </button>
                         <button type="button" class="board-section-switcher__btn" disabled aria-pressed="false">
                             <span class="board-section-switcher__label">Dailies</span>
+                            <MudSkeleton Width="24px" Height="20px" SkeletonType="SkeletonType.Rectangle" Class="rounded-pill" />
                         </button>
                         <button type="button" class="board-section-switcher__btn" disabled aria-pressed="false">
                             <span class="board-section-switcher__label">To-dos</span>
+                            <MudSkeleton Width="24px" Height="20px" SkeletonType="SkeletonType.Rectangle" Class="rounded-pill" />
                         </button>
                     </div>
                     <BoardColumnSkeleton Section="BoardSection.Habit" />

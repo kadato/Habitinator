@@ -565,6 +565,30 @@
     }
 }
 
+/* Search strip skeleton matches the 36px real controls. */
+.board-skel-search {
+    flex: 1 1 auto !important;
+    min-width: 12rem !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    border-radius: var(--radius-md) !important;
+}
+
+.board-skel-trigger {
+    flex-shrink: 0 !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    border-radius: var(--radius-md) !important;
+}
+
+@media (max-width: 959.98px) {
+    .board-skel-search,
+    .board-skel-trigger {
+        height: 44px !important;
+        min-height: 44px !important;
+    }
+}
+
 .board-load-fallback {
     display: flex;
     flex-direction: column;

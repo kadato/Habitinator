@@ -1,0 +1,232 @@
+/* Skeleton placeholders mirror the real board controls. First paint
+   keeps the same size and position when real rows replace them. */
+
+/* This file copies the structural layout from BoardColumn and BoardItemCard.
+   The skeleton keeps the same shape in its own CSS scope. Real colors and
+   accents stay in BoardColumn and BoardItemCard. This file only positions placeholders. */
+.board-column {
+    min-height: 18rem;
+    height: 100%;
+    border-radius: var(--space-6);
+    overflow: hidden;
+    background: var(--mud-palette-background-gray);
+    border: 1px solid var(--hab-border-card);
+}
+
+.board-column-header-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.board-title {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.2 !important;
+}
+
+.board-title-stack {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.board-filter-toolbar {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: var(--space-2) !important;
+}
+
+.board-list {
+    border-top: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
+    display: flex;
+    flex-direction: column;
+    padding-top: 0.2rem;
+}
+
+.board-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: var(--space-4);
+    row-gap: 0.3rem;
+    align-items: start;
+    margin-bottom: var(--space-3);
+    padding: 0.45rem var(--space-5);
+    box-sizing: border-box;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--hab-border-card);
+    border-radius: var(--space-5);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.board-card__left {
+    grid-row: 1;
+    grid-column: 1;
+    align-self: center;
+}
+
+.board-card__head {
+    grid-row: 1;
+    grid-column: 2;
+    align-self: center;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+    min-width: 0;
+}
+
+.board-card__habit-btns {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.15rem;
+    flex-shrink: 0;
+}
+
+.board-card__check-col {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.board-card__head-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    margin-right: 0.15rem;
+}
+
+.board-card__extra {
+    grid-column: 2;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.board-card__foot {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.1rem;
+    padding-top: 0.2rem;
+    border-top: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 7%, transparent);
+    min-height: 0;
+}
+
+.board-card__foot-left,
+.board-card__foot-right {
+    display: inline-flex;
+    align-items: center;
+}
+
+.board-habit-counters {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-left: auto;
+}
+
+.board-card.board-row--habit {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: var(--space-4);
+}
+
+.board-row--habit .board-card__left {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    align-self: center;
+    margin-left: 0;
+}
+
+.board-row--habit .board-card__head {
+    grid-column: 1;
+}
+
+.board-row--habit .board-card__extra {
+    grid-column: 1;
+}
+
+.board-row--habit .board-card__foot {
+    grid-column: 1;
+}
+
+.board-row--habit .board-card__habit-btns {
+    gap: var(--space-2);
+}
+
+@media (max-width: 959.98px) {
+    .board-column {
+        min-height: auto;
+    }
+}
+
+.board-column .board-skel-badge {
+    flex-shrink: 0;
+}
+
+.board-column .board-skel-info {
+    flex-shrink: 0;
+    margin-left: -2px;
+    opacity: 0.9;
+}
+
+.board-column .board-skel-filter-btn {
+    flex: 1 1 0 !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    border-radius: var(--radius-md) !important;
+}
+
+.board-column .board-skel-add {
+    border-radius: 0.65rem !important;
+}
+
+.board-column .board-skel-check {
+    border-radius: var(--space-3) !important;
+    flex-shrink: 0;
+}
+
+.board-column .board-skel-sq {
+    border-radius: var(--radius-md) !important;
+    flex-shrink: 0;
+}
+
+.board-column .board-skel-pill {
+    border-radius: var(--radius-sm) !important;
+}
+
+@media (max-width: 959.98px) {
+    .board-column .board-skel-filter-btn {
+        height: 44px !important;
+        min-height: 44px !important;
+    }
+}
+
+@media (pointer: coarse) {
+    .board-column .board-skel-check {
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+    }
+
+    .board-column .board-skel-sq {
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+    }
+}

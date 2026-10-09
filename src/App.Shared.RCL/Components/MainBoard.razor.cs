@@ -118,7 +118,7 @@ public partial class MainBoard : IAsyncDisposable
 
     private int SelectedFilterTagCount => _selectedFilterTags.Count;
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync()
     {
         _subscription = ApplicationState.RegisterOnPersisting(PersistBoardData);
         _searchText = UiSessionState.SearchText;
@@ -129,7 +129,9 @@ public partial class MainBoard : IAsyncDisposable
         }
         _mobileSectionIndex = UiSessionState.MobileSectionIndex;
 
-        if (ApplicationState.TryTakeFromJson<BoardSnapshot>("board_snapshot", out var restored) && restored is not null)
+        if (ApplicationState.TryTakeFromJson<BoardSnapshot>("board_snapshot", out var restored)
+            && restored is not null
+            && IsNonEmptySnapshot(restored))
         {
             Habits = restored.Habits.ToList();
             Dailies = restored.Dailies.ToList();
@@ -139,7 +141,9 @@ public partial class MainBoard : IAsyncDisposable
             _initialLoadComplete = true;
             InitialBoardLoad.MarkComplete();
         }
-        else if (BoardDataService.TryGetCachedSnapshot(out var cached) && cached is not null)
+        else if (BoardDataService.TryGetCachedSnapshot(out var cached)
+            && cached is not null
+            && IsNonEmptySnapshot(cached))
         {
             Habits = cached.Habits.ToList();
             Dailies = cached.Dailies.ToList();
@@ -149,21 +153,181 @@ public partial class MainBoard : IAsyncDisposable
             _initialLoadComplete = true;
             InitialBoardLoad.MarkComplete();
         }
-        await DateFormatService.InitializeAsync();
+
+        if (!_initialLoadComplete)
+        {
+            // No usable rows yet. Show skeletons on first paint while the local
+            // mirror loads in the background. Empty snapshots keep the loading
+            // state. The board never flashes empty before the remote hydrate.
+            _isLoading = true;
+        }
+
         BoardSync.Changed += OnBoardSyncStatusChanged;
         RemoteBoardRefresh.RegisterForRemoteRefresh(HandleRemoteBoardRefreshedAsync);
         UndoService.OnStateChanged += HandleUndoStateChanged;
         UndoService.OnUndoPerformed += HandleUndoPerformed;
         PreferencesService.Changed += OnPreferencesChanged;
-        await LoadShortcutsPreferenceAsync();
+
+        // Prefs, date format, and the SQLite mirror load together off the
+        // render path. First paint shows cached rows or skeletons.
+        _ = InitializeBoardAsync();
+        return Task.CompletedTask;
+    }
+
+    private async Task InitializeBoardAsync()
+    {
+        // Prefs and date format load off the critical path. The board read
+        // starts at once, so first paint shows the local mirror without
+        // waiting for settings.
+        var prefsTask = Task.WhenAll(
+            SafeInitializeAsync(() => DateFormatService.InitializeAsync()),
+            SafeInitializeAsync(LoadShortcutsPreferenceAsync));
+
         if (!_initialLoadComplete)
         {
-            await InitialLoadAsync();
+            try
+            {
+                await LoadInitialBoardAsync();
+            }
+            catch
+            {
+                // LoadAsync records _loadError for the retry UI. Anything escaping
+                // here, like a disposed scope or a snackbar failure, must not stall init.
+            }
+        }
+
+        try
+        {
+            await prefsTask;
+        }
+        catch
+        {
+            // Best effort. Board renders with defaults.
+        }
+
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // The board was disposed before background init finished.
+        }
+    }
+
+    private static bool IsNonEmptySnapshot(BoardSnapshot snapshot) =>
+        snapshot.Habits.Count + snapshot.Dailies.Count + snapshot.Todos.Count > 0;
+
+    private bool HasBoardItems() =>
+        Habits.Count + Dailies.Count + Todos.Count > 0;
+
+    private async Task LoadInitialBoardAsync()
+    {
+        if (_initialLoadComplete)
+        {
+            return;
+        }
+
+        try
+        {
+            await EnsureAuthReadyAsync();
+            await LoadAsync(LoadBoardAsync);
+            if (_loadError is not null)
+            {
+                _initialLoadComplete = true;
+                InitialBoardLoad.MarkComplete();
+                return;
+            }
+
+            if (HasBoardItems())
+            {
+                _initialLoadComplete = true;
+                InitialBoardLoad.MarkComplete();
+                return;
+            }
+
+            // Empty local mirror. Pull once while skeletons stay up. A returning
+            // user never sees an empty board flash before remote rows arrive.
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+                await BoardSyncRequestor.SyncNowAsync(cts.Token);
+                await LoadBoardAsync();
+            }
+            catch
+            {
+                // Offline or remote failed. The empty state below is real.
+            }
+
+            _initialLoadComplete = true;
+            InitialBoardLoad.MarkComplete();
+        }
+        catch
+        {
+            _initialLoadComplete = true;
+            InitialBoardLoad.MarkComplete();
+        }
+    }
+
+    private async Task EnsureAuthReadyAsync()
+    {
+        // MainBoard mounts only inside an authorized view. On MAUI a logged-in
+        // gate guards it instead. A false IsLoggedIn here means the session
+        // provider has not caught up yet. The user is not anonymous.
+        // The local read is keyed by user. A brief wait avoids an empty
+        // snapshot and the empty-board flash.
+        if (ClientSession.IsLoggedIn)
+        {
+            return;
+        }
+
+        try
+        {
+            var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            void OnChanged(object? sender, EventArgs e) => tcs.TrySetResult();
+            ClientSession.Changed += OnChanged;
+            try
+            {
+                if (ClientSession.IsLoggedIn)
+                {
+                    return;
+                }
+
+                await tcs.Task.WaitAsync(TimeSpan.FromSeconds(2));
+            }
+            finally
+            {
+                ClientSession.Changed -= OnChanged;
+            }
+        }
+        catch
+        {
+            // The wait timed out or failed. The load below still runs.
+        }
+    }
+
+    private static async Task SafeInitializeAsync(Func<Task> init)
+    {
+        try
+        {
+            await init();
+        }
+        catch
+        {
+            // Best effort. Callers fall back to defaults.
         }
     }
 
     private Task PersistBoardData()
     {
+        // Prerender registers this before the local mirror loads. An
+        // unconditional persist would cache an empty board and flash it on
+        // the next start. Persist only usable rows.
+        if (!_initialLoadComplete || _loadError is not null || !HasBoardItems())
+        {
+            return Task.CompletedTask;
+        }
+
         var snapshot = new BoardSnapshot(
             Habits,
             Dailies,
@@ -293,13 +457,19 @@ public partial class MainBoard : IAsyncDisposable
     {
         try
         {
-            await JS.InvokeVoidAsync(HabitinatorLoadScriptFunction, "_content/App.Shared.RCL/js/sortable.min.js");
-            await JS.InvokeVoidAsync(HabitinatorLoadScriptFunction, "_content/App.Shared.RCL/js/boardSortable.js");
+            await Task.WhenAll(
+                LoadBoardScriptAsync("_content/App.Shared.RCL/js/sortable.min.js"),
+                LoadBoardScriptAsync("_content/App.Shared.RCL/js/boardSortable.js"));
         }
         catch (Exception)
         {
             // Ignored during background preload
         }
+    }
+
+    private async Task LoadBoardScriptAsync(string path)
+    {
+        await JS.InvokeVoidAsync(HabitinatorLoadScriptFunction, path);
     }
 
     private async Task StartBoardClientScriptsAsync()
@@ -337,7 +507,9 @@ public partial class MainBoard : IAsyncDisposable
 
             _dailyRetroClientReady = true;
             _ = RefreshStreaksAsync();
-            await TryOpenDailyYesterdayRetroIfNeededAsync();
+            // The retro dialog is post-paint work. Open it off the render path
+            // so swipe and viewport setup stay responsive.
+            _ = OpenRetroAfterScriptsAsync();
         }
         catch (JSDisconnectedException)
         {
@@ -354,6 +526,19 @@ public partial class MainBoard : IAsyncDisposable
         catch (JSException)
         {
             _boardClientScriptsStarted = false;
+        }
+    }
+
+    private async Task OpenRetroAfterScriptsAsync()
+    {
+        try
+        {
+            await TryOpenDailyYesterdayRetroIfNeededAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // Best effort post-paint dialog. Retry happens on next load.
         }
     }
 
@@ -406,13 +591,6 @@ public partial class MainBoard : IAsyncDisposable
     {
         _lastLocalMutationTime = DateTimeOffset.UtcNow;
         await LoadBoardAsync();
-    }
-
-    private async Task InitialLoadAsync()
-    {
-        await LoadAsync(LoadBoardAsync);
-        _initialLoadComplete = true;
-        InitialBoardLoad.MarkComplete();
     }
 
     private async Task RetryLoadAsync()

@@ -44,10 +44,7 @@
             {
                 <MudProgressLinear Indeterminate="true"/>
             }
-            else
-            {
-                @Body
-            }
+            @Body
         </MudContainer>
     </MudMainContent>
     @if (Session.IsLoggedIn)
@@ -82,31 +79,69 @@
         base.OnInitialized();
         Session.Changed += OnSessionChanged;
         IsDarkMode = GetSystemDarkMode();
+        // Start session load off the render path so the shell paints immediately.
+        // The initial Session.Changed event from LoadAsync is ignored (see below).
+        // LoadSessionAsync finishes the auth redirect and prefs work.
+        _ = LoadSessionAsync();
     }
 
     private void OnSessionChanged(object? sender, EventArgs e)
     {
+        // The Changed event fired by the initial LoadAsync is handled by
+        // LoadSessionAsync. Skip it here to avoid double prefs load and warmup.
+        if (!_sessionInitialized)
+        {
+            return;
+        }
+
         _ = InvokeAsync(OnSessionChangedAsync);
     }
 
-    protected override async Task OnInitializedAsync()
+    private async Task LoadSessionAsync()
     {
-        await Session.LoadAsync();
-        if (!Session.IsLoggedIn)
+        try
         {
-            var path = new Uri(Nav.Uri).LocalPath.TrimEnd('/');
-            if (!IsPublicWhenLoggedOut(path))
+            await Session.LoadAsync();
+        }
+        catch
+        {
+            // A slow or failing token store must never block first paint.
+        }
+
+        try
+        {
+            if (!Session.IsLoggedIn)
             {
-                Nav.NavigateTo("/auth/login", replace: true);
+                var path = new Uri(Nav.Uri).LocalPath.TrimEnd('/');
+                if (!IsPublicWhenLoggedOut(path))
+                {
+                    Nav.NavigateTo("/auth/login", replace: true);
+                }
+            }
+            else
+            {
+                await LoadPreferencesAsync();
             }
         }
-        else
+        catch
         {
-            await LoadPreferencesAsync();
+            // Best effort. The board shows local state and retries via sync.
         }
 
         _sessionInitialized = true;
-        await InvokeAsync(StateHasChanged);
+        if (Session.IsLoggedIn)
+        {
+            _ = WarmUpCachesAsync();
+        }
+
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // The layout was disposed before the session finished loading.
+        }
     }
 
     protected override async Task OnAfterFirstRenderAsync()

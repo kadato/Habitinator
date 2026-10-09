@@ -4,12 +4,12 @@
 @inject NavigationManager Navigation
 
 <PageMeta Title="@PageTitles.Page("Sign in")"
-          Description="You sign in to your Habitinator account or continue as the demo guest."
+          Description="Sign in to your Habitinator account or continue as demo guest."
           CanonicalPath="/auth/login"
           Robots="@SeoDefaults.IndexRobots"/>
 
 <AuthPageShell Title="Sign in"
-               Subtitle="Sign in with your email and password. Or continue as the demo guest."
+               Subtitle="Sign in with your email and password. Or continue as demo guest."
                MaxWidth="28rem">
     <ChildContent>
         @if (!string.IsNullOrWhiteSpace(_message))
@@ -44,8 +44,8 @@
     </ChildContent>
     <Footer>
         <span>New here?</span>
-        <a href="/auth/register" data-enhance-nav="false">Create account</a>,
-        <a href="/auth/forgot-password" data-enhance-nav="false">Forgot password</a>,
+        <a href="/auth/register" data-enhance-nav="false">Create account</a>
+        <a href="/auth/forgot-password" data-enhance-nav="false">Forgot password</a>
         <a href="/privacy" data-enhance-nav="false">Privacy</a>
     </Footer>
 </AuthPageShell>

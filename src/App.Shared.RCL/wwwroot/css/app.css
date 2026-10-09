@@ -414,6 +414,31 @@ input[type="number"].mud-input-slot {
     text-transform: none !important;
 }
 
+/* Replacements for Bootstrap text utilities. Neither Bootstrap nor MudBlazor
+   ships these names, so without them the markup falls back to browser defaults
+   such as underlined brand links and unmuted secondary text. */
+.text-decoration-none {
+    text-decoration: none !important;
+}
+
+.text-secondary {
+    color: var(--mud-palette-text-secondary) !important;
+}
+
+.font-weight-normal {
+    font-weight: 400 !important;
+}
+
+.text-truncate {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.max-w-240 {
+    max-width: 240px !important;
+}
+
 /* Responsive visibility. Do not rely on Bootstrap display utilities for app chrome. */
 .app-show-mobile-only,
 .app-show-mobile-only.mud-button-root,

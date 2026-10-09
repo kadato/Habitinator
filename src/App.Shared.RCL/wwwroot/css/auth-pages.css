@@ -94,6 +94,10 @@
     margin-bottom: var(--space-2);
 }
 
+.auth-card .form-check-label {
+    margin-bottom: 0;
+}
+
 .auth-card .btn-primary,
 .auth-card .btn-outline-secondary {
     width: 100%;
@@ -151,10 +155,48 @@
     text-decoration: none;
 }
 
+/* Links after the first get a dash separator that travels with the link on wrap. */
+.auth-page__footer a + a::before {
+    content: "-";
+    margin-right: var(--space-4);
+    font-weight: 400;
+    color: var(--mud-palette-text-disabled);
+}
+
 .auth-card .alert {
     border-radius: var(--space-4);
     font-size: 0.9rem;
     margin-bottom: var(--space-6);
+}
+
+/* Long-form content inside cards, such as the privacy page. */
+.auth-card h2 {
+    margin: 1.5rem 0 0.5rem;
+    font-size: 1rem;
+    line-height: 1.4;
+}
+
+.auth-card h2:first-child {
+    margin-top: 0;
+}
+
+.auth-card p {
+    margin: 0 0 0.75rem;
+    line-height: 1.55;
+}
+
+.auth-card p:last-child {
+    margin-bottom: 0;
+}
+
+.auth-card ul {
+    margin: 0 0 0.75rem;
+    padding-left: 1.25rem;
+    line-height: 1.55;
+}
+
+.auth-card li + li {
+    margin-top: 0.25rem;
 }
 
 /* Welcome landing */
@@ -179,7 +221,7 @@
     background: color-mix(in srgb, var(--mud-palette-primary) 6%, var(--mud-palette-surface));
     border: 1px dashed var(--mud-palette-divider);
     border-radius: var(--space-4);
-    padding: var(--space-2);
+    padding: var(--space-4);
 }
 
 @media (min-width: 768px) {

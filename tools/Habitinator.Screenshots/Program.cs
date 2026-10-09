@@ -52,7 +52,7 @@ foreach (var (themeName, scheme) in new[] { ("light", ColorScheme.Light), ("dark
     // Auth screens first. No login needed.
     await CaptureAuthScreensAsync(page, baseUrl, themeName);
 
-    // Log in as the demo guest
+    // Sign in as the demo guest
     await LoginAsGuestAsync(page, baseUrl);
 
     // Board + edit dialogs

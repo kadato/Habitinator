@@ -26,7 +26,7 @@ public static class AuthQueryMessages
 
         if (query.TryGetValue("guest", out var guest) && guest == "missing")
         {
-            return "Demo guest user is not available.";
+            return "Demo guest is not available.";
         }
 
         return null;
@@ -39,7 +39,7 @@ public static class AuthQueryMessages
             ? emailValue.ToString()
             : null;
         var message = query.TryGetValue("error", out var error) && error == "1"
-            ? "Registration could not be completed. Check the password length, or try another email if this one is already registered."
+            ? "Registration failed. Try a longer password or another email."
             : null;
 
         return new AuthRegisterQuery(email, message);

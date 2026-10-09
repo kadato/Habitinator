@@ -34,7 +34,7 @@
                    value="@_password" @oninput="OnPasswordInput" @attributes="FormControlAttrs"
                    aria-invalid="@(_hasError ? "true" : null)" aria-describedby="@(_hasError ? "auth-error" : null)"/>
         </div>
-        <p class="auth-form-hint">Use at least 8 characters. Avoid obvious passwords for your account security.</p>
+        <p class="auth-form-hint">Use at least 8 characters. Avoid obvious passwords.</p>
         <div class="auth-form-actions">
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"

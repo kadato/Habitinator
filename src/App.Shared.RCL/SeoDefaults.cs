@@ -7,7 +7,7 @@ public static class SeoDefaults
     public const string DefaultTitle = PageTitles.Landing;
 
     public const string DefaultDescription =
-        "Cross-platform productivity app for habits, scheduled dailies, and to-dos with a focus timer, activity history, and statistics. Web and mobile.";
+        "Cross-platform productivity app for habits, dailies, and to-dos with a focus timer, activity history, and statistics, on web and mobile.";
 
     public const string NoIndexRobots = "noindex, nofollow";
 

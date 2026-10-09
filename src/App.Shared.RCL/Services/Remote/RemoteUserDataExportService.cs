@@ -21,7 +21,7 @@ public sealed class RemoteUserDataExportService : IUserDataExportService
         using var res = await Client.GetAsync("api/account/export", cancellationToken);
         if (res.StatusCode == HttpStatusCode.Unauthorized)
         {
-            throw new InvalidOperationException("Sign in required. Open Log in and try again.");
+            throw new InvalidOperationException("Sign in first, then try again.");
         }
 
         res.EnsureSuccessStatusCode();

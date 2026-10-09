@@ -64,42 +64,34 @@ public sealed partial class LocalFirstBoardDataService(
     {
         await store.EnsureReadyAsync(cancellationToken);
 
-        string? userKey;
-        BoardSnapshot snap;
-        var shouldFetchRemote = false;
+        // Local-first: never touch the network here. The board renders the
+        // SQLite mirror immediately and BoardSyncCoordinator pulls remote
+        // changes in the background after InitialBoardLoad completes.
+        // Prefs read stays outside the gate so sync work never blocks it.
+        var today = await TodayAsync(cancellationToken);
 
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            userKey = await ResolveAuthedUserKeyAsync(cancellationToken);
+            var userKey = await ResolveAuthedUserKeyAsync(cancellationToken);
             if (userKey is null)
             {
                 return EmptySnapshot();
             }
 
             await EnsureUserScopeAsync(userKey, cancellationToken);
-            var today = await TodayAsync(cancellationToken);
-            snap = ReadSnapshot(await store.ListItemsAsync(userKey, includeArchived: false, cancellationToken), today);
+            var snap = ReadSnapshot(await store.ListItemsAsync(userKey, includeArchived: false, cancellationToken), today);
             _cachedSnapshot = snap;
-
-            if (IsEmpty(snap) && !syncStatus.IsSyncing)
-            {
-                shouldFetchRemote = true;
-            }
+            return snap;
         }
         finally
         {
             _gate.Release();
         }
-
-        if (shouldFetchRemote)
-        {
-            snap = await TryFetchAndReplaceIfEmptyAsync(userKey, cancellationToken) ?? snap;
-        }
-
-        return snap;
     }
 
+    // Only GetItemAsync uses this now (deep links into a fresh mirror).
+    // GetSnapshotAsync stays local-only so first paint never waits on network.
     private async Task<BoardSnapshot?> TryFetchAndReplaceIfEmptyAsync(string userKey, CancellationToken cancellationToken)
     {
         BoardSnapshot? fresh = null;
@@ -117,11 +109,12 @@ public sealed partial class LocalFirstBoardDataService(
             return null;
         }
 
+        var today = await TodayAsync(cancellationToken);
+
         await _gate.WaitAsync(cancellationToken);
         try
         {
             await EnsureUserScopeAsync(userKey, cancellationToken);
-            var today = await TodayAsync(cancellationToken);
             var current = ReadSnapshot(await store.ListItemsAsync(userKey, includeArchived: false, cancellationToken), today);
             if (!IsEmpty(current))
             {
@@ -204,23 +197,39 @@ public sealed partial class LocalFirstBoardDataService(
         // the old Counter until a full snapshot replaces it. Use the
         // remote map when online so the board keeps the correct
         // prerendered snapshot instead of flipping back to stale values.
-        var remoteMap = await TryGetRemoteStreakMapAsync(cancellationToken);
+        // Remote fetch runs alongside the local list so slow networks cost
+        // max(remote, local) instead of the sum. Callers invoke this off the
+        // critical path (post-paint refresh and warmup).
+        var remoteTask = TryGetRemoteStreakMapAsync(cancellationToken);
+        var pendingTask = CollectPendingStreakIdsAsync(userKey, cancellationToken);
 
+        IReadOnlyList<BoardLocalRow> items;
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            var items = await store.ListItemsAsync(userKey, includeArchived: false, cancellationToken);
-            if (remoteMap is null)
-            {
-                return BuildLocalStreakMap(items);
-            }
-
-            return await MergeStreakMapsAsync(userKey, items, remoteMap, cancellationToken);
+            items = await store.ListItemsAsync(userKey, includeArchived: false, cancellationToken);
         }
         finally
         {
             _gate.Release();
         }
+
+        var remoteMap = await remoteTask;
+        if (remoteMap is null)
+        {
+            return BuildLocalStreakMap(items);
+        }
+
+        var pendingIds = await pendingTask;
+        var (merged, changedRows) = ComputeMergedStreakMap(items, remoteMap, pendingIds);
+        if (changedRows.Count > 0)
+        {
+            // Counter corrections hit SQLite off the return path. The merged
+            // values are already in hand, so N per-row writes never delay UI.
+            _ = PersistStreakCorrectionsAsync(changedRows);
+        }
+
+        return merged;
     }
 
     private async Task<Dictionary<Guid, int>?> TryGetRemoteStreakMapAsync(CancellationToken cancellationToken)
@@ -260,19 +269,16 @@ public sealed partial class LocalFirstBoardDataService(
         }
     }
 
-    private async Task<Dictionary<Guid, int>> MergeStreakMapsAsync(
-        string userKey,
+    private static (Dictionary<Guid, int> Merged, List<BoardLocalRow> Changed) ComputeMergedStreakMap(
         IReadOnlyList<BoardLocalRow> items,
         Dictionary<Guid, int> remoteMap,
-        CancellationToken cancellationToken)
+        HashSet<Guid> pendingIds)
     {
         // Pending outbox ops mean the server has not seen our latest optimistic
         // streak yet. Keep the local Counter for those items so a retro check-in
         // does not flicker back to the pre-sync value.
-        var pendingIds = await CollectPendingStreakIdsAsync(userKey, cancellationToken);
-
         var merged = new Dictionary<Guid, int>(remoteMap.Count);
-        var changed = false;
+        List<BoardLocalRow> changed = [];
         foreach (var row in items.Where(x => x.Section == BoardSection.Daily))
         {
             if (pendingIds.Contains(row.Id))
@@ -287,8 +293,7 @@ public sealed partial class LocalFirstBoardDataService(
                 if (row.Counter != streak)
                 {
                     row.Counter = streak;
-                    await store.UpsertItemAsync(row, cancellationToken);
-                    changed = true;
+                    changed.Add(row);
                 }
             }
             else
@@ -302,12 +307,32 @@ public sealed partial class LocalFirstBoardDataService(
             merged[kvp.Key] = kvp.Value;
         }
 
-        if (changed)
-        {
-            _cachedSnapshot = null;
-        }
+        return (merged, changed);
+    }
 
-        return merged;
+    private async Task PersistStreakCorrectionsAsync(List<BoardLocalRow> changedRows)
+    {
+        try
+        {
+            await _gate.WaitAsync(CancellationToken.None);
+            try
+            {
+                foreach (var row in changedRows)
+                {
+                    await store.UpsertItemAsync(row, CancellationToken.None);
+                }
+
+                _cachedSnapshot = null;
+            }
+            finally
+            {
+                _gate.Release();
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Background streak correction skipped.");
+        }
     }
 
     private async Task EnsureUserScopeAsync(string userKey, CancellationToken cancellationToken)

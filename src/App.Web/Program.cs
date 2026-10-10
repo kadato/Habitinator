@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using App.Web;
 using App.Web.Auth;
 using App.Web.DependencyInjection;
+using App.Web.Mcp;
 using App.Web.Services;
 
 using Azure.Monitor.OpenTelemetry.AspNetCore;
@@ -37,6 +38,7 @@ builder.Services.AddWebOptions(builder.Configuration, builder.Environment);
 builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddWebAuthenticationAndAuthorization(builder.Configuration, builder.Environment);
 builder.Services.AddApplicationServices(builder.Environment);
+builder.Services.AddHabitinatorMcp();
 builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApiDocument();
@@ -98,6 +100,7 @@ app.MapBoardApi();
 app.MapAuthApi();
 app.MapActivityApi();
 app.MapSettingsApi();
+app.MapHabitinatorMcp();
 
 
 await app.RunAsync();

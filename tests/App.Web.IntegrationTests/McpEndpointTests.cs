@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -103,6 +104,7 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
         names.Should().Contain("set_preferences_json");
 
         // Notes, tags, due date, then checklist add and check.
+        var dueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(60));
         var created = JsonSerializer.Deserialize<BoardItem>(
             await CallTextAsync(mcp, "create_item", new Dictionary<string, object?> { ["section"] = "Todo", ["title"] = "MCP coverage todo" }), json)!;
         var updated = JsonSerializer.Deserialize<BoardItem>(
@@ -111,11 +113,11 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
                 ["itemId"] = created.Id,
                 ["notes"] = "coverage notes",
                 ["tags"] = "mcp,coverage",
-                ["dueDate"] = "2026-12-01",
+                ["dueDate"] = dueDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             }), json)!;
         updated.Notes.Should().Be("coverage notes");
         updated.Tags.Should().Be("mcp,coverage");
-        updated.TodoDueDate.Should().Be(new DateOnly(2026, 12, 1));
+        updated.TodoDueDate.Should().Be(dueDate);
 
         var checklist = JsonSerializer.Deserialize<DailyChecklistItem[]>(
             await CallTextAsync(mcp, "add_checklist_item", new()
@@ -150,6 +152,9 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
         (await CallTextAsync(mcp, "list_tags", [])).Should().Contain("mcp");
 
         // Daily recurrence fields and habit counters through MCP.
+        // Use dates relative to today so the streak backfill always has room:
+        // a start 10 days ago leaves 3 scheduled days before today for counter 3.
+        var dailyStart = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-10)).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         var daily = JsonSerializer.Deserialize<BoardItem>(
             await CallTextAsync(mcp, "create_item", new() { ["section"] = "Daily", ["title"] = "MCP daily" }), json)!;
         var updatedDaily = JsonSerializer.Deserialize<BoardItem>(
@@ -158,13 +163,14 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
                 ["itemId"] = daily.Id,
                 ["repeat"] = "Daily",
                 ["repeatInterval"] = 1,
-                ["startDate"] = "2026-10-10",
+                ["startDate"] = dailyStart,
                 ["counter"] = 3,
             }), json)!;
         updatedDaily.DailyRepeat.Should().Be(DailyRepeatType.Daily);
         updatedDaily.DailyRepeatInterval.Should().Be(1);
         updatedDaily.Counter.Should().Be(3);
 
+        var weeklyStart = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-30)).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         var weekly = JsonSerializer.Deserialize<BoardItem>(
             await CallTextAsync(mcp, "update_daily", new()
             {
@@ -172,7 +178,7 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
                 ["repeat"] = "Weekly",
                 ["repeatInterval"] = 2,
                 ["weekdays"] = 65,
-                ["startDate"] = "2026-10-01",
+                ["startDate"] = weeklyStart,
             }), json)!;
         weekly.DailyRepeat.Should().Be(DailyRepeatType.Weekly);
         weekly.DailyRepeatInterval.Should().Be(2);

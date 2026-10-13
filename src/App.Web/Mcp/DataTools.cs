@@ -15,7 +15,7 @@ public sealed class DataTools(
     UserDataImportService import,
     IHttpContextAccessor http)
 {
-    [McpServerTool(Name = "export_data", ReadOnly = true, OpenWorld = false)]
+    [McpServerTool(Name = "export_data", Title = "Export user data", ReadOnly = true, OpenWorld = false)]
     [Description("Exports the full user board, activity events, and settings as a JSON document. The server refuses exports above 50000 rows. Feed the JSON back to import_data to restore.")]
     public async Task<string> ExportData(CancellationToken cancellationToken = default)
     {
@@ -23,7 +23,7 @@ public sealed class DataTools(
         return JsonSerializer.Serialize(dto, App.Shared.RCL.Services.JsonDefaults.Export);
     }
 
-    [McpServerTool(Name = "import_data", Destructive = true, OpenWorld = true)]
+    [McpServerTool(Name = "import_data", Title = "Import user data", Destructive = true, OpenWorld = true)]
     [Description("Restores a board from the JSON document that export_data returns. Items missing from the file become tombstones. Ask the user for confirmation first, then retry with confirmToken set to CONFIRM.")]
     public async Task<string> ImportData(
         [Description("Export JSON document as produced by export_data. Keep it under a few MB.")]
@@ -40,6 +40,7 @@ public sealed class DataTools(
                 McpErrorCode.InvalidParams);
         }
 
+        McpInput.CheckImportSize(json);
         UserDataExportDto? data;
         try
         {

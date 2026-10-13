@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Globalization;
 using System.Text.Json;
 
 using App.Shared.RCL.Models;
@@ -15,7 +14,7 @@ namespace App.Web.Mcp;
 [McpServerToolType]
 public sealed class SettingsTools(IDbContextFactory<ApplicationDbContext> dbFactory, IHttpContextAccessor http)
 {
-    [McpServerTool(Name = "get_preferences", ReadOnly = true, OpenWorld = false)]
+    [McpServerTool(Name = "get_preferences", Title = "Get preferences", ReadOnly = true, OpenWorld = false)]
     [Description("Reads user preferences: date format, day start, timezone override, display name, theme, pomodoro setup, keyboard shortcuts.")]
     public async Task<UserPreferences> GetPreferences(CancellationToken cancellationToken = default)
     {
@@ -25,7 +24,7 @@ public sealed class SettingsTools(IDbContextFactory<ApplicationDbContext> dbFact
         return row?.UserPreferences ?? UserPreferences.CreateDefault();
     }
 
-    [McpServerTool(Name = "put_preferences", OpenWorld = true)]
+    [McpServerTool(Name = "put_preferences", Title = "Update preferences", Idempotent = true, OpenWorld = true)]
     [Description("Updates user preferences field by field. Omit a field to keep its value. For a full replace use set_preferences_json.")]
     public async Task<UserPreferences> PutPreferences(
         [Description("Date format or null to keep.")] string? dateFormat = null,
@@ -41,10 +40,22 @@ public sealed class SettingsTools(IDbContextFactory<ApplicationDbContext> dbFact
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
+        McpInput.CheckDateFormat(dateFormat);
+        McpInput.CheckDisplayName(displayName);
+        McpInput.CheckTimeZoneOverride(timeZoneOverrideId);
+        McpInput.CheckPomodoro("Pomodoro work minutes", pomodoroWorkMinutes, 1, 180);
+        McpInput.CheckPomodoro("Pomodoro short break minutes", pomodoroShortBreakMinutes, 1, 60);
+        McpInput.CheckPomodoro("Pomodoro long break minutes", pomodoroLongBreakMinutes, 1, 120);
+        McpInput.CheckPomodoro("Pomodoro cycles before long break", pomodoroCyclesBeforeLongBreak, 1, 12);
+        TimeSpan? dayStart = null;
+        if (dayStartLocalTime is not null)
+        {
+            dayStart = McpInput.ParseTimeOfDay(dayStartLocalTime, "Day start");
+        }
+
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
-            ?? throw new McpProtocolException(
-                "Sign in required.", McpErrorCode.InvalidRequest);
+            ?? throw McpUser.MissingAccount();
 
         var prefs = row.UserPreferences ?? UserPreferences.CreateDefault();
         if (dateFormat is not null)
@@ -52,9 +63,9 @@ public sealed class SettingsTools(IDbContextFactory<ApplicationDbContext> dbFact
             prefs.DateFormat = dateFormat;
         }
 
-        if (dayStartLocalTime is not null && TimeSpan.TryParse(dayStartLocalTime, CultureInfo.InvariantCulture, out var dayStart))
+        if (dayStart.HasValue)
         {
-            prefs.DayStartLocalTime = dayStart;
+            prefs.DayStartLocalTime = dayStart.Value;
         }
 
         if (timeZoneOverrideId is not null)
@@ -102,7 +113,7 @@ public sealed class SettingsTools(IDbContextFactory<ApplicationDbContext> dbFact
         return row.UserPreferences;
     }
 
-    [McpServerTool(Name = "set_preferences_json", OpenWorld = true)]
+    [McpServerTool(Name = "set_preferences_json", Title = "Replace preferences", Idempotent = true, OpenWorld = true)]
     [Description("Replaces all user preferences with a JSON document. Read get_preferences first and keep every field you do not mean to change.")]
     public async Task<UserPreferences> SetPreferencesJson(
         [Description("Full preferences JSON document.")] string json,
@@ -124,16 +135,23 @@ public sealed class SettingsTools(IDbContextFactory<ApplicationDbContext> dbFact
             throw new McpProtocolException("The json is not a valid preferences document.", McpErrorCode.InvalidParams);
         }
 
+        McpInput.CheckDateFormat(prefs.DateFormat);
+        McpInput.CheckDisplayName(prefs.DisplayName);
+        McpInput.CheckTimeZoneOverride(prefs.TimeZoneOverrideId);
+        McpInput.CheckPomodoro("Pomodoro work minutes", prefs.PomodoroWorkDurationMinutes, 1, 180);
+        McpInput.CheckPomodoro("Pomodoro short break minutes", prefs.PomodoroShortBreakMinutes, 1, 60);
+        McpInput.CheckPomodoro("Pomodoro long break minutes", prefs.PomodoroLongBreakMinutes, 1, 120);
+        McpInput.CheckPomodoro("Pomodoro cycles before long break", prefs.PomodoroCyclesBeforeLongBreak, 1, 12);
+
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
-            ?? throw new McpProtocolException(
-                "Sign in required.", McpErrorCode.InvalidRequest);
+            ?? throw McpUser.MissingAccount();
         row.UserPreferences = prefs.Normalize();
         await db.SaveChangesAsync(cancellationToken);
         return row.UserPreferences;
     }
 
-    [McpServerTool(Name = "get_notification_settings", ReadOnly = true, OpenWorld = false)]
+    [McpServerTool(Name = "get_notification_settings", Title = "Get notification settings", ReadOnly = true, OpenWorld = false)]
     [Description("Reads notification settings: toasts, daily reminder, focus timer and sync alerts, sound, quiet hours.")]
     public async Task<NotificationSettings> GetNotificationSettings(CancellationToken cancellationToken = default)
     {
@@ -143,7 +161,7 @@ public sealed class SettingsTools(IDbContextFactory<ApplicationDbContext> dbFact
         return row?.NotificationSettings ?? NotificationSettings.CreateDefault();
     }
 
-    [McpServerTool(Name = "put_notification_settings", OpenWorld = true)]
+    [McpServerTool(Name = "put_notification_settings", Title = "Update notification settings", Idempotent = true, OpenWorld = true)]
     [Description("Updates notification settings field by field. Omit a field to keep its value. For a full replace use set_notification_settings_json.")]
     public async Task<NotificationSettings> PutNotificationSettings(
         [Description("In-app messages on or off, or null to keep.")] bool? inAppMessagesEnabled = null,
@@ -162,10 +180,27 @@ public sealed class SettingsTools(IDbContextFactory<ApplicationDbContext> dbFact
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
+        TimeSpan? reminder = null;
+        TimeSpan? quietStart = null;
+        TimeSpan? quietEnd = null;
+        if (dailyReminderTime is not null)
+        {
+            reminder = McpInput.ParseTimeOfDay(dailyReminderTime, "Daily reminder time");
+        }
+
+        if (quietHoursStartUtc is not null)
+        {
+            quietStart = McpInput.ParseTimeOfDay(quietHoursStartUtc, "Quiet hours start");
+        }
+
+        if (quietHoursEndUtc is not null)
+        {
+            quietEnd = McpInput.ParseTimeOfDay(quietHoursEndUtc, "Quiet hours end");
+        }
+
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
-            ?? throw new McpProtocolException(
-                "Sign in required.", McpErrorCode.InvalidRequest);
+            ?? throw McpUser.MissingAccount();
 
         var settings = row.NotificationSettings ?? NotificationSettings.CreateDefault();
         if (inAppMessagesEnabled.HasValue)
@@ -198,7 +233,7 @@ public sealed class SettingsTools(IDbContextFactory<ApplicationDbContext> dbFact
             settings.DailyReminderEnabled = dailyReminderEnabled.Value;
         }
 
-        if (dailyReminderTime is not null && TimeSpan.TryParse(dailyReminderTime, CultureInfo.InvariantCulture, out var reminder))
+        if (dailyReminderTime is not null)
         {
             settings.DailyReminderTime = reminder;
         }
@@ -223,12 +258,12 @@ public sealed class SettingsTools(IDbContextFactory<ApplicationDbContext> dbFact
             settings.QuietHoursEnabled = quietHoursEnabled.Value;
         }
 
-        if (quietHoursStartUtc is not null && TimeSpan.TryParse(quietHoursStartUtc, CultureInfo.InvariantCulture, out var quietStart))
+        if (quietHoursStartUtc is not null)
         {
             settings.QuietHoursStartUtc = quietStart;
         }
 
-        if (quietHoursEndUtc is not null && TimeSpan.TryParse(quietHoursEndUtc, CultureInfo.InvariantCulture, out var quietEnd))
+        if (quietHoursEndUtc is not null)
         {
             settings.QuietHoursEndUtc = quietEnd;
         }
@@ -238,7 +273,7 @@ public sealed class SettingsTools(IDbContextFactory<ApplicationDbContext> dbFact
         return settings;
     }
 
-    [McpServerTool(Name = "set_notification_settings_json", OpenWorld = true)]
+    [McpServerTool(Name = "set_notification_settings_json", Title = "Replace notification settings", Idempotent = true, OpenWorld = true)]
     [Description("Replaces all notification settings with a JSON document. Read get_notification_settings first and keep every field you do not mean to change.")]
     public async Task<NotificationSettings> SetNotificationSettingsJson(
         [Description("Full notification settings JSON document.")] string json,
@@ -260,12 +295,28 @@ public sealed class SettingsTools(IDbContextFactory<ApplicationDbContext> dbFact
             throw new McpProtocolException("The json is not a valid notification settings document.", McpErrorCode.InvalidParams);
         }
 
+        CheckNotificationTimes(settings);
+
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var row = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
-            ?? throw new McpProtocolException(
-                "Sign in required.", McpErrorCode.InvalidRequest);
+            ?? throw McpUser.MissingAccount();
         row.NotificationSettings = settings;
         await db.SaveChangesAsync(cancellationToken);
         return settings;
+    }
+
+    private static void CheckNotificationTimes(NotificationSettings settings)
+    {
+        CheckOptionalTimeOfDay(settings.DailyReminderTime, "Daily reminder time");
+        CheckOptionalTimeOfDay(settings.QuietHoursStartUtc, "Quiet hours start");
+        CheckOptionalTimeOfDay(settings.QuietHoursEndUtc, "Quiet hours end");
+    }
+
+    private static void CheckOptionalTimeOfDay(TimeSpan? value, string name)
+    {
+        if (value.HasValue && (value.Value < TimeSpan.Zero || value.Value >= TimeSpan.FromDays(1)))
+        {
+            throw new McpProtocolException($"{name} must use HH:mm within one day.", McpErrorCode.InvalidParams);
+        }
     }
 }

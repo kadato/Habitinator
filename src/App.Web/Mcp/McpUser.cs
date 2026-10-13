@@ -16,4 +16,11 @@ internal static class McpUser
 
         throw new McpProtocolException("Sign in required. Call with a valid JWT bearer token or auth cookie.", McpErrorCode.InvalidRequest);
     }
+
+    public static McpProtocolException MissingAccount()
+    {
+        return new McpProtocolException(
+            "You are signed in, but the server has no record for you. Register or sign in again.",
+            McpErrorCode.InternalError);
+    }
 }

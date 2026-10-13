@@ -15,8 +15,8 @@ public sealed class BoardTools(
     BoardSyncDeltaService sync,
     IHttpContextAccessor http)
 {
-    [McpServerTool(Name = "get_snapshot", ReadOnly = true, OpenWorld = false)]
-    [Description("Reads the full board mirror: habits, dailies, todos. Call this first before any mutation so you have item ids.")]
+    [McpServerTool(Name = "get_snapshot", Title = "Get board snapshot", ReadOnly = true, OpenWorld = false)]
+    [Description("Reads the full board mirror: habits, dailies, and todos. Before any mutation, read this so you have item ids.")]
     public async Task<BoardSnapshot> GetSnapshot(
         [Description("Max rows to return, 1 to 10000. Default 200 to keep payloads small. Null returns the cached full mirror.")]
         int? limit = 200,
@@ -27,7 +27,7 @@ public sealed class BoardTools(
         return await boards.GetSnapshotAsync(userId, take, cancellationToken);
     }
 
-    [McpServerTool(Name = "get_item", ReadOnly = true, OpenWorld = false)]
+    [McpServerTool(Name = "get_item", Title = "Get board item", ReadOnly = true, OpenWorld = false)]
     [Description("Reads one active board item by id. Returns null when not found.")]
     public async Task<BoardItem?> GetItem(
         [Description("Board item id as GUID string.")]
@@ -38,7 +38,7 @@ public sealed class BoardTools(
         return await boards.GetItemAsync(userId, itemId, cancellationToken);
     }
 
-    [McpServerTool(Name = "get_archived", ReadOnly = true, OpenWorld = false)]
+    [McpServerTool(Name = "get_archived", Title = "Get archived items", ReadOnly = true, OpenWorld = false)]
     [Description("Reads archived items hidden from the active board.")]
     public async Task<BoardSnapshot> GetArchived(
         [Description("Max rows to return, 1 to 10000. Default 200.")]
@@ -50,7 +50,7 @@ public sealed class BoardTools(
         return await boards.GetArchivedSnapshotAsync(userId, take, cancellationToken);
     }
 
-    [McpServerTool(Name = "get_sync_delta", ReadOnly = true, OpenWorld = false)]
+    [McpServerTool(Name = "get_sync_delta", Title = "Get board sync delta", ReadOnly = true, OpenWorld = false)]
     [Description("Reads incremental board changes after a cursor. Use for sync, not for the first read. Cursor is an ISO 8601 watermark or watermark|id composite from a prior call.")]
     public async Task<BoardSyncDelta> GetSyncDelta(
         [Description("Cursor from the NextCursor of the last call. Required.")]
@@ -69,7 +69,7 @@ public sealed class BoardTools(
         return await sync.GetSyncDeltaAsync(userId, cursor, take, cancellationToken);
     }
 
-    [McpServerTool(Name = "get_streaks", ReadOnly = true, OpenWorld = false)]
+    [McpServerTool(Name = "get_streaks", Title = "Get daily streaks", ReadOnly = true, OpenWorld = false)]
     [Description("Reads the daily streak map: item id to current streak count.")]
     public async Task<Dictionary<Guid, int>> GetStreaks(CancellationToken cancellationToken = default)
     {
@@ -77,7 +77,47 @@ public sealed class BoardTools(
         return await boards.GetDailyStreakMapAsync(userId, cancellationToken);
     }
 
-    [McpServerTool(Name = "list_tags", ReadOnly = true, OpenWorld = false)]
+    [McpServerTool(Name = "search_items", Title = "Search board items", ReadOnly = true, OpenWorld = false)]
+    [Description("Searches active board items by title, exact tag, and section. Use this instead of pulling the full snapshot to find one item.")]
+    public async Task<IReadOnlyList<BoardItem>> SearchItems(
+        [Description("Free text matched against title, notes, and tags. Null matches all.")] string? query = null,
+        [Description("Exact tag to match, or null for all.")] string? tag = null,
+        [Description("Section to search, or null for all sections.")] BoardSection? section = null,
+        [Description("Max rows to return, 1 to 200. Default 50.")]
+        int? limit = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        var take = Math.Clamp(limit ?? 50, 1, 200);
+        var snapshot = await boards.GetSnapshotAsync(userId, null, cancellationToken);
+        IEnumerable<BoardItem> all = section switch
+        {
+            BoardSection.Habit => snapshot.Habits,
+            BoardSection.Daily => snapshot.Dailies,
+            BoardSection.Todo => snapshot.Todos,
+            _ => snapshot.Habits.Concat(snapshot.Dailies).Concat(snapshot.Todos),
+        };
+
+        if (!string.IsNullOrWhiteSpace(tag))
+        {
+            var wanted = tag.Trim();
+            all = all.Where(x => BoardTagUtil.ParseTags(x.Tags)
+                .Any(t => string.Equals(t, wanted, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var q = query.Trim();
+            all = all.Where(x =>
+                (x.Title?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (x.Notes?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (x.Tags?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false));
+        }
+
+        return all.Take(take).ToList();
+    }
+
+    [McpServerTool(Name = "list_tags", Title = "List tags", ReadOnly = true, OpenWorld = false)]
     [Description("Lists distinct tags used across habits, dailies, and todos, sorted alphabetically.")]
     public async Task<string[]> ListTags(CancellationToken cancellationToken = default)
     {
@@ -89,8 +129,8 @@ public sealed class BoardTools(
             .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)];
     }
 
-    [McpServerTool(Name = "reorder_item", OpenWorld = true)]
-    [Description("Moves an item to a zero-based position within its section list. Position 0 puts it first; values past the end put it last. Returns the updated item.")]
+    [McpServerTool(Name = "reorder_item", Title = "Reorder board item", Idempotent = true, OpenWorld = true)]
+    [Description("Moves an item to a zero-based position within its section list. Position 0 puts it first. Values past the end put it last. Returns the updated item.")]
     public async Task<BoardItem?> ReorderItem(
         [Description("Section of the item.")] BoardSection section,
         [Description("Item id.")] Guid itemId,
@@ -128,25 +168,58 @@ public sealed class BoardTools(
         };
     }
 
-    [McpServerTool(Name = "create_item", OpenWorld = true)]
+    [McpServerTool(Name = "create_item", Title = "Create board item", OpenWorld = true)]
     [Description("Creates a habit, daily, or todo with a title. Returns the created item.")]
     public async Task<BoardItem> CreateItem(
         [Description("Section: Habit, Daily, or Todo.")]
         BoardSection section,
         [Description("Title, 1 to 200 chars.")]
         string title,
+        [Description("Notes up to 4000 chars, or null.")] string? notes = null,
+        [Description("Comma-separated tags up to 500 chars, or null.")] string? tags = null,
+        [Description("Date as yyyy-MM-dd. For Daily it sets the start date. For Todo it sets the due date. Omit the date for Habit.")]
+        string? date = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        if (string.IsNullOrWhiteSpace(title) || title.Length > 200)
+        var cleanTitle = McpInput.CleanTitle(title);
+        McpInput.CheckNotes(notes);
+        McpInput.CheckTags(tags);
+
+        DateOnly? parsedDate = null;
+        if (date is not null)
         {
-            throw new McpProtocolException("Title must be 1 to 200 chars.", McpErrorCode.InvalidParams);
+            if (section == BoardSection.Habit)
+            {
+                throw new McpProtocolException("Habits take no date. Omit the date for Habit.", McpErrorCode.InvalidParams);
+            }
+
+            parsedDate = McpInput.ParseDate(date);
         }
 
-        return await boards.CreateItemAsync(userId, section, title.Trim(), null, cancellationToken);
+        var created = await boards.CreateItemAsync(userId, section, cleanTitle, null, cancellationToken);
+        if (notes is null && tags is null && parsedDate is null)
+        {
+            return created;
+        }
+
+        if (section == BoardSection.Todo)
+        {
+            var todoArgs = UpdateTodoArgs.From(created) with { Notes = notes, Tags = tags, DueDate = parsedDate, };
+            return (await boards.UpdateTodoAsync(userId, created.Id, todoArgs, cancellationToken)).Item ?? created;
+        }
+
+        if (section == BoardSection.Daily)
+        {
+            var dailyArgs = UpdateDailyArgs.From(created) with { Notes = notes, Tags = tags, StartDate = parsedDate, };
+            return (await boards.UpdateDailyAsync(userId, created.Id, dailyArgs, cancellationToken)).Item ?? created;
+        }
+
+        var habitArgs = UpdateHabitArgs.From(created) with { Notes = notes, Tags = tags, };
+        return (await boards.UpdateHabitAsync(userId, created.Id, habitArgs, cancellationToken)).Item ?? created;
     }
 
-    [McpServerTool(Name = "rename_item", OpenWorld = true)]
+    [McpServerTool(Name = "rename_item", Title = "Rename board item", Idempotent = true, OpenWorld = true)]
     [Description("Renames a board item. Returns the updated item or null when not found.")]
     public async Task<BoardItem?> RenameItem(
         [Description("Section of the item.")] BoardSection section,
@@ -155,17 +228,14 @@ public sealed class BoardTools(
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        if (string.IsNullOrWhiteSpace(title) || title.Length > 200)
-        {
-            throw new McpProtocolException("Title must be 1 to 200 chars.", McpErrorCode.InvalidParams);
-        }
+        var cleanTitle = McpInput.CleanTitle(title);
 
-        var result = await boards.RenameItemAsync(userId, section, itemId, title.Trim(), null, cancellationToken);
+        var result = await boards.RenameItemAsync(userId, section, itemId, cleanTitle, null, cancellationToken);
         return result.Item;
     }
 
-    [McpServerTool(Name = "toggle_item", OpenWorld = true)]
-    [Description("Toggles a daily or todo for today. Habits use habit_plus and habit_minus instead. Returns the updated item.")]
+    [McpServerTool(Name = "toggle_item", Title = "Toggle daily or todo", OpenWorld = true)]
+    [Description("Toggles a daily or todo for today. You cannot uncomplete a past date. Completion there is append-only. For habits, use habit_plus and habit_minus instead. Returns the updated item.")]
     public async Task<BoardItem?> ToggleItem(
         [Description("Section: Daily or Todo.")] BoardSection section,
         [Description("Item id.")] Guid itemId,
@@ -181,7 +251,7 @@ public sealed class BoardTools(
         return result.Item;
     }
 
-    [McpServerTool(Name = "archive_item", OpenWorld = true)]
+    [McpServerTool(Name = "archive_item", Title = "Archive board item", Idempotent = true, OpenWorld = true)]
     [Description("Archives an item so it hides from the active board. Returns the updated item.")]
     public async Task<BoardItem?> ArchiveItem(
         [Description("Section of the item.")] BoardSection section,
@@ -193,7 +263,7 @@ public sealed class BoardTools(
         return result.Item;
     }
 
-    [McpServerTool(Name = "unarchive_item", OpenWorld = true)]
+    [McpServerTool(Name = "unarchive_item", Title = "Unarchive board item", Idempotent = true, OpenWorld = true)]
     [Description("Restores an archived item to the active board. Returns the updated item.")]
     public async Task<BoardItem?> UnarchiveItem(
         [Description("Section of the item.")] BoardSection section,
@@ -205,7 +275,7 @@ public sealed class BoardTools(
         return result.Item;
     }
 
-    [McpServerTool(Name = "delete_item", Destructive = true, OpenWorld = true)]
+    [McpServerTool(Name = "delete_item", Title = "Delete board item", Destructive = true, OpenWorld = true)]
     [Description("Soft deletes an item. The row hides from the board. Creating the item again with the same id restores it. Ask the user for confirmation first, then retry with confirmToken set to the item id string.")]
     public async Task<string> DeleteItem(
         [Description("Section of the item.")] BoardSection section,

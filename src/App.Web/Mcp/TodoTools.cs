@@ -13,7 +13,7 @@ namespace App.Web.Mcp;
 [McpServerToolType]
 public sealed class TodoTools(BoardPersistenceService boards, IHttpContextAccessor http)
 {
-    [McpServerTool(Name = "update_todo", OpenWorld = true)]
+    [McpServerTool(Name = "update_todo", Title = "Update todo", Idempotent = true, OpenWorld = true)]
     [Description("Updates todo fields: title, notes, tags, due date, checklist, sort order. Omit a field to keep its value. Pass an empty string to clear notes, tags, due date, or the checklist.")]
     public async Task<BoardItem?> UpdateTodo(
         [Description("Todo item id.")] Guid itemId,

@@ -11,7 +11,7 @@ namespace App.Web.Mcp;
 [McpServerToolType]
 public sealed class HabitTools(BoardPersistenceService boards, IHttpContextAccessor http)
 {
-    [McpServerTool(Name = "habit_plus", OpenWorld = true)]
+    [McpServerTool(Name = "habit_plus", Title = "Add habit plus tick", OpenWorld = true)]
     [Description("Adds one plus tick to a habit. Returns the updated habit or null when not found.")]
     public async Task<BoardItem?> HabitPlus(
         [Description("Habit item id.")] Guid itemId,
@@ -22,7 +22,7 @@ public sealed class HabitTools(BoardPersistenceService boards, IHttpContextAcces
         return result.Item;
     }
 
-    [McpServerTool(Name = "habit_minus", OpenWorld = true)]
+    [McpServerTool(Name = "habit_minus", Title = "Add habit minus tick", OpenWorld = true)]
     [Description("Adds one minus tick to a habit. Returns the updated habit or null when not found.")]
     public async Task<BoardItem?> HabitMinus(
         [Description("Habit item id.")] Guid itemId,
@@ -33,7 +33,7 @@ public sealed class HabitTools(BoardPersistenceService boards, IHttpContextAcces
         return result.Item;
     }
 
-    [McpServerTool(Name = "update_habit", OpenWorld = true)]
+    [McpServerTool(Name = "update_habit", Title = "Update habit", Idempotent = true, OpenWorld = true)]
     [Description("Updates habit fields: title, notes, tags, tracking flags, reset period, counters, checklist, sort order. Omit a field to keep its value. Pass an empty string to clear notes, tags, or the checklist.")]
     public async Task<BoardItem?> UpdateHabit(
         [Description("Habit item id.")] Guid itemId,
@@ -66,8 +66,8 @@ public sealed class HabitTools(BoardPersistenceService boards, IHttpContextAcces
             TrackPlus = trackPlus ?? current.TrackPlus,
             TrackMinus = trackMinus ?? current.TrackMinus,
             ResetPeriod = resetPeriod ?? current.ResetPeriod,
-            Counter = Math.Max(0, counter ?? current.Counter),
-            NegativeCounter = Math.Max(0, negativeCounter ?? current.NegativeCounter),
+            Counter = McpInput.ResolveHabitCounter(counter, current.Counter, "Counter"),
+            NegativeCounter = McpInput.ResolveHabitCounter(negativeCounter, current.NegativeCounter, "Negative counter"),
             ChecklistJson = checklistJson is null ? current.ChecklistJson : McpInput.NormalizedChecklist(EmptyToNull(checklistJson)),
             SortOrder = sortOrder ?? current.SortOrder,
         };

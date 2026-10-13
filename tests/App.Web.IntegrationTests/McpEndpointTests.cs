@@ -10,6 +10,7 @@ using FluentAssertions;
 
 using Microsoft.Extensions.Logging.Abstractions;
 
+using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
@@ -18,6 +19,11 @@ namespace App.Web.IntegrationTests;
 [Collection(nameof(IntegrationCollection))]
 public sealed class McpEndpointTests(PostgresWebAppFactory factory)
 {
+    private static readonly JsonSerializerOptions TestJson = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() },
+    };
     [Fact]
     public async Task Mcp_WithoutToken_ReturnsUnauthorized()
     {
@@ -80,6 +86,123 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
 
         var snapshot = await mcp.CallToolAsync("get_snapshot");
         snapshot.IsError.Should().Be(null);
+    }
+
+    [Fact]
+    public async Task Mcp_SearchItems_FindsByTitleTagAndSection()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var json = TestJson;
+        var stamp = Guid.NewGuid().ToString("N")[..8];
+        var title = $"Searchable {stamp} todo";
+        var created = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new Dictionary<string, object?> { ["section"] = "Todo", ["title"] = title }), json)!;
+        await CallTextAsync(mcp, "update_todo", new()
+        {
+            ["itemId"] = created.Id,
+            ["tags"] = $"searchable,{stamp}",
+        });
+
+        var byQuery = JsonSerializer.Deserialize<BoardItem[]>(
+            await CallTextAsync(mcp, "search_items", new Dictionary<string, object?> { ["query"] = stamp }), json)!;
+        byQuery.Select(t => t.Id).Should().Contain(created.Id);
+
+        var byTag = JsonSerializer.Deserialize<BoardItem[]>(
+            await CallTextAsync(mcp, "search_items", new Dictionary<string, object?> { ["tag"] = stamp }), json)!;
+        byTag.Select(t => t.Id).Should().Contain(created.Id);
+
+        var bySectionMiss = JsonSerializer.Deserialize<BoardItem[]>(
+            await CallTextAsync(mcp, "search_items", new Dictionary<string, object?> { ["query"] = stamp, ["section"] = "Habit" }), json)!;
+        bySectionMiss.Should().BeEmpty();
+
+        var names = (await mcp.ListToolsAsync()).Select(t => t.Name).ToHashSet(StringComparer.Ordinal);
+        names.Should().Contain("search_items");
+    }
+
+    [Fact]
+    public async Task Mcp_CreateItem_AcceptsNotesTagsAndDate()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var json = TestJson;
+        var stamp = Guid.NewGuid().ToString("N")[..8];
+
+        var daily = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new Dictionary<string, object?> { ["section"] = "Daily", ["title"] = $"MCP dated daily {stamp}", ["notes"] = "n", ["tags"] = "t", ["date"] = "2026-01-05" }), json)!;
+        daily.DailyStartDate.Should().Be(new DateOnly(2026, 1, 5));
+        daily.Notes.Should().Be("n");
+
+        var todo = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new Dictionary<string, object?> { ["section"] = "Todo", ["title"] = $"MCP dated todo {stamp}", ["date"] = "2026-02-06" }), json)!;
+        todo.TodoDueDate.Should().Be(new DateOnly(2026, 2, 6));
+
+        await Assert.ThrowsAsync<McpProtocolException>(async () =>
+            await mcp.CallToolAsync("create_item", new Dictionary<string, object?> { ["section"] = "Habit", ["title"] = $"MCP dated habit {stamp}", ["date"] = "2026-01-05" }));
+    }
+
+    [Fact]
+    public async Task Mcp_ValidationErrors_ReturnToolErrors()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var json = TestJson;
+        var item = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new Dictionary<string, object?> { ["section"] = "Todo", ["title"] = "MCP validation todo" }), json)!;
+
+        async Task ExpectError(string name, Dictionary<string, object?> args)
+        {
+            var ex = await Assert.ThrowsAsync<McpProtocolException>(async () =>
+                await mcp.CallToolAsync(name, args));
+            ex.Message.Should().NotBeNullOrWhiteSpace($"tool {name} should report InvalidParams");
+        }
+
+        await ExpectError("update_daily", new() { ["itemId"] = item.Id, ["repeatInterval"] = 0 });
+        await ExpectError("update_daily", new() { ["itemId"] = item.Id, ["counter"] = -1 });
+        await ExpectError("update_daily", new() { ["itemId"] = item.Id, ["weekdays"] = 999 });
+        await ExpectError("update_habit", new() { ["itemId"] = item.Id, ["counter"] = -5 });
+        await ExpectError("get_sync_delta", new() { ["cursor"] = "   " });
+        await ExpectError("delete_item", new() { ["section"] = "Todo", ["itemId"] = item.Id });
+        await ExpectError("import_data", new() { ["json"] = "{}" });
+        await ExpectError("daily_complete_for_date", new() { ["itemId"] = item.Id, ["date"] = "not-a-date" });
+        await ExpectError("get_day_detail", new() { ["date"] = "not-a-date" });
+        await ExpectError("put_preferences", new() { ["dayStartLocalTime"] = "not-a-time" });
+        await ExpectError("put_preferences", new() { ["pomodoroWorkMinutes"] = 999 });
+        await ExpectError("put_notification_settings", new() { ["quietHoursStartUtc"] = "25:00" });
+        await ExpectError("log_activity", new() { ["eventType"] = "TimerSession" });
+        await ExpectError("log_activity", new() { ["eventType"] = "HabitPlus", ["boardItemId"] = Guid.NewGuid() });
+        await ExpectError("log_timer_session", new() { ["durationSeconds"] = 60, ["boardItemId"] = Guid.NewGuid() });
+        await ExpectError("log_timer_session", new() { ["durationSeconds"] = 60, ["customLabel"] = new string('x', 501) });
+        await ExpectError("set_checklist", new() { ["section"] = "Todo", ["itemId"] = item.Id, ["json"] = "not json" });
+        await ExpectError("add_checklist_item", new() { ["section"] = "Todo", ["itemId"] = item.Id, ["text"] = "   " });
+    }
+
+    [Fact]
+    public async Task Mcp_Prompts_ListAllAndRejectBadDate()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var prompts = await mcp.ListPromptsAsync();
+        var promptNames = prompts.Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
+        promptNames.Should().Contain("plan_day");
+        promptNames.Should().Contain("review_week");
+        promptNames.Should().Contain("habit_coach");
+
+        var action = () => mcp.GetPromptAsync("plan_day", new Dictionary<string, object?> { ["date"] = "not-a-date" });
+        await action.Should().ThrowAsync<Exception>();
+    }
+
+    [Fact]
+    public async Task Mcp_Resources_ReadSnapshotAndRejectBadId()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var resources = await mcp.ListResourcesAsync();
+        resources.Select(r => r.Uri).Should().Contain("board://snapshot");
+
+        var snapshot = await mcp.ReadResourceAsync("board://snapshot");
+        snapshot.Contents.Should().NotBeEmpty();
+
+        var badItem = () => mcp.ReadResourceAsync("board://item/not-a-guid");
+        await badItem.Should().ThrowAsync<Exception>();
+
+        var badDay = () => mcp.ReadResourceAsync("activity://day/not-a-date");
+        await badDay.Should().ThrowAsync<Exception>();
     }
 
     [Fact]

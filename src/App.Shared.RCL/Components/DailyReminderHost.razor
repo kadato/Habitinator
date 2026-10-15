@@ -118,6 +118,17 @@
 
     public void Dispose()
     {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing)
+        {
+            return;
+        }
+
         SettingsService.Changed -= OnSettingsChanged;
         _cts.Cancel();
         _cts.Dispose();

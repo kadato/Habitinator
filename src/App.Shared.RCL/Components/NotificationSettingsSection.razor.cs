@@ -1,4 +1,3 @@
-#pragma warning disable S3881 // Dispose is implemented in the generated Razor part
 #pragma warning disable S4487, S2325 // Flagged fields are read by the Razor markup part and flagged methods use services injected there; Sonar sees this code-behind file in isolation.
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
@@ -86,8 +85,18 @@ public partial class NotificationSettingsSection : IDisposable
 
     public void Dispose()
     {
-        RemoteBoardRefresh.UnregisterForRemoteRefresh(HandleRemoteSettingsRefreshedAsync);
+        Dispose(disposing: true);
         GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing)
+        {
+            return;
+        }
+
+        RemoteBoardRefresh.UnregisterForRemoteRefresh(HandleRemoteSettingsRefreshedAsync);
     }
 
     private void ApplyModel(NotificationSettings s)

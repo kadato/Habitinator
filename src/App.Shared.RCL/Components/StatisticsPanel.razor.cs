@@ -1,4 +1,3 @@
-#pragma warning disable S3881 // Dispose is implemented in the generated Razor part
 #pragma warning disable S1144, S4487, S2325, IDE0051, IDE0052 // Unused/private members are used by the Razor markup part; flagged methods use services injected there.
 using System.Globalization;
 
@@ -192,10 +191,20 @@ public partial class StatisticsPanel : IDisposable
 
     public void Dispose()
     {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing)
+        {
+            return;
+        }
+
         _disposed = true;
         _loadVersion++;
         _subscription.Dispose();
-        GC.SuppressFinalize(this);
     }
 
     private void ApplyOverview(ActivityOverviewDto overview)

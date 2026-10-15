@@ -159,8 +159,15 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
         await ExpectError("update_daily", new() { ["itemId"] = item.Id, ["weekdays"] = 999 });
         await ExpectError("update_habit", new() { ["itemId"] = item.Id, ["counter"] = -5 });
         await ExpectError("get_sync_delta", new() { ["cursor"] = "   " });
-        await ExpectError("delete_item", new() { ["section"] = "Todo", ["itemId"] = item.Id });
-        await ExpectError("import_data", new() { ["json"] = "{}" });
+        // delete_item and import_data without confirmation ask for elicitation.
+        // The test client has no ElicitationHandler, so the client throws here.
+        // Real callers either confirm via elicitation or retry with confirmToken.
+        var deleteEx = await Assert.ThrowsAnyAsync<Exception>(async () =>
+            await mcp.CallToolAsync("delete_item", new Dictionary<string, object?> { ["section"] = "Todo", ["itemId"] = item.Id }));
+        deleteEx.Message.Should().NotBeNullOrWhiteSpace("tool delete_item should ask for confirmation");
+        var importEx = await Assert.ThrowsAnyAsync<Exception>(async () =>
+            await mcp.CallToolAsync("import_data", new Dictionary<string, object?> { ["json"] = "{}" }));
+        importEx.Message.Should().NotBeNullOrWhiteSpace("tool import_data should ask for confirmation");
         await ExpectError("daily_complete_for_date", new() { ["itemId"] = item.Id, ["date"] = "not-a-date" });
         await ExpectError("get_day_detail", new() { ["date"] = "not-a-date" });
         await ExpectError("put_preferences", new() { ["dayStartLocalTime"] = "not-a-time" });

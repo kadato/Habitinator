@@ -166,6 +166,7 @@ public partial class Program
 
             options.AddPolicy("auth", context => CreateAuthPolicy(context, environment));
             options.AddPolicy("api", context => CreateApiPolicy(context, environment));
+            options.AddPolicy("mcp", context => CreateMcpPolicy(context, environment));
         });
     }
 
@@ -189,6 +190,43 @@ public partial class Program
 
         var isDevOrTest = IsDevOrTest(environment);
         var limit = isDevOrTest ? 1000 : 300;
+        var queueLimit = isDevOrTest ? 50 : 10;
+
+        return RateLimitPartition.GetSlidingWindowLimiter(key, _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = limit,
+            Window = TimeSpan.FromMinutes(1),
+            SegmentsPerWindow = 6,
+            QueueLimit = queueLimit
+        });
+    }
+
+    private static RateLimitPartition<string> CreateMcpPolicy(HttpContext context, IWebHostEnvironment environment)
+    {
+        var user = AuthenticatedUserId.TryGet(context.User)?.ToString()
+                   ?? context.Connection.RemoteIpAddress?.ToString()
+                   ?? "unknown";
+
+        // Routable headers (2026-07-28): Mcp-Name carries the tool name for named
+        // invocations. Discovery and list requests omit it. Destructive tools get
+        // a stricter window.
+        var tool = context.Request.Headers["Mcp-Name"].ToString();
+        var isDestructive = string.Equals(tool, "delete_item", StringComparison.Ordinal)
+            || string.Equals(tool, "import_data", StringComparison.Ordinal);
+        var key = isDestructive ? $"{user}:write" : $"{user}:read";
+
+        // MCP polling must not starve REST, so the read window is wider than api (300).
+        var isDevOrTest = IsDevOrTest(environment);
+        int limit;
+        if (isDestructive)
+        {
+            limit = isDevOrTest ? 100 : 60;
+        }
+        else
+        {
+            limit = isDevOrTest ? 1000 : 600;
+        }
+
         var queueLimit = isDevOrTest ? 50 : 10;
 
         return RateLimitPartition.GetSlidingWindowLimiter(key, _ => new SlidingWindowRateLimiterOptions

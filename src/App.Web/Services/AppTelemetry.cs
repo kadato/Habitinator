@@ -77,4 +77,19 @@ internal static class AppTelemetry
     internal static void RecordSnapshot(int items) => SnapshotSize.Record(items);
 
     internal static void RecordFanoutFailure() => BoardFanoutFailures.Add(1);
+
+    private static readonly Counter<long> McpToolCalls = Meter.CreateCounter<long>(
+        "mcp.tool.calls", description: "MCP tool calls by tool and outcome.");
+
+    private static readonly Histogram<long> McpToolDuration = Meter.CreateHistogram<long>(
+        "mcp.tool.duration_ms", description: "MCP tool duration in milliseconds.");
+
+    internal static void RecordMcpTool(string tool, string outcome, long ms)
+    {
+        McpToolCalls.Add(1,
+            new KeyValuePair<string, object?>("tool", tool),
+            new KeyValuePair<string, object?>("outcome", outcome));
+        McpToolDuration.Record(ms,
+            new KeyValuePair<string, object?>("tool", tool));
+    }
 }

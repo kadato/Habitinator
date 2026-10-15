@@ -44,8 +44,8 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: |
-            11.0.x
+          # SDK version comes from global.json so CI uses the same RC as local builds.
+          # Floating 11.0.x pulls the newest preview while packages pin rc.1.
           dotnet-quality: 'preview'
 
       - name: Setup Azure Developer CLI

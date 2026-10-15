@@ -4,6 +4,7 @@ using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 using App.Web.Services;
 
+using ModelContextProtocol;
 using ModelContextProtocol.Server;
 
 namespace App.Web.Mcp;
@@ -12,30 +13,32 @@ namespace App.Web.Mcp;
 public sealed class HabitTools(BoardPersistenceService boards, IHttpContextAccessor http)
 {
     [McpServerTool(Name = "habit_plus", Title = "Add habit plus tick", OpenWorld = true)]
-    [Description("Adds one plus tick to a habit. Returns the updated habit or null when not found.")]
-    public async Task<BoardItem?> HabitPlus(
+    [Description("Adds one plus tick to a habit. Returns the updated habit. Throws when not found.")]
+    public async Task<BoardItem> HabitPlus(
         [Description("Habit item id.")] Guid itemId,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
         var result = await boards.IncrementHabitPlusAsync(userId, itemId, null, cancellationToken);
-        return result.Item;
+        return result.Item
+            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
     }
 
     [McpServerTool(Name = "habit_minus", Title = "Add habit minus tick", OpenWorld = true)]
-    [Description("Adds one minus tick to a habit. Returns the updated habit or null when not found.")]
-    public async Task<BoardItem?> HabitMinus(
+    [Description("Adds one minus tick to a habit. Returns the updated habit. Throws when not found.")]
+    public async Task<BoardItem> HabitMinus(
         [Description("Habit item id.")] Guid itemId,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
         var result = await boards.IncrementHabitMinusAsync(userId, itemId, null, cancellationToken);
-        return result.Item;
+        return result.Item
+            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
     }
 
     [McpServerTool(Name = "update_habit", Title = "Update habit", Idempotent = true, OpenWorld = true)]
     [Description("Updates habit fields: title, notes, tags, tracking flags, reset period, counters, checklist, sort order. Omit a field to keep its value. Pass an empty string to clear notes, tags, or the checklist.")]
-    public async Task<BoardItem?> UpdateHabit(
+    public async Task<BoardItem> UpdateHabit(
         [Description("Habit item id.")] Guid itemId,
         [Description("Title, 1 to 200 chars.")] string? title = null,
         [Description("Notes up to 4000 chars, or null to keep. Empty string clears.")] string? notes = null,
@@ -50,11 +53,8 @@ public sealed class HabitTools(BoardPersistenceService boards, IHttpContextAcces
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        var current = await boards.GetItemAsync(userId, itemId, cancellationToken);
-        if (current is null)
-        {
-            return null;
-        }
+        var current = await boards.GetItemAsync(userId, itemId, cancellationToken)
+            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
 
         McpInput.CheckNotes(notes);
         McpInput.CheckTags(tags);
@@ -72,7 +72,12 @@ public sealed class HabitTools(BoardPersistenceService boards, IHttpContextAcces
             SortOrder = sortOrder ?? current.SortOrder,
         };
         var result = await boards.UpdateHabitAsync(userId, itemId, args, cancellationToken);
-        return result.Item;
+        return result.Status switch
+        {
+            BoardMutationStatus.Ok when result.Item is not null => result.Item,
+            BoardMutationStatus.NotFound => throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams),
+            _ => throw new McpProtocolException("Version conflict. Read the item again and retry.", McpErrorCode.InvalidRequest),
+        };
     }
 
     private static string? EmptyToNull(string? value) => value is not null && value.Length == 0 ? null : value;

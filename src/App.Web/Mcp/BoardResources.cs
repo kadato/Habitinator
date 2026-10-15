@@ -91,7 +91,7 @@ public sealed class BoardResources(
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        if (!DateOnly.TryParse(date, CultureInfo.InvariantCulture, DateTimeStyles.None, out var day))
+        if (!DateOnly.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day))
         {
             throw new McpProtocolException($"Invalid date: {date}. Use yyyy-MM-dd.", McpErrorCode.InvalidParams);
         }

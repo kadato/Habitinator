@@ -179,12 +179,22 @@ internal static class McpInput
 
     public static DateOnly ParseDate(string raw, string paramName = "Date")
     {
-        if (!DateOnly.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+        if (!DateOnly.TryParseExact(raw, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
         {
             throw new McpProtocolException($"{paramName} must use yyyy-MM-dd.", McpErrorCode.InvalidParams);
         }
 
         return parsed;
+    }
+
+    public static DateOnly? ParseNullableDate(string? raw, string paramName = "Date")
+    {
+        if (string.IsNullOrEmpty(raw))
+        {
+            return null;
+        }
+
+        return ParseDate(raw, paramName);
     }
 
     public static void CheckImportSize(string json)

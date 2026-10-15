@@ -21,6 +21,6 @@ internal static class McpUser
     {
         return new McpProtocolException(
             "You are signed in, but the server has no record for you. Register or sign in again.",
-            McpErrorCode.InternalError);
+            McpErrorCode.InvalidRequest);
     }
 }

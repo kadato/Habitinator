@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Globalization;
 
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
@@ -15,7 +14,7 @@ public sealed class TodoTools(BoardPersistenceService boards, IHttpContextAccess
 {
     [McpServerTool(Name = "update_todo", Title = "Update todo", Idempotent = true, OpenWorld = true)]
     [Description("Updates todo fields: title, notes, tags, due date, checklist, sort order. Omit a field to keep its value. Pass an empty string to clear notes, tags, due date, or the checklist.")]
-    public async Task<BoardItem?> UpdateTodo(
+    public async Task<BoardItem> UpdateTodo(
         [Description("Todo item id.")] Guid itemId,
         [Description("Title, 1 to 200 chars, or null to keep.")] string? title = null,
         [Description("Notes up to 4000 chars, or null to keep. Empty string clears.")] string? notes = null,
@@ -26,11 +25,8 @@ public sealed class TodoTools(BoardPersistenceService boards, IHttpContextAccess
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        var current = await boards.GetItemAsync(userId, itemId, cancellationToken);
-        if (current is null)
-        {
-            return null;
-        }
+        var current = await boards.GetItemAsync(userId, itemId, cancellationToken)
+            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
 
         McpInput.CheckNotes(notes);
         McpInput.CheckTags(tags);
@@ -40,26 +36,16 @@ public sealed class TodoTools(BoardPersistenceService boards, IHttpContextAccess
             Notes = notes ?? current.Notes,
             Tags = tags ?? current.Tags,
             ChecklistJson = checklistJson is null ? current.ChecklistJson : McpInput.NormalizedChecklist(EmptyToNull(checklistJson)),
-            DueDate = dueDate is null ? current.TodoDueDate : ParseNullableDate(dueDate),
+            DueDate = dueDate is null ? current.TodoDueDate : McpInput.ParseNullableDate(dueDate, nameof(dueDate)),
             SortOrder = sortOrder ?? current.SortOrder,
         };
         var result = await boards.UpdateTodoAsync(userId, itemId, args, cancellationToken);
-        return result.Item;
-    }
-
-    private static DateOnly? ParseNullableDate(string raw)
-    {
-        if (raw.Length == 0)
+        return result.Status switch
         {
-            return null;
-        }
-
-        if (!DateOnly.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
-        {
-            throw new McpProtocolException("dueDate must use yyyy-MM-dd.", McpErrorCode.InvalidParams);
-        }
-
-        return parsed;
+            BoardMutationStatus.Ok when result.Item is not null => result.Item,
+            BoardMutationStatus.NotFound => throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams),
+            _ => throw new McpProtocolException("Version conflict. Read the item again and retry.", McpErrorCode.InvalidRequest),
+        };
     }
 
     private static string? EmptyToNull(string? value) => value is not null && value.Length == 0 ? null : value;

@@ -14,15 +14,16 @@ namespace App.Web.Mcp;
 public sealed class ChecklistTools(BoardPersistenceService boards, IHttpContextAccessor http)
 {
     [McpServerTool(Name = "get_checklist", Title = "Get checklist", ReadOnly = true, OpenWorld = false)]
-    [Description("Reads the checklist subtasks of a habit, daily, or todo. Returns an empty list when it has none.")]
+    [Description("Reads the checklist subtasks of a habit, daily, or todo. Returns an empty list when it has none. Throws when the item is missing.")]
     public async Task<IReadOnlyList<DailyChecklistItem>> GetChecklist(
         [Description("Section of the item.")] BoardSection section,
         [Description("Item id.")] Guid itemId,
         CancellationToken cancellationToken = default)
     {
         _ = section; // Kept for API compatibility. Board ids are globally unique.
-        var current = await LoadItem(itemId, cancellationToken);
-        return current is null ? [] : DailyChecklistJson.Parse(current.ChecklistJson);
+        var current = await LoadItem(itemId, cancellationToken)
+            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+        return DailyChecklistJson.Parse(current.ChecklistJson);
     }
 
     [McpServerTool(Name = "add_checklist_item", Title = "Add checklist item", OpenWorld = true)]

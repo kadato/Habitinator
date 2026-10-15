@@ -1180,4 +1180,194 @@ public sealed class BoardPersistenceService(
             EventId = eventId
         });
     }
+
+    public async Task<IReadOnlyList<BoardItem>> SearchItemsAsync(
+        Guid userId,
+        string? query,
+        string? tag,
+        BoardSection? section,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var take = Math.Clamp(limit, 1, 200);
+        await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var filtered = LiveBoardItems(readDb, userId).AsNoTracking();
+        if (section.HasValue)
+        {
+            filtered = filtered.Where(x => x.Section == section.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var pattern = "%" + EscapeLikePattern(query.Trim()) + "%";
+            filtered = filtered.Where(x =>
+                EF.Functions.ILike(x.Title, pattern) ||
+                (x.Notes != null && EF.Functions.ILike(x.Notes, pattern)) ||
+                (x.Tags != null && EF.Functions.ILike(x.Tags, pattern)));
+        }
+
+        var entities = await filtered
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.CreatedAtUtc)
+            .ThenBy(x => x.Id)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(tag))
+        {
+            var wanted = tag.Trim();
+            entities = entities
+                .Where(e => BoardTagUtil.ParseTags(e.Tags)
+                    .Any(t => string.Equals(t, wanted, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+        }
+
+        var (today, dayStart) = await UserDayContext.LoadAsync(readDb, userId, timeZone, cancellationToken);
+        var dailies = entities.Where(x => x.Section == BoardSection.Daily).ToList();
+        var streaks = dailies.Count == 0
+            ? EmptyDailyStreaks
+            : await streakCalculator.BuildDailyStreakMapAsync(userId, dailies, today, dayStart, readDb, cancellationToken);
+        return entities.Select(e => ToModelWithToday(e, today, streaks)).ToList();
+    }
+
+    private static string EscapeLikePattern(string value) =>
+        value.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
+
+    public async Task<string[]> GetDistinctTagsAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var raws = await LiveBoardItems(readDb, userId)
+            .AsNoTracking()
+            .Where(x => x.Tags != null)
+            .Select(x => x.Tags!)
+            .ToListAsync(cancellationToken);
+        return [.. raws
+            .SelectMany(BoardTagUtil.ParseTags)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)];
+    }
+
+    public async Task<BoardItem> CreateItemDetailedAsync(
+        Guid userId,
+        BoardSection section,
+        string title,
+        string? notes,
+        string? tags,
+        DateOnly? startOrDueDate,
+        Guid? itemId,
+        CancellationToken cancellationToken = default)
+    {
+        var cleanTitle = ZalgoSanitizer.SanitizeAndTrim(title);
+        var cleanNotes = string.IsNullOrWhiteSpace(notes) ? null : ZalgoSanitizer.SanitizeAndTrim(notes);
+        var cleanTags = string.IsNullOrWhiteSpace(tags) ? null : ZalgoSanitizer.SanitizeAndTrim(tags);
+        var dateUtc = startOrDueDate?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+        if (itemId is { } id)
+        {
+            var existing = await dbContext.BoardItems
+                .FirstOrDefaultAsync(x => x.UserId == userId && x.Id == id, cancellationToken);
+            if (existing is not null)
+            {
+                existing.DeletedAtUtc = null;
+                existing.Section = section;
+                existing.Title = cleanTitle;
+                existing.Notes = cleanNotes;
+                existing.Tags = cleanTags;
+                existing.DailyStartDate = section == BoardSection.Habit ? existing.DailyStartDate : dateUtc;
+                existing.UpdatedAtUtc = DateTimeOffset.UtcNow;
+                await dbContext.SaveChangesAsync(cancellationToken);
+                var restored = await ToModelWithDailyStreaksAsync(userId, existing, cancellationToken);
+                await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+                return restored;
+            }
+        }
+
+        var utcNow = DateTimeOffset.UtcNow;
+        var entity = new BoardItemEntity
+        {
+            Id = itemId ?? Guid.NewGuid(),
+            UserId = userId,
+            Section = section,
+            Title = cleanTitle,
+            Notes = cleanNotes,
+            Tags = cleanTags,
+            TrackPlus = true,
+            TrackMinus = true,
+            ResetPeriod = (int)HabitResetPeriod.Daily,
+            HabitPeriodStart = section == BoardSection.Habit
+                ? ToUtcDate(await TodayAsync(userId, cancellationToken))
+                : null,
+            IsCompleted = false,
+            Counter = 0,
+            NegativeCounter = 0,
+            DailyStartDate = section == BoardSection.Habit ? null : dateUtc,
+            DailyRepeatType = (int)DailyRepeatType.Daily,
+            DailyRepeatInterval = 1,
+            ChecklistJson = null,
+            DailyLastCompletedOn = null,
+            CreatedAtUtc = utcNow,
+            UpdatedAtUtc = utcNow,
+            SortOrder = await GetInitialSortOrderAsync(userId, section, cancellationToken)
+        };
+
+        dbContext.BoardItems.Add(entity);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        var created = await ToModelWithDailyStreaksAsync(userId, entity, cancellationToken);
+        await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+        return created;
+    }
+
+    public async Task<BoardMutationResult> ReorderItemAsync(
+        Guid userId,
+        BoardSection section,
+        Guid itemId,
+        int position,
+        CancellationToken cancellationToken = default)
+    {
+        var list = await dbContext.BoardItems
+            .Where(x => x.UserId == userId && x.Section == section && x.DeletedAtUtc == null && !x.IsArchived)
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.CreatedAtUtc)
+            .ThenBy(x => x.Id)
+            .ToListAsync(cancellationToken);
+        var index = list.FindIndex(x => x.Id == itemId);
+        if (index < 0)
+        {
+            AppTelemetry.RecordMutation(section.ToString(), "not_found");
+            return new BoardMutationResult(BoardMutationStatus.NotFound, null);
+        }
+
+        var moving = list[index];
+        list.RemoveAt(index);
+        var insertAt = Math.Clamp(position, 0, list.Count);
+        list.Insert(insertAt, moving);
+
+        double? prev = insertAt > 0 ? list[insertAt - 1].SortOrder : null;
+        double? next = insertAt < list.Count - 1 ? list[insertAt + 1].SortOrder : null;
+        moving.SortOrder = (prev, next) switch
+        {
+            (not null, not null) => (prev.Value + next.Value) / 2.0,
+            (not null, null) => prev.Value + 1.0,
+            (null, not null) => next.Value - 1.0,
+            _ => insertAt,
+        };
+        moving.UpdatedAtUtc = DateTimeOffset.UtcNow;
+
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            DiscardPendingMutationChanges();
+            AppTelemetry.RecordMutation(section.ToString(), "conflict");
+            AppTelemetry.RecordConflict(section.ToString());
+            return await BuildConflictFromDatabaseAsync(userId, section, itemId, cancellationToken);
+        }
+
+        var model = await ToModelWithDailyStreaksAsync(userId, moving, cancellationToken);
+        await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+        AppTelemetry.RecordMutation(section.ToString(), "ok");
+        return new BoardMutationResult(BoardMutationStatus.Ok, model);
+    }
 }

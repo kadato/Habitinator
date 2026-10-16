@@ -1255,6 +1255,7 @@ public sealed class BoardPersistenceService(
         string? tags,
         DateOnly? startOrDueDate,
         Guid? itemId,
+        string? checklistJson = null,
         CancellationToken cancellationToken = default)
     {
         var cleanTitle = ZalgoSanitizer.SanitizeAndTrim(title);
@@ -1273,6 +1274,10 @@ public sealed class BoardPersistenceService(
                 existing.Title = cleanTitle;
                 existing.Notes = cleanNotes;
                 existing.Tags = cleanTags;
+                if (checklistJson is not null)
+                {
+                    existing.ChecklistJson = checklistJson;
+                }
                 existing.DailyStartDate = section == BoardSection.Habit ? existing.DailyStartDate : dateUtc;
                 existing.UpdatedAtUtc = DateTimeOffset.UtcNow;
                 await dbContext.SaveChangesAsync(cancellationToken);
@@ -1303,7 +1308,7 @@ public sealed class BoardPersistenceService(
             DailyStartDate = section == BoardSection.Habit ? null : dateUtc,
             DailyRepeatType = (int)DailyRepeatType.Daily,
             DailyRepeatInterval = 1,
-            ChecklistJson = null,
+            ChecklistJson = checklistJson,
             DailyLastCompletedOn = null,
             CreatedAtUtc = utcNow,
             UpdatedAtUtc = utcNow,

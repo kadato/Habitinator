@@ -141,7 +141,7 @@ public sealed class BoardTools(
     }
 
     [McpServerTool(Name = "create_item", Title = "Create board item", OpenWorld = true)]
-    [Description("Creates a habit, daily, or todo with a title. Returns the created item.")]
+    [Description("Creates a habit, daily, or todo with a title and optional checklist. Returns the created item.")]
     public async Task<BoardItem> CreateItem(
         McpServer server,
         [Description("Section: Habit, Daily, or Todo.")]
@@ -152,12 +152,15 @@ public sealed class BoardTools(
         [Description("Comma-separated tags up to 500 chars, or null.")] string? tags = null,
         [Description("Date as yyyy-MM-dd. For Daily it sets the start date. For Todo it sets the due date. Omit the date for Habit.")]
         string? date = null,
+        [Description("Checklist as JSON array of items or checklist text, 8000 chars or fewer, or null.")]
+        string? checklistJson = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
         var cleanTitle = McpInput.CleanTitle(title);
         McpInput.CheckNotes(notes);
         McpInput.CheckTags(tags);
+        var normalizedChecklist = checklistJson is not null ? McpInput.NormalizedChecklist(checklistJson) : null;
 
         DateOnly? parsedDate = null;
         if (date is not null)
@@ -170,7 +173,7 @@ public sealed class BoardTools(
             parsedDate = McpInput.ParseDate(date);
         }
 
-        var created = await boards.CreateItemDetailedAsync(userId, section, cleanTitle, notes, tags, parsedDate, null, cancellationToken);
+        var created = await boards.CreateItemDetailedAsync(userId, section, cleanTitle, notes, tags, parsedDate, null, normalizedChecklist, cancellationToken);
         await McpNotifications.BoardChangedAsync(server, created.Id, cancellationToken);
         return created;
     }
@@ -213,6 +216,37 @@ public sealed class BoardTools(
         return item;
     }
 
+    [McpServerTool(Name = "batch_toggle_items", Title = "Batch toggle dailies or todos", OpenWorld = true)]
+    [Description("Toggles multiple dailies or todos for today in one call. Habits cannot be toggled. Returns array of updated items.")]
+    public async Task<IReadOnlyList<BoardItem>> BatchToggleItems(
+        McpServer server,
+        [Description("Section: Daily or Todo.")] BoardSection section,
+        [Description("List of item GUIDs.")] IReadOnlyList<Guid> itemIds,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        if (section == BoardSection.Habit)
+        {
+            throw new McpProtocolException("Habits cannot be toggled. Use habit_plus or habit_minus.", McpErrorCode.InvalidParams);
+        }
+
+        if (itemIds is null || itemIds.Count == 0)
+        {
+            throw new McpProtocolException("itemIds must not be empty.", McpErrorCode.InvalidParams);
+        }
+
+        var updated = new List<BoardItem>(itemIds.Count);
+        foreach (var itemId in itemIds)
+        {
+            var result = await boards.ToggleItemAsync(userId, section, itemId, null, cancellationToken);
+            var item = ThrowOnError(result);
+            updated.Add(item);
+        }
+
+        await McpNotifications.BoardChangedAsync(server, null, cancellationToken);
+        return updated;
+    }
+
     [McpServerTool(Name = "archive_item", Title = "Archive board item", Idempotent = true, OpenWorld = true)]
     [Description("Archives an item so it hides from the active board. Returns the updated item.")]
     public async Task<BoardItem> ArchiveItem(
@@ -226,6 +260,32 @@ public sealed class BoardTools(
         var item = ThrowOnError(result);
         await McpNotifications.BoardChangedAsync(server, item.Id, cancellationToken);
         return item;
+    }
+
+    [McpServerTool(Name = "bulk_archive", Title = "Bulk archive items", Idempotent = true, OpenWorld = true)]
+    [Description("Archives multiple items so they hide from the active board. Returns array of updated items.")]
+    public async Task<IReadOnlyList<BoardItem>> BulkArchive(
+        McpServer server,
+        [Description("Section of the items.")] BoardSection section,
+        [Description("List of item GUIDs.")] IReadOnlyList<Guid> itemIds,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        if (itemIds is null || itemIds.Count == 0)
+        {
+            throw new McpProtocolException("itemIds must not be empty.", McpErrorCode.InvalidParams);
+        }
+
+        var updated = new List<BoardItem>(itemIds.Count);
+        foreach (var itemId in itemIds)
+        {
+            var result = await boards.ArchiveItemAsync(userId, section, itemId, null, cancellationToken);
+            var item = ThrowOnError(result);
+            updated.Add(item);
+        }
+
+        await McpNotifications.BoardChangedAsync(server, null, cancellationToken);
+        return updated;
     }
 
     [McpServerTool(Name = "unarchive_item", Title = "Unarchive board item", Idempotent = true, OpenWorld = true)]

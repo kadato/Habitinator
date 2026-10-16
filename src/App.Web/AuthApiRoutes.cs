@@ -47,6 +47,7 @@ internal static class AuthApiRoutes
         endpoints.MapPost("/api/account/delete", DeleteAccountAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api");
         endpoints.MapGet("/api/account/export", ExportDataAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api");
         endpoints.MapPost("/api/account/import", ImportDataAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api");
+        endpoints.MapPost("/api/account/mcp-token", CreateMcpTokenAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api");
     }
 
     // Endpoint handlers
@@ -372,6 +373,33 @@ internal static class AuthApiRoutes
 
         await signInManager.SignOutAsync();
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> CreateMcpTokenAsync(
+        CurrentUserId user,
+        UserManager<ApplicationUser> userManager,
+        JwtTokenService jwt,
+        HttpContext httpContext,
+        CreateMcpTokenRequest? request)
+    {
+        var appUser = await userManager.FindByIdAsync(user.Value.ToString());
+        if (appUser is null)
+        {
+            return Results.NotFound();
+        }
+
+        var days = Math.Clamp(request?.Days ?? 90, 1, 365);
+        var lifetime = TimeSpan.FromDays(days);
+        var token = jwt.CreateToken(appUser, lifetime);
+        var expiresAtUtc = DateTime.UtcNow.Add(lifetime);
+        var baseUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
+        var endpoint = $"{baseUrl}/mcp";
+
+        return Results.Ok(new CreateMcpTokenResponse(
+            Token: token,
+            ExpiresAtUtc: expiresAtUtc,
+            Endpoint: endpoint,
+            Days: days));
     }
 
     // Helpers

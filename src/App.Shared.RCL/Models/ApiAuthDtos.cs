@@ -41,3 +41,11 @@ public sealed record ResetPasswordRequest(
     [Required] string Token,
     [Required, MinLength(8)] string NewPassword);
 
+public sealed record CreateMcpTokenRequest(int? Days = 90, string? Label = null);
+
+public sealed record CreateMcpTokenResponse(
+    string Token,
+    DateTime ExpiresAtUtc,
+    string Endpoint,
+    int Days);
+

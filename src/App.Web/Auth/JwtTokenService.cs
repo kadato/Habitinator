@@ -24,7 +24,7 @@ public sealed class JwtTokenService
             SecurityAlgorithms.HmacSha256);
     }
 
-    public string CreateToken(ApplicationUser user)
+    public string CreateToken(ApplicationUser user, TimeSpan? lifetimeOverride = null)
     {
         List<Claim> claims =
         [
@@ -34,11 +34,12 @@ public sealed class JwtTokenService
             new(AppClaims.Name, user.UserName ?? string.Empty)
         ];
 
+        var lifetime = lifetimeOverride ?? TimeSpan.FromMinutes(_options.ExpirationMinutes);
         var token = new JwtSecurityToken(
             _options.Issuer,
             _options.Audience,
             claims,
-            expires: DateTime.UtcNow.AddMinutes(_options.ExpirationMinutes),
+            expires: DateTime.UtcNow.Add(lifetime),
             signingCredentials: _credentials);
 
         return Handler.WriteToken(token);

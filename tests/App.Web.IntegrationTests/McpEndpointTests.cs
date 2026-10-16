@@ -77,12 +77,22 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
         names.Should().Contain("daily_complete_for_date");
         names.Should().Contain("log_timer_session");
         names.Should().Contain("export_data");
+        names.Should().Contain("batch_toggle_items");
+        names.Should().Contain("bulk_archive");
 
         var prompts = await mcp.ListPromptsAsync();
-        prompts.Select(p => p.Name).Should().Contain("plan_day");
+        var promptNames = prompts.Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
+        promptNames.Should().Contain("plan_day");
+        promptNames.Should().Contain("daily_standup");
+        promptNames.Should().Contain("evening_review");
+        promptNames.Should().Contain("backlog_triage");
 
         var resources = await mcp.ListResourcesAsync();
-        resources.Select(r => r.Uri).Should().Contain("board://snapshot");
+        var resourceUris = resources.Select(r => r.Uri).ToHashSet(StringComparer.Ordinal);
+        resourceUris.Should().Contain("board://snapshot");
+        resourceUris.Should().Contain("board://summary");
+        resourceUris.Should().Contain("board://summary.md");
+        resourceUris.Should().Contain("board://tags");
 
         var snapshot = await mcp.CallToolAsync("get_snapshot");
         snapshot.IsError.Should().Be(null);
@@ -360,6 +370,126 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
         notif.SoundEnabledForDeviceNotifications.Should().BeFalse();
 
         _ = second;
+    }
+
+    [Fact]
+    public async Task Mcp_CreateItem_WithChecklist_AndBatchOperations()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var json = TestJson;
+        var stamp = Guid.NewGuid().ToString("N")[..8];
+
+        var checklist = "[{\"text\":\"Step 1\",\"isDone\":false},{\"text\":\"Step 2\",\"isDone\":true}]";
+        var created = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new()
+            {
+                ["section"] = "Todo",
+                ["title"] = $"Atomic todo {stamp}",
+                ["checklistJson"] = checklist
+            }), json)!;
+
+        created.ChecklistJson.Should().NotBeNullOrWhiteSpace();
+        created.ChecklistJson.Should().Contain("Step 1");
+
+        // Create 2 items for batch toggle and bulk archive.
+        var todo1 = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new() { ["section"] = "Todo", ["title"] = $"Batch 1 {stamp}" }), json)!;
+        var todo2 = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new() { ["section"] = "Todo", ["title"] = $"Batch 2 {stamp}" }), json)!;
+
+        // Batch toggle items
+        var toggled = JsonSerializer.Deserialize<BoardItem[]>(
+            await CallTextAsync(mcp, "batch_toggle_items", new()
+            {
+                ["section"] = "Todo",
+                ["itemIds"] = new[] { todo1.Id, todo2.Id }
+            }), json)!;
+
+        toggled.Should().HaveCount(2);
+        toggled.All(t => t.IsCompleted).Should().BeTrue();
+
+        // Bulk archive items
+        var archived = JsonSerializer.Deserialize<BoardItem[]>(
+            await CallTextAsync(mcp, "bulk_archive", new()
+            {
+                ["section"] = "Todo",
+                ["itemIds"] = new[] { todo1.Id, todo2.Id }
+            }), json)!;
+
+        archived.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task Mcp_SummaryResources_AndNewPrompts()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+
+        // Resources
+        var summary = await mcp.ReadResourceAsync("board://summary");
+        summary.Contents.Should().NotBeEmpty();
+        var summaryText = string.Concat(summary.Contents.OfType<TextResourceContents>().Select(c => c.Text));
+        summaryText.Should().Contain("habitsCount");
+
+        var summaryMd = await mcp.ReadResourceAsync("board://summary.md");
+        summaryMd.Contents.Should().NotBeEmpty();
+        var summaryMdText = string.Concat(summaryMd.Contents.OfType<TextResourceContents>().Select(c => c.Text));
+        summaryMdText.Should().Contain("# Board Summary");
+
+        var tagsResource = await mcp.ReadResourceAsync("board://tags");
+        tagsResource.Contents.Should().NotBeEmpty();
+
+        // Prompts
+        var standup = await mcp.GetPromptAsync("daily_standup");
+        standup.Messages.Should().NotBeEmpty();
+        standup.Messages[0].Content.ToString().Should().Contain("Daily standup");
+
+        var review = await mcp.GetPromptAsync("evening_review");
+        review.Messages.Should().NotBeEmpty();
+        review.Messages[0].Content.ToString().Should().Contain("Evening review");
+
+        var triage = await mcp.GetPromptAsync("backlog_triage");
+        triage.Messages.Should().NotBeEmpty();
+        triage.Messages[0].Content.ToString().Should().Contain("Backlog triage");
+    }
+
+    [Fact]
+    public async Task Mcp_PersonalTokenEndpoint_GeneratesUsableToken()
+    {
+        var client = factory.CreateClient();
+        var suffix = Guid.NewGuid().ToString("N");
+        var email = $"mcp-token-{suffix}@integration.test";
+        const string password = "TestUser1!Aa";
+
+        var register = await client.PostAsJsonAsync(
+            "/api/auth/register", new RegisterRequest(email, password));
+        register.EnsureSuccessStatusCode();
+        var login = await client.PostAsJsonAsync(
+            "/api/auth/login", new LoginRequest(email, password, RememberMe: false));
+        login.EnsureSuccessStatusCode();
+        var initialToken = (await login.Content.ReadFromJsonAsync<LoginResponse>())!.AccessToken;
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", initialToken);
+
+        // Generate long-lived MCP personal token
+        var tokenRes = await client.PostAsJsonAsync("/api/account/mcp-token", new CreateMcpTokenRequest(Days: 60, Label: "Test Agent"));
+        tokenRes.EnsureSuccessStatusCode();
+        var tokenData = await tokenRes.Content.ReadFromJsonAsync<CreateMcpTokenResponse>();
+        tokenData.Should().NotBeNull();
+        tokenData.Token.Should().NotBeNullOrWhiteSpace();
+        tokenData.Days.Should().Be(60);
+        tokenData.ExpiresAtUtc.Should().BeAfter(DateTime.UtcNow.AddDays(50));
+
+        // Use the newly minted MCP token with McpClient
+        var mcpClient = factory.CreateClient();
+        mcpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenData.Token);
+        var transport = new HttpClientTransport(
+            new HttpClientTransportOptions { Endpoint = new Uri(mcpClient.BaseAddress!, "/mcp"), },
+            mcpClient,
+            NullLoggerFactory.Instance,
+            ownsHttpClient: false);
+        await using var mcp = await McpClient.CreateAsync(transport);
+
+        var snapshot = await mcp.CallToolAsync("get_snapshot");
+        snapshot.IsError.Should().Be(null);
     }
 
     private async Task<McpClient> CreateLoggedInMcpClientAsync()

@@ -104,4 +104,102 @@ public sealed class BoardResources(
             Text = JsonSerializer.Serialize(detail, Json),
         };
     }
+
+    [McpServerResource(UriTemplate = "board://summary", Name = "Board summary", Title = "Board summary", MimeType = "application/json")]
+    [Description("High-level summary of active habits, today's dailies (done vs pending), todos (active vs overdue), and streaks.")]
+    public async Task<TextResourceContents> GetSummary(CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        var snapshot = await boards.GetSnapshotAsync(userId, 200, cancellationToken);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var summary = new
+        {
+            HabitsCount = snapshot.Habits.Count,
+            TotalHabitTicks = snapshot.Habits.Sum(h => h.Counter),
+            DailiesCount = snapshot.Dailies.Count,
+            DailiesCompletedToday = snapshot.Dailies.Count(d => d.IsCompleted),
+            DailiesPendingToday = snapshot.Dailies.Count(d => !d.IsCompleted),
+            TodosActiveCount = snapshot.Todos.Count(t => !t.IsCompleted),
+            TodosCompletedCount = snapshot.Todos.Count(t => t.IsCompleted),
+            TodosOverdueCount = snapshot.Todos.Count(t => !t.IsCompleted && t.TodoDueDate.HasValue && t.TodoDueDate.Value < today),
+            TopStreaks = snapshot.Dailies
+                .Where(d => d.Counter > 0)
+                .OrderByDescending(d => d.Counter)
+                .Take(5)
+                .Select(d => new { d.Title, Streak = d.Counter })
+                .ToList()
+        };
+
+        return new TextResourceContents
+        {
+            Uri = "board://summary",
+            MimeType = "application/json",
+            Text = JsonSerializer.Serialize(summary, Json),
+        };
+    }
+
+    [McpServerResource(UriTemplate = "board://summary.md", Name = "Board summary markdown", Title = "Board summary markdown", MimeType = "text/markdown")]
+    [Description("Compact Markdown overview of today's status, pending dailies, overdue todos, and top habits. Optimized for low token consumption.")]
+    public async Task<TextResourceContents> GetSummaryMarkdown(CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        var snapshot = await boards.GetSnapshotAsync(userId, 200, cancellationToken);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var pendingDailies = snapshot.Dailies.Where(d => !d.IsCompleted).ToList();
+        var doneDailies = snapshot.Dailies.Where(d => d.IsCompleted).ToList();
+        var overdueTodos = snapshot.Todos.Where(t => !t.IsCompleted && t.TodoDueDate.HasValue && t.TodoDueDate.Value < today).ToList();
+        var activeTodos = snapshot.Todos.Where(t => !t.IsCompleted && (!t.TodoDueDate.HasValue || t.TodoDueDate.Value >= today)).ToList();
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine(CultureInfo.InvariantCulture, $"# Board Summary ({today:yyyy-MM-dd})");
+        sb.AppendLine();
+        sb.AppendLine(CultureInfo.InvariantCulture, $"**Dailies:** {doneDailies.Count}/{snapshot.Dailies.Count} done");
+        if (pendingDailies.Count > 0)
+        {
+            sb.AppendLine("### Pending Dailies");
+            foreach (var d in pendingDailies.Take(10))
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- {d.Title} (streak: {d.Counter})");
+            }
+        }
+        sb.AppendLine();
+        sb.AppendLine(CultureInfo.InvariantCulture, $"**Todos:** {activeTodos.Count} active, {overdueTodos.Count} overdue");
+        if (overdueTodos.Count > 0)
+        {
+            sb.AppendLine("### Overdue Todos");
+            foreach (var t in overdueTodos.Take(10))
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- [!] {t.Title} (due: {t.TodoDueDate!.Value:yyyy-MM-dd})");
+            }
+        }
+        sb.AppendLine();
+        sb.AppendLine(CultureInfo.InvariantCulture, $"**Habits:** {snapshot.Habits.Count} tracked");
+        foreach (var h in snapshot.Habits.Take(5))
+        {
+            sb.AppendLine(CultureInfo.InvariantCulture, $"- {h.Title}: +{h.Counter} / -{h.NegativeCounter}");
+        }
+
+        return new TextResourceContents
+        {
+            Uri = "board://summary.md",
+            MimeType = "text/markdown",
+            Text = sb.ToString(),
+        };
+    }
+
+    [McpServerResource(UriTemplate = "board://tags", Name = "Board tags", Title = "Board tags list", MimeType = "application/json")]
+    [Description("List of distinct tags currently in use across board items.")]
+    public async Task<TextResourceContents> GetTags(CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        var tags = await boards.GetDistinctTagsAsync(userId, cancellationToken);
+        return new TextResourceContents
+        {
+            Uri = "board://tags",
+            MimeType = "application/json",
+            Text = JsonSerializer.Serialize(tags, Json),
+        };
+    }
 }

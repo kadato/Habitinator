@@ -21,10 +21,12 @@ internal static class McpRegistration
                 Version = version,
             };
             options.ServerInstructions =
-                "Habitinator board helper. Authenticate with a JWT bearer token or auth cookie. " +
+                "Habitinator board helper. Authenticate with a JWT bearer token, auth cookie, or MCP personal token. " +
                 "Before any mutation, read with get_snapshot or search_items so you have item ids. " +
+                "Quick overview is available via resources board://summary and board://summary.md. " +
                 "Habits move with habit_plus and habit_minus. Past dailies complete with daily_complete_for_date. " +
-                "Today toggles with toggle_item. Past daily completion is append-only. No tool reverses a past daily completion. " +
+                "Today toggles with toggle_item or batch_toggle_items. Bulk archive with bulk_archive. " +
+                "Past daily completion is append-only. No tool reverses a past daily completion. " +
                 "Write dates as yyyy-MM-dd and times as HH:mm. The server rejects bad values with InvalidParams. " +
                 "Fix the input and retry. Reuse eventId on retry for log_activity and log_timer_session so the server logs the event once. " +
                 "delete_item and import_data ask for elicitation confirmation. Older clients pass confirmToken instead.";
@@ -130,36 +132,61 @@ internal static class McpRegistration
     {
         // Tool arguments do not support completions in the spec, only prompt
         // arguments and resource template parameters.
-        if (ctx.Params.Ref is PromptReference pr
-            && (string.Equals(pr.Name, "plan_day", StringComparison.Ordinal)
-                || string.Equals(pr.Name, "review_week", StringComparison.Ordinal))
-            && string.Equals(ctx.Params.Argument?.Name, "tag", StringComparison.Ordinal))
+        if (ctx.Params.Ref is PromptReference pr)
         {
-            var partial = ctx.Params.Argument?.Value ?? "";
-            var tags = await GetTagsAsync(ctx, ct);
-            var values = tags
-                .Where(t => t.StartsWith(partial, StringComparison.OrdinalIgnoreCase))
-                .Take(20)
-                .ToList();
-            return Complete(values);
+            if ((string.Equals(pr.Name, "plan_day", StringComparison.Ordinal)
+                    || string.Equals(pr.Name, "review_week", StringComparison.Ordinal)
+                    || string.Equals(pr.Name, "daily_standup", StringComparison.Ordinal)
+                    || string.Equals(pr.Name, "backlog_triage", StringComparison.Ordinal))
+                && string.Equals(ctx.Params.Argument?.Name, "tag", StringComparison.Ordinal))
+            {
+                var partial = ctx.Params.Argument?.Value ?? "";
+                var tags = await GetTagsAsync(ctx, ct);
+                var values = tags
+                    .Where(t => t.StartsWith(partial, StringComparison.OrdinalIgnoreCase))
+                    .Take(20)
+                    .ToList();
+                return Complete(values);
+            }
+
+            if (string.Equals(pr.Name, "review_week", StringComparison.Ordinal)
+                && string.Equals(ctx.Params.Argument?.Name, "period", StringComparison.Ordinal))
+            {
+                var partial = ctx.Params.Argument?.Value ?? "";
+                string[] periods = ["last_7_days", "last_30_days", "this_month", "last_month"];
+                return Complete(periods.Where(p => p.StartsWith(partial, StringComparison.OrdinalIgnoreCase)).ToList());
+            }
+
+            if (string.Equals(pr.Name, "habit_coach", StringComparison.Ordinal)
+                && string.Equals(ctx.Params.Argument?.Name, "habitId", StringComparison.Ordinal))
+            {
+                var partial = ctx.Params.Argument?.Value ?? "";
+                var ids = await GetHabitIdsAsync(ctx, partial, ct);
+                return Complete(ids);
+            }
         }
 
-        if (ctx.Params.Ref is PromptReference coach
-            && string.Equals(coach.Name, "habit_coach", StringComparison.Ordinal)
-            && string.Equals(ctx.Params.Argument?.Name, "habitId", StringComparison.Ordinal))
+        if (ctx.Params.Ref is ResourceTemplateReference rr)
         {
-            var partial = ctx.Params.Argument?.Value ?? "";
-            var ids = await GetHabitIdsAsync(ctx, partial, ct);
-            return Complete(ids);
-        }
+            if ((rr.Uri ?? "").StartsWith("board://item/", StringComparison.Ordinal)
+                && string.Equals(ctx.Params.Argument?.Name, "id", StringComparison.Ordinal))
+            {
+                var partial = ctx.Params.Argument?.Value ?? "";
+                var ids = await GetItemIdsAsync(ctx, partial, ct);
+                return Complete(ids);
+            }
 
-        if (ctx.Params.Ref is ResourceTemplateReference rr
-            && (rr.Uri ?? "").StartsWith("board://item/", StringComparison.Ordinal)
-            && string.Equals(ctx.Params.Argument?.Name, "id", StringComparison.Ordinal))
-        {
-            var partial = ctx.Params.Argument?.Value ?? "";
-            var ids = await GetItemIdsAsync(ctx, partial, ct);
-            return Complete(ids);
+            if ((rr.Uri ?? "").StartsWith("activity://day/", StringComparison.Ordinal)
+                && string.Equals(ctx.Params.Argument?.Name, "date", StringComparison.Ordinal))
+            {
+                var partial = ctx.Params.Argument?.Value ?? "";
+                var today = DateOnly.FromDateTime(DateTime.UtcNow);
+                var recentDates = Enumerable.Range(0, 7)
+                    .Select(i => today.AddDays(-i).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture))
+                    .Where(d => d.StartsWith(partial, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                return Complete(recentDates);
+            }
         }
 
         return Complete([]);

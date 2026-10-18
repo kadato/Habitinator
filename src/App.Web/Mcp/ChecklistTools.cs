@@ -16,11 +16,11 @@ public sealed class ChecklistTools(BoardPersistenceService boards, IHttpContextA
     [McpServerTool(Name = "get_checklist", Title = "Get checklist", ReadOnly = true, OpenWorld = false)]
     [Description("Reads the checklist subtasks of a habit, daily, or todo. Returns an empty list when it has none. Throws when the item is missing.")]
     public async Task<IReadOnlyList<DailyChecklistItem>> GetChecklist(
-        [Description("Section of the item.")] BoardSection section,
         [Description("Item id.")] Guid itemId,
+        [Description("Section of the item. Optional; auto-detected if omitted.")] BoardSection? section = null,
         CancellationToken cancellationToken = default)
     {
-        _ = section; // Kept for API compatibility. Board ids are globally unique.
+        _ = section; // Board ids are globally unique.
         var current = await LoadItem(itemId, cancellationToken)
             ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
         return DailyChecklistJson.Parse(current.ChecklistJson);
@@ -29,30 +29,34 @@ public sealed class ChecklistTools(BoardPersistenceService boards, IHttpContextA
     [McpServerTool(Name = "add_checklist_item", Title = "Add checklist item", OpenWorld = true)]
     [Description("Adds one subtask to the checklist of a habit, daily, or todo. Returns the updated checklist.")]
     public async Task<IReadOnlyList<DailyChecklistItem>> AddChecklistItem(
-        [Description("Section of the item.")] BoardSection section,
         [Description("Item id.")] Guid itemId,
         [Description("Subtask text, 1 to 500 chars.")] string text,
+        [Description("Section of the item. Optional; auto-detected if omitted.")] BoardSection? section = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
         var current = await LoadItem(itemId, cancellationToken)
             ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+        var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
+            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
         var items = DailyChecklistJson.Parse(current.ChecklistJson).ToList();
         items.Add(new DailyChecklistItem(Guid.NewGuid(), McpInput.CleanChecklistText(text), false));
-        return await SaveChecklistAsync(userId, section, itemId, current, items, cancellationToken);
+        return await SaveChecklistAsync(userId, resolvedSection, itemId, current, items, cancellationToken);
     }
 
     [McpServerTool(Name = "set_checklist_item_done", Title = "Set checklist item done", Idempotent = true, OpenWorld = true)]
     [Description("Checks or unchecks one subtask. Returns the updated checklist.")]
     public async Task<IReadOnlyList<DailyChecklistItem>> SetChecklistItemDone(
-        [Description("Section of the item.")] BoardSection section,
         [Description("Item id.")] Guid itemId,
         [Description("Subtask id.")] Guid checklistItemId,
         [Description("True to check, false to uncheck.")] bool done,
+        [Description("Section of the item. Optional; auto-detected if omitted.")] BoardSection? section = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
         var current = await LoadItem(itemId, cancellationToken)
+            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+        var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
             ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
         var items = DailyChecklistJson.Parse(current.ChecklistJson).ToList();
         var index = items.FindIndex(x => x.Id == checklistItemId);
@@ -62,19 +66,21 @@ public sealed class ChecklistTools(BoardPersistenceService boards, IHttpContextA
         }
 
         items[index] = items[index] with { IsDone = done };
-        return await SaveChecklistAsync(userId, section, itemId, current, items, cancellationToken);
+        return await SaveChecklistAsync(userId, resolvedSection, itemId, current, items, cancellationToken);
     }
 
     [McpServerTool(Name = "remove_checklist_item", Title = "Remove checklist item", OpenWorld = true)]
     [Description("Removes one subtask from the checklist. Returns the updated checklist.")]
     public async Task<IReadOnlyList<DailyChecklistItem>> RemoveChecklistItem(
-        [Description("Section of the item.")] BoardSection section,
         [Description("Item id.")] Guid itemId,
         [Description("Subtask id.")] Guid checklistItemId,
+        [Description("Section of the item. Optional; auto-detected if omitted.")] BoardSection? section = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
         var current = await LoadItem(itemId, cancellationToken)
+            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+        var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
             ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
         var items = DailyChecklistJson.Parse(current.ChecklistJson).ToList();
         if (items.RemoveAll(x => x.Id == checklistItemId) == 0)
@@ -82,20 +88,22 @@ public sealed class ChecklistTools(BoardPersistenceService boards, IHttpContextA
             throw new McpProtocolException("Checklist item not found.", McpErrorCode.InvalidParams);
         }
 
-        return await SaveChecklistAsync(userId, section, itemId, current, items, cancellationToken);
+        return await SaveChecklistAsync(userId, resolvedSection, itemId, current, items, cancellationToken);
     }
 
     [McpServerTool(Name = "set_checklist", Title = "Set checklist", Idempotent = true, OpenWorld = true)]
     [Description("Replaces the whole checklist with a JSON array of {text, isDone} objects. An empty array clears it. Returns the updated checklist.")]
     public async Task<IReadOnlyList<DailyChecklistItem>> SetChecklist(
-        [Description("Section of the item.")] BoardSection section,
         [Description("Item id.")] Guid itemId,
         [Description("JSON array like [{\"text\":\"Buy milk\",\"isDone\":false}].")]
         string json,
+        [Description("Section of the item. Optional; auto-detected if omitted.")] BoardSection? section = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
         var current = await LoadItem(itemId, cancellationToken)
+            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+        var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
             ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
         List<ChecklistEditRow> rows;
         try
@@ -110,7 +118,7 @@ public sealed class ChecklistTools(BoardPersistenceService boards, IHttpContextA
         var items = rows
             .Select(r => new DailyChecklistItem(Guid.NewGuid(), McpInput.CleanChecklistText(r.Text), r.IsDone))
             .ToList();
-        return await SaveChecklistAsync(userId, section, itemId, current, items, cancellationToken);
+        return await SaveChecklistAsync(userId, resolvedSection, itemId, current, items, cancellationToken);
     }
 
     private async Task<BoardItem?> LoadItem(Guid itemId, CancellationToken cancellationToken)

@@ -54,6 +54,7 @@ public sealed class DailyTools(BoardPersistenceService boards, IHttpContextAcces
         [Description("Repeat interval, 1 to 999, or null to keep.")] int? repeatInterval = null,
         [Description("Manual streak counter, 0 to 9999, or null to keep.")] int? counter = null,
         [Description("Weekday bitmask for weekly repeats, 0 means no mask, or null to keep.")] int? weekdays = null,
+        [Description("Weekday names like [\"Mon\", \"Wed\", \"Fri\"], or null to keep. Alternative to bitmask.")] IReadOnlyList<string>? weekdayNames = null,
         [Description("Checklist JSON array, or null to keep. Empty string clears.")] string? checklistJson = null,
         [Description("Sort order position value, or null to keep. Prefer reorder_item to move items.")] double? sortOrder = null,
         CancellationToken cancellationToken = default)
@@ -75,7 +76,7 @@ public sealed class DailyTools(BoardPersistenceService boards, IHttpContextAcces
             ChecklistJson = checklistJson is null ? current.ChecklistJson : McpInput.NormalizedChecklist(EmptyToNull(checklistJson)),
             Counter = McpInput.ResolveDailyCounter(counter, current.Counter),
             SortOrder = sortOrder ?? current.SortOrder,
-            Weekdays = McpInput.ResolveWeekdays(weekdays, current.DailyWeekdays),
+            Weekdays = McpInput.ResolveWeekdaysWithNames(weekdays, weekdayNames, current.DailyWeekdays),
         };
         var result = await boards.UpdateDailyAsync(userId, itemId, args, cancellationToken);
         return result.Status switch

@@ -157,6 +157,57 @@ internal static class McpInput
         return mask;
     }
 
+    public static int ResolveWeekdaysWithNames(int? weekdays, IReadOnlyList<string>? weekdayNames, int current)
+    {
+        if (weekdayNames is { Count: > 0 })
+        {
+            var mask = DailyWeekdays.None;
+            foreach (var name in weekdayNames)
+            {
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    continue;
+                }
+
+                var trimmed = name.Trim();
+                if (int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out var dayInt) && dayInt >= 0 && dayInt <= 6)
+                {
+                    mask |= 1 << dayInt;
+                }
+                else if (Enum.TryParse<DayOfWeek>(trimmed, ignoreCase: true, out var dow))
+                {
+                    mask |= 1 << (int)dow;
+                }
+                else
+                {
+                    var matched = trimmed.ToUpperInvariant() switch
+                    {
+                        "SUN" => DayOfWeek.Sunday,
+                        "MON" => DayOfWeek.Monday,
+                        "TUE" => DayOfWeek.Tuesday,
+                        "WED" => DayOfWeek.Wednesday,
+                        "THU" => DayOfWeek.Thursday,
+                        "FRI" => DayOfWeek.Friday,
+                        "SAT" => DayOfWeek.Saturday,
+                        _ => (DayOfWeek?)null,
+                    };
+                    if (matched.HasValue)
+                    {
+                        mask |= 1 << (int)matched.Value;
+                    }
+                    else
+                    {
+                        throw new McpProtocolException($"Unrecognized weekday name: '{trimmed}'. Use Mon, Tue, Wed, Thu, Fri, Sat, Sun.", McpErrorCode.InvalidParams);
+                    }
+                }
+            }
+
+            return DailyWeekdays.Normalize(mask);
+        }
+
+        return ResolveWeekdays(weekdays, current);
+    }
+
     public static void CheckPomodoro(string name, int? value, int min, int max)
     {
         if (value is { } v && (v < min || v > max))

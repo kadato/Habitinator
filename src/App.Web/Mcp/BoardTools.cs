@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.Text.Json;
 
 using App.Shared.RCL.Models;
@@ -16,6 +17,77 @@ public sealed class BoardTools(
     BoardSyncDeltaService sync,
     IHttpContextAccessor http)
 {
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
+    [McpServerTool(Name = "get_board_summary", Title = "Get board summary", ReadOnly = true, OpenWorld = false)]
+    [Description("Returns a high-level summary of active habits, today's dailies (done vs pending), todos (active vs overdue), and streaks. Format can be 'markdown' (default, low tokens) or 'json'.")]
+    public async Task<string> GetBoardSummary(
+        [Description("Format: 'markdown' (default, token-efficient) or 'json'.")] string? format = "markdown",
+        CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        var snapshot = await boards.GetSnapshotAsync(userId, 200, cancellationToken);
+        var today = await boards.TodayAsync(userId, cancellationToken);
+
+        if (string.Equals(format, "json", StringComparison.OrdinalIgnoreCase))
+        {
+            var summary = new
+            {
+                HabitsCount = snapshot.Habits.Count,
+                TotalHabitTicks = snapshot.Habits.Sum(h => h.Counter),
+                DailiesCount = snapshot.Dailies.Count,
+                DailiesCompletedToday = snapshot.Dailies.Count(d => d.IsCompleted),
+                DailiesPendingToday = snapshot.Dailies.Count(d => !d.IsCompleted),
+                TodosActiveCount = snapshot.Todos.Count(t => !t.IsCompleted),
+                TodosCompletedCount = snapshot.Todos.Count(t => t.IsCompleted),
+                TodosOverdueCount = snapshot.Todos.Count(t => !t.IsCompleted && t.TodoDueDate.HasValue && t.TodoDueDate.Value < today),
+                TopStreaks = snapshot.Dailies
+                    .Where(d => d.Counter > 0)
+                    .OrderByDescending(d => d.Counter)
+                    .Take(5)
+                    .Select(d => new { d.Title, Streak = d.Counter })
+                    .ToList()
+            };
+            return JsonSerializer.Serialize(summary, Json);
+        }
+
+        var pendingDailies = snapshot.Dailies.Where(d => !d.IsCompleted).ToList();
+        var doneDailies = snapshot.Dailies.Where(d => d.IsCompleted).ToList();
+        var overdueTodos = snapshot.Todos.Where(t => !t.IsCompleted && t.TodoDueDate.HasValue && t.TodoDueDate.Value < today).ToList();
+        var activeTodos = snapshot.Todos.Where(t => !t.IsCompleted && (!t.TodoDueDate.HasValue || t.TodoDueDate.Value >= today)).ToList();
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine(CultureInfo.InvariantCulture, $"# Board Summary ({today:yyyy-MM-dd})");
+        sb.AppendLine();
+        sb.AppendLine(CultureInfo.InvariantCulture, $"**Dailies:** {doneDailies.Count}/{snapshot.Dailies.Count} done");
+        if (pendingDailies.Count > 0)
+        {
+            sb.AppendLine("### Pending Dailies");
+            foreach (var d in pendingDailies.Take(10))
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- {d.Title} (streak: {d.Counter})");
+            }
+        }
+        sb.AppendLine();
+        sb.AppendLine(CultureInfo.InvariantCulture, $"**Todos:** {activeTodos.Count} active, {overdueTodos.Count} overdue");
+        if (overdueTodos.Count > 0)
+        {
+            sb.AppendLine("### Overdue Todos");
+            foreach (var t in overdueTodos.Take(10))
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- [!] {t.Title} (due: {t.TodoDueDate!.Value:yyyy-MM-dd})");
+            }
+        }
+        sb.AppendLine();
+        sb.AppendLine(CultureInfo.InvariantCulture, $"**Habits:** {snapshot.Habits.Count} tracked");
+        foreach (var h in snapshot.Habits.Take(5))
+        {
+            sb.AppendLine(CultureInfo.InvariantCulture, $"- {h.Title}: +{h.Counter} / -{h.NegativeCounter}");
+        }
+
+        return sb.ToString();
+    }
+
     [McpServerTool(Name = "get_snapshot", Title = "Get board snapshot", ReadOnly = true, OpenWorld = false)]
     [Description("Reads the full board mirror: habits, dailies, and todos. Before any mutation, read this so you have item ids.")]
     public async Task<BoardSnapshot> GetSnapshot(
@@ -121,13 +193,15 @@ public sealed class BoardTools(
     [Description("Moves an item to a zero-based position within its section list. Position 0 puts it first. Values past the end put it last. Returns the updated item. Throws when not found.")]
     public async Task<BoardItem> ReorderItem(
         McpServer server,
-        [Description("Section of the item.")] BoardSection section,
         [Description("Item id.")] Guid itemId,
         [Description("Zero-based position within the section list.")] int position,
+        [Description("Section of the item. Optional; auto-detected if omitted.")] BoardSection? section = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        var result = await boards.ReorderItemAsync(userId, section, itemId, position, cancellationToken);
+        var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
+            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+        var result = await boards.ReorderItemAsync(userId, resolvedSection, itemId, position, cancellationToken);
         var item = result.Status switch
         {
             BoardMutationStatus.Ok when result.Item is not null => result.Item,
@@ -141,7 +215,7 @@ public sealed class BoardTools(
     }
 
     [McpServerTool(Name = "create_item", Title = "Create board item", OpenWorld = true)]
-    [Description("Creates a habit, daily, or todo with a title and optional checklist. Returns the created item.")]
+    [Description("Creates a habit, daily, or todo with title, schedule, tracking, and optional checklist. Returns the created item.")]
     public async Task<BoardItem> CreateItem(
         McpServer server,
         [Description("Section: Habit, Daily, or Todo.")]
@@ -154,6 +228,15 @@ public sealed class BoardTools(
         string? date = null,
         [Description("Checklist as JSON array of items or checklist text, 8000 chars or fewer, or null.")]
         string? checklistJson = null,
+        [Description("Repeat schedule for Daily: Daily, Weekly, Monthly, or Yearly, or null.")] DailyRepeatType? repeat = null,
+        [Description("Repeat interval for Daily, 1 to 999, or null.")] int? repeatInterval = null,
+        [Description("Weekday bitmask for weekly Daily, or null.")] int? weekdays = null,
+        [Description("Weekday names like [\"Mon\", \"Wed\", \"Fri\"] for weekly Daily, or null.")] IReadOnlyList<string>? weekdayNames = null,
+        [Description("Habit reset period: Daily, Weekly, or Monthly, or null.")] HabitResetPeriod? resetPeriod = null,
+        [Description("Track plus ticks for Habit, or null.")] bool? trackPlus = null,
+        [Description("Track minus ticks for Habit, or null.")] bool? trackMinus = null,
+        [Description("Initial streak counter or habit plus tally, or null.")] int? counter = null,
+        [Description("Initial habit minus tally, or null.")] int? negativeCounter = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
@@ -173,8 +256,104 @@ public sealed class BoardTools(
             parsedDate = McpInput.ParseDate(date);
         }
 
-        var created = await boards.CreateItemDetailedAsync(userId, section, cleanTitle, notes, tags, parsedDate, null, normalizedChecklist, cancellationToken);
+        var resolvedRepeatInterval = repeatInterval.HasValue ? McpInput.ResolveRepeatInterval(repeatInterval, 1) : (int?)null;
+        var resolvedWeekdays = (weekdays.HasValue || weekdayNames is { Count: > 0 })
+            ? McpInput.ResolveWeekdaysWithNames(weekdays, weekdayNames, 0)
+            : (int?)null;
+        var resolvedCounter = counter.HasValue ? McpInput.ResolveDailyCounter(counter, 0) : (int?)null;
+        var resolvedNegCounter = negativeCounter.HasValue ? McpInput.ResolveHabitCounter(negativeCounter, 0, "Negative counter") : (int?)null;
+
+        var created = await boards.CreateItemDetailedAsync(
+            userId,
+            section,
+            cleanTitle,
+            notes,
+            tags,
+            parsedDate,
+            null,
+            normalizedChecklist,
+            repeat,
+            resolvedRepeatInterval,
+            resolvedWeekdays,
+            resetPeriod,
+            trackPlus,
+            trackMinus,
+            resolvedCounter,
+            resolvedNegCounter,
+            cancellationToken);
         await McpNotifications.BoardChangedAsync(server, created.Id, cancellationToken);
+        return created;
+    }
+
+    public sealed record BatchCreateItemInput(
+        [Description("Section: Habit, Daily, or Todo.")] BoardSection Section,
+        [Description("Title, 1 to 200 chars.")] string Title,
+        [Description("Notes up to 4000 chars, or null.")] string? Notes = null,
+        [Description("Comma-separated tags up to 500 chars, or null.")] string? Tags = null,
+        [Description("Date as yyyy-MM-dd. Start date for Daily, due date for Todo. Omit for Habit.")] string? Date = null,
+        [Description("Checklist as JSON array or text, or null.")] string? ChecklistJson = null,
+        [Description("Repeat schedule for Daily: Daily, Weekly, Monthly, or Yearly, or null.")] DailyRepeatType? Repeat = null,
+        [Description("Repeat interval for Daily, 1 to 999, or null.")] int? RepeatInterval = null,
+        [Description("Weekday names like [\"Mon\", \"Wed\", \"Fri\"] for weekly Daily, or null.")] IReadOnlyList<string>? WeekdayNames = null,
+        [Description("Habit reset period: Daily, Weekly, or Monthly, or null.")] HabitResetPeriod? ResetPeriod = null,
+        [Description("Track plus ticks for Habit, or null.")] bool? TrackPlus = null,
+        [Description("Track minus ticks for Habit, or null.")] bool? TrackMinus = null);
+
+    [McpServerTool(Name = "batch_create_items", Title = "Batch create board items", OpenWorld = true)]
+    [Description("Creates multiple habits, dailies, or todos in a single call. Returns array of created items.")]
+    public async Task<IReadOnlyList<BoardItem>> BatchCreateItems(
+        McpServer server,
+        [Description("Array of items to create.")] IReadOnlyList<BatchCreateItemInput> items,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        if (items is null || items.Count == 0)
+        {
+            throw new McpProtocolException("items must not be empty.", McpErrorCode.InvalidParams);
+        }
+
+        var created = new List<BoardItem>(items.Count);
+        foreach (var item in items)
+        {
+            var cleanTitle = McpInput.CleanTitle(item.Title);
+            McpInput.CheckNotes(item.Notes);
+            McpInput.CheckTags(item.Tags);
+            var normalizedChecklist = item.ChecklistJson is not null ? McpInput.NormalizedChecklist(item.ChecklistJson) : null;
+            DateOnly? parsedDate = null;
+            if (item.Date is not null)
+            {
+                if (item.Section == BoardSection.Habit)
+                {
+                    throw new McpProtocolException("Habits take no date. Omit the date for Habit.", McpErrorCode.InvalidParams);
+                }
+
+                parsedDate = McpInput.ParseDate(item.Date);
+            }
+
+            int? weekdays = item.WeekdayNames is not null
+                ? McpInput.ResolveWeekdaysWithNames(null, item.WeekdayNames, 0)
+                : null;
+
+            var res = await boards.CreateItemDetailedAsync(
+                userId,
+                item.Section,
+                cleanTitle,
+                item.Notes,
+                item.Tags,
+                parsedDate,
+                null,
+                normalizedChecklist,
+                item.Repeat,
+                item.RepeatInterval,
+                weekdays,
+                item.ResetPeriod,
+                item.TrackPlus,
+                item.TrackMinus,
+                cancellationToken: cancellationToken);
+            created.Add(res);
+        }
+
+        await McpNotifications.BoardChangedAsync(server, null, cancellationToken);
         return created;
     }
 
@@ -182,15 +361,17 @@ public sealed class BoardTools(
     [Description("Renames a board item. Returns the updated item. Throws when not found.")]
     public async Task<BoardItem> RenameItem(
         McpServer server,
-        [Description("Section of the item.")] BoardSection section,
         [Description("Item id.")] Guid itemId,
         [Description("New title, 1 to 200 chars.")] string title,
+        [Description("Section of the item. Optional; auto-detected if omitted.")] BoardSection? section = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
         var cleanTitle = McpInput.CleanTitle(title);
+        var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
+            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
 
-        var result = await boards.RenameItemAsync(userId, section, itemId, cleanTitle, null, cancellationToken);
+        var result = await boards.RenameItemAsync(userId, resolvedSection, itemId, cleanTitle, null, cancellationToken);
         var item = ThrowOnError(result);
         await McpNotifications.BoardChangedAsync(server, item.Id, cancellationToken);
         return item;
@@ -200,17 +381,20 @@ public sealed class BoardTools(
     [Description("Toggles a daily or todo for today. You cannot uncomplete a past date. Completion there is append-only. For habits, use habit_plus and habit_minus instead. Returns the updated item.")]
     public async Task<BoardItem> ToggleItem(
         McpServer server,
-        [Description("Section: Daily or Todo.")] BoardSection section,
         [Description("Item id.")] Guid itemId,
+        [Description("Section: Daily or Todo. Optional; auto-detected if omitted.")] BoardSection? section = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        if (section == BoardSection.Habit)
+        var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
+            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+
+        if (resolvedSection == BoardSection.Habit)
         {
             throw new McpProtocolException("Habits cannot be toggled. Use habit_plus or habit_minus.", McpErrorCode.InvalidParams);
         }
 
-        var result = await boards.ToggleItemAsync(userId, section, itemId, null, cancellationToken);
+        var result = await boards.ToggleItemAsync(userId, resolvedSection, itemId, null, cancellationToken);
         var item = ThrowOnError(result);
         await McpNotifications.BoardChangedAsync(server, item.Id, cancellationToken);
         return item;
@@ -220,16 +404,11 @@ public sealed class BoardTools(
     [Description("Toggles multiple dailies or todos for today in one call. Habits cannot be toggled. Returns array of updated items.")]
     public async Task<IReadOnlyList<BoardItem>> BatchToggleItems(
         McpServer server,
-        [Description("Section: Daily or Todo.")] BoardSection section,
         [Description("List of item GUIDs.")] IReadOnlyList<Guid> itemIds,
+        [Description("Section: Daily or Todo. Optional; auto-detected per item if omitted.")] BoardSection? section = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        if (section == BoardSection.Habit)
-        {
-            throw new McpProtocolException("Habits cannot be toggled. Use habit_plus or habit_minus.", McpErrorCode.InvalidParams);
-        }
-
         if (itemIds is null || itemIds.Count == 0)
         {
             throw new McpProtocolException("itemIds must not be empty.", McpErrorCode.InvalidParams);
@@ -238,7 +417,15 @@ public sealed class BoardTools(
         var updated = new List<BoardItem>(itemIds.Count);
         foreach (var itemId in itemIds)
         {
-            var result = await boards.ToggleItemAsync(userId, section, itemId, null, cancellationToken);
+            var s = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
+                ?? throw new McpProtocolException($"Item not found: {itemId:D}", McpErrorCode.InvalidParams);
+
+            if (s == BoardSection.Habit)
+            {
+                throw new McpProtocolException("Habits cannot be toggled. Use habit_plus or habit_minus.", McpErrorCode.InvalidParams);
+            }
+
+            var result = await boards.ToggleItemAsync(userId, s, itemId, null, cancellationToken);
             var item = ThrowOnError(result);
             updated.Add(item);
         }
@@ -251,12 +438,15 @@ public sealed class BoardTools(
     [Description("Archives an item so it hides from the active board. Returns the updated item.")]
     public async Task<BoardItem> ArchiveItem(
         McpServer server,
-        [Description("Section of the item.")] BoardSection section,
         [Description("Item id.")] Guid itemId,
+        [Description("Section of the item. Optional; auto-detected if omitted.")] BoardSection? section = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        var result = await boards.ArchiveItemAsync(userId, section, itemId, null, cancellationToken);
+        var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
+            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+
+        var result = await boards.ArchiveItemAsync(userId, resolvedSection, itemId, null, cancellationToken);
         var item = ThrowOnError(result);
         await McpNotifications.BoardChangedAsync(server, item.Id, cancellationToken);
         return item;
@@ -266,8 +456,8 @@ public sealed class BoardTools(
     [Description("Archives multiple items so they hide from the active board. Returns array of updated items.")]
     public async Task<IReadOnlyList<BoardItem>> BulkArchive(
         McpServer server,
-        [Description("Section of the items.")] BoardSection section,
         [Description("List of item GUIDs.")] IReadOnlyList<Guid> itemIds,
+        [Description("Section of the items. Optional; auto-detected per item if omitted.")] BoardSection? section = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
@@ -279,7 +469,10 @@ public sealed class BoardTools(
         var updated = new List<BoardItem>(itemIds.Count);
         foreach (var itemId in itemIds)
         {
-            var result = await boards.ArchiveItemAsync(userId, section, itemId, null, cancellationToken);
+            var s = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
+                ?? throw new McpProtocolException($"Item not found: {itemId:D}", McpErrorCode.InvalidParams);
+
+            var result = await boards.ArchiveItemAsync(userId, s, itemId, null, cancellationToken);
             var item = ThrowOnError(result);
             updated.Add(item);
         }
@@ -292,12 +485,15 @@ public sealed class BoardTools(
     [Description("Restores an archived item to the active board. Returns the updated item.")]
     public async Task<BoardItem> UnarchiveItem(
         McpServer server,
-        [Description("Section of the item.")] BoardSection section,
         [Description("Item id.")] Guid itemId,
+        [Description("Section of the item. Optional; auto-detected if omitted.")] BoardSection? section = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        var result = await boards.UnarchiveItemAsync(userId, section, itemId, null, cancellationToken);
+        var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
+            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+
+        var result = await boards.UnarchiveItemAsync(userId, resolvedSection, itemId, null, cancellationToken);
         var item = ThrowOnError(result);
         await McpNotifications.BoardChangedAsync(server, item.Id, cancellationToken);
         return item;
@@ -308,19 +504,22 @@ public sealed class BoardTools(
     public async Task<string> DeleteItem(
         McpServer server,
         RequestContext<CallToolRequestParams> ctx,
-        [Description("Section of the item.")] BoardSection section,
         [Description("Item id.")] Guid itemId,
+        [Description("Section of the item. Optional; auto-detected if omitted.")] BoardSection? section = null,
         [Description("Confirmation token. Pass the item id string to confirm. Omit on the first call.")]
         string? confirmToken = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
+        var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
+            ?? throw new McpProtocolException($"Item not found: {itemId:D}", McpErrorCode.InvalidParams);
+
         if (!string.Equals(confirmToken, itemId.ToString("D"), StringComparison.OrdinalIgnoreCase)
             && !ConfirmDeleteAccepted(ctx))
         {
             if (server.IsMrtrSupported)
             {
-                throw NeedDeleteConfirm(section, itemId);
+                throw NeedDeleteConfirm(resolvedSection, itemId);
             }
 
             throw new McpProtocolException(
@@ -328,7 +527,7 @@ public sealed class BoardTools(
                 McpErrorCode.InvalidParams);
         }
 
-        var result = await boards.DeleteItemAsync(userId, section, itemId, null, cancellationToken);
+        var result = await boards.DeleteItemAsync(userId, resolvedSection, itemId, null, cancellationToken);
         if (result.Status == BoardMutationStatus.Ok)
         {
             await McpNotifications.BoardChangedAsync(server, itemId, cancellationToken);

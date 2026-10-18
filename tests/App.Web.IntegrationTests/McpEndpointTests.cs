@@ -24,6 +24,8 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
         PropertyNameCaseInsensitive = true,
         Converters = { new JsonStringEnumConverter() },
     };
+    private static readonly string[] MonWedFriWeekdays = ["Mon", "Wed", "Fri"];
+    private static readonly string[] MonWedWeekdays = ["Mon", "Wed"];
     [Fact]
     public async Task Mcp_WithoutToken_ReturnsUnauthorized()
     {
@@ -72,7 +74,9 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
         var tools = await mcp.ListToolsAsync();
         var names = tools.Select(t => t.Name).ToHashSet(StringComparer.Ordinal);
         names.Should().Contain("get_snapshot");
+        names.Should().Contain("get_board_summary");
         names.Should().Contain("create_item");
+        names.Should().Contain("batch_create_items");
         names.Should().Contain("habit_plus");
         names.Should().Contain("daily_complete_for_date");
         names.Should().Contain("log_timer_session");
@@ -490,6 +494,143 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
 
         var snapshot = await mcp.CallToolAsync("get_snapshot");
         snapshot.IsError.Should().Be(null);
+    }
+
+    [Fact]
+    public async Task Mcp_GetBoardSummary_ReturnsMarkdownAndJson()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var md = await CallTextAsync(mcp, "get_board_summary", []);
+        md.Should().Contain("# Board Summary");
+        md.Should().Contain("**Dailies:**");
+        md.Should().Contain("**Todos:**");
+        md.Should().Contain("**Habits:**");
+
+        var jsonStr = await CallTextAsync(mcp, "get_board_summary", new() { ["format"] = "json" });
+        jsonStr.Should().Contain("habitsCount");
+        jsonStr.Should().Contain("dailiesCount");
+        jsonStr.Should().Contain("todosActiveCount");
+    }
+
+    [Fact]
+    public async Task Mcp_BatchCreateItems_CreatesMultipleItems()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var json = TestJson;
+        var stamp = Guid.NewGuid().ToString("N")[..8];
+
+        var created = JsonSerializer.Deserialize<BoardItem[]>(
+            await CallTextAsync(mcp, "batch_create_items", new()
+            {
+                ["items"] = new object[]
+                {
+                    new Dictionary<string, object?> { ["section"] = "Todo", ["title"] = $"Batch todo 1 {stamp}" },
+                    new Dictionary<string, object?> { ["section"] = "Todo", ["title"] = $"Batch todo 2 {stamp}" },
+                    new Dictionary<string, object?> { ["section"] = "Daily", ["title"] = $"Batch daily {stamp}", ["repeat"] = "Weekly", ["weekdayNames"] = MonWedFriWeekdays },
+                }
+            }), json)!;
+
+        created.Should().HaveCount(3);
+        created.Select(i => i.Title).Should().Contain($"Batch todo 1 {stamp}");
+        created.Select(i => i.Title).Should().Contain($"Batch todo 2 {stamp}");
+        created.First(i => i.Title == $"Batch daily {stamp}").DailyRepeat.Should().Be(DailyRepeatType.Weekly);
+    }
+
+    [Fact]
+    public async Task Mcp_CreateItem_AcceptsRepeatScheduleAndHabitSettings()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var json = TestJson;
+        var stamp = Guid.NewGuid().ToString("N")[..8];
+
+        var daily = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new()
+            {
+                ["section"] = "Daily",
+                ["title"] = $"Configured daily {stamp}",
+                ["repeat"] = "Weekly",
+                ["repeatInterval"] = 2,
+                ["weekdayNames"] = MonWedWeekdays
+            }), json)!;
+
+        daily.DailyRepeat.Should().Be(DailyRepeatType.Weekly);
+        daily.DailyRepeatInterval.Should().Be(2);
+
+        var habit = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new()
+            {
+                ["section"] = "Habit",
+                ["title"] = $"Configured habit {stamp}",
+                ["trackMinus"] = false,
+                ["resetPeriod"] = "Weekly",
+                ["counter"] = 5
+            }), json)!;
+
+        habit.TrackMinus.Should().BeFalse();
+        habit.ResetPeriod.Should().Be(HabitResetPeriod.Weekly);
+        habit.Counter.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task Mcp_Mutations_AllowOmittedSection()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var json = TestJson;
+        var stamp = Guid.NewGuid().ToString("N")[..8];
+
+        var todo = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new() { ["section"] = "Todo", ["title"] = $"Omitted section todo {stamp}" }), json)!;
+
+        // Rename without section
+        var renamed = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "rename_item", new() { ["itemId"] = todo.Id, ["title"] = $"Renamed todo {stamp}" }), json)!;
+        renamed.Title.Should().Be($"Renamed todo {stamp}");
+
+        // Toggle without section
+        var toggled = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "toggle_item", new() { ["itemId"] = todo.Id }), json)!;
+        toggled.IsCompleted.Should().BeTrue();
+
+        // Archive without section
+        var archived = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "archive_item", new() { ["itemId"] = todo.Id }), json)!;
+        archived.IsArchived.Should().BeTrue();
+
+        // Unarchive without section
+        var unarchived = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "unarchive_item", new() { ["itemId"] = todo.Id }), json)!;
+        unarchived.IsArchived.Should().BeFalse();
+
+        // Delete with confirmToken without section
+        var deleteRes = await CallTextAsync(mcp, "delete_item", new() { ["itemId"] = todo.Id, ["confirmToken"] = todo.Id.ToString("D") });
+        deleteRes.Should().Contain("Deleted");
+    }
+
+    [Fact]
+    public async Task Mcp_BoardItemMarkdown_ResourceReturnsMarkdown()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var json = TestJson;
+        var stamp = Guid.NewGuid().ToString("N")[..8];
+
+        var todo = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new()
+            {
+                ["section"] = "Todo",
+                ["title"] = $"Markdown resource todo {stamp}",
+                ["notes"] = "Some detailed notes",
+                ["tags"] = "work,urgent",
+                ["checklistJson"] = "[{\"text\":\"Step 1\",\"isDone\":true},{\"text\":\"Step 2\",\"isDone\":false}]"
+            }), json)!;
+
+        var res = await mcp.ReadResourceAsync($"board://item/{todo.Id:D}.md");
+        res.Contents.Should().NotBeEmpty();
+        var text = ((TextResourceContents)res.Contents[0]).Text;
+        text.Should().Contain($"# {todo.Title}");
+        text.Should().Contain("Some detailed notes");
+        text.Should().Contain("work,urgent");
+        text.Should().Contain("[x] Step 1");
+        text.Should().Contain("[ ] Step 2");
     }
 
     private async Task<McpClient> CreateLoggedInMcpClientAsync()

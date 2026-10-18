@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Text.Json;
 
+using App.Shared.RCL.Models;
 using App.Web.Services;
 
 using ModelContextProtocol;
@@ -70,6 +71,67 @@ public sealed class BoardResources(
         };
     }
 
+    [McpServerResource(UriTemplate = "board://item/{id}.md", Name = "Board item markdown", Title = "Board item markdown", MimeType = "text/markdown")]
+    [Description("One board item formatted in low-token Markdown.")]
+    public async Task<TextResourceContents> GetItemMarkdown(
+        [Description("Board item id.")] string id,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        if (!Guid.TryParse(id, out var itemId))
+        {
+            throw new McpProtocolException($"Invalid item id: {id}", McpErrorCode.InvalidParams);
+        }
+
+        var item = await boards.GetItemAsync(userId, itemId, cancellationToken)
+            ?? throw new McpProtocolException($"Item not found: {id}", McpErrorCode.InvalidParams);
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine(CultureInfo.InvariantCulture, $"# {item.Title}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **ID:** `{item.Id:D}`");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Completed:** {item.IsCompleted}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Counter:** +{item.Counter} / -{item.NegativeCounter}");
+        if (item.DailyStartDate.HasValue)
+        {
+            sb.AppendLine(CultureInfo.InvariantCulture, $"- **Start Date:** {item.DailyStartDate.Value:yyyy-MM-dd}");
+        }
+
+        if (item.TodoDueDate.HasValue)
+        {
+            sb.AppendLine(CultureInfo.InvariantCulture, $"- **Due Date:** {item.TodoDueDate.Value:yyyy-MM-dd}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(item.Tags))
+        {
+            sb.AppendLine(CultureInfo.InvariantCulture, $"- **Tags:** {item.Tags}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(item.Notes))
+        {
+            sb.AppendLine(CultureInfo.InvariantCulture, $"- **Notes:** {item.Notes}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(item.ChecklistJson))
+        {
+            var checklist = DailyChecklistJson.Parse(item.ChecklistJson);
+            if (checklist.Count > 0)
+            {
+                sb.AppendLine("- **Checklist:**");
+                foreach (var c in checklist)
+                {
+                    sb.AppendLine(CultureInfo.InvariantCulture, $"  - [{(c.IsDone ? "x" : " ")}] {c.Text}");
+                }
+            }
+        }
+
+        return new TextResourceContents
+        {
+            Uri = $"board://item/{id}.md",
+            MimeType = "text/markdown",
+            Text = sb.ToString(),
+        };
+    }
+
     [McpServerResource(UriTemplate = "activity://dashboard", Name = "Activity dashboard", Title = "Activity dashboard", MimeType = "application/json")]
     [Description("Activity dashboard heatmap data with default period.")]
     public async Task<TextResourceContents> GetDashboard(CancellationToken cancellationToken = default)
@@ -111,7 +173,7 @@ public sealed class BoardResources(
     {
         var userId = McpUser.RequireId(http);
         var snapshot = await boards.GetSnapshotAsync(userId, 200, cancellationToken);
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = await boards.TodayAsync(userId, cancellationToken);
 
         var summary = new
         {
@@ -145,7 +207,7 @@ public sealed class BoardResources(
     {
         var userId = McpUser.RequireId(http);
         var snapshot = await boards.GetSnapshotAsync(userId, 200, cancellationToken);
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = await boards.TodayAsync(userId, cancellationToken);
 
         var pendingDailies = snapshot.Dailies.Where(d => !d.IsCompleted).ToList();
         var doneDailies = snapshot.Dailies.Where(d => d.IsCompleted).ToList();

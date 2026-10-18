@@ -32,15 +32,9 @@ public sealed class HabitPrompts(
         }
 
         var snapshot = await boards.GetSnapshotAsync(userId, 200, cancellationToken);
-        DateOnly? day = null;
-        if (date is not null)
-        {
-            day = McpInput.ParseDate(date);
-        }
+        DateOnly day = date is not null ? McpInput.ParseDate(date) : await boards.TodayAsync(userId, cancellationToken);
 
-        var detail = day.HasValue
-            ? await stats.GetActivityDayDetailAsync(userId, day.Value, tag, cancellationToken)
-            : null;
+        var detail = await stats.GetActivityDayDetailAsync(userId, day, tag, cancellationToken);
 
         const int maxRows = 30;
         IEnumerable<BoardItem> dailiesSource = snapshot.Dailies;
@@ -61,9 +55,9 @@ public sealed class HabitPrompts(
             : "";
         return [
             new(ChatRole.User,
-                $"Plan my day{(day.HasValue ? $" for {day.Value:yyyy-MM-dd}" : "")}{(tag is null ? "" : $" tagged {tag}")}{truncated}.\n" +
+                $"Plan my day for {day:yyyy-MM-dd}{(tag is null ? "" : $" tagged {tag}")}{truncated}.\n" +
                 $"Dailies:\n{string.Join("\n", dailies)}\nTodos:\n{string.Join("\n", todos)}\n" +
-                (detail is null ? "" : $"Today so far: {JsonSerializer.Serialize(detail, Json)}.") +
+                $"Today so far: {JsonSerializer.Serialize(detail, Json)}." +
                 "\nReply with the top 5 items in order and one line for each that says why.")
         ];
     }
@@ -123,7 +117,7 @@ public sealed class HabitPrompts(
         }
 
         var snapshot = await boards.GetSnapshotAsync(userId, 200, cancellationToken);
-        DateOnly today = date is not null ? McpInput.ParseDate(date) : DateOnly.FromDateTime(DateTime.UtcNow);
+        DateOnly today = date is not null ? McpInput.ParseDate(date) : await boards.TodayAsync(userId, cancellationToken);
         var yesterday = today.AddDays(-1);
 
         var yesterdayDetail = await stats.GetActivityDayDetailAsync(userId, yesterday, tag, cancellationToken);
@@ -162,7 +156,7 @@ public sealed class HabitPrompts(
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        DateOnly day = date is not null ? McpInput.ParseDate(date) : DateOnly.FromDateTime(DateTime.UtcNow);
+        DateOnly day = date is not null ? McpInput.ParseDate(date) : await boards.TodayAsync(userId, cancellationToken);
         var detail = await stats.GetActivityDayDetailAsync(userId, day, null, cancellationToken);
         var snapshot = await boards.GetSnapshotAsync(userId, 200, cancellationToken);
 
@@ -190,6 +184,7 @@ public sealed class HabitPrompts(
         }
 
         var snapshot = await boards.GetSnapshotAsync(userId, 200, cancellationToken);
+        var today = await boards.TodayAsync(userId, cancellationToken);
         var todos = snapshot.Todos.AsEnumerable();
         if (!string.IsNullOrWhiteSpace(tag))
         {
@@ -201,7 +196,7 @@ public sealed class HabitPrompts(
         var completedTodos = todos.Where(t => t.IsCompleted).ToList();
         var untagged = activeTodos.Where(t => string.IsNullOrWhiteSpace(t.Tags)).Select(t => t.Title).Take(15);
         var withChecklists = activeTodos.Where(t => !string.IsNullOrWhiteSpace(t.ChecklistJson)).Select(t => t.Title).Take(10);
-        var overdue = activeTodos.Where(t => t.TodoDueDate.HasValue && t.TodoDueDate.Value < DateOnly.FromDateTime(DateTime.UtcNow)).Select(t => $"{t.Title} (due {t.TodoDueDate!.Value:yyyy-MM-dd})");
+        var overdue = activeTodos.Where(t => t.TodoDueDate.HasValue && t.TodoDueDate.Value < today).Select(t => $"{t.Title} (due {t.TodoDueDate!.Value:yyyy-MM-dd})");
 
         return [
             new(ChatRole.User,

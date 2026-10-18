@@ -22,10 +22,12 @@ internal static class McpRegistration
             };
             options.ServerInstructions =
                 "Habitinator board helper. Authenticate with a JWT bearer token, auth cookie, or MCP personal token. " +
-                "Before any mutation, read with get_snapshot or search_items so you have item ids. " +
-                "Quick overview is available via resources board://summary and board://summary.md. " +
+                "Quick overview is available via get_board_summary or resources board://summary and board://summary.md. " +
+                "Before any mutation, read with get_snapshot, search_items, or get_board_summary so you have item ids. " +
+                "Create items individually with create_item or in bulk with batch_create_items. " +
                 "Habits move with habit_plus and habit_minus. Past dailies complete with daily_complete_for_date. " +
                 "Today toggles with toggle_item or batch_toggle_items. Bulk archive with bulk_archive. " +
+                "Item section is optional on ID-targeted mutations and auto-detected. " +
                 "Past daily completion is append-only. No tool reverses a past daily completion. " +
                 "Write dates as yyyy-MM-dd and times as HH:mm. The server rejects bad values with InvalidParams. " +
                 "Fix the input and retry. Reuse eventId on retry for log_activity and log_timer_session so the server logs the event once. " +
@@ -149,6 +151,20 @@ internal static class McpRegistration
                 return Complete(values);
             }
 
+            if ((string.Equals(pr.Name, "plan_day", StringComparison.Ordinal)
+                    || string.Equals(pr.Name, "daily_standup", StringComparison.Ordinal)
+                    || string.Equals(pr.Name, "evening_review", StringComparison.Ordinal))
+                && string.Equals(ctx.Params.Argument?.Name, "date", StringComparison.Ordinal))
+            {
+                var partial = ctx.Params.Argument?.Value ?? "";
+                var today = await GetTodayAsync(ctx, ct);
+                var recentDates = Enumerable.Range(0, 7)
+                    .Select(i => today.AddDays(-i).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture))
+                    .Where(d => d.StartsWith(partial, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                return Complete(recentDates);
+            }
+
             if (string.Equals(pr.Name, "review_week", StringComparison.Ordinal)
                 && string.Equals(ctx.Params.Argument?.Name, "period", StringComparison.Ordinal))
             {
@@ -180,7 +196,7 @@ internal static class McpRegistration
                 && string.Equals(ctx.Params.Argument?.Name, "date", StringComparison.Ordinal))
             {
                 var partial = ctx.Params.Argument?.Value ?? "";
-                var today = DateOnly.FromDateTime(DateTime.UtcNow);
+                var today = await GetTodayAsync(ctx, ct);
                 var recentDates = Enumerable.Range(0, 7)
                     .Select(i => today.AddDays(-i).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture))
                     .Where(d => d.StartsWith(partial, StringComparison.OrdinalIgnoreCase))
@@ -196,6 +212,18 @@ internal static class McpRegistration
     {
         Completion = new Completion { Values = [.. values], Total = values.Count, HasMore = false },
     };
+
+    private static async Task<DateOnly> GetTodayAsync(RequestContext<CompleteRequestParams> ctx, CancellationToken ct)
+    {
+        var userId = AuthenticatedUserId.TryGet(ctx.User);
+        if (!userId.HasValue || ctx.Services is null)
+        {
+            return DateOnly.FromDateTime(DateTime.UtcNow);
+        }
+
+        var boards = (BoardPersistenceService?)ctx.Services.GetService(typeof(BoardPersistenceService));
+        return boards is null ? DateOnly.FromDateTime(DateTime.UtcNow) : await boards.TodayAsync(userId.Value, ct);
+    }
 
     private static async Task<string[]> GetTagsAsync(RequestContext<CompleteRequestParams> ctx, CancellationToken ct)
     {

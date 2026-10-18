@@ -36,13 +36,19 @@ Mutations need item ids. `get_snapshot` and `search_items` return the ids. `habi
 
 ## Formats
 
-Dates use strict `yyyy-MM-dd` via `DateOnly.TryParseExact`. Times look like `HH:mm` and stay within one day. The server rejects bad values and out-of-range counters, intervals, and weekdays with `InvalidParams`. It never clamps them. A retry with fixed values succeeds. `log_activity` and `log_timer_session` accept `eventId`. Reuse the same `eventId` on retry. The server then logs the event once.
+Dates use strict `yyyy-MM-dd` via `DateOnly.TryParseExact`. Times look like `HH:mm` and stay within one day. Weekdays can be passed as bitmasks or friendly weekday name arrays (`["Mon", "Wed", "Fri"]` or `["Monday", "Wednesday", "Friday"]`). The server rejects bad values and out-of-range counters, intervals, and weekdays with `InvalidParams`. It never clamps them. A retry with fixed values succeeds. `log_activity` and `log_timer_session` accept `eventId`. Reuse the same `eventId` on retry. The server then logs the event once.
 
 ## Tools
 
-The board tools are `get_snapshot`, `get_item`, `get_archived`, `get_sync_delta`, `get_streaks`, `list_tags`, `search_items`, `reorder_item`, `create_item`, `rename_item`, `toggle_item`, `batch_toggle_items`, `archive_item`, `bulk_archive`, `unarchive_item`, and `delete_item`.
+The board tools are `get_snapshot`, `get_board_summary`, `get_item`, `get_archived`, `get_sync_delta`, `get_streaks`, `list_tags`, `search_items`, `reorder_item`, `create_item`, `batch_create_items`, `rename_item`, `toggle_item`, `batch_toggle_items`, `archive_item`, `bulk_archive`, `unarchive_item`, and `delete_item`.
 
-`create_item` takes `section` and `title`. It also takes optional `notes`, `tags`, `date`, and `checklistJson`. For Daily, the date sets the start date. For Todo, the date sets the due date. Omit the date for Habit. The checklist can be initialized atomically at creation time. The create is atomic in one `CreateItemDetailedAsync` call, no second update.
+`get_board_summary` returns a lightweight overview of active habits, today completed and pending dailies, active and overdue todos, and streak totals. Accepts optional `format` (`markdown` by default, or `json`) and optional `tag` filter. Recommended as the first call for LLM agents before reading the full snapshot to save context tokens.
+
+`create_item` takes `section` and `title`. It also takes optional `notes`, `tags`, `date`, `checklistJson`, `repeat`, `repeatInterval`, `weekdays`, `weekdayNames`, `resetPeriod`, `trackPlus`, `trackMinus`, `counter`, and `negativeCounter`. For Daily, the date sets the start date. For Todo, the date sets the due date. Omit the date for Habit. The checklist can be initialized atomically at creation time. The create is atomic in one `CreateItemDetailedAsync` call, no second update.
+
+`batch_create_items` creates multiple board items across sections in a single call. Accepts `items` (array of item objects matching `create_item` parameters). Returns the array of created items.
+
+On ID-targeted tools (`reorder_item`, `rename_item`, `toggle_item`, `batch_toggle_items`, `archive_item`, `bulk_archive`, `unarchive_item`, `delete_item`, and all checklist tools `get_checklist`, `add_checklist_item`, `set_checklist_item_done`, `remove_checklist_item`, `set_checklist`), the `section` parameter is optional. When omitted, the server automatically resolves the item's section from the database.
 
 `search_items` filters by `query`, `tag`, `section`, and `limit`. The limit runs 1 to 200 and defaults to 50. It runs DB-backed with `EF.Functions.Like` on lowercased title, notes, and tags, then applies an exact tag filter in memory with `BoardTagUtil.ParseTags`. It finds one item without a full snapshot read.
 
@@ -56,7 +62,7 @@ The checklist tools are `get_checklist`, `add_checklist_item`, `set_checklist_it
 
 The activity tools are `get_overview`, `get_dashboard`, `get_daily_contributions`, `get_habit_contributions`, `get_day_detail`, and `log_activity`. The timer tool is `log_timer_session`. The data tools are `export_data` and `import_data`. Import JSON must stay under 10 MB. The settings tools are `get_preferences`, `put_preferences`, `set_preferences_json`, `get_notification_settings`, `put_notification_settings`, and `set_notification_settings_json`. The server rejects bad `HH:mm` values and out-of-range pomodoro numbers with `InvalidParams`. It never ignores them.
 
-Read-only tools carry the `ReadOnly` flag. `delete_item` and `import_data` carry `Destructive`. Repeatable updates carry `Idempotent`. That group is `update_*`, `put_*`, `set_*`, `reorder_item`, `set_checklist_item_done`, `set_checklist`, `bulk_archive`, `log_activity`, and `log_timer_session`. The `log_*` tools count as repeatable only with a reused `eventId`.
+Read-only tools carry the `ReadOnly` flag: `get_*`, `list_*`, `search_*`. `delete_item` and `import_data` carry `Destructive`. Repeatable updates carry `Idempotent`. That group is `update_*`, `put_*`, `set_*`, `reorder_item`, `set_checklist_item_done`, `set_checklist`, `bulk_archive`, `log_activity`, and `log_timer_session`. The `log_*` tools count as repeatable only with a reused `eventId`.
 
 ## Prompts
 
@@ -68,7 +74,7 @@ The prompts are `plan_day`, `review_week`, `habit_coach`, `daily_standup`, `even
 - `evening_review` takes optional `date`. Reviews what was completed today, habit consistency, and unfinished dailies.
 - `backlog_triage` takes optional `tag`. Analyzes overdue todos, untagged items, and items ready for archive.
 
-Completion suggests tag values for the `tag` argument of `plan_day`, `review_week`, `daily_standup`, and `backlog_triage`, period values for `review_week`, habit ids for `habit_coach`, item ids for `board://item/{id}`, and recent date strings for `activity://day/{date}`.
+Completion suggests tag values for the `tag` argument of `plan_day`, `review_week`, `daily_standup`, and `backlog_triage`, period values for `review_week`, habit ids for `habit_coach`, item ids for `board://item/{id}` and `board://item/{id}.md`, date values (yesterday, today, tomorrow) for `plan_day`, `daily_standup`, and `evening_review`, and recent date strings for `activity://day/{date}`.
 
 The long tools `get_snapshot`, `get_sync_delta`, `search_items`, `export_data`, and `import_data` send progress notifications when the client passes a progress token. Mutations send best effort `board://snapshot` and `board://item/{id}` resource notifications. On stateless HTTP there is no push channel, so only stateful clients receive them. SignalR already fans out to the UI.
 
@@ -77,7 +83,8 @@ The long tools `get_snapshot`, `get_sync_delta`, `search_items`, `export_data`, 
 The resources are:
 - `board://snapshot`: Current active mirror with the first 200 rows by sort order.
 - `board://archived`: Archived items hidden from the active board, first 200 rows.
-- `board://item/{id}`: One board item by GUID.
+- `board://item/{id}`: One board item by GUID (JSON).
+- `board://item/{id}.md`: One board item by GUID formatted as Markdown for low token consumption.
 - `board://summary`: Summary of active habits, today completed and pending dailies, active and overdue todos, and streaks, in JSON format.
 - `board://summary.md`: Summary in Markdown format, structured for low token consumption.
 - `board://tags`: Distinct tag taxonomy across active items, in JSON format.

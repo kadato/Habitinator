@@ -25,16 +25,28 @@ public sealed class BoardPersistenceService(
     IUserTimeZoneService timeZone,
     DailyStreakCalculationService streakCalculator)
 {
-    private async Task<DateOnly> TodayAsync(Guid userId, CancellationToken cancellationToken)
+    public async Task<DateOnly> TodayAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var (today, _) = await TodayAndDayStartAsync(userId, cancellationToken);
         return today;
     }
 
-    private Task<(DateOnly Today, TimeSpan? DayStartLocalTime)> TodayAndDayStartAsync(
+    public Task<(DateOnly Today, TimeSpan? DayStartLocalTime)> TodayAndDayStartAsync(
         Guid userId,
-        CancellationToken cancellationToken) =>
+        CancellationToken cancellationToken = default) =>
         UserDayContext.LoadAsync(dbContext, userId, timeZone, cancellationToken);
+
+    public async Task<BoardSection?> GetItemSectionAsync(
+        Guid userId,
+        Guid itemId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await readDb.BoardItems.AsNoTracking()
+            .Where(x => x.UserId == userId && x.Id == itemId && x.DeletedAtUtc == null)
+            .Select(x => (BoardSection?)x.Section)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 
     private static IQueryable<BoardItemEntity> LiveBoardItems(ApplicationDbContext db, Guid userId) =>
         db.BoardItems.Where(x => x.UserId == userId && x.DeletedAtUtc == null && !x.IsArchived);
@@ -1256,6 +1268,14 @@ public sealed class BoardPersistenceService(
         DateOnly? startOrDueDate,
         Guid? itemId,
         string? checklistJson = null,
+        DailyRepeatType? dailyRepeat = null,
+        int? dailyRepeatInterval = null,
+        int? dailyWeekdays = null,
+        HabitResetPeriod? habitResetPeriod = null,
+        bool? trackPlus = null,
+        bool? trackMinus = null,
+        int? counter = null,
+        int? negativeCounter = null,
         CancellationToken cancellationToken = default)
     {
         var cleanTitle = ZalgoSanitizer.SanitizeAndTrim(title);
@@ -1278,6 +1298,45 @@ public sealed class BoardPersistenceService(
                 {
                     existing.ChecklistJson = checklistJson;
                 }
+                if (dailyRepeat.HasValue)
+                {
+                    existing.DailyRepeatType = (int)dailyRepeat.Value;
+                }
+
+                if (dailyRepeatInterval.HasValue)
+                {
+                    existing.DailyRepeatInterval = dailyRepeatInterval.Value;
+                }
+
+                if (dailyWeekdays.HasValue)
+                {
+                    existing.DailyWeekdays = dailyWeekdays.Value;
+                }
+
+                if (habitResetPeriod.HasValue)
+                {
+                    existing.ResetPeriod = (int)habitResetPeriod.Value;
+                }
+
+                if (trackPlus.HasValue)
+                {
+                    existing.TrackPlus = trackPlus.Value;
+                }
+
+                if (trackMinus.HasValue)
+                {
+                    existing.TrackMinus = trackMinus.Value;
+                }
+
+                if (counter.HasValue)
+                {
+                    existing.Counter = counter.Value;
+                }
+
+                if (negativeCounter.HasValue)
+                {
+                    existing.NegativeCounter = negativeCounter.Value;
+                }
                 existing.DailyStartDate = section == BoardSection.Habit ? existing.DailyStartDate : dateUtc;
                 existing.UpdatedAtUtc = DateTimeOffset.UtcNow;
                 await dbContext.SaveChangesAsync(cancellationToken);
@@ -1296,18 +1355,19 @@ public sealed class BoardPersistenceService(
             Title = cleanTitle,
             Notes = cleanNotes,
             Tags = cleanTags,
-            TrackPlus = true,
-            TrackMinus = true,
-            ResetPeriod = (int)HabitResetPeriod.Daily,
+            TrackPlus = trackPlus ?? true,
+            TrackMinus = trackMinus ?? true,
+            ResetPeriod = (int)(habitResetPeriod ?? HabitResetPeriod.Daily),
             HabitPeriodStart = section == BoardSection.Habit
-                ? ToUtcDate(await TodayAsync(userId, cancellationToken))
+                ? ToUtcDate(HabitResetSchedule.PeriodStartFor(await TodayAsync(userId, cancellationToken), habitResetPeriod ?? HabitResetPeriod.Daily))
                 : null,
             IsCompleted = false,
-            Counter = 0,
-            NegativeCounter = 0,
+            Counter = counter ?? 0,
+            NegativeCounter = negativeCounter ?? 0,
             DailyStartDate = section == BoardSection.Habit ? null : dateUtc,
-            DailyRepeatType = (int)DailyRepeatType.Daily,
-            DailyRepeatInterval = 1,
+            DailyRepeatType = (int)(dailyRepeat ?? DailyRepeatType.Daily),
+            DailyRepeatInterval = dailyRepeatInterval ?? 1,
+            DailyWeekdays = dailyWeekdays ?? 0,
             ChecklistJson = checklistJson,
             DailyLastCompletedOn = null,
             CreatedAtUtc = utcNow,

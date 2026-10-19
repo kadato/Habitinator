@@ -54,6 +54,11 @@ public sealed class BoardResources(
         [Description("Board item id.")] string id,
         CancellationToken cancellationToken = default)
     {
+        if (id.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+        {
+            return await GetItemMarkdown(id[..^3], cancellationToken);
+        }
+
         var userId = McpUser.RequireId(http);
         if (!Guid.TryParse(id, out var itemId))
         {
@@ -77,6 +82,11 @@ public sealed class BoardResources(
         [Description("Board item id.")] string id,
         CancellationToken cancellationToken = default)
     {
+        if (id.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+        {
+            id = id[..^3];
+        }
+
         var userId = McpUser.RequireId(http);
         if (!Guid.TryParse(id, out var itemId))
         {

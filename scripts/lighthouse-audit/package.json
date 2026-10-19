@@ -12,6 +12,6 @@
   "type": "commonjs",
   "dependencies": {
     "lighthouse": "^13.5.0",
-    "playwright": "^1.64.0"
+    "playwright": "^1.64.1"
   }
 }

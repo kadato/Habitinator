@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <DotNetVersion>11.0.0-rc.1.26425.128</DotNetVersion>
+    <DotNetVersion>11.0.0-rc.2.26504.105</DotNetVersion>
     <WebAssemblyVersion>$(DotNetVersion)</WebAssemblyVersion>
     <MauiVersion>11.0.0-rc.1.26451.6</MauiVersion>
   </PropertyGroup>
@@ -54,20 +54,20 @@
 
     <!-- Aspire AppHost dependencies -->
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.1" />
-    <PackageVersion Include="MessagePack" Version="3.1.11" />
+    <PackageVersion Include="MessagePack" Version="3.1.12" />
 
     <!-- Testing dependencies -->
     <PackageVersion Include="Appium.WebDriver" Version="9.0.0" />
     <PackageVersion Include="FluentAssertions" Version="8.11.0" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="Xunit.SkippableFact" Version="1.5.85" />
-    <PackageVersion Include="AngleSharp" Version="1.8.4" />
+    <PackageVersion Include="AngleSharp" Version="1.8.5" />
     <PackageVersion Include="bunit" Version="2.11.3" />
     <PackageVersion Include="coverlet.collector" Version="10.1.0" />
-    <PackageVersion Include="FsCheck.Xunit" Version="3.4.0" />
+    <PackageVersion Include="FsCheck.Xunit" Version="3.5.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(DotNetVersion)" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />

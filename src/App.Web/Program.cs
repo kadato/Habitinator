@@ -212,7 +212,8 @@ public partial class Program
         // a stricter window.
         var tool = context.Request.Headers["Mcp-Name"].ToString();
         var isDestructive = string.Equals(tool, "delete_item", StringComparison.Ordinal)
-            || string.Equals(tool, "import_data", StringComparison.Ordinal);
+            || string.Equals(tool, "import_data", StringComparison.Ordinal)
+            || string.Equals(tool, "delete_tag", StringComparison.Ordinal);
         var key = isDestructive ? $"{user}:write" : $"{user}:read";
 
         // MCP polling must not starve REST, so the read window is wider than api (300).

@@ -14,6 +14,12 @@ internal static class McpUser
             return id;
         }
 
+        var envUser = Environment.GetEnvironmentVariable("HABITINATOR_USER_ID");
+        if (Guid.TryParse(envUser, out var envId))
+        {
+            return envId;
+        }
+
         throw new McpProtocolException("Sign in required. Call with a valid JWT bearer token or auth cookie.", McpErrorCode.InvalidRequest);
     }
 

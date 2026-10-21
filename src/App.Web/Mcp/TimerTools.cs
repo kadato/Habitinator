@@ -8,8 +8,22 @@ using ModelContextProtocol.Server;
 namespace App.Web.Mcp;
 
 [McpServerToolType]
-public sealed class TimerTools(BoardPersistenceService boards, IHttpContextAccessor http)
+public sealed class TimerTools(
+    BoardPersistenceService boards,
+    ActivityStatisticsService stats,
+    IHttpContextAccessor http)
 {
+    [McpServerTool(Name = "get_timer_summary", Title = "Get focus timer summary", ReadOnly = true, OpenWorld = false)]
+    [Description("Returns a summary of focus timer sessions for a date: total focus minutes, session count, and breakdown. Defaults to today.")]
+    public async Task<TimerSummaryDto> GetTimerSummary(
+        [Description("Date as yyyy-MM-dd. Defaults to today.")] string? date = null,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        DateOnly day = date is not null ? McpInput.ParseDate(date) : await boards.TodayAsync(userId, cancellationToken);
+        return await stats.GetTimerSummaryAsync(userId, day, cancellationToken);
+    }
+
     [McpServerTool(Name = "log_timer_session", Title = "Log focus timer session", Idempotent = true, OpenWorld = true)]
     [Description("Logs a focus timer session of 1 second to 24 hours. Reuse eventId on retry so the server logs the session once. To link the session to a board item, pass boardItemId.")]
     public async Task<string> LogTimerSession(

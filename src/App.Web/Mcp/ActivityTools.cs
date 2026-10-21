@@ -59,6 +59,27 @@ public sealed class ActivityTools(
         return await stats.GetActivityDayDetailAsync(McpUser.RequireId(http), day, tag, cancellationToken);
     }
 
+    [McpServerTool(Name = "list_activity_events", Title = "List activity events", ReadOnly = true, OpenWorld = false)]
+    [Description("Queries activity events across a date range with optional filtering by event type and board item.")]
+    public async Task<IReadOnlyList<ActivityDayEventDto>> ListActivityEvents(
+        [Description("Start date as yyyy-MM-dd.")] string startDate,
+        [Description("End date as yyyy-MM-dd.")] string endDate,
+        [Description("Event type filter, or null for all.")] ActivityEventType? eventType = null,
+        [Description("Board item ID filter, or null for all.")] Guid? boardItemId = null,
+        [Description("Maximum events to return, from 1 to 200. Default is 50.")] int? limit = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        var start = McpInput.ParseDate(startDate);
+        var end = McpInput.ParseDate(endDate);
+        if (start > end)
+        {
+            throw new McpProtocolException("startDate must be before or equal to endDate.", McpErrorCode.InvalidParams);
+        }
+
+        return await stats.GetActivityEventsAsync(userId, start, end, eventType, boardItemId, limit ?? 50, cancellationToken);
+    }
+
     [McpServerTool(Name = "log_activity", Title = "Log activity event", Idempotent = true, OpenWorld = true)]
     [Description("Logs one activity event such as a habit tick or daily completion. Reuse eventId on retry so the server logs the event once. For focus timer sessions, use log_timer_session instead.")]
     public async Task<string> LogActivity(

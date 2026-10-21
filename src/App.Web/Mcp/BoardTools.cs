@@ -20,9 +20,9 @@ public sealed class BoardTools(
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     [McpServerTool(Name = "get_board_summary", Title = "Get board summary", ReadOnly = true, OpenWorld = false)]
-    [Description("Returns a high-level summary of active habits, today's dailies (done vs pending), todos (active vs overdue), and streaks. Format can be 'markdown' (default, low tokens) or 'json'.")]
+    [Description("Returns a summary of active habits, completed and pending dailies, active and overdue todos, and streaks. Output format is markdown or json.")]
     public async Task<string> GetBoardSummary(
-        [Description("Format: 'markdown' (default, token-efficient) or 'json'.")] string? format = "markdown",
+        [Description("Output format: markdown or json. Defaults to markdown.")] string? format = "markdown",
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
@@ -89,12 +89,14 @@ public sealed class BoardTools(
     }
 
     [McpServerTool(Name = "get_snapshot", Title = "Get board snapshot", ReadOnly = true, OpenWorld = false)]
-    [Description("Reads the full board mirror: habits, dailies, and todos. Before any mutation, read this so you have item ids.")]
-    public async Task<BoardSnapshot> GetSnapshot(
+    [Description("Reads the full board mirror: habits, dailies, and todos. Read this to get item IDs before mutations. Output format is json or markdown.")]
+    public async Task<object> GetSnapshot(
         McpServer server,
         RequestContext<CallToolRequestParams> ctx,
         [Description("Max rows to return, 1 to 10000. Default 200 to keep payloads small. Null returns the cached full mirror.")]
         int? limit = 200,
+        [Description("Output format: json or markdown. Defaults to json.")]
+        string? format = "json",
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
@@ -102,6 +104,33 @@ public sealed class BoardTools(
         await McpProgress.ReportAsync(server, ctx, 0, 1, "Reading snapshot.", cancellationToken);
         var snapshot = await boards.GetSnapshotAsync(userId, take, cancellationToken);
         await McpProgress.ReportAsync(server, ctx, 1, 1, "Snapshot done.", cancellationToken);
+
+        if (string.Equals(format, "markdown", StringComparison.OrdinalIgnoreCase))
+        {
+            var today = await boards.TodayAsync(userId, cancellationToken);
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine(CultureInfo.InvariantCulture, $"# Board Snapshot ({today:yyyy-MM-dd})");
+            sb.AppendLine();
+            sb.AppendLine("### Habits");
+            foreach (var h in snapshot.Habits)
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- `{h.Id:D}` **{h.Title}** (+{h.Counter}/-{h.NegativeCounter}){(string.IsNullOrWhiteSpace(h.Tags) ? "" : $" [Tags: {h.Tags}]")}");
+            }
+            sb.AppendLine();
+            sb.AppendLine("### Dailies");
+            foreach (var d in snapshot.Dailies)
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- `{d.Id:D}` [{(d.IsCompleted ? "x" : " ")}] **{d.Title}** (streak: {d.Counter}){(string.IsNullOrWhiteSpace(d.Tags) ? "" : $" [Tags: {d.Tags}]")}");
+            }
+            sb.AppendLine();
+            sb.AppendLine("### Todos");
+            foreach (var t in snapshot.Todos)
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- `{t.Id:D}` [{(t.IsCompleted ? "x" : " ")}] **{t.Title}**{(t.TodoDueDate.HasValue ? $" (due: {t.TodoDueDate.Value:yyyy-MM-dd})" : "")}{(string.IsNullOrWhiteSpace(t.Tags) ? "" : $" [Tags: {t.Tags}]")}");
+            }
+            return sb.ToString();
+        }
+
         return snapshot;
     }
 
@@ -162,8 +191,8 @@ public sealed class BoardTools(
     }
 
     [McpServerTool(Name = "search_items", Title = "Search board items", ReadOnly = true, OpenWorld = false)]
-    [Description("Searches active board items by title, exact tag, and section. Use this instead of pulling the full snapshot to find one item.")]
-    public async Task<IReadOnlyList<BoardItem>> SearchItems(
+    [Description("Searches board items by title, exact tag, and section. Use this to find an item without pulling the full snapshot. Output format is json or markdown.")]
+    public async Task<object> SearchItems(
         McpServer server,
         RequestContext<CallToolRequestParams> ctx,
         [Description("Free text matched against title, notes, and tags. Null matches all.")] string? query = null,
@@ -171,13 +200,30 @@ public sealed class BoardTools(
         [Description("Section to search, or null for all sections.")] BoardSection? section = null,
         [Description("Max rows to return, 1 to 200. Default 50.")]
         int? limit = 50,
+        [Description("Include archived items in search results. Default false.")]
+        bool includeArchived = false,
+        [Description("Output format: json or markdown. Defaults to json.")]
+        string? format = "json",
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
         var take = Math.Clamp(limit ?? 50, 1, 200);
         await McpProgress.ReportAsync(server, ctx, 0, 1, "Searching.", cancellationToken);
-        var items = await boards.SearchItemsAsync(userId, query, tag, section, take, cancellationToken);
+        var items = await boards.SearchItemsAsync(userId, query, tag, section, take, includeArchived, cancellationToken);
         await McpProgress.ReportAsync(server, ctx, 1, 1, "Search done.", cancellationToken);
+
+        if (string.Equals(format, "markdown", StringComparison.OrdinalIgnoreCase))
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine(CultureInfo.InvariantCulture, $"# Search Results ({items.Count} items)");
+            sb.AppendLine();
+            foreach (var item in items)
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- `{item.Id:D}` **{item.Title}** [{(item.IsCompleted ? "done" : "open")}]{(string.IsNullOrWhiteSpace(item.Tags) ? "" : $" (tags: {item.Tags})")}{(item.IsArchived ? " [Archived]" : "")}");
+            }
+            return sb.ToString();
+        }
+
         return items;
     }
 
@@ -444,7 +490,7 @@ public sealed class BoardTools(
     {
         var userId = McpUser.RequireId(http);
         var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
-            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+            ?? throw new McpProtocolException($"Item not found: {itemId:D}", McpErrorCode.InvalidParams);
 
         var result = await boards.ArchiveItemAsync(userId, resolvedSection, itemId, null, cancellationToken);
         var item = ThrowOnError(result);
@@ -453,11 +499,13 @@ public sealed class BoardTools(
     }
 
     [McpServerTool(Name = "bulk_archive", Title = "Bulk archive items", Idempotent = true, OpenWorld = true)]
-    [Description("Archives multiple items so they hide from the active board. Returns array of updated items.")]
+    [Description("Archives multiple items so they hide from the active board. Returns array of updated items. Archiving more than 5 items requests confirmation.")]
     public async Task<IReadOnlyList<BoardItem>> BulkArchive(
         McpServer server,
+        RequestContext<CallToolRequestParams> ctx,
         [Description("List of item GUIDs.")] IReadOnlyList<Guid> itemIds,
         [Description("Section of the items. Optional; auto-detected per item if omitted.")] BoardSection? section = null,
+        [Description("Confirmation token. Pass CONFIRM to confirm bulk archive of >5 items.")] string? confirmToken = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
@@ -466,19 +514,26 @@ public sealed class BoardTools(
             throw new McpProtocolException("itemIds must not be empty.", McpErrorCode.InvalidParams);
         }
 
-        var updated = new List<BoardItem>(itemIds.Count);
-        foreach (var itemId in itemIds)
+        if (itemIds.Count > 5 && !string.Equals(confirmToken, "CONFIRM", StringComparison.Ordinal) && !ConfirmBulkArchiveAccepted(ctx))
         {
-            var s = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
-                ?? throw new McpProtocolException($"Item not found: {itemId:D}", McpErrorCode.InvalidParams);
+            if (server.IsMrtrSupported)
+            {
+                throw NeedBulkArchiveConfirm(itemIds.Count);
+            }
 
-            var result = await boards.ArchiveItemAsync(userId, s, itemId, null, cancellationToken);
-            var item = ThrowOnError(result);
-            updated.Add(item);
+            throw new McpProtocolException($"Archiving {itemIds.Count} items needs confirmation. Retry with confirmToken set to 'CONFIRM'.", McpErrorCode.InvalidParams);
         }
 
-        await McpNotifications.BoardChangedAsync(server, null, cancellationToken);
-        return updated;
+        try
+        {
+            var updated = await boards.BulkArchiveAsync(userId, itemIds, cancellationToken);
+            await McpNotifications.BoardChangedAsync(server, null, cancellationToken);
+            return updated;
+        }
+        catch (KeyNotFoundException ex)
+        {
+            throw new McpProtocolException(ex.Message, McpErrorCode.InvalidParams);
+        }
     }
 
     [McpServerTool(Name = "unarchive_item", Title = "Unarchive board item", Idempotent = true, OpenWorld = true)]
@@ -491,12 +546,75 @@ public sealed class BoardTools(
     {
         var userId = McpUser.RequireId(http);
         var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
-            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+            ?? throw new McpProtocolException($"Item not found: {itemId:D}", McpErrorCode.InvalidParams);
 
         var result = await boards.UnarchiveItemAsync(userId, resolvedSection, itemId, null, cancellationToken);
         var item = ThrowOnError(result);
         await McpNotifications.BoardChangedAsync(server, item.Id, cancellationToken);
         return item;
+    }
+
+    [McpServerTool(Name = "bulk_unarchive", Title = "Bulk unarchive items", Idempotent = true, OpenWorld = true)]
+    [Description("Restores multiple archived items to the active board. Returns array of updated items.")]
+    public async Task<IReadOnlyList<BoardItem>> BulkUnarchive(
+        McpServer server,
+        [Description("List of item GUIDs.")] IReadOnlyList<Guid> itemIds,
+        [Description("Section of the items. Optional; auto-detected per item if omitted.")] BoardSection? section = null,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        if (itemIds is null || itemIds.Count == 0)
+        {
+            throw new McpProtocolException("itemIds must not be empty.", McpErrorCode.InvalidParams);
+        }
+
+        try
+        {
+            var updated = await boards.BulkUnarchiveAsync(userId, itemIds, cancellationToken);
+            await McpNotifications.BoardChangedAsync(server, null, cancellationToken);
+            return updated;
+        }
+        catch (KeyNotFoundException ex)
+        {
+            throw new McpProtocolException(ex.Message, McpErrorCode.InvalidParams);
+        }
+    }
+
+    [McpServerTool(Name = "rename_tag", Title = "Rename tag across items", Idempotent = true, OpenWorld = true)]
+    [Description("Renames a tag across all items for the current user. Returns status message.")]
+    public async Task<string> RenameTag(
+        McpServer server,
+        [Description("Current tag name to rename.")] string oldTag,
+        [Description("New tag name.")] string newTag,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        if (string.IsNullOrWhiteSpace(oldTag) || string.IsNullOrWhiteSpace(newTag))
+        {
+            throw new McpProtocolException("oldTag and newTag must not be empty.", McpErrorCode.InvalidParams);
+        }
+
+        var count = await boards.RenameTagAsync(userId, oldTag, newTag, cancellationToken);
+        await McpNotifications.BoardChangedAsync(server, null, cancellationToken);
+        return $"Renamed tag '{oldTag}' to '{newTag}' on {count} items.";
+    }
+
+    [McpServerTool(Name = "delete_tag", Title = "Delete tag across items", Destructive = true, OpenWorld = true)]
+    [Description("Removes a tag from all items for the current user. Returns status message.")]
+    public async Task<string> DeleteTag(
+        McpServer server,
+        [Description("Tag name to remove from all items.")] string tag,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        if (string.IsNullOrWhiteSpace(tag))
+        {
+            throw new McpProtocolException("tag must not be empty.", McpErrorCode.InvalidParams);
+        }
+
+        var count = await boards.DeleteTagAsync(userId, tag, cancellationToken);
+        await McpNotifications.BoardChangedAsync(server, null, cancellationToken);
+        return $"Removed tag '{tag}' from {count} items.";
     }
 
     [McpServerTool(Name = "delete_item", Title = "Delete board item", Destructive = true, OpenWorld = true)]
@@ -597,4 +715,44 @@ public sealed class BoardTools(
                 },
             }),
         }, requestState: JsonSerializer.Serialize(new { section = section.ToString(), itemId }));
+
+    private static bool ConfirmBulkArchiveAccepted(RequestContext<CallToolRequestParams> ctx)
+    {
+        if (ctx.Params?.InputResponses is null
+            || !ctx.Params.InputResponses.TryGetValue("confirm_bulk_archive", out var resp)
+            || resp is null)
+        {
+            return false;
+        }
+
+        var elicit = resp.Deserialize(InputResponse.ElicitResultJsonTypeInfo);
+        if (elicit is null || !elicit.IsAccepted || elicit.Content is null)
+        {
+            return false;
+        }
+
+        return elicit.Content.TryGetValue("confirm", out var value)
+            && value.ValueKind == JsonValueKind.True;
+    }
+
+    private static InputRequiredException NeedBulkArchiveConfirm(int count) =>
+        new(new Dictionary<string, InputRequest>
+        {
+            ["confirm_bulk_archive"] = InputRequest.ForElicitation(new ElicitRequestParams
+            {
+                Message = $"Archive {count} items? They will hide from the active board.",
+                RequestedSchema = new ElicitRequestParams.RequestSchema
+                {
+                    Properties = new Dictionary<string, ElicitRequestParams.PrimitiveSchemaDefinition>
+                    {
+                        ["confirm"] = new ElicitRequestParams.BooleanSchema
+                        {
+                            Description = "Confirm bulk archive",
+                            Default = false,
+                        },
+                    },
+                    Required = ["confirm"],
+                },
+            }),
+        }, requestState: JsonSerializer.Serialize(new { tool = "bulk_archive", count }));
 }

@@ -22,7 +22,7 @@ public sealed class ChecklistTools(BoardPersistenceService boards, IHttpContextA
     {
         _ = section; // Board ids are globally unique.
         var current = await LoadItem(itemId, cancellationToken)
-            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+            ?? throw new McpProtocolException($"Item {itemId:D} not found. Check if it is archived using get_archived or search_items.", McpErrorCode.InvalidParams);
         return DailyChecklistJson.Parse(current.ChecklistJson);
     }
 
@@ -36,9 +36,9 @@ public sealed class ChecklistTools(BoardPersistenceService boards, IHttpContextA
     {
         var userId = McpUser.RequireId(http);
         var current = await LoadItem(itemId, cancellationToken)
-            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+            ?? throw new McpProtocolException($"Item {itemId:D} not found. Check if it is archived using get_archived or search_items.", McpErrorCode.InvalidParams);
         var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
-            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+            ?? throw new McpProtocolException($"Item {itemId:D} not found. Check if it is archived using get_archived or search_items.", McpErrorCode.InvalidParams);
         var items = DailyChecklistJson.Parse(current.ChecklistJson).ToList();
         items.Add(new DailyChecklistItem(Guid.NewGuid(), McpInput.CleanChecklistText(text), false));
         return await SaveChecklistAsync(userId, resolvedSection, itemId, current, items, cancellationToken);
@@ -55,9 +55,9 @@ public sealed class ChecklistTools(BoardPersistenceService boards, IHttpContextA
     {
         var userId = McpUser.RequireId(http);
         var current = await LoadItem(itemId, cancellationToken)
-            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+            ?? throw new McpProtocolException($"Item {itemId:D} not found. Check if it is archived using get_archived or search_items.", McpErrorCode.InvalidParams);
         var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
-            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+            ?? throw new McpProtocolException($"Item {itemId:D} not found. Check if it is archived using get_archived or search_items.", McpErrorCode.InvalidParams);
         var items = DailyChecklistJson.Parse(current.ChecklistJson).ToList();
         var index = items.FindIndex(x => x.Id == checklistItemId);
         if (index < 0)
@@ -79,9 +79,9 @@ public sealed class ChecklistTools(BoardPersistenceService boards, IHttpContextA
     {
         var userId = McpUser.RequireId(http);
         var current = await LoadItem(itemId, cancellationToken)
-            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+            ?? throw new McpProtocolException($"Item {itemId:D} not found. Check if it is archived using get_archived or search_items.", McpErrorCode.InvalidParams);
         var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
-            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+            ?? throw new McpProtocolException($"Item {itemId:D} not found. Check if it is archived using get_archived or search_items.", McpErrorCode.InvalidParams);
         var items = DailyChecklistJson.Parse(current.ChecklistJson).ToList();
         if (items.RemoveAll(x => x.Id == checklistItemId) == 0)
         {
@@ -102,9 +102,9 @@ public sealed class ChecklistTools(BoardPersistenceService boards, IHttpContextA
     {
         var userId = McpUser.RequireId(http);
         var current = await LoadItem(itemId, cancellationToken)
-            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+            ?? throw new McpProtocolException($"Item {itemId:D} not found. Check if it is archived using get_archived or search_items.", McpErrorCode.InvalidParams);
         var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
-            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+            ?? throw new McpProtocolException($"Item {itemId:D} not found. Check if it is archived using get_archived or search_items.", McpErrorCode.InvalidParams);
         List<ChecklistEditRow> rows;
         try
         {

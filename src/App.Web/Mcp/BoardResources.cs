@@ -77,7 +77,7 @@ public sealed class BoardResources(
     }
 
     [McpServerResource(UriTemplate = "board://item/{id}.md", Name = "Board item markdown", Title = "Board item markdown", MimeType = "text/markdown")]
-    [Description("One board item formatted in low-token Markdown.")]
+    [Description("One board item formatted as Markdown.")]
     public async Task<TextResourceContents> GetItemMarkdown(
         [Description("Board item id.")] string id,
         CancellationToken cancellationToken = default)
@@ -162,6 +162,11 @@ public sealed class BoardResources(
         [Description("Date as yyyy-MM-dd.")] string date,
         CancellationToken cancellationToken = default)
     {
+        if (date.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+        {
+            return await GetDayMarkdown(date[..^3], cancellationToken);
+        }
+
         var userId = McpUser.RequireId(http);
         if (!DateOnly.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day))
         {
@@ -177,8 +182,84 @@ public sealed class BoardResources(
         };
     }
 
+    [McpServerResource(UriTemplate = "activity://day/{date}.md", Name = "Activity day markdown", Title = "Activity day markdown", MimeType = "text/markdown")]
+    [Description("Activity detail for one date in Markdown format.")]
+    public async Task<TextResourceContents> GetDayMarkdown(
+        [Description("Date as yyyy-MM-dd.")] string date,
+        CancellationToken cancellationToken = default)
+    {
+        if (date.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+        {
+            date = date[..^3];
+        }
+
+        var userId = McpUser.RequireId(http);
+        if (!DateOnly.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day))
+        {
+            throw new McpProtocolException($"Invalid date: {date}. Use yyyy-MM-dd.", McpErrorCode.InvalidParams);
+        }
+
+        var detail = await stats.GetActivityDayDetailAsync(userId, day, null, cancellationToken);
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine(CultureInfo.InvariantCulture, $"# Activity Detail ({day:yyyy-MM-dd})");
+        sb.AppendLine();
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Focus minutes:** {detail.FocusMinutesTotal} min");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Events logged:** {detail.Events.Count}");
+        sb.AppendLine();
+        if (detail.Events.Count > 0)
+        {
+            sb.AppendLine("### Events");
+            foreach (var ev in detail.Events)
+            {
+                var title = ev.BoardItemTitle ?? ev.CustomLabel ?? "item";
+                var time = ev.OccurredAtUtc.ToString("HH:mm", CultureInfo.InvariantCulture);
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- `{time}` **{ev.Label}**: {title}{(ev.DurationSeconds.HasValue ? $" ({ev.DurationSeconds.Value / 60}m)" : "")}");
+            }
+        }
+
+        return new TextResourceContents
+        {
+            Uri = $"activity://day/{date}.md",
+            MimeType = "text/markdown",
+            Text = sb.ToString(),
+        };
+    }
+
+    [McpServerResource(UriTemplate = "activity://dashboard.md", Name = "Activity dashboard markdown", Title = "Activity dashboard markdown", MimeType = "text/markdown")]
+    [Description("Activity dashboard summary in compact Markdown format.")]
+    public async Task<TextResourceContents> GetDashboardMarkdown(CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        var dashboard = await stats.GetDashboardAsync(userId, null, null, cancellationToken);
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine(CultureInfo.InvariantCulture, $"# Activity Dashboard ({dashboard.RangeStart:yyyy-MM-dd} to {dashboard.RangeEnd:yyyy-MM-dd})");
+        sb.AppendLine();
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Total events:** {dashboard.TotalEvents}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Total focus time:** {dashboard.TotalFocusMinutes} minutes");
+        if (dashboard.BusiestDay.HasValue)
+        {
+            sb.AppendLine(CultureInfo.InvariantCulture, $"- **Busiest day:** {dashboard.BusiestDay.Value:yyyy-MM-dd} ({dashboard.MaxDayCount} events)");
+        }
+        sb.AppendLine();
+        if (dashboard.WeekBars.Count > 0)
+        {
+            sb.AppendLine("### Weekly Summary");
+            foreach (var w in dashboard.WeekBars.TakeLast(8))
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- Week of {w.WeekStart:yyyy-MM-dd}: {w.EventCount} events, {w.FocusMinutes} min focus");
+            }
+        }
+
+        return new TextResourceContents
+        {
+            Uri = "activity://dashboard.md",
+            MimeType = "text/markdown",
+            Text = sb.ToString(),
+        };
+    }
+
     [McpServerResource(UriTemplate = "board://summary", Name = "Board summary", Title = "Board summary", MimeType = "application/json")]
-    [Description("High-level summary of active habits, today's dailies (done vs pending), todos (active vs overdue), and streaks.")]
+    [Description("Summary of active habits, completed and pending dailies, active and overdue todos, and streaks.")]
     public async Task<TextResourceContents> GetSummary(CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
@@ -212,7 +293,7 @@ public sealed class BoardResources(
     }
 
     [McpServerResource(UriTemplate = "board://summary.md", Name = "Board summary markdown", Title = "Board summary markdown", MimeType = "text/markdown")]
-    [Description("Compact Markdown overview of today's status, pending dailies, overdue todos, and top habits. Optimized for low token consumption.")]
+    [Description("Markdown overview of today's status, pending dailies, overdue todos, and top habits.")]
     public async Task<TextResourceContents> GetSummaryMarkdown(CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
@@ -272,6 +353,64 @@ public sealed class BoardResources(
             Uri = "board://tags",
             MimeType = "application/json",
             Text = JsonSerializer.Serialize(tags, Json),
+        };
+    }
+
+    [McpServerResource(UriTemplate = "board://streaks", Name = "Daily streaks", Title = "Daily streaks map", MimeType = "application/json")]
+    [Description("Current streak count for each daily item.")]
+    public async Task<TextResourceContents> GetStreaksResource(CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        var streaks = await boards.GetDailyStreakMapAsync(userId, cancellationToken);
+        return new TextResourceContents
+        {
+            Uri = "board://streaks",
+            MimeType = "application/json",
+            Text = JsonSerializer.Serialize(streaks, Json),
+        };
+    }
+
+    [McpServerResource(UriTemplate = "board://archived.md", Name = "Archived board markdown", Title = "Archived board markdown", MimeType = "text/markdown")]
+    [Description("Archived board items formatted as Markdown.")]
+    public async Task<TextResourceContents> GetArchivedMarkdown(CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        var snapshot = await boards.GetArchivedSnapshotAsync(userId, 200, cancellationToken);
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("# Archived Items");
+        sb.AppendLine();
+        if (snapshot.Habits.Count > 0)
+        {
+            sb.AppendLine("### Habits");
+            foreach (var h in snapshot.Habits)
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- `{h.Id:D}` {h.Title} (+{h.Counter}/-{h.NegativeCounter})");
+            }
+            sb.AppendLine();
+        }
+        if (snapshot.Dailies.Count > 0)
+        {
+            sb.AppendLine("### Dailies");
+            foreach (var d in snapshot.Dailies)
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- `{d.Id:D}` {d.Title} (streak: {d.Counter})");
+            }
+            sb.AppendLine();
+        }
+        if (snapshot.Todos.Count > 0)
+        {
+            sb.AppendLine("### Todos");
+            foreach (var t in snapshot.Todos)
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- `{t.Id:D}` [{(t.IsCompleted ? "x" : " ")}] {t.Title}{(t.TodoDueDate.HasValue ? $" (due: {t.TodoDueDate.Value:yyyy-MM-dd})" : "")}");
+            }
+        }
+
+        return new TextResourceContents
+        {
+            Uri = "board://archived.md",
+            MimeType = "text/markdown",
+            Text = sb.ToString(),
         };
     }
 }

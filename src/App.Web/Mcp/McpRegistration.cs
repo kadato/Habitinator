@@ -24,14 +24,17 @@ internal static class McpRegistration
                 "Habitinator board helper. Authenticate with a JWT bearer token, auth cookie, or MCP personal token. " +
                 "Quick overview is available via get_board_summary or resources board://summary and board://summary.md. " +
                 "Before any mutation, read with get_snapshot, search_items, or get_board_summary so you have item ids. " +
+                "get_snapshot and search_items accept format='markdown' for compact reading, and search_items accepts includeArchived=true. " +
                 "Create items individually with create_item or in bulk with batch_create_items. " +
                 "Habits move with habit_plus and habit_minus. Past dailies complete with daily_complete_for_date. " +
-                "Today toggles with toggle_item or batch_toggle_items. Bulk archive with bulk_archive. " +
+                "Today toggles with toggle_item or batch_toggle_items. Bulk archive with bulk_archive and restore with bulk_unarchive. " +
+                "Manage tags across items with rename_tag and delete_tag. " +
                 "Item section is optional on ID-targeted mutations and auto-detected. " +
                 "Past daily completion is append-only. No tool reverses a past daily completion. " +
+                "Inspect timer totals with get_timer_summary and activity logs with list_activity_events. " +
                 "Write dates as yyyy-MM-dd and times as HH:mm. The server rejects bad values with InvalidParams. " +
                 "Fix the input and retry. Reuse eventId on retry for log_activity and log_timer_session so the server logs the event once. " +
-                "delete_item and import_data ask for elicitation confirmation. Older clients pass confirmToken instead.";
+                "delete_item, delete_tag, import_data, and mass bulk_archive ask for elicitation confirmation. Older clients pass confirmToken instead.";
         })
         .WithHttpTransport(o =>
         {
@@ -139,6 +142,7 @@ internal static class McpRegistration
             if ((string.Equals(pr.Name, "plan_day", StringComparison.Ordinal)
                     || string.Equals(pr.Name, "review_week", StringComparison.Ordinal)
                     || string.Equals(pr.Name, "daily_standup", StringComparison.Ordinal)
+                    || string.Equals(pr.Name, "weekly_retro", StringComparison.Ordinal)
                     || string.Equals(pr.Name, "backlog_triage", StringComparison.Ordinal))
                 && string.Equals(ctx.Params.Argument?.Name, "tag", StringComparison.Ordinal))
             {
@@ -158,14 +162,17 @@ internal static class McpRegistration
             {
                 var partial = ctx.Params.Argument?.Value ?? "";
                 var today = await GetTodayAsync(ctx, ct);
-                var recentDates = Enumerable.Range(0, 7)
-                    .Select(i => today.AddDays(-i).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture))
+                var dates = new List<string> { today.AddDays(1).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) };
+                dates.AddRange(Enumerable.Range(0, 7)
+                    .Select(i => today.AddDays(-i).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)));
+                var values = dates
                     .Where(d => d.StartsWith(partial, StringComparison.OrdinalIgnoreCase))
                     .ToList();
-                return Complete(recentDates);
+                return Complete(values);
             }
 
-            if (string.Equals(pr.Name, "review_week", StringComparison.Ordinal)
+            if ((string.Equals(pr.Name, "review_week", StringComparison.Ordinal)
+                    || string.Equals(pr.Name, "weekly_retro", StringComparison.Ordinal))
                 && string.Equals(ctx.Params.Argument?.Name, "period", StringComparison.Ordinal))
             {
                 var partial = ctx.Params.Argument?.Value ?? "";
@@ -178,6 +185,22 @@ internal static class McpRegistration
             {
                 var partial = ctx.Params.Argument?.Value ?? "";
                 var ids = await GetHabitIdsAsync(ctx, partial, ct);
+                return Complete(ids);
+            }
+
+            if (string.Equals(pr.Name, "break_down_todo", StringComparison.Ordinal)
+                && string.Equals(ctx.Params.Argument?.Name, "todoId", StringComparison.Ordinal))
+            {
+                var partial = ctx.Params.Argument?.Value ?? "";
+                var ids = await GetTodoIdsAsync(ctx, partial, ct);
+                return Complete(ids);
+            }
+
+            if (string.Equals(pr.Name, "streak_recovery", StringComparison.Ordinal)
+                && string.Equals(ctx.Params.Argument?.Name, "dailyId", StringComparison.Ordinal))
+            {
+                var partial = ctx.Params.Argument?.Value ?? "";
+                var ids = await GetDailyIdsAsync(ctx, partial, ct);
                 return Complete(ids);
             }
         }
@@ -252,7 +275,7 @@ internal static class McpRegistration
             return [];
         }
 
-        var habits = await boards.SearchItemsAsync(userId.Value, null, null, App.Shared.RCL.Models.BoardSection.Habit, 50, ct);
+        var habits = await boards.SearchItemsAsync(userId.Value, null, null, App.Shared.RCL.Models.BoardSection.Habit, 50, false, ct);
         return habits
             .Where(h => h.Id.ToString("D").StartsWith(partial, StringComparison.OrdinalIgnoreCase)
                 || h.Title.StartsWith(partial, StringComparison.OrdinalIgnoreCase))
@@ -276,11 +299,59 @@ internal static class McpRegistration
             return [];
         }
 
-        var items = await boards.SearchItemsAsync(userId.Value, null, null, null, 50, ct);
+        var items = await boards.SearchItemsAsync(userId.Value, null, null, null, 50, false, ct);
         return items
             .Where(i => i.Id.ToString("D").StartsWith(partial, StringComparison.OrdinalIgnoreCase)
                 || i.Title.StartsWith(partial, StringComparison.OrdinalIgnoreCase))
             .Select(i => i.Id.ToString("D"))
+            .Take(20)
+            .ToList();
+    }
+
+    private static async Task<IReadOnlyList<string>> GetTodoIdsAsync(
+        RequestContext<CompleteRequestParams> ctx, string partial, CancellationToken ct)
+    {
+        var userId = AuthenticatedUserId.TryGet(ctx.User);
+        if (!userId.HasValue || ctx.Services is null)
+        {
+            return [];
+        }
+
+        var boards = (BoardPersistenceService?)ctx.Services.GetService(typeof(BoardPersistenceService));
+        if (boards is null)
+        {
+            return [];
+        }
+
+        var todos = await boards.SearchItemsAsync(userId.Value, null, null, App.Shared.RCL.Models.BoardSection.Todo, 50, false, ct);
+        return todos
+            .Where(t => t.Id.ToString("D").StartsWith(partial, StringComparison.OrdinalIgnoreCase)
+                || t.Title.StartsWith(partial, StringComparison.OrdinalIgnoreCase))
+            .Select(t => t.Id.ToString("D"))
+            .Take(20)
+            .ToList();
+    }
+
+    private static async Task<IReadOnlyList<string>> GetDailyIdsAsync(
+        RequestContext<CompleteRequestParams> ctx, string partial, CancellationToken ct)
+    {
+        var userId = AuthenticatedUserId.TryGet(ctx.User);
+        if (!userId.HasValue || ctx.Services is null)
+        {
+            return [];
+        }
+
+        var boards = (BoardPersistenceService?)ctx.Services.GetService(typeof(BoardPersistenceService));
+        if (boards is null)
+        {
+            return [];
+        }
+
+        var dailies = await boards.SearchItemsAsync(userId.Value, null, null, App.Shared.RCL.Models.BoardSection.Daily, 50, false, ct);
+        return dailies
+            .Where(d => d.Id.ToString("D").StartsWith(partial, StringComparison.OrdinalIgnoreCase)
+                || d.Title.StartsWith(partial, StringComparison.OrdinalIgnoreCase))
+            .Select(d => d.Id.ToString("D"))
             .Take(20)
             .ToList();
     }

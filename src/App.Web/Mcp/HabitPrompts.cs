@@ -208,4 +208,87 @@ public sealed class HabitPrompts(
                 "Provide triage recommendations: 1) Items ready to archive, 2) Overdue items needing rescheduling or breakdown, 3) Suggested tags for untagged items.")
         ];
     }
+
+    [McpServerPrompt(Name = "break_down_todo", Title = "Break down todo"), Description("Breaks down a complex todo into 3 to 7 structured, actionable subtasks formatted for checklists.")]
+    public async Task<IEnumerable<ChatMessage>> BreakDownTodo(
+        [Description("Todo item id.")] string todoId,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        if (!Guid.TryParse(todoId, out var id))
+        {
+            throw new McpProtocolException("todoId must be a GUID.", McpErrorCode.InvalidParams);
+        }
+
+        var item = await boards.GetItemAsync(userId, id, cancellationToken)
+            ?? throw new McpProtocolException($"Todo not found: {todoId}", McpErrorCode.InvalidParams);
+
+        var checklistInfo = string.IsNullOrWhiteSpace(item.ChecklistJson)
+            ? "No existing subtasks."
+            : $"Current subtasks: {item.ChecklistJson}";
+
+        return [
+            new(ChatRole.User,
+                $"Break down my todo '{item.Title}'.\n" +
+                $"Notes: {item.Notes ?? "none"}\n" +
+                $"Due date: {(item.TodoDueDate.HasValue ? item.TodoDueDate.Value.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) : "none")}\n" +
+                $"{checklistInfo}\n" +
+                "Generate 3 to 7 concise, actionable subtasks in logical execution order. Provide them as a JSON checklist array compatible with set_checklist.")
+        ];
+    }
+
+    [McpServerPrompt(Name = "streak_recovery", Title = "Streak recovery"), Description("Helps recover momentum when a daily or habit streak is broken, suggesting ramp-up adjustments.")]
+    public async Task<IEnumerable<ChatMessage>> StreakRecovery(
+        [Description("Daily item id.")] string dailyId,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        if (!Guid.TryParse(dailyId, out var id))
+        {
+            throw new McpProtocolException("dailyId must be a GUID.", McpErrorCode.InvalidParams);
+        }
+
+        var item = await boards.GetItemAsync(userId, id, cancellationToken)
+            ?? throw new McpProtocolException($"Daily not found: {dailyId}", McpErrorCode.InvalidParams);
+
+        var today = await boards.TodayAsync(userId, cancellationToken);
+        var lastCompleted = item.DailyLastCompletedOn?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) ?? "never";
+
+        return [
+            new(ChatRole.User,
+                $"Help me recover my streak for daily '{item.Title}'.\n" +
+                $"Current streak count: {item.Counter}.\n" +
+                $"Last completed on: {lastCompleted} (today is {today:yyyy-MM-dd}).\n" +
+                $"Repeat schedule: {item.DailyRepeat} every {item.DailyRepeatInterval} (weekdays mask: {item.DailyWeekdays}).\n" +
+                "Coach me on recovering consistency without guilt. Suggest: 1) What caused the lapse, 2) A 3-day restart goal, and 3) Whether the schedule needs adjustment.")
+        ];
+    }
+
+    [McpServerPrompt(Name = "weekly_retro", Title = "Weekly retro"), Description("Structured agile retrospective for the past week: wins, bottlenecks, missed dailies, and experiments.")]
+    public async Task<IEnumerable<ChatMessage>> WeeklyRetro(
+        [Description("Period key such as last_7_days, or null for default.")] string? period = "last_7_days",
+        [Description("Tag filter, or null for all.")] string? tag = null,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = McpUser.RequireId(http);
+        if (tag is not null && tag.Length > McpInput.MaxTagsLength)
+        {
+            throw new McpProtocolException("Tag filter must be 500 chars or fewer.", McpErrorCode.InvalidParams);
+        }
+
+        var overview = await stats.GetOverviewAsync(userId, period, tag, cancellationToken);
+        var snapshot = await boards.GetSnapshotAsync(userId, 200, cancellationToken);
+
+        var habitsSummary = snapshot.Habits.Select(h => $"{h.Title} (+{h.Counter}/-{h.NegativeCounter})");
+        var activeTodos = snapshot.Todos.Count(t => !t.IsCompleted);
+
+        return [
+            new(ChatRole.User,
+                $"Weekly retrospective for {period ?? "last_7_days"}{(tag is null ? "" : $" tagged {tag}")}.\n" +
+                $"Total events: {overview.Dashboard.TotalEvents}, Total focus minutes: {overview.Dashboard.TotalFocusMinutes}.\n" +
+                $"Habits summary: {string.Join(", ", habitsSummary)}\n" +
+                $"Remaining active todos: {activeTodos}.\n" +
+                "Run my weekly retrospective. Format the response as: 1) Celebrate wins, 2) Identify friction or missed routines, 3) One concrete experiment to try next week.")
+        ];
+    }
 }

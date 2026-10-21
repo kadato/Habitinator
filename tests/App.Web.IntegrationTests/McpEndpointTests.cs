@@ -633,6 +633,167 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
         text.Should().Contain("[ ] Step 2");
     }
 
+    [Fact]
+    public async Task Mcp_BulkUnarchive_AndTagManagement()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var json = TestJson;
+
+        var item1 = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new()
+            {
+                ["section"] = "Todo",
+                ["title"] = "Bulk test 1",
+                ["tags"] = "project,urgent",
+            }), json)!;
+
+        var item2 = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new()
+            {
+                ["section"] = "Todo",
+                ["title"] = "Bulk test 2",
+                ["tags"] = "project,urgent",
+            }), json)!;
+
+        // Bulk archive
+        var archived = JsonSerializer.Deserialize<BoardItem[]>(
+            await CallTextAsync(mcp, "bulk_archive", new()
+            {
+                ["itemIds"] = new[] { item1.Id, item2.Id }
+            }), json)!;
+        archived.Should().HaveCount(2);
+
+        // Bulk unarchive
+        var unarchived = JsonSerializer.Deserialize<BoardItem[]>(
+            await CallTextAsync(mcp, "bulk_unarchive", new()
+            {
+                ["itemIds"] = new[] { item1.Id, item2.Id }
+            }), json)!;
+        unarchived.Should().HaveCount(2);
+        unarchived.All(i => !i.IsArchived).Should().BeTrue();
+
+        // Rename tag
+        var renameMsg = await CallTextAsync(mcp, "rename_tag", new()
+        {
+            ["oldTag"] = "urgent",
+            ["newTag"] = "high-priority"
+        });
+        renameMsg.Should().Contain("Renamed tag");
+
+        var tags = JsonSerializer.Deserialize<string[]>(
+            await CallTextAsync(mcp, "list_tags", []), json)!;
+        tags.Should().Contain("high-priority");
+        tags.Should().NotContain("urgent");
+
+        // Delete tag
+        var deleteMsg = await CallTextAsync(mcp, "delete_tag", new()
+        {
+            ["tag"] = "high-priority"
+        });
+        deleteMsg.Should().Contain("Removed tag");
+    }
+
+    [Fact]
+    public async Task Mcp_MarkdownFormats_AndSearchWithArchived()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var json = TestJson;
+
+        var item = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new()
+            {
+                ["section"] = "Todo",
+                ["title"] = "Markdown search test",
+                ["tags"] = "markdown-test",
+            }), json)!;
+
+        await CallTextAsync(mcp, "archive_item", new() { ["itemId"] = item.Id });
+
+        // Search with includeArchived = true and markdown format
+        var searchMd = await CallTextAsync(mcp, "search_items", new()
+        {
+            ["query"] = "Markdown search",
+            ["includeArchived"] = true,
+            ["format"] = "markdown"
+        });
+        searchMd.Should().Contain("# Search Results");
+        searchMd.Should().Contain("Markdown search test");
+        searchMd.Should().Contain("[Archived]");
+
+        // Snapshot in markdown format
+        var snapshotMd = await CallTextAsync(mcp, "get_snapshot", new()
+        {
+            ["format"] = "markdown"
+        });
+        snapshotMd.Should().Contain("# Board Snapshot");
+    }
+
+    [Fact]
+    public async Task Mcp_TimerSummary_AndActivityEvents()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+
+        await CallTextAsync(mcp, "log_timer_session", new()
+        {
+            ["durationSeconds"] = 1500,
+            ["customLabel"] = "Deep work integration test"
+        });
+
+        var summary = await CallTextAsync(mcp, "get_timer_summary", []);
+        summary.Should().Contain("totalMinutes");
+        summary.Should().Contain("Deep work integration test");
+
+        var today = DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var eventsJson = await CallTextAsync(mcp, "list_activity_events", new()
+        {
+            ["startDate"] = today,
+            ["endDate"] = today
+        });
+        eventsJson.Should().Contain("Deep work integration test");
+    }
+
+    [Fact]
+    public async Task Mcp_NewResources_AndPrompts()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+
+        // New resources
+        var streaks = await mcp.ReadResourceAsync("board://streaks");
+        streaks.Contents.Should().NotBeEmpty();
+
+        var archivedMd = await mcp.ReadResourceAsync("board://archived.md");
+        archivedMd.Contents.Should().NotBeEmpty();
+        string.Concat(archivedMd.Contents.OfType<TextResourceContents>().Select(c => c.Text)).Should().Contain("# Archived Items");
+
+        var dashboardMd = await mcp.ReadResourceAsync("activity://dashboard.md");
+        dashboardMd.Contents.Should().NotBeEmpty();
+        string.Concat(dashboardMd.Contents.OfType<TextResourceContents>().Select(c => c.Text)).Should().Contain("# Activity Dashboard");
+
+        var today = DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var dayMd = await mcp.ReadResourceAsync($"activity://day/{today}.md");
+        dayMd.Contents.Should().NotBeEmpty();
+        string.Concat(dayMd.Contents.OfType<TextResourceContents>().Select(c => c.Text)).Should().Contain("# Activity Detail");
+
+        // New prompts
+        var created = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new() { ["section"] = "Todo", ["title"] = "Prompt test todo" }), TestJson)!;
+
+        var breakdown = await mcp.GetPromptAsync("break_down_todo", new Dictionary<string, object?> { ["todoId"] = created.Id.ToString() });
+        breakdown.Messages.Should().NotBeEmpty();
+        breakdown.Messages[0].Content.ToString().Should().Contain("Break down my todo");
+
+        var daily = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new() { ["section"] = "Daily", ["title"] = "Prompt test daily" }), TestJson)!;
+
+        var recovery = await mcp.GetPromptAsync("streak_recovery", new Dictionary<string, object?> { ["dailyId"] = daily.Id.ToString() });
+        recovery.Messages.Should().NotBeEmpty();
+        recovery.Messages[0].Content.ToString().Should().Contain("Help me recover my streak");
+
+        var retro = await mcp.GetPromptAsync("weekly_retro");
+        retro.Messages.Should().NotBeEmpty();
+        retro.Messages[0].Content.ToString().Should().Contain("Weekly retrospective");
+    }
+
     private async Task<McpClient> CreateLoggedInMcpClientAsync()
     {
         var client = factory.CreateClient();

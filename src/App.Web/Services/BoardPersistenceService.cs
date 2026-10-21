@@ -427,6 +427,74 @@ public sealed class BoardPersistenceService(
             entity => ToModelWithDailyStreaksAsync(userId, entity, cancellationToken),
             cancellationToken);
 
+    public async Task<IReadOnlyList<BoardItem>> BulkArchiveAsync(
+        Guid userId,
+        IReadOnlyList<Guid> itemIds,
+        CancellationToken cancellationToken = default)
+    {
+        var entities = await dbContext.BoardItems
+            .Where(x => x.UserId == userId && itemIds.Contains(x.Id) && x.DeletedAtUtc == null && !x.IsArchived)
+            .ToListAsync(cancellationToken);
+
+        if (entities.Count != itemIds.Count)
+        {
+            var found = entities.Select(e => e.Id).ToHashSet();
+            var missing = itemIds.FirstOrDefault(id => !found.Contains(id));
+            throw new KeyNotFoundException($"Item not found: {missing:D}");
+        }
+
+        foreach (var entity in entities)
+        {
+            entity.IsArchived = true;
+            entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+
+        var (today, dayStart) = await UserDayContext.LoadAsync(dbContext, userId, timeZone, cancellationToken);
+        var dailies = entities.Where(x => x.Section == BoardSection.Daily).ToList();
+        var streaks = dailies.Count == 0
+            ? EmptyDailyStreaks
+            : await streakCalculator.BuildDailyStreakMapAsync(userId, dailies, today, dayStart, dbContext, cancellationToken);
+
+        return entities.Select(e => ToModelWithToday(e, today, streaks)).ToList();
+    }
+
+    public async Task<IReadOnlyList<BoardItem>> BulkUnarchiveAsync(
+        Guid userId,
+        IReadOnlyList<Guid> itemIds,
+        CancellationToken cancellationToken = default)
+    {
+        var entities = await dbContext.BoardItems
+            .Where(x => x.UserId == userId && itemIds.Contains(x.Id) && x.DeletedAtUtc == null && x.IsArchived)
+            .ToListAsync(cancellationToken);
+
+        if (entities.Count != itemIds.Count)
+        {
+            var found = entities.Select(e => e.Id).ToHashSet();
+            var missing = itemIds.FirstOrDefault(id => !found.Contains(id));
+            throw new KeyNotFoundException($"Item not found: {missing:D}");
+        }
+
+        foreach (var entity in entities)
+        {
+            entity.IsArchived = false;
+            entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+
+        var (today, dayStart) = await UserDayContext.LoadAsync(dbContext, userId, timeZone, cancellationToken);
+        var dailies = entities.Where(x => x.Section == BoardSection.Daily).ToList();
+        var streaks = dailies.Count == 0
+            ? EmptyDailyStreaks
+            : await streakCalculator.BuildDailyStreakMapAsync(userId, dailies, today, dayStart, dbContext, cancellationToken);
+
+        return entities.Select(e => ToModelWithToday(e, today, streaks)).ToList();
+    }
+
     public async Task<BoardSnapshot> GetArchivedSnapshotAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return await GetArchivedSnapshotAsync(userId, null, cancellationToken);
@@ -1193,17 +1261,30 @@ public sealed class BoardPersistenceService(
         });
     }
 
-    public async Task<IReadOnlyList<BoardItem>> SearchItemsAsync(
+    public Task<IReadOnlyList<BoardItem>> SearchItemsAsync(
         Guid userId,
         string? query,
         string? tag,
         BoardSection? section,
         int limit,
         CancellationToken cancellationToken = default)
+        => SearchItemsAsync(userId, query, tag, section, limit, false, cancellationToken);
+
+    public async Task<IReadOnlyList<BoardItem>> SearchItemsAsync(
+        Guid userId,
+        string? query,
+        string? tag,
+        BoardSection? section,
+        int limit,
+        bool includeArchived,
+        CancellationToken cancellationToken = default)
     {
         var take = Math.Clamp(limit, 1, 200);
         await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var filtered = LiveBoardItems(readDb, userId).AsNoTracking();
+        var baseQuery = includeArchived
+            ? readDb.BoardItems.Where(x => x.UserId == userId && x.DeletedAtUtc == null)
+            : LiveBoardItems(readDb, userId);
+        var filtered = baseQuery.AsNoTracking();
         if (section.HasValue)
         {
             filtered = filtered.Where(x => x.Section == section.Value);
@@ -1216,6 +1297,12 @@ public sealed class BoardPersistenceService(
                 EF.Functions.ILike(x.Title, pattern) ||
                 (x.Notes != null && EF.Functions.ILike(x.Notes, pattern)) ||
                 (x.Tags != null && EF.Functions.ILike(x.Tags, pattern)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(tag))
+        {
+            var tagPattern = "%" + EscapeLikePattern(tag.Trim()) + "%";
+            filtered = filtered.Where(x => x.Tags != null && EF.Functions.ILike(x.Tags, tagPattern));
         }
 
         var entities = await filtered
@@ -1240,6 +1327,93 @@ public sealed class BoardPersistenceService(
             ? EmptyDailyStreaks
             : await streakCalculator.BuildDailyStreakMapAsync(userId, dailies, today, dayStart, readDb, cancellationToken);
         return entities.Select(e => ToModelWithToday(e, today, streaks)).ToList();
+    }
+
+    public async Task<int> RenameTagAsync(
+        Guid userId,
+        string oldTag,
+        string newTag,
+        CancellationToken cancellationToken = default)
+    {
+        var cleanedOld = oldTag.Trim();
+        var cleanedNew = newTag.Trim();
+        if (string.IsNullOrWhiteSpace(cleanedOld) || string.IsNullOrWhiteSpace(cleanedNew))
+        {
+            return 0;
+        }
+
+        var tagPattern = "%" + EscapeLikePattern(cleanedOld) + "%";
+        var items = await dbContext.BoardItems
+            .Where(x => x.UserId == userId && x.DeletedAtUtc == null && x.Tags != null && EF.Functions.ILike(x.Tags, tagPattern))
+            .ToListAsync(cancellationToken);
+
+        var updatedCount = 0;
+        foreach (var item in items)
+        {
+            var parsed = BoardTagUtil.ParseTags(item.Tags).ToList();
+            var index = parsed.FindIndex(t => string.Equals(t, cleanedOld, StringComparison.OrdinalIgnoreCase));
+            if (index >= 0)
+            {
+                var newTagsList = new List<string>(parsed.Count);
+                foreach (var t in parsed)
+                {
+                    var replacement = string.Equals(t, cleanedOld, StringComparison.OrdinalIgnoreCase) ? cleanedNew : t;
+                    if (!newTagsList.Any(x => string.Equals(x, replacement, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        newTagsList.Add(replacement);
+                    }
+                }
+                item.Tags = newTagsList.Count > 0 ? string.Join(",", newTagsList) : null;
+                item.UpdatedAtUtc = DateTimeOffset.UtcNow;
+                updatedCount++;
+            }
+        }
+
+        if (updatedCount > 0)
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+        }
+
+        return updatedCount;
+    }
+
+    public async Task<int> DeleteTagAsync(
+        Guid userId,
+        string tag,
+        CancellationToken cancellationToken = default)
+    {
+        var cleanedTag = tag.Trim();
+        if (string.IsNullOrWhiteSpace(cleanedTag))
+        {
+            return 0;
+        }
+
+        var tagPattern = "%" + EscapeLikePattern(cleanedTag) + "%";
+        var items = await dbContext.BoardItems
+            .Where(x => x.UserId == userId && x.DeletedAtUtc == null && x.Tags != null && EF.Functions.ILike(x.Tags, tagPattern))
+            .ToListAsync(cancellationToken);
+
+        var updatedCount = 0;
+        foreach (var item in items)
+        {
+            var parsed = BoardTagUtil.ParseTags(item.Tags).ToList();
+            var removed = parsed.RemoveAll(t => string.Equals(t, cleanedTag, StringComparison.OrdinalIgnoreCase));
+            if (removed > 0)
+            {
+                item.Tags = parsed.Count > 0 ? string.Join(",", parsed) : null;
+                item.UpdatedAtUtc = DateTimeOffset.UtcNow;
+                updatedCount++;
+            }
+        }
+
+        if (updatedCount > 0)
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+        }
+
+        return updatedCount;
     }
 
     private static string EscapeLikePattern(string value) =>

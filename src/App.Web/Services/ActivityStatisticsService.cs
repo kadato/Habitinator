@@ -471,4 +471,104 @@ public sealed class ActivityStatisticsService(
         string.IsNullOrWhiteSpace(periodKey) || string.Equals(periodKey, DailyGraphPeriods.Rolling370Days, StringComparison.Ordinal)
             ? null
             : periodKey;
+
+    public async Task<IReadOnlyList<ActivityDayEventDto>> GetActivityEventsAsync(
+        Guid userId,
+        DateOnly startDate,
+        DateOnly endDate,
+        ActivityEventType? eventType = null,
+        Guid? boardItemId = null,
+        int limit = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var take = Math.Clamp(limit, 1, 200);
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var (_, dayStart) = await TodayAndDayStartAsync(db, userId, cancellationToken);
+
+        var fromUtc = startDate.AddDays(-1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var toUtc = endDate.AddDays(2).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+        var query = db.UserActivityEvents.AsNoTracking()
+            .Where(e => e.UserId == userId && e.OccurredAtUtc >= fromUtc && e.OccurredAtUtc < toUtc);
+
+        if (eventType.HasValue)
+        {
+            query = query.Where(e => e.EventType == eventType.Value);
+        }
+
+        if (boardItemId.HasValue)
+        {
+            query = query.Where(e => e.BoardItemId == boardItemId.Value);
+        }
+
+        var allRows = await query
+            .OrderByDescending(e => e.OccurredAtUtc)
+            .Take(take * 2)
+            .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
+            .ToListAsync(cancellationToken);
+
+        var filteredRows = allRows
+            .Where(e =>
+            {
+                var localDay = DailySchedule.LocalDay(e.OccurredAtUtc, timeZone, dayStart);
+                return localDay >= startDate && localDay <= endDate;
+            })
+            .Take(take)
+            .ToList();
+
+        List<Guid> boardIds = [.. filteredRows.Select(x => x.BoardItemId).OfType<Guid>().Distinct()];
+        IReadOnlyDictionary<Guid, string> titles = boardIds.Count == 0
+            ? FrozenDictionary<Guid, string>.Empty
+            : await db.BoardItems.AsNoTracking()
+                .Where(b => b.UserId == userId && boardIds.Contains(b.Id))
+                .ToDictionaryAsync(b => b.Id, b => b.Title, cancellationToken);
+
+        return filteredRows.Select(r => new ActivityDayEventDto(
+            r.OccurredAtUtc,
+            r.EventType,
+            r.EventType.ToString(),
+            r.BoardItemId.HasValue && titles.TryGetValue(r.BoardItemId.Value, out var title) ? title : null,
+            r.DurationSeconds,
+            r.CustomLabel)).ToList();
+    }
+
+    public async Task<TimerSummaryDto> GetTimerSummaryAsync(
+        Guid userId,
+        DateOnly day,
+        CancellationToken cancellationToken = default)
+    {
+        var detail = await GetActivityDayDetailAsync(userId, day, null, cancellationToken);
+        var timerEvents = detail.Events
+            .Where(e => e.EventType == ActivityEventType.TimerSession)
+            .ToList();
+
+        var totalSeconds = timerEvents.Sum(e => e.DurationSeconds ?? 0);
+        var sessions = timerEvents.Select(e => new TimerSessionBreakdownDto(
+            null,
+            e.BoardItemTitle,
+            e.CustomLabel,
+            e.DurationSeconds ?? 0,
+            e.OccurredAtUtc)).ToList();
+
+        return new TimerSummaryDto(
+            day,
+            totalSeconds,
+            (int)Math.Round(totalSeconds / 60.0),
+            sessions.Count,
+            sessions);
+    }
 }
+
+public sealed record TimerSessionBreakdownDto(
+    Guid? BoardItemId,
+    string? Title,
+    string? CustomLabel,
+    int DurationSeconds,
+    DateTimeOffset OccurredAtUtc);
+
+public sealed record TimerSummaryDto(
+    DateOnly Date,
+    int TotalSeconds,
+    int TotalMinutes,
+    int SessionCount,
+    IReadOnlyList<TimerSessionBreakdownDto> Sessions);

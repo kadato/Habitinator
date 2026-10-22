@@ -170,6 +170,12 @@
 
 :global(.board-tags-menu-popover) {
     z-index: calc(var(--mud-zindex-popover, 1300) + 1) !important;
+    overflow: hidden !important;
+}
+
+:global(.board-tags-menu-popover .mud-list),
+:global(.board-tags-menu-popover .mud-menu-list-wrapper) {
+    overflow: hidden !important;
 }
 
 

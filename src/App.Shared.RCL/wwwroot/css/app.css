@@ -1358,3 +1358,19 @@ input[type="number"].mud-input-slot {
         font-size: 16px !important;
     }
 }
+
+/* Universal Popover Scrollbar Normalization - Prevent Double Scrollbars */
+.mud-popover:has(.mud-list),
+.mud-popover:has(.mud-menu-list),
+.mud-popover:has(.board-tags-menu-panel),
+.mud-popover.overflow-y-auto:has(.mud-list),
+.mud-popover.overflow-y-auto:has(.mud-menu-list) {
+    overflow: hidden !important;
+}
+
+.mud-popover .mud-list,
+.mud-popover .mud-menu-list {
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+}
+}

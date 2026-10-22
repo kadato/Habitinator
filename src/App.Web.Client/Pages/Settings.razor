@@ -28,7 +28,7 @@
                 {
                     <NotificationSettingsSection ShowTitle="false"/>
                 }
-                else
+                else if (_settingsIndex == 2)
                 {
                     <MudPaper Class="pa-4 mb-3" Elevation="0" Outlined="true">
                         <MudStack Spacing="2">
@@ -44,6 +44,10 @@
                     </MudPaper>
 
                     <AccountActionsSection ShowTitle="false" OnAccountDeleted="HandleAccountDeleted"/>
+                }
+                else
+                {
+                    <AiAssistantSettingsSection ShowTitle="false"/>
                 }
             </div>
         </div>

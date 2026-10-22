@@ -1,0 +1,691 @@
+@using App.Shared.RCL.Models
+@using App.Shared.RCL.Services
+@implements IDisposable
+@inject BoardUiSessionState UiSessionState
+@inject IUserPreferencesService PreferencesService
+@inject IAiAssistantService AiService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<MudDrawer @bind-Open="UiSessionState.IsAiDrawerOpen"
+           Anchor="Anchor.Right"
+           Elevation="4"
+           Variant="DrawerVariant.Temporary"
+           Width="480px"
+           Class="ai-assistant-drawer"
+           ClipMode="DrawerClipMode.Never">
+    <div class="ai-drawer-container d-flex flex-column h-100">
+        <!-- Clean Header -->
+        <div class="ai-drawer-header px-3 py-2 d-flex align-center justify-space-between gap-1">
+            <div class="d-flex align-center gap-2 min-w-0 flex-shrink-1">
+                <div class="ai-header-avatar flex-shrink-0" aria-hidden="true">
+                    <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small" Style="color: #ffffff !important;" />
+                </div>
+                <MudText Typo="Typo.subtitle2" Class="font-weight-bold text-truncate ai-header-title">
+                    Habitinator AI
+                </MudText>
+                @if (_preferences?.Ai.Enabled == true)
+                {
+                    <MudMenu dense="true"
+                             Class="ai-model-menu-container"
+                             AnchorOrigin="Origin.BottomRight"
+                             TransformOrigin="Origin.TopRight"
+                             PopoverFixed="true"
+                             PopoverClass="ai-model-dropdown-popover"
+                             MaxHeight="340">
+                        <ActivatorContent Context="modelMenu">
+                            <button type="button"
+                                    class="ai-model-pill"
+                                    title="Switch AI model: @GetModelFullName(_activeModel)"
+                                    aria-label="Select AI model: @_activeModel"
+                                    @onclick="@(e => modelMenu.ToggleAsync(e))">
+                                <span class="ai-model-pill__name">@GetActiveModelShortName()</span>
+                                <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Size="Size.Small" Class="ai-model-pill__chevron" />
+                            </button>
+                        </ActivatorContent>
+                        <ChildContent>
+                            <div class="px-3 py-1-5 border-bottom ai-dropdown-header">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block font-weight-bold text-truncate">
+                                    Provider: @_preferences.Ai.Provider
+                                </MudText>
+                            </div>
+                            @foreach (var opt in AiModelCatalog.GetModelsForProvider(_preferences.Ai.Provider))
+                            {
+                                var isCurrent = string.Equals(_activeModel, opt.Id, StringComparison.OrdinalIgnoreCase);
+                                <MudMenuItem OnClick="() => SwitchModelAsync(opt.Id)"
+                                             Class="ai-model-menu-item">
+                                    <div class="d-flex align-center justify-space-between gap-2 w-100 min-w-0 ai-dropdown-row"
+                                         title="@AiModelCatalog.GetModelTooltip(opt.DisplayName, opt.Description)">
+                                        <div class="min-w-0 flex-grow-1 overflow-hidden">
+                                            <div class="d-flex align-center gap-1 min-w-0">
+                                                @if (isCurrent)
+                                                {
+                                                    <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Primary" Class="ai-menu-check-icon flex-shrink-0" />
+                                                }
+                                                <span class="ai-dropdown-title text-truncate @(isCurrent ? "font-weight-bold text-primary" : "")">
+                                                    @opt.DisplayName
+                                                </span>
+                                            </div>
+                                            @if (!string.IsNullOrWhiteSpace(opt.Description))
+                                            {
+                                                <span class="ai-dropdown-desc text-truncate d-block">
+                                                    @opt.Description
+                                                </span>
+                                            }
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(opt.Badge))
+                                        {
+                                            <span class="ai-dropdown-badge flex-shrink-0">@opt.Badge</span>
+                                        }
+                                    </div>
+                                </MudMenuItem>
+                            }
+                        </ChildContent>
+                    </MudMenu>
+                }
+            </div>
+            <div class="d-flex align-center gap-0 flex-shrink-0">
+                <MudIconButton Icon="@Icons.Material.Filled.DeleteSweep"
+                               Size="Size.Small"
+                               Color="Color.Inherit"
+                               Class="ai-header-btn"
+                               aria-label="Clear chat history"
+                               OnClick="ClearChat" />
+                <MudIconButton Icon="@Icons.Material.Filled.Settings"
+                               Size="Size.Small"
+                               Color="Color.Inherit"
+                               Class="ai-header-btn"
+                               aria-label="AI settings"
+                               OnClick="NavigateToSettings" />
+                <MudIconButton Icon="@Icons.Material.Filled.Close"
+                               Size="Size.Small"
+                               Color="Color.Inherit"
+                               Class="ai-header-btn"
+                               aria-label="Close assistant"
+                               OnClick="() => UiSessionState.SetAiDrawer(false)" />
+            </div>
+        </div>
+
+        <!-- Body / Chat Messages -->
+        <div id="ai-messages-scroll-area" class="ai-drawer-body flex-grow-1 px-4 py-3 overflow-y-auto">
+            @if (_preferences?.Ai.Enabled != true)
+            {
+                <div class="ai-unconfigured-card mb-4 pa-3 rounded-lg">
+                    <div class="d-flex align-center justify-space-between">
+                        <div>
+                            <MudText Typo="Typo.subtitle2" Class="font-weight-bold mb-1">
+                                AI assistant is disabled
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Enable the assistant in Settings to use board tools and habit coaching.
+                            </MudText>
+                        </div>
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Settings"
+                                   OnClick="NavigateToSettings">
+                            Settings
+                        </MudButton>
+                    </div>
+                </div>
+            }
+
+            @if (_messages.Count <= 1)
+            {
+                <div class="ai-empty-state mb-4">
+                    <MudText Typo="Typo.h6" Class="font-weight-bold mb-1">
+                        How can I help you today?
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                        Ask questions about your board, or choose a quick action:
+                    </MudText>
+
+                    <div class="ai-prompts-grid">
+                        <button type="button"
+                                class="ai-prompt-pill"
+                                @onclick='() => SendQuickPromptAsync("Plan my day based on today dailies and active todos")'>
+                            <MudIcon Icon="@Icons.Material.Filled.WbSunny" Size="Size.Small" Class="ai-prompt-pill__icon" />
+                            <span class="ai-prompt-pill__text">Plan my day</span>
+                        </button>
+                        <button type="button"
+                                class="ai-prompt-pill"
+                                @onclick='() => SendQuickPromptAsync("What dailies and todos do I have left for today?")'>
+                            <MudIcon Icon="@Icons.Material.Filled.Checklist" Size="Size.Small" Class="ai-prompt-pill__icon" />
+                            <span class="ai-prompt-pill__text">What is pending?</span>
+                        </button>
+                        <button type="button"
+                                class="ai-prompt-pill"
+                                @onclick='() => SendQuickPromptAsync("Suggest 3 positive daily habits for better focus and health")'>
+                            <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Size="Size.Small" Class="ai-prompt-pill__icon" />
+                            <span class="ai-prompt-pill__text">Suggest habits</span>
+                        </button>
+                        <button type="button"
+                                class="ai-prompt-pill"
+                                @onclick='() => SendQuickPromptAsync("Show my timer summary and focus minutes")'>
+                            <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Small" Class="ai-prompt-pill__icon" />
+                            <span class="ai-prompt-pill__text">Focus stats</span>
+                        </button>
+                    </div>
+                </div>
+            }
+
+            <div class="ai-message-list d-flex flex-column gap-3">
+                @foreach (var msg in _messages.Where(m => m.Role != "system" && m.Role != "tool"))
+                {
+                    var isUser = msg.Role == "user";
+                    <div class="ai-message @(isUser ? "ai-message--user" : "ai-message--assistant") d-flex flex-column">
+                        <div class="ai-message-bubble pa-3 rounded-xl position-relative">
+                            @if (!isUser)
+                            {
+                                var modelId = msg.Model ?? _activeModel;
+                                var isCurrentlyStreaming = _isStreaming && msg == _messages.LastOrDefault();
+                                <div class="d-flex align-center justify-space-between mb-2 pb-1 border-bottom">
+                                    <div class="d-flex align-center gap-1 min-w-0">
+                                        <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small" Color="Color.Primary" Class="flex-shrink-0" />
+                                        <MudText Typo="Typo.caption" Class="font-weight-bold flex-shrink-0">Habitinator AI</MudText>
+                                        @if (!string.IsNullOrWhiteSpace(modelId))
+                                        {
+                                            <span class="ai-bubble-model-pill" title="@GetModelFullName(modelId)">@GetModelShortName(modelId)</span>
+                                        }
+                                    </div>
+                                    <div class="d-flex align-center gap-1 flex-shrink-0">
+                                        @if (isCurrentlyStreaming)
+                                        {
+                                            <span class="ai-streaming-badge">Streaming...</span>
+                                        }
+                                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                                       Size="Size.Small"
+                                                       Color="Color.Default"
+                                                       aria-label="Copy response"
+                                                       OnClick="() => CopyToClipboardAsync(msg.Content)" />
+                                    </div>
+                                </div>
+                                <div class="ai-rendered-markdown">
+                                    @((MarkupString)MarkdownFormatter.ToHtml(msg.Content))
+                                    @if (isCurrentlyStreaming)
+                                    {
+                                        <span class="ai-streaming-cursor" aria-hidden="true">▍</span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2" Class="white-space-pre-wrap">@msg.Content</MudText>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (_lastToolExecutions.Count > 0)
+                {
+                    <div class="ai-tools-card pa-3 rounded-lg border">
+                        <div class="d-flex align-center justify-space-between mb-2">
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small" Color="Color.Primary" />
+                                <MudText Typo="Typo.caption" Class="font-weight-bold">
+                                    Board actions executed (@_lastToolExecutions.Count)
+                                </MudText>
+                            </div>
+                            <MudButton Variant="Variant.Text"
+                                       Size="Size.Small"
+                                       Color="Color.Default"
+                                       Class="ai-details-toggle-btn"
+                                       OnClick="() => _showToolDetails = !_showToolDetails">
+                                @(_showToolDetails ? "Hide details" : "Show details")
+                            </MudButton>
+                        </div>
+
+                        <div class="d-flex flex-column gap-2">
+                            @foreach (var tool in _lastToolExecutions)
+                            {
+                                <div class="ai-tool-item d-flex align-center justify-space-between pa-2 rounded">
+                                    <div class="d-flex align-center gap-2 min-w-0">
+                                        <MudIcon Icon="@GetToolIcon(tool.ToolName)"
+                                                 Size="Size.Small"
+                                                 Color="@(tool.IsSuccess ? Color.Success : Color.Error)" />
+                                        <div class="min-w-0">
+                                            <div class="d-flex align-center gap-1 flex-wrap">
+                                                <code class="ai-tool-name-code">@tool.ToolName</code>
+                                                <MudText Typo="Typo.caption" Class="font-weight-bold text-truncate">
+                                                    @GetFriendlyToolTitle(tool.ToolName)
+                                                </MudText>
+                                            </div>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block text-truncate">
+                                                @tool.Result
+                                            </MudText>
+                                        </div>
+                                    </div>
+                                    <span class="ai-status-pill @(tool.IsSuccess ? "ai-status-pill--success" : "ai-status-pill--error")">
+                                        @(tool.IsSuccess ? "Success" : "Failed")
+                                    </span>
+                                </div>
+
+                                @if (_showToolDetails && !string.IsNullOrWhiteSpace(tool.Arguments) && tool.Arguments != "{}")
+                                {
+                                    <pre class="ai-code-block mt-1 pa-2 rounded" style="font-size: 0.75rem;"><code>@tool.Arguments</code></pre>
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (_isSending && !_isStreaming)
+                {
+                    <div class="ai-message ai-message--assistant d-flex flex-column">
+                        <div class="ai-message-bubble pa-3 rounded-xl d-flex align-center gap-3">
+                            <div class="ai-thinking-avatar flex-shrink-0">
+                                <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small" Color="Color.Primary" />
+                            </div>
+                            <div class="d-flex flex-column gap-1 min-w-0">
+                                <div class="d-flex align-center gap-2">
+                                    <span class="ai-thinking-title">Habitinator AI is thinking</span>
+                                    <span class="ai-typing-dots" aria-hidden="true">
+                                        <span class="ai-dot"></span>
+                                        <span class="ai-dot"></span>
+                                        <span class="ai-dot"></span>
+                                    </span>
+                                </div>
+                                <span class="ai-thinking-subtext">Consulting board state and coaching tools.</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <div id="ai-messages-bottom"></div>
+            </div>
+        </div>
+
+        <!-- Clean Footer / Input -->
+        <div class="ai-drawer-footer px-4 py-3">
+            <div class="ai-input-row d-flex align-stretch gap-2">
+                <MudTextField T="string"
+                              @bind-Value="_inputText"
+                              Placeholder="Ask Habitinator AI, for example 'Plan my day' or 'Add todo'"
+                              Variant="Variant.Outlined"
+                              dense="true"
+                              margin="Margin.None"
+                              Lines="1"
+                              Sizing="InputSizing.Auto"
+                              MaxLines="4"
+                              Immediate="true"
+                              OnKeyDown="HandleKeyDown"
+                              Disabled="_isSending || _isStreaming"
+                              Class="ai-text-field flex-grow-1" />
+                <MudButton Variant="Variant.Filled"
+                           Color="@(_isStreaming ? Color.Error : Color.Primary)"
+                           Class="ai-send-btn"
+                           aria-label="@GetSendButtonAriaLabel()"
+                           Disabled="@(!_isStreaming && (_isSending || string.IsNullOrWhiteSpace(_inputText)))"
+                           OnClick="HandleSendOrStopAsync">
+                    @if (_isStreaming)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Stop" Size="Size.Small" />
+                    }
+                    else if (_isSending)
+                    {
+                        <span class="ai-spinner" aria-hidden="true"></span>
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Medium" />
+                    }
+                </MudButton>
+            </div>
+            <div class="ai-input-hint mt-2 d-flex align-center justify-space-between px-1">
+                <span class="ai-hint-shortcuts">
+                    <kbd class="ai-kbd">Enter</kbd>
+                    <span class="ai-hint-sep">to send</span>
+                    <span class="ai-hint-dot">,</span>
+                    <kbd class="ai-kbd">Shift + Enter</kbd>
+                    <span class="ai-hint-sep">new line</span>
+                </span>
+                <span class="ai-safe-tools-tag">
+                    <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" Class="ai-safe-tools-icon" />
+                    Safe board tools
+                </span>
+            </div>
+        </div>
+    </div>
+</MudDrawer>
+
+@code {
+    private readonly List<AiChatMessage> _messages =
+    [
+        AiChatMessage.Assistant("Hello! I am your Habitinator AI assistant. I can help you plan your day, break down tasks, check off completed dailies, and coach your habits. What would you like to work on?")
+    ];
+
+    private readonly List<AiToolExecution> _lastToolExecutions = [];
+    private string _inputText = string.Empty;
+    private string? _activeModel;
+    private bool _isSending;
+    private bool _isStreaming;
+    private CancellationTokenSource? _streamCts;
+    private bool _showToolDetails;
+    private UserPreferences? _preferences;
+
+    protected override async Task OnInitializedAsync()
+    {
+        UiSessionState.OnAiDrawerChanged += HandleDrawerChanged;
+        await LoadPreferencesAsync();
+    }
+
+    private void HandleDrawerChanged()
+    {
+        if (UiSessionState.IsAiDrawerOpen)
+        {
+            _ = InvokeAsync(async () =>
+            {
+                await LoadPreferencesAsync();
+                StateHasChanged();
+            });
+        }
+        else
+        {
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadPreferencesAsync()
+    {
+        try
+        {
+            _preferences = await PreferencesService.GetAsync();
+            _preferences.Ai ??= new AiPreferences();
+            _activeModel = _preferences.Ai.Model;
+            if (_messages.Count > 0 && string.IsNullOrWhiteSpace(_messages[0].Model))
+            {
+                _messages[0].Model = _activeModel;
+            }
+        }
+        catch
+        {
+            _preferences = UserPreferences.CreateDefault();
+            _activeModel = _preferences.Ai.Model;
+            if (_messages.Count > 0 && string.IsNullOrWhiteSpace(_messages[0].Model))
+            {
+                _messages[0].Model = _activeModel;
+            }
+        }
+    }
+
+    private string GetActiveModelShortName() => AiModelCatalog.GetModelShortName(_activeModel);
+
+    private static string GetModelShortName(string? modelId) => AiModelCatalog.GetModelShortName(modelId);
+
+    private static string GetModelFullName(string? modelId) => AiModelCatalog.GetModelFullName(modelId);
+
+    private async Task SwitchModelAsync(string modelId)
+    {
+        _activeModel = modelId;
+        if (_preferences is not null)
+        {
+            _preferences.Ai.Model = modelId;
+            try
+            {
+                await PreferencesService.SaveAsync(_preferences);
+                Snackbar.Add($"Switched model to {modelId}", Severity.Info, o => o.VisibleStateDuration = 1500);
+            }
+            catch
+            {
+                // Best effort save
+            }
+        }
+        StateHasChanged();
+    }
+
+    private async Task SendQuickPromptAsync(string prompt)
+    {
+        _inputText = prompt;
+        await SendMessageAsync();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey && !_isSending && !_isStreaming)
+        {
+            await SendMessageAsync();
+        }
+    }
+
+    private string GetSendButtonAriaLabel()
+    {
+        if (_isStreaming)
+        {
+            return "Stop streaming";
+        }
+        return _isSending ? "Sending message..." : "Send message";
+    }
+
+    private async Task HandleSendOrStopAsync()
+    {
+        if (_isStreaming)
+        {
+            if (_streamCts is not null)
+            {
+                await _streamCts.CancelAsync();
+            }
+            _isStreaming = false;
+            StateHasChanged();
+            return;
+        }
+
+        await SendMessageAsync();
+    }
+
+    private async Task SendMessageAsync()
+    {
+        var text = _inputText?.Trim();
+        if (string.IsNullOrWhiteSpace(text) || _isSending)
+        {
+            return;
+        }
+
+        _inputText = string.Empty;
+        _messages.Add(AiChatMessage.User(text));
+        _lastToolExecutions.Clear();
+        _isSending = true;
+        _isStreaming = false;
+        StateHasChanged();
+
+        await ScrollToBottomAsync();
+
+        try
+        {
+            var request = new AiChatRequest
+            {
+                Messages = _messages.ToList(),
+                ModelOverride = _activeModel
+            };
+
+            var response = await AiService.SendChatAsync(request);
+            if (response.Success && response.Message is not null)
+            {
+                if (response.ToolExecutions.Count > 0)
+                {
+                    _lastToolExecutions.AddRange(response.ToolExecutions);
+                }
+
+                var fullContent = response.Message.Content ?? string.Empty;
+                var modelId = response.Message.Model ?? _activeModel;
+
+                // Create assistant message and stream content live into the bubble
+                var assistantMessage = AiChatMessage.Assistant(string.Empty, modelId);
+                _messages.Add(assistantMessage);
+                _isStreaming = true;
+                StateHasChanged();
+                await ScrollToBottomAsync();
+
+                await StreamTextIntoMessageAsync(assistantMessage, fullContent);
+            }
+            else
+            {
+                var errorMsg = response.Error ?? "Failed to receive response from AI provider.";
+                _messages.Add(AiChatMessage.Assistant($"⚠️ {errorMsg}", _activeModel));
+                Snackbar.Add(errorMsg, Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _messages.Add(AiChatMessage.Assistant($"⚠️ Request failed: {ex.Message}", _activeModel));
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _isSending = false;
+            _isStreaming = false;
+            StateHasChanged();
+            await ScrollToBottomAsync();
+        }
+    }
+
+    private async Task StreamTextIntoMessageAsync(AiChatMessage message, string fullContent)
+    {
+        if (string.IsNullOrEmpty(fullContent))
+        {
+            return;
+        }
+
+        if (_streamCts is not null)
+        {
+            await _streamCts.CancelAsync();
+            _streamCts.Dispose();
+        }
+        _streamCts = new CancellationTokenSource();
+        var ct = _streamCts.Token;
+
+        try
+        {
+            var words = fullContent.Split(' ');
+            var sb = new System.Text.StringBuilder();
+            var batchSize = Math.Max(1, words.Length / 35);
+
+            for (var i = 0; i < words.Length; i++)
+            {
+                if (ct.IsCancellationRequested)
+                {
+                    message.Content = fullContent;
+                    break;
+                }
+
+                sb.Append(words[i]);
+                if (i < words.Length - 1)
+                {
+                    sb.Append(' ');
+                }
+
+                if (i % batchSize == 0 || i == words.Length - 1 || words[i].Contains('\n'))
+                {
+                    message.Content = sb.ToString();
+                    StateHasChanged();
+
+                    if (i % (batchSize * 3) == 0)
+                    {
+                        await ScrollToBottomAsync();
+                    }
+
+                    await Task.Delay(20, ct);
+                }
+            }
+
+            message.Content = fullContent;
+        }
+        catch (OperationCanceledException)
+        {
+            message.Content = fullContent;
+        }
+        catch
+        {
+            message.Content = fullContent;
+        }
+        finally
+        {
+            StateHasChanged();
+            await ScrollToBottomAsync();
+        }
+    }
+
+    private async Task CopyToClipboardAsync(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return;
+        }
+
+        try
+        {
+            var ok = await JS.InvokeAsync<bool>("habitinatorCopyText", content);
+            if (ok)
+            {
+                Snackbar.Add("Copied to clipboard.", Severity.Success, o => o.VisibleStateDuration = 1200);
+            }
+            else
+            {
+                Snackbar.Add("Copy failed.", Severity.Warning);
+            }
+        }
+        catch
+        {
+            Snackbar.Add("Copy failed.", Severity.Warning);
+        }
+    }
+
+    private async Task ScrollToBottomAsync()
+    {
+        try
+        {
+            await Task.Delay(50);
+            await JS.InvokeVoidAsync("eval", "document.getElementById('ai-messages-scroll-area')?.scrollTo({ top: 99999, behavior: 'smooth' })");
+        }
+        catch
+        {
+            // Best effort scroll
+        }
+    }
+
+    private static string GetFriendlyToolTitle(string toolName) => toolName switch
+    {
+        "create_item" => "Created item",
+        "toggle_item" => "Toggled status",
+        "habit_plus" => "Habit +1",
+        "habit_minus" => "Habit -1",
+        "get_board_summary" => "Inspected board status",
+        "get_snapshot" => "Read board snapshot",
+        "get_timer_summary" => "Checked focus timer",
+        _ => toolName
+    };
+
+    private static string GetToolIcon(string toolName) => toolName switch
+    {
+        "create_item" => Icons.Material.Filled.AddCircle,
+        "toggle_item" => Icons.Material.Filled.CheckCircle,
+        "habit_plus" => Icons.Material.Filled.Add,
+        "habit_minus" => Icons.Material.Filled.Remove,
+        "get_board_summary" => Icons.Material.Filled.Assessment,
+        "get_snapshot" => Icons.Material.Filled.Visibility,
+        "get_timer_summary" => Icons.Material.Filled.Timer,
+        _ => Icons.Material.Filled.Build
+    };
+
+    private void ClearChat()
+    {
+        _messages.Clear();
+        _lastToolExecutions.Clear();
+        _messages.Add(AiChatMessage.Assistant("Chat history cleared. How can I help you today?", _activeModel));
+    }
+
+    private void NavigateToSettings()
+    {
+        UiSessionState.SetAiDrawer(false);
+        UiSessionState.SettingsSectionIndex = 3;
+        Nav.NavigateTo("/settings");
+    }
+
+    public void Dispose()
+    {
+        UiSessionState.OnAiDrawerChanged -= HandleDrawerChanged;
+        _streamCts?.Cancel();
+        _streamCts?.Dispose();
+    }
+}

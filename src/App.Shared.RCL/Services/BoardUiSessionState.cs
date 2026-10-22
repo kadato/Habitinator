@@ -8,4 +8,22 @@ public sealed class BoardUiSessionState
 #pragma warning restore IDE0028
     public int MobileSectionIndex { get; set; }
     public int SettingsSectionIndex { get; set; }
+    public bool IsAiDrawerOpen { get; set; }
+
+    public event Action? OnAiDrawerChanged;
+
+    public void ToggleAiDrawer()
+    {
+        IsAiDrawerOpen = !IsAiDrawerOpen;
+        OnAiDrawerChanged?.Invoke();
+    }
+
+    public void SetAiDrawer(bool open)
+    {
+        if (IsAiDrawerOpen != open)
+        {
+            IsAiDrawerOpen = open;
+            OnAiDrawerChanged?.Invoke();
+        }
+    }
 }

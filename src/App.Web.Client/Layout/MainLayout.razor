@@ -9,6 +9,7 @@
 @inject IActivityStatisticsReader StatsReader
 @inject IBoardDataService BoardData
 @inject IBoardLocalStoreLifecycle LocalBoardLifecycle
+@inject BoardUiSessionState UiSessionState
 
 <PageTitle>@SeoDefaults.DefaultTitle</PageTitle>
 
@@ -18,6 +19,7 @@
 <MudSnackbarProvider/>
 <TimeZoneInitializer />
 <CommandPalette />
+<AiAssistantDrawer />
 
 <AuthorizeView>
     <Authorized>
@@ -50,6 +52,11 @@
                                 <span class="d-inline-flex align-center sync-indicator-wrap">
                                     <SyncStatusIndicator IconOnly="true" />
                                 </span>
+                                <MudIconButton Icon="@Icons.Material.Filled.SmartToy"
+                                               Color="Color.Primary"
+                                               Size="Size.Medium"
+                                               aria-label="AI assistant"
+                                               OnClick="() => UiSessionState.ToggleAiDrawer()" />
                                 <MudMenu AnchorOrigin="Origin.BottomRight"
                                          TransformOrigin="Origin.TopRight"
                                          Dense="true"

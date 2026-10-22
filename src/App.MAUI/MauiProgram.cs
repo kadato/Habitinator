@@ -134,6 +134,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IActivityStatisticsReader, RemoteActivityStatisticsReader>();
         builder.Services.AddSingleton<INotificationSettingsService, RemoteNotificationSettingsService>();
         builder.Services.AddSingleton<IUserPreferencesService, LocalFirstUserPreferencesService>();
+        builder.Services.AddSingleton<IAiAssistantService, RemoteAiAssistantService>();
         builder.Services.AddSingleton<MauiDailyReminderService>();
         // Scoped. UserNotifier feeds ISnackbar, which uses NavigationManager. NavigationManager is only valid inside the Blazor WebView scope, not root or singleton.
         builder.Services.AddScoped<IUserNotifier, UserNotifier>();

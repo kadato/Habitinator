@@ -95,6 +95,7 @@ builder.Services.AddScoped<IBoardColumnStateStore, JsBoardColumnStateStore>();
 builder.Services.AddScoped<IUpcomingViewStateStore, UpcomingViewStateStore>();
 builder.Services.AddScoped<BoardUiSessionState>();
 builder.Services.AddScoped<ICommandPaletteService, CommandPaletteService>();
+builder.Services.AddScoped<IAiAssistantService, RemoteAiAssistantService>();
 
 var host = builder.Build();
 try

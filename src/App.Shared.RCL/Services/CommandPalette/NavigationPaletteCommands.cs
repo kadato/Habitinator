@@ -16,7 +16,8 @@ internal sealed class NavigationPaletteCommands(
     IUserPreferencesService preferences,
     IUserNotifier notifier,
     Action close,
-    Func<Task> notifyRefresh)
+    Func<Task> notifyRefresh,
+    BoardUiSessionState? uiSession = null)
 {
     private readonly NavigationManager _nav = nav;
     private readonly IBoardDataService _boardData = boardData;
@@ -25,6 +26,7 @@ internal sealed class NavigationPaletteCommands(
     private readonly IUserNotifier _notifier = notifier;
     private readonly Action _close = close;
     private readonly Func<Task> _notifyRefresh = notifyRefresh;
+    private readonly BoardUiSessionState? _uiSession = uiSession;
 
     private const string NavigationCategory = "Navigation";
     private const string AppearanceCategory = "Appearance";
@@ -62,6 +64,23 @@ internal sealed class NavigationPaletteCommands(
             ShortcutBadge: "G U",
             Action: () => NavigateAsync("/upcoming"),
             Keywords: ["upcoming", "calendar", "schedule", "due", "next", "week"]));
+
+        if (_uiSession is not null)
+        {
+            list.Add(new(
+                Id: "nav-ai-assistant",
+                Title: "AI assistant",
+                Subtitle: "Chat with your board helper and habit coach",
+                Category: NavigationCategory,
+                Icon: Icons.Material.Filled.SmartToy,
+                Action: () =>
+                {
+                    _close();
+                    _uiSession.SetAiDrawer(true);
+                    return Task.CompletedTask;
+                },
+                Keywords: ["ai", "assistant", "coach", "chat", "mcp", "opencode", "llm", "plan"]));
+        }
 
         list.Add(new(
             Id: "nav-settings",

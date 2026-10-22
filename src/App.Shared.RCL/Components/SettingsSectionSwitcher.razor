@@ -20,6 +20,13 @@
         <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" aria-hidden="true" />
         <span class="settings-section-switcher__label">Account</span>
     </button>
+    <button type="button"
+            @attributes="GetTabAria(3)"
+            class="@GetSwitcherClass(3)"
+            @onclick="() => OnTabSelected(3)">
+        <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small" aria-hidden="true" />
+        <span class="settings-section-switcher__label">AI assistant</span>
+    </button>
 </div>
 
 @code {

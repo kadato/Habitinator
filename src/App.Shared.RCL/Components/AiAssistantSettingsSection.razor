@@ -1,0 +1,577 @@
+@using App.Shared.RCL.Models
+@using App.Shared.RCL.Services
+@inject IUserPreferencesService PreferencesService
+@inject IAiAssistantService AiService
+@inject IAccountActionsService AccountActions
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<MudStack Spacing="3">
+    @if (ShowTitle)
+    {
+        <MudText Typo="Typo.h5" Class="font-weight-bold">AI assistant and provider settings</MudText>
+    }
+
+    @if (_loading)
+    {
+        <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
+                <MudSkeleton Width="160px" Height="24px" Class="mb-1" />
+                <MudSkeleton Width="350px" Height="16px" Class="mb-3" />
+                <MudSkeleton Width="100%" Height="40px" />
+            </MudStack>
+        </MudPaper>
+    }
+    else if (_model is not null)
+    {
+        <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
+                <div class="d-flex align-center justify-space-between">
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Class="mb-1 font-weight-bold">Enable AI assistant</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
+                            Activate the in-app AI assistant drawer, habit coaching, and board tools.
+                        </MudText>
+                    </div>
+                    <MudSwitch T="bool"
+                               Value="_model.Ai.Enabled"
+                               ValueChanged="OnEnabledChanged"
+                               Color="Color.Primary" />
+                </div>
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+            <MudStack Spacing="3">
+                <div>
+                    <MudText Typo="Typo.subtitle1" Class="mb-1 font-weight-bold">LLM provider configuration</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
+                        Connect OpenCode API, OpenRouter, OpenAI, Groq, or local Ollama. Any OpenAI-compatible endpoint works.
+                    </MudText>
+                </div>
+
+                <MudSelect T="string"
+                           Label="Provider preset"
+                           Variant="Variant.Outlined"
+                           dense="true"
+                           Value="_model.Ai.Provider"
+                           ValueChanged="OnPresetChanged">
+                    <MudSelectItem Value="@("OpenCode Go")">OpenCode Go (subscription, recommended)</MudSelectItem>
+                    <MudSelectItem Value="@("OpenCode")">OpenCode Console (pay-per-token)</MudSelectItem>
+                    <MudSelectItem Value="@("OpenRouter")">OpenRouter</MudSelectItem>
+                    <MudSelectItem Value="@("OpenAI")">OpenAI</MudSelectItem>
+                    <MudSelectItem Value="@("Groq")">Groq</MudSelectItem>
+                    <MudSelectItem Value="@("Ollama")">Ollama (local)</MudSelectItem>
+                    <MudSelectItem Value="@("Custom")">Custom (OpenAI compatible)</MudSelectItem>
+                </MudSelect>
+
+                <MudTextField T="string"
+                              Label="API Endpoint URL"
+                              Variant="Variant.Outlined"
+                              dense="true"
+                              Placeholder="https://api.opencode.ai/v1"
+                              Value="_model.Ai.Endpoint"
+                              ValueChanged="v => { _model.Ai.Endpoint = v; _testResult = null; }"
+                              OnBlur="SavePreferencesAsync"
+                              HelperText="Supports the OpenAI chat completions protocol and responses protocol." />
+
+                <MudTextField T="string"
+                              Label="API Key"
+                              Variant="Variant.Outlined"
+                              dense="true"
+                              InputType="@(_showKey ? InputType.Text : InputType.Password)"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@(_showKey ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                              OnAdornmentClick="() => _showKey = !_showKey"
+                              Placeholder="sk-..."
+                              Value="_model.Ai.ApiKey"
+                              ValueChanged="v => { _model.Ai.ApiKey = v; _testResult = null; }"
+                              OnBlur="SavePreferencesAsync"
+                              HelperText="Stored in your account preferences. Habitinator never shares your API key." />
+
+                <div>
+                    <MudText Typo="Typo.subtitle2" Class="mb-1 font-weight-bold">
+                        Model selection (@_model.Ai.Provider)
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">
+                        Choose a model from the dropdown or select a quick pill below.
+                    </MudText>
+
+                    <MudSelect T="string"
+                               Label="AI model"
+                               Variant="Variant.Outlined"
+                               dense="true"
+                               Value="@GetSelectedDropdownValue()"
+                               ValueChanged="OnModelDropdownChanged"
+                               PopoverClass="ai-settings-model-popover"
+                               HelperText="Select an OpenCode or provider model from the list.">
+                        @foreach (var opt in AiModelCatalog.GetModelsForProvider(_model.Ai.Provider))
+                        {
+                            <MudSelectItem Value="@opt.Id">
+                                <div class="d-flex align-center justify-space-between w-100 gap-2 min-w-0"
+                                     title="@AiModelCatalog.GetModelTooltip(opt.DisplayName, opt.Description)">
+                                    <span class="font-weight-medium text-truncate min-w-0">@opt.DisplayName</span>
+                                    @if (!string.IsNullOrWhiteSpace(opt.Badge))
+                                    {
+                                        <span class="ai-dropdown-badge flex-shrink-0">@opt.Badge</span>
+                                    }
+                                </div>
+                            </MudSelectItem>
+                        }
+                        <MudSelectItem Value="@("custom_model_choice")">Custom model ID</MudSelectItem>
+                    </MudSelect>
+
+                    @if (_isCustomModel || !AiModelCatalog.GetModelsForProvider(_model.Ai.Provider).Any(m => string.Equals(m.Id, _model.Ai.Model, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        <div class="mt-2">
+                            <MudTextField T="string"
+                                          Label="Custom model identifier"
+                                          Variant="Variant.Outlined"
+                                          dense="true"
+                                          Placeholder="For example: muse-spark-1.3-contributor"
+                                          Value="_model.Ai.Model"
+                                          ValueChanged="OnCustomModelInputChanged"
+                                          OnBlur="SavePreferencesAsync"
+                                          HelperText="Enter the exact model identifier required by your provider." />
+                        </div>
+                    }
+                </div>
+
+                <MudTextField T="string"
+                              Label="Custom instructions (optional)"
+                              Variant="Variant.Outlined"
+                              dense="true"
+                              Lines="3"
+                              Placeholder="For example: Keep responses short and actionable. Finish overdue todos first."
+                              Value="_model.Ai.CustomInstructions"
+                              ValueChanged="v => _model.Ai.CustomInstructions = v"
+                              OnBlur="SavePreferencesAsync" />
+
+                <div class="d-flex align-center gap-2 mt-2">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               Disabled="_testing"
+                               StartIcon="@(_testing ? null : Icons.Material.Filled.Bolt)"
+                               OnClick="TestConnectionAsync">
+                        @if (_testing)
+                        {
+                            <span class="ai-spinner mr-2" aria-hidden="true"></span>
+                            <span>Testing connection...</span>
+                        }
+                        else
+                        {
+                            <span>Test connection</span>
+                        }
+                    </MudButton>
+
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Default"
+                               Size="Size.Small"
+                               Disabled="_saving"
+                               StartIcon="@Icons.Material.Filled.Save"
+                               OnClick="SavePreferencesAsync">
+                        Save
+                    </MudButton>
+                </div>
+
+                @if (_testResult is not null)
+                {
+                    <MudAlert Severity="@(_testResult.Success ? Severity.Success : Severity.Error)"
+                              Variant="Variant.Outlined"
+                              Dense="true"
+                              Class="mt-2">
+                        @_testResult.Message
+                    </MudAlert>
+                }
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.subtitle1" Class="mb-1 font-weight-bold">Available board tools</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">
+                    The assistant uses these tools on your Habitinator board:
+                </MudText>
+
+                <div class="ai-tool-pills-list d-flex flex-wrap gap-2">
+                    <span class="ai-tool-cap-pill">
+                        <MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Small" Color="Color.Primary" />
+                        <code class="ai-tool-cap-pill__code">get_board_summary</code>
+                        <span class="ai-tool-cap-pill__desc">Today overview</span>
+                    </span>
+                    <span class="ai-tool-cap-pill">
+                        <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Primary" />
+                        <code class="ai-tool-cap-pill__code">get_snapshot</code>
+                        <span class="ai-tool-cap-pill__desc">Inspect items</span>
+                    </span>
+                    <span class="ai-tool-cap-pill">
+                        <MudIcon Icon="@Icons.Material.Filled.AddCircle" Size="Size.Small" Color="Color.Success" />
+                        <code class="ai-tool-cap-pill__code">create_item</code>
+                        <span class="ai-tool-cap-pill__desc">Habit, Daily, Todo</span>
+                    </span>
+                    <span class="ai-tool-cap-pill">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Info" />
+                        <code class="ai-tool-cap-pill__code">toggle_item</code>
+                        <span class="ai-tool-cap-pill__desc">Mark done or undone</span>
+                    </span>
+                    <span class="ai-tool-cap-pill">
+                        <MudIcon Icon="@Icons.Material.Filled.PlusOne" Size="Size.Small" Color="Color.Secondary" />
+                        <code class="ai-tool-cap-pill__code">habit_plus, habit_minus</code>
+                        <span class="ai-tool-cap-pill__desc">Streaks</span>
+                    </span>
+                    <span class="ai-tool-cap-pill">
+                        <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Small" Color="Color.Warning" />
+                        <code class="ai-tool-cap-pill__code">get_timer_summary</code>
+                        <span class="ai-tool-cap-pill__desc">Focus timer</span>
+                    </span>
+                </div>
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+            <MudStack Spacing="3">
+                <div class="d-flex align-center justify-space-between flex-wrap gap-2">
+                    <div>
+                        <div class="d-flex align-center gap-2 mb-1">
+                            <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small" Color="Color.Primary" />
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Model Context Protocol (MCP) server</MudText>
+                        </div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
+                            Habitinator runs a native MCP server at <code>/mcp</code> with Streamable HTTP. Connect Claude Desktop, Cursor, or any external AI client to manage habits and track focus sessions.
+                        </MudText>
+                    </div>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               Disabled="_generatingMcpToken"
+                               StartIcon="@(_generatingMcpToken ? null : Icons.Material.Filled.Key)"
+                               OnClick="GenerateMcpTokenAsync">
+                        @if (_generatingMcpToken)
+                        {
+                            <span class="ai-spinner mr-2" aria-hidden="true"></span>
+                            <span>Generating...</span>
+                        }
+                        else
+                        {
+                            <span>Generate MCP token</span>
+                        }
+                    </MudButton>
+                </div>
+
+                @if (_mcpTokenResponse is not null)
+                {
+                    <div class="mcp-token-panel pa-3 rounded-lg border d-flex flex-column gap-2 mt-2">
+                        <div class="d-flex align-center justify-space-between flex-wrap gap-2">
+                            <MudText Typo="Typo.caption" Class="font-weight-bold">
+                                MCP connection details (valid for @_mcpTokenResponse.Days days)
+                            </MudText>
+                            <MudButton Variant="Variant.Text"
+                                       Size="Size.Small"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.ContentCopy"
+                                       OnClick="CopyMcpConfigAsync">
+                                Copy Claude config
+                            </MudButton>
+                        </div>
+                        <div>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Endpoint URL:</MudText>
+                            <div class="d-flex align-center gap-1">
+                                <code class="d-block pa-1 rounded text-truncate font-monospace flex-grow-1 mcp-token-panel__code">@_mcpTokenResponse.Endpoint</code>
+                                <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                               Size="Size.Small"
+                                               aria-label="Copy MCP endpoint"
+                                               OnClick='() => CopyTextAsync(_mcpTokenResponse.Endpoint, "Endpoint URL copied.")' />
+                            </div>
+                        </div>
+                        <div>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Bearer Token:</MudText>
+                            <div class="d-flex align-center gap-1">
+                                <code class="d-block pa-1 rounded text-truncate font-monospace flex-grow-1 mcp-token-panel__code">@_mcpTokenResponse.Token</code>
+                                <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                               Size="Size.Small"
+                                               aria-label="Copy MCP token"
+                                               OnClick='() => CopyTextAsync(_mcpTokenResponse.Token, "Bearer token copied.")' />
+                            </div>
+                        </div>
+                    </div>
+                }
+            </MudStack>
+        </MudPaper>
+    }
+</MudStack>
+
+@code {
+    [Parameter] public bool ShowTitle { get; set; } = true;
+
+    private UserPreferences? _model;
+    private bool _loading = true;
+    private bool _saving;
+    private bool _testing;
+    private bool _generatingMcpToken;
+    private bool _showKey;
+    private AiTestConnectionResponse? _testResult;
+    private CreateMcpTokenResponse? _mcpTokenResponse;
+    private bool _isCustomModel;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _model = await PreferencesService.GetAsync();
+            _model.Ai ??= new AiPreferences();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load preferences: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private string GetSelectedDropdownValue()
+    {
+        if (_isCustomModel)
+        {
+            return "custom_model_choice";
+        }
+
+        if (_model is null || string.IsNullOrWhiteSpace(_model.Ai.Model))
+        {
+            return string.Empty;
+        }
+
+        var inCatalog = AiModelCatalog.GetModelsForProvider(_model.Ai.Provider)
+            .Any(m => string.Equals(m.Id, _model.Ai.Model, StringComparison.OrdinalIgnoreCase));
+
+        return inCatalog ? _model.Ai.Model : "custom_model_choice";
+    }
+
+    private async Task OnModelDropdownChanged(string modelId)
+    {
+        if (_model is null)
+        {
+            return;
+        }
+
+        if (modelId == "custom_model_choice")
+        {
+            _isCustomModel = true;
+            return;
+        }
+
+        _isCustomModel = false;
+        _model.Ai.Model = modelId;
+        _testResult = null;
+        await SavePreferencesAsync();
+        StateHasChanged();
+    }
+
+    private void OnCustomModelInputChanged(string value)
+    {
+        if (_model is null)
+        {
+            return;
+        }
+
+        _model.Ai.Model = value;
+        _testResult = null;
+    }
+
+    private async Task OnEnabledChanged(bool value)
+    {
+        if (_model is null)
+        {
+            return;
+        }
+
+        _model.Ai.Enabled = value;
+        await SavePreferencesAsync();
+    }
+
+    private async Task OnPresetChanged(string provider)
+    {
+        if (_model is null)
+        {
+            return;
+        }
+
+        _model.Ai.Provider = provider;
+        _testResult = null;
+        _isCustomModel = false;
+
+        var defaultEndpoint = GetDefaultEndpoint(provider);
+        if (!string.IsNullOrWhiteSpace(defaultEndpoint))
+        {
+            _model.Ai.Endpoint = defaultEndpoint;
+        }
+
+        var defaultModel = GetDefaultModel(provider);
+        if (!string.IsNullOrWhiteSpace(defaultModel))
+        {
+            _model.Ai.Model = defaultModel;
+        }
+
+        await SavePreferencesAsync();
+        StateHasChanged();
+    }
+
+    private static string GetDefaultEndpoint(string provider) => provider switch
+    {
+        "OpenCode Go" => AiPreferences.DefaultOpenCodeGoEndpoint,
+        "OpenCode" => AiPreferences.DefaultOpenCodeConsoleEndpoint,
+        "OpenRouter" => AiPreferences.DefaultOpenRouterEndpoint,
+        "OpenAI" => AiPreferences.DefaultOpenAiEndpoint,
+        "Groq" => AiPreferences.DefaultGroqEndpoint,
+        "Ollama" => AiPreferences.DefaultOllamaEndpoint,
+        _ => string.Empty
+    };
+
+    private static string GetDefaultModel(string provider) => provider switch
+    {
+        "OpenCode Go" => "muse-spark-1.3-contributor",
+        "OpenCode" => "muse-spark-1.3-contributor",
+        "OpenRouter" => "anthropic/claude-3.7-sonnet",
+        "OpenAI" => "gpt-4o",
+        "Groq" => "llama-3.3-70b-versatile",
+        "Ollama" => "llama3.2",
+        _ => "muse-spark-1.3-contributor"
+    };
+
+    private async Task SavePreferencesAsync()
+    {
+        if (_model is null)
+        {
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            await PreferencesService.SaveAsync(_model);
+            Snackbar.Add("AI preferences saved.", Severity.Success, o => o.VisibleStateDuration = 1500);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to save preferences: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task TestConnectionAsync()
+    {
+        if (_model is null)
+        {
+            return;
+        }
+
+        _testing = true;
+        _testResult = null;
+        StateHasChanged();
+        await Task.Yield();
+
+        try
+        {
+            var req = new AiTestConnectionRequest
+            {
+                Endpoint = _model.Ai.Endpoint,
+                ApiKey = _model.Ai.ApiKey,
+                Model = _model.Ai.Model
+            };
+
+            var res = await AiService.TestConnectionAsync(req);
+            _testResult = res;
+
+            if (res.Success)
+            {
+                Snackbar.Add("Connection test succeeded.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Connection test failed: {res.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _testResult = new AiTestConnectionResponse
+            {
+                Success = false,
+                Message = $"Request exception: {ex.Message}"
+            };
+            Snackbar.Add(_testResult.Message, Severity.Error);
+        }
+        finally
+        {
+            _testing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task GenerateMcpTokenAsync()
+    {
+        _generatingMcpToken = true;
+        StateHasChanged();
+        await Task.Yield();
+        try
+        {
+            _mcpTokenResponse = await AccountActions.CreateMcpTokenAsync(new CreateMcpTokenRequest(90, "AI Settings"));
+            Snackbar.Add("Generated MCP token.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to generate MCP token: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _generatingMcpToken = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CopyMcpConfigAsync()
+    {
+        if (_mcpTokenResponse is null)
+        {
+            return;
+        }
+
+        var configJson = $$"""
+        {
+          "mcpServers": {
+            "habitinator": {
+              "url": "{{_mcpTokenResponse.Endpoint}}",
+              "headers": {
+                "Authorization": "Bearer {{_mcpTokenResponse.Token}}"
+              }
+            }
+          }
+        }
+        """;
+        await CopyTextAsync(configJson, "Claude Desktop configuration copied to clipboard.");
+    }
+
+    private async Task CopyTextAsync(string text, string successMessage)
+    {
+        try
+        {
+            var ok = await JS.InvokeAsync<bool>("habitinatorCopyText", text);
+            if (ok)
+            {
+                Snackbar.Add(successMessage, Severity.Success, o => o.VisibleStateDuration = 1200);
+            }
+            else
+            {
+                Snackbar.Add("Copy failed.", Severity.Warning);
+            }
+        }
+        catch
+        {
+            Snackbar.Add("Copy failed.", Severity.Warning);
+        }
+    }
+}

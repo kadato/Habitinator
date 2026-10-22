@@ -7,6 +7,7 @@
 @inject ISnackbar Snackbar
 @inject IActivityStatisticsReader StatsReader
 @inject IBoardDataService BoardData
+@inject BoardUiSessionState UiSessionState
 
 <PageTitle>@PageTitles.Brand</PageTitle>
 
@@ -16,6 +17,7 @@
 <MudSnackbarProvider/>
 <TimeZoneInitializer />
 <CommandPalette />
+<AiAssistantDrawer />
 
 <MudLayout Class="app-shell-layout">
     @if (Session.IsLoggedIn)
@@ -32,6 +34,11 @@
                         <span class="d-inline-flex align-center sync-indicator-wrap">
                             <SyncStatusIndicator IconOnly="true" />
                         </span>
+                        <MudIconButton Icon="@Icons.Material.Filled.SmartToy"
+                                       Color="Color.Primary"
+                                       Size="Size.Medium"
+                                       aria-label="AI assistant"
+                                       OnClick="() => UiSessionState.ToggleAiDrawer()" />
                     </div>
                 </div>
                 <NavMenu MobileTopBar="true" />

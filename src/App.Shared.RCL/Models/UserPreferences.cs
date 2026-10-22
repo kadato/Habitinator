@@ -27,6 +27,8 @@ public sealed class UserPreferences
 
     public bool EnableKeyboardShortcuts { get; set; } = true;
 
+    public AiPreferences Ai { get; set; } = new();
+
     public static UserPreferences CreateDefault()
     {
         return new UserPreferences();
@@ -44,6 +46,8 @@ public sealed class UserPreferences
         {
             DayStartLocalTime = TimeSpan.Zero;
         }
+
+        Ai = (Ai ?? new AiPreferences()).Normalize();
 
         return this;
     }

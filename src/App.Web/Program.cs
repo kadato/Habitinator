@@ -100,6 +100,7 @@ app.MapBoardApi();
 app.MapAuthApi();
 app.MapActivityApi();
 app.MapSettingsApi();
+app.MapAiApi();
 app.MapHabitinatorMcp();
 
 

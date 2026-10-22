@@ -173,6 +173,8 @@ public static class DependencyInjectionExtensions
         services.AddScoped<IUpcomingViewStateStore, UpcomingViewStateStore>();
         services.AddScoped<BoardUiSessionState>();
         services.AddScoped<ICommandPaletteService, CommandPaletteService>();
+        services.AddScoped<AiAssistantService>();
+        services.AddScoped<IAiAssistantService, WebAiAssistantService>();
         services.AddOptions<SmtpOptions>().BindConfiguration(SmtpOptions.SectionName);
         services.AddSingleton<IEmailSender>(sp =>
         {

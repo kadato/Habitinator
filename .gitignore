@@ -55,3 +55,7 @@ undefined:/
 
 # Playwright MCP local dumps. Never commit these.
 .playwright-mcp/
+
+# Local environment variables and secrets
+.env
+.env.*

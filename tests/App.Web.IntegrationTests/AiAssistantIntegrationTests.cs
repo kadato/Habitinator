@@ -66,7 +66,8 @@ public sealed class AiAssistantIntegrationTests(PostgresWebAppFactory factory)
         var testRes = await client.PostAsJsonAsync("/api/ai/test", new AiTestConnectionRequest
         {
             Endpoint = "https://opencode.ai/inference/go/openai/v1",
-            Model = "muse-spark-1.3-contributor"
+            Model = "muse-spark-1.3-contributor",
+            ApiKey = "test-mock-key"
         });
 
         testRes.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -87,7 +88,8 @@ public sealed class AiAssistantIntegrationTests(PostgresWebAppFactory factory)
         var res = await aiService.TestConnectionAsync(new AiTestConnectionRequest
         {
             Endpoint = "https://opencode.ai/inference/go/openai/v1",
-            Model = "muse-spark-1.3-contributor"
+            Model = "muse-spark-1.3-contributor",
+            ApiKey = "test-mock-key"
         });
 
         res.Success.Should().BeTrue();
@@ -104,7 +106,8 @@ public sealed class AiAssistantIntegrationTests(PostgresWebAppFactory factory)
         var res = await aiService.TestConnectionAsync(new AiTestConnectionRequest
         {
             Endpoint = "https://opencode.ai/inference/go/openai/v1",
-            Model = "mimo-v2.5"
+            Model = "mimo-v2.5",
+            ApiKey = "test-mock-key"
         });
 
         res.Success.Should().BeTrue();
@@ -142,6 +145,7 @@ public sealed class AiAssistantIntegrationTests(PostgresWebAppFactory factory)
         {
             EndpointOverride = "https://opencode.ai/inference/go/openai/v1",
             ModelOverride = "muse-spark-1.3-contributor",
+            ApiKeyOverride = "test-mock-key",
             Messages =
             [
                 AiChatMessage.User("What habits do I have on my board?")
@@ -190,6 +194,7 @@ public sealed class AiAssistantIntegrationTests(PostgresWebAppFactory factory)
         {
             EndpointOverride = "https://opencode.ai/inference/go/openai/v1",
             ModelOverride = "mimo-v2.5",
+            ApiKeyOverride = "test-mock-key",
             Messages =
             [
                 AiChatMessage.User("What habits do I have on my board?")

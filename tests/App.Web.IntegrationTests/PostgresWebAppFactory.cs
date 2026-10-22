@@ -3,6 +3,7 @@ using App.Web.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 using Npgsql;
@@ -23,6 +24,7 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
 
     public async Task InitializeAsync()
     {
+        Environment.SetEnvironmentVariable("OPENCODE_API_KEY", "mock-opencode-key-integration-tests");
         var connectionString = _externalConnectionString;
         if (!string.IsNullOrWhiteSpace(connectionString))
         {
@@ -62,6 +64,10 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
     {
         builder.UseEnvironment("Testing");
         builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(GetIntegrationConfiguration()));
+        builder.ConfigureServices(services =>
+        {
+            services.AddSingleton<IHttpClientFactory, MockAiHttpClientFactory>();
+        });
     }
 
     private Dictionary<string, string?> GetIntegrationConfiguration()

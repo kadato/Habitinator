@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using App.Shared.RCL.Models;
+using App.Shared.RCL.Services.Remote;
 
 using FluentAssertions;
 
@@ -13,6 +14,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
+
+using NSubstitute;
 
 namespace App.Web.IntegrationTests;
 
@@ -494,6 +497,35 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
 
         var snapshot = await mcp.CallToolAsync("get_snapshot");
         snapshot.IsError.Should().Be(null);
+    }
+
+    [Fact]
+    public async Task Mcp_RemoteAccountActionsService_GeneratesTokenSuccessfully()
+    {
+        var client = factory.CreateClient();
+        var suffix = Guid.NewGuid().ToString("N");
+        var email = $"mcp-remote-{suffix}@integration.test";
+        const string password = "TestUser1!Aa";
+
+        var register = await client.PostAsJsonAsync(
+            "/api/auth/register", new RegisterRequest(email, password));
+        register.EnsureSuccessStatusCode();
+        var login = await client.PostAsJsonAsync(
+            "/api/auth/login", new LoginRequest(email, password, RememberMe: false));
+        login.EnsureSuccessStatusCode();
+        var loginData = await login.Content.ReadFromJsonAsync<LoginResponse>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginData!.AccessToken);
+
+        var mockFactory = Substitute.For<IHttpClientFactory>();
+        mockFactory.CreateClient("api").Returns(client);
+
+        var service = new RemoteAccountActionsService(mockFactory);
+        var tokenRes = await service.CreateMcpTokenAsync(new CreateMcpTokenRequest(Days: 90, Label: "Claude Desktop"));
+
+        tokenRes.Should().NotBeNull();
+        tokenRes.Token.Should().NotBeNullOrWhiteSpace();
+        tokenRes.Days.Should().Be(90);
+        tokenRes.Endpoint.Should().EndWith("/mcp");
     }
 
     [Fact]

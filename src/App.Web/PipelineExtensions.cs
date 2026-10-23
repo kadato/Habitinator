@@ -1,7 +1,10 @@
+using App.Shared.RCL.Models;
 using App.Web.Hubs;
+using App.Web.Mcp;
 using App.Web.Middleware;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace App.Web;
 
@@ -73,6 +76,16 @@ internal static class PipelineExtensions
         });
 
         app.MapGet("/.well-known/change-password", () => Results.Redirect("/settings", permanent: false));
+        app.MapGet("/.well-known/mcp/server-card.json", (HttpContext http, IOptions<SitePublicOptions> site) =>
+            Results.Json(McpServerCard.Build(http, site)))
+            .AllowAnonymous()
+            .DisableAntiforgery()
+            .RequireRateLimiting("api");
+        app.MapGet("/.well-known/api-catalog", () =>
+            Results.Content(ApiCatalogDocument.Json, "application/linkset+json"))
+            .AllowAnonymous()
+            .DisableAntiforgery()
+            .RequireRateLimiting("api");
         app.UseOpenApi(options =>
         {
             options.Path = "/openapi/v1.json";

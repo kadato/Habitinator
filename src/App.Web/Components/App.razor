@@ -176,6 +176,12 @@
     <link rel="icon" type="image/png" href="/favicon.png"/>
     <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
     <link rel="manifest" href="/manifest.webmanifest"/>
+    @if (HttpContext?.User?.Identity?.IsAuthenticated != true)
+    {
+        <script type="application/ld+json">
+            @((MarkupString)LandingJsonLd)
+        </script>
+    }
     @* Fallback until the interactive circuit updates head. Must match Routes render mode. *@
     <title>@SeoDefaults.DefaultTitle</title>
     <HeadOutlet @rendermode="GetRoutesRenderMode()"/>
@@ -245,6 +251,18 @@
 </body>
 
 @code {
+    private const string LandingJsonLd = """
+        {
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          "name": "Habitinator",
+          "url": "https://habitinator.app/",
+          "applicationCategory": "ProductivityApplication",
+          "operatingSystem": "Web, Android, Windows, iOS, macOS",
+          "description": "Track habits, dailies, and to-dos with a focus timer and activity statistics."
+        }
+        """;
+
     [CascadingParameter]
     private HttpContext? HttpContext { get; set; }
 

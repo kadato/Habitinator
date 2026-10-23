@@ -25,7 +25,10 @@ public sealed class DiscoveryLinkHeadersMiddleware(RequestDelegate next, IOption
                     "Link",
                     $"<{baseUrl}/.well-known/api-catalog>; rel=\"api-catalog\"; type=\"application/linkset+json\"");
                 context.Response.Headers.Append("Link", $"<{baseUrl}/sitemap.xml>; rel=\"sitemap\"; type=\"application/xml\"");
-                context.Response.Headers.Append("Link", $"<{baseUrl}/llms.txt>; rel=\"alternate\"; type=\"text/plain\"; title=\"LLM site index\"");
+                context.Response.Headers.Append("Link", $"<{baseUrl}/llms.txt>; rel=\"describedby\"; type=\"text/markdown\"; title=\"LLM site index\"");
+                context.Response.Headers.Append("Link", $"<{baseUrl}/.well-known/mcp/server-card.json>; rel=\"mcp\"; type=\"application/json\"; title=\"Habitinator MCP server card\"");
+                context.Response.Headers.Append("Link", $"<{baseUrl}/.well-known/ai-catalog.json>; rel=\"ai-catalog\"; type=\"application/json\"; title=\"Agent capability catalog\"");
+                context.Response.Headers.Append("Link", $"<{baseUrl}/.well-known/agent-skills/index.json>; rel=\"agent-skills\"; type=\"application/json\"; title=\"Agent skills index\"");
             }
         }
 

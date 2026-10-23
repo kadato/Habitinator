@@ -1,5 +1,7 @@
 # MCP reference
 
+The server card lives at `/.well-known/mcp/server-card.json`. The capability catalog lives at `/.well-known/ai-catalog.json`. The agent skill lives at `/.well-known/agent-skills/habitinator/SKILL.md`. The auth guide lives at `/auth.md`. `Link` headers, `/.well-known/api-catalog`, and `llms.txt` advertise all four.
+
 The MCP endpoint is `POST /mcp`. It uses Streamable HTTP in stateless mode. The endpoint needs the `BoardOrJwt` policy and sits behind the `mcp` rate limit window. Reads use `{user}:read`, with 1000 requests per minute in development and test environments, and 600 requests per minute sliding window in production. `delete_item`, `delete_tag`, and `import_data` match on the `Mcp-Name` routable header and use `{user}:write`. Their rate limit is 100 requests per minute in development and test environments, and 60 requests per minute in production. The read window stays wider than the 300 requests per minute `api` window so MCP polling does not starve REST.
 
 The server version is synced from the assembly version, not a hardcoded string.
@@ -8,7 +10,54 @@ The server version is synced from the assembly version, not a hardcoded string.
 
 The endpoint accepts a JWT bearer token from `/api/auth/login`, long-lived personal MCP tokens from `/api/account/mcp-token`, and the auth cookie. Without a token, the server returns 401. When the user record is missing, the tool throws `InvalidRequest` with "Sign in required" or "Register or sign in again".
 
-To configure external AI assistants like Claude Desktop or Cursor, call `POST /api/account/mcp-token` to generate a dedicated long-lived token valid from 1 to 365 days:
+### Connect from the app
+
+Tokens are minted in the Settings panel under Settings, AI assistant, External AI access (MCP). The panel tests each token and copies the client config with the token filled in. The panel lists issued tokens with expiry dates and revokes one token or all tokens. Revocation takes effect immediately. auth.md documents the same flow for the terminal.
+
+### Client configs
+
+Claude Desktop, Cursor, and VS Code read `mcpServers` with a `url` plus an `Authorization` header. OpenCode reads `mcp.servers` with `type: remote` and `oauth: false`. Hermes reads `mcp_servers` in `config.yaml`.
+
+OpenCode `opencode.jsonc`:
+
+```jsonc
+{
+  "mcp": {
+    "servers": {
+      "habitinator": {
+        "type": "remote",
+        "url": "https://habitinator.app/mcp",
+        "oauth": false,
+        "headers": { "Authorization": "Bearer YOUR_MCP_TOKEN" }
+      }
+    }
+  }
+}
+```
+
+```bash
+export HABITINATOR_MCP_TOKEN=YOUR_MCP_TOKEN
+opencode mcp add habitinator --url https://habitinator.app/mcp --header 'Authorization=Bearer {env:HABITINATOR_MCP_TOKEN}'
+```
+
+Hermes `config.yaml`:
+
+```yaml
+mcp_servers:
+  habitinator:
+    url: "https://habitinator.app/mcp"
+    headers:
+      Authorization: "Bearer YOUR_MCP_TOKEN"
+    timeout: 120
+    connect_timeout: 60
+    enabled: true
+```
+
+Claude Desktop, Cursor, and VS Code use `mcpServers` with `url` plus an `Authorization` header. The Settings panel shows the exact snippet with your token filled in.
+
+### Token minting from the terminal
+
+If you prefer the terminal over the Settings panel, call `POST /api/account/mcp-token` with a login JWT. The call mints a dedicated long-lived token valid from 1 to 365 days:
 
 ```bash
 curl -s -X POST $BASE/api/account/mcp-token \

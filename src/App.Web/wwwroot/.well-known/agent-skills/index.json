@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "habitinator",
+      "type": "skill-md",
+      "description": "Read and update Habitinator boards over MCP: habits, dailies, todos, activity, and focus timer.",
+      "url": "https://habitinator.app/.well-known/agent-skills/habitinator/SKILL.md",
+      "digest": "sha256:b25c841aaad932a8a2b7390bd74e1b6a744d34dbbdbd10851acfc0c43f70eb9d"
+    }
+  ]
+}

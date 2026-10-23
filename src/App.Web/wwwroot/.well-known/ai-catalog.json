@@ -1,0 +1,21 @@
+{
+  "specVersion": "ai-catalog/1.0",
+  "host": {
+    "domain": "habitinator.app",
+    "site": "https://habitinator.app/"
+  },
+  "entries": [
+    {
+      "identifier": "urn:habitinator:mcp:board-helper",
+      "displayName": "Habitinator board helper",
+      "mediaType": "application/mcp-server-card+json",
+      "type": "application/mcp-server-card+json",
+      "url": "https://habitinator.app/.well-known/mcp/server-card.json",
+      "representativeQueries": [
+        "Summarize my Habitinator board for today",
+        "What todos are overdue in Habitinator?",
+        "Plan my day from Habitinator dailies and todos"
+      ]
+    }
+  ]
+}

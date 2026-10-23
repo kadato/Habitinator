@@ -1,6 +1,7 @@
 # https://habitinator.app - public marketing and auth pages only. App data requires sign-in.
 # AI preferences, an emerging Content-Signal convention. Allow search indexing, no model training on content.
 Content-Signal: search=yes, ai-train=no
+Agentmap: https://habitinator.app/.well-known/ai-catalog.json
 User-agent: *
 Allow: /
 Disallow: /api/

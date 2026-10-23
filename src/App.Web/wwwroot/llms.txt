@@ -25,6 +25,16 @@ Habitinator is a Blazor web and .NET MAUI productivity app. User board data is p
 - [Board REST API](/api/board) accepts JWT or cookie auth
 - [Health](https://habitinator.app/health)
 
+## MCP, authenticated
+
+- The MCP endpoint is `POST https://habitinator.app/mcp` with Streamable HTTP in stateless mode.
+- The endpoint needs a Bearer personal token. Generate one in the app at **Settings**, **AI assistant**, **External AI access (MCP)**. Without the app, call `POST /api/account/mcp-token` with a login JWT.
+- Agent auth guide: [auth.md](https://habitinator.app/auth.md), with registration and token minting steps.
+- Server card: [server-card.json](https://habitinator.app/.well-known/mcp/server-card.json), with versions and capabilities.
+- Capability catalog: [ai-catalog.json](https://habitinator.app/.well-known/ai-catalog.json). Agent skill: [SKILL.md](https://habitinator.app/.well-known/agent-skills/habitinator/SKILL.md).
+- Copy a ready config for Claude Desktop, OpenCode, Hermes, or Cursor from that Settings panel.
+- Full tool, prompt, and resource reference: [docs/mcp.md on GitHub](https://github.com/kadato/Habitinator/blob/main/docs/mcp.md).
+
 ## Privacy
 
 Authentication uses session cookies and optional JWT for native clients. The web app contains no third-party advertising trackers. Read [the privacy policy](https://habitinator.app/privacy).

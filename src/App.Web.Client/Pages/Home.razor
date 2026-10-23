@@ -13,26 +13,7 @@
                   Description="@SeoDefaults.DefaultDescription"
                   CanonicalPath="/"
                   OgImagePath="/og-image.png"
-                  Robots="@SeoDefaults.IndexRobots">
-            <script type="application/ld+json">
-                @((MarkupString)LandingJsonLd)
-            </script>
-        </PageMeta>
+                  Robots="@SeoDefaults.IndexRobots"/>
         <HomeLanding/>
     </NotAuthorized>
 </AuthorizeView>
-
-@code {
-    private const string LandingJsonLd = """
-        {
-          "@context": "https://schema.org",
-          "@type": "WebApplication",
-          "name": "Habitinator",
-          "url": "https://habitinator.app/",
-          "applicationCategory": "ProductivityApplication",
-          "operatingSystem": "Web, Android, Windows, iOS, macOS",
-          "description": "Track habits, dailies, and to-dos with a focus timer and activity statistics."
-        }
-        """;
-
-}

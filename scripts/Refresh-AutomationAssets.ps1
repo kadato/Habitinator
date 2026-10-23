@@ -10,7 +10,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string] $BaseUrl = "http://127.0.0.1:5950"
+    [string] $BaseUrl = "http://127.0.0.1:5050"
 )
 
 $ErrorActionPreference = "Stop"

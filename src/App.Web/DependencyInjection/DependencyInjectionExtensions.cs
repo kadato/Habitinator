@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 
 using App.Shared.RCL.Models;
@@ -256,6 +257,24 @@ public static class DependencyInjectionExtensions
                     }
 
                     return Task.CompletedTask;
+                },
+                OnTokenValidated = async context =>
+                {
+                    // Personal MCP tokens carry the registry row id as jti. Login JWTs
+                    // have no jti and skip this check. A missing or revoked row fails auth.
+                    var jti = context.Principal?.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+                    if (jti is null || !Guid.TryParse(jti, out var tokenId))
+                    {
+                        return;
+                    }
+
+                    using var scope = context.HttpContext.RequestServices.CreateScope();
+                    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    var row = await db.McpTokens.FindAsync([tokenId], context.HttpContext.RequestAborted);
+                    if (row is null || row.RevokedAtUtc is not null)
+                    {
+                        context.Fail("MCP token is revoked or unknown. Generate a new one.");
+                    }
                 }
             };
         });

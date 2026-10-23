@@ -13,6 +13,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 
     public DbSet<UserActivityEventEntity> UserActivityEvents => Set<UserActivityEventEntity>();
 
+    public DbSet<McpTokenEntity> McpTokens => Set<McpTokenEntity>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

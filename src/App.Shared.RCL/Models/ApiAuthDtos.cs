@@ -47,5 +47,14 @@ public sealed record CreateMcpTokenResponse(
     string Token,
     DateTime ExpiresAtUtc,
     string Endpoint,
-    int Days);
+    int Days,
+    Guid Id,
+    string Label);
+
+public sealed record McpTokenInfo(
+    Guid Id,
+    string Label,
+    DateTime CreatedAtUtc,
+    DateTime ExpiresAtUtc,
+    DateTime? RevokedAtUtc);
 

@@ -8,6 +8,7 @@ using App.Web.Data;
 using App.Web.Services;
 
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace App.Web;
@@ -48,6 +49,9 @@ internal static class AuthApiRoutes
         endpoints.MapGet("/api/account/export", ExportDataAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api");
         endpoints.MapPost("/api/account/import", ImportDataAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api");
         endpoints.MapPost("/api/account/mcp-token", CreateMcpTokenAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api");
+        endpoints.MapGet("/api/account/mcp-tokens", ListMcpTokensAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api");
+        endpoints.MapDelete("/api/account/mcp-tokens/{id:guid}", RevokeMcpTokenAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api");
+        endpoints.MapPost("/api/account/mcp-tokens/revoke-all", RevokeAllMcpTokensAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api");
     }
 
     // Endpoint handlers
@@ -379,8 +383,10 @@ internal static class AuthApiRoutes
         CurrentUserId user,
         UserManager<ApplicationUser> userManager,
         JwtTokenService jwt,
+        ApplicationDbContext db,
         HttpContext httpContext,
-        CreateMcpTokenRequest? request)
+        CreateMcpTokenRequest? request,
+        CancellationToken cancellationToken)
     {
         var appUser = await userManager.FindByIdAsync(user.Value.ToString());
         if (appUser is null)
@@ -389,8 +395,21 @@ internal static class AuthApiRoutes
         }
 
         var days = Math.Clamp(request?.Days ?? 90, 1, 365);
+        var label = NormalizeMcpLabel(request?.Label);
         var lifetime = TimeSpan.FromDays(days);
-        var token = jwt.CreateToken(appUser, lifetime);
+        var now = DateTimeOffset.UtcNow;
+        var row = new McpTokenEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Value,
+            Label = label,
+            CreatedAtUtc = now,
+            ExpiresAtUtc = now.Add(lifetime),
+        };
+        db.McpTokens.Add(row);
+        await db.SaveChangesAsync(cancellationToken);
+
+        var token = jwt.CreateToken(appUser, lifetime, row.Id);
         var expiresAtUtc = DateTime.UtcNow.Add(lifetime);
         var baseUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
         var endpoint = $"{baseUrl}/mcp";
@@ -399,7 +418,83 @@ internal static class AuthApiRoutes
             Token: token,
             ExpiresAtUtc: expiresAtUtc,
             Endpoint: endpoint,
-            Days: days));
+            Days: days,
+            Id: row.Id,
+            Label: label));
+    }
+
+    private static async Task<IResult> ListMcpTokensAsync(
+        CurrentUserId user,
+        ApplicationDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        await db.McpTokens
+            .Where(t => t.UserId == user.Value && t.ExpiresAtUtc <= now)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        var rows = await db.McpTokens
+            .AsNoTracking()
+            .Where(t => t.UserId == user.Value)
+            .OrderByDescending(t => t.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+
+        var infos = rows
+            .Select(t => new McpTokenInfo(
+                t.Id,
+                t.Label,
+                t.CreatedAtUtc.UtcDateTime,
+                t.ExpiresAtUtc.UtcDateTime,
+                t.RevokedAtUtc.HasValue ? t.RevokedAtUtc.Value.UtcDateTime : null))
+            .ToList();
+
+        return Results.Ok(infos);
+    }
+
+    private static async Task<IResult> RevokeMcpTokenAsync(
+        CurrentUserId user,
+        Guid id,
+        ApplicationDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var row = await db.McpTokens
+            .FirstOrDefaultAsync(t => t.Id == id && t.UserId == user.Value, cancellationToken);
+        if (row is null)
+        {
+            return Results.NotFound();
+        }
+
+        if (row.RevokedAtUtc is null)
+        {
+            row.RevokedAtUtc = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> RevokeAllMcpTokensAsync(
+        CurrentUserId user,
+        ApplicationDbContext db,
+        CancellationToken cancellationToken)
+    {
+        await db.McpTokens
+            .Where(t => t.UserId == user.Value && t.RevokedAtUtc == null)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(t => t.RevokedAtUtc, DateTimeOffset.UtcNow),
+                cancellationToken);
+
+        return Results.NoContent();
+    }
+
+    private static string NormalizeMcpLabel(string? label)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            return "MCP token";
+        }
+
+        return label.Trim()[..Math.Min(100, label.Trim().Length)];
     }
 
     // Helpers

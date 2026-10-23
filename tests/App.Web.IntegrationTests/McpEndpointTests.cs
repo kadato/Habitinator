@@ -460,6 +460,78 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
     }
 
     [Fact]
+    public async Task Mcp_TokenLifecycle_ListRevokeAndDenyRevoked()
+    {
+        var client = factory.CreateClient();
+        var suffix = Guid.NewGuid().ToString("N");
+        var email = $"mcp-lifecycle-{suffix}@integration.test";
+        const string password = "TestUser1!Aa";
+
+        var register = await client.PostAsJsonAsync(
+            "/api/auth/register", new RegisterRequest(email, password));
+        register.EnsureSuccessStatusCode();
+        var login = await client.PostAsJsonAsync(
+            "/api/auth/login", new LoginRequest(email, password, RememberMe: false));
+        login.EnsureSuccessStatusCode();
+        var initialToken = (await login.Content.ReadFromJsonAsync<LoginResponse>())!.AccessToken;
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", initialToken);
+
+        var first = await client.PostAsJsonAsync("/api/account/mcp-token", new CreateMcpTokenRequest(Days: 30, Label: "First"));
+        first.EnsureSuccessStatusCode();
+        var firstData = (await first.Content.ReadFromJsonAsync<CreateMcpTokenResponse>())!;
+        firstData.Label.Should().Be("First");
+        var second = await client.PostAsJsonAsync("/api/account/mcp-token", new CreateMcpTokenRequest(Days: 30, Label: "Second"));
+        second.EnsureSuccessStatusCode();
+        var secondData = (await second.Content.ReadFromJsonAsync<CreateMcpTokenResponse>())!;
+
+        var list = await client.GetAsync("/api/account/mcp-tokens");
+        list.EnsureSuccessStatusCode();
+        var tokens = (await list.Content.ReadFromJsonAsync<List<McpTokenInfo>>())!;
+        tokens.Should().HaveCount(2);
+        tokens.Select(t => t.Label).Should().Contain(["First", "Second"]);
+
+        var revoke = await client.DeleteAsync($"/api/account/mcp-tokens/{firstData.Id:D}");
+        revoke.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var revokedCall = await PostMcpToolsListAsync(factory, secondData.Token);
+        revokedCall.Should().Be(HttpStatusCode.OK);
+
+        var deniedCall = await PostMcpToolsListAsync(factory, firstData.Token);
+        deniedCall.Should().Be(HttpStatusCode.Unauthorized);
+
+        var listAfter = await client.GetAsync("/api/account/mcp-tokens");
+        var tokensAfter = (await listAfter.Content.ReadFromJsonAsync<List<McpTokenInfo>>())!;
+        tokensAfter.Single(t => t.Id == firstData.Id).RevokedAtUtc.Should().NotBeNull();
+
+        var revokeAll = await client.PostAsync("/api/account/mcp-tokens/revoke-all", null);
+        revokeAll.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var deniedSecond = await PostMcpToolsListAsync(factory, secondData.Token);
+        deniedSecond.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    private static async Task<HttpStatusCode> PostMcpToolsListAsync(PostgresWebAppFactory webFactory, string bearerToken)
+    {
+        var mcpClient = webFactory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = JsonContent.Create(new
+            {
+                jsonrpc = "2.0",
+                id = 1,
+                method = "tools/list",
+                @params = new { },
+            }),
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+
+        var res = await mcpClient.SendAsync(request);
+        return res.StatusCode;
+    }
+
+    [Fact]
     public async Task Mcp_PersonalTokenEndpoint_GeneratesUsableToken()
     {
         var client = factory.CreateClient();

@@ -109,6 +109,15 @@ internal sealed class NavigationPaletteCommands(
             Icon: Icons.Material.Filled.Notifications,
             Action: () => NavigateAsync(SettingsPath),
             Keywords: ["notifications", "alerts", "reminders", "sound"]));
+
+        list.Add(new(
+            Id: "nav-mcp-setup",
+            Title: "Connect external AI (MCP)",
+            Subtitle: "Get a token and configs for Claude, OpenCode, Hermes",
+            Category: NavigationCategory,
+            Icon: Icons.Material.Filled.Hub,
+            Action: () => NavigateToMcpSetupAsync(),
+            Keywords: ["mcp", "opencode", "hermes", "claude", "cursor", "vscode", "token", "external", "connect", "setup"]));
     }
 
     public void AddArchiveCommand(List<CommandItem> list)
@@ -179,6 +188,12 @@ internal sealed class NavigationPaletteCommands(
         _close();
         _nav.NavigateTo(path);
         return Task.CompletedTask;
+    }
+
+    private Task NavigateToMcpSetupAsync()
+    {
+        _uiSession?.SettingsSectionIndex = 3;
+        return NavigateAsync(SettingsPath);
     }
 
     private async Task OpenArchiveAsync()

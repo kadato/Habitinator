@@ -136,3 +136,19 @@
     border: 1px solid var(--mud-palette-lines-default);
     color: var(--mud-palette-text-primary);
 }
+
+.mcp-snippet-pre {
+    font-family: var(--hab-font-mono, monospace);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: var(--mud-palette-background);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--radius-sm, 4px);
+    padding: 8px 10px;
+    margin: 0 0 4px 0;
+    color: var(--mud-palette-text-primary);
+    max-height: 260px;
+    overflow: auto;
+}

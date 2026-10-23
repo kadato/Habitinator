@@ -9,4 +9,10 @@ public interface IAccountActionsService
     Task DeleteAccountAsync(CancellationToken cancellationToken = default);
 
     Task<CreateMcpTokenResponse> CreateMcpTokenAsync(CreateMcpTokenRequest? request = null, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<McpTokenInfo>> ListMcpTokensAsync(CancellationToken cancellationToken = default);
+
+    Task RevokeMcpTokenAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task RevokeAllMcpTokensAsync(CancellationToken cancellationToken = default);
 }

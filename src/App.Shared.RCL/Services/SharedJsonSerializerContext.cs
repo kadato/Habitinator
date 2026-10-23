@@ -20,6 +20,8 @@ namespace App.Shared.RCL.Services;
 [JsonSerializable(typeof(LoginResponse))]
 [JsonSerializable(typeof(CreateMcpTokenRequest))]
 [JsonSerializable(typeof(CreateMcpTokenResponse))]
+[JsonSerializable(typeof(McpTokenInfo))]
+[JsonSerializable(typeof(List<McpTokenInfo>))]
 [JsonSerializable(typeof(ChangePasswordRequest))]
 [JsonSerializable(typeof(NotificationSettings))]
 [JsonSerializable(typeof(UserPreferences))]

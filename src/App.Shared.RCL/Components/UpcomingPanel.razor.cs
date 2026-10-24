@@ -91,6 +91,13 @@ public partial class UpcomingPanel
 
     private int TodayPct => _todayScheduled == 0 ? 100 : (int)Math.Round(100.0 * _todayDone / _todayScheduled);
 
+    private string FilterLabel => _filter switch
+    {
+        UpcomingFilter.Dailies => "Dailies",
+        UpcomingFilter.Todos => "To-dos",
+        _ => "All",
+    };
+
     private string MonthTitle => new DateOnly(_visibleYear, _visibleMonth, 1).ToString("MMMM yyyy", CultureInfo.CurrentCulture);
     private string MonthShort => new DateOnly(_visibleYear, _visibleMonth, 1).ToString("MMM", CultureInfo.CurrentCulture);
     private DateOnly WeekStart => _selected.AddDays(-(((int)_selected.DayOfWeek + 6) % 7));
@@ -606,7 +613,6 @@ public partial class UpcomingPanel
         }
     }
 
-    private string FilterBtnClass(UpcomingFilter f) => _filter == f ? "cal-seg__btn cal-seg__btn--active" : "cal-seg__btn";
     private string ViewBtnClass(CalView v) => _view == v ? "cal-seg__btn cal-seg__btn--active" : "cal-seg__btn";
 
     private string FormatDate(DateOnly date)

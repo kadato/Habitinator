@@ -70,17 +70,57 @@
                 </div>
             }
             <div class="cal-controls">
-                <div class="cal-seg" role="group" aria-label="Calendar view">
+                <div class="cal-seg cal-seg--primary" role="group" aria-label="Calendar view">
                     <button type="button" class="@ViewBtnClass(CalView.Day)" aria-pressed="@(_view == CalView.Day)" @onclick="() => SetView(CalView.Day)">Day</button>
                     <button type="button" class="@ViewBtnClass(CalView.Week)" aria-pressed="@(_view == CalView.Week)" @onclick="() => SetView(CalView.Week)">Week</button>
                     <button type="button" class="@ViewBtnClass(CalView.Next7)" aria-pressed="@(_view == CalView.Next7)" @onclick="() => SetView(CalView.Next7)">7 days</button>
                     <button type="button" class="@ViewBtnClass(CalView.Month)" aria-pressed="@(_view == CalView.Month)" @onclick="() => SetView(CalView.Month)">Month</button>
                 </div>
-                <div class="cal-seg" role="group" aria-label="Show items">
-                    <button type="button" class="@FilterBtnClass(UpcomingFilter.All)" aria-pressed="@(_filter == UpcomingFilter.All)" @onclick="() => SetFilter(UpcomingFilter.All)">All</button>
-                    <button type="button" class="@FilterBtnClass(UpcomingFilter.Dailies)" aria-pressed="@(_filter == UpcomingFilter.Dailies)" @onclick="() => SetFilter(UpcomingFilter.Dailies)">Dailies</button>
-                    <button type="button" class="@FilterBtnClass(UpcomingFilter.Todos)" aria-pressed="@(_filter == UpcomingFilter.Todos)" @onclick="() => SetFilter(UpcomingFilter.Todos)">To-dos</button>
-                </div>
+                <MudMenu AnchorOrigin="Origin.BottomRight"
+                         TransformOrigin="Origin.TopRight"
+                         Dense="true"
+                         PopoverClass="cal-filter-menu-popover">
+                    <ActivatorContent Context="filterMenu">
+                        <button type="button"
+                                class="cal-filter-trigger"
+                                aria-haspopup="true"
+                                aria-label="@($"Filter items, currently {FilterLabel}")"
+                                title="@($"Filter items, currently {FilterLabel}")"
+                                @onclick="@(e => filterMenu.ToggleAsync(e))">
+                            <span class="cal-filter-trigger__label">Filter: @FilterLabel</span>
+                            <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Size="Size.Small" Class="cal-filter-trigger__chevron" aria-hidden="true" />
+                        </button>
+                    </ActivatorContent>
+                    <ChildContent>
+                        <MudMenuItem OnClick="() => SetFilter(UpcomingFilter.All)" aria-label="Show all items">
+                            <div class="d-flex align-center gap-2">
+                                @if (_filter == UpcomingFilter.All)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Primary" aria-hidden="true" />
+                                }
+                                <MudText Typo="Typo.body2">All</MudText>
+                            </div>
+                        </MudMenuItem>
+                        <MudMenuItem OnClick="() => SetFilter(UpcomingFilter.Dailies)" aria-label="Show dailies only">
+                            <div class="d-flex align-center gap-2">
+                                @if (_filter == UpcomingFilter.Dailies)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Primary" aria-hidden="true" />
+                                }
+                                <MudText Typo="Typo.body2">Dailies</MudText>
+                            </div>
+                        </MudMenuItem>
+                        <MudMenuItem OnClick="() => SetFilter(UpcomingFilter.Todos)" aria-label="Show to-dos only">
+                            <div class="d-flex align-center gap-2">
+                                @if (_filter == UpcomingFilter.Todos)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Primary" aria-hidden="true" />
+                                }
+                                <MudText Typo="Typo.body2">To-dos</MudText>
+                            </div>
+                        </MudMenuItem>
+                    </ChildContent>
+                </MudMenu>
             </div>
         </section>
 

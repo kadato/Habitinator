@@ -10,6 +10,7 @@ using FluentAssertions;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using MudBlazor;
 using MudBlazor.Services;
 
 using NSubstitute;
@@ -24,6 +25,7 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
     private readonly IUserDateFormatService _dateFormat = Substitute.For<IUserDateFormatService>();
     private readonly IUserNotifier _notifier = Substitute.For<IUserNotifier>();
     private readonly IUpcomingViewStateStore _viewState = Substitute.For<IUpcomingViewStateStore>();
+    private readonly IRenderedComponent<MudPopoverProvider> _popoverProvider;
 
     public UpcomingPanelTests()
     {
@@ -34,6 +36,7 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
         _ctx.Services.AddSingleton(_dateFormat);
         _ctx.Services.AddSingleton(_notifier);
         _ctx.Services.AddSingleton(_viewState);
+        _popoverProvider = _ctx.Render<MudPopoverProvider>();
         _viewState.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<UpcomingViewState?>(null));
         _dateFormat.Format(Arg.Any<DateOnly>()).Returns(x => ((DateOnly)x[0]!).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
     }
@@ -114,9 +117,8 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
         cut.WaitForState(() => cut.Markup.Contains("Nothing scheduled"), TimeSpan.FromSeconds(5));
 
         var weekBtn = cut.FindAll("button").Single(b => b.TextContent.Trim() == "Week");
-        var dailiesBtn = cut.FindAll("button").Single(b => b.TextContent.Trim() == "Dailies");
         weekBtn.ClassList.Should().Contain("cal-seg__btn--active");
-        dailiesBtn.ClassList.Should().Contain("cal-seg__btn--active");
+        cut.Find(".cal-filter-trigger").TextContent.Should().Contain("Filter: Dailies");
     }
 
     [Fact]
@@ -129,11 +131,18 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
         cut.WaitForState(() => cut.Markup.Contains("Nothing scheduled"), TimeSpan.FromSeconds(5));
 
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Week").Click();
-        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Dailies").Click();
-
         cut.WaitForAssertion(() =>
             _viewState.Received().SetAsync(
-                Arg.Is<UpcomingViewState>(s => s.View == "Week" && s.Filter == "Dailies"),
+                Arg.Is<UpcomingViewState>(s => s.View == "Week"),
+                Arg.Any<CancellationToken>()),
+            TimeSpan.FromSeconds(5));
+
+        cut.Find(".cal-filter-trigger").Click();
+        cut.WaitForState(() => _popoverProvider.Markup.Contains("Dailies"), TimeSpan.FromSeconds(5));
+        _popoverProvider.FindAll(".mud-menu-item").Single(e => e.TextContent.Contains("Dailies")).Click();
+        cut.WaitForAssertion(() =>
+            _viewState.Received().SetAsync(
+                Arg.Is<UpcomingViewState>(s => s.Filter == "Dailies"),
                 Arg.Any<CancellationToken>()),
             TimeSpan.FromSeconds(5));
     }
@@ -200,8 +209,7 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
 
         // Defaults are Month and All.
         var monthBtn = cut.FindAll("button").Single(b => b.TextContent.Trim() == "Month");
-        var allBtn = cut.FindAll("button").Single(b => b.TextContent.Trim() == "All");
         monthBtn.ClassList.Should().Contain("cal-seg__btn--active");
-        allBtn.ClassList.Should().Contain("cal-seg__btn--active");
+        cut.Find(".cal-filter-trigger").TextContent.Should().Contain("Filter: All");
     }
 }

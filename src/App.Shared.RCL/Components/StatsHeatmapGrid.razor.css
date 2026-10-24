@@ -117,10 +117,10 @@ button.stats-cell:focus-visible, button.stats-cell:focus {
 }
 
 .stats-lvl-0 { background: color-mix(in srgb, var(--mud-palette-background-gray) 85%, var(--mud-palette-surface)); border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 50%, transparent); }
-.stats-lvl-1 { background: color-mix(in srgb, var(--mud-palette-primary) 28%, var(--mud-palette-surface) 72%); }
-.stats-lvl-2 { background: color-mix(in srgb, var(--mud-palette-primary) 48%, var(--mud-palette-surface) 52%); }
-.stats-lvl-3 { background: color-mix(in srgb, var(--mud-palette-primary) 74%, var(--mud-palette-surface) 26%); }
-.stats-lvl-4 { background: var(--mud-palette-primary); }
+.stats-lvl-1 { background: color-mix(in srgb, var(--hab-accent-success) 26%, var(--mud-palette-surface) 74%); }
+.stats-lvl-2 { background: color-mix(in srgb, var(--hab-accent-success) 48%, var(--mud-palette-surface) 52%); }
+.stats-lvl-3 { background: color-mix(in srgb, var(--hab-accent-success) 72%, var(--mud-palette-surface) 28%); }
+.stats-lvl-4 { background: var(--hab-accent-streak); box-shadow: 0 0 0 1px color-mix(in srgb, var(--hab-accent-streak) 45%, transparent), 0 1px 4px color-mix(in srgb, var(--hab-accent-streak) 45%, transparent); }
 .stats-lvl-na { background: transparent; opacity: 0.18; border: 1px dashed color-mix(in srgb, var(--mud-palette-divider) 60%, transparent); }
 
 .stats-cell.stats-daily-due {

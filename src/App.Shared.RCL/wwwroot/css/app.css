@@ -951,7 +951,7 @@ input[type="number"].mud-input-slot {
     background: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
     color: var(--mud-palette-primary);
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 32%, transparent);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-md);
     padding: 0.25rem 0.65rem;
     font-family: var(--hab-font-sans);
     font-size: 0.76rem;
@@ -1722,13 +1722,13 @@ input[type="number"].mud-input-slot {
 }
 
 .ai-rendered-markdown .ai-md-quote {
-    border-left: 3px solid var(--mud-palette-primary) !important;
-    padding: 0.3rem 0.75rem !important;
+    padding: 0.5rem 0.75rem !important;
     margin: 0.4rem 0 !important;
-    background-color: var(--mud-palette-background) !important;
-    border-radius: 0 4px 4px 0 !important;
-    font-style: italic !important;
-    opacity: 0.92 !important;
+    background: color-mix(in srgb, var(--mud-palette-primary) 7%, var(--mud-palette-surface)) !important;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 18%, transparent) !important;
+    border-radius: 8px !important;
+    font-style: normal !important;
+    color: var(--mud-palette-text-primary) !important;
 }
 
 .ai-rendered-markdown .ai-inline-code {

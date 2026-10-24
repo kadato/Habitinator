@@ -69,19 +69,19 @@
 }
 
 .stats-lvl-1 {
-    background: color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-surface) 65%);
+    background: color-mix(in srgb, var(--hab-accent-success) 30%, var(--mud-palette-surface) 70%);
 }
 
 .stats-lvl-2 {
-    background: color-mix(in srgb, var(--mud-palette-primary) 55%, var(--mud-palette-surface) 45%);
+    background: color-mix(in srgb, var(--hab-accent-success) 52%, var(--mud-palette-surface) 48%);
 }
 
 .stats-lvl-3 {
-    background: color-mix(in srgb, var(--mud-palette-primary) 80%, var(--mud-palette-surface) 20%);
+    background: color-mix(in srgb, var(--hab-accent-success) 76%, var(--mud-palette-surface) 24%);
 }
 
 .stats-lvl-4 {
-    background: var(--mud-palette-primary);
+    background: var(--hab-accent-streak);
 }
 
 .stats-block-bg {
@@ -327,6 +327,11 @@
     line-height: 1.35;
     color: color-mix(in srgb, var(--mud-palette-text-secondary) 90%, var(--mud-palette-text-primary) 10%);
     opacity: 0.95;
+    white-space: normal;
+    overflow-wrap: break-word;
+    overflow: visible;
+    text-overflow: clip;
+    min-width: 0;
 }
 
 ::deep .stats-kpi-card__icon {
@@ -339,12 +344,16 @@
     display: block;
     padding-left: 0.15rem;
     font-family: var(--hab-font-mono);
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1, "zero" 1;
-    letter-spacing: -0.01em;
     line-height: 1.2;
     color: var(--mud-palette-text-primary);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    min-width: 0;
 }
 
 ::deep .stats-kpi-card--sidebar {
@@ -674,7 +683,7 @@
     padding: 0.2rem;
     background: var(--mud-palette-background-gray);
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-lg);
 }
 .stats-segment__btn {
     appearance: none;
@@ -684,7 +693,7 @@
     font-size: 0.78rem;
     font-weight: 650;
     padding: 0.35rem 0.75rem;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-md);
     cursor: pointer;
 }
 .stats-segment__btn--active {
@@ -693,6 +702,13 @@
     border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, transparent);
 }
 .stats-segment__btn:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: 2px; }
+
+@media (pointer: coarse) {
+    .stats-segment__btn {
+        min-height: 44px;
+        padding: 0.5rem 0.85rem;
+    }
+}
 
 .stats-empty {
     display: flex;

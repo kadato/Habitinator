@@ -49,7 +49,7 @@
     width: 100%;
     gap: var(--space-1);
     padding: 0.2rem;
-    background: var(--mud-palette-surface);
+    background: var(--mud-palette-background-gray);
     border: 1px solid var(--mud-palette-divider);
     border-radius: var(--radius-lg);
     box-sizing: border-box;
@@ -67,7 +67,7 @@
     gap: var(--space-2);
     min-height: 44px;
     padding: var(--space-2) var(--space-3);
-    border: none;
+    border: 1px solid transparent;
     border-radius: var(--radius-md);
     background: transparent;
     color: var(--mud-palette-text-secondary);
@@ -81,7 +81,13 @@
 
 .board-section-switcher__btn--active {
     color: var(--mud-palette-primary);
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, transparent);
+}
+
+.board-section-switcher__btn:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
 }
 
 .board-section-switcher__count {
@@ -529,6 +535,16 @@
 @media (pointer: coarse) {
     .board-search-pill ::deep .mud-input-slot input {
         font-size: 16px !important;
+    }
+
+    .board-search-wrapper,
+    .board-search-pill,
+    .board-search-wrapper ::deep .mud-input-control,
+    .board-search-wrapper ::deep .mud-input-control-input-container,
+    .board-search-wrapper ::deep .mud-input-outlined {
+        height: 44px !important;
+        min-height: 44px !important;
+        max-height: 44px !important;
     }
 }
 

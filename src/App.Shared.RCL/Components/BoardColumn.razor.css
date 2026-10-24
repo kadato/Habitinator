@@ -207,6 +207,13 @@
     }
 }
 
+@media (pointer: coarse) {
+    .board-filter-btn {
+        height: 44px !important;
+        min-height: 44px !important;
+    }
+}
+
 @media (max-width: 479.98px) {
     .board-column ::deep .mud-card-header {
         padding-left: 0.65rem !important;
@@ -288,6 +295,26 @@
     border-radius: 50%;
     margin-bottom: var(--space-5);
     color: var(--mud-palette-text-secondary);
+    background: color-mix(in srgb, var(--mud-palette-text-secondary) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-text-secondary) 18%, transparent);
+}
+
+.board-column--habit .empty-state-icon-container {
+    color: var(--hab-type-habit);
+    background: color-mix(in srgb, var(--hab-type-habit) 12%, transparent);
+    border-color: color-mix(in srgb, var(--hab-type-habit) 24%, transparent);
+}
+
+.board-column--daily .empty-state-icon-container {
+    color: var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 24%, transparent);
+}
+
+.board-column--todo .empty-state-icon-container {
+    color: var(--hab-type-todo-ink);
+    background: color-mix(in srgb, var(--hab-type-todo) 14%, transparent);
+    border-color: color-mix(in srgb, var(--hab-type-todo) 28%, transparent);
 }
 
 .empty-state-icon-container--filter {

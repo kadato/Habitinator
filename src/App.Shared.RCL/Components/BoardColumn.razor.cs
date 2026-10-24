@@ -408,7 +408,7 @@ public partial class BoardColumn : IAsyncDisposable
             _ => OrderBySort(items)
         };
 
-    private bool AnyDoneTodos => EffectiveItems.Any(x => x.IsCompleted);
+    private bool IsItemBusy(Guid id) => _optimisticOverrides.ContainsKey(id);
 
     private bool IsItemDraggable() =>
         Section != BoardSection.Todo || _todoFilter == TodoListFilter.Active;
@@ -485,9 +485,9 @@ public partial class BoardColumn : IAsyncDisposable
     {
         return Section switch
         {
-            BoardSection.Habit => "Habits track long-term goals. Use + or - to log entries. Click title for notes.",
-            BoardSection.Daily => "Dailies repeat automatically. Check off when done for today. Click title for details.",
-            BoardSection.Todo => "To-Dos are single tasks. On Active, drag cards to reorder. Click title for details.",
+            BoardSection.Habit => "Use + / − to log. Open the title for notes and counters.",
+            BoardSection.Daily => "Check off when done today. Open the title for details.",
+            BoardSection.Todo => "Drag to reorder on Active. Open the title for details.",
             _ => string.Empty
         };
     }

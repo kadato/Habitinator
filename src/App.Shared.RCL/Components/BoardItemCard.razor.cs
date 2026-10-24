@@ -26,6 +26,9 @@ public partial class BoardItemCard
     [Parameter] public EventCallback OnDelete { get; set; }
     [Parameter] public EventCallback<(Guid ChecklistItemId, bool IsDone)> OnSetChecklistItemDone { get; set; }
 
+    /// <summary>True while a habit log or toggle is saving. Shows the pending state. Blocks double-tap.</summary>
+    [Parameter] public bool IsBusy { get; set; }
+
     /// <summary>Oldest missed scheduled day. Set for dailies with past misses in the catch-up window.</summary>
     [Parameter] public DateOnly? OverdueSince { get; set; }
 
@@ -68,8 +71,11 @@ public partial class BoardItemCard
                || _lastRenderedSection != Section
                || _lastRenderedCanReorder != CanReorder
                || _lastRenderedSubtasksExpanded != _subtasksExpanded
-               || _lastRenderedOverdueSince != OverdueSince;
+               || _lastRenderedOverdueSince != OverdueSince
+               || _lastRenderedIsBusy != IsBusy;
     }
+
+    private bool? _lastRenderedIsBusy;
 
     protected override void OnAfterRender(bool firstRender)
     {
@@ -78,6 +84,7 @@ public partial class BoardItemCard
         _lastRenderedCanReorder = CanReorder;
         _lastRenderedSubtasksExpanded = _subtasksExpanded;
         _lastRenderedOverdueSince = OverdueSince;
+        _lastRenderedIsBusy = IsBusy;
     }
 
     private void ToggleSubtasksExpand()
@@ -184,6 +191,41 @@ public partial class BoardItemCard
         if (e.Key is "Enter" or " ")
         {
             await OnOpenEditor.InvokeAsync();
+            return;
         }
+
+        if (Section != BoardSection.Habit || IsBusy)
+        {
+            return;
+        }
+
+        if ((e.Key is "+" or "=") && Item.TrackPlus)
+        {
+            await OnHabitUp.InvokeAsync();
+        }
+        else if ((e.Key is "-" or "_" or "Subtract") && Item.TrackMinus)
+        {
+            await OnHabitDown.InvokeAsync();
+        }
+    }
+
+    private string GetTitleAriaLabel()
+    {
+        if (Section == BoardSection.Habit && (Item.TrackPlus || Item.TrackMinus))
+        {
+            return $"Open details for {Item.Title}. Press plus to log positive. Press minus to log negative.";
+        }
+
+        return $"Open details for {Item.Title}";
+    }
+
+    private string GetTitleHint()
+    {
+        if (Section == BoardSection.Habit && (Item.TrackPlus || Item.TrackMinus))
+        {
+            return "Open details. Shortcut: + logs positive, - logs negative.";
+        }
+
+        return "Open details";
     }
 }

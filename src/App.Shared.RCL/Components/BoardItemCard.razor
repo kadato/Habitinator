@@ -4,19 +4,21 @@
         <div class="board-card__habit-btns board-card__left">
             @if (Item.TrackPlus)
             {
-                <button type="button" class="board-sq board-sq--good" title="Log positive" aria-label="@($"Log positive for {Item.Title}")" draggable="false" @onclick="OnHabitUp" @onclick:stopPropagation="true">
+                <button type="button" class="@($"board-sq board-sq--good{(IsBusy ? " board-sq--pending" : string.Empty)}")" title="Log positive for this habit" aria-label="@($"Log positive for {Item.Title}{(IsBusy ? ", saving" : string.Empty)}")" aria-busy="@(IsBusy ? "true" : "false")" disabled="@IsBusy" draggable="false" @onclick="OnHabitUp" @onclick:stopPropagation="true">
                     <svg aria-hidden="true" class="board-habit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
+                    <span class="hab-visually-hidden">Log positive</span>
                 </button>
             }
             @if (Item.TrackMinus)
             {
-                <button type="button" class="board-sq board-sq--bad" title="Log negative" aria-label="@($"Log negative for {Item.Title}")" draggable="false" @onclick="OnHabitDown" @onclick:stopPropagation="true">
+                <button type="button" class="@($"board-sq board-sq--bad{(IsBusy ? " board-sq--pending" : string.Empty)}")" title="Log negative for this habit" aria-label="@($"Log negative for {Item.Title}{(IsBusy ? ", saving" : string.Empty)}")" aria-busy="@(IsBusy ? "true" : "false")" disabled="@IsBusy" draggable="false" @onclick="OnHabitDown" @onclick:stopPropagation="true">
                     <svg aria-hidden="true" class="board-habit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
+                    <span class="hab-visually-hidden">Log negative</span>
                 </button>
             }
         </div>
@@ -53,7 +55,7 @@
         </div>
     }
     <div class="board-card__head">
-        <button type="button" class="board-card__title" @onclick="OnOpenEditor" @onkeydown="OnTitleKeyDown" aria-label="@($"Open details for {Item.Title}")">
+        <button type="button" class="board-card__title" @onclick="OnOpenEditor" @onkeydown="OnTitleKeyDown" aria-label="@GetTitleAriaLabel()" title="@GetTitleHint()">
             <span class="board-card__title-text">@Item.Title</span>
         </button>
         <div class="board-card__head-actions">

@@ -20,16 +20,6 @@
                             <MudText Typo="Typo.body2" Class="board-column-info-text">
                                 @GetGlossaryText()
                             </MudText>
-                            @if (Section == BoardSection.Todo)
-                            {
-                                <MudDivider Class="my-2"/>
-                                <MudMenuItem OnClick="DeleteAllDoneTodosAsync" Disabled="@(!AnyDoneTodos)">
-                                    <div class="d-flex align-center gap-2">
-                                        <MudIcon Icon="@Icons.Material.Filled.DeleteSweep" Size="Size.Small" Color="Color.Error" aria-hidden="true" />
-                                        <MudText Typo="Typo.body2" Color="Color.Error">Delete all done to-dos</MudText>
-                                    </div>
-                                </MudMenuItem>
-                            }
                         </ChildContent>
                     </MudMenu>
                 </MudStack>
@@ -221,6 +211,7 @@
                        Section="Section"
                        CanReorder="IsItemDraggable()"
                        OverdueSince="@GetDailyOverdueSince(item)"
+                       IsBusy="@IsItemBusy(item.Id)"
                        OnHabitUp="@(() => HabitUpAsync(item))"
                        OnHabitDown="@(() => HabitDownAsync(item))"
                        OnToggle="@(() => ToggleAsync(item))"

@@ -6,21 +6,21 @@
     </linearGradient>
     <style type="text/css"><![CDATA[
       @font-face {
-        font-family: 'Plus Jakarta Sans';
+        font-family: 'Karla';
         font-style: normal;
         font-weight: 700;
         font-display: swap;
-        src: url('fonts/PlusJakartaSans-Bold.woff2') format('woff2');
+        src: url('fonts/Karla-Bold.woff2') format('woff2');
       }
       @font-face {
-        font-family: 'Plus Jakarta Sans';
+        font-family: 'Karla';
         font-style: normal;
         font-weight: 500;
         font-display: swap;
-        src: url('fonts/PlusJakartaSans-Medium.woff2') format('woff2');
+        src: url('fonts/Karla-Medium.woff2') format('woff2');
       }
-      .title { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; }
-      .tagline { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 500; }
+      .title { font-family: 'Karla', sans-serif; font-weight: 700; }
+      .tagline { font-family: 'Karla', sans-serif; font-weight: 500; }
     ]]></style>
   </defs>
   <rect width="1200" height="630" fill="url(#bg)"/>

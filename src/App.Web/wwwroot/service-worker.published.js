@@ -17,9 +17,11 @@ const SHELL_ASSETS = [
     '/_content/MudBlazor/MudBlazor.min.css',
     '/_content/MudBlazor/MudBlazor.min.js',
     '/_framework/blazor.web.js',
-    '/_content/App.Shared.RCL/fonts/PlusJakartaSans-Regular.woff2',
-    '/_content/App.Shared.RCL/fonts/PlusJakartaSans-Medium.woff2',
-    '/_content/App.Shared.RCL/fonts/PlusJakartaSans-Bold.woff2'
+    '/_content/App.Shared.RCL/fonts/karla-400.woff2',
+    '/_content/App.Shared.RCL/fonts/karla-500.woff2',
+    '/_content/App.Shared.RCL/fonts/karla-600.woff2',
+    '/_content/App.Shared.RCL/fonts/karla-700.woff2',
+    '/_content/App.Shared.RCL/fonts/karla-800.woff2'
 ];
 
 // Match all wasm and js files under the framework directory.

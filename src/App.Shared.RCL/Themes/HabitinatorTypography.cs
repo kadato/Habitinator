@@ -6,7 +6,7 @@ internal static class HabitinatorTypography
 {
     private static readonly string[] FontFamily =
     [
-        "Plus Jakarta Sans",
+        "Karla",
         "ui-sans-serif",
         "system-ui",
         "-apple-system",

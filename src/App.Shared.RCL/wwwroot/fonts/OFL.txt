@@ -1,2 +1,6 @@
-Plus Jakarta Sans is licensed under the SIL Open Font License 1.1.
-Source: https://fonts.google.com/specimen/Plus+Jakarta+Sans
+Karla is licensed under the SIL Open Font License 1.1.
+Source: https://fonts.google.com/specimen/Karla
+Copyright (c) Jonathan Pinhorn.
+
+JetBrains Mono is licensed under the SIL Open Font License 1.1.
+Source: https://fonts.google.com/specimen/JetBrains+Mono

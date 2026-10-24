@@ -30,9 +30,9 @@ public static class MauiProgram
             .UseMauiApp<App>()
             .ConfigureFonts(fonts =>
             {
-                fonts.AddFont("PlusJakartaSans-Regular.ttf", "PlusJakartaSans");
-                fonts.AddFont("PlusJakartaSans-Medium.ttf", "PlusJakartaSansMedium");
-                fonts.AddFont("PlusJakartaSans-Bold.ttf", "PlusJakartaSansBold");
+                fonts.AddFont("Karla-Regular.ttf", "Karla");
+                fonts.AddFont("Karla-Medium.ttf", "KarlaMedium");
+                fonts.AddFont("Karla-Bold.ttf", "KarlaBold");
             });
         builder.UseLocalNotification(config =>
         {

@@ -17,85 +17,8 @@
         <EditDialogNotes @bind-Notes="_notes"
                          @bind-Notes:after="() => ScheduleSave()"/>
 
-        <div class="hab-checklist">
-            <div class="hab-checklist__head">
-                <span class="hab-checklist__head-title">
-                    <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-                    Checklist
-                </span>
-                @if (_checklistRows.Count > 0)
-                {
-                    <span class="hab-checklist__count">@_checklistRows.Count(x => x.IsDone) / @_checklistRows.Count</span>
-                }
-            </div>
-            <div class="hab-checklist__list">
-                <ChecklistEditor @bind-Value="_checklistRows"
-                                 @bind-Value:after="() => ScheduleSave(300)"/>
-            </div>
-        </div>
-
-        <div class="hab-modal__section">
-            <span class="hab-modal__section-label">
-                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path><path d="M12 8v8"></path></svg>
-                Track which counters
-            </span>
-            <div class="habit-track">
-                <button type="button"
-                        class="habit-track__option @(_trackPlus ? "habit-track__option--on-good" : string.Empty)"
-                        @onclick="ToggleTrackPlus"
-                        @attributes="PlusAria">
-                    <span class="habit-track__circle habit-track__circle--good">
-                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="12" y1="5" x2="12" y2="19"></line>
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                        </svg>
-                    </span>
-                    <span class="habit-track__label">Plus</span>
-                </button>
-                <button type="button"
-                        class="habit-track__option @(_trackMinus ? "habit-track__option--on-bad" : string.Empty)"
-                        @onclick="ToggleTrackMinus"
-                        @attributes="MinusAria">
-                    <span class="habit-track__circle habit-track__circle--bad">
-                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                        </svg>
-                    </span>
-                    <span class="habit-track__label">Minus</span>
-                </button>
-            </div>
-            <span style="font-size:0.72rem; color:var(--mud-palette-text-secondary); margin-top:0.1rem;">At least one counter stays on. Counters show on the board card.</span>
-        </div>
-
-        <div class="hab-modal__section">
-            <span class="hab-modal__section-label">
-                <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
-                Tags
-            </span>
-            <TagPicker @bind-Tags="_tags"
-                       @bind-Tags:after="() => SaveNowAsync()"
-                       TriggerId="edit-habit-tags-trigger" @ref="_tagPicker"/>
-        </div>
-
         <div class="hab-modal__section hab-modal__section--plain">
-            <MudText Typo="Typo.caption" Class="edit-daily-label-body" Style="margin-bottom:0.35rem;">Reset counter</MudText>
-            <MudSelect T="HabitResetPeriod"
-                       @bind-Value="_resetPeriod"
-                       @bind-Value:after="() => { _ = SaveNowAsync(); }"
-                       Variant="Variant.Outlined"
-                       Class="hab-modal__field edit-habit-select"
-                       Margin="Margin.Dense"
-                       aria-label="Reset counter"
-                       AnchorOrigin="Origin.BottomLeft"
-                       TransformOrigin="Origin.TopLeft"
-                       Dense="true">
-                <MudSelectItem T="HabitResetPeriod" Value="HabitResetPeriod.Daily">Daily</MudSelectItem>
-                <MudSelectItem T="HabitResetPeriod" Value="HabitResetPeriod.Weekly">Weekly</MudSelectItem>
-                <MudSelectItem T="HabitResetPeriod" Value="HabitResetPeriod.Monthly">Monthly</MudSelectItem>
-            </MudSelect>
-        </div>
-
-        <div class="hab-modal__section hab-modal__section--plain">
+            <span class="hab-modal__section-label">Counters</span>
             <span class="edit-daily-label-body" style="margin:0 0 0.35rem 0;">Adjust + count</span>
             <div class="counter-adjust">
                 <button type="button" class="counter-adjust__btn counter-adjust__btn--bad" aria-label="Decrease + count" @onclick="DecrementPlusLocal" disabled="@(_counter < 1)">
@@ -118,6 +41,107 @@
             </div>
         </div>
 
+        <div class="hab-advanced @(_checklistOpen ? "hab-advanced--open" : string.Empty)">
+            <button type="button" class="hab-advanced__trigger" @onclick="() => _checklistOpen = !_checklistOpen" aria-expanded="@(_checklistOpen ? "true" : "false")" aria-label="@($"Checklist, {_checklistRows.Count(x => x.IsDone)} of {_checklistRows.Count} done")">
+                <span>Checklist@(_checklistRows.Count > 0 ? $" ({_checklistRows.Count(x => x.IsDone)}/{_checklistRows.Count})" : string.Empty)</span>
+                <span class="hab-advanced__chevron" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </span>
+            </button>
+            @if (_checklistOpen)
+            {
+                <div class="hab-advanced__body">
+                    <div class="hab-checklist">
+                        <div class="hab-checklist__list">
+                            <ChecklistEditor @bind-Value="_checklistRows"
+                                             @bind-Value:after="() => ScheduleSave(300)"/>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="hab-advanced @(_tagsOpen ? "hab-advanced--open" : string.Empty)">
+            <button type="button" class="hab-advanced__trigger" @onclick="() => _tagsOpen = !_tagsOpen" aria-expanded="@(_tagsOpen ? "true" : "false")">
+                <span>Tags@(string.IsNullOrWhiteSpace(_tags) ? string.Empty : $" ({EditDialogHelpers.FormatTags(_tags).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length})")</span>
+                <span class="hab-advanced__chevron" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </span>
+            </button>
+            @if (_tagsOpen)
+            {
+                <div class="hab-advanced__body">
+                    <TagPicker @bind-Tags="_tags"
+                               @bind-Tags:after="() => SaveNowAsync()"
+                               TriggerId="edit-habit-tags-trigger" @ref="_tagPicker"/>
+                </div>
+            }
+        </div>
+
+        <div class="hab-advanced @(_advancedOpen ? "hab-advanced--open" : string.Empty)">
+            <button type="button" class="hab-advanced__trigger" @onclick="() => _advancedOpen = !_advancedOpen" aria-expanded="@(_advancedOpen ? "true" : "false")">
+                <span>Tracking and reset</span>
+                <span class="hab-advanced__chevron" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </span>
+            </button>
+            @if (_advancedOpen)
+            {
+                <div class="hab-advanced__body">
+                    <div class="hab-modal__section">
+                        <span class="hab-modal__section-label">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path><path d="M12 8v8"></path></svg>
+                            Track which counters
+                        </span>
+                        <div class="habit-track">
+                            <button type="button"
+                                    class="habit-track__option @(_trackPlus ? "habit-track__option--on-good" : string.Empty)"
+                                    @onclick="ToggleTrackPlus"
+                                    @attributes="PlusAria">
+                                <span class="habit-track__circle habit-track__circle--good">
+                                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                </span>
+                                <span class="habit-track__label">Plus</span>
+                            </button>
+                            <button type="button"
+                                    class="habit-track__option @(_trackMinus ? "habit-track__option--on-bad" : string.Empty)"
+                                    @onclick="ToggleTrackMinus"
+                                    @attributes="MinusAria">
+                                <span class="habit-track__circle habit-track__circle--bad">
+                                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                </span>
+                                <span class="habit-track__label">Minus</span>
+                            </button>
+                        </div>
+                        <span style="font-size:0.72rem; color:var(--mud-palette-text-secondary); margin-top:0.1rem;">At least one counter stays on. Counters show on the board card.</span>
+                    </div>
+
+                    <div class="hab-modal__section hab-modal__section--plain">
+                        <MudText Typo="Typo.caption" Class="edit-daily-label-body" Style="margin-bottom:0.35rem;">Reset counter</MudText>
+                        <MudSelect T="HabitResetPeriod"
+                                   @bind-Value="_resetPeriod"
+                                   @bind-Value:after="() => { _ = SaveNowAsync(); }"
+                                   Variant="Variant.Outlined"
+                                   Class="hab-modal__field edit-habit-select"
+                                   Margin="Margin.Dense"
+                                   aria-label="Reset counter"
+                                   AnchorOrigin="Origin.BottomLeft"
+                                   TransformOrigin="Origin.TopLeft"
+                                   Dense="true">
+                            <MudSelectItem T="HabitResetPeriod" Value="HabitResetPeriod.Daily">Daily</MudSelectItem>
+                            <MudSelectItem T="HabitResetPeriod" Value="HabitResetPeriod.Weekly">Weekly</MudSelectItem>
+                            <MudSelectItem T="HabitResetPeriod" Value="HabitResetPeriod.Monthly">Monthly</MudSelectItem>
+                        </MudSelect>
+                    </div>
+                </div>
+            }
+        </div>
+
         <EditDialogFooterActions OnArchive="() => CloseWithAction(EditDialogAction.Archive)" OnDelete="() => CloseWithAction(EditDialogAction.Delete)"/>
     </div>
 </div>
@@ -138,6 +162,9 @@
     private int _negativeCounter;
 
     private List<ChecklistRow> _checklistRows = [];
+    private bool _checklistOpen;
+    private bool _tagsOpen;
+    private bool _advancedOpen;
 
     protected override string BatchDescription => $"Edit \"{Item.Title}\"";
 

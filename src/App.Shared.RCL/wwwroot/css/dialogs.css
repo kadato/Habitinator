@@ -300,7 +300,8 @@
 }
 .edit-daily-checklist__input .mud-input-outlined-border { border: none !important; }
 .edit-daily-checklist__input .mud-input-root { color: var(--mud-palette-text-primary); }
-.edit-daily-checklist__input .mud-input-root:focus-within {
+.edit-daily-checklist__input .mud-input-root:focus-within,
+.edit-daily-checklist__input input:focus-visible {
     outline: 2px solid var(--mud-palette-primary) !important;
     outline-offset: 1px !important;
     border-radius: var(--radius-sm);
@@ -515,7 +516,7 @@
     padding: 0.2rem;
     background: var(--mud-palette-background-gray);
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-lg);
     width: 100%;
 }
 .hab-segment__btn {
@@ -526,7 +527,7 @@
     justify-content: center;
     gap: 0.45rem;
     padding: 0.45rem 0.6rem;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-md);
     border: 1px solid transparent;
     background: transparent;
     color: var(--mud-palette-text-secondary);
@@ -863,7 +864,7 @@
     padding: 0.2rem;
     background: var(--mud-palette-background-gray);
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-lg);
 }
 .stats-segment__btn {
     appearance: none;
@@ -873,7 +874,7 @@
     font-size: 0.78rem;
     font-weight: 650;
     padding: 0.35rem 0.75rem;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-md);
     cursor: pointer;
     outline: none;
 }
@@ -885,6 +886,13 @@
     background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
     color: var(--mud-palette-primary);
     border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, transparent);
+}
+
+@media (pointer: coarse) {
+    .stats-segment__btn {
+        min-height: 44px;
+        padding: 0.5rem 0.85rem;
+    }
 }
 .stats-habit-ratio {
     flex-shrink: 0;

@@ -20,20 +20,23 @@
             <EditDialogNotes @bind-Notes="_notes"
                              @bind-Notes:after="() => ScheduleSave()"/>
 
-            <div class="hab-checklist">
-                <div class="hab-checklist__head">
-                    <span class="hab-checklist__head-title">
-                        <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-                        Checklist
+            <div class="hab-advanced @(_checklistOpen ? "hab-advanced--open" : string.Empty)">
+                <button type="button" class="hab-advanced__trigger" @onclick="() => _checklistOpen = !_checklistOpen" aria-expanded="@(_checklistOpen ? "true" : "false")">
+                    <span>Checklist@(_checklistRows.Count > 0 ? $" ({_checklistRows.Count(x => x.IsDone)}/{_checklistRows.Count})" : string.Empty)</span>
+                    <span class="hab-advanced__chevron" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                     </span>
-                    @if (_checklistRows.Count > 0)
-                    {
-                        <span class="hab-checklist__count">@_checklistRows.Count(x => x.IsDone) / @_checklistRows.Count</span>
-                    }
-                </div>
-                <div class="hab-checklist__list">
-                    <ChecklistEditor @bind-Value="_checklistRows" @bind-Value:after="() => ScheduleSave(300)"/>
-                </div>
+                </button>
+                @if (_checklistOpen)
+                {
+                    <div class="hab-advanced__body">
+                        <div class="hab-checklist">
+                            <div class="hab-checklist__list">
+                                <ChecklistEditor @bind-Value="_checklistRows" @bind-Value:after="() => ScheduleSave(300)"/>
+                            </div>
+                        </div>
+                    </div>
+                }
             </div>
 
             <div class="hab-modal__section" style="padding:0.7rem 0.75rem;">
@@ -85,12 +88,19 @@
                 </div>
             }
 
-            <div class="hab-modal__section">
-                <span class="hab-modal__section-label">
-                    <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path></svg>
-                    Tags
-                </span>
-                <TagPicker @bind-Tags="_tags" @bind-Tags:after="() => SaveNowAsync()" TriggerId="edit-daily-tags-trigger" @ref="_tagPicker"/>
+            <div class="hab-advanced @(_tagsOpen ? "hab-advanced--open" : string.Empty)">
+                <button type="button" class="hab-advanced__trigger" @onclick="() => _tagsOpen = !_tagsOpen" aria-expanded="@(_tagsOpen ? "true" : "false")">
+                    <span>Tags@(string.IsNullOrWhiteSpace(_tags) ? string.Empty : $" ({EditDialogHelpers.FormatTags(_tags).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length})")</span>
+                    <span class="hab-advanced__chevron" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </span>
+                </button>
+                @if (_tagsOpen)
+                {
+                    <div class="hab-advanced__body">
+                        <TagPicker @bind-Tags="_tags" @bind-Tags:after="() => SaveNowAsync()" TriggerId="edit-daily-tags-trigger" @ref="_tagPicker"/>
+                    </div>
+                }
             </div>
 
             <div class="hab-modal__section" style="padding:0.7rem 0.75rem;">
@@ -163,6 +173,8 @@
     private int _repeatInterval = 1;
     private int _weekdays;
     private List<ChecklistRow> _checklistRows = [];
+    private bool _checklistOpen;
+    private bool _tagsOpen;
     private int _counter;
     private int _currentStreak;
     private int _previousStreak;

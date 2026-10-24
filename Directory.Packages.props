@@ -53,7 +53,7 @@
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.6.0" />
 
     <!-- Aspire AppHost dependencies -->
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.3" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.4" />
     <PackageVersion Include="MessagePack" Version="3.1.12" />
 
     <!-- Testing dependencies -->

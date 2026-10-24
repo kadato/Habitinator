@@ -51,14 +51,14 @@
     border-radius: var(--radius-lg) !important;
 }
 
-/* Filter tabs -- pill segmented like board filters */
+/* Filter tabs -- rect segmented like board filters */
 .filter-tabs {
     display: inline-flex;
     gap: 0.2rem;
     padding: 0.2rem;
     background: var(--mud-palette-background-gray);
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-lg);
     border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
     overflow-x: auto;
     scrollbar-width: none;
@@ -69,7 +69,7 @@
     appearance: none;
     background: transparent;
     border: 1px solid transparent;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-md);
     padding: 0.38rem 0.7rem;
     font-family: inherit;
     font-size: 0.78rem;

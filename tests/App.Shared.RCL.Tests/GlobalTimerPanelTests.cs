@@ -121,12 +121,12 @@ public sealed class GlobalTimerPanelTests : IAsyncDisposable
         popover.Instance.Open.Should().BeFalse();
 
         // Act - Click the info button adornment
-        var infoBtn = cut.Find("button[aria-label=\"About time's up alerts\"]");
+        var infoBtn = cut.Find("button[aria-label=\"About alert timing\"]");
         infoBtn.Click();
 
         // Assert - Popover is now open and rendered in popover provider
         popover.Instance.Open.Should().BeTrue();
-        _popoverProvider.Markup.Should().Contain("Time's up alerts");
+        _popoverProvider.Markup.Should().Contain("Alert timing");
         _popoverProvider.Markup.Should().Contain(FocusDurationInput.HelpTooltip);
 
         // Act - Click the close button
@@ -146,7 +146,7 @@ public sealed class GlobalTimerPanelTests : IAsyncDisposable
         var popover = cut.FindComponents<MudPopover>().Single(p => p.Instance.Class?.Contains("timer-focus-help-popover") == true);
 
         // Act - Open popover
-        var infoBtn = cut.Find("button[aria-label=\"About time's up alerts\"]");
+        var infoBtn = cut.Find("button[aria-label=\"About alert timing\"]");
         infoBtn.Click();
         popover.Instance.Open.Should().BeTrue();
 
@@ -164,7 +164,7 @@ public sealed class GlobalTimerPanelTests : IAsyncDisposable
         var popover = cut.FindComponents<MudPopover>().Single(p => p.Instance.Class?.Contains("timer-focus-help-popover") == true);
 
         // Open popover
-        var infoBtn = cut.Find("button[aria-label=\"About time's up alerts\"]");
+        var infoBtn = cut.Find("button[aria-label=\"About alert timing\"]");
         infoBtn.Click();
         popover.Instance.Open.Should().BeTrue();
 

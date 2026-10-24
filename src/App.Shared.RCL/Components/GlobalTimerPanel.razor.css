@@ -111,10 +111,11 @@
 
 .timer-field-sub ::deep .mud-typography {
     display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
     line-height: 1.35 !important;
+    overflow-wrap: break-word;
 }
 
 /* Keep the MudBlazor outlined rendering, with the label notch and adornment rhythm.
@@ -181,13 +182,13 @@
     font-feature-settings: "tnum" 1, "zero" 1;
 }
 
-/* Segmented mode toggle. Even padding all around, roomy pills. */
+/* Segmented mode toggle. Rect container with rect thumbs, matching the app-wide segment pattern. */
 .custom-timer-toggle {
     display: flex;
     width: 100%;
     background-color: var(--mud-palette-background-gray);
     border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-lg);
     padding: 0.25rem;
     gap: 0.25rem;
     position: relative;
@@ -202,7 +203,7 @@
     box-sizing: border-box;
     border: 1px solid transparent;
     background: transparent;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-md);
     padding: 10px 14px;
     min-height: 44px;
     height: 44px;
@@ -487,8 +488,8 @@
     .timer-inputs-pair {
         flex: 1 1 320px;
         min-width: min(100%, 280px);
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: center;
+        grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+        align-items: start;
     }
 
     /* Pomodoro box hugs its content instead of stretching the column. */
@@ -497,14 +498,15 @@
         max-width: 100%;
     }
 
-    /* Helper lines live on stacked layouts only, so the row stays one line.
-       Error text keeps showing. */
-    .timer-inputs-pair ::deep .mud-input-control:not(.mud-input-error) .mud-input-helper-text {
-        display: none !important;
+    .timer-inputs-pair ::deep .mud-input-helper-text {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        overflow-wrap: break-word !important;
     }
 
     .timer-field-sub {
-        display: none;
+        display: block;
     }
 
     .timer-toolbar__actions {
@@ -646,5 +648,15 @@
 
     .timer-main {
         gap: 0.65rem;
+    }
+}
+
+/* Fine pointers get smaller icon buttons. Touch keeps the full 44px targets above. */
+@media (min-width: 960px) and (pointer: fine) {
+    ::deep .timer-icon-btn {
+        width: 2.5rem !important;
+        height: 2.5rem !important;
+        min-width: 2.5rem !important;
+        min-height: 2.5rem !important;
     }
 }

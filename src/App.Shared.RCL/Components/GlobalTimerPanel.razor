@@ -24,7 +24,7 @@
                         @GetDisplayTime()
                         @if (!string.IsNullOrWhiteSpace(GetRunningTargetLabel()))
                         {
-                            <span class="mud-text-secondary font-weight-normal text-truncate max-w-240">, @GetRunningTargetLabel()</span>
+                            <span class="mud-text-secondary font-weight-normal text-truncate max-w-240" title="@GetRunningTargetLabel()">, @GetRunningTargetLabel()</span>
                         }
                     </MudText>
                 }
@@ -219,23 +219,11 @@
 
     private bool _showFocusHelp;
 
-    private string FocusHelperText
-    {
-        get
-        {
-            if (_showFocusHelp)
-            {
-                return "Optional one-time alert. An empty field means no alert.";
-            }
-
-            if (FocusDurationInput.TryParse(_focusDurationText, out var parsed) && parsed.HasValue && parsed.Value > TimeSpan.Zero)
-            {
-                return $"Time's up alert at {FocusDurationInput.FormatForAlertLabel(parsed.Value)}";
-            }
-
-            return "Examples: 10m, 25m, 1:20, 90s";
-        }
-    }
+    /// <summary>Live preview of the parsed alert, shown in the field label. Empty input keeps the default label.</summary>
+    private string AlertLabel =>
+        FocusDurationInput.TryParse(_focusDurationText, out var parsed) && parsed.HasValue && parsed.Value > TimeSpan.Zero
+            ? $"Alert at {FocusDurationInput.FormatForAlertLabel(parsed.Value)}"
+            : "Alert after (optional)";
 
     private void ToggleFocusHelp() => _showFocusHelp = !_showFocusHelp;
 
@@ -278,14 +266,13 @@
      private RenderFragment RenderTimerInputs => __builder =>
      {
           <div class="timer-inputs-pair">
-             <div class="timer-target-input-row">
+             <div class="timer-target-input-row" title="Leave empty for an open session without board progress.">
                  <MudAutocomplete T="string"
                                   Value="@_sessionTargetText"
                                   ValueChanged="OnSessionTargetValueChanged"
                                   SearchFunc="SearchSessionTargetsAsync"
                                   Label="Session target"
                                   Placeholder="Search board or type a custom label"
-                                  HelperText="If you leave the target empty, the timer runs an open session."
                                   Variant="Variant.Outlined"
                                   Margin="Margin.Dense"
                                   Class="timer-target-field flex-grow-1"
@@ -319,9 +306,8 @@
                       <MudTextField T="string"
                                     @bind-Text="FocusDurationText"
                                     OnBlur="OnFocusDurationBlur"
-                                    Label="Time's up after"
-                                    Placeholder="10m, 25m, 1:20, 90s"
-                                    HelperText="@FocusHelperText"
+                                    Label="@AlertLabel"
+                                    Placeholder="e.g. 25m, 1h 20m"
                                     Clearable="true"
                                     Variant="Variant.Outlined"
                                     Margin="Margin.Dense"
@@ -329,7 +315,7 @@
                                     Immediate="true"
                                     Adornment="Adornment.End"
                                     AdornmentIcon="@Icons.Material.Outlined.Info"
-                                    AdornmentAriaLabel="About time's up alerts"
+                                    AdornmentAriaLabel="About alert timing"
                                     OnAdornmentClick="ToggleFocusHelp"
                                     Error="@_focusDurationParseError"
                                     ErrorText="@_focusDurationErrorText"/>
@@ -340,7 +326,7 @@
                                   Elevation="4">
                           <MudStack Spacing="1">
                               <div class="d-flex justify-space-between align-center">
-                                  <MudText Typo="Typo.subtitle2" Class="font-weight-bold" Color="Color.Primary">Time's up alerts</MudText>
+                                  <MudText Typo="Typo.subtitle2" Class="font-weight-bold" Color="Color.Primary">Alert timing</MudText>
                                   <MudIconButton Icon="@Icons.Material.Filled.Close"
                                                  Size="Size.Small"
                                                  OnClick="CloseFocusHelp"
@@ -355,7 +341,7 @@
              }
              else
              {
-                  <div class="timer-pomodoro-info-field">
+                  <div class="timer-pomodoro-info-field" title="@GetPomodoroCycleHint()">
                       <MudField Label="Pomodoro session" Variant="Variant.Outlined" Margin="Margin.Dense" Class="timer-pomodoro-field-control">
                           <div class="timer-pomodoro-info-container" title="@GetPomodoroCycleTitle()">
                               <span class="timer-pomodoro-info-item timer-pomodoro-info-item--next">
@@ -368,9 +354,6 @@
                               </span>
                           </div>
                       </MudField>
-                      <div class="timer-field-sub">
-                          <MudText Typo="Typo.caption" Color="Color.Secondary">@GetPomodoroCycleHint()</MudText>
-                      </div>
                   </div>
               }
          </div>

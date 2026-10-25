@@ -65,6 +65,10 @@ public sealed class AiChatRequest
     public string? ApiKeyOverride { get; set; }
 
     public string? ModelOverride { get; set; }
+
+    public string? ClientTimeZoneId { get; set; }
+
+    public string? ClientToday { get; set; }
 }
 
 public sealed class AiChatResponse

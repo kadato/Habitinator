@@ -76,4 +76,55 @@ public sealed class MarkdownFormatterTests
         Assert.Contains("<ol class=\"ai-md-list\">", html);
         Assert.Contains("<li>First</li>", html);
     }
+
+    [Fact]
+    public void Formats_links_and_autolinks_safely()
+    {
+        var input = "See [docs](https://example.com/guide) or visit https://example.com/raw.";
+        var html = MarkdownFormatter.ToHtml(input);
+
+        Assert.Contains("<a class=\"ai-md-link\" href=\"https://example.com/guide\"", html);
+        Assert.Contains("target=\"_blank\"", html);
+        Assert.Contains("rel=\"noopener\"", html);
+        Assert.Contains("https://example.com/raw", html);
+    }
+
+    [Fact]
+    public void Rejects_javascript_links()
+    {
+        var input = "Click [evil](javascript:alert(1))";
+        var html = MarkdownFormatter.ToHtml(input);
+
+        Assert.DoesNotContain("<a ", html);
+        Assert.DoesNotContain("href=\"javascript", html);
+    }
+
+    [Fact]
+    public void Formats_tables()
+    {
+        var input = "| Task | Due |\n| --- | --- |\n| Buy milk | Today |";
+        var html = MarkdownFormatter.ToHtml(input);
+
+        Assert.Contains("<table class=\"ai-md-table\">", html);
+        Assert.Contains("<th>Task</th>", html);
+        Assert.Contains("<td>Buy milk</td>", html);
+    }
+
+    [Fact]
+    public void Formats_horizontal_rule()
+    {
+        var html = MarkdownFormatter.ToHtml("Above\n---\nBelow");
+
+        Assert.Contains("<hr class=\"ai-md-hr\" />", html);
+    }
+
+    [Fact]
+    public void Does_not_link_inside_code_spans()
+    {
+        var input = "`https://example.com/raw`";
+        var html = MarkdownFormatter.ToHtml(input);
+
+        Assert.Contains("<code class=\"ai-inline-code\">https://example.com/raw</code>", html);
+        Assert.DoesNotContain("<a ", html);
+    }
 }

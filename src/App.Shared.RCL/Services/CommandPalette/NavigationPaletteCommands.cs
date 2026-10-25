@@ -183,6 +183,44 @@ internal sealed class NavigationPaletteCommands(
             Keywords: ["keyboard", "shortcuts", "hotkeys", "keys"]));
     }
 
+    public void AddAiPromptCommands(List<CommandItem> list)
+    {
+        if (_uiSession is null)
+        {
+            return;
+        }
+
+        list.Add(new(
+            Id: "ai-prompt-plan",
+            Title: "Ask AI to plan my day",
+            Subtitle: "Open the assistant with a day-planning prompt",
+            Category: "AI assistant",
+            Icon: Icons.Material.Filled.WbSunny,
+            Action: () =>
+            {
+                _close();
+                _uiSession.PendingAiPrompt = "Plan my day based on today dailies and active todos";
+                _uiSession.SetAiDrawer(true);
+                return Task.CompletedTask;
+            },
+            Keywords: ["ai", "plan", "day", "schedule", "assistant"]));
+
+        list.Add(new(
+            Id: "ai-prompt-review",
+            Title: "Ask AI for overdue review",
+            Subtitle: "Open the assistant with overdue and pending review",
+            Category: "AI assistant",
+            Icon: Icons.Material.Filled.Checklist,
+            Action: () =>
+            {
+                _close();
+                _uiSession.PendingAiPrompt = "What dailies and todos do I have left for today, including overdue?";
+                _uiSession.SetAiDrawer(true);
+                return Task.CompletedTask;
+            },
+            Keywords: ["ai", "review", "overdue", "pending", "assistant"]));
+    }
+
     public Task NavigateAsync(string path)
     {
         _close();

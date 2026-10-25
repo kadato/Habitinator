@@ -10,6 +10,9 @@ public sealed class BoardUiSessionState
     public int SettingsSectionIndex { get; set; }
     public bool IsAiDrawerOpen { get; set; }
 
+    /// <summary>Queued prompt for the AI drawer. Set by palette quick actions, consumed on open.</summary>
+    public string? PendingAiPrompt { get; set; }
+
     public event Action? OnAiDrawerChanged;
 
     public void ToggleAiDrawer()

@@ -14,7 +14,8 @@ internal sealed class BoardPaletteCommands(
     IUserNotifier notifier,
     Action<string, string, Guid?> startTimerOn,
     Action close,
-    Func<Task> notifyRefresh)
+    Func<Task> notifyRefresh,
+    BoardUiSessionState? uiSession = null)
 {
     private readonly IBoardDataService _boardData = boardData;
     private readonly IUndoService _undo = undo;
@@ -23,6 +24,7 @@ internal sealed class BoardPaletteCommands(
     private readonly Action<string, string, Guid?> _startTimerOn = startTimerOn;
     private readonly Action _close = close;
     private readonly Func<Task> _notifyRefresh = notifyRefresh;
+    private readonly BoardUiSessionState? _uiSession = uiSession;
 
     private const string SuggestedCategory = "Suggested";
     private const string ActionsCategory = "Actions";
@@ -260,99 +262,108 @@ internal sealed class BoardPaletteCommands(
         }
     }
 
-    private List<CommandItem> GetHabitSubActions(BoardItem h) =>
-    [
-        new(
-            Id: $"habit-{h.Id}-plus",
-            Title: "+1 Increment count",
-            Subtitle: "Log positive completion",
-            Category: ActionsCategory,
-            Icon: Icons.Material.Filled.Add,
-            Action: async () =>
-            {
-                _close();
-                await _boardData.IncrementHabitPlusAsync(h.Id);
-                await _notifyRefresh();
-            },
-            Keywords: ["plus", "increment", "+1", KwAdd]),
-        new(
-            Id: $"habit-{h.Id}-minus",
-            Title: "-1 Decrement count",
-            Subtitle: "Log setback count",
-            Category: ActionsCategory,
-            Icon: Icons.Material.Filled.Remove,
-            Action: async () =>
-            {
-                _close();
-                await _boardData.IncrementHabitMinusAsync(h.Id);
-                await _notifyRefresh();
-            },
-            Keywords: ["minus", "decrement", "-1", "subtract"]),
-        new(
-            Id: $"habit-{h.Id}-reset",
-            Title: "Reset counters",
-            Subtitle: "Set positive and negative counters back to 0",
-            Category: ActionsCategory,
-            Icon: Icons.Material.Filled.RestartAlt,
-            Action: async () =>
-            {
-                _close();
-                await _boardData.UpdateHabitAsync(h.Id, UpdateHabitArgs.From(h) with { Counter = 0, NegativeCounter = 0 });
-                await _notifyRefresh();
-                await _notifier.NotifyAsync($"Counters for '{h.Title}' reset to 0.", Severity.Info);
-            },
-            Keywords: ["reset", "clear", "zero"]),
-        new(
-            Id: $"habit-{h.Id}-timer",
-            Title: "Start focus timer on this habit",
-            Subtitle: StartTimerSubtitle,
-            Category: ActionsCategory,
-            Icon: Icons.Material.Filled.Timer,
-            Action: () =>
-            {
-                _close();
-                _startTimerOn("Habit", h.Title, h.Id);
-                return Task.CompletedTask;
-            },
-            Keywords: [KwTimer, KwStart, KwFocus, KwStopwatch]),
-        new(
-            Id: $"habit-{h.Id}-edit",
-            Title: "Edit habit details",
-            Subtitle: "Open editor for title, notes, and checklist",
-            Category: ActionsCategory,
-            Icon: Icons.Material.Filled.Edit,
-            Action: async () =>
-            {
-                _close();
-                var parameters = new DialogParameters<EditHabitDialog> { { x => x.Item, h } };
-                var dialog = await _dialogs.ShowAsync<EditHabitDialog>(string.Empty, parameters, DialogDefaults.SmallEditor);
-                await dialog.Result;
-                await _notifyRefresh();
-            },
-            Keywords: [KwEdit, KwRename, KwChange, "modify", KwNotes, KwChecklist]),
-        new(
-            Id: $"habit-{h.Id}-archive",
-            Title: "Archive habit",
-            Subtitle: MoveToArchiveSubtitle,
-            Category: ActionsCategory,
-            Icon: Icons.Material.Filled.Archive,
-            Action: async () =>
-            {
-                _close();
-                await _boardData.ArchiveItemAsync(BoardSection.Habit, h.Id);
-                await _notifyRefresh();
-            },
-            Keywords: [KwArchive, KwHide]),
-        new(
-            Id: $"habit-{h.Id}-delete",
-            Title: "Delete habit",
-            Subtitle: "Permanently delete this habit",
-            Category: ActionsCategory,
-            Icon: Icons.Material.Filled.Delete,
-            IsDanger: true,
-            Action: () => DeleteItemAsync(BoardSection.Habit, h.Id),
-            Keywords: [KwDelete, KwRemove, KwTrash, KwDestroy])
-    ];
+    private List<CommandItem> GetHabitSubActions(BoardItem h)
+    {
+        var actions = new List<CommandItem>
+        {
+            new(
+                Id: $"habit-{h.Id}-plus",
+                Title: "+1 Increment count",
+                Subtitle: "Log positive completion",
+                Category: ActionsCategory,
+                Icon: Icons.Material.Filled.Add,
+                Action: async () =>
+                {
+                    _close();
+                    await _boardData.IncrementHabitPlusAsync(h.Id);
+                    await _notifyRefresh();
+                },
+                Keywords: ["plus", "increment", "+1", KwAdd]),
+            new(
+                Id: $"habit-{h.Id}-minus",
+                Title: "-1 Decrement count",
+                Subtitle: "Log setback count",
+                Category: ActionsCategory,
+                Icon: Icons.Material.Filled.Remove,
+                Action: async () =>
+                {
+                    _close();
+                    await _boardData.IncrementHabitMinusAsync(h.Id);
+                    await _notifyRefresh();
+                },
+                Keywords: ["minus", "decrement", "-1", "subtract"]),
+            new(
+                Id: $"habit-{h.Id}-reset",
+                Title: "Reset counters",
+                Subtitle: "Set positive and negative counters back to 0",
+                Category: ActionsCategory,
+                Icon: Icons.Material.Filled.RestartAlt,
+                Action: async () =>
+                {
+                    _close();
+                    await _boardData.UpdateHabitAsync(h.Id, UpdateHabitArgs.From(h) with { Counter = 0, NegativeCounter = 0 });
+                    await _notifyRefresh();
+                    await _notifier.NotifyAsync($"Counters for '{h.Title}' reset to 0.", Severity.Info);
+                },
+                Keywords: ["reset", "clear", "zero"]),
+            new(
+                Id: $"habit-{h.Id}-timer",
+                Title: "Start focus timer on this habit",
+                Subtitle: StartTimerSubtitle,
+                Category: ActionsCategory,
+                Icon: Icons.Material.Filled.Timer,
+                Action: () =>
+                {
+                    _close();
+                    _startTimerOn("Habit", h.Title, h.Id);
+                    return Task.CompletedTask;
+                },
+                Keywords: [KwTimer, KwStart, KwFocus, KwStopwatch]),
+            new(
+                Id: $"habit-{h.Id}-edit",
+                Title: "Edit habit details",
+                Subtitle: "Open editor for title, notes, and checklist",
+                Category: ActionsCategory,
+                Icon: Icons.Material.Filled.Edit,
+                Action: async () =>
+                {
+                    _close();
+                    var parameters = new DialogParameters<EditHabitDialog> { { x => x.Item, h } };
+                    var dialog = await _dialogs.ShowAsync<EditHabitDialog>(string.Empty, parameters, DialogDefaults.SmallEditor);
+                    await dialog.Result;
+                    await _notifyRefresh();
+                },
+                Keywords: [KwEdit, KwRename, KwChange, "modify", KwNotes, KwChecklist]),
+            new(
+                Id: $"habit-{h.Id}-archive",
+                Title: "Archive habit",
+                Subtitle: MoveToArchiveSubtitle,
+                Category: ActionsCategory,
+                Icon: Icons.Material.Filled.Archive,
+                Action: async () =>
+                {
+                    _close();
+                    await _boardData.ArchiveItemAsync(BoardSection.Habit, h.Id);
+                    await _notifyRefresh();
+                },
+                Keywords: [KwArchive, KwHide]),
+            new(
+                Id: $"habit-{h.Id}-delete",
+                Title: "Delete habit",
+                Subtitle: "Permanently delete this habit",
+                Category: ActionsCategory,
+                Icon: Icons.Material.Filled.Delete,
+                IsDanger: true,
+                Action: () => DeleteItemAsync(BoardSection.Habit, h.Id),
+                Keywords: [KwDelete, KwRemove, KwTrash, KwDestroy])
+        };
+        if (BuildAskAiForItem(BoardSection.Habit, h.Id, h.Title) is { } askAi)
+        {
+            actions.Add(askAi);
+        }
+
+        return actions;
+    }
 
     private List<CommandItem> GetDailySubActions(BoardItem d, bool isDone)
     {
@@ -454,6 +465,11 @@ internal sealed class BoardPaletteCommands(
                 Action: () => DeleteItemAsync(BoardSection.Daily, d.Id),
                 Keywords: [KwDelete, KwRemove, KwTrash, KwDestroy])
         };
+
+        if (BuildAskAiForItem(BoardSection.Daily, d.Id, d.Title) is { } askDaily)
+        {
+            actions.Add(askDaily);
+        }
 
         return actions;
     }
@@ -579,7 +595,36 @@ internal sealed class BoardPaletteCommands(
             Action: () => DeleteItemAsync(BoardSection.Todo, t.Id),
             Keywords: [KwDelete, KwRemove, KwTrash, KwDestroy]));
 
+        if (BuildAskAiForItem(BoardSection.Todo, t.Id, t.Title) is { } askTodo)
+        {
+            actions.Add(askTodo);
+        }
+
         return actions;
+    }
+
+    private CommandItem? BuildAskAiForItem(BoardSection section, Guid id, string title)
+    {
+        if (_uiSession is null)
+        {
+            return null;
+        }
+
+        var truncated = title.Length <= 40 ? title : string.Concat(title.AsSpan(0, 39).ToString(), "…");
+        return new CommandItem(
+            Id: $"{section}-{id}-ask-ai",
+            Title: $"Ask AI about \"{truncated}\"",
+            Subtitle: "Open the assistant with this item in context",
+            Category: ActionsCategory,
+            Icon: Icons.Material.Filled.SmartToy,
+            Action: () =>
+            {
+                _close();
+                _uiSession.PendingAiPrompt = $"Help me with my {section} '{title}' (ID: {id}).";
+                _uiSession.SetAiDrawer(true);
+                return Task.CompletedTask;
+            },
+            Keywords: ["ai", "ask", "assistant", "help", "coach"]);
     }
 
     private static bool Matches(string title, string? notes, string? tags, string query)
@@ -631,6 +676,84 @@ internal sealed class BoardPaletteCommands(
         {
             _isCreatingItem = false;
         }
+    }
+
+    public async Task CreateItemWithTitleAsync(BoardSection section, string title)
+    {
+        if (_isCreatingItem)
+        {
+            return;
+        }
+
+        var clean = title.Trim();
+        if (string.IsNullOrWhiteSpace(clean))
+        {
+            await CreateItemAsync(section);
+            return;
+        }
+
+        // Extract inline tags like "#evening" and a simple "due tomorrow|today|yyyy-MM-dd" hint.
+        var (parsedTitle, tags) = ParseInlineTitle(clean);
+        _isCreatingItem = true;
+        _close();
+        try
+        {
+            var item = await _boardData.CreateItemAsync(section, parsedTitle);
+            if (!string.IsNullOrWhiteSpace(tags) && item is not null)
+            {
+                try
+                {
+                    if (section == BoardSection.Todo)
+                    {
+                        await _boardData.UpdateTodoAsync(item.Id, UpdateTodoArgs.From(item) with { Tags = tags });
+                    }
+                    else if (section == BoardSection.Habit)
+                    {
+                        await _boardData.UpdateHabitAsync(item.Id, UpdateHabitArgs.From(item) with { Tags = tags });
+                    }
+                    else
+                    {
+                        await _boardData.UpdateDailyAsync(item.Id, UpdateDailyArgs.From(item) with { Tags = tags });
+                    }
+                }
+                catch
+                {
+                    // Tag enrichment is best effort; the item already exists.
+                }
+            }
+
+            await _notifyRefresh();
+            await _notifier.NotifyAsync($"Added {section}: '{parsedTitle}'.", Severity.Success);
+        }
+        catch
+        {
+            await _notifier.NotifyAsync("Could not create item.", Severity.Error);
+        }
+        finally
+        {
+            _isCreatingItem = false;
+        }
+    }
+
+    private static (string Title, string? Tags) ParseInlineTitle(string input)
+    {
+        var tags = new List<string>();
+        var words = input.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+        var kept = new List<string>();
+        foreach (var w in words)
+        {
+            if (w.StartsWith('#') && w.Length > 1)
+            {
+                tags.Add(w[1..].Trim());
+            }
+            else
+            {
+                kept.Add(w);
+            }
+        }
+
+        var title = kept.Count > 0 ? string.Join(' ', kept) : input.Trim();
+        return (title, tags.Count > 0 ? string.Join(", ", tags) : null);
     }
 
     private static string GetDefaultTitle(BoardSection section) =>

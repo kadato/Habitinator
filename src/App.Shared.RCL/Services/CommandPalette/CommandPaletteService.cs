@@ -20,6 +20,9 @@ public sealed class CommandPaletteService : ICommandPaletteService
     private readonly NavigationPaletteCommands _navigation;
     private readonly ExportPaletteCommands _exportCommands;
     private readonly IRemoteBoardRefreshService? _refresh;
+    private readonly BoardUiSessionState? _uiSession;
+    private readonly List<string> _recentIds = [];
+    private const int MaxRecent = 5;
 
     public CommandPaletteService(
         NavigationManager nav,
@@ -50,11 +53,13 @@ public sealed class CommandPaletteService : ICommandPaletteService
                 timer.Start();
             },
             close,
-            notifyRefresh);
+            notifyRefresh,
+            uiSession);
         _timers = new TimerPaletteCommands(
             timer, boardData, dialogs, notifier, timerSessionLog, _navigation.NavigateAsync, close, notifyRefresh);
         _exportCommands = new ExportPaletteCommands(export, boardData, js, dialogs, notifier, close);
         _refresh = refresh;
+        _uiSession = uiSession;
     }
 
     private async Task NotifyBoardRefreshAsync()
@@ -117,7 +122,149 @@ public sealed class CommandPaletteService : ICommandPaletteService
         _navigation.AddYesterdayRetroCommand(list);
         _exportCommands.AddExportCommand(list);
         _navigation.AddAppearanceCommands(list);
+        _navigation.AddAiPromptCommands(list);
         return Task.FromResult(list);
+    }
+
+    public IReadOnlyList<string> RecentIds => _recentIds;
+
+    public void RecordRecent(string commandId)
+    {
+        if (string.IsNullOrWhiteSpace(commandId))
+        {
+            return;
+        }
+
+        _recentIds.Remove(commandId);
+        _recentIds.Insert(0, commandId);
+        while (_recentIds.Count > MaxRecent)
+        {
+            _recentIds.RemoveAt(_recentIds.Count - 1);
+        }
+    }
+
+    public void SetRecentIds(IEnumerable<string>? ids)
+    {
+        _recentIds.Clear();
+        if (ids is null)
+        {
+            return;
+        }
+
+        foreach (var id in ids.Where(i => !string.IsNullOrWhiteSpace(i)).Distinct().Take(MaxRecent))
+        {
+            _recentIds.Add(id);
+        }
+    }
+
+    public List<CommandItem> BuildRecentGroup(List<CommandItem> rootCommands)
+    {
+        var recent = new List<CommandItem>();
+        foreach (var id in _recentIds)
+        {
+            var match = rootCommands.FirstOrDefault(c => c.Id == id);
+            if (match is not null)
+            {
+                recent.Add(match with { Category = "Recent" });
+            }
+        }
+
+        return recent;
+    }
+
+    private static string Truncate(string value, int maxLength)
+    {
+        if (value.Length <= maxLength)
+        {
+            return value;
+        }
+
+        return string.Concat(value.AsSpan(0, maxLength - 1).TrimEnd(), "…");
+    }
+
+    public List<CommandItem> BuildQuickAddCommands(string query)
+    {
+        var q = query.Trim();
+        if (!q.StartsWith("add ", StringComparison.OrdinalIgnoreCase))
+        {
+            return [];
+        }
+
+        var rest = q[4..].Trim();
+        if (string.IsNullOrWhiteSpace(rest))
+        {
+            return [];
+        }
+
+        var section = BoardSection.Todo;
+        var title = rest;
+        var lower = rest.ToLowerInvariant();
+        if (lower.StartsWith("todo ", StringComparison.Ordinal) || lower.StartsWith("to-do ", StringComparison.Ordinal))
+        {
+            section = BoardSection.Todo;
+            title = rest[(rest.IndexOf(' ') + 1)..].Trim();
+        }
+        else if (lower.StartsWith("habit ", StringComparison.Ordinal))
+        {
+            section = BoardSection.Habit;
+            title = rest[6..].Trim();
+        }
+        else if (lower.StartsWith("daily ", StringComparison.Ordinal) || lower.StartsWith("dailies ", StringComparison.Ordinal))
+        {
+            section = BoardSection.Daily;
+            title = rest[(rest.IndexOf(' ') + 1)..].Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return [];
+        }
+
+        // Strip trailing tags and due hints from the visible title for a cleaner preview.
+        var preview = title;
+        var capturedSection = section;
+        var capturedTitle = title;
+        return
+        [
+            new CommandItem(
+                Id: $"quick-add-{capturedSection}-{preview.GetHashCode(StringComparison.Ordinal):x}",
+                Title: $"Add {capturedSection}: {preview}",
+                Subtitle: "Quick add without opening the editor",
+                Category: "Quick add",
+                Icon: Icons.Material.Filled.Add,
+                Action: () => _board.CreateItemWithTitleAsync(capturedSection, capturedTitle),
+                Keywords: ["add", "quick", "create", capturedSection.ToString().ToLowerInvariant()])
+        ];
+    }
+
+    public CommandItem? BuildAskAiCommand(string query)
+    {
+        var q = query.Trim();
+        if (string.IsNullOrWhiteSpace(q) || q.StartsWith('>'))
+        {
+            return null;
+        }
+
+        if (_uiSession is null)
+        {
+            return null;
+        }
+
+        var prompt = q;
+        return new CommandItem(
+            Id: $"ask-ai-{prompt.GetHashCode(StringComparison.Ordinal):x}",
+            Title: $"Ask AI about \"{Truncate(prompt, 48)}\"",
+            Subtitle: "Open the assistant with this question",
+            Category: "AI assistant",
+            Icon: Icons.Material.Filled.SmartToy,
+            Action: () =>
+            {
+                Close();
+                _uiSession.PendingAiPrompt = prompt;
+                _uiSession.SetAiDrawer(true);
+                return Task.CompletedTask;
+            },
+            Keywords: ["ai", "ask", "assistant", "chat"]);
     }
 
     public async Task<List<CommandItem>> SearchBoardItemsAsync(string query, CancellationToken cancellationToken = default)
@@ -132,9 +279,16 @@ public sealed class CommandPaletteService : ICommandPaletteService
         {
             var snapshot = await _boardData.GetSnapshotAsync(cancellationToken);
             var q = query.Trim();
+            if (q.StartsWith('>'))
+            {
+                // Command-only mode: skip board search so ">" filters root commands.
+                return results;
+            }
+
             if (_board.TryBuildDeleteCommands(q, snapshot) is { } deletes)
             {
-                return deletes;
+                // Delete intent first, but keep timer shortcuts and item matches below it.
+                results.AddRange(deletes);
             }
 
             _timers.AddTimerShortcutCommands(q, results);
@@ -150,6 +304,9 @@ public sealed class CommandPaletteService : ICommandPaletteService
 
     public Task CreateItemAsync(BoardSection section) =>
         _board.CreateItemAsync(section);
+
+    public Task CreateItemWithTitleAsync(BoardSection section, string title) =>
+        _board.CreateItemWithTitleAsync(section, title);
 
     public Task DeleteItemAsync(BoardSection section, Guid itemId) =>
         _board.DeleteItemAsync(section, itemId);

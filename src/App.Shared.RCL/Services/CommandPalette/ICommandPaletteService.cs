@@ -18,7 +18,21 @@ public interface ICommandPaletteService
 
     Task<List<CommandItem>> SearchBoardItemsAsync(string query, CancellationToken cancellationToken = default);
 
+    IReadOnlyList<string> RecentIds { get; }
+
+    void RecordRecent(string commandId);
+
+    void SetRecentIds(IEnumerable<string>? ids);
+
+    List<CommandItem> BuildRecentGroup(List<CommandItem> rootCommands);
+
+    List<CommandItem> BuildQuickAddCommands(string query);
+
+    CommandItem? BuildAskAiCommand(string query);
+
     Task CreateItemAsync(BoardSection section);
+
+    Task CreateItemWithTitleAsync(BoardSection section, string title);
 
     Task DeleteItemAsync(BoardSection section, Guid itemId);
 

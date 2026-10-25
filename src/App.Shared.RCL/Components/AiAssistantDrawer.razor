@@ -1,9 +1,12 @@
 @using App.Shared.RCL.Models
 @using App.Shared.RCL.Services
+@using System.Text.Json
 @implements IDisposable
 @inject BoardUiSessionState UiSessionState
 @inject IUserPreferencesService PreferencesService
 @inject IAiAssistantService AiService
+@inject IBoardDataService BoardData
+@inject IRemoteBoardRefreshService RemoteRefresh
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
@@ -16,7 +19,6 @@
            Class="ai-assistant-drawer"
            ClipMode="DrawerClipMode.Never">
     <div class="ai-drawer-container d-flex flex-column h-100">
-        <!-- Clean Header -->
         <div class="ai-drawer-header px-3 py-2 d-flex align-center justify-space-between gap-1">
             <div class="d-flex align-center gap-2 min-w-0 flex-shrink-1">
                 <div class="ai-header-avatar flex-shrink-0" aria-hidden="true">
@@ -86,6 +88,12 @@
                 }
             </div>
             <div class="d-flex align-center gap-0 flex-shrink-0">
+                <MudIconButton Icon="@Icons.Material.Filled.Add"
+                               Size="Size.Small"
+                               Color="Color.Inherit"
+                               Class="ai-header-btn"
+                               aria-label="New chat thread"
+                               OnClick="NewThreadAsync" />
                 <MudIconButton Icon="@Icons.Material.Filled.DeleteSweep"
                                Size="Size.Small"
                                Color="Color.Inherit"
@@ -107,7 +115,19 @@
             </div>
         </div>
 
-        <!-- Body / Chat Messages -->
+        @if (_threads.Count > 1)
+        {
+            <div class="px-3 py-1 d-flex align-center gap-2 flex-wrap">
+                @foreach (var t in _threads.Take(4))
+                {
+                    var isActive = t.Id == _activeThreadId;
+                    <MudChip T="string" Size="Size.Small" Color="@(isActive ? Color.Primary : Color.Default)" OnClick="() => SwitchThreadAsync(t.Id)">
+                        @t.Title
+                    </MudChip>
+                }
+            </div>
+        }
+
         <div id="ai-messages-scroll-area" class="ai-drawer-body flex-grow-1 px-4 py-3 overflow-y-auto">
             @if (_preferences?.Ai.Enabled != true)
             {
@@ -132,55 +152,47 @@
                 </div>
             }
 
-            @if (_messages.Count <= 1)
+            @if (ActiveEntries.Count <= 1)
             {
                 <div class="ai-empty-state mb-4">
                     <MudText Typo="Typo.h6" Class="font-weight-bold mb-1">
                         Ask about your board
                     </MudText>
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
-                        Plan today, check what is pending, or get habit ideas:
+                        Plan today, check what is pending, or get habit ideas. Try /plan, /review, or @@ to mention an item.
                     </MudText>
 
                     <div class="ai-prompts-grid">
-                        <button type="button"
-                                class="ai-prompt-pill"
-                                @onclick='() => SendQuickPromptAsync("Plan my day based on today dailies and active todos")'>
-                            <MudIcon Icon="@Icons.Material.Filled.WbSunny" Size="Size.Small" Class="ai-prompt-pill__icon" />
-                            <span class="ai-prompt-pill__text">Plan my day</span>
-                        </button>
-                        <button type="button"
-                                class="ai-prompt-pill"
-                                @onclick='() => SendQuickPromptAsync("What dailies and todos do I have left for today?")'>
-                            <MudIcon Icon="@Icons.Material.Filled.Checklist" Size="Size.Small" Class="ai-prompt-pill__icon" />
-                            <span class="ai-prompt-pill__text">What is pending?</span>
-                        </button>
-                        <button type="button"
-                                class="ai-prompt-pill"
-                                @onclick='() => SendQuickPromptAsync("Suggest 3 positive daily habits for better focus and health")'>
-                            <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Size="Size.Small" Class="ai-prompt-pill__icon" />
-                            <span class="ai-prompt-pill__text">Suggest habits</span>
-                        </button>
-                        <button type="button"
-                                class="ai-prompt-pill"
-                                @onclick='() => SendQuickPromptAsync("Show my timer summary and focus minutes")'>
-                            <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Small" Class="ai-prompt-pill__icon" />
-                            <span class="ai-prompt-pill__text">Focus stats</span>
-                        </button>
+                        @foreach (var qp in _quickPrompts)
+                        {
+                            <button type="button"
+                                    class="ai-prompt-pill"
+                                    @onclick="() => SendQuickPromptAsync(qp.Prompt)">
+                                <MudIcon Icon="@qp.Icon" Size="Size.Small" Class="ai-prompt-pill__icon" />
+                                <span class="ai-prompt-pill__text">@qp.Label</span>
+                            </button>
+                        }
                     </div>
                 </div>
             }
 
             <div class="ai-message-list d-flex flex-column gap-3">
-                @foreach (var msg in _messages.Where(m => m.Role != "system" && m.Role != "tool"))
+                @{
+                    var entryIndex = -1;
+                }
+                @foreach (var entry in ActiveEntries.Where(e => e.Message.Role != "system" && e.Message.Role != "tool"))
                 {
-                    var isUser = msg.Role == "user";
+                    entryIndex++;
+                    var localIndex = ActiveEntries.IndexOf(entry);
+                    var isUser = entry.Message.Role == "user";
+                    var isLast = localIndex == ActiveEntries.Count - 1;
+                    var isError = !isUser && (entry.Message.Content?.StartsWith("⚠️", StringComparison.Ordinal) == true);
                     <div class="ai-message @(isUser ? "ai-message--user" : "ai-message--assistant") d-flex flex-column">
                         <div class="ai-message-bubble pa-3 rounded-xl position-relative">
                             @if (!isUser)
                             {
-                                var modelId = msg.Model ?? _activeModel;
-                                var isCurrentlyStreaming = _isStreaming && msg == _messages.LastOrDefault();
+                                var modelId = entry.Message.Model ?? _activeModel;
+                                var isCurrentlyStreaming = _isStreaming && isLast;
                                 <div class="d-flex align-center justify-space-between mb-2 pb-1 border-bottom">
                                     <div class="d-flex align-center gap-1 min-w-0">
                                         <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small" Color="Color.Primary" Class="flex-shrink-0" />
@@ -199,73 +211,99 @@
                                                        Size="Size.Small"
                                                        Color="Color.Default"
                                                        aria-label="Copy response"
-                                                       OnClick="() => CopyToClipboardAsync(msg.Content)" />
+                                                       OnClick="() => CopyToClipboardAsync(entry.Message.Content)" />
+                                        @if (isLast && !_isSending)
+                                        {
+                                            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                                           Size="Size.Small"
+                                                           Color="Color.Default"
+                                                           aria-label="Regenerate response"
+                                                           OnClick="RegenerateAsync" />
+                                        }
+                                        @if (isError)
+                                        {
+                                            <MudIconButton Icon="@Icons.Material.Filled.Replay"
+                                                           Size="Size.Small"
+                                                           Color="Color.Warning"
+                                                           aria-label="Retry request"
+                                                           OnClick="RetryLastAsync" />
+                                        }
                                     </div>
                                 </div>
                                 <div class="ai-rendered-markdown">
-                                    @((MarkupString)MarkdownFormatter.ToHtml(msg.Content))
+                                    @((MarkupString)MarkdownFormatter.ToHtml(entry.Message.Content))
                                     @if (isCurrentlyStreaming)
                                     {
                                         <span class="ai-streaming-cursor" aria-hidden="true">▍</span>
                                     }
                                 </div>
+                                @if (entry.Tools.Count > 0)
+                                {
+                                    <div class="ai-tools-card pa-3 rounded-lg border mt-2">
+                                        <div class="d-flex align-center justify-space-between mb-2">
+                                            <div class="d-flex align-center gap-2">
+                                                <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small" Color="Color.Primary" />
+                                                <MudText Typo="Typo.caption" Class="font-weight-bold">
+                                                    Board actions (@entry.Tools.Count)
+                                                </MudText>
+                                            </div>
+                                            <MudButton Variant="Variant.Text"
+                                                       Size="Size.Small"
+                                                       Color="Color.Default"
+                                                       Class="ai-details-toggle-btn"
+                                                       OnClick="() => ToggleToolDetails(entry)">
+                                                @(entry.ShowDetails ? "Hide details" : "Show details")
+                                            </MudButton>
+                                        </div>
+                                        <div class="d-flex flex-column gap-2">
+                                            @foreach (var tool in entry.Tools)
+                                            {
+                                                <div class="ai-tool-item d-flex align-center justify-space-between pa-2 rounded">
+                                                    <div class="d-flex align-center gap-2 min-w-0">
+                                                        <MudIcon Icon="@GetToolIcon(tool.ToolName)"
+                                                                 Size="Size.Small"
+                                                                 Color="@(tool.IsSuccess ? Color.Success : Color.Error)" />
+                                                        <div class="min-w-0">
+                                                            <div class="d-flex align-center gap-1 flex-wrap">
+                                                                <code class="ai-tool-name-code">@tool.ToolName</code>
+                                                                <MudText Typo="Typo.caption" Class="font-weight-bold text-truncate">
+                                                                    @GetFriendlyToolTitle(tool.ToolName)
+                                                                </MudText>
+                                                            </div>
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block text-truncate">
+                                                                @tool.Result
+                                                            </MudText>
+                                                        </div>
+                                                    </div>
+                                                    <span class="ai-status-pill @(tool.IsSuccess ? "ai-status-pill--success" : "ai-status-pill--error")">
+                                                        @(tool.IsSuccess ? "Success" : "Failed")
+                                                    </span>
+                                                </div>
+                                                @if (entry.ShowDetails && !string.IsNullOrWhiteSpace(tool.Arguments) && tool.Arguments != "{}")
+                                                {
+                                                    <pre class="ai-code-block mt-1 pa-2 rounded" style="font-size: 0.75rem;"><code>@tool.Arguments</code></pre>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                }
                             }
                             else
                             {
-                                <MudText Typo="Typo.body2" Class="white-space-pre-wrap">@msg.Content</MudText>
-                            }
-                        </div>
-                    </div>
-                }
-
-                @if (_lastToolExecutions.Count > 0)
-                {
-                    <div class="ai-tools-card pa-3 rounded-lg border">
-                        <div class="d-flex align-center justify-space-between mb-2">
-                            <div class="d-flex align-center gap-2">
-                                <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small" Color="Color.Primary" />
-                                <MudText Typo="Typo.caption" Class="font-weight-bold">
-                                    Board actions executed (@_lastToolExecutions.Count)
-                                </MudText>
-                            </div>
-                            <MudButton Variant="Variant.Text"
-                                       Size="Size.Small"
-                                       Color="Color.Default"
-                                       Class="ai-details-toggle-btn"
-                                       OnClick="() => _showToolDetails = !_showToolDetails">
-                                @(_showToolDetails ? "Hide details" : "Show details")
-                            </MudButton>
-                        </div>
-
-                        <div class="d-flex flex-column gap-2">
-                            @foreach (var tool in _lastToolExecutions)
-                            {
-                                <div class="ai-tool-item d-flex align-center justify-space-between pa-2 rounded">
-                                    <div class="d-flex align-center gap-2 min-w-0">
-                                        <MudIcon Icon="@GetToolIcon(tool.ToolName)"
-                                                 Size="Size.Small"
-                                                 Color="@(tool.IsSuccess ? Color.Success : Color.Error)" />
-                                        <div class="min-w-0">
-                                            <div class="d-flex align-center gap-1 flex-wrap">
-                                                <code class="ai-tool-name-code">@tool.ToolName</code>
-                                                <MudText Typo="Typo.caption" Class="font-weight-bold text-truncate">
-                                                    @GetFriendlyToolTitle(tool.ToolName)
-                                                </MudText>
-                                            </div>
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block text-truncate">
-                                                @tool.Result
-                                            </MudText>
-                                        </div>
-                                    </div>
-                                    <span class="ai-status-pill @(tool.IsSuccess ? "ai-status-pill--success" : "ai-status-pill--error")">
-                                        @(tool.IsSuccess ? "Success" : "Failed")
-                                    </span>
+                                <MudText Typo="Typo.body2" Class="white-space-pre-wrap">@entry.Message.Content</MudText>
+                                <div class="d-flex justify-end gap-1 mt-1">
+                                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                                   Size="Size.Small"
+                                                   Color="Color.Inherit"
+                                                   aria-label="Copy message"
+                                                   OnClick="() => CopyToClipboardAsync(entry.Message.Content)" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                   Size="Size.Small"
+                                                   Color="Color.Inherit"
+                                                   aria-label="Edit and resend"
+                                                   Disabled="_isSending"
+                                                   OnClick="() => EditUserMessageAsync(localIndex)" />
                                 </div>
-
-                                @if (_showToolDetails && !string.IsNullOrWhiteSpace(tool.Arguments) && tool.Arguments != "{}")
-                                {
-                                    <pre class="ai-code-block mt-1 pa-2 rounded" style="font-size: 0.75rem;"><code>@tool.Arguments</code></pre>
-                                }
                             }
                         </div>
                     </div>
@@ -297,12 +335,24 @@
             </div>
         </div>
 
-        <!-- Clean Footer / Input -->
         <div class="ai-drawer-footer px-4 py-3">
+            @if (_mentionItems.Count > 0)
+            {
+                <div class="d-flex flex-column gap-1 mb-2 pa-2 rounded border">
+                    @foreach (var m in _mentionItems)
+                    {
+                        <button type="button" class="ai-prompt-pill" @onclick="() => PickMentionAsync(m.Title)">
+                            <MudIcon Icon="@Icons.Material.Filled.Tag" Size="Size.Small" Class="ai-prompt-pill__icon" />
+                            <span class="ai-prompt-pill__text">@m.Title (@m.Section)</span>
+                        </button>
+                    }
+                </div>
+            }
             <div class="ai-input-row d-flex align-stretch gap-2">
                 <MudTextField T="string"
-                              @bind-Value="_inputText"
-                              Placeholder="Ask Habitinator AI, for example 'Plan my day' or 'Add todo'"
+                              Value="_inputText"
+                              ValueChanged="OnInputChangedAsync"
+                              Placeholder="Ask Habitinator AI, /plan, /review, or @@item"
                               Variant="Variant.Outlined"
                               dense="true"
                               margin="Margin.None"
@@ -351,24 +401,72 @@
 </MudDrawer>
 
 @code {
-    private readonly List<AiChatMessage> _messages =
+    private sealed class ChatEntry
+    {
+        public AiChatMessage Message { get; set; } = new();
+        public List<AiToolExecution> Tools { get; set; } = [];
+        public bool ShowDetails { get; set; }
+    }
+
+    private sealed class AiThread
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString("N");
+        public string Title { get; set; } = "New chat";
+        public List<ChatEntry> Entries { get; set; } = [];
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    }
+
+    private sealed record QuickPrompt(string Label, string Prompt, string Icon);
+
+    private sealed record MentionItem(string Title, string Section);
+
+    private readonly List<AiThread> _threads = [];
+    private string _activeThreadId = string.Empty;
+    private List<ChatEntry> ActiveEntries => _threads.FirstOrDefault(t => t.Id == _activeThreadId)?.Entries ?? [];
+    private readonly List<QuickPrompt> _quickPrompts =
     [
-        AiChatMessage.Assistant("Hello! I am your Habitinator AI assistant. I can help you plan your day, break down tasks, check off completed dailies, and coach your habits. What would you like to work on?")
+        new("Plan my day", "Plan my day based on today dailies and active todos", Icons.Material.Filled.WbSunny),
+        new("What is pending?", "What dailies and todos do I have left for today?", Icons.Material.Filled.Checklist),
+        new("Suggest habits", "Suggest 3 positive daily habits for better focus and health", Icons.Material.Filled.Lightbulb),
+        new("Focus stats", "Show my timer summary and focus minutes", Icons.Material.Filled.Timer),
     ];
 
-    private readonly List<AiToolExecution> _lastToolExecutions = [];
+    private readonly List<MentionItem> _mentionItems = [];
+    private BoardSnapshot? _boardSnapshot;
     private string _inputText = string.Empty;
     private string? _activeModel;
     private bool _isSending;
     private bool _isStreaming;
     private CancellationTokenSource? _streamCts;
-    private bool _showToolDetails;
     private UserPreferences? _preferences;
 
     protected override async Task OnInitializedAsync()
     {
         UiSessionState.OnAiDrawerChanged += HandleDrawerChanged;
         await LoadPreferencesAsync();
+        await LoadThreadsAsync();
+        EnsureThread();
+    }
+
+    private void EnsureThread()
+    {
+        if (_threads.Count == 0)
+        {
+            var thread = new AiThread
+            {
+                Title = "New chat",
+                Entries =
+                [
+                    new ChatEntry { Message = AiChatMessage.Assistant("Hello! I am your Habitinator AI assistant. I can help you plan your day, break down tasks, check off completed dailies, and coach your habits. What would you like to work on?", _activeModel) }
+                ]
+            };
+            _threads.Add(thread);
+            _activeThreadId = thread.Id;
+        }
+        else if (string.IsNullOrEmpty(_activeThreadId) || _threads.All(t => t.Id != _activeThreadId))
+        {
+            _activeThreadId = _threads[0].Id;
+        }
     }
 
     private void HandleDrawerChanged()
@@ -378,7 +476,19 @@
             _ = InvokeAsync(async () =>
             {
                 await LoadPreferencesAsync();
-                StateHasChanged();
+                await RefreshQuickPromptsAsync();
+                var pending = UiSessionState.PendingAiPrompt;
+                if (!string.IsNullOrWhiteSpace(pending))
+                {
+                    UiSessionState.PendingAiPrompt = null;
+                    _inputText = pending.Trim();
+                    StateHasChanged();
+                    await SendMessageAsync();
+                }
+                else
+                {
+                    StateHasChanged();
+                }
             });
         }
         else
@@ -394,19 +504,11 @@
             _preferences = await PreferencesService.GetAsync();
             _preferences.Ai ??= new AiPreferences();
             _activeModel = _preferences.Ai.Model;
-            if (_messages.Count > 0 && string.IsNullOrWhiteSpace(_messages[0].Model))
-            {
-                _messages[0].Model = _activeModel;
-            }
         }
         catch
         {
             _preferences = UserPreferences.CreateDefault();
             _activeModel = _preferences.Ai.Model;
-            if (_messages.Count > 0 && string.IsNullOrWhiteSpace(_messages[0].Model))
-            {
-                _messages[0].Model = _activeModel;
-            }
         }
     }
 
@@ -429,11 +531,201 @@
             }
             catch
             {
-                // Best effort save
+                // Best effort: preferences save is optional.
             }
         }
         StateHasChanged();
     }
+
+    private async Task LoadThreadsAsync()
+    {
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("localStorage.getItem", CancellationToken.None, new object?[] { "habitinator-ai-threads" });
+            if (!string.IsNullOrWhiteSpace(json))
+            {
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var stored = JsonSerializer.Deserialize<List<StoredThread>>(json, options);
+                if (stored is not null)
+                {
+                    foreach (var s in stored.Take(20))
+                    {
+                        var entries = s.Messages?.Take(100).Select(m => new ChatEntry { Message = m }).ToList() ?? [];
+                        if (entries.Count == 0)
+                        {
+                            continue;
+                        }
+                        _threads.Add(new AiThread { Id = s.Id ?? Guid.NewGuid().ToString("N"), Title = s.Title ?? "Chat", Entries = entries, UpdatedAt = s.UpdatedAt });
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Best effort: local persistence and board reads must not break chat.
+        }
+    }
+
+    private async Task PersistThreadsAsync()
+    {
+        try
+        {
+            var stored = _threads.Take(20).Select(t => new StoredThread
+            {
+                Id = t.Id,
+                Title = t.Title,
+                UpdatedAt = t.UpdatedAt,
+                Messages = t.Entries.Take(100).Select(e => e.Message).ToList()
+            }).ToList();
+            var json = JsonSerializer.Serialize(stored);
+            if (json.Length < 400000)
+            {
+                await JS.InvokeVoidAsync("localStorage.setItem", CancellationToken.None, new object?[] { "habitinator-ai-threads", json });
+            }
+        }
+        catch
+        {
+            // Best effort: local persistence and board reads must not break chat.
+        }
+    }
+
+    private sealed class StoredThread
+    {
+        public string? Id { get; set; }
+        public string? Title { get; set; }
+        public DateTime UpdatedAt { get; set; }
+        public List<AiChatMessage>? Messages { get; set; }
+    }
+
+    private async Task NewThreadAsync()
+    {
+        var thread = new AiThread
+        {
+            Title = $"Chat {_threads.Count + 1}",
+            Entries =
+            [
+                new ChatEntry { Message = AiChatMessage.Assistant("New chat started. How can I help you today?", _activeModel) }
+            ]
+        };
+        _threads.Insert(0, thread);
+        _activeThreadId = thread.Id;
+        while (_threads.Count > 20)
+        {
+            _threads.RemoveAt(_threads.Count - 1);
+        }
+        await PersistThreadsAsync();
+        StateHasChanged();
+        await ScrollToBottomAsync();
+    }
+
+    private async Task SwitchThreadAsync(string id)
+    {
+        _activeThreadId = id;
+        await PersistThreadsAsync();
+        StateHasChanged();
+        await ScrollToBottomAsync();
+    }
+
+    private async Task RefreshQuickPromptsAsync()
+    {
+        try
+        {
+            _boardSnapshot = await BoardData.GetSnapshotAsync();
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var overdue = _boardSnapshot.Todos.Count(t => !t.IsCompleted && t.TodoDueDate.HasValue && t.TodoDueDate.Value < today);
+            var pendingDailies = _boardSnapshot.Dailies.Count(d => !d.IsCompleted);
+            _quickPrompts.Clear();
+            if (overdue > 0)
+            {
+                _quickPrompts.Add(new($"Catch up ({overdue} overdue)", $"I have {overdue} overdue todos. Help me catch up, starting with the oldest.", Icons.Material.Filled.Warning));
+            }
+            if (pendingDailies > 0)
+            {
+                _quickPrompts.Add(new("Plan my day", "Plan my day based on today dailies and active todos", Icons.Material.Filled.WbSunny));
+            }
+            else
+            {
+                _quickPrompts.Add(new("Suggest habits", "Suggest 3 positive daily habits for better focus and health", Icons.Material.Filled.Lightbulb));
+            }
+            _quickPrompts.Add(new("What is pending?", "What dailies and todos do I have left for today?", Icons.Material.Filled.Checklist));
+            _quickPrompts.Add(new("Focus stats", "Show my timer summary and focus minutes", Icons.Material.Filled.Timer));
+            while (_quickPrompts.Count > 4)
+            {
+                _quickPrompts.RemoveAt(_quickPrompts.Count - 1);
+            }
+        }
+        catch
+        {
+            // Best effort: local persistence and board reads must not break chat.
+        }
+    }
+
+    private async Task OnInputChangedAsync(string value)
+    {
+        _inputText = value;
+        await UpdateMentionsAsync();
+    }
+
+    private async Task UpdateMentionsAsync()
+    {
+        _mentionItems.Clear();
+        var atIndex = _inputText.LastIndexOf('@');
+        if (atIndex < 0)
+        {
+            return;
+        }
+        var query = _inputText[(atIndex + 1)..].Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+        if (query.Length < 1 && !_inputText.EndsWith('@') && string.IsNullOrEmpty(query))
+        {
+            return;
+        }
+        try
+        {
+            _boardSnapshot ??= await BoardData.GetSnapshotAsync();
+            var q = query.Trim();
+            var matches = _boardSnapshot.Habits.Select(h => new MentionItem(h.Title, "Habit"))
+                .Concat(_boardSnapshot.Dailies.Select(d => new MentionItem(d.Title, "Daily")))
+                .Concat(_boardSnapshot.Todos.Select(t => new MentionItem(t.Title, "Todo")))
+                .Where(m => string.IsNullOrEmpty(q) || m.Title.Contains(q, StringComparison.OrdinalIgnoreCase))
+                .Take(6)
+                .ToList();
+            _mentionItems.AddRange(matches);
+        }
+        catch
+        {
+            // Best effort: local persistence and board reads must not break chat.
+        }
+    }
+
+    private Task PickMentionAsync(string title)
+    {
+        var atIndex = _inputText.LastIndexOf('@');
+        if (atIndex >= 0)
+        {
+            var after = _inputText[(atIndex + 1)..];
+            var spaceIndex = after.IndexOf(' ');
+            var tail = spaceIndex >= 0 ? after[spaceIndex..] : string.Empty;
+            _inputText = string.Concat(_inputText.AsSpan(0, atIndex).ToString(), "@", title, tail, spaceIndex < 0 ? " " : string.Empty);
+        }
+        _mentionItems.Clear();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private static string ExpandSlashCommand(string text) => text.TrimStart() switch
+    {
+        "/plan" or "/plan " or _ when text.StartsWith("/plan ", StringComparison.OrdinalIgnoreCase) =>
+            "Plan my day based on today dailies and active todos. " + text.Replace("/plan", string.Empty, StringComparison.OrdinalIgnoreCase).Trim(),
+        _ when text.StartsWith("/review", StringComparison.OrdinalIgnoreCase) =>
+            "Review what dailies and todos are left for today, including overdue. " + text.Replace("/review", string.Empty, StringComparison.OrdinalIgnoreCase).Trim(),
+        _ when text.StartsWith("/suggest", StringComparison.OrdinalIgnoreCase) =>
+            "Suggest 3 positive daily habits for better focus and health. " + text.Replace("/suggest", string.Empty, StringComparison.OrdinalIgnoreCase).Trim(),
+        _ when text.StartsWith("/retro", StringComparison.OrdinalIgnoreCase) =>
+            "Review yesterday's dailies and help me backdate what I completed. " + text.Replace("/retro", string.Empty, StringComparison.OrdinalIgnoreCase).Trim(),
+        _ when text.StartsWith("/timer", StringComparison.OrdinalIgnoreCase) =>
+            "Show my timer summary and focus minutes. " + text.Replace("/timer", string.Empty, StringComparison.OrdinalIgnoreCase).Trim(),
+        _ => text
+    };
 
     private async Task SendQuickPromptAsync(string prompt)
     {
@@ -460,92 +752,122 @@
 
     private async Task HandleSendOrStopAsync()
     {
-        if (_isStreaming)
+        if (_isStreaming || _isSending)
         {
             if (_streamCts is not null)
             {
                 await _streamCts.CancelAsync();
             }
             _isStreaming = false;
-            StateHasChanged();
             return;
         }
 
         await SendMessageAsync();
     }
 
+    private async Task RetryLastAsync()
+    {
+        var entries = ActiveEntries;
+        var lastUser = entries.LastOrDefault(e => e.Message.Role == "user");
+        if (lastUser is null || _isSending)
+        {
+            return;
+        }
+        var failedIndex = entries.FindLastIndex(e => e.Message.Content?.StartsWith("⚠️", StringComparison.Ordinal) == true);
+        if (failedIndex >= 0)
+        {
+            entries.RemoveAt(failedIndex);
+        }
+        _inputText = lastUser.Message.Content ?? string.Empty;
+        entries.Remove(lastUser);
+        await PersistThreadsAsync();
+        await SendMessageAsync();
+    }
+
+    private async Task RegenerateAsync()
+    {
+        var entries = ActiveEntries;
+        if (entries.Count == 0 || _isSending)
+        {
+            return;
+        }
+        var lastAssistantIndex = entries.FindLastIndex(e => e.Message.Role == "assistant");
+        if (lastAssistantIndex < 0)
+        {
+            return;
+        }
+        var lastUser = entries.Take(lastAssistantIndex).LastOrDefault(e => e.Message.Role == "user");
+        if (lastUser is null)
+        {
+            return;
+        }
+        entries.RemoveAt(lastAssistantIndex);
+        _inputText = lastUser.Message.Content ?? string.Empty;
+        entries.Remove(lastUser);
+        await PersistThreadsAsync();
+        await SendMessageAsync();
+    }
+
+    private async Task EditUserMessageAsync(int entryIndex)
+    {
+        var entries = ActiveEntries;
+        if (entryIndex < 0 || entryIndex >= entries.Count || _isSending)
+        {
+            return;
+        }
+        var entry = entries[entryIndex];
+        if (entry.Message.Role != "user")
+        {
+            return;
+        }
+        _inputText = entry.Message.Content ?? string.Empty;
+        entries.RemoveRange(entryIndex, entries.Count - entryIndex);
+        await PersistThreadsAsync();
+        StateHasChanged();
+    }
+
+    private static void ToggleToolDetails(ChatEntry entry)
+    {
+        entry.ShowDetails = !entry.ShowDetails;
+    }
+
     private async Task SendMessageAsync()
     {
-        var text = _inputText?.Trim();
-        if (string.IsNullOrWhiteSpace(text) || _isSending)
+        var raw = _inputText?.Trim();
+        if (string.IsNullOrWhiteSpace(raw) || _isSending)
         {
             return;
         }
 
+        if (raw.Equals("/help", StringComparison.OrdinalIgnoreCase))
+        {
+            _inputText = string.Empty;
+            ActiveEntries.Add(new ChatEntry { Message = AiChatMessage.User(raw) });
+            ActiveEntries.Add(new ChatEntry { Message = AiChatMessage.Assistant("Try /plan, /review, /suggest, /retro, or /timer. Use @@ to mention a board item by title.", _activeModel) });
+            await PersistThreadsAsync();
+            StateHasChanged();
+            await ScrollToBottomAsync();
+            return;
+        }
+
+        var text = ExpandSlashCommand(raw);
         _inputText = string.Empty;
-        _messages.Add(AiChatMessage.User(text));
-        _lastToolExecutions.Clear();
+        _mentionItems.Clear();
+        var thread = _threads.FirstOrDefault(t => t.Id == _activeThreadId);
+        if (thread is null)
+        {
+            EnsureThread();
+            thread = _threads.First(t => t.Id == _activeThreadId);
+        }
+        thread.Entries.Add(new ChatEntry { Message = AiChatMessage.User(text) });
+        thread.Title = text.Length <= 32 ? text : string.Concat(text.AsSpan(0, 31).ToString(), "…");
+        thread.UpdatedAt = DateTime.UtcNow;
         _isSending = true;
         _isStreaming = false;
         StateHasChanged();
 
         await ScrollToBottomAsync();
-
-        try
-        {
-            var request = new AiChatRequest
-            {
-                Messages = _messages.ToList(),
-                ModelOverride = _activeModel
-            };
-
-            var response = await AiService.SendChatAsync(request);
-            if (response.Success && response.Message is not null)
-            {
-                if (response.ToolExecutions.Count > 0)
-                {
-                    _lastToolExecutions.AddRange(response.ToolExecutions);
-                }
-
-                var fullContent = response.Message.Content ?? string.Empty;
-                var modelId = response.Message.Model ?? _activeModel;
-
-                // Create assistant message and stream content live into the bubble
-                var assistantMessage = AiChatMessage.Assistant(string.Empty, modelId);
-                _messages.Add(assistantMessage);
-                _isStreaming = true;
-                StateHasChanged();
-                await ScrollToBottomAsync();
-
-                await StreamTextIntoMessageAsync(assistantMessage, fullContent);
-            }
-            else
-            {
-                var errorMsg = response.Error ?? "Failed to receive response from AI provider.";
-                _messages.Add(AiChatMessage.Assistant($"⚠️ {errorMsg}", _activeModel));
-                Snackbar.Add(errorMsg, Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            _messages.Add(AiChatMessage.Assistant($"⚠️ Request failed: {ex.Message}", _activeModel));
-            Snackbar.Add(ex.Message, Severity.Error);
-        }
-        finally
-        {
-            _isSending = false;
-            _isStreaming = false;
-            StateHasChanged();
-            await ScrollToBottomAsync();
-        }
-    }
-
-    private async Task StreamTextIntoMessageAsync(AiChatMessage message, string fullContent)
-    {
-        if (string.IsNullOrEmpty(fullContent))
-        {
-            return;
-        }
+        await PersistThreadsAsync();
 
         if (_streamCts is not null)
         {
@@ -553,22 +875,88 @@
             _streamCts.Dispose();
         }
         _streamCts = new CancellationTokenSource();
-        var ct = _streamCts.Token;
+        var requestToken = _streamCts.Token;
+
+        try
+        {
+            var request = new AiChatRequest
+            {
+                Messages = thread.Entries.Select(e => e.Message).ToList(),
+                ModelOverride = _activeModel,
+                ClientTimeZoneId = TimeZoneInfo.Local.Id
+            };
+
+            var response = await AiService.SendChatAsync(request, requestToken);
+            if (response.Success && response.Message is not null)
+            {
+                var fullContent = response.Message.Content ?? string.Empty;
+                var modelId = response.Message.Model ?? _activeModel;
+
+                var assistantEntry = new ChatEntry { Message = AiChatMessage.Assistant(string.Empty, modelId) };
+                thread.Entries.Add(assistantEntry);
+                if (response.ToolExecutions.Count > 0)
+                {
+                    assistantEntry.Tools.AddRange(response.ToolExecutions);
+                    try
+                    {
+                        await RemoteRefresh.NotifyFromRemoteAsync(requestToken);
+                    }
+                    catch
+                    {
+                        // Best effort: board refresh must not fail the chat response.
+                    }
+                }
+
+                _isStreaming = true;
+                StateHasChanged();
+                await ScrollToBottomAsync();
+
+                await StreamTextIntoMessageAsync(assistantEntry.Message, fullContent, requestToken);
+            }
+            else
+            {
+                var errorMsg = response.Error ?? "Failed to receive response from AI provider.";
+                thread.Entries.Add(new ChatEntry { Message = AiChatMessage.Assistant($"⚠️ {errorMsg}", _activeModel) });
+                Snackbar.Add(errorMsg, Severity.Error);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            thread.Entries.Add(new ChatEntry { Message = AiChatMessage.Assistant("Stopped. The board was not changed.", _activeModel) });
+        }
+        catch (Exception ex)
+        {
+            thread.Entries.Add(new ChatEntry { Message = AiChatMessage.Assistant($"⚠️ Request failed: {ex.Message}", _activeModel) });
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _isSending = false;
+            _isStreaming = false;
+            thread.UpdatedAt = DateTime.UtcNow;
+            StateHasChanged();
+            await PersistThreadsAsync();
+            await ScrollToBottomAsync();
+        }
+    }
+
+    private async Task StreamTextIntoMessageAsync(AiChatMessage message, string fullContent, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(fullContent))
+        {
+            return;
+        }
 
         try
         {
             var words = fullContent.Split(' ');
             var sb = new System.Text.StringBuilder();
-            var batchSize = Math.Max(1, words.Length / 35);
+            // Reveal in about 20 frames so long answers finish in under a second.
+            var batchSize = Math.Max(1, words.Length / 20);
 
             for (var i = 0; i < words.Length; i++)
             {
-                if (ct.IsCancellationRequested)
-                {
-                    message.Content = fullContent;
-                    break;
-                }
-
+                ct.ThrowIfCancellationRequested();
                 sb.Append(words[i]);
                 if (i < words.Length - 1)
                 {
@@ -580,12 +968,12 @@
                     message.Content = sb.ToString();
                     StateHasChanged();
 
-                    if (i % (batchSize * 3) == 0)
+                    if (i % (batchSize * 2) == 0)
                     {
                         await ScrollToBottomAsync();
                     }
 
-                    await Task.Delay(20, ct);
+                    await Task.Delay(12, ct);
                 }
             }
 
@@ -594,6 +982,7 @@
         catch (OperationCanceledException)
         {
             message.Content = fullContent;
+            throw;
         }
         catch
         {
@@ -615,7 +1004,7 @@
 
         try
         {
-            var ok = await JS.InvokeAsync<bool>("habitinatorCopyText", content);
+            var ok = await JS.InvokeAsync<bool>("habitinatorCopyText", CancellationToken.None, new object?[] { content });
             if (ok)
             {
                 Snackbar.Add("Copied to clipboard.", Severity.Success, o => o.VisibleStateDuration = 1200);
@@ -636,11 +1025,11 @@
         try
         {
             await Task.Delay(50);
-            await JS.InvokeVoidAsync("eval", "document.getElementById('ai-messages-scroll-area')?.scrollTo({ top: 99999, behavior: 'smooth' })");
+            await JS.InvokeVoidAsync("eval", CancellationToken.None, new object?[] { "document.getElementById('ai-messages-scroll-area')?.scrollTo({ top: 99999, behavior: 'smooth' })" });
         }
         catch
         {
-            // Best effort scroll
+            // Best effort: local persistence and board reads must not break chat.
         }
     }
 
@@ -650,6 +1039,9 @@
         "toggle_item" => "Toggled status",
         "habit_plus" => "Habit +1",
         "habit_minus" => "Habit -1",
+        "rename_item" => "Renamed item",
+        "set_due_date" => "Updated due date",
+        "archive_item" => "Archived item",
         "get_board_summary" => "Inspected board status",
         "get_snapshot" => "Read board snapshot",
         "get_timer_summary" => "Checked focus timer",
@@ -662,17 +1054,27 @@
         "toggle_item" => Icons.Material.Filled.CheckCircle,
         "habit_plus" => Icons.Material.Filled.Add,
         "habit_minus" => Icons.Material.Filled.Remove,
+        "rename_item" => Icons.Material.Filled.Edit,
+        "set_due_date" => Icons.Material.Filled.Event,
+        "archive_item" => Icons.Material.Filled.Archive,
         "get_board_summary" => Icons.Material.Filled.Assessment,
         "get_snapshot" => Icons.Material.Filled.Visibility,
         "get_timer_summary" => Icons.Material.Filled.Timer,
         _ => Icons.Material.Filled.Build
     };
 
-    private void ClearChat()
+    private async Task ClearChat()
     {
-        _messages.Clear();
-        _lastToolExecutions.Clear();
-        _messages.Add(AiChatMessage.Assistant("Chat history cleared. How can I help you today?", _activeModel));
+        var thread = _threads.FirstOrDefault(t => t.Id == _activeThreadId);
+        if (thread is not null)
+        {
+            thread.Entries.Clear();
+            thread.Entries.Add(new ChatEntry { Message = AiChatMessage.Assistant("Chat history cleared. How can I help you today?", _activeModel) });
+            thread.UpdatedAt = DateTime.UtcNow;
+            await PersistThreadsAsync();
+            StateHasChanged();
+            await ScrollToBottomAsync();
+        }
     }
 
     private void NavigateToSettings()

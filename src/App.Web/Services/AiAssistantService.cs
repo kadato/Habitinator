@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 
 using App.Shared.RCL.Models;
+using App.Shared.RCL.Services;
 
 namespace App.Web.Services;
 
@@ -150,7 +151,10 @@ public sealed class AiAssistantService(
         }
 
         var today = await boards.TodayAsync(userId, cancellationToken);
-        var systemInstructions = BuildSystemPrompt(today, preferences.CustomInstructions);
+        var timeZoneLabel = !string.IsNullOrWhiteSpace(request.ClientTimeZoneId)
+            ? request.ClientTimeZoneId.Trim()
+            : null;
+        var systemInstructions = BuildSystemPrompt(today, preferences.CustomInstructions, timeZoneLabel);
 
         if (IsResponsesProtocol(model, endpoint))
         {
@@ -220,8 +224,7 @@ public sealed class AiAssistantService(
             }
         }
 
-        var client = httpFactory.CreateClient();
-        client.Timeout = TimeSpan.FromSeconds(60);
+        var client = CreateProviderClient();
 
         for (var iteration = 0; iteration < MaxToolIterations; iteration++)
         {
@@ -233,60 +236,10 @@ public sealed class AiAssistantService(
                 ["tools"] = toolsSchema.DeepClone()
             };
 
-            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpoint);
-            httpRequest.Content = new StringContent(requestBody.ToJsonString(), System.Text.Encoding.UTF8, "application/json");
-
-            if (!string.IsNullOrWhiteSpace(apiKey))
+            var (root, failure) = await PostProviderJsonAsync(client, endpoint, apiKey, requestBody, toolExecutions, cancellationToken);
+            if (failure is not null)
             {
-                httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey.Trim());
-            }
-
-            httpRequest.Headers.TryAddWithoutValidation("User-Agent", "Habitinator/1.0");
-            httpRequest.Headers.TryAddWithoutValidation("HTTP-Referer", "https://habitinator.app");
-            httpRequest.Headers.TryAddWithoutValidation("X-Title", "Habitinator");
-            httpRequest.Headers.TryAddWithoutValidation("x-opencode-session", $"ses_habitinator_{Guid.NewGuid():N}");
-
-            HttpResponseMessage httpResponse;
-            try
-            {
-                httpResponse = await client.SendAsync(httpRequest, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to call AI provider at {Endpoint}", endpoint);
-                return new AiChatResponse
-                {
-                    Success = false,
-                    Error = $"AI request failed: {ex.Message}",
-                    ToolExecutions = toolExecutions
-                };
-            }
-
-            var responseJson = await httpResponse.Content.ReadAsStringAsync(cancellationToken);
-            if (!httpResponse.IsSuccessStatusCode)
-            {
-                var errorMsg = ExtractErrorMessage(responseJson) ?? $"HTTP {(int)httpResponse.StatusCode} ({httpResponse.ReasonPhrase})";
-                return new AiChatResponse
-                {
-                    Success = false,
-                    Error = $"AI provider returned error: {errorMsg}",
-                    ToolExecutions = toolExecutions
-                };
-            }
-
-            JsonNode? root;
-            try
-            {
-                root = JsonNode.Parse(responseJson);
-            }
-            catch (Exception ex)
-            {
-                return new AiChatResponse
-                {
-                    Success = false,
-                    Error = $"Failed to parse AI response: {ex.Message}",
-                    ToolExecutions = toolExecutions
-                };
+                return failure;
             }
 
             var outputArray = root?["output"]?.AsArray();
@@ -464,8 +417,7 @@ public sealed class AiAssistantService(
             messagesArray.Add(node);
         }
 
-        var client = httpFactory.CreateClient();
-        client.Timeout = TimeSpan.FromSeconds(60);
+        var client = CreateProviderClient();
 
         for (var iteration = 0; iteration < MaxToolIterations; iteration++)
         {
@@ -477,60 +429,10 @@ public sealed class AiAssistantService(
                 ["temperature"] = 0.3
             };
 
-            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpoint);
-            httpRequest.Content = new StringContent(requestBody.ToJsonString(), System.Text.Encoding.UTF8, "application/json");
-
-            if (!string.IsNullOrWhiteSpace(apiKey))
+            var (root, failure) = await PostProviderJsonAsync(client, endpoint, apiKey, requestBody, toolExecutions, cancellationToken);
+            if (failure is not null)
             {
-                httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey.Trim());
-            }
-
-            httpRequest.Headers.TryAddWithoutValidation("User-Agent", "Habitinator/1.0");
-            httpRequest.Headers.TryAddWithoutValidation("HTTP-Referer", "https://habitinator.app");
-            httpRequest.Headers.TryAddWithoutValidation("X-Title", "Habitinator");
-            httpRequest.Headers.TryAddWithoutValidation("x-opencode-session", $"ses_habitinator_{Guid.NewGuid():N}");
-
-            HttpResponseMessage httpResponse;
-            try
-            {
-                httpResponse = await client.SendAsync(httpRequest, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to call AI provider at {Endpoint}", endpoint);
-                return new AiChatResponse
-                {
-                    Success = false,
-                    Error = $"AI request failed: {ex.Message}",
-                    ToolExecutions = toolExecutions
-                };
-            }
-
-            var responseJson = await httpResponse.Content.ReadAsStringAsync(cancellationToken);
-            if (!httpResponse.IsSuccessStatusCode)
-            {
-                var errorMsg = ExtractErrorMessage(responseJson) ?? $"HTTP {(int)httpResponse.StatusCode} ({httpResponse.ReasonPhrase})";
-                return new AiChatResponse
-                {
-                    Success = false,
-                    Error = $"AI provider returned error: {errorMsg}",
-                    ToolExecutions = toolExecutions
-                };
-            }
-
-            JsonNode? root;
-            try
-            {
-                root = JsonNode.Parse(responseJson);
-            }
-            catch (Exception ex)
-            {
-                return new AiChatResponse
-                {
-                    Success = false,
-                    Error = $"Failed to parse AI response: {ex.Message}",
-                    ToolExecutions = toolExecutions
-                };
+                return failure;
             }
 
             var choice = root?["choices"]?[0];
@@ -622,6 +524,81 @@ public sealed class AiAssistantService(
         };
     }
 
+    private HttpClient CreateProviderClient()
+    {
+        var client = httpFactory.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(60);
+        return client;
+    }
+
+    private static void AddProviderHeaders(HttpRequestMessage httpRequest, string apiKey)
+    {
+        if (!string.IsNullOrWhiteSpace(apiKey))
+        {
+            httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey.Trim());
+        }
+
+        httpRequest.Headers.TryAddWithoutValidation("User-Agent", "Habitinator/1.0");
+        httpRequest.Headers.TryAddWithoutValidation("HTTP-Referer", "https://habitinator.app");
+        httpRequest.Headers.TryAddWithoutValidation("X-Title", "Habitinator");
+        httpRequest.Headers.TryAddWithoutValidation("x-opencode-session", $"ses_habitinator_{Guid.NewGuid():N}");
+    }
+
+    private async Task<(JsonNode? Root, AiChatResponse? Failure)> PostProviderJsonAsync(
+        HttpClient client,
+        string endpoint,
+        string apiKey,
+        JsonObject requestBody,
+        List<AiToolExecution> toolExecutions,
+        CancellationToken cancellationToken)
+    {
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpoint);
+        httpRequest.Content = new StringContent(requestBody.ToJsonString(), System.Text.Encoding.UTF8, "application/json");
+        AddProviderHeaders(httpRequest, apiKey);
+
+        HttpResponseMessage httpResponse;
+        try
+        {
+            httpResponse = await client.SendAsync(httpRequest, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to call AI provider at {Endpoint}", endpoint);
+            return (null, new AiChatResponse
+            {
+                Success = false,
+                Error = $"AI request failed: {ex.Message}",
+                ToolExecutions = toolExecutions
+            });
+        }
+
+        var responseJson = await httpResponse.Content.ReadAsStringAsync(cancellationToken);
+        if (!httpResponse.IsSuccessStatusCode)
+        {
+            var errorMsg = ExtractErrorMessage(responseJson) ?? $"HTTP {(int)httpResponse.StatusCode} ({httpResponse.ReasonPhrase})";
+            return (null, new AiChatResponse
+            {
+                Success = false,
+                Error = $"AI provider returned error: {errorMsg}",
+                ToolExecutions = toolExecutions
+            });
+        }
+
+        try
+        {
+            return (JsonNode.Parse(responseJson), null);
+        }
+        catch (Exception ex)
+        {
+            return (null, new AiChatResponse
+            {
+                Success = false,
+                Error = $"Failed to parse AI response: {ex.Message}",
+                ToolExecutions = toolExecutions
+            });
+        }
+    }
+
     private async Task<AiToolExecution> ExecuteToolAsync(
         Guid userId,
         string toolName,
@@ -665,19 +642,25 @@ public sealed class AiAssistantService(
                         {
                             var sb = new System.Text.StringBuilder();
                             sb.AppendLine(CultureInfo.InvariantCulture, $"# Board Summary ({today:yyyy-MM-dd})");
+                            var overdue = snapshot.Todos.Where(t => !t.IsCompleted && t.TodoDueDate.HasValue && t.TodoDueDate.Value < today).ToList();
+                            sb.AppendLine(CultureInfo.InvariantCulture, $"**Overdue todos:** {overdue.Count}");
+                            foreach (var t in overdue.Take(10))
+                            {
+                                sb.AppendLine(CultureInfo.InvariantCulture, $"- [ ] {t.Title} (due {t.TodoDueDate!.Value:yyyy-MM-dd}) [ID: {t.Id}]");
+                            }
                             sb.AppendLine(CultureInfo.InvariantCulture, $"**Dailies:** {snapshot.Dailies.Count(d => d.IsCompleted)}/{snapshot.Dailies.Count} done");
-                            foreach (var d in snapshot.Dailies.Where(d => !d.IsCompleted).Take(10))
+                            foreach (var d in snapshot.Dailies.Where(d => !d.IsCompleted).Take(20))
                             {
                                 sb.AppendLine(CultureInfo.InvariantCulture, $"- [ ] {d.Title} (streak: {d.Counter}) [ID: {d.Id}]");
                             }
                             sb.AppendLine(CultureInfo.InvariantCulture, $"**Todos:** {snapshot.Todos.Count(t => !t.IsCompleted)} active");
-                            foreach (var t in snapshot.Todos.Where(t => !t.IsCompleted).Take(10))
+                            foreach (var t in snapshot.Todos.Where(t => !t.IsCompleted).OrderBy(t => t.TodoDueDate ?? new DateOnly(9999, 12, 31)).Take(20))
                             {
                                 var due = t.TodoDueDate.HasValue ? $" (due {t.TodoDueDate.Value:yyyy-MM-dd})" : "";
                                 sb.AppendLine(CultureInfo.InvariantCulture, $"- [ ] {t.Title}{due} [ID: {t.Id}]");
                             }
                             sb.AppendLine(CultureInfo.InvariantCulture, $"**Habits:** {snapshot.Habits.Count} tracked");
-                            foreach (var h in snapshot.Habits.Take(8))
+                            foreach (var h in snapshot.Habits.Take(15))
                             {
                                 sb.AppendLine(CultureInfo.InvariantCulture, $"- {h.Title}: +{h.Counter}/-{h.NegativeCounter} [ID: {h.Id}]");
                             }
@@ -800,6 +783,109 @@ public sealed class AiAssistantService(
                         break;
                     }
 
+                case "rename_item":
+                    {
+                        var idStr = root.TryGetProperty("itemId", out var idProp) ? idProp.GetString() : string.Empty;
+                        var title = root.TryGetProperty("title", out var tProp) ? tProp.GetString() : string.Empty;
+                        if (!Guid.TryParse(idStr, out var itemId) || string.IsNullOrWhiteSpace(title))
+                        {
+                            exec.Result = "Error: valid itemId GUID and non-empty title are required.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var section = await boards.GetItemSectionAsync(userId, itemId, cancellationToken);
+                        if (section is null)
+                        {
+                            exec.Result = $"Error: item {itemId} not found.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var current = await boards.GetSnapshotAsync(userId, 500, cancellationToken);
+                        var item = current.Habits.Concat(current.Dailies).Concat(current.Todos).FirstOrDefault(i => i.Id == itemId);
+                        if (item is null)
+                        {
+                            exec.Result = $"Error: item {itemId} not found.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var clean = title.Trim();
+                        BoardMutationResult result = section switch
+                        {
+                            BoardSection.Habit => await boards.UpdateHabitAsync(userId, itemId, UpdateHabitArgs.From(item) with { Title = clean }, cancellationToken),
+                            BoardSection.Daily => await boards.UpdateDailyAsync(userId, itemId, UpdateDailyArgs.From(item) with { Title = clean }, cancellationToken),
+                            _ => await boards.UpdateTodoAsync(userId, itemId, UpdateTodoArgs.From(item) with { Title = clean }, cancellationToken)
+                        };
+                        exec.Result = $"Renamed to '{clean}'.";
+                        exec.IsSuccess = result.Status == BoardMutationStatus.Ok;
+                        break;
+                    }
+
+                case "set_due_date":
+                    {
+                        var idStr = root.TryGetProperty("itemId", out var idProp) ? idProp.GetString() : string.Empty;
+                        var dueStr = root.TryGetProperty("dueDate", out var dProp) ? dProp.GetString() : string.Empty;
+                        if (!Guid.TryParse(idStr, out var itemId))
+                        {
+                            exec.Result = "Error: valid itemId GUID is required.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        DateOnly? due = null;
+                        if (!string.IsNullOrWhiteSpace(dueStr))
+                        {
+                            if (!DateOnly.TryParseExact(dueStr.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDue))
+                            {
+                                exec.Result = "Error: dueDate must be yyyy-MM-dd or empty to clear.";
+                                exec.IsSuccess = false;
+                                break;
+                            }
+
+                            due = parsedDue;
+                        }
+
+                        var snapshot = await boards.GetSnapshotAsync(userId, 500, cancellationToken);
+                        var todo = snapshot.Todos.FirstOrDefault(t => t.Id == itemId);
+                        if (todo is null)
+                        {
+                            exec.Result = $"Error: to-do {itemId} not found. set_due_date only applies to todos.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var result = await boards.UpdateTodoAsync(userId, itemId, UpdateTodoArgs.From(todo) with { DueDate = due }, cancellationToken);
+                        exec.Result = due.HasValue ? $"Due date set to {due.Value:yyyy-MM-dd}." : "Due date cleared.";
+                        exec.IsSuccess = result.Status == BoardMutationStatus.Ok;
+                        break;
+                    }
+
+                case "archive_item":
+                    {
+                        var idStr = root.TryGetProperty("itemId", out var idProp) ? idProp.GetString() : string.Empty;
+                        if (!Guid.TryParse(idStr, out var itemId))
+                        {
+                            exec.Result = "Error: valid itemId GUID is required.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var section = await boards.GetItemSectionAsync(userId, itemId, cancellationToken);
+                        if (section is null)
+                        {
+                            exec.Result = $"Error: item {itemId} not found.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var result = await boards.ArchiveItemAsync(userId, section.Value, itemId, null, cancellationToken);
+                        exec.Result = $"Archived item {itemId}.";
+                        exec.IsSuccess = result.Status == BoardMutationStatus.Ok;
+                        break;
+                    }
+
                 default:
                     exec.Result = $"Unknown tool '{toolName}'.";
                     exec.IsSuccess = false;
@@ -816,12 +902,14 @@ public sealed class AiAssistantService(
         return exec;
     }
 
-    private static string BuildSystemPrompt(DateOnly today, string? customInstructions)
+    private static string BuildSystemPrompt(DateOnly today, string? customInstructions, string? timeZoneLabel = null)
     {
         var custom = string.IsNullOrWhiteSpace(customInstructions) ? "" : $"\nUser Custom Instructions:\n{customInstructions.Trim()}\n";
+        var tz = string.IsNullOrWhiteSpace(timeZoneLabel) ? "" : $" User timezone: {timeZoneLabel.Trim()}.\n";
         return
             $"You are Habitinator AI, a productivity assistant and habit coach inside the Habitinator app.\n" +
             $"Today is {today:yyyy-MM-dd} ({today.DayOfWeek}).\n" +
+            tz +
             "You have direct access to the user's board tools:\n" +
             "- get_board_summary: Use this to see pending and completed dailies, active and overdue todos, and habits.\n" +
             "- get_snapshot: Use this to inspect items with their IDs.\n" +
@@ -829,12 +917,16 @@ public sealed class AiAssistantService(
             "- toggle_item: Toggles a Daily or Todo as completed or uncompleted.\n" +
             "- habit_plus: Increments a positive habit tick.\n" +
             "- habit_minus: Increments a negative habit tick.\n" +
+            "- rename_item: Renames any board item by ID.\n" +
+            "- set_due_date: Sets or clears a Todo due date (yyyy-MM-dd or empty to clear).\n" +
+            "- archive_item: Archives a Habit, Daily, or Todo by ID.\n" +
             "- get_timer_summary: Inspects focus timer and Pomodoro minutes.\n\n" +
             "Rules:\n" +
             "1. When the user asks what to do, what's left, or to plan their day, always call get_board_summary first.\n" +
             "2. When creating items, specify section ('Habit', 'Daily', or 'Todo') and title clearly.\n" +
-            "3. Format your responses with clear Markdown bullet points and bold highlights.\n" +
-            "4. Keep answers encouraging, actionable, and concise.\n" +
+            "3. Prefer rename_item, set_due_date, and archive_item over delete. Never delete without explicit user confirmation.\n" +
+            "4. Format your responses with clear Markdown bullet points, tables where helpful, and bold highlights.\n" +
+            "5. Keep answers encouraging, actionable, and concise.\n" +
             custom;
     }
 
@@ -998,6 +1090,82 @@ public sealed class AiAssistantService(
                     {
                         ["type"] = "object",
                         ["properties"] = new JsonObject()
+                    }
+                }
+            },
+            new JsonObject
+            {
+                ["type"] = "function",
+                ["function"] = new JsonObject
+                {
+                    ["name"] = "rename_item",
+                    ["description"] = "Renames any habit, daily, or to-do by ID.",
+                    ["parameters"] = new JsonObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JsonObject
+                        {
+                            ["itemId"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "The GUID of the item to rename."
+                            },
+                            ["title"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "The new title."
+                            }
+                        },
+                        ["required"] = new JsonArray { "itemId", "title" }
+                    }
+                }
+            },
+            new JsonObject
+            {
+                ["type"] = "function",
+                ["function"] = new JsonObject
+                {
+                    ["name"] = "set_due_date",
+                    ["description"] = "Sets or clears a to-do due date. Use yyyy-MM-dd, or empty to clear.",
+                    ["parameters"] = new JsonObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JsonObject
+                        {
+                            ["itemId"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "The GUID of the to-do."
+                            },
+                            ["dueDate"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "Due date yyyy-MM-dd, or empty to clear."
+                            }
+                        },
+                        ["required"] = new JsonArray { "itemId" }
+                    }
+                }
+            },
+            new JsonObject
+            {
+                ["type"] = "function",
+                ["function"] = new JsonObject
+                {
+                    ["name"] = "archive_item",
+                    ["description"] = "Archives a habit, daily, or to-do by ID.",
+                    ["parameters"] = new JsonObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JsonObject
+                        {
+                            ["itemId"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "The GUID of the item to archive."
+                            }
+                        },
+                        ["required"] = new JsonArray { "itemId" }
                     }
                 }
             }

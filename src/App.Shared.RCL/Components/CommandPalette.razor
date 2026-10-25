@@ -53,7 +53,7 @@
                     @foreach (var group in _groupedItems)
                     {
                         <div class="cmd-palette-group" role="group" aria-label="@group.Key">
-                            <div class="cmd-palette-group-title" aria-hidden="true">@group.Key</div>
+                            <div class="cmd-palette-group-title" aria-hidden="true">@GetGroupTitle(group.Key)</div>
                             @foreach (var item in group)
                             {
                                 var isSelected = SelectedItemId is not null && item.Id == SelectedItemId;
@@ -70,7 +70,7 @@
                                         <MudIcon Icon="@item.Icon" Class="cmd-palette-item-icon" aria-hidden="true" />
                                     }
                                     <div class="cmd-palette-item-body">
-                                        <span class="cmd-palette-item-title">@item.Title</span>
+                                        <span class="cmd-palette-item-title">@((MarkupString)GetHighlightedHtml(item.Title, _query))</span>
                                         @if (!string.IsNullOrEmpty(item.Subtitle))
                                         {
                                             <span class="cmd-palette-item-subtitle">@item.Subtitle</span>
@@ -100,6 +100,7 @@
             <div class="cmd-palette-footer" aria-hidden="true">
                 <span class="cmd-palette-footer-item"><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
                 <span class="cmd-palette-footer-item"><kbd>↵</kbd> Select</span>
+                <span class="cmd-palette-footer-item"><kbd>G</kbd> then <kbd>B</kbd>/<kbd>S</kbd>/<kbd>U</kbd>/<kbd>P</kbd> Go to</span>
                 @if (_breadcrumbs.Count > 0)
                 {
                     <span class="cmd-palette-footer-item"><kbd>⌫</kbd> Back</span>

@@ -15,13 +15,43 @@ public partial class CommandPalette : IDisposable
     private List<CommandItem>? _currentSubItems;
     private List<CommandItem> _flatVisibleItems = [];
     private List<IGrouping<string, CommandItem>> _groupedItems = [];
+    private readonly Dictionary<string, int> _groupTotals =
+#pragma warning disable IDE0028 // Dictionary with comparer cannot use collection expression.
+        new(StringComparer.Ordinal);
+#pragma warning restore IDE0028
     private string _query = string.Empty;
     private int _selectedIndex;
     private CancellationTokenSource? _searchCts;
+    private bool _pendingChord;
+    private DotNetObjectReference<CommandPalette>? _dotNetRef;
+    private bool _globalShortcutRegistered;
 
     protected override void OnInitialized()
     {
         PaletteService.StateChanged += HandleServiceStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_globalShortcutRegistered)
+        {
+            _globalShortcutRegistered = true;
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            try
+            {
+                await JS.InvokeVoidAsync("HabitinatorCommandPalette.initGlobal", _dotNetRef);
+            }
+            catch
+            {
+                // Best effort global shortcut.
+            }
+        }
+    }
+
+    [JSInvokable("ToggleFromJs")]
+    public void ToggleFromJs()
+    {
+        PaletteService.Toggle();
     }
 
     private void HandleServiceStateChanged()
@@ -35,7 +65,9 @@ public partial class CommandPalette : IDisposable
                 _currentSubItems = null;
                 _query = string.Empty;
                 _selectedIndex = 0;
+                _pendingChord = false;
                 _rootItems = await PaletteService.GetRootCommandsAsync();
+                await LoadRecentAsync();
                 await RecomputeVisibleItemsAsync();
                 StateHasChanged();
                 await SafeInvokeVoidAsync("HabitinatorCommandPalette.onOpen");
@@ -55,6 +87,35 @@ public partial class CommandPalette : IDisposable
         });
     }
 
+    private async Task LoadRecentAsync()
+    {
+        try
+        {
+            var ids = await JS.InvokeAsync<string[]?>("HabitinatorCommandPalette.loadRecent", CancellationToken.None, null);
+            if (ids is not null)
+            {
+                PaletteService.SetRecentIds(ids);
+            }
+        }
+        catch
+        {
+            // Local storage unavailable.
+        }
+    }
+
+    private async Task SaveRecentAsync(string commandId)
+    {
+        try
+        {
+            PaletteService.RecordRecent(commandId);
+            await JS.InvokeVoidAsync("HabitinatorCommandPalette.saveRecent", CancellationToken.None, new object?[] { PaletteService.RecentIds.ToArray() });
+        }
+        catch
+        {
+            PaletteService.RecordRecent(commandId);
+        }
+    }
+
     private async Task OnQueryInput(ChangeEventArgs e)
     {
         _query = e.Value?.ToString() ?? string.Empty;
@@ -65,10 +126,23 @@ public partial class CommandPalette : IDisposable
     private async Task RecomputeVisibleItemsAsync()
     {
         var token = await ResetSearchAsync();
+        // Debounce fast typing so snapshot reads do not stack up.
+        if (!string.IsNullOrWhiteSpace(_query) && _currentSubItems is null)
+        {
+            try
+            {
+                await Task.Delay(120, token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+        }
+
         var items = _currentSubItems is not null
             ? FilterSubItems(_query)
             : await BuildRootItemsAsync(_query, token);
-        if (items is null)
+        if (items is null || token.IsCancellationRequested)
         {
             return;
         }
@@ -79,6 +153,8 @@ public partial class CommandPalette : IDisposable
         {
             _selectedIndex = Math.Max(0, _flatVisibleItems.Count - 1);
         }
+
+        StateHasChanged();
     }
 
     private async Task<CancellationToken> ResetSearchAsync()
@@ -95,33 +171,63 @@ public partial class CommandPalette : IDisposable
 
     private List<CommandItem> FilterSubItems(string query)
     {
-        if (_currentSubItems is null || string.IsNullOrWhiteSpace(query))
+        if (_currentSubItems is null)
         {
-            return _currentSubItems is null ? [] : [.. _currentSubItems];
+            return [];
         }
 
-        return _currentSubItems.Where(MatchesSubItemQuery).ToList();
-    }
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return [.. _currentSubItems];
+        }
 
-    private bool MatchesSubItemQuery(CommandItem i) =>
-        i.Title.Contains(_query, StringComparison.OrdinalIgnoreCase) ||
-        (i.Subtitle is not null && i.Subtitle.Contains(_query, StringComparison.OrdinalIgnoreCase)) ||
-        (i.Keywords is not null && i.Keywords.Any(k => k.Contains(_query, StringComparison.OrdinalIgnoreCase)));
+        return _currentSubItems
+            .Select(i => (Item: i, Score: CommandPaletteScoring.ScoreItem(i, query.Trim())))
+            .Where(x => x.Score > 0)
+            .OrderByDescending(x => x.Score)
+            .Select(x => x.Item)
+            .ToList();
+    }
 
     private async Task<List<CommandItem>?> BuildRootItemsAsync(string query, CancellationToken token)
     {
-        // Initial state: show Suggested, Navigation, and top Actions
-        if (string.IsNullOrWhiteSpace(query))
+        var effective = query.Trim();
+        var commandOnly = effective.StartsWith('>');
+        if (commandOnly)
         {
-            return _rootItems.Where(i => i.Category is "Suggested" or "Navigation" or "Actions").ToList();
+            effective = effective[1..].Trim();
         }
 
-        var q = query.Trim();
+        if (string.IsNullOrWhiteSpace(effective))
+        {
+            return BuildBrowseItems();
+        }
 
-        // 1. Matching root commands
+        var q = effective;
+
+        // 1. Matching root commands with fuzzy ranking.
         var items = FindMatchingRootCommands(q);
 
-        // 2. Search board items
+        // 2. Quick-add: "add <section> <title> #tag".
+        items.AddRange(PaletteService.BuildQuickAddCommands(q));
+
+        // 3. Ask AI handoff.
+        if (PaletteService.BuildAskAiCommand(q) is { } askAi)
+        {
+            items.Add(askAi);
+        }
+
+        if (commandOnly)
+        {
+            return items
+                .Select(i => (Item: i, Score: CommandPaletteScoring.ScoreItem(i, q)))
+                .Where(x => x.Score > 0)
+                .OrderByDescending(x => x.Score)
+                .Select(x => x.Item)
+                .ToList();
+        }
+
+        // 4. Search board items.
         var boardResults = await SearchBoardItemsSafeAsync(q, token);
         if (boardResults is null)
         {
@@ -136,13 +242,23 @@ public partial class CommandPalette : IDisposable
         return items;
     }
 
+    private List<CommandItem> BuildBrowseItems()
+    {
+        // Show recent first, then every category capped with totals in the group header.
+        var recent = PaletteService.BuildRecentGroup(_rootItems);
+        var ordered = new List<CommandItem>();
+        ordered.AddRange(recent);
+        ordered.AddRange(_rootItems);
+        return ordered;
+    }
+
     private List<CommandItem> FindMatchingRootCommands(string q)
     {
-        return _rootItems.Where(i =>
-            i.Title.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-            i.Category.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-            (i.Subtitle is not null && i.Subtitle.Contains(q, StringComparison.OrdinalIgnoreCase)) ||
-            (i.Keywords is not null && i.Keywords.Any(k => k.Contains(q, StringComparison.OrdinalIgnoreCase))))
+        return _rootItems
+            .Select(i => (Item: i, Score: CommandPaletteScoring.ScoreItem(i, q)))
+            .Where(x => x.Score > 0)
+            .OrderByDescending(x => x.Score)
+            .Select(x => x.Item)
             .ToList();
     }
 
@@ -160,8 +276,15 @@ public partial class CommandPalette : IDisposable
 
     private void ApplyGrouping(List<CommandItem> items)
     {
-        // Group with capped items per category when browsing root, but never truncate sub-actions
+        _groupTotals.Clear();
+        foreach (var g in items.GroupBy(i => i.Category))
+        {
+            _groupTotals[g.Key] = g.Count();
+        }
+
         var maxItemsPerCategory = GetMaxItemsPerCategory();
+
+        // GroupBy preserves first-seen order so Recent stays on top.
         _groupedItems = items
             .GroupBy(i => i.Category)
             .Select(g => new CappedGrouping(g.Key, g.Take(maxItemsPerCategory)))
@@ -178,7 +301,23 @@ public partial class CommandPalette : IDisposable
             return 100;
         }
 
-        return string.IsNullOrWhiteSpace(_query) ? 4 : 8;
+        return string.IsNullOrWhiteSpace(_query) ? 6 : 10;
+    }
+
+    public string GetGroupTitle(string category)
+    {
+        if (_groupTotals.TryGetValue(category, out var total))
+        {
+            var shown = _groupedItems.FirstOrDefault(g => g.Key == category)?.Count() ?? 0;
+            if (total > shown)
+            {
+                return $"{category} ({shown} of {total})";
+            }
+
+            return $"{category} ({total})";
+        }
+
+        return category;
     }
 
     public CommandItem? SelectedItem =>
@@ -214,6 +353,11 @@ public partial class CommandPalette : IDisposable
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
+        if (await HandleChordAsync(e))
+        {
+            return;
+        }
+
         if (await HandleCreationShortcutAsync(e))
         {
             return;
@@ -229,6 +373,22 @@ public partial class CommandPalette : IDisposable
                 await MoveSelectionAsync(-1);
                 break;
 
+            case "Home":
+                await MoveToEdgeAsync(first: true);
+                break;
+
+            case "End":
+                await MoveToEdgeAsync(first: false);
+                break;
+
+            case "PageDown":
+                await MoveSelectionAsync(5);
+                break;
+
+            case "PageUp":
+                await MoveSelectionAsync(-5);
+                break;
+
             case "Enter":
                 await ExecuteSelectedAsync();
                 break;
@@ -242,6 +402,60 @@ public partial class CommandPalette : IDisposable
                 break;
         }
     }
+
+    private async Task<bool> HandleChordAsync(KeyboardEventArgs e)
+    {
+        // When the query is empty, press G then B, S, U, or P.
+        if (_currentSubItems is not null)
+        {
+            _pendingChord = false;
+            return false;
+        }
+
+        if (_pendingChord)
+        {
+            _pendingChord = false;
+            var path = e.Key.ToLowerInvariant() switch
+            {
+                "b" => "/",
+                "s" => "/stats",
+                "u" => "/upcoming",
+                "p" => "/settings",
+                _ => null
+            };
+            if (path is not null && string.IsNullOrWhiteSpace(_query))
+            {
+                var nav = _rootItems.FirstOrDefault(c => c.Id == $"nav-{PathToNavId(path)}");
+                if (nav?.Action is not null)
+                {
+                    await SaveRecentAsync(nav.Id);
+                    await nav.Action();
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(_query) && e.Key.Equals("g", StringComparison.OrdinalIgnoreCase)
+            && !e.CtrlKey && !e.MetaKey && !e.AltKey)
+        {
+            _pendingChord = true;
+            StateHasChanged();
+            return true;
+        }
+
+        return false;
+    }
+
+    private static string PathToNavId(string path) => path switch
+    {
+        "/" => "board",
+        "/stats" => "stats",
+        "/upcoming" => "upcoming",
+        "/settings" => "settings",
+        _ => "board"
+    };
 
     private async Task<bool> HandleCreationShortcutAsync(KeyboardEventArgs e)
     {
@@ -280,6 +494,18 @@ public partial class CommandPalette : IDisposable
         await SafeInvokeVoidAsync("HabitinatorCommandPalette.scrollSelectedIntoView", SelectedItemId);
     }
 
+    private async Task MoveToEdgeAsync(bool first)
+    {
+        if (_flatVisibleItems.Count == 0)
+        {
+            return;
+        }
+
+        _selectedIndex = first ? 0 : _flatVisibleItems.Count - 1;
+        StateHasChanged();
+        await SafeInvokeVoidAsync("HabitinatorCommandPalette.scrollSelectedIntoView", SelectedItemId);
+    }
+
     private Task ExecuteSelectedAsync()
     {
         return SelectedItem is not null ? ExecuteItemAsync(SelectedItem) : Task.CompletedTask;
@@ -287,6 +513,13 @@ public partial class CommandPalette : IDisposable
 
     private async Task HandleEscapeAsync()
     {
+        if (_pendingChord)
+        {
+            _pendingChord = false;
+            StateHasChanged();
+            return;
+        }
+
         if (!string.IsNullOrEmpty(_query))
         {
             _query = string.Empty;
@@ -315,6 +548,7 @@ public partial class CommandPalette : IDisposable
                 _currentSubItems = children;
                 _query = string.Empty;
                 _selectedIndex = 0;
+                _pendingChord = false;
                 await RecomputeVisibleItemsAsync();
             }
             catch
@@ -324,7 +558,15 @@ public partial class CommandPalette : IDisposable
         }
         else if (item.Action is not null)
         {
-            await item.Action();
+            await SaveRecentAsync(item.Id);
+            try
+            {
+                await item.Action();
+            }
+            catch
+            {
+                // Action hosts already notify; keep palette stable.
+            }
         }
     }
 
@@ -354,7 +596,12 @@ public partial class CommandPalette : IDisposable
             return $"Search actions for {_breadcrumbs[^1]}...";
         }
 
-        return "Type a command or search...";
+        if (_pendingChord)
+        {
+            return "G pressed. Press B, S, U, or P...";
+        }
+
+        return "Type a command or search. Try > for commands, add todo ...";
     }
 
     private string? GetActiveDescendantId()
@@ -362,11 +609,48 @@ public partial class CommandPalette : IDisposable
         return SelectedItemId is not null ? $"cmd-item-{SelectedItemId}" : null;
     }
 
+    private static string GetHighlightedHtml(string text, string query)
+    {
+        var encoded = System.Net.WebUtility.HtmlEncode(text);
+        var q = query.Trim().TrimStart('>');
+        if (string.IsNullOrWhiteSpace(q) || q.StartsWith("add ", StringComparison.OrdinalIgnoreCase))
+        {
+            return encoded;
+        }
+
+        var idx = encoded.IndexOf(System.Net.WebUtility.HtmlEncode(q), StringComparison.OrdinalIgnoreCase);
+        if (idx < 0)
+        {
+            // Fall back to first-word highlight for fuzzy matches.
+            var first = q.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(first))
+            {
+                return encoded;
+            }
+
+            idx = encoded.IndexOf(System.Net.WebUtility.HtmlEncode(first), StringComparison.OrdinalIgnoreCase);
+            if (idx < 0)
+            {
+                return encoded;
+            }
+
+            q = first;
+        }
+
+        var encodedQ = System.Net.WebUtility.HtmlEncode(q);
+        return string.Concat(
+            encoded.AsSpan(0, idx).ToString(),
+            "<mark class=\"cmd-palette-mark\">",
+            encoded[idx..(idx + encodedQ.Length)],
+            "</mark>",
+            encoded[(idx + encodedQ.Length)..]);
+    }
+
     private async ValueTask SafeInvokeVoidAsync(string identifier, params object?[]? args)
     {
         try
         {
-            await JS.InvokeVoidAsync(identifier, args);
+            await JS.InvokeVoidAsync(identifier, CancellationToken.None, args);
         }
         catch
         {
@@ -388,6 +672,8 @@ public partial class CommandPalette : IDisposable
             _searchCts?.Cancel();
             _searchCts?.Dispose();
             _searchCts = null;
+            _dotNetRef?.Dispose();
+            _dotNetRef = null;
         }
     }
 

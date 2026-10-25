@@ -201,6 +201,20 @@
     opacity: 0.8;
 }
 
+.cmd-palette-mark {
+    background: transparent;
+    color: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-thickness: 2px;
+    text-decoration-color: var(--mud-palette-primary);
+}
+
+.cmd-palette-item--selected .cmd-palette-mark {
+    color: var(--mud-palette-primary);
+}
+
 .cmd-palette-item-chevron {
     font-size: 1rem;
     color: var(--mud-palette-text-disabled);

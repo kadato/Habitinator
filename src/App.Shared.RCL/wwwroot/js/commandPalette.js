@@ -1,6 +1,7 @@
 // Command palette focus management and smooth scrolling
 globalThis.HabitinatorCommandPalette = (function () {
   let previousActiveElement = null;
+  let globalRef = null;
 
   function getDialog() {
     return document.querySelector('.cmd-palette-dialog');
@@ -44,7 +45,42 @@ globalThis.HabitinatorCommandPalette = (function () {
     }
   }
 
+  function onGlobalKeydown(e) {
+    const isMod = e.ctrlKey || e.metaKey;
+    if (!isMod) return;
+    if ((e.key === 'k' || e.key === 'K') && !e.shiftKey && !e.altKey) {
+      const tag = (document.activeElement && document.activeElement.tagName) || '';
+      // Allow toggle from anywhere except when user is selecting text with Ctrl+K in an editor that handles it.
+      e.preventDefault();
+      try {
+        if (globalRef) globalRef.invokeMethodAsync('ToggleFromJs');
+      } catch (err) { /* ignore */ }
+    }
+  }
+
   return {
+    initGlobal: function (dotNetRef) {
+      globalRef = dotNetRef;
+      if (!globalThis.__habitinatorPaletteGlobalBound) {
+        globalThis.__habitinatorPaletteGlobalBound = true;
+        document.addEventListener('keydown', onGlobalKeydown, true);
+      }
+    },
+    loadRecent: function () {
+      try {
+        const raw = localStorage.getItem('habitinator-palette-recent');
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed.slice(0, 5) : [];
+      } catch (e) {
+        return [];
+      }
+    },
+    saveRecent: function (ids) {
+      try {
+        localStorage.setItem('habitinator-palette-recent', JSON.stringify(ids || []));
+      } catch (e) { /* ignore */ }
+    },
     onOpen: function () {
       previousActiveElement = document.activeElement;
       document.addEventListener('keydown', onKeydown, true);
@@ -71,7 +107,7 @@ globalThis.HabitinatorCommandPalette = (function () {
 
     scrollSelectedIntoView: function (itemId) {
       requestAnimationFrame(function () {
-        const selector = itemId ? `#cmd-item-${itemId}` : '.cmd-palette-item--selected';
+        const selector = itemId ? `#cmd-item-${CSS.escape(itemId)}` : '.cmd-palette-item--selected';
         const selected = document.querySelector(selector);
         const container = document.getElementById('cmd-palette-results');
         if (!selected || !container) return;

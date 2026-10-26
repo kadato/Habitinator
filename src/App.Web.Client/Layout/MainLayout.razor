@@ -1,6 +1,7 @@
 @using System.Security.Claims
 @using global::App.Shared.RCL
 @using global::App.Shared.RCL.Services
+@using global::App.Shared.RCL.Services.CommandPalette
 @using global::App.Shared.RCL.Services.Board.Local
 @using global::App.Shared.RCL.Themes
 @using Microsoft.AspNetCore.WebUtilities
@@ -10,6 +11,7 @@
 @inject IBoardDataService BoardData
 @inject IBoardLocalStoreLifecycle LocalBoardLifecycle
 @inject BoardUiSessionState UiSessionState
+@inject ICommandPaletteService PaletteService
 
 <PageTitle>@SeoDefaults.DefaultTitle</PageTitle>
 
@@ -52,6 +54,12 @@
                                 <span class="d-inline-flex align-center sync-indicator-wrap">
                                     <SyncStatusIndicator IconOnly="true" />
                                 </span>
+                                <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                               Color="Color.Primary"
+                                               Size="Size.Medium"
+                                               aria-label="Command palette (Ctrl+K)"
+                                               title="Open command palette (Ctrl+K)"
+                                               OnClick="() => PaletteService.Toggle()" />
                                 <MudIconButton Icon="@Icons.Material.Filled.SmartToy"
                                                Color="Color.Primary"
                                                Size="Size.Medium"

@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 
+using MudBlazor;
+
 namespace App.Shared.RCL.Components;
 
 public partial class CommandPalette : IDisposable
@@ -198,23 +200,92 @@ public partial class CommandPalette : IDisposable
             effective = effective[1..].Trim();
         }
 
-        if (string.IsNullOrWhiteSpace(effective))
+        var isAiMode = effective.StartsWith('?') || effective.StartsWith('/');
+        if (isAiMode)
+        {
+            effective = effective[1..].Trim();
+        }
+
+        var isTagMode = effective.StartsWith('#');
+        if (isTagMode)
+        {
+            effective = effective[1..].Trim();
+        }
+
+        var isUrgentMode = effective.StartsWith('!');
+        if (isUrgentMode)
+        {
+            effective = effective[1..].Trim();
+        }
+
+        var isSectionMode = effective.StartsWith('@');
+        string? targetSection = null;
+        if (isSectionMode)
+        {
+            var parts = effective[1..].Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length > 0)
+            {
+                targetSection = parts[0].ToLowerInvariant();
+                effective = parts.Length > 1 ? parts[1].Trim() : string.Empty;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(effective) && !isUrgentMode && !isTagMode && !isSectionMode && !isAiMode)
         {
             return BuildBrowseItems();
         }
 
         var q = effective;
+        var items = new List<CommandItem>();
+
+        // AI Mode
+        if (isAiMode)
+        {
+            if (PaletteService.BuildAskAiCommand(string.IsNullOrWhiteSpace(q) ? "Help me plan today" : q) is { } askAiCmd)
+            {
+                items.Add(askAiCmd);
+            }
+            var quickAiPrompts = new[]
+            {
+                ("Plan my day", "Plan my day based on today dailies and active todos"),
+                ("What is pending?", "What dailies and todos do I have left for today?"),
+                ("Suggest habits", "Suggest 3 positive daily habits for better focus and health"),
+                ("Focus stats", "Show my timer summary and focus minutes")
+            };
+            foreach (var (title, prompt) in quickAiPrompts)
+            {
+                if (string.IsNullOrWhiteSpace(q) || title.Contains(q, StringComparison.OrdinalIgnoreCase))
+                {
+                    items.Add(new CommandItem(
+                        Id: $"quick-ai-{title.GetHashCode(StringComparison.Ordinal):x}",
+                        Title: title,
+                        Subtitle: prompt,
+                        Category: "AI assistant",
+                        Icon: Icons.Material.Filled.SmartToy,
+                        Action: () =>
+                        {
+                            PaletteService.Close();
+                            PaletteService.BuildAskAiCommand(prompt)?.Action?.Invoke();
+                            return Task.CompletedTask;
+                        }));
+                }
+            }
+            return items;
+        }
 
         // 1. Matching root commands with fuzzy ranking.
-        var items = FindMatchingRootCommands(q);
-
-        // 2. Quick-add: "add <section> <title> #tag".
-        items.AddRange(PaletteService.BuildQuickAddCommands(q));
-
-        // 3. Ask AI handoff.
-        if (PaletteService.BuildAskAiCommand(q) is { } askAi)
+        if (!isTagMode && !isUrgentMode && !isSectionMode)
         {
-            items.Add(askAi);
+            items.AddRange(FindMatchingRootCommands(q));
+
+            // 2. Quick-add: "add <section> <title> #tag".
+            items.AddRange(PaletteService.BuildQuickAddCommands(q));
+
+            // 3. Ask AI handoff.
+            if (PaletteService.BuildAskAiCommand(q) is { } askAi)
+            {
+                items.Add(askAi);
+            }
         }
 
         if (commandOnly)
@@ -228,7 +299,7 @@ public partial class CommandPalette : IDisposable
         }
 
         // 4. Search board items.
-        var boardResults = await SearchBoardItemsSafeAsync(q, token);
+        var boardResults = await SearchBoardItemsSafeAsync(isTagMode ? $"#{q}" : q, token);
         if (boardResults is null)
         {
             return null;
@@ -236,7 +307,27 @@ public partial class CommandPalette : IDisposable
 
         if (!token.IsCancellationRequested)
         {
-            items.AddRange(boardResults);
+            if (isTagMode)
+            {
+                items.AddRange(boardResults.Where(b => b.Subtitle?.Contains('#', StringComparison.Ordinal) == true || b.Title.Contains(q, StringComparison.OrdinalIgnoreCase)));
+            }
+            else if (isUrgentMode)
+            {
+                items.AddRange(boardResults.Where(b => b.Subtitle?.Contains("Due", StringComparison.OrdinalIgnoreCase) == true ||
+                                                       b.Subtitle?.Contains("Daily", StringComparison.OrdinalIgnoreCase) == true && !b.Subtitle.Contains("completed today", StringComparison.OrdinalIgnoreCase) ||
+                                                       b.Title.Contains(q, StringComparison.OrdinalIgnoreCase)));
+            }
+            else if (isSectionMode && targetSection is not null)
+            {
+                items.AddRange(boardResults.Where(b =>
+                    (targetSection.StartsWith("habit", StringComparison.Ordinal) && b.Category == "Habits") ||
+                    (targetSection.StartsWith("dail", StringComparison.Ordinal) && b.Category == "Dailies") ||
+                    (targetSection.StartsWith("todo", StringComparison.Ordinal) && b.Category == "To-dos")));
+            }
+            else
+            {
+                items.AddRange(boardResults);
+            }
         }
 
         return items;
@@ -393,6 +484,14 @@ public partial class CommandPalette : IDisposable
                 await ExecuteSelectedAsync();
                 break;
 
+            case "ArrowRight" when SelectedItem?.ChildrenProvider is not null:
+                await DrillDownAsync(SelectedItem);
+                break;
+
+            case "ArrowLeft" when _breadcrumbStack.Count > 0:
+                await PopBreadcrumbAsync();
+                break;
+
             case "Backspace" when string.IsNullOrEmpty(_query) && _breadcrumbStack.Count > 0:
                 await PopBreadcrumbAsync();
                 break;
@@ -538,23 +637,21 @@ public partial class CommandPalette : IDisposable
 
     private async Task ExecuteItemAsync(CommandItem item)
     {
-        if (item.ChildrenProvider is not null)
+        if (item.PrimaryAction is not null)
         {
+            await SaveRecentAsync(item.Id);
             try
             {
-                var children = await item.ChildrenProvider();
-                _breadcrumbStack.Push((item.Title, _currentSubItems ?? _rootItems));
-                _breadcrumbs.Add(item.Title);
-                _currentSubItems = children;
-                _query = string.Empty;
-                _selectedIndex = 0;
-                _pendingChord = false;
-                await RecomputeVisibleItemsAsync();
+                await item.PrimaryAction();
             }
             catch
             {
-                // Ignore sub-item loading errors
+                // Action hosts already notify. Keep palette stable.
             }
+        }
+        else if (item.ChildrenProvider is not null)
+        {
+            await DrillDownAsync(item);
         }
         else if (item.Action is not null)
         {
@@ -565,8 +662,32 @@ public partial class CommandPalette : IDisposable
             }
             catch
             {
-                // Action hosts already notify; keep palette stable.
+                // Action hosts already notify. Keep palette stable.
             }
+        }
+    }
+
+    private async Task DrillDownAsync(CommandItem item)
+    {
+        if (item.ChildrenProvider is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var children = await item.ChildrenProvider();
+            _breadcrumbStack.Push((item.Title, _currentSubItems ?? _rootItems));
+            _breadcrumbs.Add(item.Title);
+            _currentSubItems = children;
+            _query = string.Empty;
+            _selectedIndex = 0;
+            _pendingChord = false;
+            await RecomputeVisibleItemsAsync();
+        }
+        catch
+        {
+            // Ignore sub-item loading errors
         }
     }
 
@@ -601,7 +722,42 @@ public partial class CommandPalette : IDisposable
             return "G pressed. Press B, S, U, or P...";
         }
 
-        return "Type a command or search. Try > for commands, add todo ...";
+        if (_query.StartsWith('>'))
+        {
+            return "Commands mode (e.g. navigation, export, appearance)...";
+        }
+
+        if (_query.StartsWith('?') || _query.StartsWith('/'))
+        {
+            return "Ask AI assistant anything...";
+        }
+
+        if (_query.StartsWith('#'))
+        {
+            return "Filtering by tag (e.g. #work, #health)...";
+        }
+
+        if (_query.StartsWith('!'))
+        {
+            return "Showing urgent and overdue items...";
+        }
+
+        if (_query.StartsWith('@'))
+        {
+            return "Filter by section (@habits, @dailies, @todos)...";
+        }
+
+        return "Type a command or search. Try >, ?, #tag, !urgent, add todo ...";
+    }
+
+    public string GetSearchResultsStatus()
+    {
+        if (_flatVisibleItems.Count == 0)
+        {
+            return "No matching commands or items";
+        }
+
+        return $"{_flatVisibleItems.Count} commands and items found";
     }
 
     private string? GetActiveDescendantId()

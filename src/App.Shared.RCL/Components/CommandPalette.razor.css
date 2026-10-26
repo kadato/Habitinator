@@ -215,6 +215,21 @@
     color: var(--mud-palette-primary);
 }
 
+.cmd-palette-drilldown-btn {
+    background: transparent;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.cmd-palette-drilldown-btn:hover {
+    background: rgba(125, 125, 125, 0.15);
+}
+
 .cmd-palette-item-chevron {
     font-size: 1rem;
     color: var(--mud-palette-text-disabled);

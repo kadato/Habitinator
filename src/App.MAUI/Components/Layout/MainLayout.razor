@@ -1,5 +1,6 @@
 @inherits ThemeLayoutBase
 @using global::App.Shared.RCL.Services
+@using global::App.Shared.RCL.Services.CommandPalette
 @using global::App.Shared.RCL.Themes
 @inject IApiSession Session
 @inject IAppUpdaterService UpdaterService
@@ -8,6 +9,7 @@
 @inject IActivityStatisticsReader StatsReader
 @inject IBoardDataService BoardData
 @inject BoardUiSessionState UiSessionState
+@inject ICommandPaletteService PaletteService
 
 <PageTitle>@PageTitles.Brand</PageTitle>
 
@@ -34,6 +36,12 @@
                         <span class="d-inline-flex align-center sync-indicator-wrap">
                             <SyncStatusIndicator IconOnly="true" />
                         </span>
+                        <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                       Color="Color.Primary"
+                                       Size="Size.Medium"
+                                       aria-label="Command palette (Ctrl+K)"
+                                       title="Open command palette (Ctrl+K)"
+                                       OnClick="() => PaletteService.Toggle()" />
                         <MudIconButton Icon="@Icons.Material.Filled.SmartToy"
                                        Color="Color.Primary"
                                        Size="Size.Medium"

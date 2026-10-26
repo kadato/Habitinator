@@ -42,6 +42,9 @@
                 </button>
             </div>
 
+            <!-- Accessible status for screen readers -->
+            <div class="hab-visually-hidden" role="status" aria-live="polite">@GetSearchResultsStatus()</div>
+
             <!-- Grouped command results -->
             <div class="cmd-palette-results" id="cmd-palette-results" role="listbox" aria-label="Commands and search results">
                 @if (_flatVisibleItems.Count == 0)
@@ -78,7 +81,14 @@
                                     </div>
                                     @if (item.ChildrenProvider is not null)
                                     {
-                                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Class="cmd-palette-item-chevron" aria-hidden="true" />
+                                        <button type="button"
+                                                class="cmd-palette-drilldown-btn"
+                                                title="View sub-actions (Right arrow)"
+                                                aria-label="View sub-actions"
+                                                @onclick:stopPropagation="true"
+                                                @onclick="() => DrillDownAsync(item)">
+                                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Class="cmd-palette-item-chevron" aria-hidden="true" />
+                                        </button>
                                     }
                                     else if (!string.IsNullOrEmpty(item.ShortcutBadge))
                                     {
@@ -100,10 +110,11 @@
             <div class="cmd-palette-footer" aria-hidden="true">
                 <span class="cmd-palette-footer-item"><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
                 <span class="cmd-palette-footer-item"><kbd>↵</kbd> Select</span>
+                <span class="cmd-palette-footer-item"><kbd>→</kbd> Actions</span>
                 <span class="cmd-palette-footer-item"><kbd>G</kbd> then <kbd>B</kbd>/<kbd>S</kbd>/<kbd>U</kbd>/<kbd>P</kbd> Go to</span>
                 @if (_breadcrumbs.Count > 0)
                 {
-                    <span class="cmd-palette-footer-item"><kbd>⌫</kbd> Back</span>
+                    <span class="cmd-palette-footer-item"><kbd>←</kbd><kbd>⌫</kbd> Back</span>
                 }
                 <span class="cmd-palette-footer-item"><kbd>Esc</kbd> Close</span>
             </div>

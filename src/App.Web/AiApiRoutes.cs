@@ -10,6 +10,8 @@ namespace App.Web;
 
 internal static class AiApiRoutes
 {
+    private static readonly System.Text.Json.JsonSerializerOptions Json = new(System.Text.Json.JsonSerializerDefaults.Web);
+
     internal static void MapAiApi(this IEndpointRouteBuilder endpoints)
     {
         var aiApi = endpoints.MapGroup("/api/ai")
@@ -20,6 +22,7 @@ internal static class AiApiRoutes
 
         aiApi.MapPost("/test", TestConnectionAsync);
         aiApi.MapPost("/chat", ChatAsync);
+        aiApi.MapPost("/chat/stream", StreamChatAsync);
     }
 
     private static async Task<Ok<AiTestConnectionResponse>> TestConnectionAsync(
@@ -47,5 +50,36 @@ internal static class AiApiRoutes
         var preferences = row.UserPreferences?.Ai ?? new AiPreferences();
         var result = await aiService.ChatAsync(user.Value, preferences, request, cancellationToken);
         return TypedResults.Ok(result);
+    }
+
+    private static async Task StreamChatAsync(
+        CurrentUserId user,
+        AiChatRequest request,
+        ApplicationDbContext db,
+        AiAssistantService aiService,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == user.Value, cancellationToken);
+        if (row is null)
+        {
+            httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        httpContext.Response.ContentType = "text/event-stream";
+        httpContext.Response.Headers.CacheControl = "no-cache";
+        httpContext.Response.Headers.Connection = "keep-alive";
+
+        var preferences = row.UserPreferences?.Ai ?? new AiPreferences();
+        await foreach (var evt in aiService.StreamChatAsync(user.Value, preferences, request, cancellationToken))
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(evt, Json);
+            await httpContext.Response.WriteAsync($"data: {json}\n\n", cancellationToken);
+            await httpContext.Response.Body.FlushAsync(cancellationToken);
+        }
+
+        await httpContext.Response.WriteAsync("data: [DONE]\n\n", cancellationToken);
+        await httpContext.Response.Body.FlushAsync(cancellationToken);
     }
 }

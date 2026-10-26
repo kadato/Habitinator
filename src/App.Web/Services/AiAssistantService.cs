@@ -164,6 +164,65 @@ public sealed class AiAssistantService(
         return await ChatCompletionsProtocolAsync(userId, model, endpoint, apiKey, systemInstructions, request, cancellationToken);
     }
 
+    public async IAsyncEnumerable<AiChatStreamEvent> StreamChatAsync(
+        Guid userId,
+        AiPreferences preferences,
+        AiChatRequest request,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var response = await ChatAsync(userId, preferences, request, cancellationToken);
+        if (!response.Success)
+        {
+            yield return new AiChatStreamEvent
+            {
+                Type = "error",
+                Error = response.Error ?? "Failed to receive response from AI provider."
+            };
+            yield break;
+        }
+
+        foreach (var tool in response.ToolExecutions)
+        {
+            yield return new AiChatStreamEvent
+            {
+                Type = "tool_end",
+                ToolExecution = tool
+            };
+        }
+
+        var fullContent = response.Message?.Content ?? string.Empty;
+        var model = response.Message?.Model ?? preferences.Model;
+
+        if (!string.IsNullOrEmpty(fullContent))
+        {
+            var words = fullContent.Split(' ');
+            var batchSize = Math.Max(1, words.Length / 15);
+            for (var i = 0; i < words.Length; i += batchSize)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var count = Math.Min(batchSize, words.Length - i);
+                var chunk = string.Join(' ', words.Skip(i).Take(count));
+                if (i + count < words.Length)
+                {
+                    chunk += " ";
+                }
+
+                yield return new AiChatStreamEvent
+                {
+                    Type = "delta",
+                    Text = chunk,
+                    Model = model
+                };
+            }
+        }
+
+        yield return new AiChatStreamEvent
+        {
+            Type = "done",
+            Model = model
+        };
+    }
+
     private async Task<AiChatResponse> ChatResponsesProtocolAsync(
         Guid userId,
         string model,
@@ -599,7 +658,7 @@ public sealed class AiAssistantService(
         }
     }
 
-    private async Task<AiToolExecution> ExecuteToolAsync(
+    internal async Task<AiToolExecution> ExecuteToolAsync(
         Guid userId,
         string toolName,
         string argumentsJson,
@@ -886,6 +945,200 @@ public sealed class AiAssistantService(
                         break;
                     }
 
+                case "create_items":
+                    {
+                        if (!root.TryGetProperty("items", out var itemsArr) || itemsArr.ValueKind != JsonValueKind.Array)
+                        {
+                            exec.Result = "Error: 'items' array is required.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var createdCount = 0;
+                        var summaryList = new List<string>();
+                        foreach (var el in itemsArr.EnumerateArray())
+                        {
+                            var sStr = el.TryGetProperty("section", out var s) ? s.GetString() : "Todo";
+                            var tStr = el.TryGetProperty("title", out var t) ? t.GetString() : string.Empty;
+                            if (string.IsNullOrWhiteSpace(tStr))
+                            {
+                                continue;
+                            }
+
+                            var nStr = el.TryGetProperty("notes", out var n) ? n.GetString() : null;
+                            var tgStr = el.TryGetProperty("tags", out var tg) ? tg.GetString() : null;
+                            var dStr = el.TryGetProperty("dueDate", out var d) ? d.GetString() : null;
+
+                            if (!Enum.TryParse<BoardSection>(sStr, true, out var sec))
+                            {
+                                sec = BoardSection.Todo;
+                            }
+
+                            DateOnly? dDate = null;
+                            if (!string.IsNullOrWhiteSpace(dStr) && DateOnly.TryParseExact(dStr, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+                            {
+                                dDate = dt;
+                            }
+
+                            var item = await boards.CreateItemDetailedAsync(
+                                userId,
+                                sec,
+                                tStr.Trim(),
+                                nStr,
+                                tgStr,
+                                startOrDueDate: dDate,
+                                itemId: null,
+                                cancellationToken: cancellationToken);
+                            summaryList.Add($"{sec}: '{item.Title}'");
+                            createdCount++;
+                        }
+
+                        exec.Result = $"Successfully created {createdCount} items: {string.Join(", ", summaryList)}.";
+                        exec.IsSuccess = createdCount > 0;
+                        break;
+                    }
+
+                case "update_tags":
+                    {
+                        var idStr = root.TryGetProperty("itemId", out var idProp) ? idProp.GetString() : string.Empty;
+                        var tagsStr = root.TryGetProperty("tags", out var tgProp) ? tgProp.GetString() : null;
+                        if (!Guid.TryParse(idStr, out var itemId))
+                        {
+                            exec.Result = "Error: valid itemId GUID is required.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var section = await boards.GetItemSectionAsync(userId, itemId, cancellationToken);
+                        if (section is null)
+                        {
+                            exec.Result = $"Error: item {itemId} not found.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var snapshot = await boards.GetSnapshotAsync(userId, 500, cancellationToken);
+                        var item = snapshot.Habits.Concat(snapshot.Dailies).Concat(snapshot.Todos).FirstOrDefault(i => i.Id == itemId);
+                        if (item is null)
+                        {
+                            exec.Result = $"Error: item {itemId} not found.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        BoardMutationResult result = section.Value switch
+                        {
+                            BoardSection.Habit => await boards.UpdateHabitAsync(userId, itemId, UpdateHabitArgs.From(item) with { Tags = tagsStr }, cancellationToken),
+                            BoardSection.Daily => await boards.UpdateDailyAsync(userId, itemId, UpdateDailyArgs.From(item) with { Tags = tagsStr }, cancellationToken),
+                            _ => await boards.UpdateTodoAsync(userId, itemId, UpdateTodoArgs.From(item) with { Tags = tagsStr }, cancellationToken)
+                        };
+                        exec.Result = $"Tags updated to '{tagsStr ?? "(cleared)"}'.";
+                        exec.IsSuccess = result.Status == BoardMutationStatus.Ok;
+                        break;
+                    }
+
+                case "append_notes":
+                    {
+                        var idStr = root.TryGetProperty("itemId", out var idProp) ? idProp.GetString() : string.Empty;
+                        var notesToAppend = root.TryGetProperty("notes", out var nProp) ? nProp.GetString() : string.Empty;
+                        if (!Guid.TryParse(idStr, out var itemId) || string.IsNullOrWhiteSpace(notesToAppend))
+                        {
+                            exec.Result = "Error: valid itemId and non-empty notes are required.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var section = await boards.GetItemSectionAsync(userId, itemId, cancellationToken);
+                        if (section is null)
+                        {
+                            exec.Result = $"Error: item {itemId} not found.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var snapshot = await boards.GetSnapshotAsync(userId, 500, cancellationToken);
+                        var item = snapshot.Habits.Concat(snapshot.Dailies).Concat(snapshot.Todos).FirstOrDefault(i => i.Id == itemId);
+                        if (item is null)
+                        {
+                            exec.Result = $"Error: item {itemId} not found.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var mergedNotes = string.IsNullOrWhiteSpace(item.Notes) ? notesToAppend.Trim() : $"{item.Notes}\n{notesToAppend.Trim()}";
+                        BoardMutationResult result = section.Value switch
+                        {
+                            BoardSection.Habit => await boards.UpdateHabitAsync(userId, itemId, UpdateHabitArgs.From(item) with { Notes = mergedNotes }, cancellationToken),
+                            BoardSection.Daily => await boards.UpdateDailyAsync(userId, itemId, UpdateDailyArgs.From(item) with { Notes = mergedNotes }, cancellationToken),
+                            _ => await boards.UpdateTodoAsync(userId, itemId, UpdateTodoArgs.From(item) with { Notes = mergedNotes }, cancellationToken)
+                        };
+                        exec.Result = "Notes updated successfully.";
+                        exec.IsSuccess = result.Status == BoardMutationStatus.Ok;
+                        break;
+                    }
+
+                case "set_daily_weekdays":
+                    {
+                        var idStr = root.TryGetProperty("itemId", out var idProp) ? idProp.GetString() : string.Empty;
+                        if (!Guid.TryParse(idStr, out var itemId))
+                        {
+                            exec.Result = "Error: valid itemId GUID is required.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var mask = DailyWeekdays.All;
+                        var propFound = root.TryGetProperty("days", out var wProp) || root.TryGetProperty("weekdays", out wProp);
+                        if (propFound)
+                        {
+                            if (wProp.ValueKind == JsonValueKind.Number)
+                            {
+                                mask = DailyWeekdays.Normalize(wProp.GetInt32());
+                            }
+                            else if (wProp.ValueKind == JsonValueKind.String)
+                            {
+                                var s = wProp.GetString()?.ToLowerInvariant();
+                                mask = s switch
+                                {
+                                    "weekdays" => DailyWeekdays.From(DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday),
+                                    "weekends" => DailyWeekdays.From(DayOfWeek.Saturday, DayOfWeek.Sunday),
+                                    "all" or "everyday" => DailyWeekdays.All,
+                                    _ => DailyWeekdays.All
+                                };
+                            }
+                            else if (wProp.ValueKind == JsonValueKind.Array)
+                            {
+                                var days = new List<DayOfWeek>();
+                                foreach (var elem in wProp.EnumerateArray())
+                                {
+                                    if (elem.GetString() is { } str && Enum.TryParse<DayOfWeek>(str, true, out var dow))
+                                    {
+                                        days.Add(dow);
+                                    }
+                                }
+                                mask = days.Count > 0 ? DailyWeekdays.From([.. days]) : DailyWeekdays.All;
+                            }
+                        }
+
+                        var snapshot = await boards.GetSnapshotAsync(userId, 500, cancellationToken);
+                        var daily = snapshot.Dailies.FirstOrDefault(d => d.Id == itemId);
+                        if (daily is null)
+                        {
+                            exec.Result = $"Error: daily {itemId} not found.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var result = await boards.UpdateDailyAsync(
+                            userId,
+                            itemId,
+                            UpdateDailyArgs.From(daily) with { Weekdays = mask, Repeat = DailyRepeatType.Weekly },
+                            cancellationToken);
+                        exec.Result = $"Daily schedule updated (mask {mask}).";
+                        exec.IsSuccess = result.Status == BoardMutationStatus.Ok;
+                        break;
+                    }
+
                 default:
                     exec.Result = $"Unknown tool '{toolName}'.";
                     exec.IsSuccess = false;
@@ -914,10 +1167,14 @@ public sealed class AiAssistantService(
             "- get_board_summary: Use this to see pending and completed dailies, active and overdue todos, and habits.\n" +
             "- get_snapshot: Use this to inspect items with their IDs.\n" +
             "- create_item: Creates a Habit, Daily, or Todo on the board.\n" +
+            "- create_items: Creates multiple Habits, Dailies, or Todos at once in batch.\n" +
             "- toggle_item: Toggles a Daily or Todo as completed or uncompleted.\n" +
             "- habit_plus: Increments a positive habit tick.\n" +
             "- habit_minus: Increments a negative habit tick.\n" +
             "- rename_item: Renames any board item by ID.\n" +
+            "- update_tags: Updates tags on any board item by ID.\n" +
+            "- append_notes: Appends notes to any board item by ID.\n" +
+            "- set_daily_weekdays: Sets weekly schedule for a Daily (weekdays, weekends, all).\n" +
             "- set_due_date: Sets or clears a Todo due date (yyyy-MM-dd or empty to clear).\n" +
             "- archive_item: Archives a Habit, Daily, or Todo by ID.\n" +
             "- get_timer_summary: Inspects focus timer and Pomodoro minutes.\n\n" +
@@ -1166,6 +1423,142 @@ public sealed class AiAssistantService(
                             }
                         },
                         ["required"] = new JsonArray { "itemId" }
+                    }
+                }
+            },
+            new JsonObject
+            {
+                ["type"] = "function",
+                ["function"] = new JsonObject
+                {
+                    ["name"] = "create_items",
+                    ["description"] = "Creates multiple Habits, Dailies, or Todos in a single batch operation.",
+                    ["parameters"] = new JsonObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JsonObject
+                        {
+                            ["items"] = new JsonObject
+                            {
+                                ["type"] = "array",
+                                ["description"] = "List of items to create.",
+                                ["items"] = new JsonObject
+                                {
+                                    ["type"] = "object",
+                                    ["properties"] = new JsonObject
+                                    {
+                                        ["section"] = new JsonObject
+                                        {
+                                            ["type"] = "string",
+                                            ["enum"] = new JsonArray { "Habit", "Daily", "Todo" },
+                                            ["description"] = "Which section to add to: 'Habit', 'Daily', or 'Todo'."
+                                        },
+                                        ["title"] = new JsonObject
+                                        {
+                                            ["type"] = "string",
+                                            ["description"] = "The title of the item."
+                                        },
+                                        ["notes"] = new JsonObject
+                                        {
+                                            ["type"] = "string",
+                                            ["description"] = "Optional notes."
+                                        },
+                                        ["tags"] = new JsonObject
+                                        {
+                                            ["type"] = "string",
+                                            ["description"] = "Optional comma-separated tags."
+                                        },
+                                        ["dueDate"] = new JsonObject
+                                        {
+                                            ["type"] = "string",
+                                            ["description"] = "Optional due date for Todos (yyyy-MM-dd)."
+                                        }
+                                    },
+                                    ["required"] = new JsonArray { "section", "title" }
+                                }
+                            }
+                        },
+                        ["required"] = new JsonArray { "items" }
+                    }
+                }
+            },
+            new JsonObject
+            {
+                ["type"] = "function",
+                ["function"] = new JsonObject
+                {
+                    ["name"] = "update_tags",
+                    ["description"] = "Updates comma-separated tags for any item by ID.",
+                    ["parameters"] = new JsonObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JsonObject
+                        {
+                            ["itemId"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "The GUID of the item."
+                            },
+                            ["tags"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "The comma-separated tags (or empty string to clear)."
+                            }
+                        },
+                        ["required"] = new JsonArray { "itemId", "tags" }
+                    }
+                }
+            },
+            new JsonObject
+            {
+                ["type"] = "function",
+                ["function"] = new JsonObject
+                {
+                    ["name"] = "append_notes",
+                    ["description"] = "Appends notes/description to any item by ID.",
+                    ["parameters"] = new JsonObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JsonObject
+                        {
+                            ["itemId"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "The GUID of the item."
+                            },
+                            ["notes"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "Notes to append."
+                            }
+                        },
+                        ["required"] = new JsonArray { "itemId", "notes" }
+                    }
+                }
+            },
+            new JsonObject
+            {
+                ["type"] = "function",
+                ["function"] = new JsonObject
+                {
+                    ["name"] = "set_daily_weekdays",
+                    ["description"] = "Sets which days of the week a Daily repeats on ('weekdays', 'weekends', 'all', or an integer bitmask 0-127).",
+                    ["parameters"] = new JsonObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JsonObject
+                        {
+                            ["itemId"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "The GUID of the Daily."
+                            },
+                            ["weekdays"] = new JsonObject
+                            {
+                                ["description"] = "Schedule specification: 'weekdays', 'weekends', 'all', or integer bitmask (0-127)."
+                            }
+                        },
+                        ["required"] = new JsonArray { "itemId", "weekdays" }
                     }
                 }
             }

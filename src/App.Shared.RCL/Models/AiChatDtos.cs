@@ -99,3 +99,16 @@ public sealed class AiTestConnectionResponse
 
     public long LatencyMs { get; set; }
 }
+
+public sealed class AiChatStreamEvent
+{
+    public string Type { get; set; } = "delta";
+
+    public string? Text { get; set; }
+
+    public string? Model { get; set; }
+
+    public AiToolExecution? ToolExecution { get; set; }
+
+    public string? Error { get; set; }
+}

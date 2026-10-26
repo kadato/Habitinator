@@ -13,4 +13,5 @@ public sealed record CommandItem(
     Func<Task>? Action = null,
     Func<Task<List<CommandItem>>>? ChildrenProvider = null,
     IReadOnlyList<string>? Keywords = null,
-    bool IsDanger = false);
+    bool IsDanger = false,
+    Func<Task>? PrimaryAction = null);

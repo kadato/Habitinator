@@ -209,6 +209,13 @@ internal sealed class BoardPaletteCommands(
                 Subtitle: $"Habit, +{h.Counter}, -{h.NegativeCounter}",
                 Category: "Habits",
                 Icon: Icons.Material.Filled.Repeat,
+                PrimaryAction: async () =>
+                {
+                    _close();
+                    await _boardData.IncrementHabitPlusAsync(h.Id);
+                    await _notifyRefresh();
+                    await _notifier.NotifyAsync($"Incremented '{h.Title}' (+1).", Severity.Success);
+                },
                 ChildrenProvider: () => Task.FromResult(GetHabitSubActions(h))));
         }
 
@@ -228,6 +235,13 @@ internal sealed class BoardPaletteCommands(
                 Subtitle: isDone ? $"Daily, completed today, streak: {d.Counter}" : $"Daily, streak: {d.Counter}",
                 Category: "Dailies",
                 Icon: isDone ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.CalendarToday,
+                PrimaryAction: async () =>
+                {
+                    _close();
+                    await _boardData.ToggleItemAsync(BoardSection.Daily, d.Id);
+                    await _notifyRefresh();
+                    await _notifier.NotifyAsync(isDone ? $"Reopened '{d.Title}'." : $"Completed '{d.Title}'!", Severity.Success);
+                },
                 ChildrenProvider: () => Task.FromResult(GetDailySubActions(d, isDone))));
         }
 
@@ -258,6 +272,13 @@ internal sealed class BoardPaletteCommands(
                 Subtitle: $"To-do, {status}",
                 Category: "To-dos",
                 Icon: t.IsCompleted ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.CheckBoxOutlineBlank,
+                PrimaryAction: async () =>
+                {
+                    _close();
+                    await _boardData.ToggleItemAsync(BoardSection.Todo, t.Id);
+                    await _notifyRefresh();
+                    await _notifier.NotifyAsync(t.IsCompleted ? $"Reopened '{t.Title}'." : $"Completed '{t.Title}'!", Severity.Success);
+                },
                 ChildrenProvider: () => Task.FromResult(GetTodoSubActions(t))));
         }
     }
@@ -693,37 +714,38 @@ internal sealed class BoardPaletteCommands(
         }
 
         // Extract inline tags like "#evening" and a simple "due tomorrow|today|yyyy-MM-dd" hint.
-        var (parsedTitle, tags) = ParseInlineTitle(clean);
+        var (parsedTitle, tags, dueDate) = ParseInlineTitle(clean);
         _isCreatingItem = true;
         _close();
         try
         {
             var item = await _boardData.CreateItemAsync(section, parsedTitle);
-            if (!string.IsNullOrWhiteSpace(tags) && item is not null)
+            if (item is not null && (!string.IsNullOrWhiteSpace(tags) || dueDate.HasValue))
             {
                 try
                 {
                     if (section == BoardSection.Todo)
                     {
-                        await _boardData.UpdateTodoAsync(item.Id, UpdateTodoArgs.From(item) with { Tags = tags });
+                        await _boardData.UpdateTodoAsync(item.Id, UpdateTodoArgs.From(item) with { Tags = tags ?? item.Tags, DueDate = dueDate ?? item.TodoDueDate });
                     }
-                    else if (section == BoardSection.Habit)
+                    else if (section == BoardSection.Habit && !string.IsNullOrWhiteSpace(tags))
                     {
                         await _boardData.UpdateHabitAsync(item.Id, UpdateHabitArgs.From(item) with { Tags = tags });
                     }
-                    else
+                    else if (section == BoardSection.Daily && !string.IsNullOrWhiteSpace(tags))
                     {
                         await _boardData.UpdateDailyAsync(item.Id, UpdateDailyArgs.From(item) with { Tags = tags });
                     }
                 }
                 catch
                 {
-                    // Tag enrichment is best effort; the item already exists.
+                    // Tag and due date enrichment is best effort. The item already exists.
                 }
             }
 
             await _notifyRefresh();
-            await _notifier.NotifyAsync($"Added {section}: '{parsedTitle}'.", Severity.Success);
+            var dueSuffix = dueDate.HasValue ? $" (Due: {dueDate.Value:yyyy-MM-dd})" : "";
+            await _notifier.NotifyAsync($"Added {section}: '{parsedTitle}'{dueSuffix}.", Severity.Success);
         }
         catch
         {
@@ -735,16 +757,58 @@ internal sealed class BoardPaletteCommands(
         }
     }
 
-    private static (string Title, string? Tags) ParseInlineTitle(string input)
+    internal static (string Title, string? Tags, DateOnly? DueDate) ParseInlineTitle(string input)
     {
         var tags = new List<string>();
+        DateOnly? dueDate = null;
         var words = input.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
         var kept = new List<string>();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
         foreach (var w in words)
         {
             if (w.StartsWith('#') && w.Length > 1)
             {
                 tags.Add(w[1..].Trim());
+            }
+            else if (w.StartsWith("due:", StringComparison.OrdinalIgnoreCase) && w.Length > 4)
+            {
+                var val = w[4..].Trim();
+                if (val.Equals("today", StringComparison.OrdinalIgnoreCase))
+                {
+                    dueDate = today;
+                }
+                else if (val.Equals("tomorrow", StringComparison.OrdinalIgnoreCase))
+                {
+                    dueDate = today.AddDays(1);
+                }
+                else if (DateOnly.TryParseExact(val, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsed))
+                {
+                    dueDate = parsed;
+                }
+                else if (TryParseWeekday(val, today, out var weekdayDate))
+                {
+                    dueDate = weekdayDate;
+                }
+                else
+                {
+                    kept.Add(w);
+                }
+            }
+            else if (w.Equals("@today", StringComparison.OrdinalIgnoreCase))
+            {
+                dueDate = today;
+            }
+            else if (w.Equals("@tomorrow", StringComparison.OrdinalIgnoreCase))
+            {
+                dueDate = today.AddDays(1);
+            }
+            else if (w.Equals("!urgent", StringComparison.OrdinalIgnoreCase) || w.Equals("!p1", StringComparison.OrdinalIgnoreCase) || w.Equals("!high", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!tags.Contains("urgent", StringComparer.OrdinalIgnoreCase))
+                {
+                    tags.Add("urgent");
+                }
             }
             else
             {
@@ -753,7 +817,42 @@ internal sealed class BoardPaletteCommands(
         }
 
         var title = kept.Count > 0 ? string.Join(' ', kept) : input.Trim();
-        return (title, tags.Count > 0 ? string.Join(", ", tags) : null);
+        return (title, tags.Count > 0 ? string.Join(", ", tags) : null, dueDate);
+    }
+
+    private static bool TryParseWeekday(string val, DateOnly today, out DateOnly targetDate)
+    {
+        var days = new Dictionary<string, DayOfWeek>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["mon"] = DayOfWeek.Monday,
+            ["monday"] = DayOfWeek.Monday,
+            ["tue"] = DayOfWeek.Tuesday,
+            ["tuesday"] = DayOfWeek.Tuesday,
+            ["wed"] = DayOfWeek.Wednesday,
+            ["wednesday"] = DayOfWeek.Wednesday,
+            ["thu"] = DayOfWeek.Thursday,
+            ["thursday"] = DayOfWeek.Thursday,
+            ["fri"] = DayOfWeek.Friday,
+            ["friday"] = DayOfWeek.Friday,
+            ["sat"] = DayOfWeek.Saturday,
+            ["saturday"] = DayOfWeek.Saturday,
+            ["sun"] = DayOfWeek.Sunday,
+            ["sunday"] = DayOfWeek.Sunday
+        };
+
+        if (days.TryGetValue(val, out var targetDay))
+        {
+            var offset = ((int)targetDay - (int)today.DayOfWeek + 7) % 7;
+            if (offset == 0)
+            {
+                offset = 7;
+            }
+            targetDate = today.AddDays(offset);
+            return true;
+        }
+
+        targetDate = default;
+        return false;
     }
 
     private static string GetDefaultTitle(BoardSection section) =>

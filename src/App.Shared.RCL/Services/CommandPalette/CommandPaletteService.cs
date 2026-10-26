@@ -22,6 +22,9 @@ public sealed class CommandPaletteService : ICommandPaletteService
     private readonly IRemoteBoardRefreshService? _refresh;
     private readonly BoardUiSessionState? _uiSession;
     private readonly List<string> _recentIds = [];
+#pragma warning disable IDE0028 // Dictionary with comparer cannot use collection expression.
+    private readonly Dictionary<string, CommandItem> _knownItems = new(StringComparer.Ordinal);
+#pragma warning restore IDE0028
     private const int MaxRecent = 5;
 
     public CommandPaletteService(
@@ -123,6 +126,12 @@ public sealed class CommandPaletteService : ICommandPaletteService
         _exportCommands.AddExportCommand(list);
         _navigation.AddAppearanceCommands(list);
         _navigation.AddAiPromptCommands(list);
+
+        foreach (var c in list)
+        {
+            _knownItems[c.Id] = c;
+        }
+
         return Task.FromResult(list);
     }
 
@@ -159,6 +168,11 @@ public sealed class CommandPaletteService : ICommandPaletteService
 
     public List<CommandItem> BuildRecentGroup(List<CommandItem> rootCommands)
     {
+        foreach (var c in rootCommands)
+        {
+            _knownItems[c.Id] = c;
+        }
+
         var recent = new List<CommandItem>();
         foreach (var id in _recentIds)
         {
@@ -166,6 +180,10 @@ public sealed class CommandPaletteService : ICommandPaletteService
             if (match is not null)
             {
                 recent.Add(match with { Category = "Recent" });
+            }
+            else if (_knownItems.TryGetValue(id, out var known))
+            {
+                recent.Add(known with { Category = "Recent" });
             }
         }
 
@@ -220,8 +238,22 @@ public sealed class CommandPaletteService : ICommandPaletteService
             return [];
         }
 
-        // Strip trailing tags and due hints from the visible title for a cleaner preview.
-        var preview = title;
+        var (parsedTitle, tags, dueDate) = BoardPaletteCommands.ParseInlineTitle(title);
+        var preview = parsedTitle;
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(tags))
+        {
+            parts.Add($"#{tags.Replace(", ", " #")}");
+        }
+        if (dueDate.HasValue)
+        {
+            parts.Add($"Due: {dueDate.Value:yyyy-MM-dd}");
+        }
+
+        var subtitle = parts.Count > 0
+            ? $"Quick add ({string.Join(", ", parts)})"
+            : "Quick add without opening the editor";
+
         var capturedSection = section;
         var capturedTitle = title;
         return
@@ -229,7 +261,7 @@ public sealed class CommandPaletteService : ICommandPaletteService
             new CommandItem(
                 Id: $"quick-add-{capturedSection}-{preview.GetHashCode(StringComparison.Ordinal):x}",
                 Title: $"Add {capturedSection}: {preview}",
-                Subtitle: "Quick add without opening the editor",
+                Subtitle: subtitle,
                 Category: "Quick add",
                 Icon: Icons.Material.Filled.Add,
                 Action: () => _board.CreateItemWithTitleAsync(capturedSection, capturedTitle),
@@ -293,6 +325,11 @@ public sealed class CommandPaletteService : ICommandPaletteService
 
             _timers.AddTimerShortcutCommands(q, results);
             _board.AddItemMatchCommands(q, snapshot, results);
+
+            foreach (var r in results)
+            {
+                _knownItems[r.Id] = r;
+            }
         }
         catch
         {

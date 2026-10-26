@@ -88,6 +88,48 @@
                 }
             </div>
             <div class="d-flex align-center gap-0 flex-shrink-0">
+                <MudMenu Icon="@Icons.Material.Filled.Forum"
+                         Size="Size.Small"
+                         Color="Color.Inherit"
+                         Class="ai-header-btn"
+                         aria-label="View all chat threads"
+                         Dense="true"
+                         AnchorOrigin="Origin.BottomRight"
+                         TransformOrigin="Origin.TopRight"
+                         MaxHeight="360"
+                         PopoverFixed="true">
+                    <div class="px-3 py-2 border-bottom d-flex align-center justify-space-between" style="min-width: 240px;">
+                        <MudText Typo="Typo.caption" Class="font-weight-bold">Chat Threads (@_threads.Count)</MudText>
+                        <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Text" OnClick="NewThreadAsync">New</MudButton>
+                    </div>
+                    @foreach (var t in _threads)
+                    {
+                        var isActive = t.Id == _activeThreadId;
+                        <MudMenuItem Class="@(isActive ? "mud-theme-primary-hover font-weight-bold" : "")">
+                            <div class="d-flex align-center justify-space-between w-100 gap-2">
+                                <div class="d-flex align-center gap-1 min-w-0 flex-grow-1" @onclick="() => SwitchThreadAsync(t.Id)">
+                                    @if (isActive)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Primary" />
+                                    }
+                                    <span class="text-truncate">@t.Title</span>
+                                </div>
+                                @if (_threads.Count > 1)
+                                {
+                                    <span @onclick:stopPropagation="true">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                       Size="Size.Small"
+                                                       Color="Color.Default"
+                                                       Class="pa-1"
+                                                       title="Delete thread"
+                                                       aria-label="Delete thread"
+                                                       OnClick="() => DeleteThreadAsync(t.Id)" />
+                                    </span>
+                                }
+                            </div>
+                        </MudMenuItem>
+                    }
+                </MudMenu>
                 <MudIconButton Icon="@Icons.Material.Filled.Add"
                                Size="Size.Small"
                                Color="Color.Inherit"
@@ -117,13 +159,17 @@
 
         @if (_threads.Count > 1)
         {
-            <div class="px-3 py-1 d-flex align-center gap-2 flex-wrap">
+            <div class="px-3 py-1 d-flex align-center gap-1 flex-wrap border-bottom">
                 @foreach (var t in _threads.Take(4))
                 {
                     var isActive = t.Id == _activeThreadId;
                     <MudChip T="string" Size="Size.Small" Color="@(isActive ? Color.Primary : Color.Default)" OnClick="() => SwitchThreadAsync(t.Id)">
                         @t.Title
                     </MudChip>
+                }
+                @if (_threads.Count > 4)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ml-1">+@(_threads.Count - 4) more</MudText>
                 }
             </div>
         }
@@ -237,6 +283,21 @@
                                         <span class="ai-streaming-cursor" aria-hidden="true">▍</span>
                                     }
                                 </div>
+                                @if (ExtractSuggestions(entry.Message.Content) is { Count: > 0 } suggestions)
+                                {
+                                    <div class="d-flex flex-wrap gap-1 mt-2 pt-1 border-top">
+                                        @foreach (var s in suggestions)
+                                        {
+                                            <button type="button"
+                                                    class="ai-prompt-pill"
+                                                    style="font-size: 0.75rem; padding: 2px 8px;"
+                                                    @onclick="() => QuickAddFromAiAsync(s.Section, s.Title)">
+                                                <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Class="ai-prompt-pill__icon" />
+                                                <span class="ai-prompt-pill__text">+ Add @s.Section: @s.Title</span>
+                                            </button>
+                                        }
+                                    </div>
+                                }
                                 @if (entry.Tools.Count > 0)
                                 {
                                     <div class="ai-tools-card pa-3 rounded-lg border mt-2">
@@ -862,8 +923,10 @@
         thread.Entries.Add(new ChatEntry { Message = AiChatMessage.User(text) });
         thread.Title = text.Length <= 32 ? text : string.Concat(text.AsSpan(0, 31).ToString(), "…");
         thread.UpdatedAt = DateTime.UtcNow;
+        var assistantEntry = new ChatEntry { Message = AiChatMessage.Assistant(string.Empty, _activeModel) };
+        thread.Entries.Add(assistantEntry);
         _isSending = true;
-        _isStreaming = false;
+        _isStreaming = true;
         StateHasChanged();
 
         await ScrollToBottomAsync();
@@ -881,52 +944,67 @@
         {
             var request = new AiChatRequest
             {
-                Messages = thread.Entries.Select(e => e.Message).ToList(),
+                Messages = PruneContextMessages(thread.Entries.Take(thread.Entries.Count - 1).ToList()),
                 ModelOverride = _activeModel,
                 ClientTimeZoneId = TimeZoneInfo.Local.Id
             };
 
-            var response = await AiService.SendChatAsync(request, requestToken);
-            if (response.Success && response.Message is not null)
+            var refreshedBoard = false;
+            await foreach (var evt in AiService.StreamChatAsync(request, requestToken))
             {
-                var fullContent = response.Message.Content ?? string.Empty;
-                var modelId = response.Message.Model ?? _activeModel;
-
-                var assistantEntry = new ChatEntry { Message = AiChatMessage.Assistant(string.Empty, modelId) };
-                thread.Entries.Add(assistantEntry);
-                if (response.ToolExecutions.Count > 0)
+                if (evt.Type == "tool_end" && evt.ToolExecution is not null)
                 {
-                    assistantEntry.Tools.AddRange(response.ToolExecutions);
-                    try
+                    assistantEntry.Tools.Add(evt.ToolExecution);
+                    if (!refreshedBoard)
                     {
-                        await RemoteRefresh.NotifyFromRemoteAsync(requestToken);
+                        refreshedBoard = true;
+                        _ = RemoteRefresh.NotifyFromRemoteAsync(requestToken);
                     }
-                    catch
+                    StateHasChanged();
+                }
+                else if (evt.Type == "delta" && !string.IsNullOrEmpty(evt.Text))
+                {
+                    assistantEntry.Message.Content = (assistantEntry.Message.Content ?? string.Empty) + evt.Text;
+                    StateHasChanged();
+                    await ScrollToBottomAsync();
+                }
+                else if (evt.Type == "done")
+                {
+                    if (!string.IsNullOrWhiteSpace(evt.Model))
                     {
-                        // Best effort: board refresh must not fail the chat response.
+                        assistantEntry.Message.Model = evt.Model;
                     }
                 }
-
-                _isStreaming = true;
-                StateHasChanged();
-                await ScrollToBottomAsync();
-
-                await StreamTextIntoMessageAsync(assistantEntry.Message, fullContent, requestToken);
+                else if (evt.Type == "error")
+                {
+                    var errorMsg = evt.Error ?? "Failed to receive response from AI provider.";
+                    assistantEntry.Message.Content = $"⚠️ {errorMsg}";
+                    Snackbar.Add(errorMsg, Severity.Error);
+                }
             }
-            else
+
+            if (refreshedBoard)
             {
-                var errorMsg = response.Error ?? "Failed to receive response from AI provider.";
-                thread.Entries.Add(new ChatEntry { Message = AiChatMessage.Assistant($"⚠️ {errorMsg}", _activeModel) });
-                Snackbar.Add(errorMsg, Severity.Error);
+                try
+                {
+                    await RemoteRefresh.NotifyFromRemoteAsync(requestToken);
+                }
+                catch
+                {
+                    // Best effort: board refresh must not fail the chat response.
+                }
             }
         }
         catch (OperationCanceledException)
         {
-            thread.Entries.Add(new ChatEntry { Message = AiChatMessage.Assistant("Stopped. The board was not changed.", _activeModel) });
+            if (string.IsNullOrWhiteSpace(assistantEntry.Message.Content))
+            {
+                assistantEntry.Message.Content = "Stopped. The board was not changed.";
+            }
         }
         catch (Exception ex)
         {
-            thread.Entries.Add(new ChatEntry { Message = AiChatMessage.Assistant($"⚠️ Request failed: {ex.Message}", _activeModel) });
+            assistantEntry.Message.Content = $"⚠️ Request failed: {ex.Message}";
             Snackbar.Add(ex.Message, Severity.Error);
         }
         finally
@@ -940,59 +1018,120 @@
         }
     }
 
-    private async Task StreamTextIntoMessageAsync(AiChatMessage message, string fullContent, CancellationToken ct)
+    private static List<AiChatMessage> PruneContextMessages(List<ChatEntry> entries)
     {
-        if (string.IsNullOrEmpty(fullContent))
+        var recent = entries.TakeLast(14).ToList();
+        var pruned = new List<AiChatMessage>();
+
+        for (var i = 0; i < recent.Count; i++)
+        {
+            var msg = recent[i].Message;
+            if (i < recent.Count - 4 && msg.Role == "assistant" && msg.ToolCalls is { Count: > 0 })
+            {
+                pruned.Add(new AiChatMessage
+                {
+                    Role = msg.Role,
+                    Content = !string.IsNullOrWhiteSpace(msg.Content) ? msg.Content : "Executed board tools.",
+                    Model = msg.Model
+                });
+            }
+            else
+            {
+                pruned.Add(msg);
+            }
+        }
+
+        return pruned;
+    }
+
+    private sealed record SuggestedActionItem(BoardSection Section, string Title);
+
+    private static List<SuggestedActionItem> ExtractSuggestions(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return [];
+        }
+
+        var results = new List<SuggestedActionItem>();
+        var lines = content.Split('\n');
+        foreach (var line in lines)
+        {
+            var trimmed = line.Trim().TrimStart('-', '*', '•', '1', '2', '3', '4', '5', '.', ' ');
+            BoardSection? sec = null;
+            string? title = null;
+
+            if (trimmed.StartsWith("[Habit]", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("Habit:", StringComparison.OrdinalIgnoreCase))
+            {
+                sec = BoardSection.Habit;
+                title = trimmed[(trimmed.IndexOfAny([']', ':']) + 1)..].Trim();
+            }
+            else if (trimmed.StartsWith("[Daily]", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("Daily:", StringComparison.OrdinalIgnoreCase))
+            {
+                sec = BoardSection.Daily;
+                title = trimmed[(trimmed.IndexOfAny([']', ':']) + 1)..].Trim();
+            }
+            else if (trimmed.StartsWith("[Todo]", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("Todo:", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("To-do:", StringComparison.OrdinalIgnoreCase))
+            {
+                sec = BoardSection.Todo;
+                title = trimmed[(trimmed.IndexOfAny([']', ':']) + 1)..].Trim();
+            }
+
+            if (sec.HasValue && !string.IsNullOrWhiteSpace(title) && title.Length < 60)
+            {
+                title = title.Trim('*', '"', '\'');
+                if (!results.Any(r => r.Title.Equals(title, StringComparison.OrdinalIgnoreCase)))
+                {
+                    results.Add(new SuggestedActionItem(sec.Value, title));
+                }
+            }
+
+            if (results.Count >= 4)
+            {
+                break;
+            }
+        }
+
+        return results;
+    }
+
+    private async Task QuickAddFromAiAsync(BoardSection section, string title)
+    {
+        try
+        {
+            var item = await BoardData.CreateItemAsync(section, title);
+            if (item is not null)
+            {
+                await RemoteRefresh.NotifyFromRemoteAsync();
+                Snackbar.Add($"Added {section} '{title}' to your board!", Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Could not add item: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteThreadAsync(string threadId)
+    {
+        if (_threads.Count <= 1)
+        {
+            return;
+        }
+        var thread = _threads.FirstOrDefault(t => t.Id == threadId);
+        if (thread is null)
         {
             return;
         }
 
-        try
+        _threads.Remove(thread);
+        if (_activeThreadId == threadId)
         {
-            var words = fullContent.Split(' ');
-            var sb = new System.Text.StringBuilder();
-            // Reveal in about 20 frames so long answers finish in under a second.
-            var batchSize = Math.Max(1, words.Length / 20);
-
-            for (var i = 0; i < words.Length; i++)
-            {
-                ct.ThrowIfCancellationRequested();
-                sb.Append(words[i]);
-                if (i < words.Length - 1)
-                {
-                    sb.Append(' ');
-                }
-
-                if (i % batchSize == 0 || i == words.Length - 1 || words[i].Contains('\n'))
-                {
-                    message.Content = sb.ToString();
-                    StateHasChanged();
-
-                    if (i % (batchSize * 2) == 0)
-                    {
-                        await ScrollToBottomAsync();
-                    }
-
-                    await Task.Delay(12, ct);
-                }
-            }
-
-            message.Content = fullContent;
+            _activeThreadId = _threads[0].Id;
         }
-        catch (OperationCanceledException)
-        {
-            message.Content = fullContent;
-            throw;
-        }
-        catch
-        {
-            message.Content = fullContent;
-        }
-        finally
-        {
-            StateHasChanged();
-            await ScrollToBottomAsync();
-        }
+
+        await PersistThreadsAsync();
+        StateHasChanged();
     }
 
     private async Task CopyToClipboardAsync(string? content)

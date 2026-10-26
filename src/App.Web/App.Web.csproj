@@ -53,4 +53,8 @@
     <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="App.Web.IntegrationTests" />
+  </ItemGroup>
+
 </Project>

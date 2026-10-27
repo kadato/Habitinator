@@ -149,28 +149,28 @@ public sealed class IndexedDbBoardLocalStore : IBoardLocalStore
     public Task EnqueueOutboxAsync(BoardOutboxEntry entry, CancellationToken cancellationToken = default)
     {
         var task = _inner.EnqueueOutboxAsync(entry, cancellationToken);
-        SchedulePersist();
+        ScheduleImmediatePersist();
         return task;
     }
 
     public Task UpdateOutboxAsync(BoardOutboxEntry entry, CancellationToken cancellationToken = default)
     {
         var task = _inner.UpdateOutboxAsync(entry, cancellationToken);
-        SchedulePersist();
+        ScheduleImmediatePersist();
         return task;
     }
 
     public Task DeleteOutboxAsync(Guid operationId, CancellationToken cancellationToken = default)
     {
         var task = _inner.DeleteOutboxAsync(operationId, cancellationToken);
-        SchedulePersist();
+        ScheduleImmediatePersist();
         return task;
     }
 
     public Task ClearOutboxForUserAsync(string userKey, CancellationToken cancellationToken = default)
     {
         var task = _inner.ClearOutboxForUserAsync(userKey, cancellationToken);
-        SchedulePersist();
+        ScheduleImmediatePersist();
         return task;
     }
 
@@ -219,6 +219,22 @@ public sealed class IndexedDbBoardLocalStore : IBoardLocalStore
         var cts = new CancellationTokenSource();
         _pendingPersist = cts;
         _ = PersistAfterDelayAsync(TimeSpan.FromMilliseconds(250), cts.Token);
+    }
+
+    private void ScheduleImmediatePersist()
+    {
+        try
+        {
+            _pendingPersist?.Cancel();
+            _pendingPersist?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogTrace(ex, "The scheduler ignores cancel races on rapid writes.");
+        }
+
+        _pendingPersist = null;
+        _ = PersistNowAsync(CancellationToken.None);
     }
 
     private async Task PersistAfterDelayAsync(TimeSpan delay, CancellationToken cancellationToken)

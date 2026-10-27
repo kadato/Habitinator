@@ -161,10 +161,15 @@ globalThis.habBoardStore = (function () {
         }
       };
       document.addEventListener("visibilitychange", hiddenHandler);
+      globalThis.addEventListener("pagehide", hiddenHandler);
     },
     clearHidden: function () {
       if (hiddenHandler) {
         document.removeEventListener("visibilitychange", hiddenHandler);
+        try {
+          globalThis.removeEventListener("pagehide", hiddenHandler);
+        } catch (err) {
+        }
         hiddenHandler = null;
       }
     }

@@ -1,4 +1,4 @@
-// When the tab or WebView becomes visible again, reload the board. This covers missed SignalR pushes.
+// The handler reloads the board when the tab or the WebView becomes visible again. The reload covers missed SignalR pushes.
 globalThis.HabitinatorBoardVisibility = (function () {
   let dotNetHelper = null;
 
@@ -9,13 +9,22 @@ globalThis.HabitinatorBoardVisibility = (function () {
     dotNetHelper.invokeMethodAsync("OnBecameVisible").catch(function () {});
   }
 
+  function onOnline() {
+    if (!dotNetHelper) {
+      return;
+    }
+    dotNetHelper.invokeMethodAsync("OnBecameVisible").catch(function () {});
+  }
+
   return {
     start: function (dotNetRef) {
       dotNetHelper = dotNetRef;
       document.addEventListener("visibilitychange", onVisibilityChange);
+      globalThis.addEventListener("online", onOnline);
     },
     stop: function () {
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      globalThis.removeEventListener("online", onOnline);
       dotNetHelper = null;
     }
   };

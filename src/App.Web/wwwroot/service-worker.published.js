@@ -1,5 +1,6 @@
-const CACHE_NAME = 'habitinator-v4';
-const FRAMEWORK_CACHE = 'habitinator-framework-v4';
+const CACHE_NAME = 'habitinator-v5';
+const FRAMEWORK_CACHE = 'habitinator-framework-v5';
+const API_CACHE = 'habitinator-api-v5';
 
 // Shell assets are always precached for offline rendering.
 const SHELL_ASSETS = [
@@ -54,7 +55,7 @@ globalThis.addEventListener('activate', event => {
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cacheName => {
-                    if (cacheName !== CACHE_NAME && cacheName !== FRAMEWORK_CACHE) {
+                    if (cacheName !== CACHE_NAME && cacheName !== FRAMEWORK_CACHE && cacheName !== API_CACHE) {
                         console.log('Habitinator SW: deleting old cache:', cacheName);
                         return caches.delete(cacheName);
                     }
@@ -76,8 +77,29 @@ globalThis.addEventListener('fetch', event => {
         return;
     }
 
-    // Exclude API requests from caching
+    // Read APIs use network first with cache fallback so reload offline still shows data.
+    // The worker never caches mutations. The method guard above only allows GET.
     if (url.pathname.startsWith('/api/')) {
+        if (url.pathname.startsWith('/api/auth/status')
+            || url.pathname.startsWith('/api/board')
+            || url.pathname.startsWith('/api/activity/')) {
+            event.respondWith((async () => {
+                const cache = await caches.open(API_CACHE);
+                try {
+                    const network = await fetch(event.request);
+                    if (network && network.status === 200) {
+                        event.waitUntil(cache.put(event.request, network.clone()));
+                    }
+                    return network;
+                } catch (err) {
+                    const cached = await cache.match(event.request);
+                    if (cached) {
+                        return cached;
+                    }
+                    throw err;
+                }
+            })());
+        }
         return;
     }
 

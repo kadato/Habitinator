@@ -24,6 +24,20 @@ public partial class App : Application
         base.OnStart();
         RequestLocalStoreReady();
         RequestDailyReminderReschedule();
+        Connectivity.ConnectivityChanged += OnConnectivityChanged;
+    }
+
+    protected override void OnSleep()
+    {
+        base.OnSleep();
+        try
+        {
+            Connectivity.ConnectivityChanged -= OnConnectivityChanged;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex.Message);
+        }
     }
 
     private static void RequestLocalStoreReady()
@@ -56,6 +70,14 @@ public partial class App : Application
         if (sp.GetService(typeof(BoardSyncCoordinator)) is BoardSyncCoordinator sync)
         {
             sync.RequestSync();
+        }
+    }
+
+    private static void OnConnectivityChanged(object? sender, ConnectivityChangedEventArgs e)
+    {
+        if (e.NetworkAccess == NetworkAccess.Internet)
+        {
+            RequestBoardSync();
         }
     }
 

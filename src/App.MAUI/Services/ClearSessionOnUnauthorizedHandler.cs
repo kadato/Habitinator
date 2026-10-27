@@ -18,7 +18,7 @@ public sealed partial class ClearSessionOnUnauthorizedHandler : DelegatingHandle
         var res = await base.SendAsync(request, cancellationToken);
         if (res.StatusCode == HttpStatusCode.Unauthorized && _session.IsLoggedIn)
         {
-            await _session.ClearSessionAsync(cancellationToken);
+            await _session.ClearAuthOnlyAsync(null, cancellationToken);
         }
 
         return res;

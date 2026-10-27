@@ -13,6 +13,7 @@ public interface IApiSession : IClientSessionProvider
     Task LoadAsync(CancellationToken cancellationToken = default);
     Task SetSessionAsync(LoginResponse response, CancellationToken cancellationToken = default);
     Task ClearSessionAsync(CancellationToken cancellationToken = default);
+    Task ClearAuthOnlyAsync(string? reason, CancellationToken cancellationToken = default);
 }
 
 public sealed class ApiSession : IApiSession
@@ -106,6 +107,18 @@ public sealed class ApiSession : IApiSession
         await _store.SetEmailAsync(null, cancellationToken);
         IsLoggedIn = false;
         Email = null;
+        OnChanged();
+    }
+
+    public async Task ClearAuthOnlyAsync(string? reason, CancellationToken cancellationToken = default)
+    {
+        await _hub.DisconnectAsync(cancellationToken);
+        await _store.SetAccessTokenAsync(null, cancellationToken);
+        IsLoggedIn = false;
+        var message = string.IsNullOrWhiteSpace(reason)
+            ? "Session expired. Sign in again. Board changes stay on this device."
+            : reason;
+        _syncStatus.SetProblem(message);
         OnChanged();
     }
 

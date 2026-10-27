@@ -32,6 +32,11 @@ The conversion is accurate to one network round trip. Two edits within that wind
 
 * **Local edit is newer, `LocalTime >= ServerTime`.** The client keeps the local device version. It rewrites the outbox entry with the server concurrency version and retries it. The server accepts the retry.
 * **Server edit is newer, `LocalTime < ServerTime`.** The client keeps the server version. It deletes the conflicting local outbox operation and writes the server properties into the local mirror.
+* **Additive operations never drop.** `HabitIncrement`, `HabitDecrement`, and `CompleteDailyForDate` retry on top of the server version so both sides count. The UI shows `counter (merged)` as a toast. The **sync icon** opens the merge log.
+
+## Offline queue health
+
+The client quarantines operations that fail 8 times, so one failed operation does not block newer ones. The **sync icon** shows the pending count. It opens a list with `AttemptCount`, `LastError`, **Retry**, and **Discard**. The pending count is the board outbox plus queued activity events. Failed settings writes stay on the device. The client sends them on the next read or save.
 
 ## Why SQLite and IndexedDB can mirror PostgreSQL
 

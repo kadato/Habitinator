@@ -74,12 +74,12 @@ public sealed partial class LocalFirstBoardDataService(
         try
         {
             var userKey = await ResolveAuthedUserKeyAsync(cancellationToken);
-            if (userKey is null)
+            userKey ??= (await store.GetMetaAsync(cancellationToken)).BoundUserKey;
+            if (string.IsNullOrWhiteSpace(userKey))
             {
                 return EmptySnapshot();
             }
 
-            await EnsureUserScopeAsync(userKey, cancellationToken);
             var snap = ReadSnapshot(await store.ListItemsAsync(userKey, includeArchived: false, cancellationToken), today);
             _cachedSnapshot = snap;
             return snap;
@@ -169,12 +169,12 @@ public sealed partial class LocalFirstBoardDataService(
         try
         {
             var userKey = await ResolveAuthedUserKeyAsync(cancellationToken);
-            if (userKey is null)
+            userKey ??= (await store.GetMetaAsync(cancellationToken)).BoundUserKey;
+            if (string.IsNullOrWhiteSpace(userKey))
             {
                 return null;
             }
 
-            await EnsureUserScopeAsync(userKey, cancellationToken);
             return await store.FindItemAsync(userKey, itemId, cancellationToken);
         }
         finally
@@ -189,7 +189,19 @@ public sealed partial class LocalFirstBoardDataService(
         var userKey = await users.GetUserKeyAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(userKey))
         {
-            return [];
+            try
+            {
+                userKey = (await store.GetMetaAsync(cancellationToken)).BoundUserKey;
+            }
+            catch
+            {
+                userKey = null;
+            }
+
+            if (string.IsNullOrWhiteSpace(userKey))
+            {
+                return [];
+            }
         }
 
         // The server owns streak math. A missed day resets the streak

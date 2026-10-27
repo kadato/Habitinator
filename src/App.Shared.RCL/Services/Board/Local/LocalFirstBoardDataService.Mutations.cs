@@ -107,6 +107,18 @@ public sealed partial class LocalFirstBoardDataService
             var userKey = await users.GetUserKeyAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(userKey))
             {
+                try
+                {
+                    userKey = (await store.GetMetaAsync(cancellationToken)).BoundUserKey;
+                }
+                catch
+                {
+                    userKey = null;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(userKey))
+            {
                 return EmptySnapshot();
             }
 

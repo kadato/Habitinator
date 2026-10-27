@@ -8,6 +8,9 @@ namespace App.Shared.RCL.Services.Board.Local;
 
 public sealed partial class LocalFirstBoardDataService
 {
+    /// <summary>The client deprioritizes operations that fail this many times, so one failed operation does not block newer ones.</summary>
+    public const int QuarantineAfterAttempts = 8;
+
     public async Task<bool> TryDrainOneOutboxOperationAsync(CancellationToken cancellationToken = default)
     {
         Guid operationId;
@@ -25,26 +28,26 @@ public sealed partial class LocalFirstBoardDataService
 
             await EnsureUserScopeAsync(userKey, cancellationToken);
 
-            var head = (await store.ListOutboxAsync(userKey, cancellationToken))
+            var ordered = (await store.ListOutboxAsync(userKey, cancellationToken))
                 .OrderBy(o => o.CreatedAtUtc)
                 .ThenBy(o => o.OperationId)
-                .FirstOrDefault();
+                .ToList();
 
-            if (head is null)
+            if (ordered.Count == 0)
             {
                 return false;
             }
 
-            if (head.AttemptCount > 0 && head.LastAttemptUtc is { } last)
+            BoardOutboxEntry? pick = ordered.FirstOrDefault(o => o.AttemptCount < QuarantineAfterAttempts && IsDue(o));
+
+            pick ??= ordered.FirstOrDefault(IsDue);
+
+            if (pick is null)
             {
-                var wait = Backoff(head.AttemptCount);
-                if (DateTime.UtcNow < last + wait)
-                {
-                    return false;
-                }
+                return false;
             }
 
-            operationId = head.OperationId;
+            operationId = pick.OperationId;
         }
         finally
         {
@@ -66,6 +69,71 @@ public sealed partial class LocalFirstBoardDataService
             logger.LogWarning(ex, "Outbox operation {OperationId} failed.", operationId);
             await RecordOutboxFailureAsync(operationId, ex.Message, cancellationToken);
             return false;
+        }
+    }
+
+    private static bool IsDue(BoardOutboxEntry entry)
+    {
+        if (entry.AttemptCount <= 0 || entry.LastAttemptUtc is not { } last)
+        {
+            return true;
+        }
+
+        var wait = Backoff(entry.AttemptCount);
+        return DateTime.UtcNow >= last + wait;
+    }
+
+    /// <summary>Ordered pending ops for the sync details UI. Empty when signed out.</summary>
+    public async Task<IReadOnlyList<BoardOutboxEntry>> GetPendingOutboxAsync(CancellationToken cancellationToken = default)
+    {
+        await store.EnsureReadyAsync(cancellationToken);
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var userKey = await ResolveAuthedUserKeyAsync(cancellationToken);
+            if (userKey is null)
+            {
+                var meta = await store.GetMetaAsync(cancellationToken);
+                if (string.IsNullOrEmpty(meta.BoundUserKey))
+                {
+                    return [];
+                }
+
+                userKey = meta.BoundUserKey;
+            }
+
+            return (await store.ListOutboxAsync(userKey, cancellationToken))
+                .OrderBy(o => o.CreatedAtUtc)
+                .ThenBy(o => o.OperationId)
+                .ToList();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    /// <summary>This method drops one queued operation. The sync details UI uses it to clear a failed operation without wiping the queue.</summary>
+    public async Task<bool> DiscardOutboxOperationAsync(Guid operationId, CancellationToken cancellationToken = default)
+    {
+        await store.EnsureReadyAsync(cancellationToken);
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var existing = await store.FindOutboxAsync(operationId, cancellationToken);
+            if (existing is null)
+            {
+                return false;
+            }
+
+            await store.DeleteOutboxAsync(operationId, cancellationToken);
+            return true;
+        }
+        finally
+        {
+            _gate.Release();
         }
     }
 
@@ -126,6 +194,7 @@ public sealed partial class LocalFirstBoardDataService
         BoardItem? localItem = null;
         var section = BoardSection.Todo;
         var localTime = DateTimeOffset.MinValue;
+        var opKind = (BoardOutboxOperationKind?)null;
 
         await _gate.WaitAsync(cancellationToken);
         try
@@ -141,6 +210,7 @@ public sealed partial class LocalFirstBoardDataService
             if (opRow is not null)
             {
                 localTime = new DateTimeOffset(opRow.CreatedAtUtc, TimeSpan.Zero);
+                opKind = opRow.Kind;
             }
         }
         finally
@@ -166,6 +236,23 @@ public sealed partial class LocalFirstBoardDataService
                 BoardSyncConflictOutcome.Identical,
                 string.Empty));
             await ResolveConflictKeepServerAsync(operationId, serverItem, section, cancellationToken);
+            return false;
+        }
+
+        if (opKind is BoardOutboxOperationKind.HabitIncrement
+            or BoardOutboxOperationKind.HabitDecrement
+            or BoardOutboxOperationKind.CompleteDailyForDate)
+        {
+            logger.LogInformation(
+                "Conflict on additive op {Kind}: re-applying the local increment on top of the server version so both sides count.",
+                opKind);
+            syncStatus.RecordConflict(new BoardSyncConflict(
+                DateTimeOffset.UtcNow,
+                serverItem.Id,
+                localItem.Title,
+                BoardSyncConflictOutcome.KeptDevice,
+                "counter (merged)"));
+            await ResolveConflictKeepMineAsync(operationId, serverItem, cancellationToken);
             return false;
         }
 

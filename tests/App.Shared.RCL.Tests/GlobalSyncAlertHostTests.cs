@@ -46,7 +46,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
 
         // Assert - one offline toast, then silence until the next transition
         await cut.WaitForAssertionAsync(async () => await _notifier.Received(1).NotifyAsync(
-            "Working offline. Changes will sync when you reconnect.",
+            "You are offline. The client sends changes when you reconnect.",
             Severity.Warning));
     }
 
@@ -116,7 +116,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
 
         // Assert - the offline toast fires, the sync-issue toast stays suppressed
         await cut.WaitForAssertionAsync(async () => await _notifier.Received(1).NotifyAsync(
-            "Working offline. Changes will sync when you reconnect.",
+            "You are offline. The client sends changes when you reconnect.",
             Severity.Warning));
         await _notifier.DidNotReceive().NotifyAsync(
             Arg.Is<string>(m => m.StartsWith("Sync issue:", StringComparison.Ordinal)),

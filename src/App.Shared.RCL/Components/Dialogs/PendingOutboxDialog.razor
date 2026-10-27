@@ -1,0 +1,89 @@
+@using App.Shared.RCL.Services.Board.Local
+@inject IBoardSyncRequestor SyncRequestor
+@inject IServiceProvider Services
+
+<MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content">
+    <DialogContent>
+        <div class="hab-modal hab-modal--neutral" data-dialog-label="Pending sync" aria-label="Pending sync" role="group">
+            <div class="hab-modal__grabber" aria-hidden="true"></div>
+            <div class="hab-modal__header">
+                <div class="hab-modal__topbar hab-modal__topbar--minimal">
+                    <DialogCloseButton OnClose="Close" />
+                </div>
+                <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Pending sync</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Pending.Count waiting. You can discard failing operations without wiping the queue.</MudText>
+            </div>
+            <div class="hab-modal__body">
+                <ul class="sync-conflict-list">
+                    @foreach (var op in Pending)
+                    {
+                        <li class="sync-conflict-row" @key="op.OperationId">
+                            <MudText Typo="Typo.body2" Class="font-weight-bold">@op.Kind</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Tries: @op.AttemptCount</MudText>
+                            @if (!string.IsNullOrWhiteSpace(op.LastError))
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@op.LastError</MudText>
+                            }
+                            <MudStack Row="true" Spacing="1" Class="mt-1">
+                                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => DiscardAsync(op.OperationId))">Discard</MudButton>
+                                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="RetryNow">Retry now</MudButton>
+                            </MudStack>
+                        </li>
+                    }
+                </ul>
+                @if (Conflicts.Count > 0)
+                {
+                    <MudText Typo="Typo.subtitle2" Class="mt-2">Recent merges</MudText>
+                    <ul class="sync-conflict-list">
+                        @foreach (var conflict in Conflicts)
+                        {
+                            <li class="sync-conflict-row" @key="conflict.ItemId">
+                                <MudText Typo="Typo.body2" Class="font-weight-bold">@conflict.Title</MudText>
+                                <MudText Typo="Typo.caption">@conflict.Outcome - @conflict.ChangedFields</MudText>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public IReadOnlyList<BoardOutboxEntry> Pending { get; set; } = [];
+    [Parameter] public IReadOnlyList<BoardSyncConflict> Conflicts { get; set; } = [];
+
+    private void Close() => MudDialog.Close();
+
+    private async Task DiscardAsync(Guid operationId)
+    {
+        try
+        {
+            if (Services.GetService(typeof(LocalFirstBoardDataService)) is LocalFirstBoardDataService board)
+            {
+                await board.DiscardOutboxOperationAsync(operationId);
+                var fresh = await board.GetPendingOutboxAsync();
+                Pending = fresh;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex.Message);
+        }
+    }
+
+    private void RetryNow()
+    {
+        try
+        {
+            SyncRequestor.RequestSync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex.Message);
+        }
+    }
+}

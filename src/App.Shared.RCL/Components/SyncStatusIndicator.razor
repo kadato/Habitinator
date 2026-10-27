@@ -5,6 +5,7 @@
 @inject IUserDateFormatService DateFormatService
 @inject IUserNotifier Notifier
 @inject IDialogService DialogService
+@inject IServiceProvider Services
 @implements IDisposable
 
 @{
@@ -82,6 +83,28 @@ else
 
     private async Task ShowDetailsAsync()
     {
+        try
+        {
+            if (Services.GetService(typeof(LocalFirstBoardDataService)) is LocalFirstBoardDataService board)
+            {
+                var pending = await board.GetPendingOutboxAsync();
+                if (pending.Count > 0)
+                {
+                    DialogParameters<PendingOutboxDialog> parameters = new()
+                    {
+                        { x => x.Pending, pending },
+                        { x => x.Conflicts, BoardSync.RecentConflicts }
+                    };
+                    await DialogService.ShowAsync<PendingOutboxDialog>(string.Empty, parameters, DialogDefaults.Wide);
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex.Message);
+        }
+
         if (BoardSync.RecentConflicts.Count > 0)
         {
             try
@@ -144,7 +167,7 @@ else
     {
         var pending = PendingSuffix(BoardSync.PendingCount);
         if (BoardSync.IsOffline)
-            return $"Working offline. Changes will sync when you reconnect.{pending}";
+            return $"You are offline. The client sends changes when you reconnect.{pending}";
         if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage))
             return $"Sync issue: {BoardSync.SyncProblemMessage}.{pending}";
         if (BoardSync.IsSyncing)

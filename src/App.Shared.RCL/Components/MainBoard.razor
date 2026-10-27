@@ -22,6 +22,22 @@
 
 <MudStack Class="board-shell w-100" Spacing="1">
     <h1 class="hab-visually-hidden" tabindex="-1">Board</h1>
+    @if (BoardSync.IsOffline)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="my-1" role="status">
+            You are offline. Changes stay on this device. The client sends them when you reconnect.
+            @if (BoardSync.PendingCount > 0)
+            {
+                <span> @BoardSync.PendingCount waiting.</span>
+            }
+        </MudAlert>
+    }
+    @if (!ClientSession.IsLoggedIn && _initialLoadComplete && HasBoardItems())
+    {
+        <MudAlert Severity="Severity.Info" Dense="true" Class="my-1" role="status">
+            You are signed out and offline. You see your last local copy. Connect to sign in.
+        </MudAlert>
+    }
     @if (_isLoading && _initialLoadComplete)
     {
         <MudProgressLinear Color="Color.Primary" Indeterminate="true"/>
@@ -33,6 +49,23 @@
             <MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Large" Class="board-load-fallback__icon"  aria-hidden="true" />
             <MudText Typo="Typo.subtitle2" Class="board-load-fallback__title">We couldn't load your board</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="board-load-fallback__hint">Check your connection and try again.</MudText>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Disabled="@_isLoading"
+                       OnClick="RetryLoadAsync"
+                       Size="Size.Small"
+                       Class="mt-2">
+                Retry
+            </MudButton>
+        </div>
+    }
+
+    @if (_initialLoadComplete && _loadError is null && !HasBoardItems() && BoardSync.IsOffline)
+    {
+        <div class="board-load-fallback">
+            <MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Large" Class="board-load-fallback__icon" aria-hidden="true" />
+            <MudText Typo="Typo.subtitle2" Class="board-load-fallback__title">You are offline with no local copy yet</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="board-load-fallback__hint">Connect once to load your board. It stays on this device after that.</MudText>
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
                        Disabled="@_isLoading"

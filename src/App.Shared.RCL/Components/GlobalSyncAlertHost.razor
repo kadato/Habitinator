@@ -5,10 +5,11 @@
 
 @code {
     // Sync health lives in `SyncStatusIndicator`, a cloud icon plus text with `role=status`.
-    // Toasts fire only when sync goes offline or into error. They never fire on recovery.
+    // Toasts fire when sync goes offline, when sync fails, or when the client merges a conflict.
     private NotificationSettings? _settings;
     private bool _wasOffline;
     private string? _lastProblem;
+    private int _lastConflictCount;
 
     protected override async Task OnInitializedAsync()
     {
@@ -52,17 +53,25 @@
 
         var isOffline = BoardSync.IsOffline;
         var problem = BoardSync.SyncProblemMessage;
+        var conflictCount = BoardSync.RecentConflicts.Count;
         var alertsEnabled = _settings is null || _settings.SyncFailureAlertsEnabled;
 
         try
         {
             if (alertsEnabled && isOffline && !_wasOffline)
             {
-                await UserNotifier.NotifyAsync("Working offline. Changes will sync when you reconnect.", Severity.Warning);
+                await UserNotifier.NotifyAsync("You are offline. The client sends changes when you reconnect.", Severity.Warning);
             }
             else if (alertsEnabled && !isOffline && !string.IsNullOrEmpty(problem) && !string.Equals(problem, _lastProblem, StringComparison.Ordinal))
             {
                 await UserNotifier.NotifyAsync($"Sync issue: {problem}", Severity.Error);
+            }
+
+            if (conflictCount > _lastConflictCount && BoardSync.RecentConflicts.Count > 0)
+            {
+                var latest = BoardSync.RecentConflicts[0];
+                var detail = string.IsNullOrWhiteSpace(latest.ChangedFields) ? string.Empty : $" ({latest.ChangedFields})";
+                await UserNotifier.NotifyAsync($"The client merged {latest.Title}{detail}. Tap the sync icon for details.", Severity.Info);
             }
         }
         catch
@@ -73,6 +82,7 @@
         {
             _wasOffline = isOffline;
             _lastProblem = problem;
+            _lastConflictCount = conflictCount;
         }
     }
 

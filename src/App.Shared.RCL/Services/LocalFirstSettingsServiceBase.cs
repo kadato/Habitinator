@@ -21,6 +21,9 @@ public abstract class LocalFirstSettingsServiceBase<TSettings> : IDisposable
 {
     private readonly IHttpClientFactory _http;
     private readonly IClientSessionProvider _sessionProvider;
+    private readonly ILocalSettingsStore _localStore;
+    private readonly Func<string?, TSettings> _deserialize;
+    private readonly Func<TSettings, string> _serialize;
     private readonly ILogger _logger;
     private readonly LocalFirstRemoteStore<TSettings> _store;
     private readonly string _storageKey;
@@ -38,6 +41,9 @@ public abstract class LocalFirstSettingsServiceBase<TSettings> : IDisposable
     {
         _http = http;
         _sessionProvider = sessionProvider;
+        _localStore = localStore;
+        _deserialize = options.Deserialize;
+        _serialize = options.Serialize;
         _logger = logger;
         _storageKey = options.StorageKey;
         _apiEndpoint = options.ApiEndpoint;
@@ -56,6 +62,8 @@ public abstract class LocalFirstSettingsServiceBase<TSettings> : IDisposable
 
     private string GetKey() => LocalFirstRemoteStore.KeyFor(_sessionProvider.Email, _storageKey);
 
+    private string GetPendingKey() => GetKey() + "_pending";
+
     public Task<TSettings> GetAsync(CancellationToken cancellationToken = default)
     {
         var key = GetKey();
@@ -63,6 +71,7 @@ public abstract class LocalFirstSettingsServiceBase<TSettings> : IDisposable
 
         if (_sessionProvider.IsLoggedIn)
         {
+            _ = TryFlushPendingAsync(cancellationToken);
             _store.RefreshInBackground(
                 key,
                 localSettings,
@@ -81,16 +90,90 @@ public abstract class LocalFirstSettingsServiceBase<TSettings> : IDisposable
 
         if (_sessionProvider.IsLoggedIn)
         {
-            await LocalFirstSaves.PutBestEffortAsync(
+            var ok = await LocalFirstSaves.TryPutAsync(
                 Client,
                 _apiEndpoint,
                 settings,
                 _serializerOptions,
                 _logger,
                 cancellationToken).ConfigureAwait(false);
+            if (!ok)
+            {
+                PersistPending(settings);
+            }
+            else
+            {
+                ClearPending();
+                _ = TryFlushPendingAsync(cancellationToken);
+            }
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void PersistPending(TSettings settings)
+    {
+        try
+        {
+            _localStore.Write(GetPendingKey(), _serialize(settings));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not persist pending settings.");
+        }
+    }
+
+    private void ClearPending()
+    {
+        try
+        {
+            _localStore.Write(GetPendingKey(), string.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not clear pending settings.");
+        }
+    }
+
+    private async Task TryFlushPendingAsync(CancellationToken cancellationToken)
+    {
+        string? raw;
+        try
+        {
+            raw = _localStore.Read(GetPendingKey());
+        }
+        catch
+        {
+            return;
+        }
+
+        if (string.IsNullOrEmpty(raw))
+        {
+            return;
+        }
+
+        TSettings pending;
+        try
+        {
+            pending = _deserialize(raw);
+        }
+        catch
+        {
+            ClearPending();
+            return;
+        }
+
+        var ok = await LocalFirstSaves.TryPutAsync(
+            Client,
+            _apiEndpoint,
+            pending,
+            _serializerOptions,
+            _logger,
+            cancellationToken).ConfigureAwait(false);
+        if (ok)
+        {
+            ClearPending();
+        }
     }
 
     private async Task<TSettings?> FetchRemoteAsync(CancellationToken cancellationToken)

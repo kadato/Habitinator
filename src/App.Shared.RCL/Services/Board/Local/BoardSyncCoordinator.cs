@@ -22,7 +22,7 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
     private readonly IServiceProvider _services;
     private readonly Func<bool> _isOfflineProbe;
     private readonly SemaphoreSlim _run = new(1, 1);
-    private readonly PeriodicTimer _timer = new(TimeSpan.FromSeconds(45));
+    private readonly PeriodicTimer _timer = new(TimeSpan.FromSeconds(15));
     private readonly CancellationTokenSource _appStopping = new();
     private readonly Channel<bool> _syncChannel = Channel.CreateBounded<bool>(new BoundedChannelOptions(1)
     {
@@ -108,6 +108,19 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
                 progressed = true;
             }
 
+            try
+            {
+                using var scope = _services.CreateScope();
+                if (scope.ServiceProvider.GetService<IUserActivityLogService>() is RemoteUserActivityLogService remoteFlush)
+                {
+                    await remoteFlush.TryFlushPendingAsync(cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogTrace(ex, "Activity pending flush failed.");
+            }
+
             if (progressed)
             {
                 _status.SetLastSynced(DateTimeOffset.UtcNow);
@@ -134,19 +147,6 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
                     _logger.LogTrace(ex, "Could not invalidate stats cache after sync.");
                 }
             }
-
-            try
-            {
-                using var scope = _services.CreateScope();
-                if (scope.ServiceProvider.GetService<IUserActivityLogService>() is RemoteUserActivityLogService remoteFlush)
-                {
-                    await remoteFlush.TryFlushPendingAsync(cancellationToken);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogTrace(ex, "Activity pending flush failed.");
-            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -167,7 +167,22 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
     {
         try
         {
-            _status.SetPendingCount(await _board.GetPendingOutboxCountAsync(cancellationToken));
+            var boardPending = await _board.GetPendingOutboxCountAsync(cancellationToken);
+            var activityPending = 0;
+            try
+            {
+                using var scope = _services.CreateScope();
+                if (scope.ServiceProvider.GetService<IUserActivityLogService>() is RemoteUserActivityLogService remote)
+                {
+                    activityPending = await remote.GetPendingCountAsync(cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogTrace(ex, "Could not read activity pending count.");
+            }
+
+            _status.SetPendingCount(boardPending + activityPending);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

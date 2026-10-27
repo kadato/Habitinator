@@ -157,6 +157,38 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
         }
     }
 
+    public async Task<int> GetPendingCountAsync(CancellationToken cancellationToken = default)
+    {
+        if (_localStore == null)
+        {
+            return 0;
+        }
+
+        await _queueGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            try
+            {
+                var raw = _localStore.Read(PendingKey);
+                if (string.IsNullOrEmpty(raw))
+                {
+                    return 0;
+                }
+
+                var list = JsonSerializer.Deserialize<List<ActivityLogRequest>>(raw, Serializer);
+                return list?.Count ?? 0;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+        finally
+        {
+            _queueGate.Release();
+        }
+    }
+
     public async Task TryFlushPendingAsync(CancellationToken cancellationToken = default)
     {
         if (_localStore == null)

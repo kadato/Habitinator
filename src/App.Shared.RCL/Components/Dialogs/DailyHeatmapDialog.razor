@@ -13,10 +13,15 @@
 @using Microsoft.Extensions.Logging;
 
 @inject IServiceProvider ServiceProvider
+@inject IBoardSyncStatus BoardSync
 
 <MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content">
     <DialogContent>
         <div class="hab-modal hab-modal--daily hab-modal--wide hab-modal--heatmap" data-dialog-label="Daily heatmap" aria-label="Daily heatmap" role="group" @onclick:stopPropagation="true">
+            @if (BoardSync.IsOffline)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mx-3 mt-2" role="status">You are offline. Last saved heatmap.</MudAlert>
+            }
             <div class="hab-modal__header">
                 <div class="hab-modal__topbar hab-modal__topbar--minimal">
                     <DialogCloseButton OnClose="CloseDialog" />

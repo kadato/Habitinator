@@ -10,6 +10,7 @@
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
+@inject IBoardSyncStatus BoardSync
 
 <MudDrawer @bind-Open="UiSessionState.IsAiDrawerOpen"
            Anchor="Anchor.Right"
@@ -156,6 +157,10 @@
                                OnClick="() => UiSessionState.SetAiDrawer(false)" />
             </div>
         </div>
+        @if (BoardSync.IsOffline)
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="mx-3 mt-2" role="status">You are offline. AI needs a connection. Board edits still work.</MudAlert>
+        }
 
         @if (_threads.Count > 1)
         {

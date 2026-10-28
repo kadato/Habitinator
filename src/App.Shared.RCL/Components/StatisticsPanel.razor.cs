@@ -83,6 +83,14 @@ public partial class StatisticsPanel : IDisposable
     protected override async Task OnInitializedAsync()
     {
         _subscription = ApplicationState.RegisterOnPersisting(PersistStatisticsData);
+        try
+        {
+            BoardSync.Changed += OnBoardSyncChanged;
+        }
+        catch
+        {
+            // Best effort. Banner updates on next render.
+        }
         _heatmapToday = DailySchedule.LocalToday(TimeZoneService);
         if (TryRestoreInitialOverview())
         {
@@ -204,7 +212,20 @@ public partial class StatisticsPanel : IDisposable
 
         _disposed = true;
         _loadVersion++;
+        try
+        {
+            BoardSync.Changed -= OnBoardSyncChanged;
+        }
+        catch
+        {
+            // Best effort during disposal.
+        }
         _subscription.Dispose();
+    }
+
+    private void OnBoardSyncChanged(object? sender, EventArgs e)
+    {
+        _ = InvokeAsync(StateHasChanged);
     }
 
     private void ApplyOverview(ActivityOverviewDto overview)

@@ -10,11 +10,16 @@
 
 @inject IServiceProvider ServiceProvider
 @inject IJSRuntime JS
+@inject IBoardSyncStatus BoardSync
 @implements IAsyncDisposable
 
 <MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content">
     <DialogContent>
         <div class="hab-modal hab-modal--neutral hab-modal--wide hab-modal--day-details" data-dialog-label="Day details" aria-label="Day details" role="group">
+            @if (BoardSync.IsOffline)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mx-3 mt-2" role="status">You are offline. Last saved details.</MudAlert>
+            }
             <div class="hab-modal__grabber" aria-hidden="true"></div>
             <div class="hab-modal__header" @ref="_headerRef">
                 <div class="hab-modal__topbar hab-modal__topbar--minimal">

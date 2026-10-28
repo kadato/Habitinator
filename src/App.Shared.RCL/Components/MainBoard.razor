@@ -25,11 +25,38 @@
     @if (BoardSync.IsOffline)
     {
         <MudAlert Severity="Severity.Warning" Dense="true" Class="my-1" role="status">
-            You are offline. Changes stay on this device. The client sends them when you reconnect.
-            @if (BoardSync.PendingCount > 0)
-            {
-                <span> @BoardSync.PendingCount waiting.</span>
-            }
+            <div class="d-flex align-center flex-wrap gap-2">
+                <span>
+                    You are offline. Changes stay on this device. The client sends them when you reconnect.
+                    @if (BoardSync.PendingCount > 0)
+                    {
+                        <span> @BoardSync.PendingCount waiting.</span>
+                    }
+                    @if (BoardSync.LastSyncedUtc is { } offlineSyncedAt)
+                    {
+                        <span> Last synced @DateFormatService.Format(offlineSyncedAt.LocalDateTime).</span>
+                    }
+                </span>
+                @if (BoardSync.PendingCount > 0)
+                {
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@BoardSync.IsSyncing" OnClick="() => BoardSyncRequestor.RequestSync()">Retry now</MudButton>
+                }
+            </div>
+        </MudAlert>
+    }
+    else if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage) || BoardSync.PendingCount > 0)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="my-1" role="status">
+            <div class="d-flex align-center flex-wrap gap-2">
+                <span>
+                    @(BoardSync.SyncProblemMessage ?? "Some changes have not synced yet.")
+                    @if (BoardSync.PendingCount > 0)
+                    {
+                        <span> @BoardSync.PendingCount waiting.</span>
+                    }
+                </span>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@BoardSync.IsSyncing" OnClick="() => BoardSyncRequestor.RequestSync()">Retry now</MudButton>
+            </div>
         </MudAlert>
     }
     @if (!ClientSession.IsLoggedIn && _initialLoadComplete && HasBoardItems())

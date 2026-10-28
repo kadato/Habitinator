@@ -1,11 +1,16 @@
 @inject IUserDataImportService Import
 @inject IUserNotifier Notifier
 @inject IDialogService DialogService
+@inject IBoardSyncStatus BoardSync
 
 <MudDialog Class="hab-modal-dialog"
            ContentClass="hab-modal-content">
     <DialogContent>
         <div class="hab-modal hab-modal--neutral" data-dialog-label="Import data" aria-label="Import data" role="group">
+            @if (BoardSync.IsOffline)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mx-3 mt-2" role="status">You are offline. The backup stays on this device. It restores on reconnect.</MudAlert>
+            }
             <div class="hab-modal__header">
                 <div class="hab-modal__topbar hab-modal__topbar--minimal">
                     <DialogCloseButton OnClose="() => MudDialog.Close()" />

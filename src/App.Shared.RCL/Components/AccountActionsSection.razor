@@ -1,13 +1,32 @@
 @using Microsoft.JSInterop
 @using App.Shared.RCL.Components.Dialogs
+@using App.Shared.RCL.Services.Remote
 @inject IUserNotifier Notifier
 @inject IAccountActionsService AccountActions
 @inject IUserDataExportService Export
 @inject IDialogService DialogService
 @inject IJSRuntime JS
 @inject NavigationManager Nav
+@inject IBoardSyncStatus BoardSync
+@inject IUserDataImportService ImportService
 
 <MudStack Spacing="3">
+    @if (BoardSync.IsOffline)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true" role="status">
+            You are offline. This screen shows the last saved copy. Imports wait on this device.
+        </MudAlert>
+    }
+    @if (ImportService is RemoteUserDataImportService pendingImport && pendingImport.HasPendingImport())
+    {
+        <MudAlert Severity="Severity.Info" Dense="true" role="status">
+            A backup waits here. To restore it, reconnect and open Import.
+        </MudAlert>
+    }
+    @if (Export is RemoteUserDataExportService cachedExport && cachedExport.TryGetCachedExport(out _, out var cachedAt) && cachedAt is not null)
+    {
+        <MudText Typo="Typo.caption" Color="Color.Secondary">Last export saved @cachedAt.Value.LocalDateTime.</MudText>
+    }
     @if (ShowTitle)
     {
         <MudText Typo="Typo.h5">Account actions</MudText>
@@ -91,7 +110,17 @@
         _exporting = true;
         try
         {
-            var data = await Export.ExportAsync();
+            UserDataExportDto data;
+            try
+            {
+                data = await Export.ExportAsync();
+            }
+            catch when (BoardSync.IsOffline && Export is RemoteUserDataExportService cached && cached.TryGetCachedExport(out var cachedDto, out _) && cachedDto is not null)
+            {
+                data = cachedDto;
+                await Notifier.NotifyAsync("Offline. Last saved export.", Severity.Warning);
+            }
+
             var json = System.Text.Json.JsonSerializer.Serialize(data, JsonDefaults.Export);
             var fileName = $"habitinator-export-{data.ExportedAtUtc:yyyyMMdd-HHmm}.json";
 

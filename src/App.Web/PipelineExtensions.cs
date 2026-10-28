@@ -49,8 +49,9 @@ internal static class PipelineExtensions
             app.UseRateLimiter();
         }
 
-        // Used by AppHost WithHttpHealthCheck. Anonymous, no auth required.
-        // Liveness: process is up. Readiness below checks Postgres.
+        // Used by AppHost WithHttpHealthCheck and Azure health check. Anonymous, no auth required.
+        // Liveness: process is up. Keep cloud probes here. Do not point them at
+        // /health/ready since each DB check blocks Neon scale to zero.
         app.MapGet("/health", () => Results.Text("OK", PlainTextContentType));
         app.MapGet("/health/ready", async (IServiceProvider services, CancellationToken cancellationToken) =>
         {

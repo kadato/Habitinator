@@ -75,8 +75,11 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
       linuxFxVersion: 'DOTNETCORE|10.0'
       appCommandLine: 'chmod +x App.Web && ./App.Web'
       minTlsVersion: '1.2'
-      alwaysOn: true
-      healthCheckPath: '/health/ready'
+      // Let Neon scale to zero. alwaysOn false plus liveness-only probe allows
+      // both App Service and Postgres to idle. Ready probe with DB check kept
+      // compute active 24x7 and burned the 100 CU-hour Free quota mid-month.
+      alwaysOn: false
+      healthCheckPath: '/health'
       appSettings: [
         {
           name: 'ASPNETCORE_ENVIRONMENT'

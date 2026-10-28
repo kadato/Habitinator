@@ -27,19 +27,6 @@ public partial class App : Application
         Connectivity.ConnectivityChanged += OnConnectivityChanged;
     }
 
-    protected override void OnSleep()
-    {
-        base.OnSleep();
-        try
-        {
-            Connectivity.ConnectivityChanged -= OnConnectivityChanged;
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine(ex.Message);
-        }
-    }
-
     private static void RequestLocalStoreReady()
     {
         if (IPlatformApplication.Current?.Services is not IServiceProvider sp)
@@ -56,15 +43,40 @@ public partial class App : Application
     protected override void OnResume()
     {
         base.OnResume();
+        // Re-subscribe after any sleep cycle. ConnectivityChanged is process-wide
+        // and must stay wired for offline and online transitions.
+        try
+        {
+            Connectivity.ConnectivityChanged -= OnConnectivityChanged;
+        }
+        catch
+        {
+            // Best effort. Subscribe below either way.
+        }
+
+        try
+        {
+            Connectivity.ConnectivityChanged += OnConnectivityChanged;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex.Message);
+        }
+
         RequestDailyReminderReschedule();
-        RequestBoardSync();
+        RequestHubAndSync();
     }
 
-    private static void RequestBoardSync()
+    private static void RequestHubAndSync()
     {
         if (IPlatformApplication.Current?.Services is not IServiceProvider sp)
         {
             return;
+        }
+
+        if (sp.GetService(typeof(MauiBoardHubService)) is MauiBoardHubService hub)
+        {
+            _ = RunStartupTaskAsync(sp, "hub reconnect", hub.EnsureConnectedAsync);
         }
 
         if (sp.GetService(typeof(BoardSyncCoordinator)) is BoardSyncCoordinator sync)
@@ -75,9 +87,9 @@ public partial class App : Application
 
     private static void OnConnectivityChanged(object? sender, ConnectivityChangedEventArgs e)
     {
-        if (e.NetworkAccess == NetworkAccess.Internet)
+        if (e.NetworkAccess is NetworkAccess.Internet or NetworkAccess.ConstrainedInternet)
         {
-            RequestBoardSync();
+            RequestHubAndSync();
         }
     }
 

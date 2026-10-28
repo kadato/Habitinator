@@ -63,6 +63,11 @@ public sealed class ApiSession : IApiSession
         IsLoggedIn = !string.IsNullOrEmpty(t);
         Email = e;
         IsReady = true;
+        if (IsLoggedIn && JwtAccessTokenDisplayClaims.IsExpired(t))
+        {
+            _syncStatus.SetProblem("Session expired. Sign in when online. Board changes stay on this device.");
+        }
+
         OnChanged();
 
         if (IsLoggedIn)
@@ -115,8 +120,9 @@ public sealed class ApiSession : IApiSession
         await _hub.DisconnectAsync(cancellationToken);
         await _store.SetAccessTokenAsync(null, cancellationToken);
         IsLoggedIn = false;
+        // The local mirror and the outbox stay on disk. The client replays them at the next sign in.
         var message = string.IsNullOrWhiteSpace(reason)
-            ? "Session expired. Sign in again. Board changes stay on this device."
+            ? "Session expired. Sign in again. Board changes stay on this device. They sync after relogin."
             : reason;
         _syncStatus.SetProblem(message);
         OnChanged();

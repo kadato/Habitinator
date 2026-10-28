@@ -19,8 +19,25 @@ public sealed partial class MauiBoardHubService(
 
     public async Task EnsureConnectedAsync(CancellationToken cancellationToken = default)
     {
+        try
+        {
+            if (Connectivity.Current.NetworkAccess is not (NetworkAccess.Internet or NetworkAccess.ConstrainedInternet))
+            {
+                return;
+            }
+        }
+        catch
+        {
+            // Best effort. Try connect below and let it fail with a log.
+        }
+
         var t = await tokens.GetAccessTokenAsync(cancellationToken);
         if (string.IsNullOrEmpty(t))
+        {
+            return;
+        }
+
+        if (JwtAccessTokenDisplayClaims.IsExpired(t))
         {
             return;
         }

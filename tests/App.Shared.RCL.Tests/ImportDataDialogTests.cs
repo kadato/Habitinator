@@ -30,6 +30,7 @@ public sealed class ImportDataDialogTests : IAsyncDisposable
     {
         _ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         _ctx.Services.AddMudServices();
+        _ctx.Services.AddSingleton<IBoardSyncStatus>(new NoOpBoardSyncStatus());
         _ctx.Services.AddSingleton(_import);
         _ctx.Services.AddSingleton(_notifier);
         _dialogProvider = _ctx.Render<MudDialogProvider>();

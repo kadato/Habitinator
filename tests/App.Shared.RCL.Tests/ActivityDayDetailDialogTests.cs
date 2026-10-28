@@ -30,6 +30,7 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
     {
         _ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         _ctx.Services.AddMudServices();
+        _ctx.Services.AddSingleton<IBoardSyncStatus>(new NoOpBoardSyncStatus());
         _ctx.Services.AddSingleton(_stats);
         _ctx.Services.AddSingleton(_timeZoneService);
         _ctx.Services.AddSingleton(_dateFormatService);

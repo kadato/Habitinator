@@ -30,6 +30,7 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
     {
         _ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         _ctx.Services.AddMudServices();
+        _ctx.Services.AddSingleton<IBoardSyncStatus>(new NoOpBoardSyncStatus());
         _ctx.Services.AddSingleton<IAccountActionsService>(_accountActions);
         _ctx.Services.AddSingleton<IUserNotifier>(_notifier);
         _ctx.Services.AddSingleton<IUserDataExportService>(_export);

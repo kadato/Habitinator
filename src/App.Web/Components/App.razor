@@ -229,6 +229,38 @@
     };
 </script>
 <script>
+    globalThis.habitinatorPwa = (function () {
+        let deferredPrompt = null;
+        let updateWaiting = null;
+        window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            deferredPrompt = e;
+            window.dispatchEvent(new CustomEvent('habitinator-pwa-installable'));
+        });
+        window.addEventListener('appinstalled', function () {
+            deferredPrompt = null;
+            window.dispatchEvent(new CustomEvent('habitinator-pwa-installed'));
+        });
+        return {
+            canInstall: function () { return !!deferredPrompt; },
+            install: function () {
+                if (!deferredPrompt) return Promise.resolve(false);
+                deferredPrompt.prompt();
+                return deferredPrompt.userChoice.then(function (choice) {
+                    deferredPrompt = null;
+                    return choice.outcome === 'accepted';
+                }).catch(function () { return false; });
+            },
+            skipWaitingUpdate: function () {
+                if (updateWaiting) {
+                    try { updateWaiting.postMessage('habitinator-skip-waiting'); } catch (err) {}
+                    return true;
+                }
+                return false;
+            },
+            setUpdateWaiting: function (reg) { updateWaiting = reg; }
+        };
+    })();
     if ('serviceWorker' in navigator) {
         if ('@(HostEnvironment.IsDevelopment() ? "true" : "false")' === 'true') {
             navigator.serviceWorker.getRegistrations().then(function(registrations) {
@@ -244,7 +276,28 @@
                 });
             }
         } else {
-            navigator.serviceWorker.register('service-worker.published.js');
+            navigator.serviceWorker.register('service-worker.published.js', { scope: '/' }).then(function (reg) {
+                if (reg.waiting) {
+                    globalThis.habitinatorPwa.setUpdateWaiting(reg.waiting);
+                    window.dispatchEvent(new CustomEvent('habitinator-pwa-update'));
+                }
+                reg.addEventListener('updatefound', function () {
+                    var worker = reg.installing;
+                    if (!worker) return;
+                    worker.addEventListener('statechange', function () {
+                        if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                            globalThis.habitinatorPwa.setUpdateWaiting(worker);
+                            window.dispatchEvent(new CustomEvent('habitinator-pwa-update'));
+                        }
+                    });
+                });
+            }).catch(function () {});
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', function () {
+                if (refreshing) return;
+                refreshing = true;
+                window.location.reload();
+            });
         }
     }
 </script>

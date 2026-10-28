@@ -1,6 +1,6 @@
-const CACHE_NAME = 'habitinator-v5';
-const FRAMEWORK_CACHE = 'habitinator-framework-v5';
-const API_CACHE = 'habitinator-api-v5';
+const CACHE_NAME = 'habitinator-v6';
+const FRAMEWORK_CACHE = 'habitinator-framework-v6';
+const API_CACHE = 'habitinator-api-v6';
 
 // Shell assets are always precached for offline rendering.
 const SHELL_ASSETS = [
@@ -18,6 +18,10 @@ const SHELL_ASSETS = [
     '/_content/MudBlazor/MudBlazor.min.css',
     '/_content/MudBlazor/MudBlazor.min.js',
     '/_framework/blazor.web.js',
+    '/_content/App.Shared.RCL/js/boardLocalStore.js',
+    '/_content/App.Shared.RCL/js/boardVisibility.js',
+    '/js/boardHub.js',
+    '/lib/microsoft-signalr/signalr.min.js',
     '/_content/App.Shared.RCL/fonts/karla-400.woff2',
     '/_content/App.Shared.RCL/fonts/karla-500.woff2',
     '/_content/App.Shared.RCL/fonts/karla-600.woff2',
@@ -82,6 +86,7 @@ globalThis.addEventListener('fetch', event => {
     if (url.pathname.startsWith('/api/')) {
         if (url.pathname.startsWith('/api/auth/status')
             || url.pathname.startsWith('/api/board')
+            || url.pathname.startsWith('/api/settings/')
             || url.pathname.startsWith('/api/activity/')) {
             event.respondWith((async () => {
                 const cache = await caches.open(API_CACHE);
@@ -127,10 +132,16 @@ globalThis.addEventListener('fetch', event => {
     }
 
     // Navigation requests are network-first and fall back to the cached shell.
+    // The shell boots the Blazor router, which then renders board, statistics,
+    // or settings from the local mirror. Deep links work offline this way.
     if (event.request.mode === 'navigate') {
         event.respondWith(
-            fetch(event.request).catch(() => {
-                return caches.match('/');
+            fetch(event.request).catch(async () => {
+                const shell = await caches.match('/');
+                if (shell) {
+                    return shell;
+                }
+                return Response.error();
             })
         );
         return;
@@ -153,4 +164,26 @@ globalThis.addEventListener('fetch', event => {
         }
         return networkResponse;
     })());
+});
+
+globalThis.addEventListener('sync', event => {
+    if (event.tag === 'habitinator-sync') {
+        event.waitUntil((async () => {
+            try {
+                await fetch('/health', { cache: 'no-store' });
+            } catch (err) {}
+            const list = await globalThis.clients.matchAll({ includeUncontrolled: true });
+            list.forEach(client => {
+                try {
+                    client.postMessage({ type: 'habitinator-sync' });
+                } catch (err) {}
+            });
+        })());
+    }
+});
+
+globalThis.addEventListener('message', event => {
+    if (event.data === 'habitinator-skip-waiting') {
+        globalThis.skipWaiting();
+    }
 });

@@ -59,10 +59,25 @@ public sealed class IndexedDbBoardLocalStore : IBoardLocalStore
                 var raw = await _js.InvokeAsync<string?>("habBoardStore.load", cancellationToken);
                 if (!string.IsNullOrEmpty(raw))
                 {
-                    var state = JsonSerializer.Deserialize<BoardLocalState>(raw, Serializer);
-                    if (state is not null)
+                    try
                     {
-                        _inner.ImportState(state);
+                        var state = JsonSerializer.Deserialize<BoardLocalState>(raw, Serializer);
+                        if (state is not null)
+                        {
+                            _inner.ImportState(state);
+                        }
+                    }
+                    catch (System.Text.Json.JsonException jsonEx)
+                    {
+                        _logger.LogWarning(jsonEx, "Local board cache is corrupt. Clearing it so next sync rebuilds the mirror.");
+                        try
+                        {
+                            await _js.InvokeVoidAsync("habBoardStore.clear", cancellationToken);
+                        }
+                        catch (Exception clearEx)
+                        {
+                            _logger.LogDebug(clearEx, "Clearing corrupt board cache failed.");
+                        }
                     }
                 }
             }

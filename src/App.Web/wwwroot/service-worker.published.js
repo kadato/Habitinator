@@ -171,18 +171,25 @@ globalThis.addEventListener('sync', event => {
         event.waitUntil((async () => {
             try {
                 await fetch('/health', { cache: 'no-store' });
-            } catch (err) {}
+            } catch {
+                // Wake-up ping is best effort. Clients sync on their own tick.
+            }
             const list = await globalThis.clients.matchAll({ includeUncontrolled: true });
             list.forEach(client => {
                 try {
                     client.postMessage({ type: 'habitinator-sync' });
-                } catch (err) {}
+                } catch {
+                    // A closed client drops the message. The next tick covers it.
+                }
             });
         })());
     }
 });
 
 globalThis.addEventListener('message', event => {
+    if (event.origin !== globalThis.location.origin) {
+        return;
+    }
     if (event.data === 'habitinator-skip-waiting') {
         globalThis.skipWaiting();
     }

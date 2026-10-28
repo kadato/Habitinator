@@ -71,6 +71,7 @@ public sealed class RemoteUserDataImportService(
         }
         catch
         {
+            // Corrupt settings read as no pending import.
             return false;
         }
     }
@@ -84,6 +85,7 @@ public sealed class RemoteUserDataImportService(
         }
         catch
         {
+            // Corrupt settings read as no pending import.
             raw = null;
         }
 

@@ -110,21 +110,7 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
 
             try
             {
-                using var scope = _services.CreateScope();
-                if (scope.ServiceProvider.GetService<IUserActivityLogService>() is RemoteUserActivityLogService remoteFlush)
-                {
-                    await remoteFlush.TryFlushPendingAsync(cancellationToken);
-                }
-
-                if (scope.ServiceProvider.GetService<INotificationSettingsService>() is ISettingsSyncFlush notificationFlush)
-                {
-                    await notificationFlush.FlushPendingAsync(cancellationToken);
-                }
-
-                if (scope.ServiceProvider.GetService<IUserPreferencesService>() is ISettingsSyncFlush prefsFlush)
-                {
-                    await prefsFlush.FlushPendingAsync(cancellationToken);
-                }
+                await FlushPendingQueuesAsync(cancellationToken);
             }
             catch (Exception ex)
             {
@@ -170,6 +156,25 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
         finally
         {
             _status.SetSyncing(false);
+        }
+    }
+
+    private async Task FlushPendingQueuesAsync(CancellationToken cancellationToken)
+    {
+        using var scope = _services.CreateScope();
+        if (scope.ServiceProvider.GetService<IUserActivityLogService>() is RemoteUserActivityLogService remoteFlush)
+        {
+            await remoteFlush.TryFlushPendingAsync(cancellationToken);
+        }
+
+        if (scope.ServiceProvider.GetService<INotificationSettingsService>() is ISettingsSyncFlush notificationFlush)
+        {
+            await notificationFlush.FlushPendingAsync(cancellationToken);
+        }
+
+        if (scope.ServiceProvider.GetService<IUserPreferencesService>() is ISettingsSyncFlush prefsFlush)
+        {
+            await prefsFlush.FlushPendingAsync(cancellationToken);
         }
     }
 

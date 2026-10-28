@@ -67,6 +67,7 @@ public sealed class RemoteUserDataExportService : IUserDataExportService
         }
         catch
         {
+            // Corrupt cache reads as a miss. Next export overwrites it.
             return false;
         }
     }

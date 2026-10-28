@@ -37,7 +37,8 @@ public sealed class BoardRemoteNotifyBridge(IRemoteBoardRefreshService refresh, 
     {
         try
         {
-            if (services.GetService(typeof(BoardSyncStatus)) is BoardSyncStatus status)
+            var status = services.GetService<BoardSyncStatus>();
+            if (status is not null)
             {
                 status.UpdateOffline(true);
                 if (string.IsNullOrEmpty(status.SyncProblemMessage))

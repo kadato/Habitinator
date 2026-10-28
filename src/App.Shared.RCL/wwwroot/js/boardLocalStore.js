@@ -87,9 +87,11 @@ globalThis.habBoardStore = (function () {
             resolve();
           };
           q.onerror = function () {
+            // Delete is best effort. Resolve either way so clear never hangs.
             resolve();
           };
         } catch (err) {
+          // Delete is best effort. Resolve either way so clear never hangs.
           resolve();
         }
       });
@@ -121,17 +123,21 @@ globalThis.habBoardStore = (function () {
     try {
       localStorage.setItem(LS_KEY, raw);
     } catch (err) {
+      // Quota errors fall back to IndexedDB only. Drop the localStorage copy.
       try {
         localStorage.removeItem(LS_KEY);
         localStorage.removeItem(LS_TS_KEY);
-      } catch (ignored) {}
+      } catch {
+        // Private mode blocks storage entirely. Keep the IndexedDB copy only.
+      }
     }
   }
 
   function lsSetTs(ts) {
     try {
       localStorage.setItem(LS_TS_KEY, String(ts));
-    } catch (err) {
+    } catch {
+      // Timestamp is a hint for crash recovery. Skip it when storage is blocked.
     }
   }
 
@@ -243,24 +249,32 @@ globalThis.habBoardStore = (function () {
         try {
           localStorage.removeItem(LS_KEY);
           localStorage.removeItem(LS_TS_KEY);
-        } catch (err) {}
+        } catch {
+          // Large boards skip localStorage. IndexedDB stays the copy of record.
+        }
       }
       return saveChunked(raw).then(function () {
         return idbSet(STATE_TS_KEY, ts);
-      }).catch(function () {});
+      }).catch(function () {
+        // Persist runs in the background. The next write retries it.
+      });
     },
     clear: function () {
       try {
         localStorage.removeItem(LS_KEY);
         localStorage.removeItem(LS_TS_KEY);
-      } catch (err) {}
+      } catch {
+        // Clear is best effort. IndexedDB deletes below still run.
+      }
       return idbDel(STATE_KEY).then(function () {
         return idbDel(STATE_TS_KEY);
       }).then(function () {
         return idbDel(CHUNK_COUNT_KEY);
       }).then(function () {
         return cleanupOldChunks(0);
-      }).catch(function () {});
+      }).catch(function () {
+        // Clear is best effort. A corrupt key left behind reads as empty.
+      });
     },
     onHidden: function (dotNetRef) {
       if (hiddenHandler) {
@@ -271,7 +285,8 @@ globalThis.habBoardStore = (function () {
         if (document.visibilityState === "hidden") {
           try {
             dotNetRef.invokeMethodAsync("OnHidden");
-          } catch (err) {
+          } catch {
+            // Flush is best effort. The next save retries it.
           }
         }
       };
@@ -283,7 +298,8 @@ globalThis.habBoardStore = (function () {
         document.removeEventListener("visibilitychange", hiddenHandler);
         try {
           globalThis.removeEventListener("pagehide", hiddenHandler);
-        } catch (err) {
+        } catch {
+          // Listener removal is best effort during teardown.
         }
         hiddenHandler = null;
       }

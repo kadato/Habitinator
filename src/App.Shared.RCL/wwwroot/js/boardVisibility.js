@@ -16,15 +16,24 @@ globalThis.HabitinatorBoardVisibility = (function () {
     dotNetHelper.invokeMethodAsync("OnBecameVisible").catch(function () {});
   }
 
+  function onOffline() {
+    if (!dotNetHelper) {
+      return;
+    }
+    dotNetHelper.invokeMethodAsync("OnWentOffline").catch(function () {});
+  }
+
   return {
     start: function (dotNetRef) {
       dotNetHelper = dotNetRef;
       document.addEventListener("visibilitychange", onVisibilityChange);
       globalThis.addEventListener("online", onOnline);
+      globalThis.addEventListener("offline", onOffline);
     },
     stop: function () {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       globalThis.removeEventListener("online", onOnline);
+      globalThis.removeEventListener("offline", onOffline);
       dotNetHelper = null;
     }
   };

@@ -1,3 +1,6 @@
+using App.Shared.RCL.Services.Board.Local;
+
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 
 namespace App.Shared.RCL.Services;
@@ -6,7 +9,7 @@ namespace App.Shared.RCL.Services;
 ///     Public JS-invokable target for board refresh over SignalR and visibility changes. DotNetObjectReference requires a public
 ///     type.
 /// </summary>
-public sealed class BoardRemoteNotifyBridge(IRemoteBoardRefreshService refresh)
+public sealed class BoardRemoteNotifyBridge(IRemoteBoardRefreshService refresh, IServiceProvider services)
 {
     [JSInvokable]
     public Task OnBoardChanged()
@@ -15,8 +18,39 @@ public sealed class BoardRemoteNotifyBridge(IRemoteBoardRefreshService refresh)
     }
 
     [JSInvokable]
-    public Task OnBecameVisible()
+    public async Task OnBecameVisible()
     {
-        return refresh.NotifyFromRemoteAsync();
+        try
+        {
+            services.GetService<IBoardSyncRequestor>()?.RequestSync();
+        }
+        catch
+        {
+            // Best effort. Refresh below still runs.
+        }
+
+        await refresh.NotifyFromRemoteAsync();
+    }
+
+    [JSInvokable]
+    public Task OnWentOffline()
+    {
+        try
+        {
+            if (services.GetService(typeof(BoardSyncStatus)) is BoardSyncStatus status)
+            {
+                status.UpdateOffline(true);
+                if (string.IsNullOrEmpty(status.SyncProblemMessage))
+                {
+                    status.SetProblem("Offline. Board changes stay on this device until you reconnect.");
+                }
+            }
+        }
+        catch
+        {
+            // Best effort. Coordinator probe corrects state on next tick.
+        }
+
+        return Task.CompletedTask;
     }
 }

@@ -115,10 +115,20 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
                 {
                     await remoteFlush.TryFlushPendingAsync(cancellationToken);
                 }
+
+                if (scope.ServiceProvider.GetService<INotificationSettingsService>() is ISettingsSyncFlush notificationFlush)
+                {
+                    await notificationFlush.FlushPendingAsync(cancellationToken);
+                }
+
+                if (scope.ServiceProvider.GetService<IUserPreferencesService>() is ISettingsSyncFlush prefsFlush)
+                {
+                    await prefsFlush.FlushPendingAsync(cancellationToken);
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogTrace(ex, "Activity pending flush failed.");
+                _logger.LogTrace(ex, "Activity and settings pending flush failed.");
             }
 
             if (progressed)

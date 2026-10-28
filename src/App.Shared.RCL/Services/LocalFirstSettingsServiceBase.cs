@@ -16,7 +16,7 @@ public sealed record LocalFirstSettingsOptions<TSettings>(
     Func<TSettings, string> Serialize,
     JsonSerializerOptions? SerializerOptions = null);
 
-public abstract class LocalFirstSettingsServiceBase<TSettings> : IDisposable
+public abstract class LocalFirstSettingsServiceBase<TSettings> : ISettingsSyncFlush, IDisposable
     where TSettings : class
 {
     private readonly IHttpClientFactory _http;
@@ -137,6 +137,11 @@ public abstract class LocalFirstSettingsServiceBase<TSettings> : IDisposable
 
     private async Task TryFlushPendingAsync(CancellationToken cancellationToken)
     {
+        await FlushPendingAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task FlushPendingAsync(CancellationToken cancellationToken = default)
+    {
         string? raw;
         try
         {
@@ -173,6 +178,18 @@ public abstract class LocalFirstSettingsServiceBase<TSettings> : IDisposable
         if (ok)
         {
             ClearPending();
+        }
+    }
+
+    public bool HasPending()
+    {
+        try
+        {
+            return !string.IsNullOrEmpty(_localStore.Read(GetPendingKey()));
+        }
+        catch
+        {
+            return false;
         }
     }
 

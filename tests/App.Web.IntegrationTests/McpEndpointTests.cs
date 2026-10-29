@@ -898,6 +898,168 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
         retro.Messages[0].Content.ToString().Should().Contain("Weekly retrospective");
     }
 
+    [Fact]
+    public async Task Mcp_TitleResolution_TogglesAndIncrementsByTitle()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var json = TestJson;
+
+        await CallTextAsync(mcp, "create_item", new() { ["section"] = "Habit", ["title"] = "Morning Pushups" });
+        await CallTextAsync(mcp, "create_item", new() { ["section"] = "Daily", ["title"] = "Drink Water" });
+
+        // Toggle daily by title
+        var toggledJson = await CallTextAsync(mcp, "toggle_item", new() { ["title"] = "Drink Water" });
+        var toggled = JsonSerializer.Deserialize<BoardItem>(toggledJson, json)!;
+        toggled.Title.Should().Be("Drink Water");
+        toggled.IsCompleted.Should().BeTrue();
+
+        // Plus habit by title
+        var habitJson = await CallTextAsync(mcp, "habit_plus", new() { ["title"] = "Morning Pushups" });
+        var habit = JsonSerializer.Deserialize<BoardItem>(habitJson, json)!;
+        habit.Title.Should().Be("Morning Pushups");
+        habit.Counter.Should().Be(1);
+
+        // Get item by title
+        var fetchedJson = await CallTextAsync(mcp, "get_item", new() { ["title"] = "Morning Pushups" });
+        var fetched = JsonSerializer.Deserialize<BoardItem>(fetchedJson, json)!;
+        fetched.Id.Should().Be(habit.Id);
+
+        // Archive and unarchive by title
+        var archivedJson = await CallTextAsync(mcp, "archive_item", new() { ["title"] = "Morning Pushups" });
+        var archived = JsonSerializer.Deserialize<BoardItem>(archivedJson, json)!;
+        archived.IsArchived.Should().BeTrue();
+
+        var unarchivedJson = await CallTextAsync(mcp, "unarchive_item", new() { ["title"] = "Morning Pushups" });
+        var unarchived = JsonSerializer.Deserialize<BoardItem>(unarchivedJson, json)!;
+        unarchived.IsArchived.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Mcp_TitleResolution_AmbiguousOrNotFoundThrows()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+
+        await CallTextAsync(mcp, "create_item", new() { ["section"] = "Habit", ["title"] = "Read Fiction" });
+        await CallTextAsync(mcp, "create_item", new() { ["section"] = "Habit", ["title"] = "Read Non-Fiction" });
+
+        // Ambiguous search
+        var exAmbiguous = await Assert.ThrowsAsync<McpProtocolException>(async () =>
+            await mcp.CallToolAsync("habit_plus", new Dictionary<string, object?> { ["title"] = "Read" }));
+        exAmbiguous.Message.Should().Contain("Ambiguous title 'Read'");
+
+        // Not found
+        var exNotFound = await Assert.ThrowsAsync<McpProtocolException>(async () =>
+            await mcp.CallToolAsync("habit_plus", new Dictionary<string, object?> { ["title"] = "Nonexistent" }));
+        exNotFound.Message.Should().Contain("No item found with title matching 'Nonexistent'");
+    }
+
+    [Fact]
+    public async Task Mcp_NaturalLanguageDates_CompletesPastDailyWithYesterday()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var json = TestJson;
+
+        await CallTextAsync(mcp, "create_item", new() { ["section"] = "Daily", ["title"] = "Evening Stretch" });
+
+        var completedJson = await CallTextAsync(mcp, "daily_complete_for_date", new()
+        {
+            ["title"] = "Evening Stretch",
+            ["date"] = "yesterday"
+        });
+        var completed = JsonSerializer.Deserialize<BoardItem>(completedJson, json)!;
+        completed.Title.Should().Be("Evening Stretch");
+    }
+
+    [Fact]
+    public async Task Mcp_TokenScopes_EnforcesReadOnlyAndTrackingOnly()
+    {
+        var client = factory.CreateClient();
+        var suffix = Guid.NewGuid().ToString("N");
+        var email = $"mcp-scopes-{suffix}@integration.test";
+        const string password = "TestUser1!Aa";
+
+        var register = await client.PostAsJsonAsync(
+            "/api/auth/register", new RegisterRequest(email, password));
+        register.EnsureSuccessStatusCode();
+        var login = await client.PostAsJsonAsync(
+            "/api/auth/login", new LoginRequest(email, password, RememberMe: false));
+        login.EnsureSuccessStatusCode();
+        var initialToken = (await login.Content.ReadFromJsonAsync<LoginResponse>())!.AccessToken;
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", initialToken);
+
+        // 1. Create Read-Only Token
+        var readOnlyRes = await client.PostAsJsonAsync(
+            "/api/account/mcp-token",
+            new CreateMcpTokenRequest(Days: 30, Label: "Reader", Scope: McpTokenScopes.ReadOnly));
+        readOnlyRes.EnsureSuccessStatusCode();
+        var readOnlyToken = (await readOnlyRes.Content.ReadFromJsonAsync<CreateMcpTokenResponse>())!;
+        readOnlyToken.Scope.Should().Be(McpTokenScopes.ReadOnly);
+
+        var readOnlyMcp = factory.CreateClient();
+        readOnlyMcp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", readOnlyToken.Token);
+        var readTransport = new HttpClientTransport(
+            new HttpClientTransportOptions { Endpoint = new Uri(readOnlyMcp.BaseAddress!, "/mcp"), },
+            readOnlyMcp,
+            NullLoggerFactory.Instance,
+            ownsHttpClient: false);
+        await using var readClient = await McpClient.CreateAsync(readTransport);
+
+        // Can read snapshot
+        var snap = await readClient.CallToolAsync("get_snapshot");
+        snap.IsError.Should().Be(null);
+
+        // Cannot toggle or create
+        var exReadToggle = await Assert.ThrowsAsync<McpProtocolException>(async () =>
+            await readClient.CallToolAsync("toggle_item", new Dictionary<string, object?> { ["title"] = "Any" }));
+        exReadToggle.Message.Should().Contain("Token scope 'read_only' permits read-only tools");
+
+        // 2. Create Tracking-Only Token
+        var trackingRes = await client.PostAsJsonAsync(
+            "/api/account/mcp-token",
+            new CreateMcpTokenRequest(Days: 30, Label: "Tracker", Scope: McpTokenScopes.TrackingOnly));
+        trackingRes.EnsureSuccessStatusCode();
+        var trackingToken = (await trackingRes.Content.ReadFromJsonAsync<CreateMcpTokenResponse>())!;
+        trackingToken.Scope.Should().Be(McpTokenScopes.TrackingOnly);
+
+        var trackingMcp = factory.CreateClient();
+        trackingMcp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", trackingToken.Token);
+        var trackTransport = new HttpClientTransport(
+            new HttpClientTransportOptions { Endpoint = new Uri(trackingMcp.BaseAddress!, "/mcp"), },
+            trackingMcp,
+            NullLoggerFactory.Instance,
+            ownsHttpClient: false);
+        await using var trackClient = await McpClient.CreateAsync(trackTransport);
+
+        // First create item using initial account token via direct API or full client
+        var fullMcp = factory.CreateClient();
+        fullMcp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", initialToken);
+        var fullTransport = new HttpClientTransport(
+            new HttpClientTransportOptions { Endpoint = new Uri(fullMcp.BaseAddress!, "/mcp"), },
+            fullMcp,
+            NullLoggerFactory.Instance,
+            ownsHttpClient: false);
+        await using var fullClient = await McpClient.CreateAsync(fullTransport);
+        await CallTextAsync(fullClient, "create_item", new() { ["section"] = "Daily", ["title"] = "Tracking Daily" });
+
+        // Tracking client can toggle item
+        var toggleRes = await trackClient.CallToolAsync("toggle_item", new Dictionary<string, object?> { ["title"] = "Tracking Daily" });
+        toggleRes.IsError.Should().Be(null);
+
+        // Tracking client CANNOT create or delete items
+        var exTrackCreate = await Assert.ThrowsAsync<McpProtocolException>(async () =>
+            await trackClient.CallToolAsync("create_item", new Dictionary<string, object?> { ["section"] = "Daily", ["title"] = "New" }));
+        exTrackCreate.Message.Should().Contain("Token scope 'tracking_only' permits tracking tools");
+
+        // 3. Verify ListMcpTokens returns scope and last used
+        var listRes = await client.GetAsync("/api/account/mcp-tokens");
+        listRes.EnsureSuccessStatusCode();
+        var tokens = await listRes.Content.ReadFromJsonAsync<List<McpTokenInfo>>();
+        tokens.Should().NotBeNull();
+        var reader = tokens.Single(t => t.Id == readOnlyToken.Id);
+        reader.Scope.Should().Be(McpTokenScopes.ReadOnly);
+        reader.LastUsedAtUtc.Should().NotBeNull();
+    }
+
     private async Task<McpClient> CreateLoggedInMcpClientAsync()
     {
         var client = factory.CreateClient();

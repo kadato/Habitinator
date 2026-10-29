@@ -152,3 +152,15 @@
     max-height: 260px;
     overflow: auto;
 }
+
+/* Prompt recipe card */
+.prompt-recipe-card {
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--radius-sm, 6px);
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.prompt-recipe-card:hover {
+    border-color: var(--mud-palette-primary);
+}

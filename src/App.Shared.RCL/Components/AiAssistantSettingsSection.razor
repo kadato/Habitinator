@@ -257,6 +257,16 @@
                                   Value="_mcpLabel"
                                   ValueChanged="v => _mcpLabel = v"
                                   Class="flex-grow-1" />
+                    <MudSelect T="string"
+                               Label="Scope"
+                               Variant="Variant.Outlined"
+                               dense="true"
+                               Value="_mcpScope"
+                               ValueChanged="v => _mcpScope = v">
+                        <MudSelectItem Value="@McpTokenScopes.Full">Full access</MudSelectItem>
+                        <MudSelectItem Value="@McpTokenScopes.TrackingOnly">Tracking only</MudSelectItem>
+                        <MudSelectItem Value="@McpTokenScopes.ReadOnly">Read only</MudSelectItem>
+                    </MudSelect>
                     <MudSelect T="int"
                                Label="Expiry"
                                Variant="Variant.Outlined"
@@ -394,7 +404,10 @@
                         {
                             <div class="d-flex align-center justify-space-between gap-2">
                                 <div class="min-w-0">
-                                    <MudText Typo="Typo.caption" Class="font-weight-bold text-truncate">@token.Label</MudText>
+                                    <div class="d-flex align-center gap-1">
+                                        <MudText Typo="Typo.caption" Class="font-weight-bold text-truncate">@token.Label</MudText>
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetMcpScopeColor(token.Scope)">@McpTokenScopes.DisplayName(token.Scope)</MudChip>
+                                    </div>
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">
                                         @McpTokenStatusText(token)
                                     </MudText>
@@ -422,42 +435,125 @@
                 <MudTabs Elevation="0" Rounded="true" Outlined="true" Class="mt-1">
                     <MudTabPanel Text="Claude">
                         <div class="pa-2">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">Paste into Claude Desktop config, then restart Claude.</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">
+                                Paste into Claude Desktop config, then restart Claude.
+                            </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpClaudeSnippet()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeSnippet(), "Claude configuration copied.")'>Copy Claude config</MudButton>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeSnippet(), "Claude configuration copied.")'>Copy Desktop config</MudButton>
+
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
+                                Or add to Claude Code CLI:
+                            </MudText>
+                            <pre class="mcp-snippet-pre">@GetMcpClaudeCodeCli()</pre>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeCodeCli(), "Claude Code command copied.")'>Copy CLI command</MudButton>
+
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2 d-block">
+                                Desktop config locations: macOS at <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>, Windows at <code>%APPDATA%\Claude\claude_desktop_config.json</code>, Linux at <code>~/.config/Claude/claude_desktop_config.json</code>.
+                            </MudText>
                         </div>
                     </MudTabPanel>
                     <MudTabPanel Text="OpenCode">
                         <div class="pa-2">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">Paste into <code>opencode.jsonc</code>, or run the CLI command below. Prefer <code>{env:HABITINATOR_MCP_TOKEN}</code> over a raw token checked into git.</MudText>
-                            <pre class="mcp-snippet-pre">@GetMcpOpenCodeSnippet()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpOpenCodeSnippet(), "OpenCode configuration copied.")'>Copy OpenCode config</MudButton>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">
+                                <strong>Step 1:</strong> Export your token as an environment variable so secrets stay out of git commits:
+                            </MudText>
+                            <pre class="mcp-snippet-pre">@GetMcpExportEnv()</pre>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpExportEnv(), "Export command copied.")'>Copy export command</MudButton>
+
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
+                                <strong>Step 2:</strong> Add to OpenCode with the CLI:
+                            </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpOpenCodeCli()</pre>
                             <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpOpenCodeCli(), "OpenCode command copied.")'>Copy CLI command</MudButton>
+
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
+                                Or paste into <code>opencode.jsonc</code> directly:
+                            </MudText>
+                            <pre class="mcp-snippet-pre">@GetMcpOpenCodeSnippet()</pre>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpOpenCodeSnippet(), "OpenCode configuration copied.")'>Copy config</MudButton>
                         </div>
                     </MudTabPanel>
                     <MudTabPanel Text="Hermes">
                         <div class="pa-2">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">Paste into Hermes <code>config.yaml</code> under <code>mcp_servers</code>.</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">
+                                <strong>Step 1:</strong> Export your token as an environment variable, or add it to your Hermes <code>.env</code> file:
+                            </MudText>
+                            <pre class="mcp-snippet-pre">@GetMcpExportEnv()</pre>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpExportEnv(), "Export command copied.")'>Copy export command</MudButton>
+
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
+                                <strong>Step 2:</strong> Append Habitinator to <code>~/.hermes/config.yaml</code> with one terminal command:
+                            </MudText>
+                            <pre class="mcp-snippet-pre">@GetMcpHermesAppend()</pre>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpHermesAppend(), "Hermes append command copied.")'>Copy append command</MudButton>
+
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
+                                Or paste this block under <code>mcp_servers</code> in <code>config.yaml</code>:
+                            </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpHermesSnippet()</pre>
                             <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpHermesSnippet(), "Hermes configuration copied.")'>Copy Hermes config</MudButton>
                         </div>
                     </MudTabPanel>
-                    <MudTabPanel Text="Cursor / VS Code">
+                    <MudTabPanel Text="Cursor or VS Code">
                         <div class="pa-2">
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">Paste into <code>.vscode/mcp.json</code> or Cursor MCP settings.</MudText>
                             <pre class="mcp-snippet-pre">@GetMcpClaudeSnippet()</pre>
                             <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeSnippet(), "Cursor/VS Code configuration copied.")'>Copy config</MudButton>
                         </div>
                     </MudTabPanel>
-                    <MudTabPanel Text="curl">
+                    <MudTabPanel Text="Terminal or curl">
                         <div class="pa-2">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">List tools from a terminal. Needs <code>Accept: application/json, text/event-stream</code>.</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">
+                                Quick one-line health check returning the tool count with <code>jq</code>:
+                            </MudText>
+                            <pre class="mcp-snippet-pre">@GetMcpHealthCheckCurl()</pre>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpHealthCheckCurl(), "Health check command copied.")'>Copy health check</MudButton>
+
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
+                                Full curl request for tools/list:
+                            </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpCurlSnippet()</pre>
                             <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpCurlSnippet(), "curl command copied.")'>Copy curl</MudButton>
                         </div>
                     </MudTabPanel>
                 </MudTabs>
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
+                <div class="d-flex align-center gap-2 mb-1">
+                    <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Size="Size.Small" Color="Color.Primary" />
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold">What you can ask your AI</MudText>
+                </div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">
+                    Ready prompt recipes for your in-app assistant or external agents like OpenCode, Hermes, and Claude:
+                </MudText>
+
+                <div class="d-flex flex-column gap-2">
+                    @foreach (var recipe in _promptRecipes)
+                    {
+                        <div class="pa-3 rounded border prompt-recipe-card d-flex align-center justify-space-between gap-3">
+                            <div class="min-w-0">
+                                <div class="d-flex align-center gap-2 mb-1">
+                                    <MudIcon Icon="@recipe.Icon" Size="Size.Small" Color="Color.Primary" />
+                                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold">@recipe.Title</MudText>
+                                </div>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="font-italic">
+                                    "@recipe.Prompt"
+                                </MudText>
+                            </div>
+                            <MudButton Variant="Variant.Outlined"
+                                       Size="Size.Small"
+                                       Color="Color.Default"
+                                       Class="flex-shrink-0"
+                                       StartIcon="@Icons.Material.Filled.ContentCopy"
+                                       OnClick='() => CopyTextAsync(recipe.Prompt, "Prompt copied to clipboard.")'>
+                                Copy prompt
+                            </MudButton>
+                        </div>
+                    }
+                </div>
             </MudStack>
         </MudPaper>
     }
@@ -476,6 +572,7 @@
     private CreateMcpTokenResponse? _mcpTokenResponse;
     private bool _isCustomModel;
     private string _mcpLabel = "AI Settings";
+    private string _mcpScope = McpTokenScopes.Full;
     private int _mcpDays = 90;
     private bool _testingMcp;
     private string? _mcpTestResult;
@@ -542,8 +639,42 @@
             return $"Expired {token.ExpiresAtUtc:yyyy-MM-dd}.";
         }
 
-        return $"Created {token.CreatedAtUtc:yyyy-MM-dd}, expires {token.ExpiresAtUtc:yyyy-MM-dd} ({McpExpiryText(token.ExpiresAtUtc)}).";
+        var expires = $"Expires {token.ExpiresAtUtc:yyyy-MM-dd} ({McpExpiryText(token.ExpiresAtUtc)}).";
+        if (token.LastUsedAtUtc is { } lastUsed)
+        {
+            return $"{expires} Last active {FormatTimeAgo(lastUsed)}.";
+        }
+
+        return $"{expires} Never used.";
     }
+
+    private static string FormatTimeAgo(DateTime utcTime)
+    {
+        var span = DateTime.UtcNow - utcTime;
+        if (span.TotalMinutes < 1)
+        {
+            return "just now";
+        }
+
+        if (span.TotalHours < 1)
+        {
+            return $"{(int)span.TotalMinutes}m ago";
+        }
+
+        if (span.TotalDays < 1)
+        {
+            return $"{(int)span.TotalHours}h ago";
+        }
+
+        return $"{(int)span.TotalDays}d ago";
+    }
+
+    private static Color GetMcpScopeColor(string? scope) => McpTokenScopes.Normalize(scope) switch
+    {
+        McpTokenScopes.ReadOnly => Color.Info,
+        McpTokenScopes.TrackingOnly => Color.Warning,
+        _ => Color.Primary,
+    };
 
     private async Task LoadMcpTokensAsync()
     {
@@ -796,7 +927,7 @@
         {
             var label = string.IsNullOrWhiteSpace(_mcpLabel) ? "AI Settings" : _mcpLabel.Trim();
             var days = Math.Clamp(_mcpDays, 1, 365);
-            _mcpTokenResponse = await AccountActions.CreateMcpTokenAsync(new CreateMcpTokenRequest(days, label));
+            _mcpTokenResponse = await AccountActions.CreateMcpTokenAsync(new CreateMcpTokenRequest(days, label, _mcpScope));
             Snackbar.Add("Generated MCP token.", Severity.Success);
             await LoadMcpTokensAsync();
         }
@@ -811,20 +942,54 @@
         }
     }
 
+    private string GetMcpExportEnv() =>
+        McpClientConfigSnippets.ExportEnv(_mcpTokenResponse?.Token);
+
     private string GetMcpClaudeSnippet() =>
         McpClientConfigSnippets.Claude(_mcpTokenResponse?.Endpoint, _mcpTokenResponse?.Token);
 
+    private string GetMcpClaudeCodeCli() =>
+        McpClientConfigSnippets.ClaudeCodeCli(_mcpTokenResponse?.Endpoint, _mcpTokenResponse?.Token);
+
     private string GetMcpOpenCodeSnippet() =>
-        McpClientConfigSnippets.OpenCode(_mcpTokenResponse?.Endpoint, _mcpTokenResponse?.Token);
+        McpClientConfigSnippets.OpenCode(_mcpTokenResponse?.Endpoint, _mcpTokenResponse?.Token, useEnvVar: true);
 
     private string GetMcpOpenCodeCli() =>
-        McpClientConfigSnippets.OpenCodeCli(_mcpTokenResponse?.Endpoint, _mcpTokenResponse?.Token);
+        McpClientConfigSnippets.OpenCodeCli(_mcpTokenResponse?.Endpoint, _mcpTokenResponse?.Token, useEnvVar: true);
 
     private string GetMcpHermesSnippet() =>
-        McpClientConfigSnippets.Hermes(_mcpTokenResponse?.Endpoint, _mcpTokenResponse?.Token);
+        McpClientConfigSnippets.Hermes(_mcpTokenResponse?.Endpoint, _mcpTokenResponse?.Token, useEnvVar: true);
+
+    private string GetMcpHermesAppend() =>
+        McpClientConfigSnippets.HermesAppend(_mcpTokenResponse?.Endpoint, _mcpTokenResponse?.Token, useEnvVar: true);
 
     private string GetMcpCurlSnippet() =>
         McpClientConfigSnippets.Curl(_mcpTokenResponse?.Endpoint, _mcpTokenResponse?.Token);
+
+    private string GetMcpHealthCheckCurl() =>
+        McpClientConfigSnippets.HealthCheckCurl(_mcpTokenResponse?.Endpoint, _mcpTokenResponse?.Token);
+
+    private sealed record PromptRecipe(string Title, string Prompt, string Icon);
+
+    private static readonly IReadOnlyList<PromptRecipe> _promptRecipes =
+    [
+        new(
+            "Morning kickoff and planning",
+            "Review my Habitinator board for today. What dailies and overdue todos should I prioritize this morning?",
+            Icons.Material.Filled.WbSunny),
+        new(
+            "Habit streak check-in",
+            "Check my habits for today. Which positive habits haven't been completed yet, and what are my current streaks?",
+            Icons.Material.Filled.LocalFireDepartment),
+        new(
+            "Break down a goal into tasks",
+            "Help me break down my goal into 3 concrete, actionable todos for today with relevant tags, and add them to my board.",
+            Icons.Material.Filled.PlaylistAddCheck),
+        new(
+            "Weekly retrospective",
+            "Look at my completed items and timer sessions from this past week. Summarize my focus time, consistency, and where I can improve.",
+            Icons.Material.Filled.Assessment)
+    ];
 
     private async Task TestMcpConnectionAsync()
     {

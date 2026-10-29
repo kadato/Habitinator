@@ -6,7 +6,7 @@
       "type": "skill-md",
       "description": "Read and update Habitinator boards over MCP: habits, dailies, todos, activity, and focus timer.",
       "url": "https://habitinator.app/.well-known/agent-skills/habitinator/SKILL.md",
-      "digest": "sha256:b25c841aaad932a8a2b7390bd74e1b6a744d34dbbdbd10851acfc0c43f70eb9d"
+      "digest": "sha256:bfedad1be748c1401e5b029dec9058cfc9ceaf9916aecf7f275a911db6be2864"
     }
   ]
 }

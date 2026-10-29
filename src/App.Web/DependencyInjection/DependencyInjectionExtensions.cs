@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 
 using App.Shared.RCL.Models;
@@ -274,6 +275,19 @@ public static class DependencyInjectionExtensions
                     if (row is null || row.RevokedAtUtc is not null)
                     {
                         context.Fail("MCP token is revoked or unknown. Generate a new one.");
+                        return;
+                    }
+
+                    if (context.Principal?.Identity is ClaimsIdentity identity && !identity.HasClaim(c => c.Type == "scope"))
+                    {
+                        identity.AddClaim(new Claim("scope", row.Scope ?? App.Shared.RCL.Models.McpTokenScopes.Full));
+                    }
+
+                    var now = DateTimeOffset.UtcNow;
+                    if (row.LastUsedAtUtc is null || (now - row.LastUsedAtUtc.Value) > TimeSpan.FromMinutes(1))
+                    {
+                        row.LastUsedAtUtc = now;
+                        await db.SaveChangesAsync(context.HttpContext.RequestAborted);
                     }
                 }
             };

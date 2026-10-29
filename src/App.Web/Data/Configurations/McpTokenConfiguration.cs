@@ -10,8 +10,10 @@ public sealed class McpTokenConfiguration : IEntityTypeConfiguration<McpTokenEnt
         builder.ToTable("McpTokens");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Label).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Scope).HasMaxLength(32).HasDefaultValue("full").IsRequired();
         builder.Property(x => x.CreatedAtUtc).IsRequired();
         builder.Property(x => x.ExpiresAtUtc).IsRequired();
+        builder.Property(x => x.LastUsedAtUtc);
         builder.HasIndex(x => new { x.UserId, x.ExpiresAtUtc });
         builder.HasOne(x => x.User)
             .WithMany()

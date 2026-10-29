@@ -41,7 +41,7 @@ public sealed record ResetPasswordRequest(
     [Required] string Token,
     [Required, MinLength(8)] string NewPassword);
 
-public sealed record CreateMcpTokenRequest(int? Days = 90, string? Label = null);
+public sealed record CreateMcpTokenRequest(int? Days = 90, string? Label = null, string? Scope = "full");
 
 public sealed record CreateMcpTokenResponse(
     string Token,
@@ -49,12 +49,15 @@ public sealed record CreateMcpTokenResponse(
     string Endpoint,
     int Days,
     Guid Id,
-    string Label);
+    string Label,
+    string Scope = "full");
 
 public sealed record McpTokenInfo(
     Guid Id,
     string Label,
     DateTime CreatedAtUtc,
     DateTime ExpiresAtUtc,
-    DateTime? RevokedAtUtc);
+    DateTime? RevokedAtUtc,
+    DateTime? LastUsedAtUtc = null,
+    string Scope = "full");
 

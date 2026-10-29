@@ -396,6 +396,7 @@ internal static class AuthApiRoutes
 
         var days = Math.Clamp(request?.Days ?? 90, 1, 365);
         var label = NormalizeMcpLabel(request?.Label);
+        var scope = McpTokenScopes.Normalize(request?.Scope);
         var lifetime = TimeSpan.FromDays(days);
         var now = DateTimeOffset.UtcNow;
         var row = new McpTokenEntity
@@ -403,13 +404,14 @@ internal static class AuthApiRoutes
             Id = Guid.NewGuid(),
             UserId = user.Value,
             Label = label,
+            Scope = scope,
             CreatedAtUtc = now,
             ExpiresAtUtc = now.Add(lifetime),
         };
         db.McpTokens.Add(row);
         await db.SaveChangesAsync(cancellationToken);
 
-        var token = jwt.CreateToken(appUser, lifetime, row.Id);
+        var token = jwt.CreateToken(appUser, lifetime, row.Id, scope);
         var expiresAtUtc = DateTime.UtcNow.Add(lifetime);
         var baseUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
         var endpoint = $"{baseUrl}/mcp";
@@ -420,7 +422,8 @@ internal static class AuthApiRoutes
             Endpoint: endpoint,
             Days: days,
             Id: row.Id,
-            Label: label));
+            Label: label,
+            Scope: scope));
     }
 
     private static async Task<IResult> ListMcpTokensAsync(
@@ -445,7 +448,9 @@ internal static class AuthApiRoutes
                 t.Label,
                 t.CreatedAtUtc.UtcDateTime,
                 t.ExpiresAtUtc.UtcDateTime,
-                t.RevokedAtUtc.HasValue ? t.RevokedAtUtc.Value.UtcDateTime : null))
+                t.RevokedAtUtc.HasValue ? t.RevokedAtUtc.Value.UtcDateTime : null,
+                t.LastUsedAtUtc.HasValue ? t.LastUsedAtUtc.Value.UtcDateTime : null,
+                t.Scope ?? McpTokenScopes.Full))
             .ToList();
 
         return Results.Ok(infos);

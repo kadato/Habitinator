@@ -17,7 +17,7 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261023100843_AddMcpTokens";
+    public override string LastMigrationId => "20261029081110_AddMcpTokenScopeAndLastUsed";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -259,8 +259,18 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .HasMaxLength(100)
                     .HasColumnType("character varying(100)");
 
+                b.Property<DateTimeOffset?>("LastUsedAtUtc")
+                    .HasColumnType("timestamp with time zone");
+
                 b.Property<DateTimeOffset?>("RevokedAtUtc")
                     .HasColumnType("timestamp with time zone");
+
+                b.Property<string>("Scope")
+                    .IsRequired()
+                    .ValueGeneratedOnAdd()
+                    .HasMaxLength(32)
+                    .HasColumnType("character varying(32)")
+                    .HasDefaultValue("full");
 
                 b.Property<Guid>("UserId")
                     .HasColumnType("uuid");

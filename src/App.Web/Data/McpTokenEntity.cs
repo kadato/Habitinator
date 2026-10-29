@@ -11,9 +11,13 @@ public sealed class McpTokenEntity
 
     public string Label { get; set; } = string.Empty;
 
+    public string Scope { get; set; } = "full";
+
     public DateTimeOffset CreatedAtUtc { get; set; }
 
     public DateTimeOffset ExpiresAtUtc { get; set; }
+
+    public DateTimeOffset? LastUsedAtUtc { get; set; }
 
     public DateTimeOffset? RevokedAtUtc { get; set; }
 }

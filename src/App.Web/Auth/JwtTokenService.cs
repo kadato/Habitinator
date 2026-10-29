@@ -24,7 +24,7 @@ public sealed class JwtTokenService
             SecurityAlgorithms.HmacSha256);
     }
 
-    public string CreateToken(ApplicationUser user, TimeSpan? lifetimeOverride = null, Guid? tokenId = null)
+    public string CreateToken(ApplicationUser user, TimeSpan? lifetimeOverride = null, Guid? tokenId = null, string? scope = null)
     {
         List<Claim> claims =
         [
@@ -37,6 +37,11 @@ public sealed class JwtTokenService
         if (tokenId.HasValue)
         {
             claims.Add(new Claim(JwtRegisteredClaimNames.Jti, tokenId.Value.ToString("D")));
+        }
+
+        if (!string.IsNullOrWhiteSpace(scope))
+        {
+            claims.Add(new Claim("scope", scope));
         }
 
         var lifetime = lifetimeOverride ?? TimeSpan.FromMinutes(_options.ExpirationMinutes);

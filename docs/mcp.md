@@ -12,7 +12,7 @@ The endpoint accepts a JWT bearer token from `/api/auth/login`, long-lived perso
 
 ### Connect from the app
 
-Tokens are minted in the Settings panel under Settings, AI assistant, External AI access (MCP). The panel tests each token and copies the client config with the token filled in. The panel lists issued tokens with expiry dates and revokes one token or all tokens. Revocation takes effect immediately. auth.md documents the same flow for the terminal.
+Tokens are minted in the Settings panel under Settings, AI assistant, External AI access (MCP). Tokens support three scopes. `full` gives complete access. `tracking_only` gives read tools, habit and daily completion, and timer logging. `read_only` gives read tools, prompts, and resources. The panel tests each token and copies the client config with the token filled in. The panel lists issued tokens with their scope, expiry dates, and last active timestamps, and revokes one token or all tokens. Revocation takes effect immediately. auth.md documents the same flow for the terminal.
 
 ### Client configs
 
@@ -57,13 +57,13 @@ Claude Desktop, Cursor, and VS Code use `mcpServers` with `url` plus an `Authori
 
 ### Token minting from the terminal
 
-If you prefer the terminal over the Settings panel, call `POST /api/account/mcp-token` with a login JWT. The call mints a dedicated long-lived token valid from 1 to 365 days:
+If you prefer the terminal over the Settings panel, call `POST /api/account/mcp-token` with a login JWT. The call mints a dedicated long-lived token valid from 1 to 365 days, with an optional `scope` of `full`, `tracking_only`, or `read_only`:
 
 ```bash
 curl -s -X POST $BASE/api/account/mcp-token \
 	-H "Authorization: Bearer $TOKEN" \
 	-H 'Content-Type: application/json' \
-	-d '{"days":90,"label":"Claude Desktop"}'
+	-d '{"days":90,"label":"Claude Desktop","scope":"full"}'
 ```
 
 A `tools/list` call looks like this:
@@ -81,11 +81,11 @@ curl -s -X POST $BASE/mcp \
 
 ## Call order
 
-Mutations need item IDs. `get_snapshot` and `search_items` return the IDs. `habit_plus` and `habit_minus` move habits. `daily_complete_for_date` completes past dailies. `toggle_item` flips dailies and todos for today. `batch_toggle_items` toggles multiple items in one call. Past daily completion is append-only, and no tool reverses a past daily completion. `delete_item` and `import_data` ask for elicitation confirmation through `InputRequired` with `confirm_delete` and `confirm_import`. To confirm the action without elicitation, pass `confirmToken` set to the item ID or `CONFIRM`. On sessions without MRTR support, the server fails with `InvalidParams` and returns the same retry guidance.
+Mutations accept either an `itemId` GUID or a `title` query string. When `itemId` is omitted, the server resolves the item by matching title. The resolver accepts an exact match or a unique prefix, and returns candidate guidance when multiple items match. `get_snapshot` and `search_items` return all IDs. `habit_plus` and `habit_minus` move habits. `daily_complete_for_date` completes past dailies. `toggle_item` flips dailies and todos for today. `batch_toggle_items` toggles multiple items in one call. Past daily completion is append-only, and no tool reverses a past daily completion. `delete_item` and `import_data` ask for elicitation confirmation through `InputRequired` with `confirm_delete` and `confirm_import`. To confirm the action without elicitation, pass `confirmToken` set to the item ID or `CONFIRM`. On sessions without MRTR support, the server fails with `InvalidParams` and returns the same retry guidance.
 
 ## Formats
 
-Dates use strict `yyyy-MM-dd` via `DateOnly.TryParseExact`. Times look like `HH:mm` and stay within one day. Weekdays can be passed as bitmasks or weekday name arrays, such as `["Mon", "Wed", "Fri"]` or `["Monday", "Wednesday", "Friday"]`. The server rejects bad values and out-of-range counters, intervals, and weekdays with `InvalidParams`. It never clamps them. A retry with fixed values succeeds. `log_activity` and `log_timer_session` accept an optional `eventId`. To prevent duplicate logs on retry, reuse the same `eventId`.
+Dates accept `yyyy-MM-dd` and relative keywords `today`, `yesterday`, and `tomorrow`. Times look like `HH:mm` and stay within one day. Weekdays can be passed as bitmasks or weekday name arrays, such as `["Mon", "Wed", "Fri"]` or `["Monday", "Wednesday", "Friday"]`. The server rejects bad values and out-of-range counters, intervals, and weekdays with `InvalidParams`. It never clamps them. A retry with fixed values succeeds. `log_activity` and `log_timer_session` accept an optional `eventId`. To prevent duplicate logs on retry, reuse the same `eventId`.
 
 ## Tools
 

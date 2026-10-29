@@ -13,25 +13,29 @@ namespace App.Web.Mcp;
 public sealed class HabitTools(BoardPersistenceService boards, IHttpContextAccessor http)
 {
     [McpServerTool(Name = "habit_plus", Title = "Add habit plus tick", OpenWorld = true)]
-    [Description("Adds one plus tick to a habit. Returns the updated habit. Throws when not found.")]
+    [Description("Adds one plus tick to a habit. Resolves by itemId or title. Returns the updated habit. Throws when not found.")]
     public async Task<BoardItem> HabitPlus(
-        [Description("Habit item id.")] Guid itemId,
+        [Description("Habit item id. Optional if title is provided.")] Guid? itemId = null,
+        [Description("Habit title to match if itemId is omitted.")] string? title = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        var result = await boards.IncrementHabitPlusAsync(userId, itemId, null, cancellationToken);
+        var resolvedId = await McpItemResolver.ResolveItemIdAsync(boards, userId, itemId, title, BoardSection.Habit, cancellationToken: cancellationToken);
+        var result = await boards.IncrementHabitPlusAsync(userId, resolvedId, null, cancellationToken);
         return result.Item
             ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
     }
 
     [McpServerTool(Name = "habit_minus", Title = "Add habit minus tick", OpenWorld = true)]
-    [Description("Adds one minus tick to a habit. Returns the updated habit. Throws when not found.")]
+    [Description("Adds one minus tick to a habit. Resolves by itemId or title. Returns the updated habit. Throws when not found.")]
     public async Task<BoardItem> HabitMinus(
-        [Description("Habit item id.")] Guid itemId,
+        [Description("Habit item id. Optional if title is provided.")] Guid? itemId = null,
+        [Description("Habit title to match if itemId is omitted.")] string? title = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        var result = await boards.IncrementHabitMinusAsync(userId, itemId, null, cancellationToken);
+        var resolvedId = await McpItemResolver.ResolveItemIdAsync(boards, userId, itemId, title, BoardSection.Habit, cancellationToken: cancellationToken);
+        var result = await boards.IncrementHabitMinusAsync(userId, resolvedId, null, cancellationToken);
         return result.Item
             ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
     }

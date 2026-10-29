@@ -13,31 +13,37 @@ namespace App.Web.Mcp;
 public sealed class DailyTools(BoardPersistenceService boards, IHttpContextAccessor http)
 {
     [McpServerTool(Name = "daily_complete_for_date", Title = "Complete daily for date", OpenWorld = true)]
-    [Description("Marks a daily complete for a past calendar date in yyyy-MM-dd form. For today, use toggle_item instead. Returns the updated daily. Throws when not found.")]
+    [Description("Marks a daily complete for a past calendar date in yyyy-MM-dd form or 'yesterday'. Resolves by itemId or title. For today, use toggle_item instead. Returns the updated daily. Throws when not found.")]
     public async Task<BoardItem> CompleteForDate(
-        [Description("Daily item id.")] Guid itemId,
-        [Description("Date as yyyy-MM-dd.")] string date,
+        [Description("Date as yyyy-MM-dd or 'yesterday'.")] string date,
+        [Description("Daily item id. Optional if title is provided.")] Guid? itemId = null,
+        [Description("Daily title to match if itemId is omitted.")] string? title = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        var day = McpInput.ParseDate(date);
+        var today = await boards.TodayAsync(userId, cancellationToken);
+        var day = McpInput.ParseDate(date, today: today);
+        var resolvedId = await McpItemResolver.ResolveItemIdAsync(boards, userId, itemId, title, BoardSection.Daily, cancellationToken: cancellationToken);
 
-        var result = await boards.CompleteDailyForDateAsync(userId, itemId, day, null, cancellationToken);
+        var result = await boards.CompleteDailyForDateAsync(userId, resolvedId, day, null, cancellationToken);
         return result.Item
             ?? throw new McpProtocolException("Item not found or date must be before today.", McpErrorCode.InvalidParams);
     }
 
     [McpServerTool(Name = "daily_skip_for_date", Title = "Skip daily for date", OpenWorld = true)]
-    [Description("Marks a past scheduled day as skipped. The skipped day bridges the streak. Returns the updated daily.")]
+    [Description("Marks a past scheduled day as skipped using yyyy-MM-dd or 'yesterday'. Resolves by itemId or title. The skipped day bridges the streak. Returns the updated daily.")]
     public async Task<BoardItem> SkipForDate(
-        [Description("Daily item id.")] Guid itemId,
-        [Description("Date as yyyy-MM-dd.")] string date,
+        [Description("Date as yyyy-MM-dd or 'yesterday'.")] string date,
+        [Description("Daily item id. Optional if title is provided.")] Guid? itemId = null,
+        [Description("Daily title to match if itemId is omitted.")] string? title = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        var day = McpInput.ParseDate(date);
+        var today = await boards.TodayAsync(userId, cancellationToken);
+        var day = McpInput.ParseDate(date, today: today);
+        var resolvedId = await McpItemResolver.ResolveItemIdAsync(boards, userId, itemId, title, BoardSection.Daily, cancellationToken: cancellationToken);
 
-        var result = await boards.SkipDailyForDateAsync(userId, itemId, day, null, cancellationToken);
+        var result = await boards.SkipDailyForDateAsync(userId, resolvedId, day, null, cancellationToken);
         return result.Item
             ?? throw new McpProtocolException("Item not found or date must be before today.", McpErrorCode.InvalidParams);
     }

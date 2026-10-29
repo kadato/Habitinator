@@ -135,15 +135,20 @@ public sealed class BoardTools(
     }
 
     [McpServerTool(Name = "get_item", Title = "Get board item", ReadOnly = true, OpenWorld = false)]
-    [Description("Reads one active board item by id. Throws when not found.")]
+    [Description("Reads one active board item by id or title. Throws when not found.")]
     public async Task<BoardItem> GetItem(
-        [Description("Board item id as GUID string.")]
-        Guid itemId,
+        [Description("Board item id as GUID string. Optional if title is provided.")]
+        Guid? itemId = null,
+        [Description("Item title to match if itemId is omitted.")]
+        string? title = null,
+        [Description("Section: Habit, Daily, or Todo. Optional and auto-detected when omitted.")]
+        BoardSection? section = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        return await boards.GetItemAsync(userId, itemId, cancellationToken)
-            ?? throw new McpProtocolException($"Item not found: {itemId:D}", McpErrorCode.InvalidParams);
+        var resolvedId = await McpItemResolver.ResolveItemIdAsync(boards, userId, itemId, title, section, cancellationToken: cancellationToken);
+        return await boards.GetItemAsync(userId, resolvedId, cancellationToken)
+            ?? throw new McpProtocolException($"Item not found: {resolvedId:D}", McpErrorCode.InvalidParams);
     }
 
     [McpServerTool(Name = "get_archived", Title = "Get archived items", ReadOnly = true, OpenWorld = false)]
@@ -424,15 +429,17 @@ public sealed class BoardTools(
     }
 
     [McpServerTool(Name = "toggle_item", Title = "Toggle daily or todo", OpenWorld = true)]
-    [Description("Toggles a daily or todo for today. You cannot uncomplete a past date. Completion there is append-only. For habits, use habit_plus and habit_minus instead. Returns the updated item.")]
+    [Description("Toggles a daily or todo for today. Resolves by itemId or title. You cannot uncomplete a past date. Completion there is append-only. For habits, use habit_plus and habit_minus instead. Returns the updated item.")]
     public async Task<BoardItem> ToggleItem(
         McpServer server,
-        [Description("Item id.")] Guid itemId,
+        [Description("Item id. Optional if title is provided.")] Guid? itemId = null,
+        [Description("Item title to match if itemId is omitted.")] string? title = null,
         [Description("Section: Daily or Todo. Optional; auto-detected if omitted.")] BoardSection? section = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
+        var resolvedId = await McpItemResolver.ResolveItemIdAsync(boards, userId, itemId, title, section, cancellationToken: cancellationToken);
+        var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, resolvedId, cancellationToken)
             ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
 
         if (resolvedSection == BoardSection.Habit)
@@ -440,7 +447,7 @@ public sealed class BoardTools(
             throw new McpProtocolException("Habits cannot be toggled. Use habit_plus or habit_minus.", McpErrorCode.InvalidParams);
         }
 
-        var result = await boards.ToggleItemAsync(userId, resolvedSection, itemId, null, cancellationToken);
+        var result = await boards.ToggleItemAsync(userId, resolvedSection, resolvedId, null, cancellationToken);
         var item = ThrowOnError(result);
         await McpNotifications.BoardChangedAsync(server, item.Id, cancellationToken);
         return item;
@@ -481,18 +488,20 @@ public sealed class BoardTools(
     }
 
     [McpServerTool(Name = "archive_item", Title = "Archive board item", Idempotent = true, OpenWorld = true)]
-    [Description("Archives an item so it hides from the active board. Returns the updated item.")]
+    [Description("Archives an item so it hides from the active board. Resolves by itemId or title. Returns the updated item.")]
     public async Task<BoardItem> ArchiveItem(
         McpServer server,
-        [Description("Item id.")] Guid itemId,
+        [Description("Item id. Optional if title is provided.")] Guid? itemId = null,
+        [Description("Item title to match if itemId is omitted.")] string? title = null,
         [Description("Section of the item. Optional; auto-detected if omitted.")] BoardSection? section = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
-            ?? throw new McpProtocolException($"Item not found: {itemId:D}", McpErrorCode.InvalidParams);
+        var resolvedId = await McpItemResolver.ResolveItemIdAsync(boards, userId, itemId, title, section, cancellationToken: cancellationToken);
+        var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, resolvedId, cancellationToken)
+            ?? throw new McpProtocolException($"Item not found: {resolvedId:D}", McpErrorCode.InvalidParams);
 
-        var result = await boards.ArchiveItemAsync(userId, resolvedSection, itemId, null, cancellationToken);
+        var result = await boards.ArchiveItemAsync(userId, resolvedSection, resolvedId, null, cancellationToken);
         var item = ThrowOnError(result);
         await McpNotifications.BoardChangedAsync(server, item.Id, cancellationToken);
         return item;
@@ -537,18 +546,20 @@ public sealed class BoardTools(
     }
 
     [McpServerTool(Name = "unarchive_item", Title = "Unarchive board item", Idempotent = true, OpenWorld = true)]
-    [Description("Restores an archived item to the active board. Returns the updated item.")]
+    [Description("Restores an archived item to the active board. Resolves by itemId or title. Returns the updated item.")]
     public async Task<BoardItem> UnarchiveItem(
         McpServer server,
-        [Description("Item id.")] Guid itemId,
+        [Description("Item id. Optional if title is provided.")] Guid? itemId = null,
+        [Description("Item title to match if itemId is omitted.")] string? title = null,
         [Description("Section of the item. Optional; auto-detected if omitted.")] BoardSection? section = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, itemId, cancellationToken)
-            ?? throw new McpProtocolException($"Item not found: {itemId:D}", McpErrorCode.InvalidParams);
+        var resolvedId = await McpItemResolver.ResolveItemIdAsync(boards, userId, itemId, title, section, includeArchived: true, cancellationToken: cancellationToken);
+        var resolvedSection = section ?? await boards.GetItemSectionAsync(userId, resolvedId, cancellationToken)
+            ?? throw new McpProtocolException($"Item not found: {resolvedId:D}", McpErrorCode.InvalidParams);
 
-        var result = await boards.UnarchiveItemAsync(userId, resolvedSection, itemId, null, cancellationToken);
+        var result = await boards.UnarchiveItemAsync(userId, resolvedSection, resolvedId, null, cancellationToken);
         var item = ThrowOnError(result);
         await McpNotifications.BoardChangedAsync(server, item.Id, cancellationToken);
         return item;

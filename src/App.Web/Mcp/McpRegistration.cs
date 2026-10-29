@@ -1,6 +1,7 @@
 using App.Web.Auth;
 using App.Web.Services;
 
+using ModelContextProtocol;
 using ModelContextProtocol.AspNetCore;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -22,18 +23,19 @@ internal static class McpRegistration
             };
             options.ServerInstructions =
                 "Habitinator board helper. Authenticate with a JWT bearer token, auth cookie, or MCP personal token. " +
+                "Tokens can be scoped to full, tracking_only, or read_only. " +
                 "Quick overview is available via get_board_summary or resources board://summary and board://summary.md. " +
-                "Before any mutation, read with get_snapshot, search_items, or get_board_summary so you have item ids. " +
+                "Items can be targeted by itemId GUID or by title on toggle_item, habit_plus, habit_minus, get_item, archive_item, and daily completion. " +
                 "get_snapshot and search_items accept format='markdown' for compact reading, and search_items accepts includeArchived=true. " +
                 "Create items individually with create_item or in bulk with batch_create_items. " +
-                "Habits move with habit_plus and habit_minus. Past dailies complete with daily_complete_for_date. " +
+                "Habits move with habit_plus and habit_minus. Past dailies complete with daily_complete_for_date using 'yesterday' or yyyy-MM-dd. " +
                 "Today toggles with toggle_item or batch_toggle_items. Bulk archive with bulk_archive and restore with bulk_unarchive. " +
                 "Manage tags across items with rename_tag and delete_tag. " +
                 "Item section is optional on ID-targeted mutations and auto-detected. " +
                 "Past daily completion is append-only. No tool reverses a past daily completion. " +
                 "Inspect timer totals with get_timer_summary and activity logs with list_activity_events. " +
-                "Write dates as yyyy-MM-dd and times as HH:mm. The server rejects bad values with InvalidParams. " +
-                "Fix the input and retry. Reuse eventId on retry for log_activity and log_timer_session so the server logs the event once. " +
+                "Dates support yyyy-MM-dd and relative values 'today', 'yesterday', and 'tomorrow'. Times use HH:mm. " +
+                "Fix the input and retry on InvalidParams. Reuse eventId on retry for log_activity and log_timer_session so the server logs the event once. " +
                 "delete_item, delete_tag, import_data, and mass bulk_archive ask for elicitation confirmation. Older clients pass confirmToken instead.";
         })
         .WithHttpTransport(o =>
@@ -50,6 +52,9 @@ internal static class McpRegistration
 #pragma warning disable S2139 // Filters must log and rethrow so the protocol returns the error to the caller.
             b.AddCallToolFilter(next => async (ctx, ct) =>
             {
+                var scope = ctx.User?.FindFirst("scope")?.Value;
+                EnforceToolScope(ctx.Params.Name, scope);
+
                 var logger = GetLogger(ctx.Server.Services);
                 var userId = AuthenticatedUserId.TryGet(ctx.User)?.ToString() ?? "anon";
                 var argCount = ctx.Params.Arguments?.Count ?? 0;
@@ -364,6 +369,57 @@ internal static class McpRegistration
             .RequireRateLimiting("mcp");
         return endpoints;
     }
+
+    private static void EnforceToolScope(string toolName, string? scope)
+    {
+        var normalized = App.Shared.RCL.Models.McpTokenScopes.Normalize(scope);
+        if (normalized == App.Shared.RCL.Models.McpTokenScopes.Full)
+        {
+            return;
+        }
+
+        var isRead = IsReadOnlyTool(toolName);
+        if (normalized == App.Shared.RCL.Models.McpTokenScopes.ReadOnly)
+        {
+            if (!isRead)
+            {
+                throw new McpProtocolException(
+                    $"Token scope 'read_only' permits read-only tools and resources only. Tool '{toolName}' was blocked.",
+                    McpErrorCode.InvalidRequest);
+            }
+
+            return;
+        }
+
+        if (normalized == App.Shared.RCL.Models.McpTokenScopes.TrackingOnly)
+        {
+            if (isRead || IsTrackingTool(toolName))
+            {
+                return;
+            }
+
+            throw new McpProtocolException(
+                $"Token scope 'tracking_only' permits tracking tools such as toggle_item, habit_plus, habit_minus, daily_complete_for_date, log_timer_session, and read-only tools only. Tool '{toolName}' was blocked.",
+                McpErrorCode.InvalidRequest);
+        }
+    }
+
+    private static bool IsReadOnlyTool(string name) =>
+        name.StartsWith("get_", StringComparison.Ordinal)
+        || name.StartsWith("list_", StringComparison.Ordinal)
+        || name.StartsWith("search_", StringComparison.Ordinal)
+        || string.Equals(name, "export_data", StringComparison.Ordinal);
+
+    private static bool IsTrackingTool(string name) =>
+        string.Equals(name, "toggle_item", StringComparison.Ordinal)
+        || string.Equals(name, "batch_toggle_items", StringComparison.Ordinal)
+        || string.Equals(name, "habit_plus", StringComparison.Ordinal)
+        || string.Equals(name, "habit_minus", StringComparison.Ordinal)
+        || string.Equals(name, "daily_complete_for_date", StringComparison.Ordinal)
+        || string.Equals(name, "daily_skip_for_date", StringComparison.Ordinal)
+        || string.Equals(name, "log_timer_session", StringComparison.Ordinal)
+        || string.Equals(name, "log_activity", StringComparison.Ordinal)
+        || string.Equals(name, "set_checklist_item_done", StringComparison.Ordinal);
 
     private static ILogger? GetLogger(IServiceProvider? services)
     {

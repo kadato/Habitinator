@@ -228,24 +228,52 @@ internal static class McpInput
         return parsed;
     }
 
-    public static DateOnly ParseDate(string raw, string paramName = "Date")
+    public static DateOnly ParseDate(string raw, string paramName = "Date", DateOnly? today = null)
     {
-        if (!DateOnly.TryParseExact(raw, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+        if (string.IsNullOrWhiteSpace(raw))
         {
-            throw new McpProtocolException($"{paramName} must use yyyy-MM-dd.", McpErrorCode.InvalidParams);
+            throw new McpProtocolException($"{paramName} must not be empty.", McpErrorCode.InvalidParams);
         }
 
-        return parsed;
+        var trimmed = raw.Trim();
+        var baseDate = today ?? DateOnly.FromDateTime(DateTime.UtcNow);
+
+        if (string.Equals(trimmed, "today", StringComparison.OrdinalIgnoreCase))
+        {
+            return baseDate;
+        }
+
+        if (string.Equals(trimmed, "yesterday", StringComparison.OrdinalIgnoreCase))
+        {
+            return baseDate.AddDays(-1);
+        }
+
+        if (string.Equals(trimmed, "tomorrow", StringComparison.OrdinalIgnoreCase))
+        {
+            return baseDate.AddDays(1);
+        }
+
+        if (DateOnly.TryParseExact(trimmed, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var exact))
+        {
+            return exact;
+        }
+
+        if (DateOnly.TryParse(trimmed, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+        {
+            return parsed;
+        }
+
+        throw new McpProtocolException($"{paramName} must use yyyy-MM-dd, 'today', 'yesterday', or 'tomorrow'.", McpErrorCode.InvalidParams);
     }
 
-    public static DateOnly? ParseNullableDate(string? raw, string paramName = "Date")
+    public static DateOnly? ParseNullableDate(string? raw, string paramName = "Date", DateOnly? today = null)
     {
-        if (string.IsNullOrEmpty(raw))
+        if (string.IsNullOrWhiteSpace(raw))
         {
             return null;
         }
 
-        return ParseDate(raw, paramName);
+        return ParseDate(raw, paramName, today);
     }
 
     public static void CheckImportSize(string json)

@@ -13,6 +13,51 @@ public static class McpClientConfigSnippets
         return $"export {EnvVarName}=\"{bearer}\"";
     }
 
+    public static string ClaudeOAuth(string? endpoint)
+    {
+        var url = string.IsNullOrWhiteSpace(endpoint) ? FallbackEndpoint : endpoint;
+        return $$"""
+        {
+          "mcpServers": {
+            "habitinator": {
+              "url": "{{url}}"
+            }
+          }
+        }
+        """;
+    }
+
+    public static string ClaudeCodeCliOAuth(string? endpoint)
+    {
+        var url = string.IsNullOrWhiteSpace(endpoint) ? FallbackEndpoint : endpoint;
+        return $"claude mcp add habitinator {url}";
+    }
+
+    public static string OpenCodeOAuth(string? endpoint)
+    {
+        var url = string.IsNullOrWhiteSpace(endpoint) ? FallbackEndpoint : endpoint;
+        return $$"""
+        {
+          "$schema": "https://opencode.ai/config.json",
+          "mcp": {
+            "servers": {
+              "habitinator": {
+                "type": "remote",
+                "url": "{{url}}",
+                "oauth": true
+              }
+            }
+          }
+        }
+        """;
+    }
+
+    public static string OpenCodeCliOAuth(string? endpoint)
+    {
+        var url = string.IsNullOrWhiteSpace(endpoint) ? FallbackEndpoint : endpoint;
+        return $"opencode mcp add habitinator --url {url}";
+    }
+
     public static string Claude(string? endpoint, string? token)
     {
         var url = string.IsNullOrWhiteSpace(endpoint) ? FallbackEndpoint : endpoint;

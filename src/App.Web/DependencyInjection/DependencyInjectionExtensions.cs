@@ -112,6 +112,7 @@ public static class DependencyInjectionExtensions
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IWebHostEnvironment environment)
     {
         services.AddSingleton<JwtTokenService>();
+        services.AddSingleton<IOAuthService, OAuthService>();
         services.AddSingleton<IClock, SystemClock>();
         services.AddScoped<GlobalTimerService>();
         services.AddSingleton<IAppWindowProgressService, FallbackAppWindowProgressService>();
@@ -259,6 +260,17 @@ public static class DependencyInjectionExtensions
 
                     return Task.CompletedTask;
                 },
+                OnChallenge = context =>
+                {
+                    if (context.Request.Path.StartsWithSegments("/mcp"))
+                    {
+                        var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}".TrimEnd('/');
+                        var metadataUrl = $"{baseUrl}/.well-known/oauth-protected-resource";
+                        context.Response.Headers.Append("WWW-Authenticate", $"Bearer realm=\"habitinator\", error=\"invalid_token\", resource_metadata=\"{metadataUrl}\"");
+                    }
+
+                    return Task.CompletedTask;
+                },
                 OnTokenValidated = async context =>
                 {
                     // Personal MCP tokens carry the registry row id as jti. Login JWTs
@@ -307,7 +319,7 @@ public static class DependencyInjectionExtensions
     {
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = environment.IsDevelopment()
+        options.Cookie.SecurePolicy = environment.IsDevelopment() || environment.IsEnvironment(AppEnvironment.Testing)
             ? CookieSecurePolicy.SameAsRequest
             : CookieSecurePolicy.Always;
     }

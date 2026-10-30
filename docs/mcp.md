@@ -8,9 +8,57 @@ The server version is synced from the assembly version, not a hardcoded string.
 
 ## Authentication
 
-The endpoint accepts a JWT bearer token from `/api/auth/login`, long-lived personal MCP tokens from `/api/account/mcp-token`, and the auth cookie. Without a token, the server returns 401. When the user record is missing, the tool throws `InvalidRequest` with "Sign in required" or "Register or sign in again".
+The MCP endpoint supports two authentication methods:
+1. **OAuth 2.1 (Zero manual keys - Recommended):** Modern MCP clients (Claude Desktop, Cursor, VS Code, OpenCode) negotiate access via standard discovery (RFC 9728 at `/.well-known/oauth-protected-resource` and RFC 8414 at `/.well-known/oauth-authorization-server`) and the authorization code flow with PKCE (RFC 7636). When you connect, your client opens a browser window for one-click approval. No manual API keys or secrets in config files!
+2. **Personal Bearer Tokens:** Long-lived tokens minted in the Settings panel or `/api/account/mcp-token` for scripts, headless environments, and terminal use.
 
-### Connect from the app
+Without authentication, the server returns 401 with a `WWW-Authenticate` header pointing to the RFC 9728 protected resource metadata so clients can automatically initiate OAuth.
+
+### Zero-key client setup (OAuth 2.1)
+
+With OAuth 2.1, your client configuration requires zero secrets:
+
+Claude Desktop, Cursor, and VS Code:
+
+```json
+{
+  "mcpServers": {
+    "habitinator": {
+      "url": "https://habitinator.app/mcp"
+    }
+  }
+}
+```
+
+OpenCode `opencode.jsonc`:
+
+```jsonc
+{
+  "mcp": {
+    "servers": {
+      "habitinator": {
+        "type": "remote",
+        "url": "https://habitinator.app/mcp",
+        "oauth": true
+      }
+    }
+  }
+}
+```
+
+Claude Code CLI:
+
+```bash
+claude mcp add habitinator https://habitinator.app/mcp
+```
+
+OpenCode CLI:
+
+```bash
+opencode mcp add habitinator --url https://habitinator.app/mcp
+```
+
+### Connect with personal tokens
 
 Tokens are minted in the Settings panel under Settings, AI assistant, External AI access (MCP). Tokens support three scopes. `full` gives complete access. `tracking_only` gives read tools, habit and daily completion, and timer logging. `read_only` gives read tools, prompts, and resources. The panel tests each token and copies the client config with the token filled in. The panel lists issued tokens with their scope, expiry dates, and last active timestamps, and revokes one token or all tokens. Revocation takes effect immediately. auth.md documents the same flow for the terminal.
 

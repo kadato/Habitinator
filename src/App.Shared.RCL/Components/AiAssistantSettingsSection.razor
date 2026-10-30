@@ -433,6 +433,37 @@
                 </div>
 
                 <MudTabs Elevation="0" Rounded="true" Outlined="true" Class="mt-1">
+                    <MudTabPanel Text="OAuth (Zero key)" Icon="@Icons.Material.Filled.AutoAwesome">
+                        <div class="pa-2">
+                            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="mb-3">
+                                <strong>Zero manual keys:</strong> Habitinator supports RFC 9728 &amp; RFC 8414 OAuth 2.1. Configure your client with the server URL; when the client connects, it opens your browser to approve access. No API key copying required.
+                            </MudAlert>
+
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">
+                                <strong>Option A: Claude Desktop, Cursor, or VS Code:</strong>
+                            </MudText>
+                            <pre class="mcp-snippet-pre">@GetMcpClaudeOAuthSnippet()</pre>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeOAuthSnippet(), "OAuth configuration copied.")'>Copy Zero-Key Config</MudButton>
+
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
+                                <strong>Option B: OpenCode (with native OAuth discovery):</strong>
+                            </MudText>
+                            <pre class="mcp-snippet-pre">@GetMcpOpenCodeOAuthSnippet()</pre>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpOpenCodeOAuthSnippet(), "OpenCode OAuth config copied.")'>Copy OpenCode Config</MudButton>
+
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
+                                <strong>Option C: Claude Code CLI:</strong>
+                            </MudText>
+                            <pre class="mcp-snippet-pre">@GetMcpClaudeCodeCliOAuth()</pre>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeCodeCliOAuth(), "Claude Code CLI command copied.")'>Copy Claude Code CLI</MudButton>
+
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
+                                <strong>Option D: OpenCode CLI:</strong>
+                            </MudText>
+                            <pre class="mcp-snippet-pre">@GetMcpOpenCodeCliOAuth()</pre>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpOpenCodeCliOAuth(), "OpenCode CLI command copied.")'>Copy OpenCode CLI</MudButton>
+                        </div>
+                    </MudTabPanel>
                     <MudTabPanel Text="Claude">
                         <div class="pa-2">
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">
@@ -941,6 +972,18 @@
             StateHasChanged();
         }
     }
+
+    private string GetMcpClaudeOAuthSnippet() =>
+        McpClientConfigSnippets.ClaudeOAuth(_mcpTokenResponse?.Endpoint);
+
+    private string GetMcpClaudeCodeCliOAuth() =>
+        McpClientConfigSnippets.ClaudeCodeCliOAuth(_mcpTokenResponse?.Endpoint);
+
+    private string GetMcpOpenCodeOAuthSnippet() =>
+        McpClientConfigSnippets.OpenCodeOAuth(_mcpTokenResponse?.Endpoint);
+
+    private string GetMcpOpenCodeCliOAuth() =>
+        McpClientConfigSnippets.OpenCodeCliOAuth(_mcpTokenResponse?.Endpoint);
 
     private string GetMcpExportEnv() =>
         McpClientConfigSnippets.ExportEnv(_mcpTokenResponse?.Token);

@@ -247,6 +247,27 @@ internal static class AuthApiRoutes
         }
 
         await signInManager.SignInAsync(guestUser, true);
+
+        string? returnUrl = null;
+        if (httpContext.Request.HasFormContentType)
+        {
+            var form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
+            returnUrl = form["ReturnUrl"].ToString();
+            if (string.IsNullOrWhiteSpace(returnUrl))
+            {
+                returnUrl = form["returnUrl"].ToString();
+            }
+        }
+        if (string.IsNullOrWhiteSpace(returnUrl))
+        {
+            returnUrl = httpContext.Request.Query["returnUrl"].ToString();
+        }
+
+        if (!string.IsNullOrWhiteSpace(returnUrl) && (returnUrl.StartsWith('/') || returnUrl.StartsWith("~/", StringComparison.Ordinal)))
+        {
+            return Results.LocalRedirect(returnUrl);
+        }
+
         return Results.LocalRedirect("/");
     }
 
@@ -259,17 +280,32 @@ internal static class AuthApiRoutes
         var email = form["Email"].ToString();
         var password = form["Password"].ToString();
         var rememberMe = form["RememberMe"] == "true";
+        var returnUrl = form["ReturnUrl"].ToString();
+        if (string.IsNullOrWhiteSpace(returnUrl))
+        {
+            returnUrl = form["returnUrl"].ToString();
+        }
+        if (string.IsNullOrWhiteSpace(returnUrl))
+        {
+            returnUrl = httpContext.Request.Query["returnUrl"].ToString();
+        }
 
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         {
-            return Results.LocalRedirect("/auth/login?error=1");
+            var retry = string.IsNullOrWhiteSpace(returnUrl)
+                ? "/auth/login?error=1"
+                : $"/auth/login?error=1&returnUrl={Uri.EscapeDataString(returnUrl)}";
+            return Results.LocalRedirect(retry);
         }
 
         var user = await userManager.FindByEmailAsync(email);
         if (user is null)
         {
             RunDummyPasswordCheck(password);
-            return Results.LocalRedirect("/auth/login?error=1");
+            var retry = string.IsNullOrWhiteSpace(returnUrl)
+                ? "/auth/login?error=1"
+                : $"/auth/login?error=1&returnUrl={Uri.EscapeDataString(returnUrl)}";
+            return Results.LocalRedirect(retry);
         }
 
         var loginResult = await signInManager.PasswordSignInAsync(
@@ -280,7 +316,15 @@ internal static class AuthApiRoutes
 
         if (!loginResult.Succeeded)
         {
-            return Results.LocalRedirect("/auth/login?error=1");
+            var retry = string.IsNullOrWhiteSpace(returnUrl)
+                ? "/auth/login?error=1"
+                : $"/auth/login?error=1&returnUrl={Uri.EscapeDataString(returnUrl)}";
+            return Results.LocalRedirect(retry);
+        }
+
+        if (!string.IsNullOrWhiteSpace(returnUrl) && (returnUrl.StartsWith('/') || returnUrl.StartsWith("~/", StringComparison.Ordinal)))
+        {
+            return Results.LocalRedirect(returnUrl);
         }
 
         return Results.LocalRedirect("/");

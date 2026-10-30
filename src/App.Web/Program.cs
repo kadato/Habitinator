@@ -98,6 +98,7 @@ app.ConfigurePipeline();
 
 app.MapBoardApi();
 app.MapAuthApi();
+app.MapOAuthRoutes();
 app.MapActivityApi();
 app.MapSettingsApi();
 app.MapAiApi();

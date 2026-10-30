@@ -18,6 +18,10 @@
         }
 
         <form method="post" action="/api/auth/cookie-login">
+            @if (!string.IsNullOrWhiteSpace(ReturnUrl))
+            {
+                <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
+            }
             <LoginFormFields HasError="@_hasError" ErrorId="auth-error"/>
             <div class="auth-form-actions">
                 <MudButton ButtonType="ButtonType.Submit"
@@ -33,6 +37,10 @@
         <div class="auth-form-divider" role="presentation">or</div>
 
         <form method="post" action="/api/auth/guest-login">
+            @if (!string.IsNullOrWhiteSpace(ReturnUrl))
+            {
+                <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
+            }
             <MudButton ButtonType="ButtonType.Submit"
                        Variant="Variant.Outlined"
                        Color="Color.Secondary"
@@ -51,6 +59,9 @@
 </AuthPageShell>
 
 @code {
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
     private string? _message;
     private bool _hasError;
 

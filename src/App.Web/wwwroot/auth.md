@@ -4,7 +4,15 @@
 
 Habitinator board data is private. Every MCP and REST call needs the user's own credential. There is no shared API key.
 
-## 1. Register or sign in
+## 1. Zero-key connection (OAuth 2.1 - Recommended)
+
+For interactive clients (Claude Desktop, Cursor, VS Code, OpenCode):
+- Add `https://habitinator.app/mcp` to your client configuration without an authorization header.
+- The client discovers OAuth metadata at `/.well-known/oauth-protected-resource` and `/.well-known/oauth-authorization-server`.
+- The client prompts you to approve access in your browser at `/oauth/authorize`.
+- The client exchanges the authorization code using PKCE for an access token and refresh token, rotating them automatically without manual intervention.
+
+## 2. Register or sign in manually
 
 - To register, call `POST /api/auth/register` with `{"email","password"}`.
 - To sign in, call `POST /api/auth/login` with the same body. The response has `accessToken`, a short-lived JWT.

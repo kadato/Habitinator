@@ -16,6 +16,7 @@ namespace App.Web;
 internal static class AuthApiRoutes
 {
     private const string BoardOrJwtPolicy = "BoardOrJwt";
+    private const string ReturnUrlQueryKey = "returnUrl";
 
     internal static void MapAuthApi(this IEndpointRouteBuilder endpoints)
     {
@@ -248,20 +249,10 @@ internal static class AuthApiRoutes
 
         await signInManager.SignInAsync(guestUser, true);
 
-        string? returnUrl = null;
-        if (httpContext.Request.HasFormContentType)
-        {
-            var form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
-            returnUrl = form["ReturnUrl"].ToString();
-            if (string.IsNullOrWhiteSpace(returnUrl))
-            {
-                returnUrl = form["returnUrl"].ToString();
-            }
-        }
-        if (string.IsNullOrWhiteSpace(returnUrl))
-        {
-            returnUrl = httpContext.Request.Query["returnUrl"].ToString();
-        }
+        var form = httpContext.Request.HasFormContentType
+            ? await httpContext.Request.ReadFormAsync(httpContext.RequestAborted)
+            : null;
+        var returnUrl = ExtractReturnUrl(httpContext.Request, form);
 
         if (!string.IsNullOrWhiteSpace(returnUrl) && (returnUrl.StartsWith('/') || returnUrl.StartsWith("~/", StringComparison.Ordinal)))
         {
@@ -280,32 +271,18 @@ internal static class AuthApiRoutes
         var email = form["Email"].ToString();
         var password = form["Password"].ToString();
         var rememberMe = form["RememberMe"] == "true";
-        var returnUrl = form["ReturnUrl"].ToString();
-        if (string.IsNullOrWhiteSpace(returnUrl))
-        {
-            returnUrl = form["returnUrl"].ToString();
-        }
-        if (string.IsNullOrWhiteSpace(returnUrl))
-        {
-            returnUrl = httpContext.Request.Query["returnUrl"].ToString();
-        }
+        var returnUrl = ExtractReturnUrl(httpContext.Request, form);
 
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         {
-            var retry = string.IsNullOrWhiteSpace(returnUrl)
-                ? "/auth/login?error=1"
-                : $"/auth/login?error=1&returnUrl={Uri.EscapeDataString(returnUrl)}";
-            return Results.LocalRedirect(retry);
+            return Results.LocalRedirect(BuildLoginErrorRedirect(returnUrl));
         }
 
         var user = await userManager.FindByEmailAsync(email);
         if (user is null)
         {
             RunDummyPasswordCheck(password);
-            var retry = string.IsNullOrWhiteSpace(returnUrl)
-                ? "/auth/login?error=1"
-                : $"/auth/login?error=1&returnUrl={Uri.EscapeDataString(returnUrl)}";
-            return Results.LocalRedirect(retry);
+            return Results.LocalRedirect(BuildLoginErrorRedirect(returnUrl));
         }
 
         var loginResult = await signInManager.PasswordSignInAsync(
@@ -316,10 +293,7 @@ internal static class AuthApiRoutes
 
         if (!loginResult.Succeeded)
         {
-            var retry = string.IsNullOrWhiteSpace(returnUrl)
-                ? "/auth/login?error=1"
-                : $"/auth/login?error=1&returnUrl={Uri.EscapeDataString(returnUrl)}";
-            return Results.LocalRedirect(retry);
+            return Results.LocalRedirect(BuildLoginErrorRedirect(returnUrl));
         }
 
         if (!string.IsNullOrWhiteSpace(returnUrl) && (returnUrl.StartsWith('/') || returnUrl.StartsWith("~/", StringComparison.Ordinal)))
@@ -329,6 +303,26 @@ internal static class AuthApiRoutes
 
         return Results.LocalRedirect("/");
     }
+
+    private static string? ExtractReturnUrl(HttpRequest request, IFormCollection? form)
+    {
+        var returnUrl = form?["ReturnUrl"].ToString();
+        if (string.IsNullOrWhiteSpace(returnUrl))
+        {
+            returnUrl = form?[ReturnUrlQueryKey].ToString();
+        }
+        if (string.IsNullOrWhiteSpace(returnUrl))
+        {
+            returnUrl = request.Query[ReturnUrlQueryKey].ToString();
+        }
+
+        return string.IsNullOrWhiteSpace(returnUrl) ? null : returnUrl;
+    }
+
+    private static string BuildLoginErrorRedirect(string? returnUrl) =>
+        string.IsNullOrWhiteSpace(returnUrl)
+            ? "/auth/login?error=1"
+            : $"/auth/login?error=1&{ReturnUrlQueryKey}={Uri.EscapeDataString(returnUrl)}";
 
     private static async Task<IResult> CookieLogoutAsync(
         HttpContext context,

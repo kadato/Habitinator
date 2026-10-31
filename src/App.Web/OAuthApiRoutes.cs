@@ -14,8 +14,14 @@ namespace App.Web.Auth;
 
 public static class OAuthApiRoutes
 {
+    private const string InvalidRequest = "invalid_request";
+    private const string InvalidGrant = "invalid_grant";
+    private const string RefreshTokenParam = "refresh_token";
+    private const string ClientIdParam = "client_id";
+    private const string RedirectUriParam = "redirect_uri";
+
     private static readonly string[] ResponseTypesSupported = ["code"];
-    private static readonly string[] GrantTypesSupported = ["authorization_code", "refresh_token"];
+    private static readonly string[] GrantTypesSupported = ["authorization_code", RefreshTokenParam];
     private static readonly string[] CodeChallengeMethodsSupported = ["S256"];
     private static readonly string[] TokenEndpointAuthMethodsSupported = ["none"];
     private static readonly string[] ScopesSupported = [McpTokenScopes.Full, McpTokenScopes.TrackingOnly, McpTokenScopes.ReadOnly];
@@ -124,57 +130,30 @@ public static class OAuthApiRoutes
         IOAuthService oauthService)
     {
         var responseType = context.Request.Query["response_type"].ToString();
-        var clientId = context.Request.Query["client_id"].ToString();
-        var redirectUri = context.Request.Query["redirect_uri"].ToString();
+        var clientId = context.Request.Query[ClientIdParam].ToString();
+        var redirectUri = context.Request.Query[RedirectUriParam].ToString();
         var scope = context.Request.Query["scope"].ToString();
         var state = context.Request.Query["state"].ToString();
         var codeChallenge = context.Request.Query["code_challenge"].ToString();
         var codeChallengeMethod = context.Request.Query["code_challenge_method"].ToString();
 
         var client = oauthService.GetClient(clientId);
-        if (string.IsNullOrWhiteSpace(redirectUri) || !oauthService.ValidateRedirectUri(client, redirectUri))
+        var validationError = ValidateAuthorizeRequest(client, responseType, redirectUri, codeChallenge, codeChallengeMethod, oauthService);
+        if (validationError is not null)
         {
-            return Results.BadRequest(new { error = "invalid_request", error_description = "Invalid or missing redirect_uri." });
+            return validationError;
         }
 
-        if (responseType != "code")
-        {
-            return BuildRedirectError(redirectUri, "unsupported_response_type", "Only 'code' response type is supported.", state);
-        }
-
-        if (string.IsNullOrWhiteSpace(codeChallenge) || !string.Equals(codeChallengeMethod, "S256", StringComparison.OrdinalIgnoreCase))
-        {
-            return BuildRedirectError(redirectUri, "invalid_request", "code_challenge and code_challenge_method=S256 are required by OAuth 2.1.", state);
-        }
-
-        var normalizedScope = McpTokenScopes.Normalize(string.IsNullOrWhiteSpace(scope) ? McpTokenScopes.Full : scope);
-
-        // Check if user is authenticated via cookie or jwt
-        if (context.User.Identity?.IsAuthenticated != true)
-        {
-            var cookieAuth = await context.AuthenticateAsync(IdentityConstants.ApplicationScheme);
-            if (cookieAuth.Succeeded && cookieAuth.Principal is not null)
-            {
-                context.User = cookieAuth.Principal;
-            }
-            else
-            {
-                var jwtAuth = await context.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
-                if (jwtAuth.Succeeded && jwtAuth.Principal is not null)
-                {
-                    context.User = jwtAuth.Principal;
-                }
-            }
-        }
-
-        if (context.User.Identity?.IsAuthenticated != true)
+        var user = await EnsureAuthenticatedUserAsync(context);
+        if (user?.Identity?.IsAuthenticated != true)
         {
             var returnUrl = context.Request.Path + context.Request.QueryString;
             return Results.LocalRedirect($"/auth/login?returnUrl={Uri.EscapeDataString(returnUrl)}");
         }
 
+        var normalizedScope = McpTokenScopes.Normalize(string.IsNullOrWhiteSpace(scope) ? McpTokenScopes.Full : scope);
         var clientName = client?.ClientName ?? (string.IsNullOrWhiteSpace(clientId) ? "External AI Assistant" : clientId);
-        var userName = context.User.Identity?.Name ?? "User";
+        var userName = user.Identity?.Name ?? "User";
 
         var html = RenderConsentHtml(
             clientName: clientName,
@@ -188,14 +167,64 @@ public static class OAuthApiRoutes
         return Results.Content(html, "text/html; charset=utf-8");
     }
 
+    private static IResult? ValidateAuthorizeRequest(
+        OAuthClient? client,
+        string responseType,
+        string redirectUri,
+        string codeChallenge,
+        string codeChallengeMethod,
+        IOAuthService oauthService)
+    {
+        if (string.IsNullOrWhiteSpace(redirectUri) || !oauthService.ValidateRedirectUri(client, redirectUri))
+        {
+            return Results.BadRequest(new { error = InvalidRequest, error_description = "Invalid or missing redirect_uri." });
+        }
+
+        if (responseType != "code")
+        {
+            return Results.BadRequest(new { error = "unsupported_response_type", error_description = "Only 'code' response type is supported." });
+        }
+
+        if (string.IsNullOrWhiteSpace(codeChallenge) || !string.Equals(codeChallengeMethod, "S256", StringComparison.OrdinalIgnoreCase))
+        {
+            return Results.BadRequest(new { error = InvalidRequest, error_description = "code_challenge and code_challenge_method=S256 are required by OAuth 2.1." });
+        }
+
+        return null;
+    }
+
+    private static async Task<ClaimsPrincipal?> EnsureAuthenticatedUserAsync(HttpContext context)
+    {
+        if (context.User.Identity?.IsAuthenticated == true)
+        {
+            return context.User;
+        }
+
+        var cookieAuth = await context.AuthenticateAsync(IdentityConstants.ApplicationScheme);
+        if (cookieAuth.Succeeded && cookieAuth.Principal is not null)
+        {
+            context.User = cookieAuth.Principal;
+            return cookieAuth.Principal;
+        }
+
+        var jwtAuth = await context.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
+        if (jwtAuth.Succeeded && jwtAuth.Principal is not null)
+        {
+            context.User = jwtAuth.Principal;
+            return jwtAuth.Principal;
+        }
+
+        return null;
+    }
+
     private static IResult AuthorizePostAsync(
         HttpContext context,
         IOAuthService oauthService)
     {
         var form = context.Request.Form;
         var action = form["action"].ToString();
-        var clientId = form["client_id"].ToString();
-        var redirectUri = form["redirect_uri"].ToString();
+        var clientId = form[ClientIdParam].ToString();
+        var redirectUri = form[RedirectUriParam].ToString();
         var scope = form["scope"].ToString();
         var state = form["state"].ToString();
         var codeChallenge = form["code_challenge"].ToString();
@@ -203,12 +232,17 @@ public static class OAuthApiRoutes
         var client = oauthService.GetClient(clientId);
         if (string.IsNullOrWhiteSpace(redirectUri) || !oauthService.ValidateRedirectUri(client, redirectUri))
         {
-            return Results.BadRequest(new { error = "invalid_request", error_description = "Invalid redirect_uri." });
+            return Results.BadRequest(new { error = InvalidRequest, error_description = "Invalid redirect_uri." });
         }
 
         if (action == "deny")
         {
-            return BuildRedirectError(redirectUri, "access_denied", "The user denied the authorization request.", state);
+            var denyUrl = $"{redirectUri}?error=access_denied&error_description={Uri.EscapeDataString("The user denied the authorization request.")}";
+            if (!string.IsNullOrWhiteSpace(state))
+            {
+                denyUrl += $"&state={Uri.EscapeDataString(state)}";
+            }
+            return Results.Redirect(denyUrl);
         }
 
         var userIdClaim = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
@@ -239,6 +273,44 @@ public static class OAuthApiRoutes
         return Results.Redirect(targetUrl);
     }
 
+    private sealed record TokenRequest(
+        string? GrantType,
+        string? Code,
+        string? RedirectUri,
+        string? ClientId,
+        string? CodeVerifier,
+        string? RefreshToken);
+
+    private static async Task<TokenRequest> ReadTokenRequestAsync(HttpContext context, CancellationToken cancellationToken)
+    {
+        if (context.Request.HasFormContentType)
+        {
+            var form = await context.Request.ReadFormAsync(cancellationToken);
+            return new TokenRequest(
+                GrantType: form["grant_type"].ToString(),
+                Code: form["code"].ToString(),
+                RedirectUri: form[RedirectUriParam].ToString(),
+                ClientId: form[ClientIdParam].ToString(),
+                CodeVerifier: form["code_verifier"].ToString(),
+                RefreshToken: form[RefreshTokenParam].ToString());
+        }
+
+        if (context.Request.ContentType?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            using var doc = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: cancellationToken);
+            var root = doc.RootElement;
+            return new TokenRequest(
+                GrantType: root.TryGetProperty("grant_type", out var gt) ? gt.GetString() : null,
+                Code: root.TryGetProperty("code", out var cd) ? cd.GetString() : null,
+                RedirectUri: root.TryGetProperty(RedirectUriParam, out var ru) ? ru.GetString() : null,
+                ClientId: root.TryGetProperty(ClientIdParam, out var ci) ? ci.GetString() : null,
+                CodeVerifier: root.TryGetProperty("code_verifier", out var cv) ? cv.GetString() : null,
+                RefreshToken: root.TryGetProperty(RefreshTokenParam, out var rt) ? rt.GetString() : null);
+        }
+
+        return new TokenRequest(null, null, null, null, null, null);
+    }
+
     private static async Task<IResult> TokenAsync(
         HttpContext context,
         IOAuthService oauthService,
@@ -247,123 +319,121 @@ public static class OAuthApiRoutes
         ApplicationDbContext dbContext,
         CancellationToken cancellationToken)
     {
-        string? grantType = null;
-        string? code = null;
-        string? redirectUri = null;
-        string? clientId = null;
-        string? codeVerifier = null;
-        string? refreshToken = null;
+        var request = await ReadTokenRequestAsync(context, cancellationToken);
 
-        if (context.Request.HasFormContentType)
+        if (string.Equals(request.GrantType, "authorization_code", StringComparison.OrdinalIgnoreCase))
         {
-            var form = await context.Request.ReadFormAsync(cancellationToken);
-            grantType = form["grant_type"].ToString();
-            code = form["code"].ToString();
-            redirectUri = form["redirect_uri"].ToString();
-            clientId = form["client_id"].ToString();
-            codeVerifier = form["code_verifier"].ToString();
-            refreshToken = form["refresh_token"].ToString();
-        }
-        else if (context.Request.ContentType?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true)
-        {
-            using var doc = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: cancellationToken);
-            var root = doc.RootElement;
-            grantType = root.TryGetProperty("grant_type", out var gt) ? gt.GetString() : null;
-            code = root.TryGetProperty("code", out var cd) ? cd.GetString() : null;
-            redirectUri = root.TryGetProperty("redirect_uri", out var ru) ? ru.GetString() : null;
-            clientId = root.TryGetProperty("client_id", out var ci) ? ci.GetString() : null;
-            codeVerifier = root.TryGetProperty("code_verifier", out var cv) ? cv.GetString() : null;
-            refreshToken = root.TryGetProperty("refresh_token", out var rt) ? rt.GetString() : null;
+            return await HandleAuthorizationCodeGrantAsync(request, oauthService, userManager, jwtTokenService, dbContext, cancellationToken);
         }
 
-        if (string.Equals(grantType, "authorization_code", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(request.GrantType, RefreshTokenParam, StringComparison.OrdinalIgnoreCase))
         {
-            if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(codeVerifier) || string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(redirectUri))
-            {
-                return Results.BadRequest(new { error = "invalid_request", error_description = "code, code_verifier, client_id, and redirect_uri are required." });
-            }
-
-            var authCode = oauthService.ValidateAndConsumeCode(code, clientId, redirectUri, codeVerifier);
-            if (authCode is null)
-            {
-                return Results.BadRequest(new { error = "invalid_grant", error_description = "The authorization code is invalid, expired, or the PKCE verifier did not match." });
-            }
-
-            var user = await userManager.FindByIdAsync(authCode.UserId.ToString());
-            if (user is null)
-            {
-                return Results.BadRequest(new { error = "invalid_grant", error_description = "User not found." });
-            }
-
-            var now = DateTimeOffset.UtcNow;
-            var tokenLifetime = TimeSpan.FromDays(30);
-            var mcpTokenEntity = new McpTokenEntity
-            {
-                Id = Guid.NewGuid(),
-                UserId = user.Id,
-                Label = $"{authCode.ClientName} (OAuth)",
-                Scope = authCode.Scope,
-                CreatedAtUtc = now,
-                ExpiresAtUtc = now.Add(tokenLifetime)
-            };
-
-            dbContext.McpTokens.Add(mcpTokenEntity);
-            await dbContext.SaveChangesAsync(cancellationToken);
-
-            var jwt = jwtTokenService.CreateToken(user, tokenLifetime, mcpTokenEntity.Id, authCode.Scope);
-            var newRefreshToken = oauthService.CreateRefreshToken(mcpTokenEntity.Id, user.Id, authCode.ClientId, authCode.Scope, tokenLifetime);
-
-            var response = new OAuthTokenResponse(
-                AccessToken: jwt,
-                TokenType: "Bearer",
-                ExpiresIn: (int)tokenLifetime.TotalSeconds,
-                RefreshToken: newRefreshToken,
-                Scope: authCode.Scope);
-
-            return Results.Ok(response);
-        }
-
-        if (string.Equals(grantType, "refresh_token", StringComparison.OrdinalIgnoreCase))
-        {
-            if (string.IsNullOrWhiteSpace(refreshToken))
-            {
-                return Results.BadRequest(new { error = "invalid_request", error_description = "refresh_token is required." });
-            }
-
-            var tokenLifetime = TimeSpan.FromDays(30);
-            var rotated = oauthService.ValidateAndRotateRefreshToken(refreshToken, clientId ?? string.Empty, tokenLifetime);
-            if (rotated is null)
-            {
-                return Results.BadRequest(new { error = "invalid_grant", error_description = "Refresh token is invalid or expired." });
-            }
-
-            var (existing, nextRefreshToken) = rotated.Value;
-            var tokenRow = await dbContext.McpTokens.FindAsync([existing.TokenId], cancellationToken);
-            if (tokenRow is null || tokenRow.RevokedAtUtc is not null)
-            {
-                oauthService.RevokeRefreshToken(nextRefreshToken);
-                return Results.BadRequest(new { error = "invalid_grant", error_description = "Token has been revoked." });
-            }
-
-            var user = await userManager.FindByIdAsync(existing.UserId.ToString());
-            if (user is null)
-            {
-                return Results.BadRequest(new { error = "invalid_grant", error_description = "User not found." });
-            }
-
-            var jwt = jwtTokenService.CreateToken(user, tokenLifetime, tokenRow.Id, existing.Scope);
-
-            var response = new OAuthTokenResponse(
-                AccessToken: jwt,
-                TokenType: "Bearer",
-                ExpiresIn: (int)tokenLifetime.TotalSeconds,
-                RefreshToken: nextRefreshToken,
-                Scope: existing.Scope);
-
-            return Results.Ok(response);
+            return await HandleRefreshTokenGrantAsync(request, oauthService, userManager, jwtTokenService, dbContext, cancellationToken);
         }
 
         return Results.BadRequest(new { error = "unsupported_grant_type", error_description = "Only 'authorization_code' and 'refresh_token' are supported." });
+    }
+
+    private static async Task<IResult> HandleAuthorizationCodeGrantAsync(
+        TokenRequest request,
+        IOAuthService oauthService,
+        UserManager<ApplicationUser> userManager,
+        JwtTokenService jwtTokenService,
+        ApplicationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Code) ||
+            string.IsNullOrWhiteSpace(request.CodeVerifier) ||
+            string.IsNullOrWhiteSpace(request.ClientId) ||
+            string.IsNullOrWhiteSpace(request.RedirectUri))
+        {
+            return Results.BadRequest(new { error = InvalidRequest, error_description = "code, code_verifier, client_id, and redirect_uri are required." });
+        }
+
+        var authCode = oauthService.ValidateAndConsumeCode(request.Code, request.ClientId, request.RedirectUri, request.CodeVerifier);
+        if (authCode is null)
+        {
+            return Results.BadRequest(new { error = InvalidGrant, error_description = "The authorization code is invalid, expired, or the PKCE verifier did not match." });
+        }
+
+        var user = await userManager.FindByIdAsync(authCode.UserId.ToString());
+        if (user is null)
+        {
+            return Results.BadRequest(new { error = InvalidGrant, error_description = "User not found." });
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        var tokenLifetime = TimeSpan.FromDays(30);
+        var mcpTokenEntity = new McpTokenEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            Label = $"{authCode.ClientName} (OAuth)",
+            Scope = authCode.Scope,
+            CreatedAtUtc = now,
+            ExpiresAtUtc = now.Add(tokenLifetime)
+        };
+
+        dbContext.McpTokens.Add(mcpTokenEntity);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var jwt = jwtTokenService.CreateToken(user, tokenLifetime, mcpTokenEntity.Id, authCode.Scope);
+        var newRefreshToken = oauthService.CreateRefreshToken(mcpTokenEntity.Id, user.Id, authCode.ClientId, authCode.Scope, tokenLifetime);
+
+        var response = new OAuthTokenResponse(
+            AccessToken: jwt,
+            TokenType: "Bearer",
+            ExpiresIn: (int)tokenLifetime.TotalSeconds,
+            RefreshToken: newRefreshToken,
+            Scope: authCode.Scope);
+
+        return Results.Ok(response);
+    }
+
+    private static async Task<IResult> HandleRefreshTokenGrantAsync(
+        TokenRequest request,
+        IOAuthService oauthService,
+        UserManager<ApplicationUser> userManager,
+        JwtTokenService jwtTokenService,
+        ApplicationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            return Results.BadRequest(new { error = InvalidRequest, error_description = "refresh_token is required." });
+        }
+
+        var tokenLifetime = TimeSpan.FromDays(30);
+        var rotated = oauthService.ValidateAndRotateRefreshToken(request.RefreshToken, request.ClientId ?? string.Empty, tokenLifetime);
+        if (rotated is null)
+        {
+            return Results.BadRequest(new { error = InvalidGrant, error_description = "Refresh token is invalid or expired." });
+        }
+
+        var (existing, nextRefreshToken) = rotated.Value;
+        var tokenRow = await dbContext.McpTokens.FindAsync([existing.TokenId], cancellationToken);
+        if (tokenRow is null || tokenRow.RevokedAtUtc is not null)
+        {
+            oauthService.RevokeRefreshToken(nextRefreshToken);
+            return Results.BadRequest(new { error = InvalidGrant, error_description = "Token has been revoked." });
+        }
+
+        var user = await userManager.FindByIdAsync(existing.UserId.ToString());
+        if (user is null)
+        {
+            return Results.BadRequest(new { error = InvalidGrant, error_description = "User not found." });
+        }
+
+        var jwt = jwtTokenService.CreateToken(user, tokenLifetime, tokenRow.Id, existing.Scope);
+
+        var response = new OAuthTokenResponse(
+            AccessToken: jwt,
+            TokenType: "Bearer",
+            ExpiresIn: (int)tokenLifetime.TotalSeconds,
+            RefreshToken: nextRefreshToken,
+            Scope: existing.Scope);
+
+        return Results.Ok(response);
     }
 
     private static async Task<IResult> RevokeAsync(
@@ -405,16 +475,6 @@ public static class OAuthApiRoutes
         }
 
         return Results.Ok();
-    }
-
-    private static IResult BuildRedirectError(string redirectUri, string error, string description, string? state)
-    {
-        var url = $"{redirectUri}?error={Uri.EscapeDataString(error)}&error_description={Uri.EscapeDataString(description)}";
-        if (!string.IsNullOrWhiteSpace(state))
-        {
-            url += $"&state={Uri.EscapeDataString(state)}";
-        }
-        return Results.Redirect(url);
     }
 
     private static string RenderConsentHtml(

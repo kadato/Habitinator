@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   uitest:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 75
 
     steps:
@@ -21,8 +21,7 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           # SDK version comes from global.json so CI uses the same RC as local builds.
-          # Floating 11.0.x pulls the newest preview while packages pin rc.1.
-          dotnet-quality: 'preview'
+          global-json-file: global.json
 
       - name: Setup Node.js (Appium)
         uses: actions/setup-node@v7

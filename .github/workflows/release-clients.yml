@@ -16,7 +16,7 @@ env:
 
 jobs:
   resolve-production-url:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       id-token: write
@@ -99,7 +99,7 @@ jobs:
 
   build-android:
     needs: [resolve-production-url]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     timeout-minutes: 45
@@ -110,8 +110,7 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           # SDK version comes from global.json so CI uses the same RC as local builds.
-          # Floating 11.0.x pulls the newest preview while packages pin rc.1.
-          dotnet-quality: 'preview'
+          global-json-file: global.json
 
       - name: Setup Java (Temurin 21)
         uses: actions/setup-java@v6
@@ -175,8 +174,7 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           # SDK version comes from global.json so CI uses the same RC as local builds.
-          # Floating 11.0.x pulls the newest preview while packages pin rc.1.
-          dotnet-quality: 'preview'
+          global-json-file: global.json
 
       - name: Install MAUI workload
         shell: pwsh
@@ -233,7 +231,7 @@ jobs:
 
   publish-release:
     needs: [resolve-production-url, build-android, build-windows]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:

@@ -13,7 +13,7 @@ jobs:
     permissions:
       contents: read
       checks: write
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:17-alpine
@@ -41,8 +41,7 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           # SDK version comes from global.json so CI uses the same RC as local builds.
-          # Floating 11.0.x pulls the newest preview while packages pin rc.1.
-          dotnet-quality: 'preview'
+          global-json-file: global.json
 
       - name: Install workloads
         run: |
@@ -125,7 +124,7 @@ jobs:
   e2e:
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     services:
       postgres:
@@ -156,8 +155,7 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           # SDK version comes from global.json so CI uses the same RC as local builds.
-          # Floating 11.0.x pulls the newest preview while packages pin rc.1.
-          dotnet-quality: 'preview'
+          global-json-file: global.json
 
       - name: Install workloads
         run: |

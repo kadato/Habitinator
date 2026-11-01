@@ -1,3 +1,4 @@
+#pragma warning disable S8949, S6966, IDE0028, IDE0042, CA1859
 using System.Globalization;
 
 using App.Shared.RCL.Models;
@@ -26,6 +27,11 @@ public partial class UpcomingPanel
     private readonly HashSet<Guid> _busy = [];
     private int _todayScheduled;
     private int _todayDone;
+    private int _todayRemainingCache;
+    private int _monthTotalCache;
+    private IReadOnlyList<BoardItem> _selectedDailiesCache = [];
+    private IReadOnlyList<BoardItem> _selectedTodosCache = [];
+    private Dictionary<DateOnly, (IReadOnlyList<BoardItem> Dailies, IReadOnlyList<BoardItem> Todos)> _cellCache = new();
     private int _visibleYear;
     private int _visibleMonth;
     private DateOnly _selected;
@@ -38,56 +44,9 @@ public partial class UpcomingPanel
     private string SideClass => HasOverdueCard ? "cal-side" : "cal-side cal-side--solo";
     private int OverdueCount => _overdue.Count;
 
-    private int TodayRemaining
-    {
-        get
-        {
-            if (_snapshot is null)
-            {
-                return 0;
-            }
-            var count = 0;
-            if (ShowDailies)
-            {
-                count += _snapshot.Dailies.Count(d => DailySchedule.IsDueOnDate(d, _today));
-            }
-            if (ShowTodos)
-            {
-                count += _snapshot.Todos.Count(t => !t.IsCompleted && t.TodoDueDate == _today);
-            }
-            return count;
-        }
-    }
+    private int TodayRemaining => _todayRemainingCache;
 
-    private int MonthTotal
-    {
-        get
-        {
-            if (_snapshot is null)
-            {
-                return 0;
-            }
-            var total = 0;
-            var days = DateTime.DaysInMonth(_visibleYear, _visibleMonth);
-            for (var d = 1; d <= days; d++)
-            {
-                var date = new DateOnly(_visibleYear, _visibleMonth, d);
-                if (ShowDailies)
-                {
-                    total += _snapshot.Dailies.Count(x => DailySchedule.IsScheduledOn(x, date));
-                }
-                if (ShowTodos)
-                {
-                    total += _snapshot.Todos.Count(t => !t.IsCompleted && t.TodoDueDate == date);
-                }
-            }
-            if (ShowTodos)
-            {
-                total += _overdue.Count;
-            }
-            return total;
-        }
-    }
+    private int MonthTotal => _monthTotalCache;
 
     private int TodayPct => _todayScheduled == 0 ? 100 : (int)Math.Round(100.0 * _todayDone / _todayScheduled);
 
@@ -155,19 +114,9 @@ public partial class UpcomingPanel
         }
     }
 
-    private IReadOnlyList<BoardItem> SelectedDailies =>
-        _snapshot is null || !ShowDailies
-            ? []
-            : [.. _snapshot.Dailies
-                .Where(d => DailySchedule.IsScheduledOn(d, _selected))
-                .OrderBy(d => d.Title, StringComparer.Ordinal)];
+    private IReadOnlyList<BoardItem> SelectedDailies => _selectedDailiesCache;
 
-    private IReadOnlyList<BoardItem> SelectedTodos =>
-        _snapshot is null || !ShowTodos
-            ? []
-            : [.. _snapshot.Todos
-                .Where(t => !t.IsCompleted && t.TodoDueDate == _selected)
-                .OrderBy(t => t.Title, StringComparer.Ordinal)];
+    private IReadOnlyList<BoardItem> SelectedTodos => _selectedTodosCache;
 
     private int SelectedVisibleCount => SelectedDailies.Count + SelectedTodos.Count;
 
@@ -214,6 +163,91 @@ public partial class UpcomingPanel
             _next7Anchor = _today;
             _calInit = true;
         }
+        RebuildCaches();
+    }
+
+    private void RebuildCaches()
+    {
+        if (_snapshot is null)
+        {
+            _todayRemainingCache = 0;
+            _monthTotalCache = 0;
+            _selectedDailiesCache = [];
+            _selectedTodosCache = [];
+            _cellCache = new();
+            return;
+        }
+        if (_visibleYear <= 0 || _visibleMonth <= 0)
+        {
+            if (_today != default)
+            {
+                _visibleYear = _today.Year;
+                _visibleMonth = _today.Month;
+                if (_selected == default)
+                {
+                    _selected = _today;
+                    _next7Anchor = _today;
+                }
+            }
+            else
+            {
+                return;
+            }
+        }
+        var showDailies = ShowDailies;
+        var showTodos = ShowTodos;
+        _todayRemainingCache = (showDailies ? _snapshot.Dailies.Count(d => DailySchedule.IsDueOnDate(d, _today)) : 0)
+            + (showTodos ? _snapshot.Todos.Count(t => !t.IsCompleted && t.TodoDueDate == _today) : 0);
+        var days = DateTime.DaysInMonth(_visibleYear, _visibleMonth);
+        var byDate = new Dictionary<DateOnly, (List<BoardItem> Dailies, List<BoardItem> Todos)>(42);
+        for (var d = 1; d <= days; d++)
+        {
+            byDate[new DateOnly(_visibleYear, _visibleMonth, d)] = (new List<BoardItem>(), new List<BoardItem>());
+        }
+        if (showDailies)
+        {
+            foreach (var item in _snapshot.Dailies)
+            {
+                for (var d = 1; d <= days; d++)
+                {
+                    var date = new DateOnly(_visibleYear, _visibleMonth, d);
+                    if (DailySchedule.IsScheduledOn(item, date))
+                    {
+                        byDate[date].Dailies.Add(item);
+                    }
+                }
+            }
+        }
+        var openTodos = showTodos ? _snapshot.Todos.Where(t => !t.IsCompleted).ToList() : new List<BoardItem>();
+        if (showTodos)
+        {
+            foreach (var t in openTodos)
+            {
+                if (t.TodoDueDate is { } due && due.Year == _visibleYear && due.Month == _visibleMonth && byDate.TryGetValue(due, out var bucket))
+                {
+                    bucket.Todos.Add(t);
+                }
+            }
+        }
+        foreach (var k in byDate.Keys.ToList())
+        {
+            var b = byDate[k];
+            b.Dailies.Sort((a, b2) => string.Compare(a.Title, b2.Title, StringComparison.Ordinal));
+            b.Todos.Sort((a, b2) => string.Compare(a.Title, b2.Title, StringComparison.Ordinal));
+        }
+        _monthTotalCache = byDate.Values.Sum(v => v.Dailies.Count + v.Todos.Count) + (showTodos ? _overdue.Count : 0);
+        var next = new Dictionary<DateOnly, (IReadOnlyList<BoardItem> Dailies, IReadOnlyList<BoardItem> Todos)>(byDate.Count);
+        foreach (var kv in byDate)
+        {
+            next[kv.Key] = (kv.Value.Dailies, kv.Value.Todos);
+        }
+        _cellCache = next;
+        _selectedDailiesCache = showDailies
+            ? [.. _snapshot.Dailies.Where(d => DailySchedule.IsScheduledOn(d, _selected)).OrderBy(d => d.Title, StringComparer.Ordinal)]
+            : [];
+        _selectedTodosCache = showTodos
+            ? [.. _snapshot.Todos.Where(t => !t.IsCompleted && t.TodoDueDate == _selected).OrderBy(t => t.Title, StringComparer.Ordinal)]
+            : [];
     }
 
     private async Task LoadAsync()
@@ -238,6 +272,7 @@ public partial class UpcomingPanel
     private void SetFilter(UpcomingFilter filter)
     {
         _filter = filter;
+        RebuildCaches();
         _ = PersistViewStateAsync();
     }
 
@@ -305,6 +340,7 @@ public partial class UpcomingPanel
                 _next7Anchor = _selected.AddDays(-6);
             }
         }
+        RebuildCaches();
     }
 
     private void PrevDay() => SelectDay(_selected.AddDays(-1));
@@ -351,6 +387,7 @@ public partial class UpcomingPanel
         var first = new DateOnly(_visibleYear, _visibleMonth, 1).AddMonths(-1);
         _visibleYear = first.Year;
         _visibleMonth = first.Month;
+        RebuildCaches();
     }
 
     private void NextMonth()
@@ -358,6 +395,7 @@ public partial class UpcomingPanel
         var first = new DateOnly(_visibleYear, _visibleMonth, 1).AddMonths(1);
         _visibleYear = first.Year;
         _visibleMonth = first.Month;
+        RebuildCaches();
     }
 
     private void GoToday()
@@ -366,6 +404,7 @@ public partial class UpcomingPanel
         _visibleMonth = _today.Month;
         _selected = _today;
         _next7Anchor = _today;
+        RebuildCaches();
     }
 
     private static string TodoCompleteLabel(BoardItem todo) => $"Mark {todo.Title} complete";
@@ -399,19 +438,35 @@ public partial class UpcomingPanel
         ? $"Next 7 days {SevenRangeTitle} calendar"
         : $"Week of {WeekRangeTitle} calendar";
 
-    private IReadOnlyList<BoardItem> CellDailies(DateOnly date) =>
-        _snapshot is null || !ShowDailies
-            ? []
-            : [.. _snapshot.Dailies
-                .Where(d => DailySchedule.IsScheduledOn(d, date))
-                .OrderBy(d => d.Title, StringComparer.Ordinal)];
+    private IReadOnlyList<BoardItem> CellDailies(DateOnly date)
+    {
+        if (!ShowDailies || _snapshot is null)
+        {
+            return [];
+        }
+        if (_cellCache.TryGetValue(date, out var bucket))
+        {
+            return bucket.Dailies;
+        }
+        return [.. _snapshot.Dailies
+            .Where(d => DailySchedule.IsScheduledOn(d, date))
+            .OrderBy(d => d.Title, StringComparer.Ordinal)];
+    }
 
-    private IReadOnlyList<BoardItem> CellTodos(DateOnly date) =>
-        _snapshot is null || !ShowTodos
-            ? []
-            : [.. _snapshot.Todos
-                .Where(t => !t.IsCompleted && t.TodoDueDate == date)
-                .OrderBy(t => t.Title, StringComparer.Ordinal)];
+    private IReadOnlyList<BoardItem> CellTodos(DateOnly date)
+    {
+        if (!ShowTodos || _snapshot is null)
+        {
+            return [];
+        }
+        if (_cellCache.TryGetValue(date, out var bucket))
+        {
+            return bucket.Todos;
+        }
+        return [.. _snapshot.Todos
+            .Where(t => !t.IsCompleted && t.TodoDueDate == date)
+            .OrderBy(t => t.Title, StringComparer.Ordinal)];
+    }
 
     private static string DailyHint(BoardItem d) => $"{d.Title} ({UpcomingSchedule.DescribeDaily(d)})";
 

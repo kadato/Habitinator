@@ -244,10 +244,17 @@
 
 .cal-filter-trigger__label {
     white-space: nowrap;
+    line-height: 1;
 }
 
 .cal-filter-trigger__chevron {
     opacity: 0.7;
+}
+
+.cal-filter-trigger ::deep .mud-icon-root {
+    flex-shrink: 0;
+    align-self: center;
+    margin: 0 !important;
 }
 
 .cal-seg__btn {
@@ -843,9 +850,11 @@
 .cal-streak {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.2rem;
     font-size: 0.75rem;
     font-weight: 750;
+    line-height: 1;
     font-variant-numeric: tabular-nums;
     color: var(--hab-accent-streak);
     background: color-mix(in srgb, var(--hab-accent-streak) 12%, transparent);
@@ -853,6 +862,12 @@
     padding: 0.2rem 0.55rem;
     flex-shrink: 0;
     margin: auto 0;
+}
+
+.cal-streak ::deep .mud-icon-root {
+    flex-shrink: 0;
+    align-self: center;
+    margin: 0 !important;
 }
 
 .cal-hint {

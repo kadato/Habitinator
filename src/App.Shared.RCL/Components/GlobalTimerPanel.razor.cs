@@ -1,4 +1,4 @@
-#pragma warning disable S2325 // Flagged methods use the injected TimerService, parameters, or fields declared in the Razor part; Sonar sees this code-behind file in isolation.
+#pragma warning disable S2325, S8949 // Flagged methods use the injected TimerService, parameters, or fields declared in the Razor part; Sonar sees this code-behind file in isolation.
 using System.Globalization;
 
 using App.Shared.RCL.Models;
@@ -59,7 +59,10 @@ public partial class GlobalTimerPanel : IDisposable
 
     protected override void OnParametersSet()
     {
-        RebuildSessionTargetOptions();
+        if (HasSessionTargetInputsChanged())
+        {
+            RebuildSessionTargetOptions();
+        }
         var wasRunning = _wasRunning;
         SyncTimerFieldsFromServiceIfNeeded();
 
@@ -152,7 +155,6 @@ public partial class GlobalTimerPanel : IDisposable
             }
         });
     }
-
     private void OnTimerStateChanged()
     {
         _ = InvokeAsync(() =>
@@ -165,6 +167,30 @@ public partial class GlobalTimerPanel : IDisposable
             }
             StateHasChanged();
         });
+    }
+
+    private IReadOnlyList<BoardItem>? _lastHabitsRef;
+    private IReadOnlyList<BoardItem>? _lastDailiesRef;
+    private IReadOnlyList<BoardItem>? _lastTodosRef;
+    private int _lastHabitsCount = -1;
+    private int _lastDailiesCount = -1;
+    private int _lastTodosCount = -1;
+
+    private bool HasSessionTargetInputsChanged()
+    {
+        if (!ReferenceEquals(_lastHabitsRef, Habits) || (Habits?.Count ?? 0) != _lastHabitsCount
+            || !ReferenceEquals(_lastDailiesRef, Dailies) || (Dailies?.Count ?? 0) != _lastDailiesCount
+            || !ReferenceEquals(_lastTodosRef, Todos) || (Todos?.Count ?? 0) != _lastTodosCount)
+        {
+            _lastHabitsRef = Habits;
+            _lastDailiesRef = Dailies;
+            _lastTodosRef = Todos;
+            _lastHabitsCount = Habits?.Count ?? 0;
+            _lastDailiesCount = Dailies?.Count ?? 0;
+            _lastTodosCount = Todos?.Count ?? 0;
+            return true;
+        }
+        return false;
     }
 
     private void RebuildSessionTargetOptions()

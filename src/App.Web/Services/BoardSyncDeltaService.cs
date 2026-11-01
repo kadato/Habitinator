@@ -43,9 +43,13 @@ public sealed class BoardSyncDeltaService(
 
         using var activity = AppTelemetry.Activity.StartActivity("board.sync_delta");
         await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var boundaryDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
 
-        var newer = await FetchNewerRowsAsync(readDb, userId, cursorTs, limit, cancellationToken);
-        var boundary = await FetchBoundaryRowsAsync(readDb, userId, cursorTs, cursorId, limit, cancellationToken);
+        var newerTask = FetchNewerRowsAsync(readDb, userId, cursorTs, limit, cancellationToken);
+        var boundaryTask = FetchBoundaryRowsAsync(boundaryDb, userId, cursorTs, cursorId, limit, cancellationToken);
+        await Task.WhenAll(newerTask, boundaryTask);
+        var newer = await newerTask;
+        var boundary = await boundaryTask;
         var (changed, truncated) = BuildChangedPage(newer, boundary, limit);
 
         var (today, dayStart) = await TodayAndDayStartAsync(userId, cancellationToken);

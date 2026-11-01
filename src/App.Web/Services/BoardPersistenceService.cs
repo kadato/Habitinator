@@ -1345,9 +1345,11 @@ public sealed class BoardPersistenceService(
         var tagPattern = "%" + EscapeLikePattern(cleanedOld) + "%";
         var items = await dbContext.BoardItems
             .Where(x => x.UserId == userId && x.DeletedAtUtc == null && x.Tags != null && EF.Functions.ILike(x.Tags, tagPattern))
+            .Select(x => new { x.Id, x.Tags })
             .ToListAsync(cancellationToken);
 
         var updatedCount = 0;
+        var now = DateTimeOffset.UtcNow;
         foreach (var item in items)
         {
             var parsed = BoardTagUtil.ParseTags(item.Tags).ToList();
@@ -1363,15 +1365,16 @@ public sealed class BoardPersistenceService(
                         newTagsList.Add(replacement);
                     }
                 }
-                item.Tags = newTagsList.Count > 0 ? string.Join(",", newTagsList) : null;
-                item.UpdatedAtUtc = DateTimeOffset.UtcNow;
+                var newTags = newTagsList.Count > 0 ? string.Join(",", newTagsList) : null;
+                await dbContext.BoardItems
+                    .Where(x => x.UserId == userId && x.Id == item.Id)
+                    .ExecuteUpdateAsync(x => x.SetProperty(e => e.Tags, newTags).SetProperty(e => e.UpdatedAtUtc, now), cancellationToken);
                 updatedCount++;
             }
         }
 
         if (updatedCount > 0)
         {
-            await dbContext.SaveChangesAsync(cancellationToken);
             await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         }
 
@@ -1392,24 +1395,27 @@ public sealed class BoardPersistenceService(
         var tagPattern = "%" + EscapeLikePattern(cleanedTag) + "%";
         var items = await dbContext.BoardItems
             .Where(x => x.UserId == userId && x.DeletedAtUtc == null && x.Tags != null && EF.Functions.ILike(x.Tags, tagPattern))
+            .Select(x => new { x.Id, x.Tags })
             .ToListAsync(cancellationToken);
 
         var updatedCount = 0;
+        var now = DateTimeOffset.UtcNow;
         foreach (var item in items)
         {
             var parsed = BoardTagUtil.ParseTags(item.Tags).ToList();
             var removed = parsed.RemoveAll(t => string.Equals(t, cleanedTag, StringComparison.OrdinalIgnoreCase));
             if (removed > 0)
             {
-                item.Tags = parsed.Count > 0 ? string.Join(",", parsed) : null;
-                item.UpdatedAtUtc = DateTimeOffset.UtcNow;
+                var newTags = parsed.Count > 0 ? string.Join(",", parsed) : null;
+                await dbContext.BoardItems
+                    .Where(x => x.UserId == userId && x.Id == item.Id)
+                    .ExecuteUpdateAsync(x => x.SetProperty(e => e.Tags, newTags).SetProperty(e => e.UpdatedAtUtc, now), cancellationToken);
                 updatedCount++;
             }
         }
 
         if (updatedCount > 0)
         {
-            await dbContext.SaveChangesAsync(cancellationToken);
             await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         }
 
@@ -1563,47 +1569,45 @@ public sealed class BoardPersistenceService(
         int position,
         CancellationToken cancellationToken = default)
     {
-        var list = await dbContext.BoardItems
+        var ids = await dbContext.BoardItems.AsNoTracking()
             .Where(x => x.UserId == userId && x.Section == section && x.DeletedAtUtc == null && !x.IsArchived)
             .OrderBy(x => x.SortOrder)
             .ThenBy(x => x.CreatedAtUtc)
             .ThenBy(x => x.Id)
+            .Select(x => new { x.Id, x.SortOrder })
             .ToListAsync(cancellationToken);
-        var index = list.FindIndex(x => x.Id == itemId);
+        var index = ids.FindIndex(x => x.Id == itemId);
         if (index < 0)
         {
             AppTelemetry.RecordMutation(section.ToString(), "not_found");
             return new BoardMutationResult(BoardMutationStatus.NotFound, null);
         }
 
-        var moving = list[index];
-        list.RemoveAt(index);
-        var insertAt = Math.Clamp(position, 0, list.Count);
-        list.Insert(insertAt, moving);
+        var orderedIds = ids.Select(x => x.Id).ToList();
+        var movingId = orderedIds[index];
+        orderedIds.RemoveAt(index);
+        var insertAt = Math.Clamp(position, 0, orderedIds.Count);
+        orderedIds.Insert(insertAt, movingId);
 
-        double? prev = insertAt > 0 ? list[insertAt - 1].SortOrder : null;
-        double? next = insertAt < list.Count - 1 ? list[insertAt + 1].SortOrder : null;
-        moving.SortOrder = (prev, next) switch
+        double? prev = insertAt > 0 ? ids.First(x => x.Id == orderedIds[insertAt - 1]).SortOrder : null;
+        double? next = insertAt < orderedIds.Count - 1 ? ids.First(x => x.Id == orderedIds[insertAt + 1]).SortOrder : null;
+        var newSortOrder = (prev, next) switch
         {
             (not null, not null) => (prev.Value + next.Value) / 2.0,
             (not null, null) => prev.Value + 1.0,
             (null, not null) => next.Value - 1.0,
             _ => insertAt,
         };
-        moving.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        var now = DateTimeOffset.UtcNow;
+        await dbContext.BoardItems
+            .Where(x => x.UserId == userId && x.Id == itemId)
+            .ExecuteUpdateAsync(x => x.SetProperty(e => e.SortOrder, newSortOrder).SetProperty(e => e.UpdatedAtUtc, now), cancellationToken);
 
-        try
+        var moving = await dbContext.BoardItems.FirstOrDefaultAsync(x => x.UserId == userId && x.Id == itemId, cancellationToken);
+        if (moving is null)
         {
-            await dbContext.SaveChangesAsync(cancellationToken);
+            return new BoardMutationResult(BoardMutationStatus.NotFound, null);
         }
-        catch (DbUpdateConcurrencyException)
-        {
-            DiscardPendingMutationChanges();
-            AppTelemetry.RecordMutation(section.ToString(), "conflict");
-            AppTelemetry.RecordConflict(section.ToString());
-            return await BuildConflictFromDatabaseAsync(userId, section, itemId, cancellationToken);
-        }
-
         var model = await ToModelWithDailyStreaksAsync(userId, moving, cancellationToken);
         await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         AppTelemetry.RecordMutation(section.ToString(), "ok");

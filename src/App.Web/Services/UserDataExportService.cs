@@ -16,14 +16,18 @@ public sealed class UserDataExportService(
 
     public async Task<UserDataExportDto> BuildAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-
-        var rowCount = await db.BoardItems.AsNoTracking().CountAsync(x => x.UserId == userId, cancellationToken)
-            + await db.UserActivityEvents.AsNoTracking().CountAsync(x => x.UserId == userId, cancellationToken);
+        await using var dbCount1 = await dbFactory.CreateDbContextAsync(cancellationToken);
+        await using var dbCount2 = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var itemsCountTask = dbCount1.BoardItems.AsNoTracking().CountAsync(x => x.UserId == userId, cancellationToken);
+        var eventsCountTask = dbCount2.UserActivityEvents.AsNoTracking().CountAsync(x => x.UserId == userId, cancellationToken);
+        await Task.WhenAll(itemsCountTask, eventsCountTask);
+        var rowCount = await itemsCountTask + await eventsCountTask;
         if (rowCount > MaxExportRows)
         {
             throw new UserDataExportTooLargeException(rowCount, MaxExportRows);
         }
+
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
         var (today, _) = await UserDayContext.LoadAsync(db, userId, timeZone, cancellationToken);
 

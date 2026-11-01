@@ -18,19 +18,28 @@ public sealed class BoardChangeNotifier(
     IHubContext<BoardHub> hub,
     ILogger<BoardChangeNotifier> logger) : IBoardChangeNotifier
 {
-    public async Task NotifyBoardChangedAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task NotifyBoardChangedAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         snapshotCache.Invalidate(userId);
         statsCache.Invalidate(userId);
         streakCache.Invalidate(userId);
+        // Cache work is sync. The SignalR fanout runs in the background so a slow
+        // client never blocks the mutating HTTP request.
+        _ = SendAsync(userId);
+        return Task.CompletedTask;
+    }
+
+    private async Task SendAsync(Guid userId)
+    {
         // Use SendCoreAsync with an empty arg list. SendAsync(hub, cancelToken) can bind to
         // SendAsync(string, object? arg1, CancellationToken) and pass the token as a hub payload, which
         // can fail serialization and surface as random save / API errors after DB commit.
         try
         {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             await hub.Clients
                 .Group(BoardHub.UserGroupName(userId))
-                .SendCoreAsync(BoardHubClient.BoardChanged, [], cancellationToken);
+                .SendCoreAsync(BoardHubClient.BoardChanged, [], cts.Token);
         }
         catch (Exception ex)
         {

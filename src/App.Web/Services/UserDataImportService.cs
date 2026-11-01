@@ -41,10 +41,13 @@ public sealed class UserDataImportService(
                 x => x.SetProperty(e => e.DeletedAtUtc, now).SetProperty(e => e.UpdatedAtUtc, now),
                 cancellationToken);
 
+        var existingById = await dbContext.BoardItems
+            .Where(x => x.UserId == userId && importIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, cancellationToken);
+
         foreach (var entry in data.Items)
         {
-            var existing = await dbContext.BoardItems
-                .FirstOrDefaultAsync(x => x.UserId == userId && x.Id == entry.Item.Id, cancellationToken);
+            var existing = existingById.TryGetValue(entry.Item.Id, out var found) ? found : null;
             if (existing is null)
             {
                 dbContext.BoardItems.Add(ToEntity(userId, entry, now));

@@ -88,8 +88,13 @@ public sealed class ActivityStatisticsService(
         var fromUtc = rangeStart.AddDays(-1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var toUtc = rangeEnd.AddDays(2).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
-        var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, tag, cancellationToken);
-        var availableTags = await GetDistinctTagsForUserAsync(db, userId, cancellationToken);
+        await using var dbTags = await dbFactory.CreateDbContextAsync(cancellationToken);
+        await using var dbIds = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var availableTagsTask = GetDistinctTagsForUserAsync(dbTags, userId, cancellationToken);
+        var allowedIdsTask = GetBoardItemIdsMatchingTagOrNullAsync(dbIds, userId, tag, cancellationToken);
+        await Task.WhenAll(availableTagsTask, allowedIdsTask);
+        var allowedIds = await allowedIdsTask;
+        var availableTags = await availableTagsTask;
 
         var eventRows = await EventsInRange(db, userId, fromUtc, toUtc, allowedIds)
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
@@ -186,8 +191,13 @@ public sealed class ActivityStatisticsService(
         var fromUtc = start.AddDays(-1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var toUtc = end.AddDays(2).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
-        var availableTags = await GetDistinctTagsForUserAsync(db, userId, cancellationToken);
-        var allowedIds = await GetBoardItemIdsMatchingTagOrNullAsync(db, userId, tag, cancellationToken);
+        await using var dbTags = await dbFactory.CreateDbContextAsync(cancellationToken);
+        await using var dbIds = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var availableTagsTask = GetDistinctTagsForUserAsync(dbTags, userId, cancellationToken);
+        var allowedIdsTask = GetBoardItemIdsMatchingTagOrNullAsync(dbIds, userId, tag, cancellationToken);
+        await Task.WhenAll(availableTagsTask, allowedIdsTask);
+        var allowedIds = await allowedIdsTask;
+        var availableTags = await availableTagsTask;
 
         var rows = await EventsInRange(db, userId, fromUtc, toUtc, allowedIds)
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))

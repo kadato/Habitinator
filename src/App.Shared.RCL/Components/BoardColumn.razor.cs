@@ -1,3 +1,4 @@
+#pragma warning disable S8949, S6966, IDE0028, IDE0042, CA1859
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 
@@ -94,6 +95,7 @@ public partial class BoardColumn : IAsyncDisposable
     {
         _habitFilter = filter;
         _needRefresh = true;
+        InvalidateVisibleCache();
         _ = PersistStateAsync();
     }
 
@@ -101,6 +103,7 @@ public partial class BoardColumn : IAsyncDisposable
     {
         _dailyFilter = filter;
         _needRefresh = true;
+        InvalidateVisibleCache();
         _ = PersistStateAsync();
     }
 
@@ -108,6 +111,7 @@ public partial class BoardColumn : IAsyncDisposable
     {
         _todoFilter = filter;
         _needRefresh = true;
+        InvalidateVisibleCache();
         _ = PersistStateAsync();
     }
 
@@ -143,19 +147,9 @@ public partial class BoardColumn : IAsyncDisposable
     private readonly Dictionary<Guid, BoardItem> _optimisticOverrides = [];
     private readonly HashSet<Guid> _optimisticDeletions = [];
     private readonly Dictionary<Guid, BoardItem> _optimisticCreations = [];
-
-    private IEnumerable<BoardItem> EffectiveItems
-    {
-        get
-        {
-            var baseItems = Items
-                .Where(x => !_optimisticDeletions.Contains(x.Id))
-                .Select(x => _optimisticOverrides.TryGetValue(x.Id, out var o) ? o : x);
-            var serverIds = new HashSet<Guid>([.. Items.Select(x => x.Id)]);
-            var creations = _optimisticCreations.Values.Where(x => !serverIds.Contains(x.Id));
-            return baseItems.Concat(creations);
-        }
-    }
+    private IReadOnlyList<BoardItem> _visibleCache = [];
+    private List<BoardItem> _effectiveCache = [];
+    private string _visibleCacheKey = string.Empty;
 
     private readonly string _columnInstanceId = Guid.NewGuid().ToString("N");
     private BoardItemEditor? _editor;
@@ -182,6 +176,31 @@ public partial class BoardColumn : IAsyncDisposable
             _lastItemsCount = Items.Count;
             _needRefresh = true;
         }
+
+        RebuildCaches();
+    }
+
+    private void RebuildCaches()
+    {
+        var key = $"{Section}:{(int)_habitFilter}:{(int)_dailyFilter}:{(int)_todoFilter}:{Items.Count}:{CountOptimisticState()}:{IsBoardFilterExcludingAll}";
+        if (key == _visibleCacheKey)
+        {
+            return;
+        }
+        _visibleCacheKey = key;
+        var baseItems = Items
+            .Where(x => !_optimisticDeletions.Contains(x.Id))
+            .Select(x => _optimisticOverrides.TryGetValue(x.Id, out var o) ? o : x);
+        var serverIds = new HashSet<Guid>([.. Items.Select(x => x.Id)]);
+        var creations = _optimisticCreations.Values.Where(x => !serverIds.Contains(x.Id));
+        _effectiveCache = [.. baseItems.Concat(creations)];
+        _visibleCache = Section switch
+        {
+            BoardSection.Habit => OrderBySort(FilterHabits()),
+            BoardSection.Daily => OrderBySort(FilterDailies()),
+            BoardSection.Todo => OrderTodos(FilterTodos()),
+            _ => OrderBySort(_effectiveCache)
+        };
     }
 
     private int CountOptimisticState() =>
@@ -340,15 +359,19 @@ public partial class BoardColumn : IAsyncDisposable
     private static string GetFilterBtnClass(bool active) =>
         active ? "board-filter-btn board-filter-btn--active" : "board-filter-btn";
 
+    private IEnumerable<BoardItem> EffectiveItems => _effectiveCache;
+
+    private int EffectiveCount => _effectiveCache.Count;
+
+    private void InvalidateVisibleCache()
+    {
+        _visibleCacheKey = string.Empty;
+        RebuildCaches();
+    }
+
     private IReadOnlyList<BoardItem> VisibleItems()
     {
-        return Section switch
-        {
-            BoardSection.Habit => OrderBySort(FilterHabits()),
-            BoardSection.Daily => OrderBySort(FilterDailies()),
-            BoardSection.Todo => OrderTodos(FilterTodos()),
-            _ => OrderBySort(EffectiveItems)
-        };
+        return _visibleCache;
     }
 
     private double? GetEffectiveSortOrder(BoardItem item) =>
@@ -840,6 +863,7 @@ public partial class BoardColumn : IAsyncDisposable
     private async Task ApplyMutationAsync(Action apply, Action rollback, Func<Task> mutation, string action)
     {
         apply();
+        InvalidateVisibleCache();
         _needRefresh = true;
         StateHasChanged();
 
@@ -847,6 +871,7 @@ public partial class BoardColumn : IAsyncDisposable
         if (!ok)
         {
             rollback();
+            InvalidateVisibleCache();
             _needRefresh = true;
             StateHasChanged();
         }

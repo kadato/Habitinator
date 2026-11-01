@@ -59,6 +59,23 @@
             <span class="board-card__title-text">@Item.Title</span>
         </button>
         <div class="board-card__head-actions">
+            @if (Section == BoardSection.Daily)
+            {
+                @if (Item.Counter > 0)
+                {
+                    <div class="board-streak board-streak--active" title="Daily streak: @Item.Counter days" role="img" aria-label="@($"Daily streak {Item.Counter} days")">
+                        <MudIcon Icon="@Icons.Material.Filled.Whatshot" Size="Size.Small" Class="streak-flame-icon" aria-hidden="true" />
+                        <span class="board-streak__text">@Item.Counter</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="board-streak board-streak--inactive" title="No current streak" role="img" aria-label="No current streak">
+                        <MudIcon Icon="@Icons.Material.Outlined.Whatshot" Size="Size.Small" Class="streak-flame-icon-inactive" aria-hidden="true" />
+                        <span class="board-streak__text">0</span>
+                    </div>
+                }
+            }
             <MudMenu AnchorOrigin="Origin.BottomRight"
                      TransformOrigin="Origin.TopRight"
                      Dense="true">
@@ -126,7 +143,7 @@
                     {
                         @foreach (var tag in TagsList)
                         {
-                            <span class="board-card__tag-badge" style="@TagBadgeStyle(tag)" title="@tag">
+                            <span @key="tag" class="board-card__tag-badge" style="@TagBadgeStyle(tag)" title="@tag">
                                 <span class="board-card__tag-badge__text">@tag</span>
                             </span>
                         }
@@ -135,7 +152,7 @@
                     {
                         @foreach (var tag in TagsList.Take(2))
                         {
-                            <span class="board-card__tag-badge" style="@TagBadgeStyle(tag)" title="@tag">
+                            <span @key="tag" class="board-card__tag-badge" style="@TagBadgeStyle(tag)" title="@tag">
                                 <span class="board-card__tag-badge__text">@tag</span>
                             </span>
                         }
@@ -155,9 +172,9 @@
                         @onclick:stopPropagation="true"
                         aria-expanded="@AriaBool(_subtasksExpanded)"
                         aria-label="@($"Subtasks: {SubDone} completed out of {SubTotal}")">
-                    <MudIcon Icon="@Icons.Material.Filled.List" Size="Size.Small" Class="me-1" aria-hidden="true"/>
+                    <MudIcon Icon="@Icons.Material.Filled.List" Size="Size.Small" aria-hidden="true"/>
                     <span class="board-subtask-pill__count">@SubDone / @SubTotal</span>
-                    <MudIcon Icon="@(_subtasksExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small" Class="ms-1" aria-hidden="true"/>
+                    <MudIcon Icon="@(_subtasksExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small" aria-hidden="true"/>
                 </button>
             }
             @if (SubTotal > 0 && _subtasksExpanded)
@@ -186,7 +203,7 @@
                 @if (Section == BoardSection.Todo && Item.TodoDueDate is { } due)
                 {
                     <div class="@TodoDueCssClass(due)" title="@TodoDueTitle()">
-                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Class="me-1" Size="Size.Small" aria-hidden="true" />
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" aria-hidden="true" />
                         <span class="board-todo-due__date">@DateFormatService.Format(due)</span>
                         <span class="board-todo-due__sep" aria-hidden="true">,</span>
                         <span class="board-todo-due__relative">@TodoDueRelativeLabel(due)</span>
@@ -195,7 +212,7 @@
                 @if (Section == BoardSection.Daily && OverdueSince is { } overdueSince)
                 {
                     <div class="board-daily-overdue" role="img" aria-label="@($"Overdue since {DateFormatService.Format(overdueSince)}")">
-                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Class="me-1" Size="Size.Small" aria-hidden="true" />
+                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" aria-hidden="true" />
                         <span>Overdue since @DateFormatService.Format(overdueSince)</span>
                     </div>
                 }
@@ -221,25 +238,6 @@
                             <span class="board-habit-badge board-habit-badge--period" title="Counter reset period">@ResetPeriodLabel</span>
                         }
                     </div>
-                }
-            </div>
-            <div class="board-card__foot-right">
-                @if (Section == BoardSection.Daily)
-                {
-                    @if (Item.Counter > 0)
-                    {
-                        <div class="board-streak board-streak--active" title="Daily streak: @Item.Counter days" role="img" aria-label="@($"Daily streak {Item.Counter} days")">
-                            <MudIcon Icon="@Icons.Material.Filled.Whatshot" Size="Size.Small" Class="me-1 streak-flame-icon" aria-hidden="true" />
-                            <span class="board-streak__text">@Item.Counter</span>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="board-streak board-streak--inactive" title="No current streak" role="img" aria-label="No current streak">
-                            <MudIcon Icon="@Icons.Material.Outlined.Whatshot" Size="Size.Small" Class="me-1 streak-flame-icon-inactive" aria-hidden="true" />
-                            <span class="board-streak__text">0</span>
-                        </div>
-                    }
                 }
             </div>
         </div>

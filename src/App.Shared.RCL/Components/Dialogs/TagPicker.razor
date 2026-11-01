@@ -20,7 +20,7 @@
             {
                 @foreach (var tag in _selectedTags)
                 {
-                    <span class="habit-tag-chip" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+                    <span class="habit-tag-chip" @key="tag" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
                         <span class="habit-tag-chip__text">@tag</span>
                         <button type="button"
                                 class="habit-tag-chip__remove"
@@ -67,7 +67,7 @@
             }
             @foreach (var option in FilteredTagSuggestions())
             {
-                <button type="button"
+                <button type="button" @key="option"
                         class="habit-tag-picker__option"
                         role="option"
                         @onclick="() => AddTag(option)">
@@ -101,6 +101,8 @@
     private string _tagSearch = string.Empty;
     private ElementReference _tagSearchField;
     private string _appliedTags = string.Empty;
+    private IReadOnlyList<string>? _filteredCache;
+    private string _filteredCacheKey = string.Empty;
 
     protected override void OnParametersSet()
     {
@@ -173,10 +175,17 @@
     private IReadOnlyList<string> FilteredTagSuggestions()
     {
         var q = _tagSearch.Trim();
-        return _allKnownTags
+        var key = $"{q}|{_selectedTags.Count}|{_allKnownTags.Count}";
+        if (_filteredCache is not null && key == _filteredCacheKey)
+        {
+            return _filteredCache;
+        }
+        _filteredCacheKey = key;
+        _filteredCache = _allKnownTags
             .Where(t => _selectedTags.All(s => !s.Equals(t, StringComparison.OrdinalIgnoreCase)))
             .Where(t => q.Length == 0 || t.Contains(q, StringComparison.OrdinalIgnoreCase))
             .ToList();
+        return _filteredCache;
     }
 
     private bool CanAddNewTagFromSearch()

@@ -29,8 +29,12 @@
     flex-direction: row;
     align-items: center;
     flex-shrink: 0;
-    gap: 0;
+    gap: 0.35rem;
     margin-right: 0.15rem;
+}
+
+.board-card__head-actions .board-streak {
+    margin-left: 0;
 }
 
 .board-card.board-row--done {
@@ -170,10 +174,13 @@
     display: inline-flex;
     flex-direction: row;
     align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
     margin: 0.1rem 0 0.1rem 0;
     padding: 0.1rem var(--space-3) 0.1rem 0.3rem;
     font-family: var(--hab-font-mono);
     font-size: 0.7rem;
+    line-height: 1;
     color: var(--mud-palette-text-secondary);
     background: var(--mud-palette-background-gray);
     border: 1px solid var(--mud-palette-divider);
@@ -183,8 +190,20 @@
     font-feature-settings: "tnum" 1, "zero" 1;
 }
 
+.board-subtask-pill ::deep .mud-icon-root {
+    display: block;
+    flex-shrink: 0;
+    align-self: center;
+    margin: 0 !important;
+    line-height: 1;
+}
+
 .board-subtask-pill__count {
     font-weight: 600;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    transform: translateY(0.07em);
 }
 
 .board-subtask-list {
@@ -240,8 +259,11 @@
     display: inline-flex;
     flex-direction: row;
     align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
     font-size: 0.75rem;
     font-weight: 600;
+    line-height: 1;
     color: var(--mud-palette-text-secondary);
 }
 
@@ -257,14 +279,39 @@
     color: var(--mud-palette-text-secondary);
 }
 
+.board-todo-due ::deep .mud-icon-root {
+    display: block;
+    flex-shrink: 0;
+    align-self: center;
+    margin: 0 !important;
+    line-height: 1;
+}
+
 .board-daily-overdue {
     display: inline-flex;
     flex-direction: row;
     align-items: center;
-    gap: var(--space-1);
+    justify-content: center;
+    gap: 0.25rem;
     font-size: 0.75rem;
     font-weight: 600;
+    line-height: 1;
     color: var(--mud-palette-error);
+}
+
+.board-daily-overdue ::deep .mud-icon-root {
+    display: block;
+    flex-shrink: 0;
+    align-self: center;
+    margin: 0 !important;
+    line-height: 1;
+}
+
+.board-daily-overdue span {
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    transform: translateY(0.07em);
 }
 
 .board-todo-due__date,
@@ -272,11 +319,16 @@
     font-family: var(--hab-font-mono);
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1, "zero" 1;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    transform: translateY(0.07em);
 }
 
 .board-todo-due__sep {
     margin-right: var(--space-1);
     opacity: 0.65;
+    line-height: 1;
 }
 
 .board-todo-due__relative {
@@ -287,16 +339,31 @@
     display: inline-flex;
     flex-direction: row;
     align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
     font-family: var(--hab-font-mono);
     font-size: 0.75rem;
+    line-height: 1;
     color: var(--mud-palette-text-secondary);
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1, "zero" 1;
     margin-left: auto;
 }
 
+.board-streak ::deep .mud-icon-root {
+    display: block;
+    flex-shrink: 0;
+    align-self: center;
+    margin: 0 !important;
+    line-height: 1;
+}
+
 .board-streak__text {
     font-weight: 600;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    transform: translateY(0.07em);
 }
 
 .board-row--done .board-card__title {

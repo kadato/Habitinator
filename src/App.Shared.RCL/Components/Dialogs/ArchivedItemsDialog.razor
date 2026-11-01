@@ -149,10 +149,12 @@
     private string _searchQuery = "";
     private BoardSection? _selectedSection = null;
 
-    private int TotalCount => _allEntries.Count;
-    private int HabitsCount => _allEntries.Count(x => x.Section == BoardSection.Habit);
-    private int DailiesCount => _allEntries.Count(x => x.Section == BoardSection.Daily);
-    private int TodosCount => _allEntries.Count(x => x.Section == BoardSection.Todo);
+    private int TotalCount => _totalCount;
+    private int HabitsCount => _habitsCount;
+    private int DailiesCount => _dailiesCount;
+    private int TodosCount => _todosCount;
+    private List<ArchivedItemEntry> _filteredCache = [];
+    private string _filteredCacheKey = "\0";
 
     private struct ArchivedItemEntry
     {
@@ -233,10 +235,17 @@
     private List<ArchivedItemEntry> GetFilteredItems()
     {
         var query = _searchQuery?.Trim() ?? "";
-        return _allEntries
+        var key = $"{_selectedSection}|{query}|{_allEntries.Count}";
+        if (key == _filteredCacheKey)
+        {
+            return _filteredCache;
+        }
+        _filteredCacheKey = key;
+        _filteredCache = _allEntries
             .Where(x => _selectedSection == null || x.Section == _selectedSection)
             .Where(x => string.IsNullOrEmpty(query) || x.Item.Title.Contains(query, StringComparison.OrdinalIgnoreCase))
             .ToList();
+        return _filteredCache;
     }
 
     protected override async Task OnInitializedAsync()
@@ -266,6 +275,8 @@
     private void BuildEntriesList()
     {
         _allEntries.Clear();
+        _filteredCache = [];
+        _filteredCacheKey = "\0";
         
         foreach (var item in _snapshot.Habits)
         {
@@ -306,7 +317,17 @@
             .OrderByDescending(x => x.Date)
             .ThenBy(x => x.Item.Title, StringComparer.OrdinalIgnoreCase)
             .ToList();
+        _totalCount = _allEntries.Count;
+        _habitsCount = _allEntries.Count(x => x.Section == BoardSection.Habit);
+        _dailiesCount = _allEntries.Count(x => x.Section == BoardSection.Daily);
+        _todosCount = _allEntries.Count(x => x.Section == BoardSection.Todo);
+        _filteredCacheKey = "\0";
     }
+
+    private int _totalCount;
+    private int _habitsCount;
+    private int _dailiesCount;
+    private int _todosCount;
 
     private void SetFilter(BoardSection? section)
     {

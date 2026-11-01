@@ -176,12 +176,13 @@ public partial class BoardItemCard
         };
     }
 
-    private static bool ShouldShowItemFooter(BoardSection section, BoardItem item)
+    private bool ShouldShowItemFooter(BoardSection section, BoardItem item)
     {
         return section switch
         {
             BoardSection.Todo => item.TodoDueDate is not null,
-            BoardSection.Habit or BoardSection.Daily => true,
+            BoardSection.Habit => true,
+            BoardSection.Daily => OverdueSince is not null,
             _ => false
         };
     }

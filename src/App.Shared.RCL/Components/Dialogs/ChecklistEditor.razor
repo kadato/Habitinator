@@ -61,7 +61,9 @@
     private void SetChecklistText(int index, string text)
     {
         if (index < 0 || index >= Value.Count) return;
-        Value[index].Text = text ?? string.Empty;
+        var clean = text ?? string.Empty;
+        if (Value[index].Text == clean) return;
+        Value[index].Text = clean;
         _ = ValueChanged.InvokeAsync(Value);
     }
 

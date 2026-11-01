@@ -1,4 +1,4 @@
-#pragma warning disable S4487, S2325, S3459 // Flagged fields are read/assigned by the Razor markup part (@if bindings, @ref), flagged methods use services injected there or ComponentBase members; Sonar sees this code-behind file in isolation.
+#pragma warning disable S4487, S2325, S3459, S8949, S6966 // Flagged fields are read/assigned by the Razor markup part (@if bindings, @ref), flagged methods use services injected there or ComponentBase members; Sonar sees this code-behind file in isolation.
 using App.Shared.RCL.Components.Dialogs;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
@@ -40,23 +40,23 @@ public partial class MainBoard : IAsyncDisposable
     private List<BoardItem> FilteredHabits => _filteredHabits;
     private List<BoardItem> FilteredDailies => _filteredDailies;
 
-    private int DailiesDueOpenCount =>
-        _filteredDailies.Count(d => DailySchedule.IsDueOnDate(d, DailySchedule.LocalToday(TimeZoneService)));
+    private int DailiesDueOpenCount => _cachedDailiesDueOpenCount;
 
     private List<BoardItem> FilteredTodos => _filteredTodos;
 
-    private int OpenTodoCount => _filteredTodos.Count(t => !t.IsCompleted);
+    private int OpenTodoCount => _cachedOpenTodoCount;
 
     private int _mobileSectionIndex;
+    private ColumnSpec[] _cachedBoardColumns = [];
+    private List<string> _cachedTagMenu = [];
+    private string _cachedTagsTriggerTitle = "Filter by tags";
+    private int _cachedDailiesDueOpenCount;
+    private int _cachedOpenTodoCount;
+    private CancellationTokenSource? _searchDebounceCts;
 
     private sealed record ColumnSpec(BoardSection Section, IReadOnlyList<BoardItem> Items, bool IsExcluded);
 
-    private ColumnSpec[] BoardColumns => new[]
-    {
-        new ColumnSpec(BoardSection.Habit, FilteredHabits, IsFilteredOut(BoardSection.Habit)),
-        new ColumnSpec(BoardSection.Daily, FilteredDailies, IsFilteredOut(BoardSection.Daily)),
-        new ColumnSpec(BoardSection.Todo, FilteredTodos, IsFilteredOut(BoardSection.Todo))
-    };
+    private ColumnSpec[] BoardColumns => _cachedBoardColumns;
 
     private bool IsFilteredOut(BoardSection section) => section switch
     {
@@ -80,10 +80,7 @@ public partial class MainBoard : IAsyncDisposable
             ? "board-trigger-btn board-trigger-btn--active"
             : "board-trigger-btn";
 
-    private string GetTagsTriggerTitle() =>
-        SelectedFilterTagCount == 0
-            ? "Filter by tags"
-            : $"Tags: {string.Join(", ", _selectedFilterTags.OrderBy(t => t, StringComparer.OrdinalIgnoreCase))}";
+    private string GetTagsTriggerTitle() => _cachedTagsTriggerTitle;
 
     private void OnMobileSectionKeyDown(KeyboardEventArgs e)
     {
@@ -109,12 +106,7 @@ public partial class MainBoard : IAsyncDisposable
         UiSessionState.MobileSectionIndex = index;
     }
 
-    private List<string> GetAllTagNamesForMenu() =>
-        Habits.Concat(Dailies).Concat(Todos)
-            .SelectMany(i => BoardTagUtil.ParseTags(i.Tags))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+    private List<string> GetAllTagNamesForMenu() => _cachedTagMenu;
 
     private int SelectedFilterTagCount => _selectedFilterTags.Count;
 
@@ -339,8 +331,18 @@ public partial class MainBoard : IAsyncDisposable
 
     private void OnBoardSyncStatusChanged(object? sender, EventArgs e)
     {
+        var key = (BoardSync.IsOffline, BoardSync.IsSyncing, BoardSync.PendingCount, BoardSync.SyncProblemMessage);
+        if (key == _lastSyncStatusKey)
+        {
+            return;
+        }
+        _lastSyncStatusKey = key;
         _ = InvokeAsync(StateHasChanged);
     }
+
+    private (bool IsOffline, bool IsSyncing, int PendingCount, string? ProblemMessage)? _lastSyncStatusKey;
+    private bool _remoteRefreshInFlight;
+    private DateTimeOffset _lastRemoteRefreshUtc = DateTimeOffset.MinValue;
 
     private void OnPreferencesChanged(object? sender, EventArgs e)
     {
@@ -381,7 +383,11 @@ public partial class MainBoard : IAsyncDisposable
         {
             return;
         }
-
+        if (_remoteRefreshInFlight || DateTimeOffset.UtcNow - _lastRemoteRefreshUtc < TimeSpan.FromMilliseconds(500))
+        {
+            return;
+        }
+        _remoteRefreshInFlight = true;
         try
         {
             await LoadBoardAsync();
@@ -391,12 +397,27 @@ public partial class MainBoard : IAsyncDisposable
         {
             // keep existing UI. User can use Retry
         }
+        finally
+        {
+            _remoteRefreshInFlight = false;
+            _lastRemoteRefreshUtc = DateTimeOffset.UtcNow;
+        }
 
         await InvokeAsync(StateHasChanged);
     }
 
     public async ValueTask DisposeAsync()
     {
+        try
+        {
+            _searchDebounceCts?.Cancel();
+        }
+        catch
+        {
+            // Best effort during disposal.
+        }
+        _searchDebounceCts?.Dispose();
+        _searchDebounceCts = null;
         BoardSync.Changed -= OnBoardSyncStatusChanged;
         RemoteBoardRefresh.UnregisterForRemoteRefresh(HandleRemoteBoardRefreshedAsync);
         UndoService.OnStateChanged -= HandleUndoStateChanged;
@@ -647,6 +668,23 @@ public partial class MainBoard : IAsyncDisposable
         _filteredHabits = FilterItems(Habits);
         _filteredDailies = FilterItems(Dailies);
         _filteredTodos = FilterItems(Todos);
+        var today = DailySchedule.LocalToday(TimeZoneService);
+        _cachedDailiesDueOpenCount = _filteredDailies.Count(d => DailySchedule.IsDueOnDate(d, today));
+        _cachedOpenTodoCount = _filteredTodos.Count(t => !t.IsCompleted);
+        _cachedTagMenu = Habits.Concat(Dailies).Concat(Todos)
+            .SelectMany(i => BoardTagUtil.ParseTags(i.Tags))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        _cachedTagsTriggerTitle = SelectedFilterTagCount == 0
+            ? "Filter by tags"
+            : $"Tags: {string.Join(", ", _selectedFilterTags.OrderBy(t => t, StringComparer.OrdinalIgnoreCase))}";
+        _cachedBoardColumns =
+        [
+            new ColumnSpec(BoardSection.Habit, _filteredHabits, IsFilteredOut(BoardSection.Habit)),
+            new ColumnSpec(BoardSection.Daily, _filteredDailies, IsFilteredOut(BoardSection.Daily)),
+            new ColumnSpec(BoardSection.Todo, _filteredTodos, IsFilteredOut(BoardSection.Todo))
+        ];
     }
 
     private List<BoardItem> FilterItems(IReadOnlyList<BoardItem> source)
@@ -750,7 +788,44 @@ public partial class MainBoard : IAsyncDisposable
     private void OnSearchTextChanged()
     {
         UiSessionState.SearchText = _searchText;
-        RecomputeFilters();
+        try
+        {
+            _searchDebounceCts?.Cancel();
+        }
+        catch
+        {
+            // A canceled debounce is expected on rapid typing.
+        }
+        _searchDebounceCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        _searchDebounceCts = cts;
+        _ = DebouncedRecomputeAsync(cts);
+    }
+
+    private async Task DebouncedRecomputeAsync(CancellationTokenSource cts)
+    {
+        try
+        {
+            await Task.Delay(180, cts.Token);
+            if (cts.IsCancellationRequested)
+            {
+                return;
+            }
+            RecomputeFilters();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer keystroke won. Ignore.
+        }
+        finally
+        {
+            if (ReferenceEquals(_searchDebounceCts, cts))
+            {
+                _searchDebounceCts = null;
+            }
+            cts.Dispose();
+        }
     }
 
     private async Task HandleTimerLogSavedAsync(TimeSpan duration)
@@ -855,8 +930,16 @@ public partial class MainBoard : IAsyncDisposable
 
     private void HandleUndoStateChanged(object? sender, EventArgs e)
     {
+        var canUndo = UndoService.CanUndo;
+        if (canUndo == _lastCanUndo)
+        {
+            return;
+        }
+        _lastCanUndo = canUndo;
         _ = InvokeAsync(StateHasChanged);
     }
+
+    private bool? _lastCanUndo;
 
     private void HandleUndoPerformed(object? sender, EventArgs e)
     {

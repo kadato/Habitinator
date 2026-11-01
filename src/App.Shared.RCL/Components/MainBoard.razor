@@ -163,7 +163,7 @@
                                         <div class="board-tag-filter-grid board-tags-menu-body">
                                             @foreach (var tag in GetAllTagNamesForMenu())
                                             {
-                                                <MudCheckBox Value="IsFilterTagSelected(tag)"
+                                                <MudCheckBox @key="tag" Value="IsFilterTagSelected(tag)"
                                                              ValueChanged="@((bool b) => OnFilterTagChanged(tag, b))"
                                                              Label="@tag"
                                                              Color="Color.Primary"
@@ -265,7 +265,7 @@
                     {
                         if (col.Section == (BoardSection)_mobileSectionIndex)
                         {
-                            <BoardColumn Section="col.Section"
+                            <BoardColumn @key="col.Section" Section="col.Section"
                                          Items="col.Items"
                                          IsBoardFilterExcludingAll="col.IsExcluded"
                                          OnChanged="OnBoardChanged"/>
@@ -280,7 +280,7 @@
                     <MudGrid Spacing="2" Class="board-columns-grid w-100">
                         @foreach (var col in BoardColumns)
                         {
-                            <MudItem xs="12" md="4">
+                            <MudItem xs="12" md="4" @key="col.Section">
                                 <BoardColumn Section="col.Section"
                                              Items="col.Items"
                                              IsBoardFilterExcludingAll="col.IsExcluded"

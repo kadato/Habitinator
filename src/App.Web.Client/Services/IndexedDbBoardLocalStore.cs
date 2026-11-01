@@ -248,8 +248,9 @@ public sealed class IndexedDbBoardLocalStore : IBoardLocalStore
             _logger.LogTrace(ex, "The scheduler ignores cancel races on rapid writes.");
         }
 
-        _pendingPersist = null;
-        _ = PersistNowAsync(CancellationToken.None);
+        var cts = new CancellationTokenSource();
+        _pendingPersist = cts;
+        _ = PersistAfterDelayAsync(TimeSpan.FromMilliseconds(100), cts.Token);
     }
 
     private async Task PersistAfterDelayAsync(TimeSpan delay, CancellationToken cancellationToken)
@@ -275,7 +276,7 @@ public sealed class IndexedDbBoardLocalStore : IBoardLocalStore
         try
         {
             var state = _inner.ExportState();
-            var raw = JsonSerializer.Serialize(state, Serializer);
+            var raw = await Task.Run(() => JsonSerializer.Serialize(state, Serializer), cancellationToken);
             await _js.InvokeVoidAsync("habBoardStore.save", cancellationToken, raw);
         }
         catch (Exception ex)

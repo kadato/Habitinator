@@ -58,30 +58,33 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
         }
 
         var (today, dayStart, timeZone) = await GetTodayAndDayStartAsync(cancellationToken);
-        var periodOptions = ActivityStatisticsCalculator.BuildPeriodOptions(today, allEvents, timeZone, dayStart);
-        var (key, start, end) = ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, today, periodOptions);
+        var overview = await Task.Run(() =>
+        {
+            var periodOptions = ActivityStatisticsCalculator.BuildPeriodOptions(today, allEvents, timeZone, dayStart);
+            var (key, start, end) = ActivityStatisticsCalculator.ResolveActivityPeriod(periodKey, today, periodOptions);
 
-        var fromUtc = start.AddDays(-1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var toUtc = end.AddDays(2).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var filteredEvents = FilterEvents(allEvents, fromUtc, toUtc, tag, snapshot);
+            var fromUtc = start.AddDays(-1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+            var toUtc = end.AddDays(2).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+            var filteredEvents = FilterEvents(allEvents, fromUtc, toUtc, tag, snapshot);
 
-        var availableTags = GetDistinctTags(snapshot);
+            var availableTags = GetDistinctTags(snapshot);
 
-        var dashboard = ActivityStatisticsCalculator.BuildDashboard(filteredEvents, key, start, end, today, timeZone, dayStart) with { AvailableTags = availableTags };
+            var dashboard = ActivityStatisticsCalculator.BuildDashboard(filteredEvents, key, start, end, today, timeZone, dayStart) with { AvailableTags = availableTags };
 
-        var dailyItems = GetDailyItems(snapshot);
-        var dailyResult = ActivityStatisticsCalculator.BuildDailyContributions(
-            filteredEvents,
-            dailyItems,
-            new ContributionsRangeContext(key, periodOptions, start, end, today, timeZone, dayStart));
+            var dailyItems = GetDailyItems(snapshot);
+            var dailyResult = ActivityStatisticsCalculator.BuildDailyContributions(
+                filteredEvents,
+                dailyItems,
+                new ContributionsRangeContext(key, periodOptions, start, end, today, timeZone, dayStart));
 
-        var habitItems = GetHabitItems(snapshot);
-        var habitResult = ActivityStatisticsCalculator.BuildHabitContributions(
-            filteredEvents,
-            habitItems,
-            new ContributionsRangeContext(key, periodOptions, start, end, today, timeZone, dayStart));
+            var habitItems = GetHabitItems(snapshot);
+            var habitResult = ActivityStatisticsCalculator.BuildHabitContributions(
+                filteredEvents,
+                habitItems,
+                new ContributionsRangeContext(key, periodOptions, start, end, today, timeZone, dayStart));
 
-        var overview = new ActivityOverviewDto(dashboard, dailyResult, habitResult);
+            return new ActivityOverviewDto(dashboard, dailyResult, habitResult);
+        }, cancellationToken);
         _overviewCache[cacheKey] = overview;
         _overviewEventCount[cacheKey] = eventCount;
         _overviewBoardHash[cacheKey] = boardHash;

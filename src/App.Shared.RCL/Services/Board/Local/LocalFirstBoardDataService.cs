@@ -324,14 +324,20 @@ public sealed partial class LocalFirstBoardDataService(
 
     private async Task PersistStreakCorrectionsAsync(List<BoardLocalRow> changedRows)
     {
+        if (changedRows.Count == 0)
+        {
+            return;
+        }
         try
         {
             await _gate.WaitAsync(CancellationToken.None);
             try
             {
-                foreach (var row in changedRows)
+                const int chunkSize = 200;
+                for (var i = 0; i < changedRows.Count; i += chunkSize)
                 {
-                    await store.UpsertItemAsync(row, CancellationToken.None);
+                    var chunk = changedRows.Skip(i).Take(chunkSize).ToList();
+                    await Task.WhenAll(chunk.Select(row => store.UpsertItemAsync(row, CancellationToken.None)));
                 }
 
                 _cachedSnapshot = null;

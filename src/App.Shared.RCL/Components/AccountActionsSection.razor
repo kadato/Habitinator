@@ -121,7 +121,7 @@
                 await Notifier.NotifyAsync("Offline. Last saved export.", Severity.Warning);
             }
 
-            var json = System.Text.Json.JsonSerializer.Serialize(data, JsonDefaults.Export);
+            var json = await Task.Run(() => System.Text.Json.JsonSerializer.Serialize(data, JsonDefaults.Export));
             var fileName = $"habitinator-export-{data.ExportedAtUtc:yyyyMMdd-HHmm}.json";
 
             bool downloaded;

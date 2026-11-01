@@ -76,23 +76,31 @@
         _error = null;
     }
 
-    private Task ValidateAsync()
+    private async Task ValidateAsync()
     {
-        if (_validating) return Task.CompletedTask;
+        if (_validating) return;
+        var json = _json;
+        if (string.IsNullOrEmpty(json) || json.Length > 5_000_000)
+        {
+            _error = json is { Length: > 5_000_000 } ? "Backup is too large to preview." : "Paste a backup first.";
+            _parsed = null;
+            _preview = null;
+            return;
+        }
         _validating = true;
         try
         {
             UserDataExportDto? data;
             try
             {
-                data = System.Text.Json.JsonSerializer.Deserialize<UserDataExportDto>(_json, JsonDefaults.Api);
+                data = await Task.Run(() => System.Text.Json.JsonSerializer.Deserialize<UserDataExportDto>(json, JsonDefaults.Api));
             }
             catch (System.Text.Json.JsonException)
             {
                 _error = "The text is not valid JSON.";
                 _parsed = null;
                 _preview = null;
-                return Task.CompletedTask;
+                return;
             }
 
             if (UserDataImportValidator.Validate(data) is { } problem)
@@ -100,13 +108,13 @@
                 _error = problem;
                 _parsed = null;
                 _preview = null;
-                return Task.CompletedTask;
+                return;
             }
 
             _parsed = data;
             _error = null;
             _preview = Summary(data!);
-            return Task.CompletedTask;
+            return;
         }
         finally
         {

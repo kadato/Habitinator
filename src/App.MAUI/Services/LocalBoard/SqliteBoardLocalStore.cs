@@ -161,9 +161,11 @@ public sealed class SqliteBoardLocalStore(
         try
         {
             await db.BoardItems.Where(x => x.UserKey == userKey).ExecuteDeleteAsync(cancellationToken);
-            if (rows.Count > 0)
+            const int chunkSize = 500;
+            for (var i = 0; i < rows.Count; i += chunkSize)
             {
-                db.BoardItems.AddRange(rows.Select(ToRow));
+                var chunk = rows.Skip(i).Take(chunkSize).Select(ToRow).ToList();
+                db.BoardItems.AddRange(chunk);
                 await db.SaveChangesAsync(cancellationToken);
             }
 

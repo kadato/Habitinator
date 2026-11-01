@@ -610,8 +610,11 @@
             var json = await JS.InvokeAsync<string?>("localStorage.getItem", CancellationToken.None, new object?[] { "habitinator-ai-threads" });
             if (!string.IsNullOrWhiteSpace(json))
             {
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var stored = JsonSerializer.Deserialize<List<StoredThread>>(json, options);
+                var stored = await Task.Run(() =>
+                {
+                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                    return JsonSerializer.Deserialize<List<StoredThread>>(json, options);
+                });
                 if (stored is not null)
                 {
                     foreach (var s in stored.Take(20))
@@ -643,7 +646,7 @@
                 UpdatedAt = t.UpdatedAt,
                 Messages = t.Entries.Take(100).Select(e => e.Message).ToList()
             }).ToList();
-            var json = JsonSerializer.Serialize(stored);
+            var json = await Task.Run(() => JsonSerializer.Serialize(stored));
             if (json.Length < 400000)
             {
                 await JS.InvokeVoidAsync("localStorage.setItem", CancellationToken.None, new object?[] { "habitinator-ai-threads", json });

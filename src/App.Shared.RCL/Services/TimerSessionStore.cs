@@ -10,25 +10,34 @@ public sealed class TimerSessionStore(
     ILogger<TimerSessionStore>? logger = null)
 {
     private const string Key = "habitinator.timer.session";
+    private string _lastWritten = "\0";
+    private DateTimeOffset _lastWriteUtc = DateTimeOffset.MinValue;
 
     private static readonly JsonSerializerOptions Serializer = new(JsonSerializerDefaults.Web)
     {
         TypeInfoResolver = SharedJsonSerializerContext.Default
     };
 
-    /// <summary>Writes the live session. Writes blank when the timer is idle, clearing the last session.</summary>
+    /// <summary>Writes the live session. Writes blank when the timer is idle, clearing the last session. Coalesces 1 Hz ticks.</summary>
     public void Save(GlobalTimerService timer)
     {
         try
         {
             var snapshot = timer.CaptureState();
-            if (IsIdle(snapshot))
+            var isIdle = IsIdle(snapshot);
+            var raw = isIdle ? string.Empty : JsonSerializer.Serialize(snapshot, Serializer);
+            var now = DateTimeOffset.UtcNow;
+            if (raw == _lastWritten && now - _lastWriteUtc < TimeSpan.FromSeconds(5))
             {
-                settings.Write(Key, string.Empty);
                 return;
             }
-
-            settings.Write(Key, JsonSerializer.Serialize(snapshot, Serializer));
+            if (!isIdle && raw == _lastWritten)
+            {
+                return;
+            }
+            _lastWritten = raw;
+            _lastWriteUtc = now;
+            settings.Write(Key, raw);
         }
         catch (Exception ex)
         {

@@ -1,4 +1,4 @@
-#pragma warning disable S1144, S4487, S2325, IDE0051, IDE0052 // Unused/private members are used by the Razor markup part; flagged methods use services injected there.
+#pragma warning disable S1144, S4487, S2325, IDE0051, IDE0052, S8949, S6966, IDE0011, CA1859 // Unused/private members are used by the Razor markup part; flagged methods use services injected there.
 using System.Globalization;
 
 using App.Shared.RCL.Components.Dialogs;
@@ -51,6 +51,7 @@ public partial class StatisticsPanel : IDisposable
     private int _visibleConsistencyCount = InitialVisibleConsistencyCount;
     private int _loadVersion;
     private bool _disposed;
+    private CancellationTokenSource? _loadCts;
     private readonly Dictionary<Guid, (string Label, string Tooltip)> _dailyRatioCache = [];
 
     [Inject] public IServiceProvider ServiceProvider { get; set; } = default!;
@@ -214,6 +215,16 @@ public partial class StatisticsPanel : IDisposable
         _loadVersion++;
         try
         {
+            _loadCts?.Cancel();
+        }
+        catch
+        {
+            // Best effort during disposal.
+        }
+        _loadCts?.Dispose();
+        _loadCts = null;
+        try
+        {
             BoardSync.Changed -= OnBoardSyncChanged;
         }
         catch
@@ -301,14 +312,23 @@ public partial class StatisticsPanel : IDisposable
     private async Task LoadStatisticsAsync(string periodKey)
     {
         var version = ++_loadVersion;
+        _loadCts?.Cancel();
+        _loadCts?.Dispose();
+        _loadCts = new CancellationTokenSource();
+        var loadToken = _loadCts.Token;
         var tag = PrepareLoadState();
-        var streaksTask = BoardData.GetStreakMapAsync(CancellationToken.None);
+        var streaksTask = BoardData.GetStreakMapAsync(loadToken);
 
         await PaintCachedStateIfAvailableAsync(periodKey, tag, streaksTask);
 
         try
         {
-            await RevalidateFromNetworkAsync(periodKey, tag, version, streaksTask);
+            await RevalidateFromNetworkAsync(periodKey, tag, version, streaksTask, loadToken);
+        }
+        catch (OperationCanceledException) when (loadToken.IsCancellationRequested || version != _loadVersion)
+        {
+            // Superseded by a newer load or disposal. Ignore.
+            ObserveFaults(streaksTask);
         }
         catch (Exception dex)
         {
@@ -402,13 +422,13 @@ public partial class StatisticsPanel : IDisposable
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task RevalidateFromNetworkAsync(string periodKey, string? tag, int version, Task<Dictionary<Guid, int>> streaksTask)
+    private async Task RevalidateFromNetworkAsync(string periodKey, string? tag, int version, Task<Dictionary<Guid, int>> streaksTask, CancellationToken loadToken)
     {
         // Fire all three reads at once so the grids do not wait an extra round trip
         // behind the dashboard. The hero still paints first for progressive load.
         var dashboardTask = ResolveDashboardAsync(periodKey, tag);
-        var dailyTask = Stats.GetDailyContributionsAsync(periodKey, tag, CancellationToken.None);
-        var habitTask = Stats.GetHabitContributionsAsync(periodKey, tag, CancellationToken.None);
+        var dailyTask = Stats.GetDailyContributionsAsync(periodKey, tag, loadToken);
+        var habitTask = Stats.GetHabitContributionsAsync(periodKey, tag, loadToken);
 
         ActivityDashboardDto dashboard;
         try
@@ -747,20 +767,23 @@ public partial class StatisticsPanel : IDisposable
 
     private string GetDailyRatioTooltip(DailyContributionGraphDto daily) => GetDailyRatio(daily).Tooltip;
 
-    private static string DailyActiveRatioLabel(DailyContributionGraphDto daily)
-    {
-        var active = daily.Heatmap.Count(c => c.InDataRange && c.Count > 0);
-        var total = daily.Heatmap.Count(c => c.InDataRange);
-        var percent = total <= 0 ? 0 : (int)Math.Round(100.0 * active / total);
-        return $"{active} of {total} days, {percent}%";
-    }
+    private static string DailyActiveRatioLabel(DailyContributionGraphDto daily) => GetDailyRatioStatic(daily).Label;
 
-    private static string DailyActiveRatioTooltip(DailyContributionGraphDto daily)
+    private static string DailyActiveRatioTooltip(DailyContributionGraphDto daily) => GetDailyRatioStatic(daily).Tooltip;
+
+    private static (string Label, string Tooltip) GetDailyRatioStatic(DailyContributionGraphDto daily)
     {
-        var active = daily.Heatmap.Count(c => c.InDataRange && c.Count > 0);
-        var total = daily.Heatmap.Count(c => c.InDataRange);
-        var label = active == 1 ? "day" : "days";
-        return $"{active} active {label} of {total} in this period";
+        var active = 0;
+        var total = 0;
+        foreach (var c in daily.Heatmap)
+        {
+            if (!c.InDataRange) continue;
+            total++;
+            if (c.Count > 0) active++;
+        }
+        var percent = total <= 0 ? 0 : (int)Math.Round(100.0 * active / total);
+        var dayWord = active == 1 ? "day" : "days";
+        return ($"{active} of {total} days, {percent}%", $"{active} active {dayWord} of {total} in this period");
     }
 
     private void ShowAllConsistency()
@@ -900,8 +923,11 @@ public partial class StatisticsPanel : IDisposable
             { x => x.TagFilter, filterTag }
         };
         var dialog = await DialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters, options);
-        _ = await dialog.Result;
-        await RefreshAfterDialogAsync();
+        var result = await dialog.Result;
+        if (result is { Canceled: false, Data: true })
+        {
+            await RefreshAfterDialogAsync();
+        }
     }
 
     private async Task OpenDailyHeatmapAsync(DailyContributionGraphDto daily)
@@ -912,8 +938,11 @@ public partial class StatisticsPanel : IDisposable
             { x => x.Title, daily.Title }
         };
         var dialog = await DialogService.ShowAsync<DailyHeatmapDialog>(string.Empty, parameters, DialogDefaults.Wide);
-        _ = await dialog.Result;
-        await RefreshAfterDialogAsync();
+        var result = await dialog.Result;
+        if (result is { Canceled: false, Data: true })
+        {
+            await RefreshAfterDialogAsync();
+        }
     }
 
     private async Task OpenDailyDayDetailAsync(DailyContributionGraphDto daily, int row, int col)
@@ -929,14 +958,17 @@ public partial class StatisticsPanel : IDisposable
             { x => x.BoardItemId, daily.BoardItemId }
         };
         var dialog = await DialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters, DialogDefaults.Wide);
-        _ = await dialog.Result;
-        await RefreshAfterDialogAsync();
+        var result = await dialog.Result;
+        if (result is { Canceled: false, Data: true })
+        {
+            await RefreshAfterDialogAsync();
+        }
     }
 
     /// <summary>
-    ///     Reloads stats after a stats dialog closes so heatmaps show retro check-ins.
-    ///     The dialog can report Cancel with no mutation flag when dismissed by clicking away.
-    ///     Drain and invalidate first so the reload reads the synced state.
+    ///     Reloads stats after a stats dialog reports a mutation. View-only closes skip
+    ///     the sync, cache wipe and reload so the exit animation stays cheap.
+    ///     The scroll snap is also suppressed here. The grids keep their position.
     /// </summary>
     private async Task RefreshAfterDialogAsync()
     {
@@ -951,6 +983,7 @@ public partial class StatisticsPanel : IDisposable
         }
 
         await RefreshAsync(() => LoadStatisticsAsync(_selectedPeriodKey));
+        _shouldScrollToEnd = false;
     }
 
     /// <summary>Marks already-started reads as observed so a fault never escapes unobserved when their results are discarded on a stale load or a failed sibling.</summary>

@@ -106,7 +106,7 @@
                         {
                             var h = _weekBarMax == 0 ? 0 : (int)Math.Round(100.0 * w.EventCount / _weekBarMax);
                             var scale = (h / 100.0).ToString(CultureInfo.InvariantCulture);
-                            <button type="button" class="stats-week-bar-wrap" title="@FormatWeekBarTooltip(w)" aria-label="@FormatWeekBarTooltip(w)" @onclick="() => ShowWeekBarValueAsync(w)">
+                            <button @key="w.WeekStart" type="button" class="stats-week-bar-wrap" title="@FormatWeekBarTooltip(w)" aria-label="@FormatWeekBarTooltip(w)" @onclick="() => ShowWeekBarValueAsync(w)">
                                 <div class="stats-week-bar" style="--bar-scale: @scale"></div>
                                 @if (w.FocusMinutes > 0)
                                 {
@@ -188,7 +188,7 @@
                                     @foreach (var daily in visibleDailies)
                                     {
                                         var cellIx = GetDailyCellIndex(daily);
-                                        <MudItem xs="12" md="6">
+                                        <MudItem @key="daily.BoardItemId" xs="12" md="6">
                                             <div class="stats-daily-block pa-3 border rounded stats-block-bg">
                                                 <div class="d-flex align-center justify-space-between gap-2 mb-1">
                                                     <button type="button" class="stats-daily-title stats-daily-title--btn" title="View streaks and heatmap for @daily.Title" aria-label="View streaks and heatmap for @daily.Title" @onclick="() => OpenDailyHeatmapAsync(daily)">@daily.Title</button>
@@ -226,7 +226,7 @@
                                     @foreach (var habit in visibleHabits)
                                     {
                                         var cellIx = GetHabitCellIndex(habit);
-                                        <MudItem xs="12" md="6">
+                                        <MudItem @key="habit.BoardItemId" xs="12" md="6">
                                             <div class="stats-habit-block pa-3 border rounded stats-block-bg">
                                                 <div class="d-flex align-center justify-space-between gap-2 mb-2">
                                                     <span class="stats-habit-title">@habit.Title</span>
@@ -366,7 +366,7 @@
                     <div class="stats-kpi-cards stats-kpi-cards--desktop">
                         @foreach (var kpi in Kpis(_data))
                         {
-                            <MudPaper Class="@($"stats-kpi-card stats-kpi-card--sidebar stats-kpi-card--plain {kpi.CardAccent}")" Elevation="0" Outlined="false">
+                            <MudPaper @key="kpi.CardLabel" Class="@($"stats-kpi-card stats-kpi-card--sidebar stats-kpi-card--plain {kpi.CardAccent}")" Elevation="0" Outlined="false">
                                 <div class="stats-kpi-card__head">
                                     <MudText Typo="Typo.caption" Class="stats-kpi-card__label">@kpi.CardLabel</MudText>
                                     <MudIcon Icon="@kpi.Icon" Class="stats-kpi-card__icon" Size="Size.Small" aria-hidden="true"/>

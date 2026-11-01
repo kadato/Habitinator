@@ -137,10 +137,18 @@
         get
         {
             if (_graph is null) return string.Empty;
-            var active = _graph.Heatmap.Count(x => x.InDataRange && x.Count > 0);
-            var total = _graph.Heatmap.Count(x => x.InDataRange);
+            if (_ratioCache is { } cached) return cached.Label;
+            var active = 0;
+            var total = 0;
+            foreach (var c in _graph.Heatmap)
+            {
+                if (!c.InDataRange) continue;
+                total++;
+                if (c.Count > 0) active++;
+            }
             var pct = total == 0 ? 0 : (int)Math.Round(100.0 * active / total);
-            return $"{active} of {total}, {pct}%";
+            _ratioCache = (Label: $"{active} of {total}, {pct}%", Tooltip: $"{active} active of {total} in this period");
+            return _ratioCache.Value.Label;
         }
     }
     private string RatioTooltip
@@ -148,11 +156,12 @@
         get
         {
             if (_graph is null) return string.Empty;
-            var active = _graph.Heatmap.Count(x => x.InDataRange && x.Count > 0);
-            var total = _graph.Heatmap.Count(x => x.InDataRange);
-            return $"{active} active of {total} in this period";
+            if (_ratioCache is { } cached) return cached.Tooltip;
+            _ = RatioLabel;
+            return _ratioCache?.Tooltip ?? string.Empty;
         }
     }
+    private (string Label, string Tooltip)? _ratioCache;
     protected override async Task OnInitializedAsync()
     {
         await DateFormatService.InitializeAsync();
@@ -228,6 +237,7 @@
             _selectedPeriodKey = data.PeriodKey;
         }
 
+        _ratioCache = null;
         _graph = data.Graphs.FirstOrDefault(g => g.BoardItemId == BoardItemId)
                  ?? (!string.IsNullOrWhiteSpace(Title)
                      ? data.Graphs.FirstOrDefault(g => string.Equals(g.Title, Title, StringComparison.OrdinalIgnoreCase))
@@ -344,16 +354,14 @@
             };
             var dialog = await DialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters, options);
             var result = await dialog.Result;
-            if (result is { Canceled: false } && result.Data is true)
+            // Reload only when the day dialog reports a check-in. View-only
+            // closes skip the sync and full list fetch so exit stays cheap.
+            if (result is { Canceled: false, Data: true })
             {
                 _mutatedBelow = true;
+                await ReloadAfterMutationAsync();
+                await InvokeAsync(StateHasChanged);
             }
-
-            // Reload on every close, not on reported mutations alone. Dismissing by clicking
-            // away reports Cancel with no payload, so the result alone cannot prove that
-            // nothing changed. Drain and invalidate first so the grid reads fresh state.
-            await ReloadAfterMutationAsync();
-            await InvokeAsync(StateHasChanged);
         }
     }
 

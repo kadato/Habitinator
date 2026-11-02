@@ -43,13 +43,35 @@ public sealed class BoardSyncDeltaService(
 
         using var activity = AppTelemetry.Activity.StartActivity("board.sync_delta");
         await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var boundaryDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-
         var newerTask = FetchNewerRowsAsync(readDb, userId, cursorTs, limit, cancellationToken);
-        var boundaryTask = FetchBoundaryRowsAsync(boundaryDb, userId, cursorTs, cursorId, limit, cancellationToken);
-        await Task.WhenAll(newerTask, boundaryTask);
-        var newer = await newerTask;
-        var boundary = await boundaryTask;
+
+        Task<List<BoardItemEntity>> boundaryTask;
+        ApplicationDbContext? boundaryDb = null;
+        if (cursorId.HasValue)
+        {
+            boundaryDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            boundaryTask = FetchBoundaryRowsAsync(boundaryDb, userId, cursorTs, cursorId, limit, cancellationToken);
+        }
+        else
+        {
+            boundaryTask = Task.FromResult(new List<BoardItemEntity>());
+        }
+
+        List<BoardItemEntity> newer;
+        List<BoardItemEntity> boundary;
+        try
+        {
+            await Task.WhenAll(newerTask, boundaryTask);
+            newer = await newerTask;
+            boundary = await boundaryTask;
+        }
+        finally
+        {
+            if (boundaryDb != null)
+            {
+                await boundaryDb.DisposeAsync();
+            }
+        }
         var (changed, truncated) = BuildChangedPage(newer, boundary, limit);
 
         var (today, dayStart) = await TodayAndDayStartAsync(userId, cancellationToken);

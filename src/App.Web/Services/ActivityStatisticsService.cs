@@ -89,12 +89,34 @@ public sealed class ActivityStatisticsService(
         var toUtc = rangeEnd.AddDays(2).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
         await using var dbTags = await dbFactory.CreateDbContextAsync(cancellationToken);
-        await using var dbIds = await dbFactory.CreateDbContextAsync(cancellationToken);
         var availableTagsTask = GetDistinctTagsForUserAsync(dbTags, userId, cancellationToken);
-        var allowedIdsTask = GetBoardItemIdsMatchingTagOrNullAsync(dbIds, userId, tag, cancellationToken);
-        await Task.WhenAll(availableTagsTask, allowedIdsTask);
-        var allowedIds = await allowedIdsTask;
-        var availableTags = await availableTagsTask;
+        Task<HashSet<Guid>?> allowedIdsTask;
+        ApplicationDbContext? dbIds = null;
+        if (!string.IsNullOrWhiteSpace(tag))
+        {
+            dbIds = await dbFactory.CreateDbContextAsync(cancellationToken);
+            allowedIdsTask = GetBoardItemIdsMatchingTagOrNullAsync(dbIds, userId, tag, cancellationToken);
+        }
+        else
+        {
+            allowedIdsTask = Task.FromResult<HashSet<Guid>?>(null);
+        }
+
+        HashSet<Guid>? allowedIds;
+        IReadOnlyList<string> availableTags;
+        try
+        {
+            await Task.WhenAll(availableTagsTask, allowedIdsTask);
+            allowedIds = await allowedIdsTask;
+            availableTags = await availableTagsTask;
+        }
+        finally
+        {
+            if (dbIds != null)
+            {
+                await dbIds.DisposeAsync();
+            }
+        }
 
         var eventRows = await EventsInRange(db, userId, fromUtc, toUtc, allowedIds)
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
@@ -192,12 +214,34 @@ public sealed class ActivityStatisticsService(
         var toUtc = end.AddDays(2).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
         await using var dbTags = await dbFactory.CreateDbContextAsync(cancellationToken);
-        await using var dbIds = await dbFactory.CreateDbContextAsync(cancellationToken);
         var availableTagsTask = GetDistinctTagsForUserAsync(dbTags, userId, cancellationToken);
-        var allowedIdsTask = GetBoardItemIdsMatchingTagOrNullAsync(dbIds, userId, tag, cancellationToken);
-        await Task.WhenAll(availableTagsTask, allowedIdsTask);
-        var allowedIds = await allowedIdsTask;
-        var availableTags = await availableTagsTask;
+        Task<HashSet<Guid>?> allowedIdsTask;
+        ApplicationDbContext? dbIds = null;
+        if (!string.IsNullOrWhiteSpace(tag))
+        {
+            dbIds = await dbFactory.CreateDbContextAsync(cancellationToken);
+            allowedIdsTask = GetBoardItemIdsMatchingTagOrNullAsync(dbIds, userId, tag, cancellationToken);
+        }
+        else
+        {
+            allowedIdsTask = Task.FromResult<HashSet<Guid>?>(null);
+        }
+
+        HashSet<Guid>? allowedIds;
+        IReadOnlyList<string> availableTags;
+        try
+        {
+            await Task.WhenAll(availableTagsTask, allowedIdsTask);
+            allowedIds = await allowedIdsTask;
+            availableTags = await availableTagsTask;
+        }
+        finally
+        {
+            if (dbIds != null)
+            {
+                await dbIds.DisposeAsync();
+            }
+        }
 
         var rows = await EventsInRange(db, userId, fromUtc, toUtc, allowedIds)
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
@@ -373,7 +417,7 @@ public sealed class ActivityStatisticsService(
         CancellationToken cancellationToken)
     {
         var tagStrings = await db.BoardItems.AsNoTracking()
-            .Where(b => b.UserId == userId && b.DeletedAtUtc == null)
+            .Where(b => b.UserId == userId && b.DeletedAtUtc == null && b.Tags != null && b.Tags != "")
             .Select(b => b.Tags)
             .ToListAsync(cancellationToken);
 

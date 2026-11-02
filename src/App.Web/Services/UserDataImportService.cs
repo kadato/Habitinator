@@ -61,10 +61,7 @@ public sealed class UserDataImportService(
         await dbContext.UserActivityEvents
             .Where(x => x.UserId == userId)
             .ExecuteDeleteAsync(cancellationToken);
-        foreach (var record in data.Events)
-        {
-            dbContext.UserActivityEvents.Add(ToEventEntity(userId, record, importIds));
-        }
+        dbContext.UserActivityEvents.AddRange(data.Events.Select(record => ToEventEntity(userId, record, importIds)));
 
         var prefsRestored = false;
         var notifRestored = false;

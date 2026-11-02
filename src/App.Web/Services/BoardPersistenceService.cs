@@ -1345,7 +1345,6 @@ public sealed class BoardPersistenceService(
         var tagPattern = "%" + EscapeLikePattern(cleanedOld) + "%";
         var items = await dbContext.BoardItems
             .Where(x => x.UserId == userId && x.DeletedAtUtc == null && x.Tags != null && EF.Functions.ILike(x.Tags, tagPattern))
-            .Select(x => new { x.Id, x.Tags })
             .ToListAsync(cancellationToken);
 
         var updatedCount = 0;
@@ -1365,16 +1364,15 @@ public sealed class BoardPersistenceService(
                         newTagsList.Add(replacement);
                     }
                 }
-                var newTags = newTagsList.Count > 0 ? string.Join(",", newTagsList) : null;
-                await dbContext.BoardItems
-                    .Where(x => x.UserId == userId && x.Id == item.Id)
-                    .ExecuteUpdateAsync(x => x.SetProperty(e => e.Tags, newTags).SetProperty(e => e.UpdatedAtUtc, now), cancellationToken);
+                item.Tags = newTagsList.Count > 0 ? string.Join(",", newTagsList) : null;
+                item.UpdatedAtUtc = now;
                 updatedCount++;
             }
         }
 
         if (updatedCount > 0)
         {
+            await dbContext.SaveChangesAsync(cancellationToken);
             await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         }
 
@@ -1395,7 +1393,6 @@ public sealed class BoardPersistenceService(
         var tagPattern = "%" + EscapeLikePattern(cleanedTag) + "%";
         var items = await dbContext.BoardItems
             .Where(x => x.UserId == userId && x.DeletedAtUtc == null && x.Tags != null && EF.Functions.ILike(x.Tags, tagPattern))
-            .Select(x => new { x.Id, x.Tags })
             .ToListAsync(cancellationToken);
 
         var updatedCount = 0;
@@ -1406,16 +1403,15 @@ public sealed class BoardPersistenceService(
             var removed = parsed.RemoveAll(t => string.Equals(t, cleanedTag, StringComparison.OrdinalIgnoreCase));
             if (removed > 0)
             {
-                var newTags = parsed.Count > 0 ? string.Join(",", parsed) : null;
-                await dbContext.BoardItems
-                    .Where(x => x.UserId == userId && x.Id == item.Id)
-                    .ExecuteUpdateAsync(x => x.SetProperty(e => e.Tags, newTags).SetProperty(e => e.UpdatedAtUtc, now), cancellationToken);
+                item.Tags = parsed.Count > 0 ? string.Join(",", parsed) : null;
+                item.UpdatedAtUtc = now;
                 updatedCount++;
             }
         }
 
         if (updatedCount > 0)
         {
+            await dbContext.SaveChangesAsync(cancellationToken);
             await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
         }
 
@@ -1602,6 +1598,14 @@ public sealed class BoardPersistenceService(
         await dbContext.BoardItems
             .Where(x => x.UserId == userId && x.Id == itemId)
             .ExecuteUpdateAsync(x => x.SetProperty(e => e.SortOrder, newSortOrder).SetProperty(e => e.UpdatedAtUtc, now), cancellationToken);
+
+        var needsRebalance = (prev.HasValue && Math.Abs(newSortOrder - prev.Value) < 1e-9)
+            || (next.HasValue && Math.Abs(newSortOrder - next.Value) < 1e-9);
+        if (needsRebalance)
+        {
+            await RebalanceSortOrdersAsync(userId, section, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
 
         var moving = await dbContext.BoardItems.FirstOrDefaultAsync(x => x.UserId == userId && x.Id == itemId, cancellationToken);
         if (moving is null)

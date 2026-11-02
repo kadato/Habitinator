@@ -248,9 +248,8 @@ public sealed class IndexedDbBoardLocalStore : IBoardLocalStore
             _logger.LogTrace(ex, "The scheduler ignores cancel races on rapid writes.");
         }
 
-        var cts = new CancellationTokenSource();
-        _pendingPersist = cts;
-        _ = PersistAfterDelayAsync(TimeSpan.FromMilliseconds(100), cts.Token);
+        _pendingPersist = null;
+        _ = PersistNowAsync(CancellationToken.None);
     }
 
     private async Task PersistAfterDelayAsync(TimeSpan delay, CancellationToken cancellationToken)

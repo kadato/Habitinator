@@ -333,11 +333,9 @@ public sealed partial class LocalFirstBoardDataService(
             await _gate.WaitAsync(CancellationToken.None);
             try
             {
-                const int chunkSize = 200;
-                for (var i = 0; i < changedRows.Count; i += chunkSize)
+                foreach (var row in changedRows)
                 {
-                    var chunk = changedRows.Skip(i).Take(chunkSize).ToList();
-                    await Task.WhenAll(chunk.Select(row => store.UpsertItemAsync(row, CancellationToken.None)));
+                    await store.UpsertItemAsync(row, CancellationToken.None);
                 }
 
                 _cachedSnapshot = null;

@@ -149,7 +149,6 @@ public partial class BoardColumn : IAsyncDisposable
     private readonly Dictionary<Guid, BoardItem> _optimisticCreations = [];
     private IReadOnlyList<BoardItem> _visibleCache = [];
     private List<BoardItem> _effectiveCache = [];
-    private string _visibleCacheKey = string.Empty;
 
     private readonly string _columnInstanceId = Guid.NewGuid().ToString("N");
     private BoardItemEditor? _editor;
@@ -182,12 +181,6 @@ public partial class BoardColumn : IAsyncDisposable
 
     private void RebuildCaches()
     {
-        var key = $"{Section}:{(int)_habitFilter}:{(int)_dailyFilter}:{(int)_todoFilter}:{Items.Count}:{CountOptimisticState()}:{IsBoardFilterExcludingAll}";
-        if (key == _visibleCacheKey)
-        {
-            return;
-        }
-        _visibleCacheKey = key;
         var baseItems = Items
             .Where(x => !_optimisticDeletions.Contains(x.Id))
             .Select(x => _optimisticOverrides.TryGetValue(x.Id, out var o) ? o : x);
@@ -365,7 +358,6 @@ public partial class BoardColumn : IAsyncDisposable
 
     private void InvalidateVisibleCache()
     {
-        _visibleCacheKey = string.Empty;
         RebuildCaches();
     }
 

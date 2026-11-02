@@ -101,8 +101,6 @@
     private string _tagSearch = string.Empty;
     private ElementReference _tagSearchField;
     private string _appliedTags = string.Empty;
-    private IReadOnlyList<string>? _filteredCache;
-    private string _filteredCacheKey = string.Empty;
 
     protected override void OnParametersSet()
     {
@@ -175,17 +173,10 @@
     private IReadOnlyList<string> FilteredTagSuggestions()
     {
         var q = _tagSearch.Trim();
-        var key = $"{q}|{_selectedTags.Count}|{_allKnownTags.Count}";
-        if (_filteredCache is not null && key == _filteredCacheKey)
-        {
-            return _filteredCache;
-        }
-        _filteredCacheKey = key;
-        _filteredCache = _allKnownTags
+        return _allKnownTags
             .Where(t => _selectedTags.All(s => !s.Equals(t, StringComparison.OrdinalIgnoreCase)))
             .Where(t => q.Length == 0 || t.Contains(q, StringComparison.OrdinalIgnoreCase))
             .ToList();
-        return _filteredCache;
     }
 
     private bool CanAddNewTagFromSearch()

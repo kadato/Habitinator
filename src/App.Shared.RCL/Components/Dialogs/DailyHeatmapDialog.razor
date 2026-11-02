@@ -15,7 +15,7 @@
 @inject IServiceProvider ServiceProvider
 @inject IBoardSyncStatus BoardSync
 
-<MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content">
+<MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content" OnBackdropClick="CloseDialog">
     <DialogContent>
         <div class="hab-modal hab-modal--daily hab-modal--wide hab-modal--heatmap" data-dialog-label="Daily heatmap" aria-label="Daily heatmap" role="group" @onclick:stopPropagation="true">
             @if (BoardSync.IsOffline)
@@ -98,6 +98,7 @@
     [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
     [Parameter] [EditorRequired] public Guid BoardItemId { get; set; }
     [Parameter] public string Title { get; set; } = "Daily";
+    [Parameter] public Action? OnMutated { get; set; }
 
     private string _selectedPeriodKey = DailyGraphPeriods.Rolling370Days;
     private IReadOnlyList<DailyGraphPeriodOption> _periodOptions = [];
@@ -342,23 +343,31 @@
     {
         return ScheduleCadence is { } cadence ? $"{plain} ({cadence})" : plain;
     }
+    private void MarkMutated()
+    {
+        _mutatedBelow = true;
+        OnMutated?.Invoke();
+    }
+
     private async Task OnCellClickAsync(int row, int col)
     {
         if (_cellIndex.TryGetValue((row, col), out var cell) && cell.InDataRange)
         {
             var options = DialogDefaults.Wide;
+            var dayMutated = false;
             var parameters = new DialogParameters<ActivityDayDetailDialog>
             {
                 { x => x.Date, cell.Date },
-                { x => x.BoardItemId, BoardItemId }
+                { x => x.BoardItemId, BoardItemId },
+                { x => x.OnMutated, () => { dayMutated = true; MarkMutated(); } }
             };
             var dialog = await DialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters, options);
             var result = await dialog.Result;
             // Reload only when the day dialog reports a check-in. View-only
             // closes skip the sync and full list fetch so exit stays cheap.
-            if (result is { Canceled: false, Data: true })
+            if (dayMutated || result is { Canceled: false, Data: true })
             {
-                _mutatedBelow = true;
+                MarkMutated();
                 await ReloadAfterMutationAsync();
                 await InvokeAsync(StateHasChanged);
             }

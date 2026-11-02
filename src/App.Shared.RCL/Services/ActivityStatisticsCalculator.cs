@@ -289,26 +289,28 @@ public static class ActivityStatisticsCalculator
         IUserTimeZoneService? timeZone = null,
         TimeSpan? dayStartLocalTime = null)
     {
-        var inRange = eventRowsInRange
-            .Where(e =>
-                e.BoardItemId is { } bid &&
-                dailyIds.Contains(bid) &&
-                (e.EventType == ActivityEventType.DailyComplete ||
-                 e.EventType == ActivityEventType.DailyUncomplete))
-            .ToList();
-
         var byItem = new Dictionary<Guid, Dictionary<DateOnly, int>>();
-        var netByItemDay = new Dictionary<(Guid id, DateOnly d), bool>();
-        foreach (var g in inRange.GroupBy(e =>
-                 (e.BoardItemId ?? Guid.Empty, DailySchedule.LocalDay(e.OccurredAtUtc, timeZone, dayStartLocalTime))))
+        var latestByItemDay = new Dictionary<(Guid id, DateOnly d), UserActivityEventRecord>();
+
+        foreach (var e in eventRowsInRange)
         {
-            var last = g.OrderBy(e => e.OccurredAtUtc).Last();
-            netByItemDay[g.Key] = last.EventType == ActivityEventType.DailyComplete;
+            if (e.BoardItemId is not { } bid ||
+                !dailyIds.Contains(bid) ||
+                (e.EventType != ActivityEventType.DailyComplete && e.EventType != ActivityEventType.DailyUncomplete))
+            {
+                continue;
+            }
+
+            var key = (bid, DailySchedule.LocalDay(e.OccurredAtUtc, timeZone, dayStartLocalTime));
+            if (!latestByItemDay.TryGetValue(key, out var existing) || e.OccurredAtUtc > existing.OccurredAtUtc)
+            {
+                latestByItemDay[key] = e;
+            }
         }
 
-        foreach (var ((id, d), isDone) in netByItemDay)
+        foreach (var ((id, d), last) in latestByItemDay)
         {
-            if (!isDone)
+            if (last.EventType != ActivityEventType.DailyComplete)
             {
                 continue;
             }

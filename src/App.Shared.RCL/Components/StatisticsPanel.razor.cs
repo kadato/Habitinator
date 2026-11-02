@@ -917,14 +917,16 @@ public partial class StatisticsPanel : IDisposable
     {
         var options = DialogDefaults.Wide;
         var filterTag = string.IsNullOrEmpty(_tagFilter) ? null : _tagFilter;
+        var mutated = false;
         var parameters = new DialogParameters<ActivityDayDetailDialog>
         {
             { x => x.Date, date },
-            { x => x.TagFilter, filterTag }
+            { x => x.TagFilter, filterTag },
+            { x => x.OnMutated, () => mutated = true }
         };
         var dialog = await DialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters, options);
         var result = await dialog.Result;
-        if (result is { Canceled: false, Data: true })
+        if (mutated || result is { Canceled: false, Data: true })
         {
             await RefreshAfterDialogAsync();
         }
@@ -932,14 +934,16 @@ public partial class StatisticsPanel : IDisposable
 
     private async Task OpenDailyHeatmapAsync(DailyContributionGraphDto daily)
     {
+        var mutated = false;
         var parameters = new DialogParameters<DailyHeatmapDialog>
         {
             { x => x.BoardItemId, daily.BoardItemId },
-            { x => x.Title, daily.Title }
+            { x => x.Title, daily.Title },
+            { x => x.OnMutated, () => mutated = true }
         };
         var dialog = await DialogService.ShowAsync<DailyHeatmapDialog>(string.Empty, parameters, DialogDefaults.Wide);
         var result = await dialog.Result;
-        if (result is { Canceled: false, Data: true })
+        if (mutated || result is { Canceled: false, Data: true })
         {
             await RefreshAfterDialogAsync();
         }
@@ -952,14 +956,16 @@ public partial class StatisticsPanel : IDisposable
             return;
         }
 
+        var mutated = false;
         var parameters = new DialogParameters<ActivityDayDetailDialog>
         {
             { x => x.Date, cell.Date },
-            { x => x.BoardItemId, daily.BoardItemId }
+            { x => x.BoardItemId, daily.BoardItemId },
+            { x => x.OnMutated, () => mutated = true }
         };
         var dialog = await DialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters, DialogDefaults.Wide);
         var result = await dialog.Result;
-        if (result is { Canceled: false, Data: true })
+        if (mutated || result is { Canceled: false, Data: true })
         {
             await RefreshAfterDialogAsync();
         }

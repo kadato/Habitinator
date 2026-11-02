@@ -13,7 +13,7 @@
 @inject IBoardSyncStatus BoardSync
 @implements IAsyncDisposable
 
-<MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content">
+<MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content" OnBackdropClick="CloseDialog">
     <DialogContent>
         <div class="hab-modal hab-modal--neutral hab-modal--wide hab-modal--day-details" data-dialog-label="Day details" aria-label="Day details" role="group">
             @if (BoardSync.IsOffline)
@@ -162,6 +162,7 @@
     [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
     [Parameter] [EditorRequired] public DateOnly Date { get; set; }
     [Parameter] public string? TagFilter { get; set; }
+    [Parameter] public Action? OnMutated { get; set; }
 
     private void LogFallback(Exception ex, string message) =>
         ServiceProvider.GetService<ILogger<ActivityDayDetailDialog>>()?.LogDebug(ex, "{Message}", message);
@@ -241,6 +242,12 @@
     {
         CloseDialog();
         return Task.CompletedTask;
+    }
+
+    private void MarkMutated()
+    {
+        _mutated = true;
+        OnMutated?.Invoke();
     }
 
     /// <summary>Closes the dialog and reports whether a check-in changed anything so parents can reload.</summary>
@@ -432,7 +439,7 @@
             var result = await BoardData.CompleteDailyForDateAsync(_dailyItem.Id, _shownDate);
             if (result is not null)
             {
-                _mutated = true;
+                MarkMutated();
                 await Notifier.NotifyAsync($"Marked done for {_shownDateLabel}.", MudBlazor.Severity.Success);
             }
             else
@@ -463,7 +470,7 @@
         try
         {
             await BoardData.ToggleItemAsync(BoardSection.Daily, _dailyItem.Id);
-            _mutated = true;
+            MarkMutated();
         }
         catch
         {
@@ -490,7 +497,7 @@
             var result = await BoardData.SkipDailyForDateAsync(_dailyItem.Id, _shownDate);
             if (result is not null)
             {
-                _mutated = true;
+                MarkMutated();
                 await Notifier.NotifyAsync($"Skipped {_shownDateLabel}. Streak continues.", MudBlazor.Severity.Success);
             }
             else

@@ -886,14 +886,25 @@ public partial class MainBoard : IAsyncDisposable
                 // Ignore error when saving daily retro status as it's non-critical local UI state
             }
 
-            await LoadBoardAsync();
-            await RefreshStreaksAsync();
-
             if (result is { Canceled: false, Data: List<Guid> committed } && committed.Count > 0)
             {
+                _lastLocalMutationTime = DateTimeOffset.UtcNow;
+                try
+                {
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    await BoardSyncRequestor.SyncNowAsync(cts.Token);
+                }
+                catch
+                {
+                    // Fall back to periodic sync if offline.
+                }
+
                 var label = committed.Count == 1 ? "1 daily" : $"{committed.Count} dailies";
                 await Notifier.NotifyAsync($"You logged {label} for yesterday.", Severity.Success);
             }
+
+            await LoadBoardAsync();
+            await RefreshStreaksAsync();
         }
         catch (Exception)
         {
@@ -919,6 +930,7 @@ public partial class MainBoard : IAsyncDisposable
 
             if (anyChanged)
             {
+                RecomputeFilters();
                 await InvokeAsync(StateHasChanged);
             }
         }

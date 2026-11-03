@@ -978,6 +978,7 @@ public sealed partial class LocalFirstBoardDataService
     {
         try
         {
+            remote.InvalidateStreaksCache();
             var stats = services.GetService<IActivityStatisticsReader>();
             if (stats != null)
             {

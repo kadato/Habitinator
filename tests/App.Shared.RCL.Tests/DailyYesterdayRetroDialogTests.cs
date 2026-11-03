@@ -23,6 +23,7 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
     private readonly IUserDateFormatService _dateFormatService = Substitute.For<IUserDateFormatService>();
     private readonly IBoardDataService _boardDataService = Substitute.For<IBoardDataService>();
     private readonly IUserNotifier _notifier = Substitute.For<IUserNotifier>();
+    private readonly App.Shared.RCL.Services.Board.Local.IBoardSyncRequestor _syncRequestor = Substitute.For<App.Shared.RCL.Services.Board.Local.IBoardSyncRequestor>();
 
     public DailyYesterdayRetroDialogTests()
     {
@@ -31,6 +32,7 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
         _ctx.Services.AddSingleton(_dateFormatService);
         _ctx.Services.AddSingleton(_boardDataService);
         _ctx.Services.AddSingleton(_notifier);
+        _ctx.Services.AddSingleton(_syncRequestor);
 
         _dateFormatService.Format(Arg.Any<DateOnly>()).Returns("2026-08-11");
         _ctx.Render<MudPopoverProvider>();
@@ -147,5 +149,82 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
         result.Should().NotBeNull();
         result.Canceled.Should().BeFalse();
         await _boardDataService.Received(1).CompleteDailyForDateAsync(daily1Id, yesterday);
+    }
+
+    [Fact]
+    public async Task Checking_Item_And_Saving_Drains_Board_Sync_When_Requestor_Available()
+    {
+        // Arrange
+        var daily1Id = Guid.NewGuid();
+        var daily1 = new BoardItem(daily1Id, "Stretch", false, 0);
+        var yesterday = new DateOnly(2026, 8, 11);
+
+        _boardDataService.CompleteDailyForDateAsync(daily1Id, yesterday)
+            .Returns(Task.FromResult<BoardItem?>(daily1 with { Counter = 1, DailyLastCompletedOn = yesterday }));
+
+        var provider = _ctx.Render<MudDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+        var parameters = new DialogParameters<DailyYesterdayRetroDialog>
+        {
+            { x => x.DueOn, yesterday },
+            { x => x.Items, new List<BoardItem> { daily1 } }
+        };
+
+        // Act
+        IDialogReference? dialogRef = null;
+        await provider.InvokeAsync(async () =>
+        {
+            dialogRef = await dialogService.ShowAsync<DailyYesterdayRetroDialog>(string.Empty, parameters);
+        });
+
+        var row = provider.Find(".daily-yesterday-row");
+        await provider.InvokeAsync(() => row.Click());
+
+        var saveBtn = provider.Find(".hab-modal__footer button");
+        await provider.InvokeAsync(() => saveBtn.Click());
+
+        var reference = dialogRef ?? throw new InvalidOperationException("DialogRef was null");
+        var result = await reference.Result;
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Canceled.Should().BeFalse();
+        await _syncRequestor.Received(1).SyncNowAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task No_Items_Checked_And_Saving_Does_Not_Drain_Board_Sync()
+    {
+        // Arrange
+        _syncRequestor.ClearReceivedCalls();
+        var daily1Id = Guid.NewGuid();
+        var daily1 = new BoardItem(daily1Id, "Stretch", false, 0);
+        var yesterday = new DateOnly(2026, 8, 11);
+
+        var provider = _ctx.Render<MudDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+        var parameters = new DialogParameters<DailyYesterdayRetroDialog>
+        {
+            { x => x.DueOn, yesterday },
+            { x => x.Items, new List<BoardItem> { daily1 } }
+        };
+
+        // Act
+        IDialogReference? dialogRef = null;
+        await provider.InvokeAsync(async () =>
+        {
+            dialogRef = await dialogService.ShowAsync<DailyYesterdayRetroDialog>(string.Empty, parameters);
+        });
+
+        var saveBtn = provider.Find(".hab-modal__footer button");
+        await provider.InvokeAsync(() => saveBtn.Click());
+
+        var reference = dialogRef ?? throw new InvalidOperationException("DialogRef was null");
+        var result = await reference.Result;
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Canceled.Should().BeTrue();
+        await _syncRequestor.DidNotReceive().SyncNowAsync(Arg.Any<CancellationToken>());
     }
 }

@@ -1,7 +1,10 @@
+@using Microsoft.Extensions.DependencyInjection
+@using App.Shared.RCL.Services.Board.Local
 @inject IUserDateFormatService DateFormatService
 @inject IBoardDataService BoardDataService
 @inject IUserNotifier Notifier
 @inject IJSRuntime JS
+@inject IServiceProvider ServiceProvider
 @implements IAsyncDisposable
 
 <MudDialog Class="hab-modal-dialog"
@@ -78,6 +81,7 @@
                            FullWidth="true"
                            Size="Size.Medium"
                            Class="hab-primary-btn"
+                           Disabled="_isCommitting"
                            OnClick="CloseAsync">
                     Save
                 </MudButton>
@@ -193,6 +197,25 @@
         }
     }
 
+    private async Task DrainBoardSyncAsync()
+    {
+        try
+        {
+            var sync = ServiceProvider.GetService<App.Shared.RCL.Services.Board.Local.IBoardSyncRequestor>();
+            if (sync is null)
+            {
+                return;
+            }
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            await sync.SyncNowAsync(cts.Token);
+        }
+        catch
+        {
+            // If offline or slow, the periodic sync delivers the change.
+        }
+    }
+
     private async Task CloseAsync()
     {
         if (_sessionEnded)
@@ -204,6 +227,7 @@
         await CommitCompletionsAsync();
         if (_committedIds.Count > 0)
         {
+            await DrainBoardSyncAsync();
             MudDialog.Close(DialogResult.Ok(_committedIds.ToList()));
         }
         else
@@ -233,6 +257,10 @@
 
         _sessionEnded = true;
         await CommitCompletionsAsync();
+        if (_committedIds.Count > 0)
+        {
+            await DrainBoardSyncAsync();
+        }
     }
 
     private static Dictionary<string, object> GetRowAria(bool isCompleted) => new()

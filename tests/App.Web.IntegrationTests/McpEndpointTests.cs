@@ -29,6 +29,16 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
     };
     private static readonly string[] MonWedFriWeekdays = ["Mon", "Wed", "Fri"];
     private static readonly string[] MonWedWeekdays = ["Mon", "Wed"];
+
+    private sealed record BatchCreateItemResult(
+        int Index,
+        bool Ok,
+        Guid? Id,
+        BoardItem? Item,
+        string? Field,
+        string? Error,
+        string? Message,
+        bool DryRun);
     [Fact]
     public async Task Mcp_WithoutToken_ReturnsUnauthorized()
     {
@@ -623,7 +633,7 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
         var json = TestJson;
         var stamp = Guid.NewGuid().ToString("N")[..8];
 
-        var created = JsonSerializer.Deserialize<BoardItem[]>(
+        var results = JsonSerializer.Deserialize<BatchCreateItemResult[]>(
             await CallTextAsync(mcp, "batch_create_items", new()
             {
                 ["items"] = new object[]
@@ -634,7 +644,9 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
                 }
             }), json)!;
 
-        created.Should().HaveCount(3);
+        results.Should().HaveCount(3);
+        results.All(r => r.Ok).Should().BeTrue();
+        var created = results.Select(r => r.Item!).ToList();
         created.Select(i => i.Title).Should().Contain($"Batch todo 1 {stamp}");
         created.Select(i => i.Title).Should().Contain($"Batch todo 2 {stamp}");
         created.First(i => i.Title == $"Batch daily {stamp}").DailyRepeat.Should().Be(DailyRepeatType.Weekly);

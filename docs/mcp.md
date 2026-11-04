@@ -2,21 +2,17 @@
 
 The server card lives at `/.well-known/mcp/server-card.json`. The capability catalog lives at `/.well-known/ai-catalog.json`. The agent skill lives at `/.well-known/agent-skills/habitinator/SKILL.md`. The auth guide lives at `/auth.md`. `Link` headers, `/.well-known/api-catalog`, and `llms.txt` advertise all four.
 
-The MCP endpoint is `POST /mcp`. It uses Streamable HTTP in stateless mode. The endpoint needs the `BoardOrJwt` policy and sits behind the `mcp` rate limit window. Reads use `{user}:read`, with 1000 requests per minute in development and test environments, and 600 requests per minute sliding window in production. `delete_item`, `delete_tag`, and `import_data` match on the `Mcp-Name` routable header and use `{user}:write`. Their rate limit is 100 requests per minute in development and test environments, and 60 requests per minute in production. The read window stays wider than the 300 requests per minute `api` window so MCP polling does not starve REST.
-
-The server version is synced from the assembly version, not a hardcoded string.
+The MCP endpoint is `POST /mcp`. It uses Streamable HTTP in stateless mode. Reads allow 1000 requests per minute in development and test environments, and 600 per minute in production. `delete_item`, `delete_tag`, and `import_data` allow 100 per minute in development and test environments, and 60 per minute in production.
 
 ## Authentication
 
 The MCP endpoint supports two authentication methods:
-1. **OAuth 2.1 (Zero manual keys - Recommended):** Modern MCP clients (Claude Desktop, Cursor, VS Code, OpenCode) negotiate access via standard discovery (RFC 9728 at `/.well-known/oauth-protected-resource` and RFC 8414 at `/.well-known/oauth-authorization-server`) and the authorization code flow with PKCE (RFC 7636). When you connect, your client opens a browser window for one-click approval. No manual API keys or secrets in config files!
+1. **OAuth 2.1 (Recommended):** Modern MCP clients negotiate access via standard discovery (RFC 9728 at `/.well-known/oauth-protected-resource` and RFC 8414 at `/.well-known/oauth-authorization-server`) and the authorization code flow with PKCE (RFC 7636). When you connect, the client opens your browser to approve access. No secrets go in config files.
 2. **Personal Bearer Tokens:** Long-lived tokens minted in the Settings panel or `/api/account/mcp-token` for scripts, headless environments, and terminal use.
 
 Without authentication, the server returns 401 with a `WWW-Authenticate` header pointing to the RFC 9728 protected resource metadata so clients can automatically initiate OAuth.
 
 ### Zero-key client setup (OAuth 2.1)
-
-With OAuth 2.1, your client configuration requires zero secrets:
 
 Claude Desktop, Cursor, and VS Code:
 
@@ -60,11 +56,9 @@ opencode mcp add habitinator --url https://habitinator.app/mcp
 
 ### Connect with personal tokens
 
-Tokens are minted in the Settings panel under Settings, AI assistant, External AI access (MCP). Tokens support three scopes. `full` gives complete access. `tracking_only` gives read tools, habit and daily completion, and timer logging. `read_only` gives read tools, prompts, and resources. The panel tests each token and copies the client config with the token filled in. The panel lists issued tokens with their scope, expiry dates, and last active timestamps, and revokes one token or all tokens. Revocation takes effect immediately. auth.md documents the same flow for the terminal.
+Tokens are minted in the Settings panel under Settings, AI assistant, External AI access (MCP). Tokens support three scopes. `full` gives complete access. `tracking_only` gives read tools, habit and daily completion, and timer logging. `read_only` gives read tools, prompts, and resources. The panel tests each token and copies the client config with the token filled in. The panel lists and revokes tokens. Revocation takes effect immediately.
 
 ### Client configs
-
-Claude Desktop, Cursor, and VS Code read `mcpServers` with a `url` plus an `Authorization` header. OpenCode reads `mcp.servers` with `type: remote` and `oauth: false`. Hermes reads `mcp_servers` in `config.yaml`.
 
 OpenCode `opencode.jsonc`:
 
@@ -101,7 +95,7 @@ mcp_servers:
     enabled: true
 ```
 
-Claude Desktop, Cursor, and VS Code use `mcpServers` with `url` plus an `Authorization` header. The Settings panel shows the exact snippet with your token filled in.
+The Settings panel shows the exact snippet with your token filled in.
 
 ### Token minting from the terminal
 
@@ -127,43 +121,55 @@ curl -s -X POST $BASE/mcp \
 	-d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
 
+### Headless approval without pasted secrets (device flow)
+
+Terminal agents that cannot open a browser use the OAuth device authorization grant (RFC 8628). The agent calls `POST /oauth/device/authorize` with its `client_id` and shows you the `verification_uri` and the short `user_code`. You approve once in your browser. The agent polls `POST /oauth/token` with `grant_type` `urn:ietf:params:oauth:grant-type:device_code` until it holds an `access_token` and a `refresh_token`. The [auth guide](https://habitinator.app/auth.md) documents the full flow.
+
 ## Call order
 
-Mutations accept either an `itemId` GUID or a `title` query string. When `itemId` is omitted, the server resolves the item by matching title. The resolver accepts an exact match or a unique prefix, and returns candidate guidance when multiple items match. `get_snapshot` and `search_items` return all IDs. `habit_plus` and `habit_minus` move habits. `daily_complete_for_date` completes past dailies. `toggle_item` flips dailies and todos for today. `batch_toggle_items` toggles multiple items in one call. Past daily completion is append-only, and no tool reverses a past daily completion. `delete_item` and `import_data` ask for elicitation confirmation through `InputRequired` with `confirm_delete` and `confirm_import`. To confirm the action without elicitation, pass `confirmToken` set to the item ID or `CONFIRM`. On sessions without MRTR support, the server fails with `InvalidParams` and returns the same retry guidance.
+Mutations accept either an `itemId` GUID or a `title` query string. When `itemId` is omitted, the server resolves the item by matching title. The resolver accepts an exact match or a unique prefix, and returns candidate guidance when multiple items match. `get_snapshot` and `search_items` return all IDs. Past daily completion is append-only, and no tool reverses a past daily completion.
+
+`create_item` and `batch_create_items` warn on near-duplicate titles: when an active item in the same section closely matches the new title, the call fails with `Similar item exists: '<title>' (id: ...)`. Retry with `allowDuplicate: true` to create anyway. For reliable retries, pass `idempotencyKey`. Reusing a key with identical fields returns the original item instead of a duplicate. Reposting a batch with the same key creates its items exactly once. Reusing a key with different fields fails and tells you to use a new key. To validate without executing, pass `dryRun: true`.
+
+`delete_item` and `import_data` ask for elicitation confirmation through `InputRequired` with `confirm_delete` and `confirm_import`. To confirm the action without elicitation, pass `confirmToken` set to the item ID or `CONFIRM`. On sessions without MRTR support, the server fails with `InvalidParams` and returns the same retry guidance. The elicitation message names the `confirmToken` retry.
 
 ## Formats
 
-Dates accept `yyyy-MM-dd` and relative keywords `today`, `yesterday`, and `tomorrow`. Times look like `HH:mm` and stay within one day. Weekdays can be passed as bitmasks or weekday name arrays, such as `["Mon", "Wed", "Fri"]` or `["Monday", "Wednesday", "Friday"]`. The server rejects bad values and out-of-range counters, intervals, and weekdays with `InvalidParams`. It never clamps them. A retry with fixed values succeeds. `log_activity` and `log_timer_session` accept an optional `eventId`. To prevent duplicate logs on retry, reuse the same `eventId`.
+Dates accept `yyyy-MM-dd` and relative keywords `today`, `yesterday`, and `tomorrow`. Times look like `HH:mm` and stay within one day. Weekdays can be passed as bitmasks or weekday name arrays, such as `["Mon", "Wed", "Fri"]` or `["Monday", "Wednesday", "Friday"]`. Tags accept a comma-separated string or a native array of strings: `"work,urgent"` and `["work", "urgent"]` store the same value, up to 500 chars. Checklist fields (`checklistJson`, and `json` on `set_checklist`) accept a JSON string or a native array of `{text, isDone}` objects, up to 8000 chars. The server rejects bad values with `InvalidParams` that names the field, states the expected format, and quotes the received value. It never clamps them. Fix the input and retry. `log_activity` and `log_timer_session` accept an optional `eventId`. To prevent duplicate logs on retry, reuse the same `eventId`.
 
 ## Tools
 
-The board tools are `get_snapshot`, `get_board_summary`, `get_item`, `get_archived`, `get_sync_delta`, `get_streaks`, `list_tags`, `search_items`, `reorder_item`, `create_item`, `batch_create_items`, `rename_item`, `toggle_item`, `batch_toggle_items`, `archive_item`, `bulk_archive`, `unarchive_item`, `bulk_unarchive`, `rename_tag`, `delete_tag`, and `delete_item`.
+The board tools are `get_snapshot`, `get_board_summary`, `get_item`, `get_archived`, `get_sync_delta`, `get_streaks`, `list_tags`, `search_items`, `reorder_item`, `create_item`, `batch_create_items`, `get_due_digest`, `rename_item`, `toggle_item`, `batch_toggle_items`, `archive_item`, `bulk_archive`, `unarchive_item`, `bulk_unarchive`, `rename_tag`, `delete_tag`, and `delete_item`.
 
-`get_snapshot` reads the board mirror of habits, dailies, and todos. It accepts an optional `limit` and an optional `format`, which defaults to `json` or can be set to `markdown`.
+`get_snapshot` reads the board mirror of habits, dailies, and todos. It accepts an optional `limit` and `format`, which defaults to `json` or can be set to `markdown`.
 
-`get_board_summary` returns an overview of active habits, today's completed and pending dailies, active and overdue todos, and streak totals. It accepts an optional `tag` filter and an optional `format`, which defaults to `markdown` or can be set to `json`. Calling `get_board_summary` before the full snapshot saves context tokens.
+`get_board_summary` returns an overview of active habits, today's completed and pending dailies, active and overdue todos, and streak totals. It accepts an optional `tag` filter and `format`, which defaults to `markdown` or can be set to `json`. Calling `get_board_summary` before the full snapshot saves context tokens.
 
-`create_item` takes `section` and `title`. It also takes optional `notes`, `tags`, `date`, `checklistJson`, `repeat`, `repeatInterval`, `weekdays`, `weekdayNames`, `resetPeriod`, `trackPlus`, `trackMinus`, `counter`, and `negativeCounter`. For Daily items, the date sets the start date. For Todo items, the date sets the due date. For Habit items, omit the date. The checklist can be set at creation time. Creation is atomic through `CreateItemDetailedAsync` without a second update.
+`create_item` takes `section` and `title`. It also takes optional `notes`, `tags`, `date`, `checklistJson`, `repeat`, `repeatInterval`, `weekdays`, `weekdayNames`, `resetPeriod`, `trackPlus`, `trackMinus`, `counter`, `negativeCounter`, `idempotencyKey`, `dryRun`, and `allowDuplicate`. For Daily items, the date sets the start date. For Todo items, the date sets the due date. For Habit items, omit the date.
 
-`batch_create_items` creates multiple board items across sections in a single call. It accepts `items`, which is an array of objects matching the `create_item` parameters, and returns the array of created items.
+`batch_create_items` creates multiple board items across sections in a single call. It accepts `items` plus an optional batch `idempotencyKey` and `dryRun`. It returns one per-item result per input: `{index, ok, id, item}` for created items and `{index, ok: false, field, error, message}` for failed ones. Valid items persist even when siblings fail, so a retry only needs to fix the failed entries. Reposting the same batch with the same key creates items exactly once. Keep item order stable across retries or pass explicit per-item keys.
 
-The `section` parameter is optional on all ID-targeted tools and checklist tools. When omitted, the server resolves the item's section from the database.
+`get_due_digest` returns overdue, due-today, and due-tomorrow todos with a `total` count. Each item appears at most once. It accepts optional `snoozedIds` to exclude snoozed items.
 
-`bulk_archive` and `bulk_unarchive` archive and restore multiple items in a single database update. When archiving more than 5 items, `bulk_archive` asks for confirmation through `InputRequired` or requires `confirmToken` set to `CONFIRM`.
+The `section` parameter is optional on all ID-targeted tools and checklist tools. When omitted, the server resolves the section.
 
-`rename_tag` and `delete_tag` update tags across all active items for the user, removing or replacing tags without altering unrelated tags.
+`bulk_archive` and `bulk_unarchive` archive and restore multiple items. When archiving more than 5 items, `bulk_archive` asks for confirmation through `InputRequired` or requires `confirmToken` set to `CONFIRM`.
 
-`search_items` filters by `query`, `tag`, `section`, `limit`, `includeArchived`, and `format`. `includeArchived` defaults to `false`. `format` defaults to `json` or accepts `markdown`. The limit runs from 1 to 200 and defaults to 50. In SQL, it filters with pattern matching before taking rows. In memory, it validates exact tag boundaries with `BoardTagUtil.ParseTags`.
+`delete_item` takes `itemId`, optional `section`, and optional `confirmToken`. The first call without `confirmToken` fails with `InvalidParams` or asks for elicitation where supported. It tells you the exact retry: pass `confirmToken` set to the item id string. `bulk_archive` of more than 5 items and `import_data` follow the same pattern with `confirmToken` set to `CONFIRM`. Always retry with the stated token rather than re-asking the user.
 
-`list_tags` queries distinct tags directly with `GetDistinctTagsAsync` without reading the board snapshot or streaks.
+`rename_tag` and `delete_tag` update tags across all active items.
 
-`reorder_item` reads the current section list, clamps the target position, computes the midpoint sort order, and saves. It reads directly from the database without a cached snapshot. If the item is missing, it throws `InvalidParams`.
+`search_items` filters by `query`, `tag`, `section`, `limit`, `includeArchived`, and `format`. `includeArchived` defaults to `false`. `format` defaults to `json` or accepts `markdown`. The limit runs from 1 to 200 and defaults to 50.
+
+`list_tags` returns distinct tags.
+
+`reorder_item` moves an item to a position. A missing item throws `InvalidParams`.
 
 If an item is missing, `get_item`, `rename_item`, `toggle_item`, `archive_item`, `unarchive_item`, `update_daily`, `update_todo`, `update_habit`, `habit_plus`, `habit_minus`, `daily_complete_for_date`, `daily_skip_for_date`, and `get_checklist` throw `InvalidParams`. Version conflicts throw `InvalidRequest`.
 
 The checklist tools are `get_checklist`, `add_checklist_item`, `set_checklist_item_done`, `remove_checklist_item`, and `set_checklist`. The daily tools are `daily_complete_for_date`, `daily_skip_for_date`, and `update_daily`. The habit tools are `habit_plus`, `habit_minus`, and `update_habit`. The todo tool is `update_todo`.
 
-The activity tools are `get_overview`, `get_dashboard`, `get_daily_contributions`, `get_habit_contributions`, `get_day_detail`, `list_activity_events`, and `log_activity`. The timer tools are `log_timer_session` and `get_timer_summary`. The data tools are `export_data` and `import_data`. Import JSON must stay under 10 MB. The settings tools are `get_preferences`, `put_preferences`, `set_preferences_json`, `get_notification_settings`, `put_notification_settings`, and `set_notification_settings_json`. The server rejects bad `HH:mm` values and out-of-range pomodoro numbers with `InvalidParams`. It never ignores them.
+The activity tools are `get_overview`, `get_dashboard`, `get_daily_contributions`, `get_habit_contributions`, `get_day_detail`, `list_activity_events`, and `log_activity`. The timer tools are `log_timer_session` and `get_timer_summary`. The data tools are `export_data` and `import_data`. Import JSON must stay under 10 MB. The settings tools are `get_preferences`, `put_preferences`, `set_preferences_json`, `get_notification_settings`, `put_notification_settings`, and `set_notification_settings_json`. The server rejects bad `HH:mm` values and out-of-range pomodoro numbers with `InvalidParams`.
 
 Read-only tools carry the `ReadOnly` flag: `get_*`, `list_*`, `search_*`. `delete_item`, `delete_tag`, and `import_data` carry `Destructive`. Repeatable updates carry `Idempotent`. That group is `update_*`, `put_*`, `set_*`, `reorder_item`, `set_checklist_item_done`, `set_checklist`, `bulk_archive`, `bulk_unarchive`, `rename_tag`, `log_activity`, and `log_timer_session`. The `log_*` tools count as repeatable only with a reused `eventId`.
 
@@ -172,7 +178,7 @@ Read-only tools carry the `ReadOnly` flag: `get_*`, `list_*`, `search_*`. `delet
 The prompts are `plan_day`, `review_week`, `habit_coach`, `daily_standup`, `evening_review`, `backlog_triage`, `break_down_todo`, `streak_recovery`, and `weekly_retro`.
 - `plan_day` takes optional `date` and `tag`. A bad date fails with `InvalidParams`. The tag filter applies to dailies and todos with an exact case-insensitive match before the 30-row preview.
 - `review_week` takes `period` and `tag`.
-- `habit_coach` takes `habitId`. A bad id throws `InvalidParams`, and a missing habit throws `InvalidParams`.
+- `habit_coach` takes `habitId`. A bad or missing id throws `InvalidParams`.
 - `daily_standup` takes optional `date` and `tag`. Summarizes yesterday activity, today pending dailies, active habits, and pending todos to recommend focus areas.
 - `evening_review` takes optional `date`. Reviews what was completed today, habit consistency, and unfinished dailies.
 - `backlog_triage` takes optional `tag`. Analyzes overdue todos, untagged items, and items ready for archive.
@@ -182,7 +188,7 @@ The prompts are `plan_day`, `review_week`, `habit_coach`, `daily_standup`, `even
 
 Argument completions suggest valid values for prompts and resource templates. They provide tags for `plan_day`, `review_week`, `daily_standup`, `backlog_triage`, and `weekly_retro`. They suggest periods for `review_week` and `weekly_retro`. They suggest habit IDs for `habit_coach`, todo IDs for `break_down_todo`, and daily IDs for `streak_recovery`. They provide item IDs for `board://item/{id}` and `board://item/{id}.md`. For date parameters, they suggest yesterday, today, and tomorrow. For `activity://day/{date}`, they provide recent date strings.
 
-When the client passes a progress token, the long tools `get_snapshot`, `get_sync_delta`, `search_items`, `export_data`, and `import_data` send progress notifications. Mutations send best effort `board://snapshot` and `board://item/{id}` resource notifications. Because stateless HTTP has no push channel, only stateful clients receive them. SignalR fans out updates to the web UI.
+When the client passes a progress token, `get_snapshot`, `get_sync_delta`, `search_items`, `export_data`, and `import_data` send progress notifications.
 
 ## Resources
 
@@ -203,10 +209,66 @@ The resources are:
 
 ## Developer tooling
 
-To test the endpoint with the official `@modelcontextprotocol/inspector` against a local or remote Habitinator instance, run `scripts/mcp-inspector.sh`:
+To test the endpoint with the official `@modelcontextprotocol/inspector`, run `scripts/mcp-inspector.sh`:
 
 ```bash
 ./scripts/mcp-inspector.sh
 ```
 
-Tests in `tests/App.Web.IntegrationTests/McpEndpointTests.cs` assert the tools, prompts, resources, completions, and token endpoints.
+Tests in `tests/App.Web.IntegrationTests/McpEndpointTests.cs` cover the tools, prompts, resources, completions, and token endpoints.
+
+## Tool schemas (machine-checked)
+
+The markers below are the machine-readable tool parameter schemas. `McpSchemaConformanceTests` parses them and fails the build when a tool signature drifts from this file. `required(...)` lists parameters without defaults, `optional(...)` lists parameters with defaults. `McpServer`, `RequestContext`, and `CancellationToken` parameters are excluded.
+
+<!-- mcp-tool-schema: get_board_summary required() optional(format,tag) -->
+<!-- mcp-tool-schema: get_snapshot required() optional(limit,format) -->
+<!-- mcp-tool-schema: get_item required() optional(itemId,title,section) -->
+<!-- mcp-tool-schema: get_archived required() optional(limit) -->
+<!-- mcp-tool-schema: get_sync_delta required(cursor) optional(limit) -->
+<!-- mcp-tool-schema: get_streaks required() optional() -->
+<!-- mcp-tool-schema: search_items required() optional(query,tag,section,limit,includeArchived,format) -->
+<!-- mcp-tool-schema: list_tags required() optional() -->
+<!-- mcp-tool-schema: reorder_item required(itemId,position) optional(section) -->
+<!-- mcp-tool-schema: create_item required(section,title) optional(notes,tags,date,checklistJson,repeat,repeatInterval,weekdays,weekdayNames,resetPeriod,trackPlus,trackMinus,counter,negativeCounter,idempotencyKey,dryRun,allowDuplicate) -->
+<!-- mcp-tool-schema: batch_create_items required(items) optional(idempotencyKey,dryRun) -->
+<!-- mcp-tool-schema: get_due_digest required() optional(snoozedIds) -->
+<!-- mcp-tool-schema: rename_item required(itemId,title) optional(section) -->
+<!-- mcp-tool-schema: toggle_item required() optional(itemId,title,section) -->
+<!-- mcp-tool-schema: batch_toggle_items required(itemIds) optional(section) -->
+<!-- mcp-tool-schema: archive_item required() optional(itemId,title,section) -->
+<!-- mcp-tool-schema: bulk_archive required(itemIds) optional(section,confirmToken) -->
+<!-- mcp-tool-schema: unarchive_item required() optional(itemId,title,section) -->
+<!-- mcp-tool-schema: bulk_unarchive required(itemIds) optional(section) -->
+<!-- mcp-tool-schema: rename_tag required(oldTag,newTag) optional() -->
+<!-- mcp-tool-schema: delete_tag required(tag) optional() -->
+<!-- mcp-tool-schema: delete_item required(itemId) optional(section,confirmToken) -->
+<!-- mcp-tool-schema: get_checklist required(itemId) optional(section) -->
+<!-- mcp-tool-schema: add_checklist_item required(itemId,text) optional(section) -->
+<!-- mcp-tool-schema: set_checklist_item_done required(itemId,checklistItemId,done) optional(section) -->
+<!-- mcp-tool-schema: remove_checklist_item required(itemId,checklistItemId) optional(section) -->
+<!-- mcp-tool-schema: set_checklist required(itemId,json) optional(section) -->
+<!-- mcp-tool-schema: daily_complete_for_date required(date) optional(itemId,title) -->
+<!-- mcp-tool-schema: daily_skip_for_date required(date) optional(itemId,title) -->
+<!-- mcp-tool-schema: update_daily required(itemId) optional(title,notes,tags,startDate,repeat,repeatInterval,counter,weekdays,weekdayNames,checklistJson,sortOrder) -->
+<!-- mcp-tool-schema: habit_plus required() optional(itemId,title) -->
+<!-- mcp-tool-schema: habit_minus required() optional(itemId,title) -->
+<!-- mcp-tool-schema: update_habit required(itemId) optional(title,notes,tags,trackPlus,trackMinus,resetPeriod,counter,negativeCounter,checklistJson,sortOrder) -->
+<!-- mcp-tool-schema: update_todo required(itemId) optional(title,notes,tags,dueDate,checklistJson,sortOrder) -->
+<!-- mcp-tool-schema: get_overview required() optional(period,tag) -->
+<!-- mcp-tool-schema: get_dashboard required() optional(period,tag) -->
+<!-- mcp-tool-schema: get_daily_contributions required() optional(period,tag) -->
+<!-- mcp-tool-schema: get_habit_contributions required() optional(period,tag) -->
+<!-- mcp-tool-schema: get_day_detail required(date) optional(tag) -->
+<!-- mcp-tool-schema: list_activity_events required(startDate,endDate) optional(eventType,boardItemId,limit) -->
+<!-- mcp-tool-schema: log_activity required(eventType) optional(boardItemId,customLabel,eventId) -->
+<!-- mcp-tool-schema: get_timer_summary required() optional(date) -->
+<!-- mcp-tool-schema: log_timer_session required(durationSeconds) optional(boardItemId,customLabel,eventId) -->
+<!-- mcp-tool-schema: export_data required() optional() -->
+<!-- mcp-tool-schema: import_data required(json) optional(confirmToken) -->
+<!-- mcp-tool-schema: get_preferences required() optional() -->
+<!-- mcp-tool-schema: put_preferences required() optional(dateFormat,dayStartLocalTime,timeZoneOverrideId,displayName,theme,pomodoroWorkMinutes,pomodoroShortBreakMinutes,pomodoroLongBreakMinutes,pomodoroCyclesBeforeLongBreak,enableKeyboardShortcuts) -->
+<!-- mcp-tool-schema: set_preferences_json required(json) optional() -->
+<!-- mcp-tool-schema: get_notification_settings required() optional() -->
+<!-- mcp-tool-schema: put_notification_settings required() optional(inAppMessagesEnabled,showSuccessToasts,showWarningToasts,showErrorToasts,toastDuration,dailyReminderEnabled,dailyReminderTime,focusTimerAlertsEnabled,syncFailureAlertsEnabled,soundEnabled,quietHoursEnabled,quietHoursStartUtc,quietHoursEndUtc) -->
+<!-- mcp-tool-schema: set_notification_settings_json required(json) optional() -->

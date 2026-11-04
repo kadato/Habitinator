@@ -31,8 +31,15 @@ public partial class BoardColumn : IAsyncDisposable
     private string _draft = string.Empty;
     private bool _draftError;
     private bool _isAdding;
+    private string? _duplicateExistingTitle;
+    private bool _duplicateConfirmed;
 
-    private void ClearDraftError() => _draftError = false;
+    private void ClearDraftError()
+    {
+        _draftError = false;
+        _duplicateExistingTitle = null;
+        _duplicateConfirmed = false;
+    }
 
     private HabitListFilter _habitFilter;
     private DailyListFilter _dailyFilter = DailyListFilter.Due;
@@ -674,6 +681,18 @@ public partial class BoardColumn : IAsyncDisposable
         {
             _draftError = false;
             var title = _draft.Trim();
+            if (!_duplicateConfirmed)
+            {
+                var existing = Items.FirstOrDefault(i => BoardTitleSimilarity.IsSimilar(i.Title, title));
+                if (existing is not null)
+                {
+                    _duplicateExistingTitle = existing.Title;
+                    return;
+                }
+            }
+
+            _duplicateExistingTitle = null;
+            _duplicateConfirmed = false;
             var newId = Guid.NewGuid();
             BoardItem tempItem = new(
                 Id: newId,
@@ -689,6 +708,19 @@ public partial class BoardColumn : IAsyncDisposable
         {
             _isAdding = false;
         }
+    }
+
+    private async Task CreateDuplicateAnywayAsync()
+    {
+        _duplicateConfirmed = true;
+        _duplicateExistingTitle = null;
+        await AddFromDraftAsync();
+    }
+
+    private void CancelDuplicate()
+    {
+        _duplicateExistingTitle = null;
+        _duplicateConfirmed = false;
     }
 
     private Task HabitUpAsync(BoardItem item)

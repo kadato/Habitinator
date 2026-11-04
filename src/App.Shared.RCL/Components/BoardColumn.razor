@@ -131,6 +131,27 @@
                           Error="@_draftError"
                           ErrorText="Add a title first."
                           Immediate="true"/>
+            @if (_duplicateExistingTitle is not null)
+            {
+                <div class="board-duplicate-warning mt-1">
+                    <MudText Typo="Typo.caption">Similar item exists: '@_duplicateExistingTitle'. Create anyway?</MudText>
+                    <div class="d-flex gap-2 mt-1">
+                        <MudButton Size="Size.Small"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Class="text-transform-none"
+                                   OnClick="CreateDuplicateAnywayAsync">
+                            Create anyway
+                        </MudButton>
+                        <MudButton Size="Size.Small"
+                                   Variant="Variant.Text"
+                                   Class="text-transform-none"
+                                   OnClick="CancelDuplicate">
+                            Cancel
+                        </MudButton>
+                    </div>
+                </div>
+            }
         </div>
 
         <div class="board-list mt-2">

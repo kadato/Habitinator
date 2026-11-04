@@ -1270,6 +1270,7 @@ public sealed class BoardPersistenceService(
         CancellationToken cancellationToken = default)
         => SearchItemsAsync(userId, query, tag, section, limit, false, cancellationToken);
 
+
     public async Task<IReadOnlyList<BoardItem>> SearchItemsAsync(
         Guid userId,
         string? query,
@@ -1327,6 +1328,74 @@ public sealed class BoardPersistenceService(
             ? EmptyDailyStreaks
             : await streakCalculator.BuildDailyStreakMapAsync(userId, dailies, today, dayStart, readDb, cancellationToken);
         return entities.Select(e => ToModelWithToday(e, today, streaks)).ToList();
+    }
+
+    /// <summary>
+    /// Finds active items whose title closely matches <paramref name="title"/>.
+    /// Used to warn before creating duplicates.
+    /// Numbered series such as "Batch 1" and "Batch 2" never match.
+    /// </summary>
+    public async Task<IReadOnlyList<(Guid Id, string Title)>> FindSimilarActiveTitlesAsync(
+        Guid userId,
+        BoardSection section,
+        string title,
+        int limit = 3,
+        CancellationToken cancellationToken = default)
+    {
+        var wanted = NormalizeTitle(title);
+        if (wanted.Length == 0)
+        {
+            return [];
+        }
+
+        await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var candidates = await LiveBoardItems(readDb, userId).AsNoTracking()
+            .Where(x => x.Section == section)
+            .Select(x => new { x.Id, x.Title })
+            .ToListAsync(cancellationToken);
+
+        var matches = new List<(Guid Id, string Title, int Rank)>();
+        foreach (var candidate in candidates)
+        {
+            var normalized = NormalizeTitle(candidate.Title);
+            if (normalized.Length == 0)
+            {
+                continue;
+            }
+
+            if (string.Equals(normalized, wanted, StringComparison.Ordinal))
+            {
+                matches.Add((candidate.Id, candidate.Title, 0));
+            }
+            else if (wanted.Length >= 8 && normalized.Length >= 8
+                && (normalized.Contains(wanted, StringComparison.Ordinal)
+                    || wanted.Contains(normalized, StringComparison.Ordinal)))
+            {
+                matches.Add((candidate.Id, candidate.Title, 1));
+            }
+        }
+
+        return [.. matches
+            .OrderBy(m => m.Rank)
+            .ThenBy(m => m.Title, StringComparer.Ordinal)
+            .Take(Math.Clamp(limit, 1, 10))
+            .Select(m => (m.Id, m.Title))];
+    }
+
+    private static string NormalizeTitle(string title)
+    {
+        var collapsed = string.Join(" ", title.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToLowerInvariant();
+        var decomposed = collapsed.Normalize(System.Text.NormalizationForm.FormD);
+        var builder = new System.Text.StringBuilder(decomposed.Length);
+        foreach (var rune in decomposed.EnumerateRunes())
+        {
+            if (System.Text.Rune.GetUnicodeCategory(rune) != System.Globalization.UnicodeCategory.NonSpacingMark)
+            {
+                builder.Append(rune);
+            }
+        }
+
+        return builder.ToString().Normalize(System.Text.NormalizationForm.FormC);
     }
 
     public async Task<int> RenameTagAsync(

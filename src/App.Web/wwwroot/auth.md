@@ -23,9 +23,9 @@ For interactive clients (Claude Desktop, Cursor, VS Code, OpenCode):
 Terminal agents that cannot open a browser use the device flow:
 
 1. The agent calls `POST /oauth/device/authorize` with `{"client_id":"opencode","scope":"full"}` and shows you the `verification_uri` plus the `user_code` (for example `ABCD-EFGH`).
-2. You open the URI in your browser, sign in, enter the code, and approve once.
+2. You open the URI in your browser, sign in, enter the code, and approve once. Codes expire in 10 minutes. Each code works once. The server binds each code to the requesting `client_id`.
 3. The agent polls `POST /oauth/token` with `{"grant_type":"urn:ietf:params:oauth:grant-type:device_code","device_code":"...","client_id":"opencode"}` every `interval` seconds. While you have not approved, the server answers `authorization_pending`.
-4. The agent calls MCP with `Authorization: Bearer <access_token>` and rotates via the `refresh_token` grant.
+4. The agent calls MCP with `Authorization: Bearer <access_token>` and rotates via the `refresh_token` grant. Refresh tokens rotate on use.
 
 ```bash
 curl -s -X POST https://habitinator.app/oauth/device/authorize \

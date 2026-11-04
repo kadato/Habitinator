@@ -123,19 +123,19 @@ curl -s -X POST $BASE/mcp \
 
 ### Headless approval without pasted secrets (device flow)
 
-Terminal agents that cannot open a browser use the OAuth device authorization grant (RFC 8628). The agent calls `POST /oauth/device/authorize` with its `client_id` and shows you the `verification_uri` and the short `user_code`. You approve once in your browser. The agent polls `POST /oauth/token` with `grant_type` `urn:ietf:params:oauth:grant-type:device_code` until it holds an `access_token` and a `refresh_token`. The [auth guide](https://habitinator.app/auth.md) documents the full flow.
+Terminal agents that cannot open a browser use the OAuth device authorization grant (RFC 8628). The agent calls `POST /oauth/device/authorize` with its `client_id` and shows you the `verification_uri` and the short `user_code`. You approve once in your browser. The agent polls `POST /oauth/token` with `grant_type` `urn:ietf:params:oauth:grant-type:device_code` until it holds an `access_token` and a `refresh_token`. Device codes expire in 10 minutes. Each code works once. The server binds each code to the requesting `client_id`. Refresh tokens rotate on use. The [auth guide](https://habitinator.app/auth.md) documents the full flow.
 
 ## Call order
 
 Mutations accept either an `itemId` GUID or a `title` query string. When `itemId` is omitted, the server resolves the item by matching title. The resolver accepts an exact match or a unique prefix, and returns candidate guidance when multiple items match. `get_snapshot` and `search_items` return all IDs. Past daily completion is append-only, and no tool reverses a past daily completion.
 
-`create_item` and `batch_create_items` warn on near-duplicate titles: when an active item in the same section closely matches the new title, the call fails with `Similar item exists: '<title>' (id: ...)`. Retry with `allowDuplicate: true` to create anyway. For reliable retries, pass `idempotencyKey`. Reusing a key with identical fields returns the original item instead of a duplicate. Reposting a batch with the same key creates its items exactly once. Reusing a key with different fields fails and tells you to use a new key. To validate without executing, pass `dryRun: true`.
+`create_item` and `batch_create_items` warn on near-duplicate titles. The check compares items in the same section. It ignores case and accents. A contains match or a trigram score at or above 0.8 triggers the warning. The call fails with `Similar item exists: '<title>' (id: ...)`. Retry with `force: true` to create anyway. `allowDuplicate: true` still works. For reliable retries, pass `idempotencyKey`. Reusing a key with identical fields returns the original item instead of a duplicate. Reposting a batch with the same key creates its items exactly once. Reusing a key with different fields fails and tells you to use a new key. To validate without executing, pass `dryRun: true`.
 
 `delete_item` and `import_data` ask for elicitation confirmation through `InputRequired` with `confirm_delete` and `confirm_import`. To confirm the action without elicitation, pass `confirmToken` set to the item ID or `CONFIRM`. On sessions without MRTR support, the server fails with `InvalidParams` and returns the same retry guidance. The elicitation message names the `confirmToken` retry.
 
 ## Formats
 
-Dates accept `yyyy-MM-dd` and relative keywords `today`, `yesterday`, and `tomorrow`. Times look like `HH:mm` and stay within one day. Weekdays can be passed as bitmasks or weekday name arrays, such as `["Mon", "Wed", "Fri"]` or `["Monday", "Wednesday", "Friday"]`. Tags accept a comma-separated string or a native array of strings: `"work,urgent"` and `["work", "urgent"]` store the same value, up to 500 chars. Checklist fields (`checklistJson`, and `json` on `set_checklist`) accept a JSON string or a native array of `{text, isDone}` objects, up to 8000 chars. The server rejects bad values with `InvalidParams` that names the field, states the expected format, and quotes the received value. It never clamps them. Fix the input and retry. `log_activity` and `log_timer_session` accept an optional `eventId`. To prevent duplicate logs on retry, reuse the same `eventId`.
+Dates accept `yyyy-MM-dd` and relative keywords `today`, `yesterday`, and `tomorrow`. Times look like `HH:mm` and stay within one day. Weekdays can be passed as bitmasks or weekday name arrays, such as `["Mon", "Wed", "Fri"]` or `["Monday", "Wednesday", "Friday"]`. Tags accept a comma-separated string or a native array of strings. `"work,urgent"` and `["work", "urgent"]` store the same canonical value `work,urgent`, up to 500 chars. UI, REST, and MCP share one parser `BoardTagUtil` and one documented format. Checklist fields `checklistJson` and `json` on `set_checklist` accept a JSON string or a native array of `{text, isDone}` objects, up to 8000 chars. The server rejects bad values with `InvalidParams` that names the field, states the expected format, and quotes the received value. It never clamps them. Fix the input and retry. `log_activity` and `log_timer_session` accept an optional `eventId`. To prevent duplicate logs on retry, reuse the same `eventId`.
 
 ## Tools
 
@@ -145,11 +145,11 @@ The board tools are `get_snapshot`, `get_board_summary`, `get_item`, `get_archiv
 
 `get_board_summary` returns an overview of active habits, today's completed and pending dailies, active and overdue todos, and streak totals. It accepts an optional `tag` filter and `format`, which defaults to `markdown` or can be set to `json`. Calling `get_board_summary` before the full snapshot saves context tokens.
 
-`create_item` takes `section` and `title`. It also takes optional `notes`, `tags`, `date`, `checklistJson`, `repeat`, `repeatInterval`, `weekdays`, `weekdayNames`, `resetPeriod`, `trackPlus`, `trackMinus`, `counter`, `negativeCounter`, `idempotencyKey`, `dryRun`, and `allowDuplicate`. For Daily items, the date sets the start date. For Todo items, the date sets the due date. For Habit items, omit the date.
+`create_item` takes `section` and `title`. It also takes optional `notes`, `tags`, `date`, `checklistJson`, `repeat`, `repeatInterval`, `weekdays`, `weekdayNames`, `resetPeriod`, `trackPlus`, `trackMinus`, `counter`, `negativeCounter`, `idempotencyKey`, `dryRun`, `allowDuplicate`, and `force`. For Daily items, the date sets the start date. For Todo items, the date sets the due date. For Habit items, omit the date.
 
 `batch_create_items` creates multiple board items across sections in a single call. It accepts `items` plus an optional batch `idempotencyKey` and `dryRun`. It returns one per-item result per input: `{index, ok, id, item}` for created items and `{index, ok: false, field, error, message}` for failed ones. Valid items persist even when siblings fail, so a retry only needs to fix the failed entries. Reposting the same batch with the same key creates items exactly once. Keep item order stable across retries or pass explicit per-item keys.
 
-`get_due_digest` returns overdue, due-today, and due-tomorrow todos with a `total` count. Each item appears at most once. It accepts optional `snoozedIds` to exclude snoozed items.
+`get_due_digest` returns overdue, due-today, and due-tomorrow todos with a `total` count. Each item appears at most once. The tool accepts optional `snoozedIds` to exclude snoozed items. The digest honors notification settings. It stays empty when daily reminders are off, when in-app messages are off, or during quiet hours.
 
 The `section` parameter is optional on all ID-targeted tools and checklist tools. When omitted, the server resolves the section.
 
@@ -217,58 +217,58 @@ To test the endpoint with the official `@modelcontextprotocol/inspector`, run `s
 
 Tests in `tests/App.Web.IntegrationTests/McpEndpointTests.cs` cover the tools, prompts, resources, completions, and token endpoints.
 
-## Tool schemas (machine-checked)
+## Machine-checked tool schemas
 
-The markers below are the machine-readable tool parameter schemas. `McpSchemaConformanceTests` parses them and fails the build when a tool signature drifts from this file. `required(...)` lists parameters without defaults, `optional(...)` lists parameters with defaults. `McpServer`, `RequestContext`, and `CancellationToken` parameters are excluded.
+The markers below are the machine-readable tool parameter schemas. `McpSchemaConformanceTests` parses them and fails the build when a tool signature drifts from this file. `required(...)` lists parameters without defaults. `optional(...)` lists parameters with defaults. Each entry uses `name:type` where `type` is one JSON Schema base type: `string`, `integer`, `number`, `boolean`, `array`. `McpServer`, `RequestContext`, and `CancellationToken` parameters are excluded.
 
-<!-- mcp-tool-schema: get_board_summary required() optional(format,tag) -->
-<!-- mcp-tool-schema: get_snapshot required() optional(limit,format) -->
-<!-- mcp-tool-schema: get_item required() optional(itemId,title,section) -->
-<!-- mcp-tool-schema: get_archived required() optional(limit) -->
-<!-- mcp-tool-schema: get_sync_delta required(cursor) optional(limit) -->
+<!-- mcp-tool-schema: get_board_summary required() optional(format:string,tag:string) -->
+<!-- mcp-tool-schema: get_snapshot required() optional(limit:integer,format:string) -->
+<!-- mcp-tool-schema: get_item required() optional(itemId:string,title:string,section:string) -->
+<!-- mcp-tool-schema: get_archived required() optional(limit:integer) -->
+<!-- mcp-tool-schema: get_sync_delta required(cursor:string) optional(limit:integer) -->
 <!-- mcp-tool-schema: get_streaks required() optional() -->
-<!-- mcp-tool-schema: search_items required() optional(query,tag,section,limit,includeArchived,format) -->
+<!-- mcp-tool-schema: search_items required() optional(query:string,tag:string,section:string,limit:integer,includeArchived:boolean,format:string) -->
 <!-- mcp-tool-schema: list_tags required() optional() -->
-<!-- mcp-tool-schema: reorder_item required(itemId,position) optional(section) -->
-<!-- mcp-tool-schema: create_item required(section,title) optional(notes,tags,date,checklistJson,repeat,repeatInterval,weekdays,weekdayNames,resetPeriod,trackPlus,trackMinus,counter,negativeCounter,idempotencyKey,dryRun,allowDuplicate) -->
-<!-- mcp-tool-schema: batch_create_items required(items) optional(idempotencyKey,dryRun) -->
-<!-- mcp-tool-schema: get_due_digest required() optional(snoozedIds) -->
-<!-- mcp-tool-schema: rename_item required(itemId,title) optional(section) -->
-<!-- mcp-tool-schema: toggle_item required() optional(itemId,title,section) -->
-<!-- mcp-tool-schema: batch_toggle_items required(itemIds) optional(section) -->
-<!-- mcp-tool-schema: archive_item required() optional(itemId,title,section) -->
-<!-- mcp-tool-schema: bulk_archive required(itemIds) optional(section,confirmToken) -->
-<!-- mcp-tool-schema: unarchive_item required() optional(itemId,title,section) -->
-<!-- mcp-tool-schema: bulk_unarchive required(itemIds) optional(section) -->
-<!-- mcp-tool-schema: rename_tag required(oldTag,newTag) optional() -->
-<!-- mcp-tool-schema: delete_tag required(tag) optional() -->
-<!-- mcp-tool-schema: delete_item required(itemId) optional(section,confirmToken) -->
-<!-- mcp-tool-schema: get_checklist required(itemId) optional(section) -->
-<!-- mcp-tool-schema: add_checklist_item required(itemId,text) optional(section) -->
-<!-- mcp-tool-schema: set_checklist_item_done required(itemId,checklistItemId,done) optional(section) -->
-<!-- mcp-tool-schema: remove_checklist_item required(itemId,checklistItemId) optional(section) -->
-<!-- mcp-tool-schema: set_checklist required(itemId,json) optional(section) -->
-<!-- mcp-tool-schema: daily_complete_for_date required(date) optional(itemId,title) -->
-<!-- mcp-tool-schema: daily_skip_for_date required(date) optional(itemId,title) -->
-<!-- mcp-tool-schema: update_daily required(itemId) optional(title,notes,tags,startDate,repeat,repeatInterval,counter,weekdays,weekdayNames,checklistJson,sortOrder) -->
-<!-- mcp-tool-schema: habit_plus required() optional(itemId,title) -->
-<!-- mcp-tool-schema: habit_minus required() optional(itemId,title) -->
-<!-- mcp-tool-schema: update_habit required(itemId) optional(title,notes,tags,trackPlus,trackMinus,resetPeriod,counter,negativeCounter,checklistJson,sortOrder) -->
-<!-- mcp-tool-schema: update_todo required(itemId) optional(title,notes,tags,dueDate,checklistJson,sortOrder) -->
-<!-- mcp-tool-schema: get_overview required() optional(period,tag) -->
-<!-- mcp-tool-schema: get_dashboard required() optional(period,tag) -->
-<!-- mcp-tool-schema: get_daily_contributions required() optional(period,tag) -->
-<!-- mcp-tool-schema: get_habit_contributions required() optional(period,tag) -->
-<!-- mcp-tool-schema: get_day_detail required(date) optional(tag) -->
-<!-- mcp-tool-schema: list_activity_events required(startDate,endDate) optional(eventType,boardItemId,limit) -->
-<!-- mcp-tool-schema: log_activity required(eventType) optional(boardItemId,customLabel,eventId) -->
-<!-- mcp-tool-schema: get_timer_summary required() optional(date) -->
-<!-- mcp-tool-schema: log_timer_session required(durationSeconds) optional(boardItemId,customLabel,eventId) -->
+<!-- mcp-tool-schema: reorder_item required(itemId:string,position:integer) optional(section:string) -->
+<!-- mcp-tool-schema: create_item required(section:string,title:string) optional(notes:string,tags:string,date:string,checklistJson:string,repeat:string,repeatInterval:integer,weekdays:integer,weekdayNames:array,resetPeriod:string,trackPlus:boolean,trackMinus:boolean,counter:integer,negativeCounter:integer,idempotencyKey:string,dryRun:boolean,allowDuplicate:boolean,force:boolean) -->
+<!-- mcp-tool-schema: batch_create_items required(items:array) optional(idempotencyKey:string,dryRun:boolean) -->
+<!-- mcp-tool-schema: get_due_digest required() optional(snoozedIds:array) -->
+<!-- mcp-tool-schema: rename_item required(itemId:string,title:string) optional(section:string) -->
+<!-- mcp-tool-schema: toggle_item required() optional(itemId:string,title:string,section:string) -->
+<!-- mcp-tool-schema: batch_toggle_items required(itemIds:array) optional(section:string) -->
+<!-- mcp-tool-schema: archive_item required() optional(itemId:string,title:string,section:string) -->
+<!-- mcp-tool-schema: bulk_archive required(itemIds:array) optional(section:string,confirmToken:string) -->
+<!-- mcp-tool-schema: unarchive_item required() optional(itemId:string,title:string,section:string) -->
+<!-- mcp-tool-schema: bulk_unarchive required(itemIds:array) optional(section:string) -->
+<!-- mcp-tool-schema: rename_tag required(oldTag:string,newTag:string) optional() -->
+<!-- mcp-tool-schema: delete_tag required(tag:string) optional() -->
+<!-- mcp-tool-schema: delete_item required(itemId:string) optional(section:string,confirmToken:string) -->
+<!-- mcp-tool-schema: get_checklist required(itemId:string) optional(section:string) -->
+<!-- mcp-tool-schema: add_checklist_item required(itemId:string,text:string) optional(section:string) -->
+<!-- mcp-tool-schema: set_checklist_item_done required(itemId:string,checklistItemId:string,done:boolean) optional(section:string) -->
+<!-- mcp-tool-schema: remove_checklist_item required(itemId:string,checklistItemId:string) optional(section:string) -->
+<!-- mcp-tool-schema: set_checklist required(itemId:string,json:string) optional(section:string) -->
+<!-- mcp-tool-schema: daily_complete_for_date required(date:string) optional(itemId:string,title:string) -->
+<!-- mcp-tool-schema: daily_skip_for_date required(date:string) optional(itemId:string,title:string) -->
+<!-- mcp-tool-schema: update_daily required(itemId:string) optional(title:string,notes:string,tags:string,startDate:string,repeat:string,repeatInterval:integer,counter:integer,weekdays:integer,weekdayNames:array,checklistJson:string,sortOrder:number) -->
+<!-- mcp-tool-schema: habit_plus required() optional(itemId:string,title:string) -->
+<!-- mcp-tool-schema: habit_minus required() optional(itemId:string,title:string) -->
+<!-- mcp-tool-schema: update_habit required(itemId:string) optional(title:string,notes:string,tags:string,trackPlus:boolean,trackMinus:boolean,resetPeriod:string,counter:integer,negativeCounter:integer,checklistJson:string,sortOrder:number) -->
+<!-- mcp-tool-schema: update_todo required(itemId:string) optional(title:string,notes:string,tags:string,dueDate:string,checklistJson:string,sortOrder:number) -->
+<!-- mcp-tool-schema: get_overview required() optional(period:string,tag:string) -->
+<!-- mcp-tool-schema: get_dashboard required() optional(period:string,tag:string) -->
+<!-- mcp-tool-schema: get_daily_contributions required() optional(period:string,tag:string) -->
+<!-- mcp-tool-schema: get_habit_contributions required() optional(period:string,tag:string) -->
+<!-- mcp-tool-schema: get_day_detail required(date:string) optional(tag:string) -->
+<!-- mcp-tool-schema: list_activity_events required(startDate:string,endDate:string) optional(eventType:string,boardItemId:string,limit:integer) -->
+<!-- mcp-tool-schema: log_activity required(eventType:string) optional(boardItemId:string,customLabel:string,eventId:string) -->
+<!-- mcp-tool-schema: get_timer_summary required() optional(date:string) -->
+<!-- mcp-tool-schema: log_timer_session required(durationSeconds:integer) optional(boardItemId:string,customLabel:string,eventId:string) -->
 <!-- mcp-tool-schema: export_data required() optional() -->
-<!-- mcp-tool-schema: import_data required(json) optional(confirmToken) -->
+<!-- mcp-tool-schema: import_data required(json:string) optional(confirmToken:string) -->
 <!-- mcp-tool-schema: get_preferences required() optional() -->
-<!-- mcp-tool-schema: put_preferences required() optional(dateFormat,dayStartLocalTime,timeZoneOverrideId,displayName,theme,pomodoroWorkMinutes,pomodoroShortBreakMinutes,pomodoroLongBreakMinutes,pomodoroCyclesBeforeLongBreak,enableKeyboardShortcuts) -->
-<!-- mcp-tool-schema: set_preferences_json required(json) optional() -->
+<!-- mcp-tool-schema: put_preferences required() optional(dateFormat:string,dayStartLocalTime:string,timeZoneOverrideId:string,displayName:string,theme:string,pomodoroWorkMinutes:integer,pomodoroShortBreakMinutes:integer,pomodoroLongBreakMinutes:integer,pomodoroCyclesBeforeLongBreak:integer,enableKeyboardShortcuts:boolean) -->
+<!-- mcp-tool-schema: set_preferences_json required(json:string) optional() -->
 <!-- mcp-tool-schema: get_notification_settings required() optional() -->
-<!-- mcp-tool-schema: put_notification_settings required() optional(inAppMessagesEnabled,showSuccessToasts,showWarningToasts,showErrorToasts,toastDuration,dailyReminderEnabled,dailyReminderTime,focusTimerAlertsEnabled,syncFailureAlertsEnabled,soundEnabled,quietHoursEnabled,quietHoursStartUtc,quietHoursEndUtc) -->
-<!-- mcp-tool-schema: set_notification_settings_json required(json) optional() -->
+<!-- mcp-tool-schema: put_notification_settings required() optional(inAppMessagesEnabled:boolean,showSuccessToasts:boolean,showWarningToasts:boolean,showErrorToasts:boolean,toastDuration:string,dailyReminderEnabled:boolean,dailyReminderTime:string,focusTimerAlertsEnabled:boolean,syncFailureAlertsEnabled:boolean,soundEnabled:boolean,quietHoursEnabled:boolean,quietHoursStartUtc:string,quietHoursEndUtc:string) -->
+<!-- mcp-tool-schema: set_notification_settings_json required(json:string) optional() -->

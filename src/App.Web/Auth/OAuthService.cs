@@ -26,7 +26,7 @@ public interface IOAuthService
 public sealed class OAuthService : IOAuthService
 {
     private static readonly TimeSpan DefaultCodeLifetime = TimeSpan.FromMinutes(5);
-    private static readonly TimeSpan DeviceCodeLifetime = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan DeviceCodeLifetime = TimeSpan.FromMinutes(10);
     private const string UserCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private readonly ConcurrentDictionary<string, OAuthClient> _clients = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, OAuthAuthorizationCode> _codes = new(StringComparer.Ordinal);

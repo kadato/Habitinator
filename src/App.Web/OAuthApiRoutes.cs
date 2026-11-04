@@ -556,7 +556,7 @@ public static class OAuthApiRoutes
             user_code = authorization.UserCode,
             verification_uri = $"{baseUrl}/oauth/device",
             verification_uri_complete = $"{baseUrl}/oauth/device?code={Uri.EscapeDataString(authorization.UserCode)}",
-            expires_in = (int)TimeSpan.FromMinutes(15).TotalSeconds,
+            expires_in = (int)TimeSpan.FromMinutes(10).TotalSeconds,
             interval = 5
         });
     }

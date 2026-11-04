@@ -394,7 +394,7 @@ public sealed partial class LocalFirstBoardDataService
                     {
                         row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
                         row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
-                        row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
+                        row.Tags = CanonicalTags(args.Tags);
                         row.TrackPlus = args.TrackPlus;
                         row.TrackMinus = args.TrackMinus;
                         row.ResetPeriod = args.ResetPeriod;
@@ -429,7 +429,7 @@ public sealed partial class LocalFirstBoardDataService
                 {
                     row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
                     row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
-                    row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
+                    row.Tags = CanonicalTags(args.Tags);
                     row.ChecklistJson = DailyChecklistJson.Normalize(args.ChecklistJson);
                     row.TodoDueDate = args.DueDate;
                     await HandleSortOrderUpdateAsync(local, userKey, BoardSection.Todo, itemId, args.SortOrder, row, cancellationToken);
@@ -462,7 +462,7 @@ public sealed partial class LocalFirstBoardDataService
                 {
                     row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
                     row.Notes = string.IsNullOrWhiteSpace(args.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Notes);
-                    row.Tags = string.IsNullOrWhiteSpace(args.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(args.Tags);
+                    row.Tags = CanonicalTags(args.Tags);
                     row.DailyStartDate = args.StartDate;
                     row.DailyRepeat = args.Repeat;
                     row.DailyRepeatInterval = Math.Max(1, Math.Min(999, args.RepeatInterval));
@@ -473,6 +473,27 @@ public sealed partial class LocalFirstBoardDataService
                 },
                 cancellationToken),
             cancellationToken);
+
+    private static string? CanonicalTags(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        var canonical = Models.BoardTagUtil.Canonicalize(ZalgoSanitizer.SanitizeAndTrim(raw));
+        if (string.IsNullOrWhiteSpace(canonical))
+        {
+            return null;
+        }
+
+        if (canonical.Length > Models.BoardTagUtil.MaxTagsLength)
+        {
+            throw new InvalidOperationException($"Tags exceed {Models.BoardTagUtil.MaxTagsLength} chars.");
+        }
+
+        return canonical;
+    }
 
     private static async Task<double> GetInitialLocalSortOrderAsync(
         IBoardLocalStore local,

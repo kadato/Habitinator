@@ -5,6 +5,7 @@ using App.Shared.RCL;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 using App.Web.Auth;
+using App.Web.Data;
 using App.Web.Services;
 
 namespace App.Web;
@@ -138,6 +139,17 @@ internal static class BoardApiRoutes
         boardApi.MapPost("/{section}/{itemId:guid}/unarchive", HandleUnarchiveItemAsync);
         boardApi.MapDelete("/{section}/{itemId:guid}", HandleDeleteItemAsync);
         boardApi.MapPost("/{section}/{itemId:guid}/toggle", HandleToggleItemAsync);
+        boardApi.MapPost("/seed-demo", HandleSeedDemoAsync);
+    }
+
+    private static async Task<IResult> HandleSeedDemoAsync(
+        CurrentUserId user,
+        ApplicationDbContext db,
+        IBoardChangeNotifier notifier,
+        CancellationToken cancellationToken)
+    {
+        await Services.DemoGuestSeeder.SeedBoardIfMissingAsync(db, notifier, user.Value, cancellationToken);
+        return Results.Ok(new { seeded = true });
     }
 
     internal sealed record BoardMutationContext(

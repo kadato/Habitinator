@@ -1109,10 +1109,31 @@ public sealed class BoardPersistenceService(
     {
         entity.Title = ZalgoSanitizer.SanitizeAndTrim(fields.Title);
         entity.Notes = string.IsNullOrWhiteSpace(fields.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(fields.Notes);
-        entity.Tags = string.IsNullOrWhiteSpace(fields.Tags) ? null : ZalgoSanitizer.SanitizeAndTrim(fields.Tags);
+        entity.Tags = CanonicalizeTags(fields.Tags);
         entity.ChecklistJson = DailyChecklistJson.Normalize(fields.ChecklistJson);
 
         await UpdateSortOrderIfNeededAsync(userId, section, entity, fields.SortOrder, cancellationToken);
+    }
+
+    internal static string? CanonicalizeTags(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        var canonical = App.Shared.RCL.Models.BoardTagUtil.Canonicalize(ZalgoSanitizer.SanitizeAndTrim(raw));
+        if (string.IsNullOrWhiteSpace(canonical))
+        {
+            return null;
+        }
+
+        if (canonical.Length > App.Shared.RCL.Models.BoardTagUtil.MaxTagsLength)
+        {
+            throw new InvalidOperationException($"Tags exceed {App.Shared.RCL.Models.BoardTagUtil.MaxTagsLength} chars.");
+        }
+
+        return canonical;
     }
 
     private async Task UpdateSortOrderIfNeededAsync(
@@ -1342,7 +1363,7 @@ public sealed class BoardPersistenceService(
         int limit = 3,
         CancellationToken cancellationToken = default)
     {
-        var wanted = NormalizeTitle(title);
+        var wanted = App.Shared.RCL.Services.BoardTitleSimilarity.Normalize(title);
         if (wanted.Length == 0)
         {
             return [];
@@ -1357,7 +1378,7 @@ public sealed class BoardPersistenceService(
         var matches = new List<(Guid Id, string Title, int Rank)>();
         foreach (var candidate in candidates)
         {
-            var normalized = NormalizeTitle(candidate.Title);
+            var normalized = App.Shared.RCL.Services.BoardTitleSimilarity.Normalize(candidate.Title);
             if (normalized.Length == 0)
             {
                 continue;
@@ -1367,9 +1388,7 @@ public sealed class BoardPersistenceService(
             {
                 matches.Add((candidate.Id, candidate.Title, 0));
             }
-            else if (wanted.Length >= 8 && normalized.Length >= 8
-                && (normalized.Contains(wanted, StringComparison.Ordinal)
-                    || wanted.Contains(normalized, StringComparison.Ordinal)))
+            else if (App.Shared.RCL.Services.BoardTitleSimilarity.IsSimilar(candidate.Title, title))
             {
                 matches.Add((candidate.Id, candidate.Title, 1));
             }
@@ -1380,22 +1399,6 @@ public sealed class BoardPersistenceService(
             .ThenBy(m => m.Title, StringComparer.Ordinal)
             .Take(Math.Clamp(limit, 1, 10))
             .Select(m => (m.Id, m.Title))];
-    }
-
-    private static string NormalizeTitle(string title)
-    {
-        var collapsed = string.Join(" ", title.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToLowerInvariant();
-        var decomposed = collapsed.Normalize(System.Text.NormalizationForm.FormD);
-        var builder = new System.Text.StringBuilder(decomposed.Length);
-        foreach (var rune in decomposed.EnumerateRunes())
-        {
-            if (System.Text.Rune.GetUnicodeCategory(rune) != System.Globalization.UnicodeCategory.NonSpacingMark)
-            {
-                builder.Append(rune);
-            }
-        }
-
-        return builder.ToString().Normalize(System.Text.NormalizationForm.FormC);
     }
 
     public async Task<int> RenameTagAsync(
@@ -1525,7 +1528,7 @@ public sealed class BoardPersistenceService(
     {
         var cleanTitle = ZalgoSanitizer.SanitizeAndTrim(title);
         var cleanNotes = string.IsNullOrWhiteSpace(notes) ? null : ZalgoSanitizer.SanitizeAndTrim(notes);
-        var cleanTags = string.IsNullOrWhiteSpace(tags) ? null : ZalgoSanitizer.SanitizeAndTrim(tags);
+        var cleanTags = CanonicalizeTags(tags);
         var dateUtc = startOrDueDate?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
         if (itemId is { } id)

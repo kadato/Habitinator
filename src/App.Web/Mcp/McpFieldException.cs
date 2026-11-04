@@ -3,9 +3,9 @@ using ModelContextProtocol;
 namespace App.Web.Mcp;
 
 /// <summary>
-/// Validation failure for one named tool field. The message always names the field,
-/// states the expected format, and includes the received value (truncated), so
-/// headless agents can fix the input without another round trip.
+/// Validation failure for one named tool field.
+/// The message names the field, states the expected format, and includes the received value.
+/// The value is truncated. Headless agents can fix the input without another round trip.
 /// Never put tokens or secrets into these messages.
 /// </summary>
 public class McpFieldException(string field, string details)
@@ -16,12 +16,12 @@ public class McpFieldException(string field, string details)
 
 /// <summary>
 /// Warning that a similarly titled active item already exists.
-/// Thrown instead of creating when allowDuplicate is false; the message names
-/// the existing title and id and tells the caller how to create anyway.
+/// Thrown instead of creating when neither <c>allowDuplicate</c> nor <c>force</c> is set.
+/// The message names the existing title and id and tells the caller how to create anyway.
 /// </summary>
 public sealed class DuplicateTitleException(Guid existingId, string existingTitle)
     : McpFieldException("title",
-        $"Similar item exists: '{existingTitle}' (id: {existingId:D}). Retry with allowDuplicate=true to create anyway.")
+        $"Similar item exists: '{existingTitle}' (id: {existingId:D}). Retry with force=true to create anyway.")
 {
     public Guid ExistingId { get; } = existingId;
 

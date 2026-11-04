@@ -10,7 +10,7 @@ internal static class McpInput
 {
     public const int MaxTitleLength = 200;
     public const int MaxNotesLength = 4000;
-    public const int MaxTagsLength = 500;
+    public const int MaxTagsLength = BoardTagUtil.MaxTagsLength;
     public const int MaxChecklistLength = 8000;
     public const int MaxCustomLabelLength = 500;
     public const int MaxDisplayNameLength = 100;
@@ -73,12 +73,7 @@ internal static class McpInput
     /// </summary>
     public static string? CanonicalTags(string? tags)
     {
-        if (tags is null)
-        {
-            return null;
-        }
-
-        return string.Join(",", BoardTagUtil.ParseTags(tags));
+        return BoardTagUtil.Canonicalize(tags);
     }
 
     public static string? NormalizedChecklist(string? checklistJson, string field = "checklistJson")

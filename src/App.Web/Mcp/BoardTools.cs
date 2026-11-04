@@ -288,7 +288,7 @@ public sealed class BoardTools(
     }
 
     [McpServerTool(Name = "create_item", Title = "Create board item", OpenWorld = true)]
-    [Description("Creates a habit, daily, or todo with title, schedule, tracking, and optional checklist. Warns on near-duplicate titles unless allowDuplicate is true.")]
+    [Description("Creates a habit, daily, or todo with title, schedule, tracking, and optional checklist. Warns on near-duplicate titles unless force or allowDuplicate is true.")]
     public async Task<BoardItem> CreateItem(
         McpServer server,
         [Description("Section: Habit, Daily, or Todo.")]
@@ -316,6 +316,8 @@ public sealed class BoardTools(
         bool dryRun = false,
         [Description("Set true to create even when a similarly titled active item exists.")]
         bool allowDuplicate = false,
+        [Description("Alias for allowDuplicate. Set true to create even when a similarly titled active item exists.")]
+        bool force = false,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
@@ -325,12 +327,13 @@ public sealed class BoardTools(
 
         if (dryRun)
         {
-            await ThrowOnDuplicateAsync(userId, validated.Section, validated.Title, allowDuplicate, cancellationToken);
+            await ThrowOnDuplicateAsync(userId, validated.Section, validated.Title, allowDuplicate || force, cancellationToken);
             return PreviewItem(validated);
         }
 
         // The duplicate check runs inside the idempotent unit, so a retry
         // with the same key replays the original item.
+        var allow = allowDuplicate || force;
         return await McpIdempotency.ExecuteAsync(
             idem,
             userId,
@@ -339,7 +342,7 @@ public sealed class BoardTools(
             FingerprintOf(validated),
             async ct =>
             {
-                await ThrowOnDuplicateAsync(userId, validated.Section, validated.Title, allowDuplicate, ct);
+                await ThrowOnDuplicateAsync(userId, validated.Section, validated.Title, allow, ct);
                 return await PersistValidatedAsync(server, userId, validated, ct);
             },
             cancellationToken);
@@ -361,7 +364,9 @@ public sealed class BoardTools(
         [Description("Optional per-item idempotency key (max 128 chars). Falls back to the batch key with the item index.")]
         string? IdempotencyKey = null,
         [Description("Set true to create this item even when a similarly titled active item exists.")]
-        bool AllowDuplicate = false);
+        bool AllowDuplicate = false,
+        [Description("Alias for AllowDuplicate. Set true to create even when a similarly titled active item exists.")]
+        bool Force = false);
 
     /// <summary>
     /// Per-item outcome of <c>batch_create_items</c>.
@@ -434,13 +439,14 @@ public sealed class BoardTools(
 
             if (dryRun)
             {
-                await ThrowOnDuplicateAsync(userId, validated.Section, validated.Title, item.AllowDuplicate, cancellationToken);
+                await ThrowOnDuplicateAsync(userId, validated.Section, validated.Title, item.AllowDuplicate || item.Force, cancellationToken);
                 var preview = PreviewItem(validated);
                 return new BatchCreateItemResult(index, true, preview.Id, preview, null, null, "Dry run: validated, nothing persisted.", true);
             }
 
             // The duplicate check runs inside the idempotent unit, so a retried
             // batch replays its original items.
+            var batchAllow = item.AllowDuplicate || item.Force;
             var created = await McpIdempotency.ExecuteAsync(
                 idem,
                 userId,
@@ -449,7 +455,7 @@ public sealed class BoardTools(
                 FingerprintOf(validated),
                 async ct =>
                 {
-                    await ThrowOnDuplicateAsync(userId, validated.Section, validated.Title, item.AllowDuplicate, ct);
+                    await ThrowOnDuplicateAsync(userId, validated.Section, validated.Title, batchAllow, ct);
                     return await PersistValidatedAsync(server, userId, validated, ct);
                 },
                 cancellationToken);

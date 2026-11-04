@@ -80,6 +80,8 @@ public sealed record BoardSnapshot(
 
 public static class BoardTagUtil
 {
+    public const int MaxTagsLength = 500;
+
     public static IEnumerable<string> ParseTags(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
@@ -93,6 +95,24 @@ public static class BoardTagUtil
             {
                 yield return part;
             }
+        }
+    }
+
+    public static string? Canonicalize(string? raw)
+    {
+        if (raw is null)
+        {
+            return null;
+        }
+
+        return string.Join(",", ParseTags(raw));
+    }
+
+    public static void EnsureLength(string? canonicalTags, string field = "tags")
+    {
+        if (canonicalTags is not null && canonicalTags.Length > MaxTagsLength)
+        {
+            throw new ArgumentException($"{field}: expected at most {MaxTagsLength} chars, got {canonicalTags.Length} chars.", field);
         }
     }
 }

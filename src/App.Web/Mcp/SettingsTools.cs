@@ -108,6 +108,7 @@ public sealed class SettingsTools(IDbContextFactory<ApplicationDbContext> dbFact
         }
 
         row.UserPreferences = prefs.Normalize();
+        db.Entry(row).Property(r => r.UserPreferences).IsModified = true;
         await db.SaveChangesAsync(cancellationToken);
         return row.UserPreferences;
     }
@@ -270,6 +271,7 @@ public sealed class SettingsTools(IDbContextFactory<ApplicationDbContext> dbFact
         }
 
         row.NotificationSettings = settings;
+        db.Entry(row).Property(r => r.NotificationSettings).IsModified = true;
         await db.SaveChangesAsync(cancellationToken);
         return settings;
     }

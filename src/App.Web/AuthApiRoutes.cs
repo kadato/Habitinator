@@ -59,10 +59,7 @@ internal static class AuthApiRoutes
 
     private static async Task<IResult> RegisterAsync(
         RegisterRequest request,
-        UserManager<ApplicationUser> userManager,
-        ApplicationDbContext dbContext,
-        IBoardChangeNotifier notifier,
-        ILoggerFactory loggerFactory)
+        UserManager<ApplicationUser> userManager)
     {
         var (user, createResult) = await CreateUserCoreAsync(userManager, request.Email, request.Password);
         if (user is null)
@@ -75,17 +72,12 @@ internal static class AuthApiRoutes
             return Results.BadRequest(MapRegistrationErrorsToUserFacing(createResult.Errors));
         }
 
-        await SeedNewUserBoardAsync(dbContext, notifier, user.Id, loggerFactory);
-
         return Results.Ok(new { message = "Registration successful." });
     }
 
     private static async Task<IResult> RegisterFormAsync(
         HttpContext httpContext,
-        UserManager<ApplicationUser> userManager,
-        ApplicationDbContext dbContext,
-        IBoardChangeNotifier notifier,
-        ILoggerFactory loggerFactory)
+        UserManager<ApplicationUser> userManager)
     {
         var form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
         var email = form["Email"].ToString();
@@ -104,8 +96,6 @@ internal static class AuthApiRoutes
                 : $"?error=1&email={Uri.EscapeDataString(email)}";
             return Results.LocalRedirect($"/auth/register{retry}");
         }
-
-        await SeedNewUserBoardAsync(dbContext, notifier, user.Id, loggerFactory);
 
         return Results.LocalRedirect("/auth/login?registered=1");
     }
@@ -593,23 +583,6 @@ internal static class AuthApiRoutes
         catch (Exception ex)
         {
             logger.LogWarning(ex, "On-demand demo data seeding failed.");
-        }
-    }
-
-    private static async Task SeedNewUserBoardAsync(
-        ApplicationDbContext db,
-        IBoardChangeNotifier notifier,
-        Guid userId,
-        ILoggerFactory loggerFactory)
-    {
-        try
-        {
-            await NewUserBoardSeeder.SeedIfMissingAsync(db, notifier, userId);
-        }
-        catch (Exception ex)
-        {
-            loggerFactory.CreateLogger("AuthApiRoutes").LogWarning(ex,
-                "Failed to seed the getting-started board for new user {UserId}.", userId);
         }
     }
 }

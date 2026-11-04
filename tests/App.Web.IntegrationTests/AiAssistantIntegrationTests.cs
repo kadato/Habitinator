@@ -333,7 +333,7 @@ public sealed class AiAssistantIntegrationTests(PostgresWebAppFactory factory)
 
         var snapshot = await boards.GetSnapshotAsync(user.Id, CancellationToken.None);
         var updated = snapshot.Todos.First(t => t.Id == created.Id);
-        updated.Tags.Should().Be("work, urgent");
+        updated.Tags.Should().Be("work,urgent");
         updated.Notes.Should().Contain("Need quarterly stats attached.");
     }
 

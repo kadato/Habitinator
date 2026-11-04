@@ -6,6 +6,8 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 using App.Shared.RCL.Models;
+using App.Shared.RCL.Services;
+using App.Web.Mcp;
 
 using FluentAssertions;
 
@@ -389,6 +391,254 @@ public sealed partial class McpAgentReliabilityTests(PostgresWebAppFactory facto
     }
 
     [Fact]
+    public async Task Mcp_DueDigest_SnoozedAndCompleted_RemovedFromNextDigest()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var json = TestJson;
+        var stamp = Guid.NewGuid().ToString("N")[..8];
+
+        async Task<BoardItem> CreateTodo(string title, string? date) =>
+            JsonSerializer.Deserialize<BoardItem>(
+                await CallTextAsync(mcp, "create_item", new Dictionary<string, object?>
+                {
+                    ["section"] = "Todo",
+                    ["title"] = $"{title} {stamp}",
+                    ["date"] = date!,
+                }), json)!;
+
+        var dueTomorrow = await CreateTodo("Snoozable interview", "tomorrow");
+        var dueToday = await CreateTodo("Completable filing", "today");
+
+        var first = JsonSerializer.Deserialize<DueDigest>(
+            await CallTextAsync(mcp, "get_due_digest", []), json)!;
+        first.DueTomorrow.Select(e => e.Id).Should().Contain(dueTomorrow.Id);
+        first.DueToday.Select(e => e.Id).Should().Contain(dueToday.Id);
+
+        // Snoozing removes it from the next digest.
+        var snoozed = JsonSerializer.Deserialize<DueDigest>(
+            await CallTextAsync(mcp, "get_due_digest", new Dictionary<string, object?>
+            {
+                ["snoozedIds"] = new[] { dueTomorrow.Id },
+            }), json)!;
+        snoozed.Overdue.Concat(snoozed.DueToday).Concat(snoozed.DueTomorrow)
+            .Select(e => e.Id).Should().NotContain(dueTomorrow.Id);
+
+        // Completing removes it from the next digest.
+        await CallTextAsync(mcp, "toggle_item", new Dictionary<string, object?> { ["itemId"] = dueToday.Id });
+        var afterComplete = JsonSerializer.Deserialize<DueDigest>(
+            await CallTextAsync(mcp, "get_due_digest", []), json)!;
+        afterComplete.Overdue.Concat(afterComplete.DueToday).Concat(afterComplete.DueTomorrow)
+            .Select(e => e.Id).Should().NotContain(dueToday.Id);
+    }
+
+    [Fact]
+    public async Task Mcp_DueDigest_HonorsNotificationSettings()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var json = TestJson;
+        var stamp = Guid.NewGuid().ToString("N")[..8];
+
+        _ = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new Dictionary<string, object?>
+            {
+                ["section"] = "Todo",
+                ["title"] = $"Settings probe {stamp}",
+                ["date"] = "tomorrow",
+            }), json)!;
+
+        var before = JsonSerializer.Deserialize<DueDigest>(
+            await CallTextAsync(mcp, "get_due_digest", []), json)!;
+        before.Total.Should().BeGreaterThan(0);
+
+        await CallTextAsync(mcp, "put_notification_settings", new Dictionary<string, object?>
+        {
+            ["dailyReminderEnabled"] = false,
+        });
+
+        var muted = JsonSerializer.Deserialize<DueDigest>(
+            await CallTextAsync(mcp, "get_due_digest", []), json)!;
+        muted.Total.Should().Be(0);
+
+        var reenabledJson = await CallTextAsync(mcp, "put_notification_settings", new Dictionary<string, object?>
+        {
+            ["dailyReminderEnabled"] = true,
+        });
+        var reenabled = JsonSerializer.Deserialize<NotificationSettings>(reenabledJson, json)!;
+        reenabled.DailyReminderEnabled.Should().BeTrue();
+
+        var restored = JsonSerializer.Deserialize<DueDigest>(
+            await CallTextAsync(mcp, "get_due_digest", []), json)!;
+        restored.Total.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public void DueDigest_FrozenClock_BucketsEachTodoOnce()
+    {
+        var frozenUtc = new DateTimeOffset(2026, 5, 15, 12, 0, 0, TimeSpan.Zero);
+        var clock = new FrozenClock(frozenUtc);
+        var today = DailySchedule.LocalToday(clock, tz: null, dayStartLocalTime: null);
+        today.Should().Be(new DateOnly(2026, 5, 15));
+        var tomorrow = today.AddDays(1);
+
+        var overdueId = Guid.NewGuid();
+        var todayId = Guid.NewGuid();
+        var tomorrowId = Guid.NewGuid();
+        var laterId = Guid.NewGuid();
+        var doneId = Guid.NewGuid();
+        var stamp = "frozen";
+        List<BoardItem> todos =
+        [
+            new(overdueId, $"Overdue {stamp}", false, 0, null, null, true, true, 0, HabitResetPeriod.Daily, null, DailyRepeatType.Daily, 1, null, null, today.AddDays(-1), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null, false, null, 0),
+            new(todayId, $"Today {stamp}", false, 0, null, null, true, true, 0, HabitResetPeriod.Daily, null, DailyRepeatType.Daily, 1, null, null, today, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null, false, null, 0),
+            new(tomorrowId, $"Tomorrow {stamp}", false, 0, null, null, true, true, 0, HabitResetPeriod.Daily, null, DailyRepeatType.Daily, 1, null, null, tomorrow, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null, false, null, 0),
+            new(laterId, $"Later {stamp}", false, 0, null, null, true, true, 0, HabitResetPeriod.Daily, null, DailyRepeatType.Daily, 1, null, null, today.AddDays(5), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null, false, null, 0),
+            new(doneId, $"Done {stamp}", true, 0, null, null, true, true, 0, HabitResetPeriod.Daily, null, DailyRepeatType.Daily, 1, null, null, tomorrow, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null, false, null, 0),
+        ];
+
+        var digest = ReminderTools.BuildDigest(todos, today, tomorrow, []);
+        digest.Overdue.Select(e => e.Id).Should().Contain(overdueId);
+        digest.DueToday.Select(e => e.Id).Should().Contain(todayId);
+        digest.DueTomorrow.Select(e => e.Id).Should().Contain(tomorrowId);
+        var all = digest.Overdue.Concat(digest.DueToday).Concat(digest.DueTomorrow).Select(e => e.Id).ToList();
+        all.Should().HaveCount(3);
+        all.Should().OnlyHaveUniqueItems("a todo due tomorrow appears exactly once in the digest");
+
+        var snoozedDigest = ReminderTools.BuildDigest(todos, today, tomorrow, [tomorrowId]);
+        snoozedDigest.Overdue.Concat(snoozedDigest.DueToday).Concat(snoozedDigest.DueTomorrow)
+            .Select(e => e.Id).Should().NotContain(tomorrowId);
+    }
+
+    private sealed class FrozenClock(DateTimeOffset now) : IClock
+    {
+        public DateTimeOffset UtcNow => now;
+    }
+
+    [Fact]
+    public async Task Mcp_CreateItem_ForceTrue_CreatesDespiteDuplicate()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var json = TestJson;
+        const string title = "Resume and portfolio polish";
+
+        var first = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new Dictionary<string, object?>
+            {
+                ["section"] = "Todo",
+                ["title"] = title,
+            }), json)!;
+
+        var dupe = await Assert.ThrowsAsync<McpProtocolException>(async () =>
+            await mcp.CallToolAsync("create_item", new Dictionary<string, object?>
+            {
+                ["section"] = "Todo",
+                ["title"] = title,
+            }));
+        dupe.Message.Should().Contain("Similar item exists");
+        dupe.Message.Should().Contain(first.Id.ToString("D"));
+
+        var forced = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new Dictionary<string, object?>
+            {
+                ["section"] = "Todo",
+                ["title"] = title,
+                ["force"] = true,
+            }), json)!;
+        forced.Id.Should().NotBe(first.Id);
+        forced.Title.Should().Be(title);
+    }
+
+    [Fact]
+    public async Task Mcp_Tags_RoundTrip_UiAndMcp()
+    {
+        var mcp = await CreateLoggedInMcpClientAsync();
+        var json = TestJson;
+        var stamp = Guid.NewGuid().ToString("N")[..8];
+
+        // MCP -> UI: create with native array, read back canonical.
+        var fromMcp = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp, "create_item", new Dictionary<string, object?>
+            {
+                ["section"] = "Todo",
+                ["title"] = $"MCP tags {stamp}",
+                ["tags"] = WorkUrgentTags,
+            }), json)!;
+        fromMcp.Tags.Should().Be("work,urgent");
+
+        var tags = JsonSerializer.Deserialize<string[]>(
+            await CallTextAsync(mcp, "list_tags", []), json)!;
+        tags.Should().Contain("work");
+        tags.Should().Contain("urgent");
+
+        var byTag = JsonSerializer.Deserialize<BoardItem[]>(
+            await CallTextAsync(mcp, "search_items", new Dictionary<string, object?> { ["tag"] = "WORK" }), json)!;
+        byTag.Select(t => t.Id).Should().Contain(fromMcp.Id);
+
+        // UI -> MCP: update via REST with spaced string, MCP reads canonical unchanged.
+        var client = factory.CreateClient();
+        var suffix = Guid.NewGuid().ToString("N");
+        var email = $"tags-{suffix}@integration.test";
+        const string password = "TestUser1!Aa";
+        (await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, password))).EnsureSuccessStatusCode();
+        var login = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, password, RememberMe: false));
+        login.EnsureSuccessStatusCode();
+        var token = (await login.Content.ReadFromJsonAsync<LoginResponse>())!.AccessToken;
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        var transport2 = new HttpClientTransport(
+            new HttpClientTransportOptions { Endpoint = new Uri(client.BaseAddress!, "/mcp") },
+            client,
+            NullLoggerFactory.Instance,
+            ownsHttpClient: false);
+        await using var mcp2 = await McpClient.CreateAsync(transport2);
+
+        var created = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp2, "create_item", new Dictionary<string, object?>
+            {
+                ["section"] = "Todo",
+                ["title"] = $"REST tags {stamp}",
+            }), json)!;
+
+        // Simulate UI saving "work, urgent" (comma+space) through the REST update path.
+        var updateRes = await client.PutAsJsonAsync($"/api/board/todos/{created.Id}",
+            new TodoUpdateRequest(created.Title, null, "work, urgent", null, null, null),
+            TestJson);
+        updateRes.EnsureSuccessStatusCode();
+
+        var viaMcp = JsonSerializer.Deserialize<BoardItem>(
+            await CallTextAsync(mcp2, "get_item", new Dictionary<string, object?> { ["itemId"] = created.Id }), json)!;
+        viaMcp.Tags.Should().Be("work,urgent");
+
+        var uiTags = JsonSerializer.Deserialize<string[]>(
+            await CallTextAsync(mcp2, "list_tags", []), json)!;
+        uiTags.Should().Contain("work");
+        uiTags.Should().Contain("urgent");
+    }
+
+    [Fact]
+    public async Task Board_SeedDemo_LoadsSampleDataForFreshAccount()
+    {
+        var client = factory.CreateClient();
+        var suffix = Guid.NewGuid().ToString("N");
+        var email = $"fresh-{suffix}@integration.test";
+        const string password = "TestUser1!Aa";
+        (await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, password))).EnsureSuccessStatusCode();
+        var login = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, password, RememberMe: false));
+        login.EnsureSuccessStatusCode();
+        var token = (await login.Content.ReadFromJsonAsync<LoginResponse>())!.AccessToken;
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var empty = await client.GetFromJsonAsync<BoardSnapshot>("/api/board/", TestJson);
+        ArgumentNullException.ThrowIfNull(empty);
+        (empty.Habits.Count + empty.Dailies.Count + empty.Todos.Count).Should().Be(0);
+
+        var seed = await client.PostAsync("/api/board/seed-demo", null);
+        seed.EnsureSuccessStatusCode();
+
+        var seeded = await client.GetFromJsonAsync<BoardSnapshot>("/api/board/", TestJson);
+        ArgumentNullException.ThrowIfNull(seeded);
+        (seeded.Habits.Count + seeded.Dailies.Count + seeded.Todos.Count).Should().BeGreaterThan(0);
+    }
+
+    [Fact]
     public async Task Mcp_DeviceFlow_MintsWorkingTokenWithoutPastedSecret()
     {
         var client = factory.CreateClient();
@@ -410,6 +660,8 @@ public sealed partial class McpAgentReliabilityTests(PostgresWebAppFactory facto
         var userCode = startDoc.GetProperty("user_code").GetString()!;
         startDoc.GetProperty("verification_uri").GetString().Should().EndWith("/oauth/device");
         userCode.Should().MatchRegex("^[A-Z2-9]{4}-[A-Z2-9]{4}$");
+        startDoc.GetProperty("expires_in").GetInt32().Should().Be(600);
+        startDoc.GetProperty("interval").GetInt32().Should().Be(5);
 
         // 2. Polling before approval reports pending, not a token.
         var pending = await client.PostAsJsonAsync("/oauth/token", new
@@ -461,6 +713,37 @@ public sealed partial class McpAgentReliabilityTests(PostgresWebAppFactory facto
         mcpCall.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         mcpCall.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
         (await client.SendAsync(mcpCall)).IsSuccessStatusCode.Should().BeTrue();
+
+        // 5. Refresh tokens rotate on use.
+        var refreshToken = tokenDoc.TryGetProperty("refreshToken", out var rt) ? rt.GetString()! : tokenDoc.GetProperty("refresh_token").GetString()!;
+        var refresh = await client.PostAsJsonAsync("/oauth/token", new
+        {
+            grant_type = "refresh_token",
+            refresh_token = refreshToken,
+            client_id = "opencode",
+        });
+        refresh.EnsureSuccessStatusCode();
+        var refreshDoc = await refresh.Content.ReadFromJsonAsync<JsonElement>();
+        var newRefresh = refreshDoc.TryGetProperty("refreshToken", out var nrt) ? nrt.GetString()! : refreshDoc.GetProperty("refresh_token").GetString()!;
+        newRefresh.Should().NotBe(refreshToken);
+
+        var oldReuse = await client.PostAsJsonAsync("/oauth/token", new
+        {
+            grant_type = "refresh_token",
+            refresh_token = refreshToken,
+            client_id = "opencode",
+        });
+        oldReuse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        // 6. Device codes are single use and bound to the requesting client.
+        var reuse = await client.PostAsJsonAsync("/oauth/token", new
+        {
+            grant_type = "urn:ietf:params:oauth:grant-type:device_code",
+            device_code = deviceCode,
+            client_id = "opencode",
+        });
+        reuse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await reuse.Content.ReadAsStringAsync()).Should().Contain("expired_token");
     }
 
     [Fact]
@@ -468,16 +751,19 @@ public sealed partial class McpAgentReliabilityTests(PostgresWebAppFactory facto
     {
         var mcp = await CreateLoggedInMcpClientAsync();
         var docs = await File.ReadAllTextAsync(FindDocsMcpMd());
+        var skill = await File.ReadAllTextAsync(FindSkillMd());
         var markers = McpSchemaMarkerRegex().Matches(docs);
         markers.Should().NotBeEmpty("docs/mcp.md must carry machine-readable tool schemas");
+        var skillMarkers = McpSchemaMarkerRegex().Matches(skill);
+        skillMarkers.Should().NotBeEmpty("agent SKILL.md must mirror the machine-readable tool schemas");
 
-        var marked = new Dictionary<string, (HashSet<string> Required, HashSet<string> Optional)>(StringComparer.Ordinal);
-        foreach (Match marker in markers)
+        var marked = ParseMarkers(markers);
+        var skillMarked = ParseMarkers(skillMarkers);
+        skillMarked.Keys.Should().BeEquivalentTo(marked.Keys, "SKILL.md markers must mirror docs/mcp.md markers");
+        foreach (var name in marked.Keys)
         {
-            var name = marker.Groups["name"].Value;
-            marked[name] = (
-                SplitParams(marker.Groups["required"].Value),
-                SplitParams(marker.Groups["optional"].Value));
+            skillMarked[name].Required.Should().BeEquivalentTo(marked[name].Required, $"SKILL.md required params of '{name}' must match docs/mcp.md");
+            skillMarked[name].Optional.Should().BeEquivalentTo(marked[name].Optional, $"SKILL.md optional params of '{name}' must match docs/mcp.md");
         }
 
         var tools = await mcp.ListToolsAsync();
@@ -487,14 +773,25 @@ public sealed partial class McpAgentReliabilityTests(PostgresWebAppFactory facto
         {
             liveNames.Add(tool.Name);
             docs.Should().Contain(tool.Name, $"docs/mcp.md must mention tool '{tool.Name}'");
+            skill.Should().Contain(tool.Name, $"agent SKILL.md must mention tool '{tool.Name}'");
             marked.Should().ContainKey(tool.Name, $"docs/mcp.md must carry a schema marker for tool '{tool.Name}'");
 
             var (properties, required) = ReadInputSchema(tool);
             var (markerRequired, markerOptional) = marked[tool.Name];
-            required.Should().BeEquivalentTo(markerRequired, $"required params of '{tool.Name}' must match docs/mcp.md");
-            properties.Should().BeEquivalentTo(
-                markerRequired.Concat(markerOptional),
+            required.Keys.Should().BeEquivalentTo(markerRequired.Keys, $"required params of '{tool.Name}' must match docs/mcp.md");
+            properties.Keys.Should().BeEquivalentTo(
+                markerRequired.Keys.Concat(markerOptional.Keys),
                 $"all params of '{tool.Name}' must match docs/mcp.md");
+            foreach (var kv in required)
+            {
+                markerRequired[kv.Key].Should().Be(kv.Value, $"type of required param '{kv.Key}' on '{tool.Name}' must match docs/mcp.md");
+            }
+
+            foreach (var kv in properties)
+            {
+                var expected = markerRequired.TryGetValue(kv.Key, out var rt) ? rt : markerOptional[kv.Key];
+                expected.Should().Be(kv.Value, $"type of param '{kv.Key}' on '{tool.Name}' must match docs/mcp.md");
+            }
         }
 
         foreach (var name in marked.Keys)
@@ -503,39 +800,92 @@ public sealed partial class McpAgentReliabilityTests(PostgresWebAppFactory facto
         }
     }
 
-    private static HashSet<string> SplitParams(string raw) =>
-        raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .ToHashSet(StringComparer.Ordinal);
+    private static Dictionary<string, (Dictionary<string, string> Required, Dictionary<string, string> Optional)> ParseMarkers(MatchCollection markers)
+    {
+        var marked = new Dictionary<string, (Dictionary<string, string> Required, Dictionary<string, string> Optional)>(StringComparer.Ordinal);
+        foreach (Match marker in markers)
+        {
+            var name = marker.Groups["name"].Value;
+            marked[name] = (
+                SplitTypedParams(marker.Groups["required"].Value),
+                SplitTypedParams(marker.Groups["optional"].Value));
+        }
 
-    private static (HashSet<string> Properties, HashSet<string> Required) ReadInputSchema(McpClientTool tool)
+        return marked;
+    }
+
+    private static Dictionary<string, string> SplitTypedParams(string raw)
+    {
+        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var part in raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var pieces = part.Split(':', 2, StringSplitOptions.TrimEntries);
+            if (pieces.Length == 2 && pieces[0].Length > 0 && pieces[1].Length > 0)
+            {
+                map[pieces[0]] = pieces[1];
+            }
+            else if (pieces[0].Length > 0)
+            {
+                map[pieces[0]] = "string";
+            }
+        }
+
+        return map;
+    }
+
+    private static (Dictionary<string, string> Properties, Dictionary<string, string> Required) ReadInputSchema(McpClientTool tool)
     {
         var element = JsonSerializer.SerializeToElement(tool.ProtocolTool.InputSchema);
-        var properties = new HashSet<string>(StringComparer.Ordinal);
+        var properties = new Dictionary<string, string>(StringComparer.Ordinal);
         if (element.ValueKind == JsonValueKind.Object
             && element.TryGetProperty("properties", out var props)
             && props.ValueKind == JsonValueKind.Object)
         {
             foreach (var property in props.EnumerateObject())
             {
-                properties.Add(property.Name);
+                properties[property.Name] = BaseJsonType(property.Value);
             }
         }
 
-        var required = new HashSet<string>(StringComparer.Ordinal);
+        var required = new Dictionary<string, string>(StringComparer.Ordinal);
         if (element.ValueKind == JsonValueKind.Object
             && element.TryGetProperty("required", out var req)
             && req.ValueKind == JsonValueKind.Array)
         {
             foreach (var item in req.EnumerateArray())
             {
-                if (item.GetString() is { } name)
+                if (item.GetString() is { } name && properties.TryGetValue(name, out var t))
                 {
-                    required.Add(name);
+                    required[name] = t;
                 }
             }
         }
 
         return (properties, required);
+    }
+
+    private static string BaseJsonType(JsonElement prop)
+    {
+        if (prop.ValueKind == JsonValueKind.Object && prop.TryGetProperty("type", out var t))
+        {
+            if (t.ValueKind == JsonValueKind.String)
+            {
+                return t.GetString() ?? "string";
+            }
+
+            if (t.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var entry in t.EnumerateArray())
+                {
+                    if (entry.GetString() is { } s && s != "null")
+                    {
+                        return s;
+                    }
+                }
+            }
+        }
+
+        return "string";
     }
 
     private static string FindDocsMcpMd()
@@ -553,6 +903,23 @@ public sealed partial class McpAgentReliabilityTests(PostgresWebAppFactory facto
         }
 
         throw new FileNotFoundException("docs/mcp.md not found above test binaries.");
+    }
+
+    private static string FindSkillMd()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            var candidate = Path.Combine(directory.FullName, "src", "App.Web", "wwwroot", ".well-known", "agent-skills", "habitinator", "SKILL.md");
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new FileNotFoundException("SKILL.md not found above test binaries.");
     }
 
     [GeneratedRegex("<!-- mcp-tool-schema:\\s*(?<name>[a-z_0-9]+)\\s+required\\((?<required>[^)]*)\\)\\s+optional\\((?<optional>[^)]*)\\)\\s*-->")]

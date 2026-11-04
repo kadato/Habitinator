@@ -17,14 +17,21 @@ public interface IOAuthService
     (OAuthRefreshToken TokenInfo, string NewRefreshToken)? ValidateAndRotateRefreshToken(string refreshToken, string clientId, TimeSpan lifetime);
     void RevokeRefreshToken(string refreshToken);
     void RevokeByTokenId(Guid tokenId);
+    OAuthDeviceAuthorization CreateDeviceAuthorization(string clientId, string clientName, string scope);
+    OAuthDeviceAuthorization? FindDeviceAuthorizationByUserCode(string userCode);
+    bool ApproveDeviceAuthorization(string userCode, Guid userId, bool approved);
+    DevicePollOutcome PollDeviceCode(string deviceCode, string clientId);
 }
 
 public sealed class OAuthService : IOAuthService
 {
     private static readonly TimeSpan DefaultCodeLifetime = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan DeviceCodeLifetime = TimeSpan.FromMinutes(15);
+    private const string UserCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private readonly ConcurrentDictionary<string, OAuthClient> _clients = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, OAuthAuthorizationCode> _codes = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, OAuthRefreshToken> _refreshTokens = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, OAuthDeviceAuthorization> _deviceAuthorizations = new(StringComparer.Ordinal);
 
     public OAuthClient RegisterClient(OAuthClientRegistrationRequest request)
     {
@@ -198,6 +205,93 @@ public sealed class OAuthService : IOAuthService
             _refreshTokens.TryRemove(key, out _);
         }
     }
+
+    /// <summary>Starts an RFC 8628 device authorization.</summary>
+    public OAuthDeviceAuthorization CreateDeviceAuthorization(string clientId, string clientName, string scope)
+    {
+        var deviceCode = "dev_" + Guid.NewGuid().ToString("N") + RandomNumberGenerator.GetHexString(16);
+        string userCode;
+        do
+        {
+            var chars = new char[8];
+            for (var i = 0; i < chars.Length; i++)
+            {
+                chars[i] = UserCodeAlphabet[RandomNumberGenerator.GetInt32(UserCodeAlphabet.Length)];
+            }
+
+            userCode = new string(chars, 0, 4) + "-" + new string(chars, 4, 4);
+        }
+        while (_deviceAuthorizations.Values.Any(d => string.Equals(d.UserCode, userCode, StringComparison.Ordinal)));
+
+        var authorization = new OAuthDeviceAuthorization(
+            DeviceCode: deviceCode,
+            UserCode: userCode,
+            ClientId: clientId,
+            ClientName: clientName,
+            Scope: scope,
+            ExpiresAtUtc: DateTimeOffset.UtcNow.Add(DeviceCodeLifetime),
+            ApprovedUserId: null,
+            Denied: false);
+        _deviceAuthorizations[deviceCode] = authorization;
+        return authorization;
+    }
+
+    public OAuthDeviceAuthorization? FindDeviceAuthorizationByUserCode(string userCode)
+    {
+        var normalized = NormalizeUserCode(userCode);
+        return _deviceAuthorizations.Values.FirstOrDefault(d =>
+            string.Equals(NormalizeUserCode(d.UserCode), normalized, StringComparison.Ordinal));
+    }
+
+    public bool ApproveDeviceAuthorization(string userCode, Guid userId, bool approved)
+    {
+        var existing = FindDeviceAuthorizationByUserCode(userCode);
+        if (existing is null || DateTimeOffset.UtcNow > existing.ExpiresAtUtc)
+        {
+            return false;
+        }
+
+        _deviceAuthorizations[existing.DeviceCode] = approved
+            ? existing with { ApprovedUserId = userId }
+            : existing with { Denied = true };
+        return true;
+    }
+
+    public DevicePollOutcome PollDeviceCode(string deviceCode, string clientId)
+    {
+        if (string.IsNullOrWhiteSpace(deviceCode) || !_deviceAuthorizations.TryGetValue(deviceCode, out var existing))
+        {
+            return new DevicePollOutcome.Expired();
+        }
+
+        if (!string.IsNullOrWhiteSpace(clientId) && !string.Equals(existing.ClientId, clientId, StringComparison.Ordinal))
+        {
+            return new DevicePollOutcome.Expired();
+        }
+
+        if (DateTimeOffset.UtcNow > existing.ExpiresAtUtc)
+        {
+            _deviceAuthorizations.TryRemove(deviceCode, out _);
+            return new DevicePollOutcome.Expired();
+        }
+
+        if (existing.Denied)
+        {
+            _deviceAuthorizations.TryRemove(deviceCode, out _);
+            return new DevicePollOutcome.Denied();
+        }
+
+        if (existing.ApprovedUserId is { } userId)
+        {
+            _deviceAuthorizations.TryRemove(deviceCode, out _);
+            return new DevicePollOutcome.Approved(userId, existing.Scope, existing.ClientId, existing.ClientName);
+        }
+
+        return new DevicePollOutcome.Pending();
+    }
+
+    public static string NormalizeUserCode(string userCode) =>
+        new((userCode ?? "").Where(char.IsLetterOrDigit).Select(char.ToUpperInvariant).ToArray());
 
     public static bool VerifyPkce(string codeVerifier, string codeChallenge)
     {

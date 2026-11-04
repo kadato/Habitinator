@@ -10,7 +10,7 @@ For interactive clients (Claude Desktop, Cursor, VS Code, OpenCode):
 - Add `https://habitinator.app/mcp` to your client configuration without an authorization header.
 - The client discovers OAuth metadata at `/.well-known/oauth-protected-resource` and `/.well-known/oauth-authorization-server`.
 - The client prompts you to approve access in your browser at `/oauth/authorize`.
-- The client exchanges the authorization code using PKCE for an access token and refresh token, rotating them automatically without manual intervention.
+- The client exchanges the authorization code using PKCE for an access token and refresh token, rotating them automatically.
 
 ## 2. Register or sign in manually
 
@@ -18,7 +18,22 @@ For interactive clients (Claude Desktop, Cursor, VS Code, OpenCode):
 - To sign in, call `POST /api/auth/login` with the same body. The response has `accessToken`, a short-lived JWT.
 - To sign in with a browser, open `https://habitinator.app/auth/login` and use the session cookie.
 
-## 2. Mint a personal MCP token
+## 3. Headless approval (OAuth device flow, RFC 8628)
+
+Terminal agents that cannot open a browser use the device flow:
+
+1. The agent calls `POST /oauth/device/authorize` with `{"client_id":"opencode","scope":"full"}` and shows you the `verification_uri` plus the `user_code` (for example `ABCD-EFGH`).
+2. You open the URI in your browser, sign in, enter the code, and approve once.
+3. The agent polls `POST /oauth/token` with `{"grant_type":"urn:ietf:params:oauth:grant-type:device_code","device_code":"...","client_id":"opencode"}` every `interval` seconds. While you have not approved, the server answers `authorization_pending`.
+4. The agent calls MCP with `Authorization: Bearer <access_token>` and rotates via the `refresh_token` grant.
+
+```bash
+curl -s -X POST https://habitinator.app/oauth/device/authorize \
+  -H 'Content-Type: application/json' \
+  -d '{"client_id":"opencode","scope":"full"}'
+```
+
+## 4. Mint a personal MCP token
 
 Call `POST /api/account/mcp-token` with the login JWT or the session cookie:
 
@@ -29,11 +44,11 @@ curl -s -X POST https://habitinator.app/api/account/mcp-token \
   -d '{"days":90,"label":"Claude Desktop"}'
 ```
 
-The server clamps `days` to 1-365. The response has `token`, `expiresAtUtc`, `endpoint`, and `days`. The Settings panel mints the same token without curl. Open **Settings**, **AI assistant**, **External AI access (MCP)**. The panel also tests the token and copies client configs.
+The server clamps `days` to 1-365. The response has `token`, `expiresAtUtc`, `endpoint`, and `days`. Open **Settings**, **AI assistant**, **External AI access (MCP)** to mint the same token without curl.
 
-## 3. Call MCP
+## 5. Call MCP
 
-Call `POST https://habitinator.app/mcp`. The endpoint uses Streamable HTTP in stateless mode. Send these headers: `Authorization: Bearer <mcp-token>`, `Content-Type: application/json`, and `Accept: application/json, text/event-stream`. Read the [server card](https://habitinator.app/.well-known/mcp/server-card.json) for versions and capabilities. Read the full tool, prompt, and resource reference in [the MCP reference on GitHub](https://github.com/kadato/Habitinator/blob/main/docs/mcp.md).
+Call `POST https://habitinator.app/mcp`. Send these headers: `Authorization: Bearer <mcp-token>`, `Content-Type: application/json`, and `Accept: application/json, text/event-stream`. Read the [server card](https://habitinator.app/.well-known/mcp/server-card.json) for versions and capabilities. The full tool reference lives in [the MCP reference on GitHub](https://github.com/kadato/Habitinator/blob/main/docs/mcp.md).
 
 ```bash
 curl -s -X POST https://habitinator.app/mcp \
@@ -43,9 +58,9 @@ curl -s -X POST https://habitinator.app/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
 
-## 4. Rules
+## 6. Rules
 
 - Tokens belong to one user. Never share them, commit them, or send them to another service.
-- Destructive tools (`delete_item`, `delete_tag`, `import_data`, mass `bulk_archive`) ask for elicitation confirmation. Clients without elicitation pass `confirmToken`.
+- Destructive tools (`delete_item`, `import_data`, mass `bulk_archive`) ask for elicitation confirmation. Clients without elicitation pass `confirmToken`. (`delete_tag` only removes a label and applies immediately.)
 - Tokens expire. When one expires, generate a new one with the same label. There is no refresh flow.
-- Revocation takes effect immediately. Revoke one token or all tokens in the Settings panel. The panel lives under **Settings**, **AI assistant**, **External AI access (MCP)**. The API equivalents are `DELETE /api/account/mcp-tokens/{id}` and `POST /api/account/mcp-tokens/revoke-all`. Revoked tokens fail with 401. Tokens minted before the registry existed stay valid until they expire.
+- Revocation takes effect immediately. Revoke tokens in the Settings panel or with `DELETE /api/account/mcp-tokens/{id}` and `POST /api/account/mcp-tokens/revoke-all`. Revoked tokens fail with 401. Tokens minted before the registry existed stay valid until they expire.

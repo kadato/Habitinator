@@ -27,6 +27,26 @@ public sealed record OAuthRefreshToken(
     string Scope,
     DateTimeOffset ExpiresAtUtc);
 
+/// <summary>RFC 8628 device authorization pending user approval in a browser.</summary>
+public sealed record OAuthDeviceAuthorization(
+    string DeviceCode,
+    string UserCode,
+    string ClientId,
+    string ClientName,
+    string Scope,
+    DateTimeOffset ExpiresAtUtc,
+    Guid? ApprovedUserId,
+    bool Denied);
+
+/// <summary>Poll outcome for the device-code token grant.</summary>
+public abstract record DevicePollOutcome
+{
+    public sealed record Pending : DevicePollOutcome;
+    public sealed record Denied : DevicePollOutcome;
+    public sealed record Expired : DevicePollOutcome;
+    public sealed record Approved(Guid UserId, string Scope, string ClientId, string ClientName) : DevicePollOutcome;
+}
+
 /// <summary>RFC 7591 dynamic client registration request.</summary>
 public sealed record OAuthClientRegistrationRequest(
     string? ClientName,

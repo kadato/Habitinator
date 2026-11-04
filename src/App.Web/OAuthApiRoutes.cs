@@ -19,9 +19,10 @@ public static class OAuthApiRoutes
     private const string RefreshTokenParam = "refresh_token";
     private const string ClientIdParam = "client_id";
     private const string RedirectUriParam = "redirect_uri";
+    private const string DeviceCodeGrantType = "urn:ietf:params:oauth:grant-type:device_code";
 
     private static readonly string[] ResponseTypesSupported = ["code"];
-    private static readonly string[] GrantTypesSupported = ["authorization_code", RefreshTokenParam];
+    private static readonly string[] GrantTypesSupported = ["authorization_code", RefreshTokenParam, DeviceCodeGrantType];
     private static readonly string[] CodeChallengeMethodsSupported = ["S256"];
     private static readonly string[] TokenEndpointAuthMethodsSupported = ["none"];
     private static readonly string[] ScopesSupported = [McpTokenScopes.Full, McpTokenScopes.TrackingOnly, McpTokenScopes.ReadOnly];
@@ -73,6 +74,22 @@ public static class OAuthApiRoutes
             .DisableAntiforgery()
             .RequireRateLimiting("auth");
 
+        // RFC 8628 Device Authorization Grant (headless agents: no pasted secrets)
+        endpoints.MapPost("/oauth/device/authorize", DeviceAuthorizeAsync)
+            .AllowAnonymous()
+            .DisableAntiforgery()
+            .RequireRateLimiting("auth");
+
+        endpoints.MapGet("/oauth/device", DeviceGetAsync)
+            .AllowAnonymous()
+            .DisableAntiforgery()
+            .RequireRateLimiting("auth");
+
+        endpoints.MapPost("/oauth/device/approve", DeviceApproveAsync)
+            .RequireAuthorization("BoardOrJwt")
+            .DisableAntiforgery()
+            .RequireRateLimiting("auth");
+
         // RFC 7009 Token Revocation Endpoint
         endpoints.MapPost("/oauth/revoke", RevokeAsync)
             .AllowAnonymous()
@@ -105,6 +122,8 @@ public static class OAuthApiRoutes
             ["grant_types_supported"] = GrantTypesSupported,
             ["code_challenge_methods_supported"] = CodeChallengeMethodsSupported,
             ["token_endpoint_auth_methods_supported"] = TokenEndpointAuthMethodsSupported,
+            ["device_authorization_endpoint"] = $"{baseUrl}/oauth/device/authorize",
+            ["device_verification_uri"] = $"{baseUrl}/oauth/device",
             ["scopes_supported"] = ScopesSupported
         });
     }
@@ -279,7 +298,8 @@ public static class OAuthApiRoutes
         string? RedirectUri,
         string? ClientId,
         string? CodeVerifier,
-        string? RefreshToken);
+        string? RefreshToken,
+        string? DeviceCode);
 
     private static async Task<TokenRequest> ReadTokenRequestAsync(HttpContext context, CancellationToken cancellationToken)
     {
@@ -292,7 +312,8 @@ public static class OAuthApiRoutes
                 RedirectUri: form[RedirectUriParam].ToString(),
                 ClientId: form[ClientIdParam].ToString(),
                 CodeVerifier: form["code_verifier"].ToString(),
-                RefreshToken: form[RefreshTokenParam].ToString());
+                RefreshToken: form[RefreshTokenParam].ToString(),
+                DeviceCode: form["device_code"].ToString());
         }
 
         if (context.Request.ContentType?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true)
@@ -305,10 +326,11 @@ public static class OAuthApiRoutes
                 RedirectUri: root.TryGetProperty(RedirectUriParam, out var ru) ? ru.GetString() : null,
                 ClientId: root.TryGetProperty(ClientIdParam, out var ci) ? ci.GetString() : null,
                 CodeVerifier: root.TryGetProperty("code_verifier", out var cv) ? cv.GetString() : null,
-                RefreshToken: root.TryGetProperty(RefreshTokenParam, out var rt) ? rt.GetString() : null);
+                RefreshToken: root.TryGetProperty(RefreshTokenParam, out var rt) ? rt.GetString() : null,
+                DeviceCode: root.TryGetProperty("device_code", out var dc) ? dc.GetString() : null);
         }
 
-        return new TokenRequest(null, null, null, null, null, null);
+        return new TokenRequest(null, null, null, null, null, null, null);
     }
 
     private static async Task<IResult> TokenAsync(
@@ -331,7 +353,12 @@ public static class OAuthApiRoutes
             return await HandleRefreshTokenGrantAsync(request, oauthService, userManager, jwtTokenService, dbContext, cancellationToken);
         }
 
-        return Results.BadRequest(new { error = "unsupported_grant_type", error_description = "Only 'authorization_code' and 'refresh_token' are supported." });
+        if (string.Equals(request.GrantType, DeviceCodeGrantType, StringComparison.Ordinal))
+        {
+            return await HandleDeviceCodeGrantAsync(request, oauthService, userManager, jwtTokenService, dbContext, cancellationToken);
+        }
+
+        return Results.BadRequest(new { error = "unsupported_grant_type", error_description = "Only 'authorization_code', 'refresh_token', and '" + DeviceCodeGrantType + "' are supported." });
     }
 
     private static async Task<IResult> HandleAuthorizationCodeGrantAsync(
@@ -362,14 +389,30 @@ public static class OAuthApiRoutes
             return Results.BadRequest(new { error = InvalidGrant, error_description = "User not found." });
         }
 
+        var response = await MintOAuthTokensAsync(
+            user, authCode.ClientName, authCode.ClientId, authCode.Scope,
+            oauthService, jwtTokenService, dbContext, cancellationToken);
+        return Results.Ok(response);
+    }
+
+    private static async Task<OAuthTokenResponse> MintOAuthTokensAsync(
+        ApplicationUser user,
+        string clientName,
+        string clientId,
+        string scope,
+        IOAuthService oauthService,
+        JwtTokenService jwtTokenService,
+        ApplicationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
         var now = DateTimeOffset.UtcNow;
         var tokenLifetime = TimeSpan.FromDays(30);
         var mcpTokenEntity = new McpTokenEntity
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
-            Label = $"{authCode.ClientName} (OAuth)",
-            Scope = authCode.Scope,
+            Label = $"{clientName} (OAuth)",
+            Scope = scope,
             CreatedAtUtc = now,
             ExpiresAtUtc = now.Add(tokenLifetime)
         };
@@ -377,17 +420,15 @@ public static class OAuthApiRoutes
         dbContext.McpTokens.Add(mcpTokenEntity);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var jwt = jwtTokenService.CreateToken(user, tokenLifetime, mcpTokenEntity.Id, authCode.Scope);
-        var newRefreshToken = oauthService.CreateRefreshToken(mcpTokenEntity.Id, user.Id, authCode.ClientId, authCode.Scope, tokenLifetime);
+        var jwt = jwtTokenService.CreateToken(user, tokenLifetime, mcpTokenEntity.Id, scope);
+        var newRefreshToken = oauthService.CreateRefreshToken(mcpTokenEntity.Id, user.Id, clientId, scope, tokenLifetime);
 
-        var response = new OAuthTokenResponse(
+        return new OAuthTokenResponse(
             AccessToken: jwt,
             TokenType: "Bearer",
             ExpiresIn: (int)tokenLifetime.TotalSeconds,
             RefreshToken: newRefreshToken,
-            Scope: authCode.Scope);
-
-        return Results.Ok(response);
+            Scope: scope);
     }
 
     private static async Task<IResult> HandleRefreshTokenGrantAsync(
@@ -434,6 +475,247 @@ public static class OAuthApiRoutes
             Scope: existing.Scope);
 
         return Results.Ok(response);
+    }
+
+    private static async Task<IResult> HandleDeviceCodeGrantAsync(
+        TokenRequest request,
+        IOAuthService oauthService,
+        UserManager<ApplicationUser> userManager,
+        JwtTokenService jwtTokenService,
+        ApplicationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.DeviceCode) || string.IsNullOrWhiteSpace(request.ClientId))
+        {
+            return Results.BadRequest(new { error = InvalidRequest, error_description = "device_code and client_id are required." });
+        }
+
+        var outcome = oauthService.PollDeviceCode(request.DeviceCode, request.ClientId);
+        return outcome switch
+        {
+            DevicePollOutcome.Pending => Results.BadRequest(new
+            {
+                error = "authorization_pending",
+                error_description = "The user has not approved yet. Keep polling every 5 seconds."
+            }),
+            DevicePollOutcome.Denied => Results.BadRequest(new
+            {
+                error = "access_denied",
+                error_description = "The user denied the authorization request."
+            }),
+            DevicePollOutcome.Approved approved => await MintDeviceTokensAsync(
+                approved, userManager, oauthService, jwtTokenService, dbContext, cancellationToken),
+            _ => Results.BadRequest(new
+            {
+                error = "expired_token",
+                error_description = "The device code is invalid or expired. Start a new device authorization."
+            }),
+        };
+    }
+
+    private static async Task<IResult> MintDeviceTokensAsync(
+        DevicePollOutcome.Approved approved,
+        UserManager<ApplicationUser> userManager,
+        IOAuthService oauthService,
+        JwtTokenService jwtTokenService,
+        ApplicationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var user = await userManager.FindByIdAsync(approved.UserId.ToString());
+        if (user is null)
+        {
+            return Results.BadRequest(new { error = InvalidGrant, error_description = "User not found." });
+        }
+
+        var response = await MintOAuthTokensAsync(
+            user, approved.ClientName, approved.ClientId, approved.Scope,
+            oauthService, jwtTokenService, dbContext, cancellationToken);
+        return Results.Ok(response);
+    }
+
+    private static async Task<IResult> DeviceAuthorizeAsync(
+        HttpContext context,
+        IOAuthService oauthService,
+        CancellationToken cancellationToken)
+    {
+        var (clientId, scopeRaw) = await ReadDeviceAuthorizeRequestAsync(context, cancellationToken);
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            return Results.BadRequest(new { error = InvalidRequest, error_description = "client_id is required." });
+        }
+
+        var client = oauthService.GetClient(clientId);
+        var clientName = client?.ClientName ?? clientId;
+        var scope = McpTokenScopes.Normalize(string.IsNullOrWhiteSpace(scopeRaw) ? McpTokenScopes.Full : scopeRaw);
+        var authorization = oauthService.CreateDeviceAuthorization(clientId, clientName, scope);
+
+        var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}".TrimEnd('/');
+        return Results.Ok(new
+        {
+            device_code = authorization.DeviceCode,
+            user_code = authorization.UserCode,
+            verification_uri = $"{baseUrl}/oauth/device",
+            verification_uri_complete = $"{baseUrl}/oauth/device?code={Uri.EscapeDataString(authorization.UserCode)}",
+            expires_in = (int)TimeSpan.FromMinutes(15).TotalSeconds,
+            interval = 5
+        });
+    }
+
+    private static async Task<(string ClientId, string? Scope)> ReadDeviceAuthorizeRequestAsync(
+        HttpContext context, CancellationToken cancellationToken)
+    {
+        if (context.Request.HasFormContentType)
+        {
+            var form = await context.Request.ReadFormAsync(cancellationToken);
+            return (form[ClientIdParam].ToString(), form["scope"].ToString());
+        }
+
+        if (context.Request.ContentType?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            using var doc = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: cancellationToken);
+            var root = doc.RootElement;
+            return (
+                root.TryGetProperty(ClientIdParam, out var ci) ? ci.GetString() ?? "" : "",
+                root.TryGetProperty("scope", out var sc) ? sc.GetString() : null);
+        }
+
+        return ("", null);
+    }
+
+    private static async Task<IResult> DeviceGetAsync(
+        HttpContext context,
+        IOAuthService oauthService)
+    {
+        var code = context.Request.Query["code"].ToString();
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return Results.Content(DeviceEntryHtml, "text/html; charset=utf-8");
+        }
+
+        var authorization = oauthService.FindDeviceAuthorizationByUserCode(code);
+        if (authorization is null || DateTimeOffset.UtcNow > authorization.ExpiresAtUtc)
+        {
+            return Results.Content(
+                RenderDeviceMessageHtml("Code expired", "This code is unknown or expired. Ask your terminal agent for a new one."),
+                "text/html; charset=utf-8");
+        }
+
+        if (authorization.ApprovedUserId.HasValue || authorization.Denied)
+        {
+            return Results.Content(
+                RenderDeviceMessageHtml("Already decided", "This code was already approved or denied. You can close this tab."),
+                "text/html; charset=utf-8");
+        }
+
+        var user = await EnsureAuthenticatedUserAsync(context);
+        if (user?.Identity?.IsAuthenticated != true)
+        {
+            var returnUrl = context.Request.Path + context.Request.QueryString;
+            return Results.LocalRedirect($"/auth/login?returnUrl={Uri.EscapeDataString(returnUrl)}");
+        }
+
+        var userName = user.Identity?.Name ?? "User";
+        return Results.Content(
+            RenderDeviceConsentHtml(authorization, userName),
+            "text/html; charset=utf-8");
+    }
+
+    private static async Task<IResult> DeviceApproveAsync(
+        HttpContext context,
+        IOAuthService oauthService)
+    {
+        if (!context.Request.HasFormContentType)
+        {
+            return Results.BadRequest(new { error = InvalidRequest, error_description = "Form fields user_code and action are required." });
+        }
+
+        var form = await context.Request.ReadFormAsync(context.RequestAborted);
+        var userCode = form["user_code"].ToString();
+        var action = form["action"].ToString();
+
+        var userIdClaim = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? context.User.FindFirst(AppClaims.Subject)?.Value;
+        if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var approved = string.Equals(action, "approve", StringComparison.OrdinalIgnoreCase);
+        if (!oauthService.ApproveDeviceAuthorization(userCode, userId, approved))
+        {
+            return Results.Content(
+                RenderDeviceMessageHtml("Code expired", "This code is unknown or expired. Ask your terminal agent for a new one."),
+                "text/html; charset=utf-8");
+        }
+
+        return Results.Content(
+            approved
+                ? RenderDeviceMessageHtml("Approved", "Access granted. Return to your terminal: the agent picks up its token automatically.")
+                : RenderDeviceMessageHtml("Denied", "Access denied. Your terminal agent was notified."),
+            "text/html; charset=utf-8");
+    }
+
+    private static string DeviceEntryHtml =>
+        """
+        <!DOCTYPE html>
+        <html lang="en">
+        <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Connect device - Habitinator</title></head>
+        <body style="font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
+        <div style="max-width:22rem;width:90%;text-align:center;">
+        <h1>Connect your terminal agent</h1>
+        <p>Enter the code shown by your agent:</p>
+        <form method="get" action="/oauth/device">
+        <input name="code" autocomplete="off" placeholder="XXXX-XXXX" style="font-size:1.5rem;text-align:center;width:100%;padding:0.5rem;" />
+        <div style="margin-top:1rem;"><button type="submit" style="font-size:1rem;padding:0.6rem 1.5rem;">Continue</button></div>
+        </form></div></body></html>
+        """;
+
+    private static string RenderDeviceConsentHtml(OAuthDeviceAuthorization authorization, string userName)
+    {
+        var encoder = HtmlEncoder.Default;
+        var safeClient = encoder.Encode(authorization.ClientName);
+        var safeUser = encoder.Encode(userName);
+        var safeScope = encoder.Encode(authorization.Scope);
+        var safeCode = encoder.Encode(authorization.UserCode);
+        var scopeDesc = authorization.Scope switch
+        {
+            McpTokenScopes.TrackingOnly => "Complete habits and dailies, track timer sessions, and read board summaries.",
+            McpTokenScopes.ReadOnly => "Read habits, dailies, todos, streaks, and board summaries.",
+            _ => "Full access to create, edit, reorder, track, and manage your boards."
+        };
+        return $$"""
+            <!DOCTYPE html>
+            <html lang="en">
+            <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Authorize {{safeClient}} - Habitinator</title></head>
+            <body style="font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
+            <div style="max-width:24rem;width:90%;text-align:center;">
+            <h1>Authorize {{safeClient}}</h1>
+            <p>Signed in as <strong>{{safeUser}}</strong>.</p>
+            <p><strong>Scope: {{safeScope}}</strong><br />{{scopeDesc}}</p>
+            <form method="post" action="/oauth/device/approve">
+            <input type="hidden" name="user_code" value="{{safeCode}}" />
+            <button type="submit" name="action" value="deny" style="font-size:1rem;padding:0.6rem 1.2rem;">Deny</button>
+            <button type="submit" name="action" value="approve" style="font-size:1rem;padding:0.6rem 1.2rem;">Allow Access</button>
+            </form></div></body></html>
+            """;
+    }
+
+    private static string RenderDeviceMessageHtml(string title, string body)
+    {
+        var encoder = HtmlEncoder.Default;
+        return $"""
+            <!DOCTYPE html>
+            <html lang="en">
+            <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>{encoder.Encode(title)} - Habitinator</title></head>
+            <body style="font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
+            <div style="max-width:24rem;width:90%;text-align:center;">
+            <h1>{encoder.Encode(title)}</h1>
+            <p>{encoder.Encode(body)}</p>
+            </div></body></html>
+            """;
     }
 
     private static async Task<IResult> RevokeAsync(
@@ -499,7 +781,7 @@ public static class OAuthApiRoutes
         {
             McpTokenScopes.TrackingOnly => "Complete habits and dailies, track timer sessions, and read board summaries.",
             McpTokenScopes.ReadOnly => "Read habits, dailies, todos, streaks, and board summaries.",
-            _ => "Full access to create, edit, reorder, track, and manage your Habitinator boards."
+            _ => "Full access to create, edit, reorder, track, and manage your boards."
         };
 
         return $$"""

@@ -205,6 +205,14 @@
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
 }
+/* Direct children keep their natural height. Items with overflow hidden
+   (such as .hab-advanced) get an automatic minimum size of zero and would
+   otherwise absorb all flex-shrink and collapse, clipping their content
+   where body scroll cannot reach it. */
+.hab-modal__body > *,
+.edit-daily-body > * {
+    flex-shrink: 0;
+}
 .hab-modal__section {
     display: flex;
     flex-direction: column;

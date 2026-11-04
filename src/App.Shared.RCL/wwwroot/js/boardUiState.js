@@ -41,10 +41,25 @@ globalThis.habitinatorDownloadJson = function (fileName, jsonText) {
     }
 };
 
+// Scrolls a message list to the bottom. CSP-safe replacement for eval-based scrolling.
+globalThis.habitinatorScrollToBottom = function (elementId) {
+    try {
+        var el = document.getElementById(elementId);
+        if (!el) {
+            return false;
+        }
+        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+        return true;
+    } catch {
+        return false;
+    }
+};
+
 globalThis.habitinatorCopyText = async function (text) {
+    var value = (text === null || text === undefined) ? '' : String(text);
     try {
         if (navigator.clipboard?.writeText) {
-            await navigator.clipboard.writeText(text);
+            await navigator.clipboard.writeText(value);
             return true;
         }
     } catch {
@@ -52,11 +67,16 @@ globalThis.habitinatorCopyText = async function (text) {
     }
     try {
         const ta = document.createElement('textarea');
-        ta.value = text;
+        ta.value = value;
+        ta.setAttribute('readonly', '');
         ta.style.position = 'fixed';
+        ta.style.top = '0';
+        ta.style.left = '0';
         ta.style.opacity = '0';
         document.body.appendChild(ta);
+        ta.focus({ preventScroll: true });
         ta.select();
+        try { ta.setSelectionRange(0, ta.value.length); } catch { /* older engines */ }
         const ok = document.execCommand('copy'); // NOSONAR: legacy fallback when the Clipboard API is unavailable
         ta.remove();
         return ok;

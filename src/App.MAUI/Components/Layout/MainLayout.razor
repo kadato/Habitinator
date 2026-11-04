@@ -19,9 +19,9 @@
 <MudSnackbarProvider/>
 <TimeZoneInitializer />
 <CommandPalette />
-<AiAssistantDrawer />
 
 <MudLayout Class="app-shell-layout">
+    <AiAssistantDrawer />
     @if (Session.IsLoggedIn)
     {
         <MudAppBar Elevation="0" Class="app-top-bar" ToolBarClass="app-top-bar-toolbar">

@@ -220,6 +220,8 @@
         _repeatInterval = Item.DailyRepeatInterval < 1 ? 1 : Item.DailyRepeatInterval;
         _weekdays = DailyWeekdays.Normalize(Item.DailyWeekdays);
         _checklistRows = EditDialogHelpers.ParseChecklistRows(Item.ChecklistJson);
+        _checklistOpen = true;
+        _tagsOpen = !string.IsNullOrWhiteSpace(_tags);
         await LoadStreaksAsync();
     }
 

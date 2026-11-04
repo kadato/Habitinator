@@ -99,7 +99,7 @@
                         Model selection (@_model.Ai.Provider)
                     </MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">
-                        Choose a model from the dropdown or select a quick pill below.
+                        Choose a model from the dropdown.
                     </MudText>
 
                     <MudSelect T="string"
@@ -196,7 +196,7 @@
             <MudStack Spacing="2">
                 <MudText Typo="Typo.subtitle1" Class="mb-1 font-weight-bold">Available board tools</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">
-                    The assistant uses these tools on your Habitinator board:
+                    The assistant uses these tools:
                 </MudText>
 
                 <div class="ai-tool-pills-list d-flex flex-wrap gap-2">
@@ -243,7 +243,7 @@
                             <MudText Typo="Typo.subtitle1" Class="font-weight-bold">External AI access (MCP)</MudText>
                         </div>
                         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
-                            Give an external AI client its own token to manage your board. Label the token, pick an expiry, generate it, then copy your client's config below.
+                            Give an external AI client its own token to manage your board. Label the token, pick an expiry, then copy the config below.
                         </MudText>
                     </div>
                 </div>
@@ -325,8 +325,8 @@
                         }
                         <div>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Endpoint URL:</MudText>
-                            <div class="d-flex align-center gap-1">
-                                <code class="d-block pa-1 rounded text-truncate font-monospace flex-grow-1 mcp-token-panel__code">@_mcpTokenResponse.Endpoint</code>
+                            <div class="d-flex align-center gap-1 min-w-0 overflow-hidden">
+                                <code class="d-block pa-1 rounded text-truncate font-monospace flex-grow-1 min-w-0 mcp-token-panel__code">@_mcpTokenResponse.Endpoint</code>
                                 <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
                                                Size="Size.Small"
                                                aria-label="Copy MCP endpoint"
@@ -335,8 +335,8 @@
                         </div>
                         <div>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Bearer Token:</MudText>
-                            <div class="d-flex align-center gap-1">
-                                <code class="d-block pa-1 rounded text-truncate font-monospace flex-grow-1 mcp-token-panel__code">@_mcpTokenResponse.Token</code>
+                            <div class="d-flex align-center gap-1 min-w-0 overflow-hidden">
+                                <code class="d-block pa-1 rounded text-truncate font-monospace flex-grow-1 min-w-0 mcp-token-panel__code">@_mcpTokenResponse.Token</code>
                                 <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
                                                Size="Size.Small"
                                                aria-label="Copy MCP token"
@@ -351,7 +351,7 @@
                     <MudAlert Severity="Severity.Warning"
                               Variant="Variant.Outlined"
                               Dense="true">
-                        Token '@_mcpExpiringSoon.Value.Label' expires @_mcpExpiringSoon.Value.ExpiryText. Generate a replacement before it lapses.
+                        Token '@_mcpExpiringSoon.Value.Label' expires @_mcpExpiringSoon.Value.ExpiryText. Generate a replacement.
                     </MudAlert>
                 }
 
@@ -433,35 +433,35 @@
                 </div>
 
                 <MudTabs Elevation="0" Rounded="true" Outlined="true" Class="mt-1">
-                    <MudTabPanel Text="OAuth (Zero key)" Icon="@Icons.Material.Filled.AutoAwesome">
+                    <MudTabPanel Text="OAuth">
                         <div class="pa-2">
                             <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="mb-3">
-                                <strong>Zero manual keys:</strong> Habitinator supports RFC 9728 &amp; RFC 8414 OAuth 2.1. Configure your client with the server URL; when the client connects, it opens your browser to approve access. No API key copying required.
+                                No keys needed. Point your client at the server URL and approve in your browser.
                             </MudAlert>
 
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">
-                                <strong>Option A: Claude Desktop, Cursor, or VS Code:</strong>
+                                Claude Desktop, Cursor, or VS Code:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpClaudeOAuthSnippet()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeOAuthSnippet(), "OAuth configuration copied.")'>Copy Zero-Key Config</MudButton>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeOAuthSnippet(), "OAuth configuration copied.")'>Copy config</MudButton>
 
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
-                                <strong>Option B: OpenCode (with native OAuth discovery):</strong>
+                                OpenCode:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpOpenCodeOAuthSnippet()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpOpenCodeOAuthSnippet(), "OpenCode OAuth config copied.")'>Copy OpenCode Config</MudButton>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpOpenCodeOAuthSnippet(), "OpenCode OAuth config copied.")'>Copy config</MudButton>
 
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
-                                <strong>Option C: Claude Code CLI:</strong>
+                                Claude Code CLI:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpClaudeCodeCliOAuth()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeCodeCliOAuth(), "Claude Code CLI command copied.")'>Copy Claude Code CLI</MudButton>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeCodeCliOAuth(), "Claude Code CLI command copied.")'>Copy command</MudButton>
 
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
-                                <strong>Option D: OpenCode CLI:</strong>
+                                OpenCode CLI:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpOpenCodeCliOAuth()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpOpenCodeCliOAuth(), "OpenCode CLI command copied.")'>Copy OpenCode CLI</MudButton>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpOpenCodeCliOAuth(), "OpenCode CLI command copied.")'>Copy command</MudButton>
                         </div>
                     </MudTabPanel>
                     <MudTabPanel Text="Claude">
@@ -486,13 +486,13 @@
                     <MudTabPanel Text="OpenCode">
                         <div class="pa-2">
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">
-                                <strong>Step 1:</strong> Export your token as an environment variable so secrets stay out of git commits:
+                                Save the token as an environment variable:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpExportEnv()</pre>
                             <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpExportEnv(), "Export command copied.")'>Copy export command</MudButton>
 
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
-                                <strong>Step 2:</strong> Add to OpenCode with the CLI:
+                                Add to OpenCode with the CLI:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpOpenCodeCli()</pre>
                             <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpOpenCodeCli(), "OpenCode command copied.")'>Copy CLI command</MudButton>
@@ -507,13 +507,13 @@
                     <MudTabPanel Text="Hermes">
                         <div class="pa-2">
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">
-                                <strong>Step 1:</strong> Export your token as an environment variable, or add it to your Hermes <code>.env</code> file:
+                                Save the token as an environment variable:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpExportEnv()</pre>
                             <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpExportEnv(), "Export command copied.")'>Copy export command</MudButton>
 
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
-                                <strong>Step 2:</strong> Append Habitinator to <code>~/.hermes/config.yaml</code> with one terminal command:
+                                Append to <code>~/.hermes/config.yaml</code>:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpHermesAppend()</pre>
                             <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpHermesAppend(), "Hermes append command copied.")'>Copy append command</MudButton>
@@ -535,13 +535,13 @@
                     <MudTabPanel Text="Terminal or curl">
                         <div class="pa-2">
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">
-                                Quick one-line health check returning the tool count with <code>jq</code>:
+                                Health check:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpHealthCheckCurl()</pre>
                             <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpHealthCheckCurl(), "Health check command copied.")'>Copy health check</MudButton>
 
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
-                                Full curl request for tools/list:
+                                List tools:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpCurlSnippet()</pre>
                             <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpCurlSnippet(), "curl command copied.")'>Copy curl</MudButton>
@@ -558,7 +558,7 @@
                     <MudText Typo="Typo.subtitle1" Class="font-weight-bold">What you can ask your AI</MudText>
                 </div>
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">
-                    Ready prompt recipes for your in-app assistant or external agents like OpenCode, Hermes, and Claude:
+                    Prompt recipes you can copy:
                 </MudText>
 
                 <div class="d-flex flex-column gap-2">
@@ -1106,7 +1106,16 @@
     {
         try
         {
-            var ok = await JS.InvokeAsync<bool>("habitinatorCopyText", text);
+            try
+            {
+                await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardUiState.js");
+            }
+            catch
+            {
+                // Ignored. The copy call below will fail and be caught too.
+            }
+
+            var ok = await JS.InvokeAsync<bool>("habitinatorCopyText", text ?? string.Empty);
             if (ok)
             {
                 Snackbar.Add(successMessage, Severity.Success, o => o.VisibleStateDuration = 1200);

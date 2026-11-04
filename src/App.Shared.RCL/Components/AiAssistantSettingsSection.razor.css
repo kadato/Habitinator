@@ -128,6 +128,9 @@
     background: var(--mud-palette-background);
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: var(--radius-md, 8px);
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: clip;
 }
 
 .mcp-token-panel__code {
@@ -135,6 +138,8 @@
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-lines-default);
     color: var(--mud-palette-text-primary);
+    min-width: 0;
+    max-width: 100%;
 }
 
 .mcp-snippet-pre {
@@ -142,6 +147,7 @@
     font-size: 0.75rem;
     line-height: 1.5;
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
     word-break: break-word;
     background: var(--mud-palette-background);
     border: 1px solid var(--mud-palette-lines-default);
@@ -149,8 +155,11 @@
     padding: 8px 10px;
     margin: 0 0 4px 0;
     color: var(--mud-palette-text-primary);
+    max-width: 100%;
+    min-width: 0;
     max-height: 260px;
     overflow: auto;
+    box-sizing: border-box;
 }
 
 /* Prompt recipe card */
@@ -159,8 +168,16 @@
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: var(--radius-sm, 6px);
     transition: border-color 0.15s ease, background-color 0.15s ease;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .prompt-recipe-card:hover {
     border-color: var(--mud-palette-primary);
+}
+
+@media (max-width: 600px) {
+    .prompt-recipe-card {
+        flex-wrap: wrap;
+    }
 }

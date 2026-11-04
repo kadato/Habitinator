@@ -88,6 +88,8 @@
         _tags = EditDialogHelpers.FormatTags(Item.Tags);
         _dueDate = Item.TodoDueDate?.ToDateTime(TimeOnly.MinValue);
         _checklistRows = EditDialogHelpers.ParseChecklistRows(Item.ChecklistJson);
+        _checklistOpen = true;
+        _tagsOpen = !string.IsNullOrWhiteSpace(_tags);
     }
 
     private void OnShellClick() => _tagPicker?.Dismiss();

@@ -35,18 +35,21 @@ public partial class CommandPalette : IDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !_globalShortcutRegistered)
+        if (_globalShortcutRegistered)
         {
+            return;
+        }
+
+        _dotNetRef ??= DotNetObjectReference.Create(this);
+        try
+        {
+            await JS.InvokeVoidAsync("habitinatorLoadScript", CancellationToken.None, new object?[] { "_content/App.Shared.RCL/js/commandPalette.js" });
+            await JS.InvokeVoidAsync("HabitinatorCommandPalette.initGlobal", _dotNetRef);
             _globalShortcutRegistered = true;
-            _dotNetRef ??= DotNetObjectReference.Create(this);
-            try
-            {
-                await JS.InvokeVoidAsync("HabitinatorCommandPalette.initGlobal", _dotNetRef);
-            }
-            catch
-            {
-                // Best effort global shortcut.
-            }
+        }
+        catch
+        {
+            // Best effort global shortcut; a later render retries.
         }
     }
 
@@ -93,6 +96,7 @@ public partial class CommandPalette : IDisposable
     {
         try
         {
+            await EnsurePaletteScriptAsync();
             var ids = await JS.InvokeAsync<string[]?>("HabitinatorCommandPalette.loadRecent", CancellationToken.None, null);
             if (ids is not null)
             {
@@ -110,6 +114,7 @@ public partial class CommandPalette : IDisposable
         try
         {
             PaletteService.RecordRecent(commandId);
+            await EnsurePaletteScriptAsync();
             await JS.InvokeVoidAsync("HabitinatorCommandPalette.saveRecent", CancellationToken.None, new object?[] { PaletteService.RecentIds.ToArray() });
         }
         catch
@@ -806,11 +811,24 @@ public partial class CommandPalette : IDisposable
     {
         try
         {
+            await EnsurePaletteScriptAsync();
             await JS.InvokeVoidAsync(identifier, CancellationToken.None, args);
         }
         catch
         {
             // Ignored when JS is not ready or during prerendering
+        }
+    }
+
+    private async Task EnsurePaletteScriptAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("habitinatorLoadScript", CancellationToken.None, new object?[] { "_content/App.Shared.RCL/js/commandPalette.js" });
+        }
+        catch
+        {
+            // Ignored when JS is not ready or during prerendering.
         }
     }
 

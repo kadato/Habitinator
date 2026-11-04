@@ -16,7 +16,8 @@
            Anchor="Anchor.Right"
            Elevation="4"
            Variant="DrawerVariant.Temporary"
-           Width="480px"
+           Overlay="true"
+           Width="min(480px, 100vw)"
            Class="ai-assistant-drawer"
            ClipMode="DrawerClipMode.Never">
     <div class="ai-drawer-container d-flex flex-column h-100">
@@ -1149,6 +1150,15 @@
 
         try
         {
+            try
+            {
+                await JS.InvokeVoidAsync("habitinatorLoadScript", CancellationToken.None, new object?[] { "_content/App.Shared.RCL/js/boardUiState.js" });
+            }
+            catch
+            {
+                // Ignored. The copy call below will fail and be caught too.
+            }
+
             var ok = await JS.InvokeAsync<bool>("habitinatorCopyText", CancellationToken.None, new object?[] { content });
             if (ok)
             {
@@ -1170,7 +1180,15 @@
         try
         {
             await Task.Delay(50);
-            await JS.InvokeVoidAsync("eval", CancellationToken.None, new object?[] { "document.getElementById('ai-messages-scroll-area')?.scrollTo({ top: 99999, behavior: 'smooth' })" });
+            try
+            {
+                await JS.InvokeVoidAsync("habitinatorLoadScript", CancellationToken.None, new object?[] { "_content/App.Shared.RCL/js/boardUiState.js" });
+            }
+            catch
+            {
+                // Ignored. The scroll call below will fail and be caught too.
+            }
+            await JS.InvokeVoidAsync("habitinatorScrollToBottom", CancellationToken.None, new object?[] { "ai-messages-scroll-area" });
         }
         catch
         {

@@ -180,6 +180,8 @@
         _counter = Item.Counter;
         _negativeCounter = Item.NegativeCounter;
         _checklistRows = EditDialogHelpers.ParseChecklistRows(Item.ChecklistJson);
+        _checklistOpen = true;
+        _tagsOpen = !string.IsNullOrWhiteSpace(_tags);
     }
 
     private void OnShellClick() => _tagPicker?.Dismiss();

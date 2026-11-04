@@ -673,9 +673,24 @@
     line-height: 1.2;
 }
 
-/* The drawer width is fixed at 480px in markup. Never let it overflow narrow screens. */
+/* The drawer is a Temporary overlay. It must never widen the page, open or closed.
+   Fixed width caused a permanent horizontal scrollbar because the off-canvas
+   panel sat 480px past the right edge. min() keeps it inside narrow screens. */
 .ai-assistant-drawer {
+    width: min(480px, 100vw) !important;
     max-width: 100vw !important;
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    height: 100dvh !important;
+    overflow-x: clip !important;
+}
+
+/* Closed overlay panels stay translated off-screen. Hide them so they never
+   create a horizontal scrollbar or steal clicks. */
+.ai-assistant-drawer.mud-drawer--closed {
+    visibility: hidden !important;
+    pointer-events: none !important;
 }
 
 /* Touch pointers get full-size header and prompt targets. */

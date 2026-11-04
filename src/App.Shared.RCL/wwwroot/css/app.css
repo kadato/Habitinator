@@ -128,6 +128,14 @@ html, body {
     -webkit-tap-highlight-color: transparent;
     accent-color: var(--hab-accent-focus);
     caret-color: var(--mud-palette-primary);
+    /* Off-canvas overlays (AI drawer, menus) sit past the right edge when
+       closed. Clip them so they never create a page-level horizontal bar. */
+    overflow-x: clip;
+}
+
+.mud-layout,
+.mud-main-content {
+    overflow-x: clip;
 }
 
 ::selection {
@@ -337,6 +345,9 @@ html.dark-theme .edit-daily-shell--habit .edit-daily-checklist__add {
 
 .settings-section-content {
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: clip;
     padding-top: var(--space-6);
 }
 
@@ -704,6 +715,21 @@ input[type="number"].mud-input-slot {
     max-width: 900px;
     margin: 0 auto;
     width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+    box-sizing: border-box;
+}
+
+/* Keep tab headers and panels inside the settings width. */
+.settings-page-wrapper .mud-tabs {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.settings-page-wrapper .mud-tabs-content {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: clip;
 }
 
 @media (max-width: 479.98px) {
@@ -717,6 +743,9 @@ input[type="number"].mud-input-slot {
     background: color-mix(in srgb, var(--mud-palette-surface) 90%, var(--mud-palette-primary) 4%);
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 10%, var(--mud-palette-table-lines) 75%);
     box-shadow: 0 1px 3px color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .settings-load-fallback {

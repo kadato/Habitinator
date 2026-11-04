@@ -18,86 +18,139 @@ internal static class McpInput
     public const int MaxTimeZoneLength = 100;
     public const int MaxImportJsonLength = 10_000_000;
 
-    public static string CleanTitle(string title)
+    private const int MaxReceivedPreview = 120;
+
+    /// <summary>One-line truncated preview of a received value for error messages.</summary>
+    public static string PreviewReceived(string? value)
+    {
+        if (value is null)
+        {
+            return "null";
+        }
+
+        var singleLine = value.Replace('\r', ' ').Replace('\n', ' ');
+        return singleLine.Length <= MaxReceivedPreview
+            ? $"'{singleLine}'"
+            : $"'{singleLine[..MaxReceivedPreview]}' (truncated)";
+    }
+
+    public static string CleanTitle(string title, string field = "title")
     {
         if (string.IsNullOrWhiteSpace(title) || title.Trim().Length > MaxTitleLength)
         {
-            throw new McpProtocolException("Title must be 1 to 200 chars.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(field,
+                $"expected 1 to {MaxTitleLength} chars, got {PreviewReceived(title)}.");
         }
 
         return title.Trim();
     }
 
-    public static void CheckNotes(string? notes)
+    public static void CheckNotes(string? notes, string field = "notes")
     {
         if (notes is not null && notes.Length > MaxNotesLength)
         {
-            throw new McpProtocolException("Notes must be 4000 chars or fewer.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(field,
+                $"expected {MaxNotesLength} chars or fewer, got {notes.Length} chars.");
         }
     }
 
-    public static void CheckTags(string? tags)
+    /// <summary>
+    /// Validates an already-normalized tags string.
+    /// Empty string clears, null keeps.
+    /// </summary>
+    public static void CheckTags(string? tags, string field = "tags")
     {
         if (tags is not null && tags.Length > MaxTagsLength)
         {
-            throw new McpProtocolException("Tags must be 500 chars or fewer.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(field,
+                $"expected comma-separated string (max {MaxTagsLength} chars), got {tags.Length} chars.");
         }
     }
 
-    public static string? NormalizedChecklist(string? checklistJson)
+    /// <summary>
+    /// Canonical tags form shared by MCP, REST, and UI: trimmed tags joined with ",".
+    /// Returns null only for null input.
+    /// </summary>
+    public static string? CanonicalTags(string? tags)
     {
-        var normalized = DailyChecklistJson.Normalize(checklistJson);
+        if (tags is null)
+        {
+            return null;
+        }
+
+        return string.Join(",", BoardTagUtil.ParseTags(tags));
+    }
+
+    public static string? NormalizedChecklist(string? checklistJson, string field = "checklistJson")
+    {
+        string? normalized;
+        try
+        {
+            normalized = DailyChecklistJson.Normalize(checklistJson);
+        }
+        catch (Exception ex) when (ex is not McpProtocolException)
+        {
+            throw new McpFieldException(field,
+                $"expected JSON array of {{text, isDone}} (max {MaxChecklistLength} chars), got {PreviewReceived(checklistJson)}.");
+        }
+
         if (normalized is not null && normalized.Length > MaxChecklistLength)
         {
-            throw new McpProtocolException("Checklist must be 8000 chars or fewer.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(field,
+                $"expected JSON array of {{text, isDone}} (max {MaxChecklistLength} chars), got {normalized.Length} chars.");
         }
 
         return normalized;
     }
 
-    public static string CleanChecklistText(string text)
+    public static string CleanChecklistText(string text, string field = "text")
     {
         if (string.IsNullOrWhiteSpace(text) || text.Trim().Length > 500)
         {
-            throw new McpProtocolException("Checklist text must be 1 to 500 chars.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(field,
+                $"expected 1 to 500 chars, got {PreviewReceived(text)}.");
         }
 
         return text.Trim();
     }
 
-    public static void CheckCustomLabel(string? customLabel)
+    public static void CheckCustomLabel(string? customLabel, string field = "customLabel")
     {
         if (customLabel is not null && customLabel.Length > MaxCustomLabelLength)
         {
-            throw new McpProtocolException("Custom label must be 500 chars or fewer.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(field,
+                $"expected {MaxCustomLabelLength} chars or fewer, got {customLabel.Length} chars.");
         }
     }
 
-    public static void CheckDisplayName(string? displayName)
+    public static void CheckDisplayName(string? displayName, string field = "displayName")
     {
         if (displayName is not null && displayName.Length > MaxDisplayNameLength)
         {
-            throw new McpProtocolException("Display name must be 100 chars or fewer.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(field,
+                $"expected {MaxDisplayNameLength} chars or fewer, got {displayName.Length} chars.");
         }
     }
 
-    public static void CheckDateFormat(string? dateFormat)
+    public static void CheckDateFormat(string? dateFormat, string field = "dateFormat")
     {
         if (dateFormat is not null && (dateFormat.Length == 0 || dateFormat.Length > MaxDateFormatLength))
         {
-            throw new McpProtocolException("Date format must be 1 to 20 chars.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(field,
+                $"expected 1 to {MaxDateFormatLength} chars, got {PreviewReceived(dateFormat)}.");
         }
     }
 
-    public static void CheckTimeZoneOverride(string? timeZoneOverrideId)
+    public static void CheckTimeZoneOverride(string? timeZoneOverrideId, string field = "timeZone")
     {
         if (timeZoneOverrideId is not null && timeZoneOverrideId.Length > MaxTimeZoneLength)
         {
-            throw new McpProtocolException("Timezone id must be 100 chars or fewer.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(field,
+                $"expected {MaxTimeZoneLength} chars or fewer, got {timeZoneOverrideId.Length} chars.");
         }
     }
 
-    public static int ResolveRepeatInterval(int? repeatInterval, int current)
+    public static int ResolveRepeatInterval(int? repeatInterval, int current, string field = "repeatInterval")
     {
         if (repeatInterval is not { } interval)
         {
@@ -106,13 +159,14 @@ internal static class McpInput
 
         if (interval is < 1 or > 999)
         {
-            throw new McpProtocolException("Repeat interval must be 1 to 999.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(field,
+                $"expected 1 to 999, got {interval}.");
         }
 
         return interval;
     }
 
-    public static int ResolveDailyCounter(int? counter, int current)
+    public static int ResolveDailyCounter(int? counter, int current, string field = "counter")
     {
         if (counter is not { } value)
         {
@@ -121,13 +175,14 @@ internal static class McpInput
 
         if (value is < 0 or > 9999)
         {
-            throw new McpProtocolException("Counter must be 0 to 9999.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(field,
+                $"expected 0 to 9999, got {value}.");
         }
 
         return value;
     }
 
-    public static int ResolveHabitCounter(int? counter, int current, string name)
+    public static int ResolveHabitCounter(int? counter, int current, string name, string? field = null)
     {
         if (counter is not { } value)
         {
@@ -136,13 +191,14 @@ internal static class McpInput
 
         if (value is < 0 or > 9999)
         {
-            throw new McpProtocolException($"{name} must be 0 to 9999.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(field ?? ToFieldName(name),
+                $"expected 0 to 9999, got {value}.");
         }
 
         return value;
     }
 
-    public static int ResolveWeekdays(int? weekdays, int current)
+    public static int ResolveWeekdays(int? weekdays, int current, string field = "weekdays")
     {
         if (weekdays is not { } mask)
         {
@@ -151,13 +207,18 @@ internal static class McpInput
 
         if (mask is < 0 or > 127)
         {
-            throw new McpProtocolException("Weekdays must be 0 to 127.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(field,
+                $"expected bitmask 0 to 127, got {mask}.");
         }
 
         return mask;
     }
 
-    public static int ResolveWeekdaysWithNames(int? weekdays, IReadOnlyList<string>? weekdayNames, int current)
+    public static int ResolveWeekdaysWithNames(
+        int? weekdays,
+        IReadOnlyList<string>? weekdayNames,
+        int current,
+        string field = "weekdayNames")
     {
         if (weekdayNames is { Count: > 0 })
         {
@@ -197,7 +258,8 @@ internal static class McpInput
                     }
                     else
                     {
-                        throw new McpProtocolException($"Unrecognized weekday name: '{trimmed}'. Use Mon, Tue, Wed, Thu, Fri, Sat, Sun.", McpErrorCode.InvalidParams);
+                        throw new McpFieldException(field,
+                            $"unrecognized weekday name {PreviewReceived(trimmed)}. Use Mon, Tue, Wed, Thu, Fri, Sat, Sun.");
                     }
                 }
             }
@@ -205,14 +267,15 @@ internal static class McpInput
             return DailyWeekdays.Normalize(mask);
         }
 
-        return ResolveWeekdays(weekdays, current);
+        return ResolveWeekdays(weekdays, current, field);
     }
 
     public static void CheckPomodoro(string name, int? value, int min, int max)
     {
         if (value is { } v && (v < min || v > max))
         {
-            throw new McpProtocolException($"{name} must be {min} to {max}.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(ToFieldName(name),
+                $"expected {min} to {max}, got {v}.");
         }
     }
 
@@ -222,17 +285,19 @@ internal static class McpInput
             || parsed < TimeSpan.Zero
             || parsed >= TimeSpan.FromDays(1))
         {
-            throw new McpProtocolException($"{paramName} must use HH:mm within one day.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(ToFieldName(paramName),
+                $"expected HH:mm within one day, got {PreviewReceived(raw)}.");
         }
 
         return parsed;
     }
 
-    public static DateOnly ParseDate(string raw, string paramName = "Date", DateOnly? today = null)
+    public static DateOnly ParseDate(string raw, string paramName = "date", DateOnly? today = null)
     {
         if (string.IsNullOrWhiteSpace(raw))
         {
-            throw new McpProtocolException($"{paramName} must not be empty.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(ToFieldName(paramName),
+                "expected yyyy-MM-dd, 'today', 'yesterday', or 'tomorrow', got empty.");
         }
 
         var trimmed = raw.Trim();
@@ -263,10 +328,11 @@ internal static class McpInput
             return parsed;
         }
 
-        throw new McpProtocolException($"{paramName} must use yyyy-MM-dd, 'today', 'yesterday', or 'tomorrow'.", McpErrorCode.InvalidParams);
+        throw new McpFieldException(ToFieldName(paramName),
+            $"expected yyyy-MM-dd, 'today', 'yesterday', or 'tomorrow', got {PreviewReceived(raw)}.");
     }
 
-    public static DateOnly? ParseNullableDate(string? raw, string paramName = "Date", DateOnly? today = null)
+    public static DateOnly? ParseNullableDate(string? raw, string paramName = "date", DateOnly? today = null)
     {
         if (string.IsNullOrWhiteSpace(raw))
         {
@@ -276,11 +342,37 @@ internal static class McpInput
         return ParseDate(raw, paramName, today);
     }
 
-    public static void CheckImportSize(string json)
+    public static void CheckImportSize(string json, string field = "json")
     {
         if (json.Length > MaxImportJsonLength)
         {
-            throw new McpProtocolException("Import JSON is too large. Keep it under 10 MB.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(field,
+                $"expected under 10 MB, got {json.Length} chars.");
         }
+    }
+
+    public static void CheckIdempotencyKey(string? key, string field = "idempotencyKey")
+    {
+        if (key is not null && key.Length > Services.BoardIdempotencyService.MaxIdempotencyKeyLength)
+        {
+            throw new McpFieldException(field,
+                $"expected at most {Services.BoardIdempotencyService.MaxIdempotencyKeyLength} chars, got {key.Length} chars.");
+        }
+    }
+
+    private static string ToFieldName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return "value";
+        }
+
+        var trimmed = name.Trim();
+        return trimmed.Length switch
+        {
+            0 => "value",
+            1 => trimmed.ToLowerInvariant(),
+            _ => char.ToLowerInvariant(trimmed[0]) + trimmed[1..],
+        };
     }
 }

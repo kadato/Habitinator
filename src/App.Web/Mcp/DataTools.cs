@@ -50,7 +50,7 @@ public sealed class DataTools(
                 {
                     ["confirm_import"] = InputRequest.ForElicitation(new ElicitRequestParams
                     {
-                        Message = "Import replaces the board. Confirm?",
+                        Message = "Import replaces the board. Confirm? Headless clients without elicitation: retry with confirmToken set to 'CONFIRM'.",
                         RequestedSchema = new ElicitRequestParams.RequestSchema
                         {
                             Properties = new Dictionary<string, ElicitRequestParams.PrimitiveSchemaDefinition>
@@ -81,12 +81,13 @@ public sealed class DataTools(
         }
         catch (JsonException)
         {
-            throw new McpProtocolException("The json is not a valid export document.", McpErrorCode.InvalidParams);
+            throw new McpFieldException("json",
+                $"expected an export document as produced by export_data, got {McpInput.PreviewReceived(json)}.");
         }
 
         if (data is null)
         {
-            throw new McpProtocolException("The json is not a valid export document.", McpErrorCode.InvalidParams);
+            throw new McpFieldException("json", "expected an export document as produced by export_data, got null.");
         }
 
         var result = await import.ImportAsync(userId, data, cancellationToken);

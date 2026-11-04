@@ -36,7 +36,7 @@ internal static class McpRegistration
                 "Inspect timer totals with get_timer_summary and activity logs with list_activity_events. " +
                 "Dates support yyyy-MM-dd and relative values 'today', 'yesterday', and 'tomorrow'. Times use HH:mm. " +
                 "Fix the input and retry on InvalidParams. Reuse eventId on retry for log_activity and log_timer_session so the server logs the event once. " +
-                "delete_item, delete_tag, import_data, and mass bulk_archive ask for elicitation confirmation. Older clients pass confirmToken instead.";
+                "delete_item, import_data, and mass bulk_archive ask for elicitation confirmation. Clients without elicitation pass confirmToken instead.";
         })
         .WithHttpTransport(o =>
         {
@@ -65,6 +65,12 @@ internal static class McpRegistration
                 var sw = System.Diagnostics.Stopwatch.StartNew();
                 try
                 {
+                    // Convert native arrays to strings before argument binding.
+                    if (ctx.Params.Arguments is not null)
+                    {
+                        McpArgumentNormalization.Normalize(ctx.Params.Name, ctx.Params.Arguments);
+                    }
+
                     var result = await next(ctx, ct);
                     AppTelemetry.RecordMcpTool(ctx.Params.Name, "ok", sw.ElapsedMilliseconds);
                     logger?.LogInformation("MCP tool {Tool} user {User} args {Args} took {Ms}ms",
@@ -76,11 +82,36 @@ internal static class McpRegistration
                     AppTelemetry.RecordMcpTool(ctx.Params.Name, "elicitation", sw.ElapsedMilliseconds);
                     throw;
                 }
+                catch (McpProtocolException)
+                {
+                    // Already actionable: message names the field, the expected
+                    // format, and the received value. Never append raw inputs here.
+                    AppTelemetry.RecordMcpTool(ctx.Params.Name, "error", sw.ElapsedMilliseconds);
+                    throw;
+                }
+                catch (System.Text.Json.JsonException ex)
+                {
+                    // Argument binding failed (wrong JSON shape). Name the tool and
+                    // the flexible fields so the agent can fix the input and retry.
+                    AppTelemetry.RecordMcpTool(ctx.Params.Name, "error", sw.ElapsedMilliseconds);
+                    logger?.LogWarning(ex, "MCP tool {Tool} argument binding failed", ctx.Params.Name);
+                    throw new McpProtocolException(
+                        $"Invalid arguments for tool '{ctx.Params.Name}': {TrimBindingMessage(ex.Message)} " +
+                        "tags accepts a comma-separated string or an array of strings " +
+                        "(max 500 chars); checklistJson and json accept a JSON string or an " +
+                        "array of {text, isDone} (max 8000 chars). Fix the input and retry.",
+                        McpErrorCode.InvalidParams);
+                }
                 catch (Exception ex)
                 {
+                    // Unexpected failure: log the full detail server-side, return a
+                    // safe message. Never leak tokens, secrets, or connection details.
                     AppTelemetry.RecordMcpTool(ctx.Params.Name, "error", sw.ElapsedMilliseconds);
                     logger?.LogError(ex, "MCP tool {Tool} failed", ctx.Params.Name);
-                    throw;
+                    throw new McpProtocolException(
+                        $"Tool '{ctx.Params.Name}' failed unexpectedly. Retry once; " +
+                        "if it repeats, report the tool name and time.",
+                        McpErrorCode.InternalError);
                 }
             });
             b.AddGetPromptFilter(next => async (ctx, ct) =>
@@ -425,5 +456,11 @@ internal static class McpRegistration
     {
         var factory = services?.GetService(typeof(ILoggerFactory)) as ILoggerFactory;
         return factory?.CreateLogger("Habitinator.Mcp");
+    }
+
+    private static string TrimBindingMessage(string message)
+    {
+        var singleLine = message.Replace('\r', ' ').Replace('\n', ' ');
+        return singleLine.Length <= 200 ? singleLine : singleLine[..200] + " (truncated)";
     }
 }

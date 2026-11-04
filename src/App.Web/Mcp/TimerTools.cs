@@ -2,7 +2,6 @@ using System.ComponentModel;
 
 using App.Web.Services;
 
-using ModelContextProtocol;
 using ModelContextProtocol.Server;
 
 namespace App.Web.Mcp;
@@ -36,13 +35,15 @@ public sealed class TimerTools(
         var userId = McpUser.RequireId(http);
         if (durationSeconds is < 1 or > 86400)
         {
-            throw new McpProtocolException("durationSeconds must be 1 to 86400.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(nameof(durationSeconds),
+                $"expected 1 to 86400, got {durationSeconds}.");
         }
 
         McpInput.CheckCustomLabel(customLabel);
         if (boardItemId.HasValue && await boards.GetItemAsync(userId, boardItemId.Value, cancellationToken) is null)
         {
-            throw new McpProtocolException("Board item not found.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(nameof(boardItemId),
+                $"no item found with id {boardItemId.Value:D}. Check it with get_snapshot or search_items.");
         }
 
         await boards.LogTimerSessionAsync(

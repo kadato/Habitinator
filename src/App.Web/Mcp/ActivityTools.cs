@@ -4,7 +4,6 @@ using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 using App.Web.Services;
 
-using ModelContextProtocol;
 using ModelContextProtocol.Server;
 
 namespace App.Web.Mcp;
@@ -74,7 +73,8 @@ public sealed class ActivityTools(
         var end = McpInput.ParseDate(endDate);
         if (start > end)
         {
-            throw new McpProtocolException("startDate must be before or equal to endDate.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(nameof(startDate),
+                $"expected a date on or before endDate {McpInput.PreviewReceived(endDate)}, got {McpInput.PreviewReceived(startDate)}.");
         }
 
         return await stats.GetActivityEventsAsync(userId, start, end, eventType, boardItemId, limit ?? 50, cancellationToken);
@@ -92,13 +92,15 @@ public sealed class ActivityTools(
         var userId = McpUser.RequireId(http);
         if (eventType == ActivityEventType.TimerSession)
         {
-            throw new McpProtocolException("Use log_timer_session for TimerSession events.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(nameof(eventType),
+                "expected HabitPlus, HabitMinus, DailyComplete, DailyUncomplete, TodoComplete, TodoUncomplete, or DailySkip. Use log_timer_session for TimerSession events.");
         }
 
         McpInput.CheckCustomLabel(customLabel);
         if (boardItemId.HasValue && await boards.GetItemAsync(userId, boardItemId.Value, cancellationToken) is null)
         {
-            throw new McpProtocolException("Board item not found.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(nameof(boardItemId),
+                $"no item found with id {boardItemId.Value:D}. Check it with get_snapshot or search_items.");
         }
 
         await boards.LogActivityAsync(userId, eventType, boardItemId, null, customLabel, eventId, cancellationToken);

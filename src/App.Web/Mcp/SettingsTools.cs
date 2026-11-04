@@ -6,7 +6,6 @@ using App.Web.Data;
 
 using Microsoft.EntityFrameworkCore;
 
-using ModelContextProtocol;
 using ModelContextProtocol.Server;
 
 namespace App.Web.Mcp;
@@ -127,12 +126,14 @@ public sealed class SettingsTools(IDbContextFactory<ApplicationDbContext> dbFact
         }
         catch (JsonException)
         {
-            throw new McpProtocolException("The json is not a valid preferences document.", McpErrorCode.InvalidParams);
+            throw new McpFieldException("json",
+                $"expected a preferences document as produced by get_preferences, got {McpInput.PreviewReceived(json)}.");
         }
 
         if (prefs is null)
         {
-            throw new McpProtocolException("The json is not a valid preferences document.", McpErrorCode.InvalidParams);
+            throw new McpFieldException("json",
+                $"expected a preferences document as produced by get_preferences, got {McpInput.PreviewReceived(json)}.");
         }
 
         McpInput.CheckDateFormat(prefs.DateFormat);
@@ -287,12 +288,14 @@ public sealed class SettingsTools(IDbContextFactory<ApplicationDbContext> dbFact
         }
         catch (JsonException)
         {
-            throw new McpProtocolException("The json is not a valid notification settings document.", McpErrorCode.InvalidParams);
+            throw new McpFieldException("json",
+                $"expected a notification settings document as produced by get_notification_settings, got {McpInput.PreviewReceived(json)}.");
         }
 
         if (settings is null)
         {
-            throw new McpProtocolException("The json is not a valid notification settings document.", McpErrorCode.InvalidParams);
+            throw new McpFieldException("json",
+                $"expected a notification settings document as produced by get_notification_settings, got {McpInput.PreviewReceived(json)}.");
         }
 
         CheckNotificationTimes(settings);
@@ -316,7 +319,10 @@ public sealed class SettingsTools(IDbContextFactory<ApplicationDbContext> dbFact
     {
         if (value.HasValue && (value.Value < TimeSpan.Zero || value.Value >= TimeSpan.FromDays(1)))
         {
-            throw new McpProtocolException($"{name} must use HH:mm within one day.", McpErrorCode.InvalidParams);
+            var field = name.Replace(" ", "", StringComparison.Ordinal);
+            field = string.IsNullOrEmpty(field) ? "value" : char.ToLowerInvariant(field[0]) + field[1..];
+            throw new McpFieldException(field,
+                $"expected HH:mm within one day, got '{value.Value}'.");
         }
     }
 }

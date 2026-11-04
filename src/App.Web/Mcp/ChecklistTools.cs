@@ -62,7 +62,8 @@ public sealed class ChecklistTools(BoardPersistenceService boards, IHttpContextA
         var index = items.FindIndex(x => x.Id == checklistItemId);
         if (index < 0)
         {
-            throw new McpProtocolException("Checklist item not found.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(nameof(checklistItemId),
+                $"no subtask found with id {checklistItemId:D}. Read the checklist with get_checklist first.");
         }
 
         items[index] = items[index] with { IsDone = done };
@@ -85,17 +86,18 @@ public sealed class ChecklistTools(BoardPersistenceService boards, IHttpContextA
         var items = DailyChecklistJson.Parse(current.ChecklistJson).ToList();
         if (items.RemoveAll(x => x.Id == checklistItemId) == 0)
         {
-            throw new McpProtocolException("Checklist item not found.", McpErrorCode.InvalidParams);
+            throw new McpFieldException(nameof(checklistItemId),
+                $"no subtask found with id {checklistItemId:D}. Read the checklist with get_checklist first.");
         }
 
         return await SaveChecklistAsync(userId, resolvedSection, itemId, current, items, cancellationToken);
     }
 
     [McpServerTool(Name = "set_checklist", Title = "Set checklist", Idempotent = true, OpenWorld = true)]
-    [Description("Replaces the whole checklist with a JSON array of {text, isDone} objects. An empty array clears it. Returns the updated checklist.")]
+    [Description("Replaces the whole checklist. Accepts a JSON string or a native array of {text, isDone} objects. An empty array clears it. Returns the updated checklist.")]
     public async Task<IReadOnlyList<DailyChecklistItem>> SetChecklist(
         [Description("Item id.")] Guid itemId,
-        [Description("JSON array like [{\"text\":\"Buy milk\",\"isDone\":false}].")]
+        [Description("Checklist as a JSON string like [{\"text\":\"Buy milk\",\"isDone\":false}] or a native array of {text, isDone} objects.")]
         string json,
         [Description("Section of the item. Optional; auto-detected if omitted.")] BoardSection? section = null,
         CancellationToken cancellationToken = default)
@@ -112,7 +114,8 @@ public sealed class ChecklistTools(BoardPersistenceService boards, IHttpContextA
         }
         catch (JsonException)
         {
-            throw new McpProtocolException("The json is not a valid checklist array.", McpErrorCode.InvalidParams);
+            throw new McpFieldException("json",
+                $"expected a JSON string or an array of {{text, isDone}} (max 8000 chars), got {McpInput.PreviewReceived(json)}.");
         }
 
         var items = rows
@@ -138,7 +141,8 @@ public sealed class ChecklistTools(BoardPersistenceService boards, IHttpContextA
         var json = DailyChecklistJson.Serialize(items);
         if (json is not null && json.Length > McpInput.MaxChecklistLength)
         {
-            throw new McpProtocolException("Checklist must be 8000 chars or fewer.", McpErrorCode.InvalidParams);
+            throw new McpFieldException("json",
+                $"expected 8000 chars or fewer, got {json.Length} chars.");
         }
 
         BoardItem? updated = section switch

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
@@ -24,10 +25,14 @@ public sealed class DailyTools(BoardPersistenceService boards, IHttpContextAcces
         var today = await boards.TodayAsync(userId, cancellationToken);
         var day = McpInput.ParseDate(date, today: today);
         var resolvedId = await McpItemResolver.ResolveItemIdAsync(boards, userId, itemId, title, BoardSection.Daily, cancellationToken: cancellationToken);
+        _ = await boards.GetItemAsync(userId, resolvedId, cancellationToken)
+            ?? throw new McpFieldException("itemId",
+                $"no daily found with id {resolvedId:D}. Check it with get_snapshot or search_items.");
 
         var result = await boards.CompleteDailyForDateAsync(userId, resolvedId, day, null, cancellationToken);
         return result.Item
-            ?? throw new McpProtocolException("Item not found or date must be before today.", McpErrorCode.InvalidParams);
+            ?? throw new McpFieldException("date",
+                $"expected a date before today ({today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}), got {McpInput.PreviewReceived(date)}. Past daily completion is append-only.");
     }
 
     [McpServerTool(Name = "daily_skip_for_date", Title = "Skip daily for date", OpenWorld = true)]
@@ -42,10 +47,14 @@ public sealed class DailyTools(BoardPersistenceService boards, IHttpContextAcces
         var today = await boards.TodayAsync(userId, cancellationToken);
         var day = McpInput.ParseDate(date, today: today);
         var resolvedId = await McpItemResolver.ResolveItemIdAsync(boards, userId, itemId, title, BoardSection.Daily, cancellationToken: cancellationToken);
+        _ = await boards.GetItemAsync(userId, resolvedId, cancellationToken)
+            ?? throw new McpFieldException("itemId",
+                $"no daily found with id {resolvedId:D}. Check it with get_snapshot or search_items.");
 
         var result = await boards.SkipDailyForDateAsync(userId, resolvedId, day, null, cancellationToken);
         return result.Item
-            ?? throw new McpProtocolException("Item not found or date must be before today.", McpErrorCode.InvalidParams);
+            ?? throw new McpFieldException("date",
+                $"expected a date before today ({today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}), got {McpInput.PreviewReceived(date)}. Past daily completion is append-only.");
     }
 
     [McpServerTool(Name = "update_daily", Title = "Update daily", Idempotent = true, OpenWorld = true)]
@@ -54,28 +63,30 @@ public sealed class DailyTools(BoardPersistenceService boards, IHttpContextAcces
         [Description("Daily item id.")] Guid itemId,
         [Description("Title, 1 to 200 chars, or null to keep.")] string? title = null,
         [Description("Notes up to 4000 chars, or null to keep. Empty string clears.")] string? notes = null,
-        [Description("Comma-separated tags up to 500 chars, or null to keep. Empty string clears.")] string? tags = null,
+        [Description("Tags as comma-separated string or array of strings up to 500 chars, or null to keep. Empty string clears.")] string? tags = null,
         [Description("Start date as yyyy-MM-dd, or null to keep. Empty string clears.")] string? startDate = null,
         [Description("Repeat: Daily, Weekly, Monthly, or Yearly, or null to keep.")] DailyRepeatType? repeat = null,
         [Description("Repeat interval, 1 to 999, or null to keep.")] int? repeatInterval = null,
         [Description("Manual streak counter, 0 to 9999, or null to keep.")] int? counter = null,
         [Description("Weekday bitmask for weekly repeats, 0 means no mask, or null to keep.")] int? weekdays = null,
         [Description("Weekday names like [\"Mon\", \"Wed\", \"Fri\"], or null to keep. Alternative to bitmask.")] IReadOnlyList<string>? weekdayNames = null,
-        [Description("Checklist JSON array, or null to keep. Empty string clears.")] string? checklistJson = null,
+        [Description("Checklist as JSON string or native array of {text, isDone}, or null to keep. Empty string clears.")] string? checklistJson = null,
         [Description("Sort order position value, or null to keep. Prefer reorder_item to move items.")] double? sortOrder = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
         var current = await boards.GetItemAsync(userId, itemId, cancellationToken)
-            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+            ?? throw new McpFieldException("itemId",
+                $"no daily found with id {itemId:D}. Check it with get_snapshot or search_items.");
 
         McpInput.CheckNotes(notes);
-        McpInput.CheckTags(tags);
+        var canonicalTags = tags is null ? null : McpInput.CanonicalTags(tags);
+        McpInput.CheckTags(canonicalTags);
         var args = UpdateDailyArgs.From(current) with
         {
             Title = title is null ? current.Title : McpInput.CleanTitle(title),
             Notes = notes ?? current.Notes,
-            Tags = tags ?? current.Tags,
+            Tags = canonicalTags ?? current.Tags,
             StartDate = startDate is null ? current.DailyStartDate : McpInput.ParseNullableDate(startDate, nameof(startDate)),
             Repeat = repeat ?? current.DailyRepeat,
             RepeatInterval = McpInput.ResolveRepeatInterval(repeatInterval, current.DailyRepeatInterval),
@@ -88,7 +99,8 @@ public sealed class DailyTools(BoardPersistenceService boards, IHttpContextAcces
         return result.Status switch
         {
             BoardMutationStatus.Ok when result.Item is not null => result.Item,
-            BoardMutationStatus.NotFound => throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams),
+            BoardMutationStatus.NotFound => throw new McpFieldException("itemId",
+                $"no daily found with id {itemId:D}. Check it with get_snapshot or search_items."),
             _ => throw new McpProtocolException("Version conflict. Read the item again and retry.", McpErrorCode.InvalidRequest),
         };
     }

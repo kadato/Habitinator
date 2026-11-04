@@ -28,7 +28,8 @@ public sealed class HabitPrompts(
         var userId = McpUser.RequireId(http);
         if (tag is not null && tag.Length > McpInput.MaxTagsLength)
         {
-            throw new McpProtocolException("Tag filter must be 500 chars or fewer.", McpErrorCode.InvalidParams);
+            throw new McpFieldException("tag",
+                $"expected {McpInput.MaxTagsLength} chars or fewer, got {tag.Length} chars.");
         }
 
         var snapshot = await boards.GetSnapshotAsync(userId, 200, cancellationToken);
@@ -71,7 +72,8 @@ public sealed class HabitPrompts(
         var userId = McpUser.RequireId(http);
         if (tag is not null && tag.Length > McpInput.MaxTagsLength)
         {
-            throw new McpProtocolException("Tag filter must be 500 chars or fewer.", McpErrorCode.InvalidParams);
+            throw new McpFieldException("tag",
+                $"expected {McpInput.MaxTagsLength} chars or fewer, got {tag.Length} chars.");
         }
 
         var overview = await stats.GetOverviewAsync(userId, period, tag, cancellationToken);
@@ -91,7 +93,8 @@ public sealed class HabitPrompts(
         var userId = McpUser.RequireId(http);
         if (!Guid.TryParse(habitId, out var id))
         {
-            throw new McpProtocolException("habitId must be a GUID.", McpErrorCode.InvalidParams);
+            throw new McpFieldException("habitId",
+                $"expected a GUID, got {McpInput.PreviewReceived(habitId)}.");
         }
 
         var item = await boards.GetItemAsync(userId, id, cancellationToken)
@@ -113,7 +116,8 @@ public sealed class HabitPrompts(
         var userId = McpUser.RequireId(http);
         if (tag is not null && tag.Length > McpInput.MaxTagsLength)
         {
-            throw new McpProtocolException("Tag filter must be 500 chars or fewer.", McpErrorCode.InvalidParams);
+            throw new McpFieldException("tag",
+                $"expected {McpInput.MaxTagsLength} chars or fewer, got {tag.Length} chars.");
         }
 
         var snapshot = await boards.GetSnapshotAsync(userId, 200, cancellationToken);
@@ -180,7 +184,8 @@ public sealed class HabitPrompts(
         var userId = McpUser.RequireId(http);
         if (tag is not null && tag.Length > McpInput.MaxTagsLength)
         {
-            throw new McpProtocolException("Tag filter must be 500 chars or fewer.", McpErrorCode.InvalidParams);
+            throw new McpFieldException("tag",
+                $"expected {McpInput.MaxTagsLength} chars or fewer, got {tag.Length} chars.");
         }
 
         var snapshot = await boards.GetSnapshotAsync(userId, 200, cancellationToken);
@@ -217,7 +222,8 @@ public sealed class HabitPrompts(
         var userId = McpUser.RequireId(http);
         if (!Guid.TryParse(todoId, out var id))
         {
-            throw new McpProtocolException("todoId must be a GUID.", McpErrorCode.InvalidParams);
+            throw new McpFieldException("todoId",
+                $"expected a GUID, got {McpInput.PreviewReceived(todoId)}.");
         }
 
         var item = await boards.GetItemAsync(userId, id, cancellationToken)
@@ -245,7 +251,8 @@ public sealed class HabitPrompts(
         var userId = McpUser.RequireId(http);
         if (!Guid.TryParse(dailyId, out var id))
         {
-            throw new McpProtocolException("dailyId must be a GUID.", McpErrorCode.InvalidParams);
+            throw new McpFieldException("dailyId",
+                $"expected a GUID, got {McpInput.PreviewReceived(dailyId)}.");
         }
 
         var item = await boards.GetItemAsync(userId, id, cancellationToken)
@@ -273,7 +280,8 @@ public sealed class HabitPrompts(
         var userId = McpUser.RequireId(http);
         if (tag is not null && tag.Length > McpInput.MaxTagsLength)
         {
-            throw new McpProtocolException("Tag filter must be 500 chars or fewer.", McpErrorCode.InvalidParams);
+            throw new McpFieldException("tag",
+                $"expected {McpInput.MaxTagsLength} chars or fewer, got {tag.Length} chars.");
         }
 
         var overview = await stats.GetOverviewAsync(userId, period, tag, cancellationToken);

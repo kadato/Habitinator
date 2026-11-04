@@ -18,23 +18,25 @@ public sealed class TodoTools(BoardPersistenceService boards, IHttpContextAccess
         [Description("Todo item id.")] Guid itemId,
         [Description("Title, 1 to 200 chars, or null to keep.")] string? title = null,
         [Description("Notes up to 4000 chars, or null to keep. Empty string clears.")] string? notes = null,
-        [Description("Comma-separated tags up to 500 chars, or null to keep. Empty string clears.")] string? tags = null,
+        [Description("Tags as comma-separated string or array of strings up to 500 chars, or null to keep. Empty string clears.")] string? tags = null,
         [Description("Due date as yyyy-MM-dd, or null to keep. Empty string clears the due date.")] string? dueDate = null,
-        [Description("Checklist JSON array, or null to keep. Empty string clears.")] string? checklistJson = null,
+        [Description("Checklist as JSON string or native array of {text, isDone}, or null to keep. Empty string clears.")] string? checklistJson = null,
         [Description("Sort order position value, or null to keep. Prefer reorder_item to move items.")] double? sortOrder = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
         var current = await boards.GetItemAsync(userId, itemId, cancellationToken)
-            ?? throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams);
+            ?? throw new McpFieldException("itemId",
+                $"no todo found with id {itemId:D}. Check it with get_snapshot or search_items.");
 
         McpInput.CheckNotes(notes);
-        McpInput.CheckTags(tags);
+        var canonicalTags = tags is null ? null : McpInput.CanonicalTags(tags);
+        McpInput.CheckTags(canonicalTags);
         var args = UpdateTodoArgs.From(current) with
         {
             Title = title is null ? current.Title : McpInput.CleanTitle(title),
             Notes = notes ?? current.Notes,
-            Tags = tags ?? current.Tags,
+            Tags = canonicalTags ?? current.Tags,
             ChecklistJson = checklistJson is null ? current.ChecklistJson : McpInput.NormalizedChecklist(EmptyToNull(checklistJson)),
             DueDate = dueDate is null ? current.TodoDueDate : McpInput.ParseNullableDate(dueDate, nameof(dueDate)),
             SortOrder = sortOrder ?? current.SortOrder,
@@ -43,7 +45,8 @@ public sealed class TodoTools(BoardPersistenceService boards, IHttpContextAccess
         return result.Status switch
         {
             BoardMutationStatus.Ok when result.Item is not null => result.Item,
-            BoardMutationStatus.NotFound => throw new McpProtocolException("Item not found.", McpErrorCode.InvalidParams),
+            BoardMutationStatus.NotFound => throw new McpFieldException("itemId",
+                $"no todo found with id {itemId:D}. Check it with get_snapshot or search_items."),
             _ => throw new McpProtocolException("Version conflict. Read the item again and retry.", McpErrorCode.InvalidRequest),
         };
     }

@@ -38,7 +38,7 @@ jobs:
           test -n "${TENANT_ID}" || { echo "::error::Set AZURE_TENANT_ID when AZURE_CLIENT_ID (OIDC) is set."; exit 1; }
           test -n "${SUBSCRIPTION_ID}" || { echo "::error::Set AZURE_SUBSCRIPTION_ID when AZURE_CLIENT_ID (OIDC) is set."; exit 1; }
 
-      - name: Azure login (discover web app URL)
+      - name: Log in to Azure and discover the web app URL
         if: ${{ vars.PRODUCTION_API_BASE_URL == '' }}
         uses: ./.github/actions/azure-login
         with:
@@ -106,13 +106,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup .NET SDK
+      - name: Set up .NET SDK
         uses: actions/setup-dotnet@v6
         with:
           # SDK version comes from global.json so CI uses the same RC as local builds.
           global-json-file: global.json
 
-      - name: Setup Java (Temurin 21)
+      - name: Set up Temurin Java 21
         uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -136,7 +136,7 @@ jobs:
           )
           PY
 
-      - name: Build Android APK (Release, unsigned)
+      - name: Build unsigned Android APK
         shell: bash
         run: |
           dotnet publish src/App.MAUI/App.MAUI.csproj \
@@ -170,7 +170,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup .NET SDK
+      - name: Set up .NET SDK
         uses: actions/setup-dotnet@v6
         with:
           # SDK version comes from global.json so CI uses the same RC as local builds.
@@ -189,7 +189,7 @@ jobs:
           $template = Get-Content "src/App.MAUI/appsettings.Release.template.json" -Raw
           $template.Replace("__API_BASE_URL__", $apiBaseUrl) | Set-Content "src/App.MAUI/appsettings.Release.json"
 
-      - name: Publish Windows app (Release)
+      - name: Publish Windows app
         shell: pwsh
         run: >
           dotnet publish src/App.MAUI/App.MAUI.csproj
@@ -209,11 +209,11 @@ jobs:
         shell: pwsh
         run: choco install innosetup -y
 
-      - name: Build Windows Installer
+      - name: Build Windows installer
         shell: pwsh
         run: iscc /dMyAppVersion="${{ github.ref_name }}" scripts/windows-installer.iss
 
-      - name: Hash Windows Installer
+      - name: Hash the Windows installer
         shell: pwsh
         run: |
           $hash = Get-FileHash artifacts/windows/Habitinator-windows-x64-setup.exe -Algorithm SHA256

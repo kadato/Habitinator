@@ -11,7 +11,7 @@ Habitinator exposes boards over Streamable HTTP MCP at `POST https://habitinator
 
 Use it when the user asks about their habits, dailies, todos, streaks, activity, or focus sessions in Habitinator.
 
-## Setup
+## Connect
 
 1. Get a token in the app. Open **Settings**, **AI assistant**, **External AI access (MCP)** and select **Generate MCP token**. Tokens support Full, TrackingOnly, and ReadOnly scopes.
 2. Without the app, call `POST /api/account/mcp-token` with a login JWT. From a headless terminal, call `POST /oauth/device/authorize` and approve the shown code in your browser. Device codes expire in 10 minutes. Each code works once. The server binds each code to the requesting `client_id`. Refresh tokens rotate on use. The [auth guide](https://habitinator.app/auth.md) documents both flows.

@@ -17,13 +17,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup .NET SDK
+      - name: Set up .NET SDK
         uses: actions/setup-dotnet@v6
         with:
           # SDK version comes from global.json so CI uses the same RC as local builds.
           global-json-file: global.json
 
-      - name: Setup Node.js (Appium)
+      - name: Set up Node.js for Appium
         uses: actions/setup-node@v7
         with:
           node-version: "20"
@@ -36,7 +36,7 @@ jobs:
           dotnet build src/App.MAUI/App.MAUI.csproj -f net11.0-android -c Debug
           dotnet build tests/App.MAUI.UITests/App.MAUI.UITests.csproj -c Debug
 
-      - name: Emulator + Appium + dotnet test
+      - name: Run tests on the Android emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
           api-level: 34
@@ -55,7 +55,7 @@ jobs:
             export ANDROID_APP_PATH="$(readlink -f "$APK")"
             dotnet test tests/App.MAUI.UITests/App.MAUI.UITests.csproj -c Debug --no-build --logger trx --results-directory "$GITHUB_WORKSPACE/TestResults-android"
 
-      - name: Upload TRX
+      - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v7
         with:

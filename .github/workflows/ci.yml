@@ -37,7 +37,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup .NET SDK
+      - name: Set up .NET SDK
         uses: actions/setup-dotnet@v6
         with:
           # SDK version comes from global.json so CI uses the same RC as local builds.
@@ -48,20 +48,20 @@ jobs:
           dotnet workload install wasm-tools
           dotnet workload restore Habitinator.slnx
 
-      - name: Format Code
+      - name: Format code
         run: |
           dotnet restore Habitinator.slnx
           dotnet format whitespace --no-restore
           dotnet format style --no-restore
 
-      - name: Verify No Unformatted Code
+      - name: Verify no unformatted code
         run: |
           git diff --exit-code
 
       - name: Build
         run: dotnet build Habitinator.slnx --configuration Release
 
-      - name: WASM size budget
+      - name: Check WASM size budget
         run: |
           dotnet publish src/App.Web.Client/App.Web.Client.csproj --configuration Release -o "${{ runner.temp }}/wasm-budget"
           bash tools/wasm-size-budget/check.sh "${{ runner.temp }}/wasm-budget/wwwroot/_framework"
@@ -106,7 +106,7 @@ jobs:
             exit 1
           fi
 
-      - name: Upload test results (TRX)
+      - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v7
         with:
@@ -151,7 +151,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup .NET SDK
+      - name: Set up .NET SDK
         uses: actions/setup-dotnet@v6
         with:
           # SDK version comes from global.json so CI uses the same RC as local builds.

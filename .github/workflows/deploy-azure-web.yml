@@ -1,4 +1,4 @@
-name: Deploy Web app to Azure
+name: Deploy web app to Azure
 
 on:
   workflow_dispatch:
@@ -41,16 +41,16 @@ jobs:
           test -n "${TENANT_ID}" || { echo "::error::Set repository variable AZURE_TENANT_ID when AZURE_CLIENT_ID (OIDC) is set."; exit 1; }
           test -n "${SUBSCRIPTION_ID}" || { echo "::error::Set repository variable AZURE_SUBSCRIPTION_ID when AZURE_CLIENT_ID (OIDC) is set."; exit 1; }
 
-      - name: Setup .NET SDK
+      - name: Set up .NET SDK
         uses: actions/setup-dotnet@v6
         with:
           # SDK version comes from global.json so CI uses the same RC as local builds.
           global-json-file: global.json
 
-      - name: Setup Azure Developer CLI
+      - name: Set up Azure Developer CLI
         uses: Azure/setup-azd@0b7e3a35ab00f2eee7080c845eb39c3f0ebfa553
 
-      - name: Azure login
+      - name: Log in to Azure
         uses: ./.github/actions/azure-login
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}

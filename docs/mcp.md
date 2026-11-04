@@ -12,7 +12,7 @@ The MCP endpoint supports two authentication methods:
 
 Without authentication, the server returns 401 with a `WWW-Authenticate` header pointing to the RFC 9728 protected resource metadata so clients can automatically initiate OAuth.
 
-### Zero-key client setup (OAuth 2.1)
+### Set up a zero-key OAuth 2.1 client
 
 Claude Desktop, Cursor, and VS Code:
 
@@ -97,7 +97,7 @@ mcp_servers:
 
 The Settings panel shows the exact snippet with your token filled in.
 
-### Token minting from the terminal
+### Mint a token from the terminal
 
 If you prefer the terminal over the Settings panel, call `POST /api/account/mcp-token` with a login JWT. The call mints a dedicated long-lived token valid from 1 to 365 days, with an optional `scope` of `full`, `tracking_only`, or `read_only`:
 
@@ -121,7 +121,7 @@ curl -s -X POST $BASE/mcp \
 	-d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
 
-### Headless approval without pasted secrets (device flow)
+### Approve headless access without pasted secrets
 
 Terminal agents that cannot open a browser use the OAuth device authorization grant (RFC 8628). The agent calls `POST /oauth/device/authorize` with its `client_id` and shows you the `verification_uri` and the short `user_code`. You approve once in your browser. The agent polls `POST /oauth/token` with `grant_type` `urn:ietf:params:oauth:grant-type:device_code` until it holds an `access_token` and a `refresh_token`. Device codes expire in 10 minutes. Each code works once. The server binds each code to the requesting `client_id`. Refresh tokens rotate on use. The [auth guide](https://habitinator.app/auth.md) documents the full flow.
 

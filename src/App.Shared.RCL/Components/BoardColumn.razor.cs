@@ -32,12 +32,14 @@ public partial class BoardColumn : IAsyncDisposable
     private bool _draftError;
     private bool _isAdding;
     private string? _duplicateExistingTitle;
+    private Guid? _duplicateExistingId;
     private bool _duplicateConfirmed;
 
     private void ClearDraftError()
     {
         _draftError = false;
         _duplicateExistingTitle = null;
+        _duplicateExistingId = null;
         _duplicateConfirmed = false;
     }
 
@@ -687,11 +689,13 @@ public partial class BoardColumn : IAsyncDisposable
                 if (existing is not null)
                 {
                     _duplicateExistingTitle = existing.Title;
+                    _duplicateExistingId = existing.Id;
                     return;
                 }
             }
 
             _duplicateExistingTitle = null;
+            _duplicateExistingId = null;
             _duplicateConfirmed = false;
             var newId = Guid.NewGuid();
             BoardItem tempItem = new(
@@ -714,12 +718,14 @@ public partial class BoardColumn : IAsyncDisposable
     {
         _duplicateConfirmed = true;
         _duplicateExistingTitle = null;
+        _duplicateExistingId = null;
         await AddFromDraftAsync();
     }
 
     private void CancelDuplicate()
     {
         _duplicateExistingTitle = null;
+        _duplicateExistingId = null;
         _duplicateConfirmed = false;
     }
 

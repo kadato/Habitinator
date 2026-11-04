@@ -232,6 +232,12 @@
             return;
         }
 
+        var candidate = _selectedTags.Concat([t]).ToList();
+        if (string.Join(",", candidate).Length > BoardTagUtil.MaxTagsLength)
+        {
+            return;
+        }
+
         _selectedTags.Add(t);
         if (_allKnownTags.All(x => !x.Equals(t, StringComparison.OrdinalIgnoreCase)))
         {
@@ -240,7 +246,7 @@
         }
 
         _tagSearch = string.Empty;
-        _ = TagsChanged.InvokeAsync(string.Join(", ", _selectedTags));
+        _ = TagsChanged.InvokeAsync(string.Join(",", _selectedTags));
     }
 
     private void AddTagFromSearch()
@@ -277,7 +283,7 @@
             _selectedTags.RemoveAt(i);
         }
 
-        _ = TagsChanged.InvokeAsync(string.Join(", ", _selectedTags));
+        _ = TagsChanged.InvokeAsync(string.Join(",", _selectedTags));
     }
 
     private async Task OnControlKeydown(KeyboardEventArgs e)

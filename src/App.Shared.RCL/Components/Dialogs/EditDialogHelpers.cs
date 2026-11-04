@@ -6,7 +6,7 @@ public static class EditDialogHelpers
 {
     public static string FormatTags(string? rawTags)
     {
-        return string.Join(", ", BoardTagUtil.ParseTags(rawTags));
+        return string.Join(",", BoardTagUtil.ParseTags(rawTags));
     }
 
     public static List<ChecklistRow> ParseChecklistRows(string? checklistJson)

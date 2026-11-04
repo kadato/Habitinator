@@ -17,6 +17,7 @@
 @inject PersistentComponentState ApplicationState
 @inject BoardUiSessionState UiSessionState
 @inject ICommandPaletteService CommandPalette
+@inject IHttpClientFactory HttpFactory
 
 
 
@@ -223,6 +224,12 @@
     @if (_initialLoadComplete && _loadError is null)
     {
         <BoardPersistOnHide />
+        @if (ShowOnboarding)
+        {
+            <EmptyBoardOnboarding OnStartFromGoal="OnboardingStartFromGoalAsync"
+                                  OnLoadDemo="OnboardingLoadDemoAsync"
+                                  OnDismiss="OnboardingDismissAsync" />
+        }
         <div class="board-columns-stage">
             @if (_isMobileViewport.GetValueOrDefault())
             {

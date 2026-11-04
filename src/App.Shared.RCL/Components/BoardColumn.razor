@@ -134,7 +134,7 @@
             @if (_duplicateExistingTitle is not null)
             {
                 <div class="board-duplicate-warning mt-1">
-                    <MudText Typo="Typo.caption">Similar item exists: '@_duplicateExistingTitle'. Create anyway?</MudText>
+                    <MudText Typo="Typo.caption">Similar item exists: '@_duplicateExistingTitle'@(_duplicateExistingId.HasValue ? $" ({_duplicateExistingId.Value:D})" : null). Create anyway?</MudText>
                     <div class="d-flex gap-2 mt-1">
                         <MudButton Size="Size.Small"
                                    Variant="Variant.Filled"

@@ -36,6 +36,11 @@ public partial class MainBoard : IAsyncDisposable
     private bool _swipeInitialized;
     private DateTimeOffset _lastLocalMutationTime = DateTimeOffset.MinValue;
     private PersistingComponentStateSubscription _subscription;
+    private bool _onboardingDismissed;
+    private bool _onboardingChecked;
+
+    private bool ShowOnboarding =>
+        _initialLoadComplete && _loadError is null && !HasBoardItems() && _onboardingChecked && !_onboardingDismissed;
 
     private List<BoardItem> FilteredHabits => _filteredHabits;
     private List<BoardItem> FilteredDailies => _filteredDailies;
@@ -461,6 +466,7 @@ public partial class MainBoard : IAsyncDisposable
         {
             // Eagerly preload SortableJS and board reordering scripts during initial data load
             _ = PreloadSortableScriptsAsync();
+            _ = LoadOnboardingDismissedAsync();
         }
 
         if (_initialLoadComplete && _loadError is null && !_boardClientScriptsStarted)
@@ -472,6 +478,64 @@ public partial class MainBoard : IAsyncDisposable
         {
             await EnsureSwipeAsync();
         }
+    }
+
+    private async Task LoadOnboardingDismissedAsync()
+    {
+        try
+        {
+            var value = await JS.InvokeAsync<string?>("localStorage.getItem", "habitinator-onboarding-dismissed");
+            _onboardingDismissed = string.Equals(value, "1", StringComparison.Ordinal);
+        }
+        catch
+        {
+            _onboardingDismissed = false;
+        }
+        finally
+        {
+            _onboardingChecked = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task OnboardingDismissAsync()
+    {
+        _onboardingDismissed = true;
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", "habitinator-onboarding-dismissed", "1");
+        }
+        catch
+        {
+            // Best effort. The board still hides the chooser once items exist.
+        }
+
+        StateHasChanged();
+    }
+
+    private Task OnboardingStartFromGoalAsync()
+    {
+        UiSessionState.PendingAiPrompt = "Help me turn my goal into habits, dailies, and todos. My goal is: ";
+        UiSessionState.SetAiDrawer(true);
+        return Task.CompletedTask;
+    }
+
+    private async Task OnboardingLoadDemoAsync()
+    {
+        try
+        {
+            var http = HttpFactory.CreateClient("api");
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            var response = await http.PostAsync("api/board/seed-demo", null, cts.Token);
+            response.EnsureSuccessStatusCode();
+        }
+        catch
+        {
+            await Notifier.NotifyAsync("Could not load demo data. Check your connection. Try again.", MudBlazor.Severity.Error);
+            return;
+        }
+
+        await OnBoardChanged();
     }
 
     private async Task PreloadSortableScriptsAsync()

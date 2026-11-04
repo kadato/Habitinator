@@ -1,0 +1,56 @@
+@namespace App.Shared.RCL.Components
+
+<MudPaper Class="pa-4 mb-3 empty-board-onboarding" Elevation="0" Outlined="true">
+    <MudText Typo="Typo.h6" Class="mb-1">Start your board</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+        Pick how to begin. You can change your mind anytime.
+    </MudText>
+    <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap" Class="mb-3">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OnStartFromGoalAsync">
+            Start from a goal
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OnLoadDemoAsync" Disabled="@_isLoadingDemo">
+            @( _isLoadingDemo ? "Loading demo..." : "Load demo data" )
+        </MudButton>
+        <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="OnStartBlankAsync">
+            Start blank
+        </MudButton>
+    </MudStack>
+    <MudDivider Class="my-2" />
+    <MudText Typo="Typo.subtitle2" Class="mb-1">Try it in 3 steps</MudText>
+    <MudList T="string" Dense="true">
+        <MudListItem Text="1. Create a daily with the box above." Icon="@Icons.Material.Outlined.Add" />
+        <MudListItem Text="2. Complete it to grow your streak." Icon="@Icons.Material.Outlined.Check" />
+        <MudListItem Text="3. Check Upcoming and Stats to see progress." Icon="@Icons.Material.Outlined.Insights" />
+    </MudList>
+</MudPaper>
+
+@code {
+    [Parameter] public EventCallback OnStartFromGoal { get; set; }
+    [Parameter] public EventCallback OnLoadDemo { get; set; }
+    [Parameter] public EventCallback OnDismiss { get; set; }
+
+    private bool _isLoadingDemo;
+
+    private Task OnStartFromGoalAsync() => OnStartFromGoal.InvokeAsync();
+
+    private async Task OnLoadDemoAsync()
+    {
+        if (_isLoadingDemo)
+        {
+            return;
+        }
+
+        _isLoadingDemo = true;
+        try
+        {
+            await OnLoadDemo.InvokeAsync();
+        }
+        finally
+        {
+            _isLoadingDemo = false;
+        }
+    }
+
+    private Task OnStartBlankAsync() => OnDismiss.InvokeAsync();
+}

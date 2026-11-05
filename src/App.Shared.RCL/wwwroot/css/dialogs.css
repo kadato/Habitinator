@@ -8,6 +8,7 @@
 .daily-yesterday-shell {
     width: 100%;
     max-width: min(var(--hab-modal-max-w), 100%);
+    max-height: min(85vh, calc(100vh - 1.5rem));
     max-height: min(85dvh, calc(100dvh - 1.5rem));
     display: flex;
     flex-direction: column;
@@ -107,6 +108,15 @@
 }
 .hab-modal__close--danger:hover,
 .edit-daily-header__close:hover { /* keep neutral, footer carries danger */ }
+
+/* Touch needs a full thumb target on the modal close button. */
+@media (pointer: coarse) {
+    .hab-modal__close,
+    .edit-daily-header__close {
+        width: 44px; height: 44px;
+        min-width: 44px; min-height: 44px;
+    }
+}
 
 /* Hero title field -- large, editorial, like card title expanded */
 .hab-modal__title-field,
@@ -1060,7 +1070,8 @@
     flex-shrink: 0;
 }
 .hab-modal--day-details .stats-day-timeline {
-    overflow-y: auto;
+    /* The modal body is the single scroller. No inner cap here. The timeline
+       would scroll inside the body scroll and show two scrollbars. */
     min-height: 0;
     overscroll-behavior: contain;
     scrollbar-gutter: stable;
@@ -1165,6 +1176,7 @@
     .daily-yesterday-shell {
         width: 100% !important;
         max-width: 100% !important;
+        max-height: calc(92vh - env(safe-area-inset-bottom, 0px)) !important;
         max-height: calc(92dvh - env(safe-area-inset-bottom, 0px)) !important;
         border-radius: var(--hab-modal-radius) var(--hab-modal-radius) 0 0 !important;
         border-left: none !important;
@@ -1184,14 +1196,35 @@
         flex: 1 1 auto;
     }
 
+    /* In-modal tag picker expands in place instead of floating. A floating
+       overlay above the control clips against the bottom-sheet bounds and
+       leaves almost no usable list space, so the dropdown joins the modal
+       body scroll with a tall list. Desktop keeps the overlay. */
     .habit-tag-picker__dropdown {
-        top: calc(100% + 0.45rem);
-        bottom: auto;
-        max-height: min(30dvh, 16rem);
-        overflow-y: auto;
+        position: static;
+        margin-top: 0.5rem;
+        max-height: none;
+        overflow: visible;
+        box-shadow:
+            0 1px 2px rgba(15,23,42,0.06),
+            0 8px 20px rgba(15,23,42,0.10);
+    }
+
+    .habit-tag-picker__search {
+        min-height: 44px;
+    }
+
+    /* Natural height. The modal body is the single scroller. The list
+       has no cap and no scroll of its own. A capped list would nest scrollbars
+       and shrink the usable space. Desktop keeps the floating overlay
+       with the capped list. */
+    .habit-tag-picker__list {
+        max-height: none;
+        overflow: visible;
     }
 
     .export-textarea textarea {
+        max-height: 40vh;
         max-height: 40dvh;
     }
 }

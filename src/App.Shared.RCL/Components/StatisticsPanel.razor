@@ -280,61 +280,78 @@
                                 <MudText Typo="Typo.subtitle2" Class="font-weight-bold">Filters</MudText>
                             </div>
                             <div class="stats-filter-row">
-                                <MudSelect T="string"
-                                           Label="Tags"
-                                           Variant="Variant.Outlined"
-                                           Dense="true"
-                                           Margin="Margin.Dense"
-                                           MultiSelection="true"
-                                           SelectAll="true"
-                                           SelectAllText="All tags"
-                                           Adornment="Adornment.Start"
-                                           AdornmentIcon="@Icons.Material.Outlined.LocalOffer"
-                                           MultiSelectionTextFunc="@(new Func<IReadOnlyList<string>, string>(GetMultiSelectionText))"
-                                           SelectedValues="_selectedTags"
-                                           SelectedValuesChanged="OnSelectedTagsChanged"
-                                           Clearable="true"
-                                           Disabled="@((_data.AvailableTags?.Count ?? 0) == 0)"
-                                           AnchorOrigin="Origin.BottomLeft"
-                                           TransformOrigin="Origin.TopLeft"
-                                           MaxHeight="300"
-                                           Style="width:100%"
-                                           Class="stats-tag-select-sidebar">
-                                    @if ((_data.AvailableTags?.Count ?? 0) > 0)
-                                    {
-                                        @foreach (var t in _data.AvailableTags ?? [])
-                                        {
-                                            <MudSelectItem T="string" Value="@t">@t</MudSelectItem>
-                                        }
-                                    }
-                                    else
-                                    {
-                                        <MudSelectItem T="string" Value="@(string.Empty)" Disabled="true">No tags created yet</MudSelectItem>
-                                    }
-                                </MudSelect>
+                                <MudMenu AnchorOrigin="Origin.BottomCenter"
+                                         TransformOrigin="Origin.TopCenter"
+                                         FullWidth="true"
+                                         MaxHeight="320"
+                                         PopoverClass="stats-filter-menu-popover"
+                                         Disabled="@(!HasAvailableTags)">
+                                    <ActivatorContent Context="tagsMenu">
+                                        <button type="button"
+                                                class="stats-filter-trigger"
+                                                aria-haspopup="true"
+                                                title="Filter by tags"
+                                                disabled="@(!HasAvailableTags)"
+                                                @onclick="@(e => tagsMenu.ToggleAsync(e))">
+                                            <span class="stats-filter-trigger__iconbox" aria-hidden="true">
+                                                <MudIcon Icon="@Icons.Material.Outlined.LocalOffer" Size="Size.Small" />
+                                            </span>
+                                            <span class="stats-filter-trigger__texts">
+                                                <span class="stats-filter-trigger__caption">Tags</span>
+                                                <span class="stats-filter-trigger__value">@(HasAvailableTags ? GetMultiSelectionText(_selectedTags.ToList()) : "No tags created yet")</span>
+                                            </span>
+                                            <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Class="stats-filter-trigger__chevron" aria-hidden="true" />
+                                        </button>
+                                    </ActivatorContent>
+                                    <ChildContent>
+                                        <MudPaper Class="stats-filter-menu-panel pa-2" Elevation="0">
+                                            <div class="stats-filter-menu-panel__actions">
+                                                <MudCheckBox Value="AreAllFilterTagsSelected" ValueChanged="@((bool b) => OnSelectAllTagsChangedAsync(b))" Dense="true" Color="Color.Primary" Class="ma-0">All tags</MudCheckBox>
+                                                <button type="button" class="stats-filter-menu-panel__clear" @onclick="OnClearTagFiltersAsync">Clear</button>
+                                            </div>
+                                            <MudDivider Class="my-1" />
+                                            <div class="stats-filter-menu-panel__list" role="group" aria-label="Tags">
+                                                @foreach (var t in _data.AvailableTags ?? [])
+                                                {
+                                                    <MudCheckBox @key="t" Value="IsTagSelected(t)" ValueChanged="@((bool b) => OnTagToggledAsync(t, b))" Dense="true" Color="Color.Primary" Class="ma-0 stats-filter-check">@t</MudCheckBox>
+                                                }
+                                            </div>
+                                        </MudPaper>
+                                    </ChildContent>
+                                </MudMenu>
 
-                                <MudSelect T="string"
-                                           Label="Period"
-                                           Variant="Variant.Outlined"
-                                           Dense="true"
-                                           Margin="Margin.Dense"
-                                           Adornment="Adornment.Start"
-                                           AdornmentIcon="@Icons.Material.Outlined.DateRange"
-                                           Value="_selectedPeriodKey"
-                                           ValueChanged="OnStatsPeriodChanged"
-                                           AnchorOrigin="Origin.BottomLeft"
-                                           TransformOrigin="Origin.TopLeft"
-                                           MaxHeight="300"
-                                           Style="width:100%"
-                                           Class="stats-year-select-sidebar">
-                                    @if (_periodOptions is not null)
-                                    {
-                                        @foreach (var opt in _periodOptions)
+                                <MudMenu AnchorOrigin="Origin.BottomCenter"
+                                         TransformOrigin="Origin.TopCenter"
+                                         FullWidth="true"
+                                         MaxHeight="320"
+                                         Dense="true"
+                                         PopoverClass="stats-filter-menu-popover">
+                                    <ActivatorContent Context="periodMenu">
+                                        <button type="button"
+                                                class="stats-filter-trigger"
+                                                aria-haspopup="true"
+                                                title="Change period"
+                                                @onclick="@(e => periodMenu.ToggleAsync(e))">
+                                            <span class="stats-filter-trigger__iconbox" aria-hidden="true">
+                                                <MudIcon Icon="@Icons.Material.Outlined.DateRange" Size="Size.Small" />
+                                            </span>
+                                            <span class="stats-filter-trigger__texts">
+                                                <span class="stats-filter-trigger__caption">Period</span>
+                                                <span class="stats-filter-trigger__value">@SelectedPeriodLabel</span>
+                                            </span>
+                                            <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Class="stats-filter-trigger__chevron" aria-hidden="true" />
+                                        </button>
+                                    </ActivatorContent>
+                                    <ChildContent>
+                                        @if (_periodOptions is not null)
                                         {
-                                            <MudSelectItem T="string" Value="@opt.Key">@opt.Label</MudSelectItem>
+                                            @foreach (var opt in _periodOptions)
+                                            {
+                                                <MudMenuItem @key="opt.Key" AutoClose="true" OnClick="@(() => OnStatsPeriodChanged(opt.Key))" Icon="@(_selectedPeriodKey == opt.Key ? Icons.Material.Filled.Check : null)" IconColor="Color.Primary">@opt.Label</MudMenuItem>
+                                            }
                                         }
-                                    }
-                                </MudSelect>
+                                    </ChildContent>
+                                </MudMenu>
                             </div>
 
                             @if (_selectedTags.Count > 0)

@@ -25,6 +25,8 @@
     font-weight: 600;
     letter-spacing: 0.02em;
     line-height: 1.2 !important;
+    /* NOTE: margin: 0 lives in global app.css (.board-title). MudText
+       renders the <p> without the component scope attribute. */
 }
 
 .board-title-stack {
@@ -212,6 +214,23 @@
         height: 44px !important;
         min-height: 44px !important;
     }
+
+    /* Info and add-field buttons keep a 44px hit target on touch,
+       at every viewport width. */
+    .board-column ::deep .board-column-info-btn .mud-icon-button {
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+        padding: 0 !important;
+    }
+
+    .board-add-wrap ::deep .mud-input-adornment-end .mud-icon-button {
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+    }
 }
 
 @media (max-width: 479.98px) {
@@ -226,13 +245,8 @@
     }
 }
 
-/* Column header glossary popover */
-:global(.board-column-info-popover) {
-    max-width: 260px !important;
-    border-radius: var(--radius-md) !important;
-    border: 1px solid var(--mud-palette-divider) !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
-}
+/* Column header glossary popover. The popover element renders outside
+   this component, so the popover rule lives in global app.css. */
 
 .board-column-info-text {
     font-size: 0.8rem;

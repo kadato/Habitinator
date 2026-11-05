@@ -36,8 +36,7 @@
                              AnchorOrigin="Origin.BottomRight"
                              TransformOrigin="Origin.TopRight"
                              PopoverFixed="true"
-                             PopoverClass="ai-model-dropdown-popover"
-                             MaxHeight="340">
+                             PopoverClass="ai-model-dropdown-popover">
                         <ActivatorContent Context="modelMenu">
                             <button type="button"
                                     class="ai-model-pill"
@@ -54,6 +53,7 @@
                                     Provider: @_preferences.Ai.Provider
                                 </MudText>
                             </div>
+                            <div class="ai-model-menu-list" role="presentation">
                             @foreach (var opt in AiModelCatalog.GetModelsForProvider(_preferences.Ai.Provider))
                             {
                                 var isCurrent = string.Equals(_activeModel, opt.Id, StringComparison.OrdinalIgnoreCase);
@@ -85,6 +85,7 @@
                                     </div>
                                 </MudMenuItem>
                             }
+                            </div>
                         </ChildContent>
                     </MudMenu>
                 }
@@ -98,12 +99,13 @@
                          Dense="true"
                          AnchorOrigin="Origin.BottomRight"
                          TransformOrigin="Origin.TopRight"
-                         MaxHeight="360"
+                         PopoverClass="ai-model-menu-popover"
                          PopoverFixed="true">
-                    <div class="px-3 py-2 border-bottom d-flex align-center justify-space-between" style="min-width: 240px;">
+                    <div class="px-3 py-2 border-bottom d-flex align-center justify-space-between ai-threads-header" style="min-width: 240px;">
                         <MudText Typo="Typo.caption" Class="font-weight-bold">Chat Threads (@_threads.Count)</MudText>
                         <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Text" OnClick="NewThreadAsync">New</MudButton>
                     </div>
+                    <div class="ai-threads-list" role="presentation">
                     @foreach (var t in _threads)
                     {
                         var isActive = t.Id == _activeThreadId;
@@ -122,7 +124,7 @@
                                         <MudIconButton Icon="@Icons.Material.Filled.Close"
                                                        Size="Size.Small"
                                                        Color="Color.Default"
-                                                       Class="pa-1"
+                                                       Class="pa-1 ai-thread-delete"
                                                        title="Delete thread"
                                                        aria-label="Delete thread"
                                                        OnClick="() => DeleteThreadAsync(t.Id)" />
@@ -131,6 +133,7 @@
                             </div>
                         </MudMenuItem>
                     }
+                    </div>
                 </MudMenu>
                 <MudIconButton Icon="@Icons.Material.Filled.Add"
                                Size="Size.Small"

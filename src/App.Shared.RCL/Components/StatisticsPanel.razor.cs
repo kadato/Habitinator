@@ -837,6 +837,40 @@ public partial class StatisticsPanel : IDisposable
     }
 
 
+    private string SelectedPeriodLabel =>
+        _periodOptions?.FirstOrDefault(o => o.Key == _selectedPeriodKey)?.Label ?? _selectedPeriodKey;
+
+    private bool HasAvailableTags => (_data?.AvailableTags?.Count ?? 0) > 0;
+
+    private bool AreAllFilterTagsSelected =>
+        HasAvailableTags && _selectedTags.Count == (_data?.AvailableTags?.Count ?? 0);
+
+    private bool IsTagSelected(string tag) => _selectedTags.Contains(tag, StringComparer.OrdinalIgnoreCase);
+
+    private Task OnTagToggledAsync(string tag, bool selected)
+    {
+        var current = _selectedTags.ToList();
+        if (selected)
+        {
+            if (!current.Contains(tag, StringComparer.OrdinalIgnoreCase))
+            {
+                current.Add(tag);
+            }
+        }
+        else
+        {
+            current.RemoveAll(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return OnSelectedTagsChanged(current);
+    }
+
+    private Task OnSelectAllTagsAsync() =>
+        OnSelectedTagsChanged(_data?.AvailableTags?.ToList() ?? []);
+
+    private Task OnSelectAllTagsChangedAsync(bool selectAll) =>
+        selectAll ? OnSelectAllTagsAsync() : OnClearTagFiltersAsync();
+
     private static string GetMultiSelectionText(IReadOnlyList<string> selectedValues)
     {
         if (selectedValues is null || selectedValues.Count == 0)
@@ -1008,6 +1042,12 @@ public partial class StatisticsPanel : IDisposable
     /// <summary>Tries an immediate sync. Stats read from the server right after.</summary>
     private async Task DrainBoardSyncAsync()
     {
+        // Data saver is on. The app queued the change locally. Choose Sync now or resume automatic sync to send the change.
+        if (ServiceProvider.GetService<IBoardSyncStatus>()?.IsPaused == true)
+        {
+            return;
+        }
+
         try
         {
             var sync = ServiceProvider.GetService<App.Shared.RCL.Services.Board.Local.IBoardSyncRequestor>();

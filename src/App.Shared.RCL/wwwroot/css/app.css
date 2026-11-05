@@ -301,6 +301,7 @@ html.dark-theme .edit-daily-shell--habit .edit-daily-checklist__add {
 /* Settings section switcher */
 .settings-section-switcher {
     display: flex;
+    flex-wrap: nowrap;
     width: 100%;
     gap: var(--space-1);
     padding: 0.2rem;
@@ -311,7 +312,7 @@ html.dark-theme .edit-daily-shell--habit .edit-daily-checklist__add {
 }
 
 .settings-section-switcher__btn {
-    flex: 1 1 33.333%;
+    flex: 1 1 0;
     min-width: 0;
     display: inline-flex;
     align-items: center;
@@ -326,10 +327,20 @@ html.dark-theme .edit-daily-shell--habit .edit-daily-checklist__add {
     color: var(--mud-palette-text-secondary);
     font-size: 0.85rem;
     font-weight: 600;
+    line-height: 1.3;
     text-transform: none;
     cursor: pointer;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+}
+
+.settings-section-switcher__btn:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.settings-section-switcher__btn .mud-icon-root {
+    flex-shrink: 0;
 }
 
 .settings-section-switcher__btn--active {
@@ -338,9 +349,15 @@ html.dark-theme .edit-daily-shell--habit .edit-daily-checklist__add {
 }
 
 .settings-section-switcher__label {
+    min-width: 0;
+    line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.settings-section-switcher__label--short {
+    display: none;
 }
 
 .settings-section-content {
@@ -358,8 +375,41 @@ html.dark-theme .edit-daily-shell--habit .edit-daily-checklist__add {
 
     .settings-section-switcher {
         position: sticky;
-        top: calc(var(--app-top-bar-offset, 4.25rem) + var(--space-2));
+        top: calc(var(--app-top-bar-offset, 4.25rem) + var(--space-2) + env(safe-area-inset-top, 0px));
         z-index: 100;
+    }
+}
+
+/* Phones: four tabs stay in one row with the icon above the label
+   so all four labels stay in one row without truncation. */
+@media (max-width: 599.98px) {
+    .settings-section-switcher__btn {
+        flex-direction: column;
+        gap: 2px;
+        padding: var(--space-2) var(--space-1);
+        font-size: 0.72rem;
+        line-height: 1.2;
+        min-height: 56px;
+    }
+
+    .settings-section-switcher__label {
+        max-width: 100%;
+    }
+
+    .settings-section-switcher__label--full {
+        display: none;
+    }
+
+    .settings-section-switcher__label--short {
+        display: inline;
+    }
+}
+
+/* Very narrow phones: tighten padding so all four columns fit. */
+@media (max-width: 359.98px) {
+    .settings-section-switcher__btn {
+        font-size: 0.68rem;
+        padding: var(--space-2) 0.15rem;
     }
 }
 
@@ -1386,6 +1436,18 @@ input[type="number"].mud-input-slot {
     .timer-focus-textfield input {
         font-size: 16px !important;
     }
+
+    /* Dense menu rows get a full 44px touch target. Card kebab menus and tag filters use the dense rows.
+       Desktop fine pointers keep the compact rows. */
+    .mud-menu-item {
+        min-height: 44px !important;
+    }
+
+    /* Chat thread delete buttons match the 44px menu rows. */
+    .ai-thread-delete.mud-icon-button {
+        min-width: 44px !important;
+        min-height: 44px !important;
+    }
 }
 
 /* Universal Popover Scrollbar Normalization - Prevent Double Scrollbars */
@@ -1403,6 +1465,181 @@ input[type="number"].mud-input-slot {
     box-sizing: border-box !important;
 }
 
+/* Board Tags filter and column info popovers. These selectors must live in
+   global CSS. The popover renders outside any component in the popover provider,
+   so scoped selectors never match the popover. */
+.board-tags-menu-popover {
+    z-index: calc(var(--mud-zindex-popover, 1300) + 1) !important;
+    overflow: hidden !important;
+}
+
+.board-tags-menu-popover .mud-list,
+.board-tags-menu-popover .mud-menu-list-wrapper {
+    overflow: hidden !important;
+}
+
+.board-column-info-popover {
+    max-width: 260px !important;
+    border-radius: var(--radius-md) !important;
+    border: 1px solid var(--mud-palette-divider) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Board Tags filter. The popover itself is the single scroll container.
+   MudBlazor caps the popover to the space around the Tags button, so every tag
+   and the footer stay reachable with one scrollbar. The filter panel and
+   tag list size naturally. The Clear all filters footer sticks to the
+   visible bottom. */
+.mud-popover.board-tags-menu-popover {
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+}
+
+.board-tags-menu-popover .mud-list,
+.board-tags-menu-popover .mud-menu-list-wrapper {
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+.board-tags-menu-panel {
+    min-width: min(17rem, 100vw - var(--space-8));
+    max-width: min(24rem, 100vw - var(--space-8));
+}
+
+/* Statistics filter menus. Like the board tags menu, the popover is
+   teleported to the popover provider outside any component, so these
+   selectors must live in global CSS. */
+.stats-filter-menu-popover {
+    z-index: calc(var(--mud-zindex-popover, 1300) + 1) !important;
+    overflow: hidden !important;
+}
+
+.mud-popover.stats-filter-menu-popover {
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    border-radius: var(--radius-xl) !important;
+    border: 1px solid var(--mud-palette-divider) !important;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16) !important;
+}
+
+.stats-filter-menu-popover .mud-menu-list {
+    padding: 0.35rem !important;
+}
+
+.stats-filter-menu-panel {
+    min-width: min(17rem, 100vw - var(--space-8));
+    max-width: min(22rem, 100vw - var(--space-8));
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+}
+
+.stats-filter-menu-panel__actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: 0.15rem 0.35rem 0.1rem;
+}
+
+.stats-filter-menu-panel__clear {
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.45rem 0.5rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.stats-filter-menu-panel__clear:hover {
+    color: var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
+}
+
+.stats-filter-menu-panel__list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    max-height: 16rem;
+    overflow-y: auto;
+}
+
+.stats-filter-check {
+    width: 100%;
+    border-radius: var(--radius-md);
+}
+
+.stats-filter-check:hover {
+    background: color-mix(in srgb, var(--mud-palette-primary) 6%, transparent);
+}
+
+/* Phones: the panel spans the full width below the trigger. */
+@media (max-width: 959.98px) {
+    .stats-filter-menu-popover {
+        left: 0.5rem !important;
+        right: 0.5rem !important;
+        width: auto !important;
+        max-width: none !important;
+    }
+
+    .stats-filter-menu-panel {
+        min-width: 0;
+        max-width: none;
+    }
+}
+
+.board-tags-menu-panel > .board-tags-menu-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    background: var(--mud-palette-surface);
+}
+
+/* Phones: the panel spans the full-width sheet, so drop its fixed widths. */
+@media (max-width: 959.98px) {
+    .board-tags-menu-panel {
+        min-width: 0;
+        max-width: none;
+    }
+}
+
+/* List-item kebab menus need a full 44px hit target on touch and on phones.
+   Global scope is required. The class sits on the MudIconButton tag.
+   The tag renders without the component scope attribute. */
+@media (max-width: 599.98px), (pointer: coarse) {
+    .board-card__delete.mud-icon-button {
+        width: 2.75rem !important;
+        height: 2.75rem !important;
+        min-width: 2.75rem !important;
+        min-height: 2.75rem !important;
+        padding: 0 !important;
+    }
+}
+
+/* Column header title is a MudText <p> next to the count badge and info
+   button. MudBlazor typography does not reset <p> margins, so the title
+   sits high without a reset. Global scope is required. MudText renders without the scope attribute. */
+.board-title {
+    margin: 0 !important;
+}
+
+/* On narrow screens the Tags menu is right-anchored. The anchor pushes the wide
+   panel off the left edge. The popover becomes a full-width sheet pinned below
+   the Tags button. The popover keeps the computed top. */
+@media (max-width: 959.98px) {
+    .board-tags-menu-popover {
+        left: 0.5rem !important;
+        right: 0.5rem !important;
+        width: auto !important;
+        max-width: none !important;
+    }
+}
+
 /* AI Assistant Model Menu Popover */
 .ai-model-menu-popover,
 .ai-model-dropdown-popover {
@@ -1414,29 +1651,65 @@ input[type="number"].mud-input-slot {
     border: 1px solid var(--mud-palette-lines-default) !important;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18) !important;
     background-color: var(--mud-palette-surface) !important;
-    overflow: hidden !important;
+    overflow-x: hidden !important;
     box-sizing: border-box !important;
+}
+
+/* The popover is the single scroll container for both AI menus. MudBlazor caps
+   the popover to the space around the activator. The stronger selector wins over
+   the global popover normalization above. */
+.mud-popover.ai-model-menu-popover,
+.mud-popover.ai-model-dropdown-popover {
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+}
+
+/* On phones the model dropdown is right-anchored. The anchor pushes the 360px
+   panel off the left edge. The popover becomes a full-width sheet pinned below
+   the activator. The popover keeps the computed top. */
+@media (max-width: 599.98px) {
+    .ai-model-dropdown-popover {
+        left: 0.5rem !important;
+        right: 0.5rem !important;
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+    }
 }
 
 .ai-model-menu-popover .mud-menu-list-wrapper,
 .ai-model-dropdown-popover .mud-menu-list-wrapper {
-    max-height: inherit !important;
-    overflow: hidden !important;
+    max-height: none !important;
+    overflow: visible !important;
     box-sizing: border-box !important;
 }
 
-.ai-model-menu-popover .mud-list,
-.ai-model-dropdown-popover .mud-list,
 .ai-model-menu-popover .mud-menu-list,
 .ai-model-dropdown-popover .mud-menu-list {
+    display: block;
     padding: 4px !important;
     width: 100% !important;
     max-width: 100% !important;
-    max-height: inherit !important;
+    max-height: none !important;
     box-sizing: border-box !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
+    overflow: visible !important;
     scrollbar-width: thin;
+}
+
+/* Sticky headers. The popover is the single scroller. The headers stay
+   put while the option rows scroll beneath the headers. */
+.ai-model-dropdown-popover .ai-dropdown-header,
+.ai-model-menu-popover .ai-threads-header {
+    position: sticky;
+    top: -4px;
+    z-index: 1;
+    background: var(--mud-palette-surface);
+}
+
+.ai-model-menu-list,
+.ai-threads-list {
+    overflow: visible;
+    overscroll-behavior: contain;
 }
 
 .ai-model-dropdown-popover .mud-list-item,

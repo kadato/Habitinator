@@ -511,12 +511,8 @@
         align-items: center;
     }
 
-    .board-card__delete.mud-icon-button {
-        width: 2.75rem;
-        height: 2.75rem;
-        min-width: 2.75rem;
-        min-height: 2.75rem;
-    }
+    /* NOTE: the kebab 44px rule lives in global app.css. The class sits on
+       the MudIconButton tag, which renders without the scope attribute. */
 
     .board-card__title-text {
         font-size: 0.92rem;
@@ -704,6 +700,14 @@
         width: 2.75rem;
         height: 2.75rem;
         min-width: 2.75rem;
+        min-height: 2.75rem;
+    }
+
+    /* NOTE: the kebab 44px rule lives in global app.css (see the
+       max-width/coarse block there). The class sits on the MudIconButton
+       tag, which renders without the scope attribute. */
+
+    .board-subtask-pill {
         min-height: 2.75rem;
     }
 }

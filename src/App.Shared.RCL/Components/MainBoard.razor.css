@@ -170,25 +170,15 @@
 }
 
 .board-tags-menu-body {
-    max-height: min(60vh, 26rem);
-    overflow-y: auto;
+    /* Natural height. The popover is the single scroller. The body has
+       no cap and no scroll of its own. A cap would nest scrollbars. */
+    overscroll-behavior: contain;
 }
 
-:global(.board-tags-menu-popover) {
-    z-index: calc(var(--mud-zindex-popover, 1300) + 1) !important;
-    overflow: hidden !important;
-}
-
-:global(.board-tags-menu-popover .mud-list),
-:global(.board-tags-menu-popover .mud-menu-list-wrapper) {
-    overflow: hidden !important;
-}
-
-
-.board-tags-menu-panel {
-    min-width: min(17rem, 100vw - var(--space-8));
-    max-width: min(24rem, 100vw - var(--space-8));
-}
+/* The .board-tags-menu-panel layout lives in global app.css. The panel is
+   a MudPaper. The panel renders without the component scope attribute, so rules
+   here never match the panel. The Board Tags filter panel section in global app.css
+   holds the rules. */
 
 .board-tag-filter-grid {
     display: grid;
@@ -529,6 +519,10 @@
         width: 100% !important;
     }
 
+    /* The full-width phone sheet for the Tags popover and the panel widths
+       live in global app.css. The popover renders outside the component and the panel is a
+       MudPaper, so scoped selectors never match the popover or the panel. */
+
     /* Section tabs on mobile: equal-width buttons so all three fit and are easy to tap. */
 }
 
@@ -635,4 +629,18 @@
 }
 .board-load-fallback__hint {
     max-width: 28ch;
+}
+
+/* Phones: single-column tag rows for thumb-friendly tapping. */
+@media (max-width: 599.98px) {
+    .board-tag-filter-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Touch rows get a full 44px target at every viewport width. */
+@media (pointer: coarse) {
+    .board-tag-filter-grid .mud-checkbox {
+        min-height: 44px;
+    }
 }

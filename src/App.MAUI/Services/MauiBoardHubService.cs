@@ -1,5 +1,6 @@
 using App.Shared.RCL.Hubs;
 using App.Shared.RCL.Services;
+using App.Shared.RCL.Services.Board.Local;
 
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
@@ -11,14 +12,35 @@ public sealed partial class MauiBoardHubService(
     IAuthTokenStore tokens,
     IRemoteBoardRefreshService refresh,
     MauiApiEndpointOptions api,
-    ILogger<MauiBoardHubService> logger)
+    ILogger<MauiBoardHubService> logger,
+    BoardSyncStatus syncStatus,
+    IServiceProvider services)
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly CancellationTokenSource _lifetimeCts = new();
     private HubConnection? _connection;
 
+    private void EnsurePauseLoaded()
+    {
+        try
+        {
+            using var scope = services.CreateScope();
+            scope.ServiceProvider.GetService(typeof(BoardSyncPausePreference));
+        }
+        catch
+        {
+            // Keep best effort. Sync status already reflects the last known choice.
+        }
+    }
+
     public async Task EnsureConnectedAsync(CancellationToken cancellationToken = default)
     {
+        EnsurePauseLoaded();
+        if (syncStatus.IsPaused)
+        {
+            return;
+        }
+
         try
         {
             if (Connectivity.Current.NetworkAccess is not (NetworkAccess.Internet or NetworkAccess.ConstrainedInternet))

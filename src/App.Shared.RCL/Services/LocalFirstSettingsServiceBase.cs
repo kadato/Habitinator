@@ -1,5 +1,7 @@
 using System.Text.Json;
 
+using App.Shared.RCL.Services.Board.Local;
+
 using Microsoft.Extensions.Logging;
 
 namespace App.Shared.RCL.Services;
@@ -64,12 +66,14 @@ public abstract class LocalFirstSettingsServiceBase<TSettings> : ISettingsSyncFl
 
     private string GetPendingKey() => GetKey() + "_pending";
 
+    private bool IsPaused() => BoardSyncPausePreference.IsPausedIn(_localStore);
+
     public Task<TSettings> GetAsync(CancellationToken cancellationToken = default)
     {
         var key = GetKey();
         var localSettings = _store.GetLocal(key);
 
-        if (_sessionProvider.IsLoggedIn)
+        if (_sessionProvider.IsLoggedIn && !IsPaused())
         {
             _ = TryFlushPendingAsync(cancellationToken);
             _store.RefreshInBackground(
@@ -90,21 +94,29 @@ public abstract class LocalFirstSettingsServiceBase<TSettings> : ISettingsSyncFl
 
         if (_sessionProvider.IsLoggedIn)
         {
-            var ok = await LocalFirstSaves.TryPutAsync(
-                Client,
-                _apiEndpoint,
-                settings,
-                _serializerOptions,
-                _logger,
-                cancellationToken).ConfigureAwait(false);
-            if (!ok)
+            if (IsPaused())
             {
+                // Sync now flushes queued settings through FlushPendingAsync.
                 PersistPending(settings);
             }
             else
             {
-                ClearPending();
-                _ = TryFlushPendingAsync(cancellationToken);
+                var ok = await LocalFirstSaves.TryPutAsync(
+                    Client,
+                    _apiEndpoint,
+                    settings,
+                    _serializerOptions,
+                    _logger,
+                    cancellationToken).ConfigureAwait(false);
+                if (!ok)
+                {
+                    PersistPending(settings);
+                }
+                else
+                {
+                    ClearPending();
+                    _ = TryFlushPendingAsync(cancellationToken);
+                }
             }
         }
 

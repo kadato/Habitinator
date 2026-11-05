@@ -59,6 +59,24 @@ public sealed class SyncStatusIndicatorTests : IAsyncDisposable
     }
 
     [Fact]
+    public void FullRow_Paused_Shows_SyncNow_And_Calls_SyncNowAsync()
+    {
+        _boardSync.IsPaused = true;
+        _boardSync.PendingCount = 2;
+
+        var cut = _ctx.Render<SyncStatusIndicator>(p => p.Add(x => x.IconOnly, false));
+
+        cut.Markup.Should().Contain("Paused");
+        var retry = cut.Find(".sync-row__retry");
+        retry.TextContent.Should().Contain("Sync now");
+
+        retry.Click();
+
+        _syncRequestor.Received(1).SyncNowAsync(Arg.Any<CancellationToken>());
+        _syncRequestor.DidNotReceive().RequestSync(Arg.Any<bool>());
+    }
+
+    [Fact]
     public void FullRow_HidesRetry_When_Idle_With_No_Pending()
     {
         var cut = _ctx.Render<SyncStatusIndicator>(p => p.Add(x => x.IconOnly, false));
@@ -106,6 +124,7 @@ public sealed class SyncStatusIndicatorTests : IAsyncDisposable
     {
         public bool IsOffline { get; set; }
         public bool IsSyncing { get; set; }
+        public bool IsPaused { get; set; }
         public DateTimeOffset? LastSyncedUtc { get; set; }
         public int PendingCount { get; set; }
         public string? SyncProblemMessage { get; set; }

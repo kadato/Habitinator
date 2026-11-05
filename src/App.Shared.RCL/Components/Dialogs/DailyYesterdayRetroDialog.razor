@@ -5,6 +5,7 @@
 @inject IUserNotifier Notifier
 @inject IJSRuntime JS
 @inject IServiceProvider ServiceProvider
+@inject IBoardSyncStatus BoardSync
 @implements IAsyncDisposable
 
 <MudDialog Class="hab-modal-dialog"
@@ -199,6 +200,12 @@
 
     private async Task DrainBoardSyncAsync()
     {
+        // Data saver: the change is already queued locally. Sync now or unpause to send it.
+        if (BoardSync.IsPaused)
+        {
+            return;
+        }
+
         try
         {
             var sync = ServiceProvider.GetService<App.Shared.RCL.Services.Board.Local.IBoardSyncRequestor>();

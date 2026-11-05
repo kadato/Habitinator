@@ -393,6 +393,12 @@
     /// <summary>Tries an immediate sync. Stats read from the server right after.</summary>
     private async Task DrainBoardSyncAsync()
     {
+        // Data saver: the change is already queued locally. Sync now or unpause to send it.
+        if (BoardSync.IsPaused)
+        {
+            return;
+        }
+
         try
         {
             var sync = ServiceProvider.GetService<App.Shared.RCL.Services.Board.Local.IBoardSyncRequestor>();

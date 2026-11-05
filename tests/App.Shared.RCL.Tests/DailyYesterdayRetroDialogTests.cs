@@ -24,6 +24,7 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
     private readonly IBoardDataService _boardDataService = Substitute.For<IBoardDataService>();
     private readonly IUserNotifier _notifier = Substitute.For<IUserNotifier>();
     private readonly App.Shared.RCL.Services.Board.Local.IBoardSyncRequestor _syncRequestor = Substitute.For<App.Shared.RCL.Services.Board.Local.IBoardSyncRequestor>();
+    private readonly TestBoardSyncStatus _boardSync = new();
 
     public DailyYesterdayRetroDialogTests()
     {
@@ -33,6 +34,7 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
         _ctx.Services.AddSingleton(_boardDataService);
         _ctx.Services.AddSingleton(_notifier);
         _ctx.Services.AddSingleton(_syncRequestor);
+        _ctx.Services.AddSingleton<IBoardSyncStatus>(_boardSync);
 
         _dateFormatService.Format(Arg.Any<DateOnly>()).Returns("2026-08-11");
         _ctx.Render<MudPopoverProvider>();
@@ -226,5 +228,70 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
         result.Should().NotBeNull();
         result.Canceled.Should().BeTrue();
         await _syncRequestor.DidNotReceive().SyncNowAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Checking_Item_And_Saving_Does_Not_Drain_When_Sync_Paused()
+    {
+        // Arrange
+        _boardSync.IsPaused = true;
+        try
+        {
+            var daily1Id = Guid.NewGuid();
+            var daily1 = new BoardItem(daily1Id, "Stretch", false, 0);
+            var yesterday = new DateOnly(2026, 8, 11);
+
+            _boardDataService.CompleteDailyForDateAsync(daily1Id, yesterday)
+                .Returns(Task.FromResult<BoardItem?>(daily1 with { Counter = 1, DailyLastCompletedOn = yesterday }));
+
+            var provider = _ctx.Render<MudDialogProvider>();
+            var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+            var parameters = new DialogParameters<DailyYesterdayRetroDialog>
+            {
+                { x => x.DueOn, yesterday },
+                { x => x.Items, new List<BoardItem> { daily1 } }
+            };
+
+            // Act
+            IDialogReference? dialogRef = null;
+            await provider.InvokeAsync(async () =>
+            {
+                dialogRef = await dialogService.ShowAsync<DailyYesterdayRetroDialog>(string.Empty, parameters);
+            });
+
+            var row = provider.Find(".daily-yesterday-row");
+            await provider.InvokeAsync(() => row.Click());
+
+            var saveBtn = provider.Find(".hab-modal__footer button");
+            await provider.InvokeAsync(() => saveBtn.Click());
+
+            var reference = dialogRef ?? throw new InvalidOperationException("DialogRef was null");
+            var result = await reference.Result;
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Canceled.Should().BeFalse();
+            await _syncRequestor.DidNotReceive().SyncNowAsync(Arg.Any<CancellationToken>());
+            await _boardDataService.Received(1).CompleteDailyForDateAsync(daily1Id, yesterday);
+        }
+        finally
+        {
+            _boardSync.IsPaused = false;
+        }
+    }
+
+    private sealed class TestBoardSyncStatus : IBoardSyncStatus
+    {
+        public bool IsOffline { get; set; }
+        public bool IsSyncing { get; set; }
+        public bool IsPaused { get; set; }
+        public DateTimeOffset? LastSyncedUtc { get; set; }
+        public int PendingCount { get; set; }
+        public string? SyncProblemMessage { get; set; }
+        public IReadOnlyList<App.Shared.RCL.Services.Board.Local.BoardSyncConflict> RecentConflicts { get; set; } = [];
+
+#pragma warning disable CS0067
+        public event EventHandler? Changed;
+#pragma warning restore CS0067
     }
 }

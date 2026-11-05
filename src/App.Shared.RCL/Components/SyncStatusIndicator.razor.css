@@ -8,6 +8,9 @@
 .sync-state--offline {
     color: var(--hab-type-todo-ink);
 }
+.sync-state--paused {
+    color: var(--hab-type-todo-ink);
+}
 .sync-state--error {
     color: var(--hab-type-habit-bad);
 }
@@ -54,6 +57,16 @@
     align-items: center;
     justify-content: center;
     line-height: 0;
+}
+
+/* Top-bar status button needs a full thumb target on touch. */
+@media (pointer: coarse) {
+    .sync-icon-btn {
+        width: 2.75rem;
+        height: 2.75rem;
+        min-width: 2.75rem;
+        min-height: 2.75rem;
+    }
 }
 
 /* Row inside the profile menu and Settings. */

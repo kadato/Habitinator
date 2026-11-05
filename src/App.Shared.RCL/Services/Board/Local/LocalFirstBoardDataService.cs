@@ -212,7 +212,8 @@ public sealed partial class LocalFirstBoardDataService(
         // Remote fetch runs alongside the local list so slow networks cost
         // max(remote, local) instead of the sum. Callers invoke this off the
         // critical path (post-paint refresh and warmup).
-        var remoteTask = TryGetRemoteStreakMapAsync(cancellationToken);
+        // Data saver is on. Skip the fetch while paused. The board opens from local data only.
+        var remoteTask = syncStatus.IsPaused ? null : TryGetRemoteStreakMapAsync(cancellationToken);
         var pendingTask = CollectPendingStreakIdsAsync(userKey, cancellationToken);
 
         IReadOnlyList<BoardLocalRow> items;
@@ -226,7 +227,7 @@ public sealed partial class LocalFirstBoardDataService(
             _gate.Release();
         }
 
-        var remoteMap = await remoteTask;
+        var remoteMap = remoteTask is null ? null : await remoteTask;
         if (remoteMap is null)
         {
             return BuildLocalStreakMap(items);

@@ -31,6 +31,7 @@ public sealed class ApiSession : IApiSession
         IBoardLocalStoreLifecycle localBoard,
         BoardSyncCoordinator sync,
         BoardSyncStatus syncStatus,
+        BoardSyncPausePreference pause,
         ILogger<ApiSession> logger)
     {
         _store = store;
@@ -39,6 +40,7 @@ public sealed class ApiSession : IApiSession
         _sync = sync;
         _syncStatus = syncStatus;
         _logger = logger;
+        pause.PausedChanged += OnPauseChanged;
     }
 
     public event EventHandler? Changed;
@@ -99,6 +101,31 @@ public sealed class ApiSession : IApiSession
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "Background hub connect or board sync failed.");
+            }
+        });
+    }
+
+    private void OnPauseChanged(object? sender, bool paused)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                if (paused)
+                {
+                    await _hub.DisconnectAsync(CancellationToken.None);
+                    _syncStatus.SetProblem(BoardSyncCoordinator.PausedProblemMessage);
+                }
+                else
+                {
+                    _syncStatus.SetProblem(null);
+                    await _hub.EnsureConnectedAsync(CancellationToken.None);
+                    await _sync.SyncNowAsync(CancellationToken.None);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Sync pause change failed.");
             }
         });
     }

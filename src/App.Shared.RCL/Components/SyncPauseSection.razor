@@ -1,0 +1,101 @@
+@using App.Shared.RCL.Services.Board.Local
+@inject BoardSyncPausePreference PausePreference
+@inject IBoardSyncRequestor SyncRequestor
+@inject IBoardSyncStatus BoardSync
+@inject ISnackbar Snackbar
+@implements IDisposable
+
+<MudPaper Class="pa-4 mb-3" Elevation="0" Outlined="true">
+    <MudStack Spacing="2">
+        <MudText Typo="Typo.subtitle1" Class="mb-1">Data saver</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">
+            Pause automatic sync to stop server usage. The app keeps working offline and queues changes on this device.
+        </MudText>
+        <MudSwitch T="bool"
+                   Label="Pause automatic sync"
+                   Color="Color.Primary"
+                   Value="_paused"
+                   ValueChanged="OnPausedChanged" />
+        @if (_paused)
+        {
+            <MudText Typo="Typo.caption" Color="Color.Warning">
+                Automatic sync is off. No board, activity, or settings traffic runs in the background.
+                @if (BoardSync.PendingCount == 1)
+                {
+                    <span>1 change waiting on this device.</span>
+                }
+                else if (BoardSync.PendingCount > 1)
+                {
+                    <span>@BoardSync.PendingCount changes waiting on this device.</span>
+                }
+            </MudText>
+            <div>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           Disabled="@BoardSync.IsSyncing"
+                           OnClick="SyncNowAsync">
+                    Sync now
+                </MudButton>
+            </div>
+        }
+        else
+        {
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                Automatic sync runs about every 15 seconds plus on resume and edits.
+            </MudText>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    private bool _paused;
+
+    protected override void OnInitialized()
+    {
+        _paused = PausePreference.IsPaused;
+        BoardSync.Changed += OnBoardSyncChanged;
+        PausePreference.PausedChanged += OnPreferenceChanged;
+    }
+
+    private void OnBoardSyncChanged(object? sender, EventArgs e)
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void OnPreferenceChanged(object? sender, bool paused)
+    {
+        _paused = paused;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnPausedChanged(bool paused)
+    {
+        _paused = paused;
+        PausePreference.SetPaused(paused);
+        if (!paused)
+        {
+            await SyncNowAsync();
+        }
+    }
+
+    private async Task SyncNowAsync()
+    {
+        try
+        {
+            await SyncRequestor.SyncNowAsync();
+            Snackbar.Add("Sync finished.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Sync failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    public void Dispose()
+    {
+        BoardSync.Changed -= OnBoardSyncChanged;
+        PausePreference.PausedChanged -= OnPreferenceChanged;
+        GC.SuppressFinalize(this);
+    }
+}

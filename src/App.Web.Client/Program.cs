@@ -58,6 +58,7 @@ builder.Services.AddScoped<IBoardLocalStore, IndexedDbBoardLocalStore>();
 builder.Services.AddScoped<ICurrentUserKeyProvider, WasmCurrentUserKeyProvider>();
 builder.Services.AddScoped<BoardSyncStatus>();
 builder.Services.AddScoped<IBoardSyncStatus>(sp => sp.GetRequiredService<BoardSyncStatus>());
+builder.Services.AddScoped<BoardSyncPausePreference>();
 builder.Services.AddScoped<BoardInitialLoadSignal>();
 builder.Services.AddScoped<LocalFirstBoardDataService>();
 builder.Services.AddScoped<IBoardLocalStoreLifecycle>(sp => sp.GetRequiredService<LocalFirstBoardDataService>());
@@ -78,7 +79,8 @@ builder.Services.AddScoped<IBoardDataService>(sp =>
     return new UndoableBoardDataService(inner, undoService);
 });
 
-builder.Services.AddScoped<IActivityStatisticsReader, RemoteActivityStatisticsReader>();
+builder.Services.AddScoped<IActivityStatisticsReader, PauseAwareActivityStatisticsReader>();
+builder.Services.AddScoped<RemoteActivityStatisticsReader>();
 builder.Services.AddScoped<IUserActivityLogService, RemoteUserActivityLogService>();
 builder.Services.AddScoped<INotificationSettingsService, RemoteNotificationSettingsService>();
 builder.Services.AddScoped<IUserPreferencesService, LocalFirstUserPreferencesService>();

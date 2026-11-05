@@ -9,6 +9,9 @@ public interface IBoardSyncStatus
 
     bool IsSyncing { get; }
 
+    /// <summary>True when the user paused automatic sync to save server usage. Sync now still works.</summary>
+    bool IsPaused { get; }
+
     DateTimeOffset? LastSyncedUtc { get; }
 
     /// <summary>Queued local writes the server has not acknowledged yet.</summary>
@@ -28,6 +31,7 @@ public sealed class NoOpBoardSyncStatus : IBoardSyncStatus
 {
     public bool IsOffline => false;
     public bool IsSyncing => false;
+    public bool IsPaused => false;
     public DateTimeOffset? LastSyncedUtc => null;
     public int PendingCount => 0;
     public string? SyncProblemMessage => null;

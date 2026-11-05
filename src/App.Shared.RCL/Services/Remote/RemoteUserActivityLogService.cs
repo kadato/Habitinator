@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
 using App.Shared.RCL.Models;
+using App.Shared.RCL.Services.Board.Local;
 
 using Microsoft.Extensions.Logging;
 
@@ -107,6 +108,13 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
 
     private async Task PostBestEffortAsync(ActivityLogRequest req, CancellationToken cancellationToken)
     {
+        if (BoardSyncPausePreference.IsPausedIn(_localStore))
+        {
+            // Data saver is on. The service queues the request locally. Sync now flushes the queued request through TryFlushPendingAsync.
+            await EnqueuePendingAsync(req, cancellationToken);
+            return;
+        }
+
         // First try to flush any pending queue when online
         await TryFlushPendingAsync(cancellationToken);
 

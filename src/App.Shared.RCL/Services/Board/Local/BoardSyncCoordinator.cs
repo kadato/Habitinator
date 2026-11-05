@@ -13,6 +13,10 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
 {
     private const int StuckAfterAttempts = 8;
 
+    public const string PausedProblemMessage = "Sync paused to save server usage. Changes stay on this device until you choose Sync now.";
+
+    private bool _pausePreferenceLoaded;
+
     private readonly LocalFirstBoardDataService _board;
     private readonly ICurrentUserKeyProvider _users;
     private readonly BoardSyncStatus _status;
@@ -57,14 +61,14 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
     }
 
     public Task SyncNowAsync(CancellationToken cancellationToken = default) =>
-        RunPullAndDrainAsync(false, cancellationToken);
+        RunPullAndDrainAsync(false, cancellationToken, bypassPause: true);
 
-    public async Task RunPullAndDrainAsync(bool notifyOnProgress, CancellationToken cancellationToken)
+    public async Task RunPullAndDrainAsync(bool notifyOnProgress, CancellationToken cancellationToken, bool bypassPause = false)
     {
         await _run.WaitAsync(cancellationToken);
         try
         {
-            await RunPullAndDrainCoreAsync(notifyOnProgress, cancellationToken);
+            await RunPullAndDrainCoreAsync(notifyOnProgress, cancellationToken, bypassPause);
         }
         finally
         {
@@ -79,11 +83,19 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
         }
     }
 
-    private async Task RunPullAndDrainCoreAsync(bool notifyOnProgress, CancellationToken cancellationToken)
+    private async Task RunPullAndDrainCoreAsync(bool notifyOnProgress, CancellationToken cancellationToken, bool bypassPause = false)
     {
+        EnsurePausePreferenceLoaded();
         _status.SetSyncing(true);
         try
         {
+            if (_status.IsPaused && !bypassPause)
+            {
+                _status.SetProblem(PausedProblemMessage);
+                await RefreshPendingCountAsync(cancellationToken);
+                return;
+            }
+
             _status.RefreshConnectivity(_isOfflineProbe);
             if (_status.IsOffline)
             {
@@ -175,6 +187,27 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
         if (scope.ServiceProvider.GetService<IUserPreferencesService>() is ISettingsSyncFlush prefsFlush)
         {
             await prefsFlush.FlushPendingAsync(cancellationToken);
+        }
+    }
+
+    private void EnsurePausePreferenceLoaded()
+    {
+        if (_pausePreferenceLoaded)
+        {
+            return;
+        }
+
+        try
+        {
+            using var scope = _services.CreateScope();
+            if (scope.ServiceProvider.GetService(typeof(BoardSyncPausePreference)) is not null)
+            {
+                _pausePreferenceLoaded = true;
+            }
+        }
+        catch
+        {
+            // Keep best effort. The next tick retries. Until loaded, sync runs normally.
         }
     }
 

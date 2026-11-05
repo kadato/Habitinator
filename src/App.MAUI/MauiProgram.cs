@@ -65,6 +65,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<RemoteBoardRefreshService>();
         builder.Services.AddSingleton<BoardSyncStatus>();
         builder.Services.AddSingleton<IBoardSyncStatus>(sp => sp.GetRequiredService<BoardSyncStatus>());
+        builder.Services.AddSingleton<BoardSyncPausePreference>();
         builder.Services.AddSingleton<BoardInitialLoadSignal>();
         builder.Services.AddSingleton<ICurrentUserKeyProvider, MauiCurrentUserKeyProvider>();
         builder.Services.AddSingleton<IBoardLocalStore, SqliteBoardLocalStore>();
@@ -131,7 +132,8 @@ public static class MauiProgram
             var undoService = sp.GetRequiredService<IUndoService>();
             return new UndoableBoardDataService(inner, undoService);
         });
-        builder.Services.AddSingleton<IActivityStatisticsReader, RemoteActivityStatisticsReader>();
+        builder.Services.AddSingleton<IActivityStatisticsReader, PauseAwareActivityStatisticsReader>();
+        builder.Services.AddSingleton<RemoteActivityStatisticsReader>();
         builder.Services.AddSingleton<INotificationSettingsService, RemoteNotificationSettingsService>();
         builder.Services.AddSingleton<IUserPreferencesService, LocalFirstUserPreferencesService>();
         builder.Services.AddSingleton<IAiAssistantService, RemoteAiAssistantService>();

@@ -41,7 +41,7 @@ else
         }
         @if (CanRetry(state))
         {
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="sync-row__retry" OnClick="RetryNow">Retry now</MudButton>
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="sync-row__retry" OnClick="RetryNow">@GetRetryLabel(state)</MudButton>
         }
     </div>
     <MudDivider Class="my-1"/>
@@ -53,7 +53,7 @@ else
     /// <summary>Drops horizontal padding so the row lines up with the host card text. Keep off inside the profile menu.</summary>
     [Parameter] public bool Flush { get; set; }
 
-    private enum SyncState { Offline, Error, Syncing, Synced, Idle }
+    private enum SyncState { Offline, Paused, Error, Syncing, Synced, Idle }
 
     protected override void OnInitialized()
     {
@@ -123,6 +123,7 @@ else
         {
             SyncState.Error => MudBlazor.Severity.Error,
             SyncState.Offline => MudBlazor.Severity.Warning,
+            SyncState.Paused => MudBlazor.Severity.Warning,
             SyncState.Syncing => MudBlazor.Severity.Info,
             _ => MudBlazor.Severity.Normal
         };
@@ -138,6 +139,7 @@ else
 
     private SyncState GetState()
     {
+        if (BoardSync.IsPaused) return SyncState.Paused;
         if (BoardSync.IsOffline) return SyncState.Offline;
         if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage)) return SyncState.Error;
         if (BoardSync.IsSyncing) return SyncState.Syncing;
@@ -147,6 +149,7 @@ else
 
     private static string GetStateClass(SyncState state) => state switch
     {
+        SyncState.Paused => "sync-state--paused",
         SyncState.Offline => "sync-state--offline",
         SyncState.Error => "sync-state--error",
         SyncState.Syncing => "sync-state--syncing",
@@ -156,6 +159,7 @@ else
 
     private static string GetStateIcon(SyncState state) => state switch
     {
+        SyncState.Paused => Icons.Material.Filled.PauseCircle,
         SyncState.Offline => Icons.Material.Filled.CloudOff,
         SyncState.Error => Icons.Material.Filled.SyncProblem,
         SyncState.Syncing => Icons.Material.Filled.CloudSync,
@@ -166,6 +170,8 @@ else
     private string GetSyncStatusTooltip()
     {
         var pending = PendingSuffix(BoardSync.PendingCount);
+        if (BoardSync.IsPaused)
+            return $"You paused automatic sync to save server usage. Choose Sync now to sync once.{pending}";
         if (BoardSync.IsOffline)
             return $"You are offline. The client sends changes when you reconnect.{pending}";
         if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage))
@@ -199,6 +205,8 @@ else
 
     private string GetSyncStatusText()
     {
+        if (BoardSync.IsPaused)
+            return "Paused";
         if (BoardSync.IsOffline)
             return "Offline";
         if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage))
@@ -213,17 +221,27 @@ else
     private static string PendingText(int pending) => pending.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     private bool CanRetry(SyncState state) =>
-        !BoardSync.IsSyncing && (state is SyncState.Offline or SyncState.Error || BoardSync.PendingCount > 0);
+        !BoardSync.IsSyncing && (state is SyncState.Offline or SyncState.Paused or SyncState.Error || BoardSync.PendingCount > 0);
 
-    private void RetryNow()
+    private static string GetRetryLabel(SyncState state) =>
+        state is SyncState.Paused ? "Sync now" : "Retry now";
+
+    private async Task RetryNow()
     {
         try
         {
+            if (BoardSync.IsPaused)
+            {
+                // Paused mode ignores RequestSync. SyncNow runs once while paused.
+                await SyncRequestor.SyncNowAsync();
+                return;
+            }
+
             SyncRequestor.RequestSync();
         }
         catch
         {
-            // Best effort. The indicator still shows the state.
+            // Keep best effort. The indicator still shows the state.
         }
     }
 }

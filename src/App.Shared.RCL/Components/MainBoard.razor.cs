@@ -245,10 +245,15 @@ public partial class MainBoard : IAsyncDisposable
 
             // Empty local mirror. Pull once while skeletons stay up. A returning
             // user never sees an empty board flash before remote rows arrive.
+            // Data saver is on for the paused case. Sync now fills the mirror.
             try
             {
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
-                await BoardSyncRequestor.SyncNowAsync(cts.Token);
+                if (!BoardSync.IsPaused)
+                {
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+                    await BoardSyncRequestor.SyncNowAsync(cts.Token);
+                }
+
                 await LoadBoardAsync();
             }
             catch
@@ -953,14 +958,17 @@ public partial class MainBoard : IAsyncDisposable
             if (result is { Canceled: false, Data: List<Guid> committed } && committed.Count > 0)
             {
                 _lastLocalMutationTime = DateTimeOffset.UtcNow;
-                try
+                if (!BoardSync.IsPaused)
                 {
-                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                    await BoardSyncRequestor.SyncNowAsync(cts.Token);
-                }
-                catch
-                {
-                    // Fall back to periodic sync if offline.
+                    try
+                    {
+                        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                        await BoardSyncRequestor.SyncNowAsync(cts.Token);
+                    }
+                    catch
+                    {
+                        // If offline then rely on periodic sync.
+                    }
                 }
 
                 var label = committed.Count == 1 ? "1 daily" : $"{committed.Count} dailies";

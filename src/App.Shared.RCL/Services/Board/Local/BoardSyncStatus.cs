@@ -20,6 +20,23 @@ public sealed class BoardSyncStatus : IBoardSyncStatus
         }
     }
 
+    private volatile bool _isPaused;
+
+    public bool IsPaused
+    {
+        get => _isPaused;
+        private set
+        {
+            if (_isPaused == value)
+            {
+                return;
+            }
+
+            _isPaused = value;
+            OnChanged();
+        }
+    }
+
     public bool IsSyncing
     {
         get => _isSyncing;
@@ -112,6 +129,8 @@ public sealed class BoardSyncStatus : IBoardSyncStatus
     public event EventHandler? Changed;
 
     internal void SetSyncing(bool value) => IsSyncing = value;
+
+    internal void SetPaused(bool value) => IsPaused = value;
 
     public void SetLastSynced(DateTimeOffset? value) => LastSyncedUtc = value;
 

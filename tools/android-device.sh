@@ -63,7 +63,8 @@ else
         sleep 3
     done
     echo "android-device: backend healthy."
-    grep -m1 -oE "http://[^ ]*:[0-9]+(.*dashboard.*)?" "$ASPIRE_LOG" | head -1 | sed 's/^/android-device: dashboard: /' || true
+    dashboard_proto="https?"
+    grep -m1 -oE "${dashboard_proto}://(localhost|127\.0\.0\.1):[0-9]+[^ ]*" "$ASPIRE_LOG" | head -1 | sed 's/^/android-device: dashboard: /' || true # NOSONAR: local dev Aspire dashboard link
 fi
 
 # The phone's localhost:<port> reaches this machine's localhost:<port>.

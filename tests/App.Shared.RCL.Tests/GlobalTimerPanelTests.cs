@@ -175,4 +175,44 @@ public sealed class GlobalTimerPanelTests : IAsyncDisposable
         // Assert - Popover is closed
         popover.Instance.Open.Should().BeFalse();
     }
+
+    [Fact]
+    public void MobileHeader_ShowsTimeOnce_WhenCollapsed()
+    {
+        // Arrange - paused session keeps a stable time string.
+        _timerService.SelectTarget("Todo", "My Task", Guid.NewGuid());
+        _timerService.Start();
+        _timerService.Pause();
+        var cut = _ctx.Render<GlobalTimerPanel>();
+        var expectedTime = _timerService.GetDisplayTime();
+
+        // Collapse the auto-expanded panel.
+        cut.Find("button.timer-mobile-header").Click();
+
+        // Act
+        var header = cut.Find("button.timer-mobile-header .timer-mobile-header-text");
+
+        // Assert - time and target share one centered row, no dangling comma.
+        header.TextContent.Should().Contain(expectedTime);
+        header.TextContent.Should().Contain("My Task");
+        header.TextContent.Should().NotContain(",");
+    }
+
+    [Fact]
+    public void MobileHeader_ShowsTargetWithoutTime_WhenExpanded()
+    {
+        // Arrange - paused session keeps a stable time string.
+        _timerService.SelectTarget("Todo", "My Task", Guid.NewGuid());
+        _timerService.Start();
+        _timerService.Pause();
+        var cut = _ctx.Render<GlobalTimerPanel>();
+        var runningTime = _timerService.GetDisplayTime();
+
+        // Act - panel auto-expands while a session is active.
+        var header = cut.Find("button.timer-mobile-header .timer-mobile-header-text");
+
+        // Assert - the big timer below owns the time readout, the header keeps only the target.
+        header.TextContent.Should().Contain("My Task");
+        header.TextContent.Should().NotContain(runningTime);
+    }
 }

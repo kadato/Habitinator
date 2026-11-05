@@ -1,4 +1,6 @@
 @using App.Shared.RCL.Services
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
 
 <MudDialog Class="hab-modal-dialog"
            ContentClass="hab-modal-content">
@@ -23,7 +25,7 @@
                 <MudTextField @ref="_durationInput"
                               T="string"
                               @bind-Value="_durationText"
-                              AutoFocus="true"
+                              AutoFocus="false"
                               Label="Time's up after"
                               Placeholder="10m, 25m, 1:15, 90s, or 0:0:30"
                               Variant="Variant.Outlined"
@@ -87,7 +89,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && _durationInput is not null)
+        if (firstRender && _durationInput is not null && await ShouldAutoFocusAsync())
         {
             try
             {
@@ -101,6 +103,18 @@
             {
                 // Focus and selection are best effort.
             }
+        }
+    }
+
+    private async Task<bool> ShouldAutoFocusAsync()
+    {
+        try
+        {
+            return await DialogFocusJs.ShouldAutoFocusAsync(JS);
+        }
+        catch
+        {
+            return true;
         }
     }
 

@@ -1,3 +1,6 @@
+@using App.Shared.RCL.Services
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
 <MudDialog Class="hab-modal-dialog"
            ContentClass="hab-modal-content">
     <DialogContent>
@@ -17,7 +20,7 @@
                 <MudTextField @ref="_targetInput"
                               T="string"
                               @bind-Value="_targetText"
-                              AutoFocus="true"
+                              AutoFocus="false"
                               Label="Target label"
                               Placeholder="Study Math, Project Refactor, Inbox Zero"
                               Variant="Variant.Outlined"
@@ -61,7 +64,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && _targetInput is not null)
+        if (firstRender && _targetInput is not null && await ShouldAutoFocusAsync())
         {
             try
             {
@@ -75,6 +78,19 @@
             {
                 // Focus and selection are best effort.
             }
+        }
+    }
+
+    private async Task<bool> ShouldAutoFocusAsync()
+    {
+        try
+        {
+            await DialogFocusJs.LoadAsync(JS);
+            return await DialogFocusJs.ShouldAutoFocusAsync(JS);
+        }
+        catch
+        {
+            return true;
         }
     }
 

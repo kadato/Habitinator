@@ -46,7 +46,7 @@ public sealed class SetFocusDialogsTests : IAsyncDisposable
         provider.Render();
 
         var textField = provider.FindComponent<MudTextField<string>>();
-        textField.Instance.AutoFocus.Should().BeTrue();
+        textField.Instance.AutoFocus.Should().BeFalse();
 
         var input = provider.Find("input.mud-input-slot");
         input.Should().NotBeNull();
@@ -98,7 +98,7 @@ public sealed class SetFocusDialogsTests : IAsyncDisposable
         provider.Render();
 
         var textField = provider.FindComponent<MudTextField<string>>();
-        textField.Instance.AutoFocus.Should().BeTrue();
+        textField.Instance.AutoFocus.Should().BeFalse();
 
         var input = provider.Find("input.mud-input-slot");
         input.Should().NotBeNull();

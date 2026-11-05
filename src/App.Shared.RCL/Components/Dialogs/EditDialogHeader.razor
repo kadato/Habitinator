@@ -1,4 +1,5 @@
 @using App.Shared.RCL.Models
+@using App.Shared.RCL.Services
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
@@ -29,7 +30,7 @@
                       Class="hab-modal__title-input edit-daily-field-header"
                       Placeholder="@TitlePlaceholder"
                       Immediate="true"
-                      AutoFocus="true"
+                      AutoFocus="false"
                       Margin="Margin.Dense"
                       aria-label="Title"/>
     </div>
@@ -54,7 +55,7 @@
     {
         if (firstRender)
         {
-            if (_titleInput is not null)
+            if (_titleInput is not null && await ShouldAutoFocusAsync())
             {
                 try
                 {
@@ -88,6 +89,19 @@
     /// <summary>Called from touch gestures. Swipe down on the header closes the dialog.</summary>
     [JSInvokable]
     public Task OnModalSwipeDownAsync() => OnClose.InvokeAsync();
+
+    /// <summary>Desktop keeps autofocus. Touch devices and MAUI open dialogs unfocused. The keyboard stays down.</summary>
+    private async Task<bool> ShouldAutoFocusAsync()
+    {
+        try
+        {
+            return await DialogFocusJs.ShouldAutoFocusAsync(JS);
+        }
+        catch
+        {
+            return true;
+        }
+    }
 
     public async ValueTask DisposeAsync()
     {

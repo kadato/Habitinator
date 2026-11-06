@@ -163,7 +163,7 @@
         </div>
         @if (BoardSync.IsOffline)
         {
-            <MudAlert Severity="Severity.Warning" Dense="true" Class="mx-3 mt-2" role="status">You are offline. AI needs a connection. Board edits still work.</MudAlert>
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mx-3 mt-2" role="status">Working offline. AI needs an internet connection. Board edits still work.</MudAlert>
         }
 
         @if (_threads.Count > 1)
@@ -422,7 +422,7 @@
                 <MudTextField T="string"
                               Value="_inputText"
                               ValueChanged="OnInputChangedAsync"
-                              Placeholder="Ask Habitinator AI, /plan, /review, or @@item"
+                              Placeholder="@(BoardSync.IsOffline ? "AI needs an internet connection" : "Ask Habitinator AI, /plan, /review, or @@item")"
                               Variant="Variant.Outlined"
                               dense="true"
                               margin="Margin.None"
@@ -431,13 +431,13 @@
                               MaxLines="4"
                               Immediate="true"
                               OnKeyDown="HandleKeyDown"
-                              Disabled="_isSending || _isStreaming"
+                              Disabled="BoardSync.IsOffline || _isSending || _isStreaming"
                               Class="ai-text-field flex-grow-1" />
                 <MudButton Variant="Variant.Filled"
                            Color="@(_isStreaming ? Color.Error : Color.Primary)"
                            Class="ai-send-btn"
                            aria-label="@GetSendButtonAriaLabel()"
-                           Disabled="@(!_isStreaming && (_isSending || string.IsNullOrWhiteSpace(_inputText)))"
+                           Disabled="@(BoardSync.IsOffline || (!_isStreaming && (_isSending || string.IsNullOrWhiteSpace(_inputText))))"
                            OnClick="HandleSendOrStopAsync">
                     @if (_isStreaming)
                     {

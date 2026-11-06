@@ -45,6 +45,22 @@ public sealed partial class MauiDailyReminderService : IDisposable
         _clock = clock;
         _logger = logger;
         _notificationSettings.Changed += OnSettingsChanged;
+        _board.Mutated += OnBoardMutated;
+    }
+
+    private void OnBoardMutated(object? sender, EventArgs e)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await SynchronizeAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogTrace(ex, "Failed to reschedule daily reminder after board mutation.");
+            }
+        });
     }
 
     private void OnSettingsChanged(object? sender, EventArgs e)
@@ -151,6 +167,7 @@ public sealed partial class MauiDailyReminderService : IDisposable
     public void Dispose()
     {
         _notificationSettings.Changed -= OnSettingsChanged;
+        _board.Mutated -= OnBoardMutated;
         _syncGate.Dispose();
     }
 }

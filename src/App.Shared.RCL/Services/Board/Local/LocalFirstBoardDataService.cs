@@ -26,6 +26,9 @@ public sealed partial class LocalFirstBoardDataService(
     /// <summary>Last snapshot read from the local store. Serves the synchronous fast path in the board component. Cleared on every mutation and user switch.</summary>
     private volatile BoardSnapshot? _cachedSnapshot;
 
+    /// <summary>Raised whenever a local board mutation is applied to the store.</summary>
+    public event EventHandler? Mutated;
+
     private async Task<DateOnly> TodayAsync(CancellationToken cancellationToken)
     {
         var prefs = await services

@@ -1,3 +1,6 @@
+@using System.Text.Json
+@using App.Shared.RCL.Models
+@using App.Shared.RCL.Services
 @using App.Shared.RCL.Services.Board.Local
 @inject IBoardSyncRequestor SyncRequestor
 @inject IServiceProvider Services
@@ -10,36 +13,54 @@
                 <div class="hab-modal__topbar hab-modal__topbar--minimal">
                     <DialogCloseButton OnClose="Close" />
                 </div>
-                <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Pending sync</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@Pending.Count waiting. You can discard failing operations without wiping the queue.</MudText>
+                <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Pending changes</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    @if (Pending.Count > 0)
+                    {
+                        <span>@Pending.Count @(Pending.Count == 1 ? "change" : "changes") saved on this device. Will sync automatically when connected.</span>
+                    }
+                    else
+                    {
+                        <span>All changes are synced with the server.</span>
+                    }
+                </MudText>
             </div>
             <div class="hab-modal__body">
-                <ul class="sync-conflict-list">
-                    @foreach (var op in Pending)
-                    {
-                        <li class="sync-conflict-row" @key="op.OperationId">
-                            <MudText Typo="Typo.body2" Class="font-weight-bold">@op.Kind</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Tries: @op.AttemptCount</MudText>
-                            @if (!string.IsNullOrWhiteSpace(op.LastError))
-                            {
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@op.LastError</MudText>
-                            }
-                            <MudStack Row="true" Spacing="1" Class="mt-1">
-                                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => DiscardAsync(op.OperationId))">Discard</MudButton>
-                                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="RetryNow">Retry now</MudButton>
-                            </MudStack>
-                        </li>
-                    }
-                </ul>
+                @if (Pending.Count > 0)
+                {
+                    <ul class="sync-conflict-list">
+                        @foreach (var op in Pending)
+                        {
+                            <li class="sync-conflict-row" @key="op.OperationId">
+                                <MudText Typo="Typo.body2" Class="font-weight-bold">@FormatOperation(op)</MudText>
+                                @if (op.AttemptCount >= 8)
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Warning">Paused after retries</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Waiting to sync</MudText>
+                                }
+                                <MudStack Row="true" Spacing="1" Class="mt-1">
+                                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => DiscardAsync(op.OperationId))">Discard</MudButton>
+                                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="RetryNow">Retry</MudButton>
+                                </MudStack>
+                            </li>
+                        }
+                    </ul>
+                    <div class="mt-3 d-flex justify-end">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="RetryNow">Sync all now</MudButton>
+                    </div>
+                }
                 @if (Conflicts.Count > 0)
                 {
-                    <MudText Typo="Typo.subtitle2" Class="mt-2">Recent merges</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="mt-3 font-weight-bold">Recent merges</MudText>
                     <ul class="sync-conflict-list">
                         @foreach (var conflict in Conflicts)
                         {
                             <li class="sync-conflict-row" @key="conflict.ItemId">
                                 <MudText Typo="Typo.body2" Class="font-weight-bold">@conflict.Title</MudText>
-                                <MudText Typo="Typo.caption">@conflict.Outcome - @conflict.ChangedFields</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@conflict.Outcome - @conflict.ChangedFields</MudText>
                             </li>
                         }
                     </ul>
@@ -54,6 +75,80 @@
 
     [Parameter] public IReadOnlyList<BoardOutboxEntry> Pending { get; set; } = [];
     [Parameter] public IReadOnlyList<BoardSyncConflict> Conflicts { get; set; } = [];
+
+    private readonly Dictionary<Guid, string> _itemTitles = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (Services.GetService(typeof(IBoardDataService)) is IBoardDataService board)
+            {
+                var snapshot = await board.GetSnapshotAsync();
+                foreach (var h in snapshot.Habits) _itemTitles[h.Id] = h.Title;
+                foreach (var d in snapshot.Dailies) _itemTitles[d.Id] = d.Title;
+                foreach (var t in snapshot.Todos) _itemTitles[t.Id] = t.Title;
+            }
+        }
+        catch
+        {
+            // Best effort title resolution from local store
+        }
+    }
+
+    private string FormatOperation(BoardOutboxEntry op)
+    {
+        string? title = null;
+        Guid? itemId = null;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(op.PayloadJson);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("Title", out var tProp) && tProp.ValueKind == JsonValueKind.String)
+            {
+                title = tProp.GetString();
+            }
+
+            if (root.TryGetProperty("ItemId", out var idProp) && idProp.TryGetGuid(out var g))
+            {
+                itemId = g;
+            }
+            else if (root.TryGetProperty("ClientItemId", out var cProp) && cProp.TryGetGuid(out var cg))
+            {
+                itemId = cg;
+            }
+        }
+        catch
+        {
+            // Non-JSON or unexpected payload
+        }
+
+        if (string.IsNullOrWhiteSpace(title) && itemId.HasValue && _itemTitles.TryGetValue(itemId.Value, out var found))
+        {
+            title = found;
+        }
+
+        var label = string.IsNullOrWhiteSpace(title) ? "item" : $"\"{title}\"";
+
+        return op.Kind switch
+        {
+            BoardOutboxOperationKind.Create => $"Created {label}",
+            BoardOutboxOperationKind.Rename => $"Renamed {label}",
+            BoardOutboxOperationKind.Delete => $"Deleted {label}",
+            BoardOutboxOperationKind.Toggle => $"Completed {label}",
+            BoardOutboxOperationKind.CompleteDailyForDate => $"Completed daily {label}",
+            BoardOutboxOperationKind.SkipDailyForDate => $"Skipped daily {label}",
+            BoardOutboxOperationKind.HabitIncrement => $"Habit +1: {label}",
+            BoardOutboxOperationKind.HabitDecrement => $"Habit -1: {label}",
+            BoardOutboxOperationKind.UpdateHabit => $"Updated habit {label}",
+            BoardOutboxOperationKind.UpdateDaily => $"Updated daily {label}",
+            BoardOutboxOperationKind.UpdateTodo => $"Updated to-do {label}",
+            BoardOutboxOperationKind.Archive => $"Archived {label}",
+            BoardOutboxOperationKind.Unarchive => $"Restored {label}",
+            _ => $"Updated {label}"
+        };
+    }
 
     private void Close() => MudDialog.Close();
 

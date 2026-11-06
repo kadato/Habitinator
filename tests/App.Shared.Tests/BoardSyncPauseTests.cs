@@ -260,6 +260,61 @@ public sealed class BoardSyncPauseTests
         detail.Should().NotBeNull();
     }
 
+    [Fact]
+    public async Task StatsOverview_WhenOffline_BuildsLocallyWithoutNetwork()
+    {
+        var handler = new StatsCountingHandler();
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var id = Guid.NewGuid();
+        await harness.Board.CreateItemAsync(BoardSection.Daily, "Meditate", id, ct);
+        await harness.Board.GetSnapshotAsync(ct);
+        var services = new ServiceCollection();
+        services.AddSingleton<IBoardDataService>(harness.Board);
+        var provider = services.BuildServiceProvider();
+        using var offline = new OfflineActivityStatisticsProvider(
+            provider,
+            new FakeEventStore(),
+            NullLogger<OfflineActivityStatisticsProvider>.Instance);
+        var expected = await offline.BuildOverviewAsync(null, null, ct);
+        handler.Responder = _ => JsonResponse(HttpStatusCode.OK, expected);
+        var remote = new RemoteActivityStatisticsReader(new StubStatsHttpFactory(handler), new StubSettingsStore([]));
+        var syncStatus = new BoardSyncStatus();
+        syncStatus.UpdateOffline(true);
+        var reader = new PauseAwareActivityStatisticsReader(remote, offline, new StubSettingsStore([]), syncStatus);
+
+        var actual = await reader.GetOverviewAsync(null, null, ct);
+
+        handler.HitCount.Should().Be(0);
+        actual.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task StatsOverview_WhenRemoteFails_GracefullyFallsBackToOffline()
+    {
+        var handler = new StatsCountingHandler();
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var id = Guid.NewGuid();
+        await harness.Board.CreateItemAsync(BoardSection.Daily, "Yoga", id, ct);
+        await harness.Board.GetSnapshotAsync(ct);
+        var services = new ServiceCollection();
+        services.AddSingleton<IBoardDataService>(harness.Board);
+        var provider = services.BuildServiceProvider();
+        using var offline = new OfflineActivityStatisticsProvider(
+            provider,
+            new FakeEventStore(),
+            NullLogger<OfflineActivityStatisticsProvider>.Instance);
+        handler.Responder = _ => throw new HttpRequestException("Simulated connection failure");
+        var remote = new RemoteActivityStatisticsReader(new StubStatsHttpFactory(handler), new StubSettingsStore([]));
+        var reader = new PauseAwareActivityStatisticsReader(remote, offline, new StubSettingsStore([]));
+
+        var actual = await reader.GetOverviewAsync(null, null, ct);
+
+        handler.HitCount.Should().Be(1);
+        actual.Should().NotBeNull();
+    }
+
     private static HttpResponseMessage JsonResponse<T>(HttpStatusCode status, T value) =>
         new(status)
         {

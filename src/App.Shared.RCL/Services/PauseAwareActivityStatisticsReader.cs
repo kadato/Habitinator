@@ -5,47 +5,67 @@ using App.Shared.RCL.Services.Remote;
 namespace App.Shared.RCL.Services;
 
 /// <summary>
-/// Routes statistics reads to this device while Data saver is on and to the
-/// server otherwise. Paused reads make no network calls. The offline provider builds
-/// the reads from the SQLite mirror and the local activity log. Mutations made while
-/// paused keep both current. If you resume automatic sync or choose Sync now, the reader refreshes the server view.
+/// Routes statistics reads to this device while Data saver is on, while offline, or as a
+/// fallback when the remote endpoint cannot be reached. Paused and offline reads
+/// make no network calls and compute directly from the local mirror and activity log.
 /// </summary>
 public sealed class PauseAwareActivityStatisticsReader(
     RemoteActivityStatisticsReader remote,
     OfflineActivityStatisticsProvider offline,
-    ILocalSettingsStore? store = null) : IActivityStatisticsReader
+    ILocalSettingsStore? store = null,
+    IBoardSyncStatus? syncStatus = null) : IActivityStatisticsReader
 {
     private bool IsPaused => BoardSyncPausePreference.IsPausedIn(store);
 
+    private bool ShouldUseOfflineProvider =>
+        IsPaused || (syncStatus?.IsOffline ?? false);
+
+    private async Task<T> ReadWithFallbackAsync<T>(Func<Task<T>> remoteCall, Func<Task<T>> offlineCall)
+    {
+        if (ShouldUseOfflineProvider)
+        {
+            return await offlineCall().ConfigureAwait(false);
+        }
+
+        try
+        {
+            return await remoteCall().ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            return await offlineCall().ConfigureAwait(false);
+        }
+    }
+
     public Task<ActivityDashboardDto> GetDashboardAsync(string? periodKey, string? tag = null,
         CancellationToken cancellationToken = default) =>
-        IsPaused
-            ? offline.BuildDashboardAsync(periodKey, tag, cancellationToken)
-            : remote.GetDashboardAsync(periodKey, tag, cancellationToken);
+        ReadWithFallbackAsync(
+            () => remote.GetDashboardAsync(periodKey, tag, cancellationToken),
+            () => offline.BuildDashboardAsync(periodKey, tag, cancellationToken));
 
     public Task<DailyContributionsViewDto> GetDailyContributionsAsync(string? periodKey, string? tag = null,
         CancellationToken cancellationToken = default) =>
-        IsPaused
-            ? offline.BuildDailyContributionsAsync(periodKey, tag, cancellationToken)
-            : remote.GetDailyContributionsAsync(periodKey, tag, cancellationToken);
+        ReadWithFallbackAsync(
+            () => remote.GetDailyContributionsAsync(periodKey, tag, cancellationToken),
+            () => offline.BuildDailyContributionsAsync(periodKey, tag, cancellationToken));
 
     public Task<HabitContributionsViewDto> GetHabitContributionsAsync(string? periodKey, string? tag = null,
         CancellationToken cancellationToken = default) =>
-        IsPaused
-            ? offline.BuildHabitContributionsAsync(periodKey, tag, cancellationToken)
-            : remote.GetHabitContributionsAsync(periodKey, tag, cancellationToken);
+        ReadWithFallbackAsync(
+            () => remote.GetHabitContributionsAsync(periodKey, tag, cancellationToken),
+            () => offline.BuildHabitContributionsAsync(periodKey, tag, cancellationToken));
 
     public Task<ActivityOverviewDto> GetOverviewAsync(string? periodKey, string? tag = null,
         CancellationToken cancellationToken = default) =>
-        IsPaused
-            ? offline.BuildOverviewAsync(periodKey, tag, cancellationToken)
-            : remote.GetOverviewAsync(periodKey, tag, cancellationToken);
+        ReadWithFallbackAsync(
+            () => remote.GetOverviewAsync(periodKey, tag, cancellationToken),
+            () => offline.BuildOverviewAsync(periodKey, tag, cancellationToken));
 
     public Task<ActivityDayDetailDto> GetActivityDayDetailAsync(DateOnly day, string? tag = null,
         CancellationToken cancellationToken = default) =>
-        IsPaused
-            ? offline.BuildDayDetailAsync(day, tag, cancellationToken)
-            : remote.GetActivityDayDetailAsync(day, tag, cancellationToken);
+        ReadWithFallbackAsync(
+            () => remote.GetActivityDayDetailAsync(day, tag, cancellationToken),
+            () => offline.BuildDayDetailAsync(day, tag, cancellationToken));
 
     public bool TryGetCachedOverview(string? periodKey, string? tag, out ActivityOverviewDto? overview) =>
         remote.TryGetCachedOverview(periodKey, tag, out overview);

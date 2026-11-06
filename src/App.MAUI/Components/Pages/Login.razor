@@ -108,7 +108,14 @@
             var r = await Auth.LoginAsync(new LoginRequest(_email, _password, _rememberMe));
             if (r is null)
             {
-                _message = "Invalid email or password.";
+                if (Microsoft.Maui.Networking.Connectivity.Current.NetworkAccess != Microsoft.Maui.Networking.NetworkAccess.Internet)
+                {
+                    _message = "You are offline. Connect to the internet to sign in, or continue as demo guest to work offline.";
+                }
+                else
+                {
+                    _message = "Invalid email or password.";
+                }
                 _hasError = true;
                 return;
             }
@@ -132,6 +139,14 @@
             var r = await Auth.GuestJwtLoginAsync();
             if (r is null)
             {
+                if (Microsoft.Maui.Networking.Connectivity.Current.NetworkAccess != Microsoft.Maui.Networking.NetworkAccess.Internet)
+                {
+                    var offlineGuest = new LoginResponse("offline-guest-token", "guest@habitinator.local");
+                    await Session.SetSessionAsync(offlineGuest);
+                    Nav.NavigateTo("/");
+                    return;
+                }
+
                 _message = "Demo guest is not available. Is the server running?";
                 _hasError = true;
                 return;

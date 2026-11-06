@@ -55,6 +55,13 @@ else
         var r = await Auth.GuestJwtLoginAsync();
         if (r is null)
         {
+            if (Microsoft.Maui.Networking.Connectivity.Current.NetworkAccess != Microsoft.Maui.Networking.NetworkAccess.Internet)
+            {
+                var offlineGuest = new LoginResponse("offline-guest-token", "guest@habitinator.local");
+                await Session.SetSessionAsync(offlineGuest);
+                return;
+            }
+
             Nav.NavigateTo("/auth/login?guest=missing", replace: true);
             return;
         }

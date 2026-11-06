@@ -180,7 +180,7 @@ public sealed partial class LocalFirstBoardDataService
         BoardRemoteConflictException ex,
         CancellationToken cancellationToken)
     {
-        logger.LogWarning(ex, "Outbox operation {OperationId} returned 409 Conflict.", operationId);
+        logger.LogInformation("Outbox operation {OperationId} encountered 409 Conflict. Attempting auto-resolution.", operationId);
 
         var serverItem = ex.ServerItem;
         if (serverItem is null)
@@ -964,6 +964,15 @@ public sealed partial class LocalFirstBoardDataService
             else if (result is not null)
             {
                 InvalidateStatsCache();
+            }
+
+            try
+            {
+                Mutated?.Invoke(this, EventArgs.Empty);
+            }
+            catch
+            {
+                // Mutation event subscribers are best-effort
             }
 
             return result;

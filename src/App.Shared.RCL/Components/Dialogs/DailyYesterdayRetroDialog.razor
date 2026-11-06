@@ -9,9 +9,10 @@
 @implements IAsyncDisposable
 
 <MudDialog Class="hab-modal-dialog"
-           ContentClass="hab-modal-content">
+           ContentClass="hab-modal-content"
+           OnBackdropClick="CloseAsync">
     <DialogContent>
-        <div class="hab-modal hab-modal--daily" data-dialog-label="Yesterday's dailies" aria-label="Yesterday's dailies" role="group">
+        <div class="hab-modal hab-modal--daily" data-dialog-label="Yesterday's dailies" aria-label="Yesterday's dailies" role="group" @onclick:stopPropagation="true">
             <div class="hab-modal__grabber" aria-hidden="true"></div>
             <div class="hab-modal__header" @ref="_headerRef">
                 <div class="hab-modal__topbar hab-modal__topbar--minimal">
@@ -263,10 +264,17 @@
         }
 
         _sessionEnded = true;
-        await CommitCompletionsAsync();
-        if (_committedIds.Count > 0)
+        try
         {
-            await DrainBoardSyncAsync();
+            await CommitCompletionsAsync();
+            if (_committedIds.Count > 0)
+            {
+                await DrainBoardSyncAsync();
+            }
+        }
+        catch
+        {
+            // Best effort during disposal.
         }
     }
 

@@ -929,6 +929,26 @@ public partial class MainBoard : IAsyncDisposable
                 return;
             }
 
+            // The board renders from the local mirror first. A check-in done on
+            // another device, for example the web page, reaches this device only
+            // through sync. Pull before deciding so yesterday's work that is
+            // already done elsewhere does not prompt again here.
+            if (!BoardSync.IsPaused)
+            {
+                try
+                {
+                    using var syncCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    await BoardSyncRequestor.SyncNowAsync(syncCts.Token);
+                    await LoadBoardAsync();
+                    prefs = await PreferencesService.GetAsync();
+                    today = DailySchedule.LocalToday(TimeZoneService, prefs.DayStartLocalTime);
+                }
+                catch
+                {
+                    // The device is offline or slow. Fall through with the local mirror.
+                }
+            }
+
             var missed = DailySchedule.GetYesterdayUncompletedDailies(Dailies, today, TimeZoneService);
             if (missed.Count == 0)
             {

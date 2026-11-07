@@ -26,6 +26,7 @@ public sealed partial class MauiDailyReminderService : IDisposable
     private readonly IUserTimeZoneService _timeZoneService;
     private readonly IUserPreferencesService _preferencesService;
     private readonly IClock _clock;
+    private readonly RemoteBoardRefreshService? _remoteRefresh;
     private readonly SemaphoreSlim _syncGate = new(1, 1);
 
     public MauiDailyReminderService(
@@ -35,7 +36,8 @@ public sealed partial class MauiDailyReminderService : IDisposable
         IUserTimeZoneService timeZoneService,
         IUserPreferencesService preferencesService,
         IClock clock,
-        ILogger<MauiDailyReminderService> logger)
+        ILogger<MauiDailyReminderService> logger,
+        RemoteBoardRefreshService? remoteRefresh = null)
     {
         _notificationSettings = notificationSettings;
         _dateFormatService = dateFormatService;
@@ -44,8 +46,17 @@ public sealed partial class MauiDailyReminderService : IDisposable
         _preferencesService = preferencesService;
         _clock = clock;
         _logger = logger;
+        _remoteRefresh = remoteRefresh;
         _notificationSettings.Changed += OnSettingsChanged;
         _board.Mutated += OnBoardMutated;
+        _remoteRefresh?.RegisterForRemoteRefresh(OnRemoteRefreshedAsync);
+    }
+
+    private Task OnRemoteRefreshedAsync()
+    {
+        // Remote pull already updated the local mirror before this runs. Rescheduling here
+        // replaces the stale notification content with what the server shows.
+        return SynchronizeAsync();
     }
 
     private void OnBoardMutated(object? sender, EventArgs e)
@@ -115,7 +126,7 @@ public sealed partial class MauiDailyReminderService : IDisposable
             }
 
             var snapshot = await _board.GetSnapshotAsync(cancellationToken);
-            // Same calendar the board uses, so the notification lists what the app shows.
+            // Use the same calendar the board uses. The notification then lists what the app shows.
             var localToday = DailyReminderSchedule.ResolveToday(utcNow, _timeZoneService, dayStart);
             var (title, body) = DailyReminderText.Build(snapshot, localToday, _dateFormatService.DateFormat);
 
@@ -168,6 +179,8 @@ public sealed partial class MauiDailyReminderService : IDisposable
     {
         _notificationSettings.Changed -= OnSettingsChanged;
         _board.Mutated -= OnBoardMutated;
+        _remoteRefresh?.UnregisterForRemoteRefresh(OnRemoteRefreshedAsync);
+
         _syncGate.Dispose();
     }
 }

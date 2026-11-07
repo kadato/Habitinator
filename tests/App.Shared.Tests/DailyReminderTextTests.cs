@@ -74,7 +74,7 @@ public class DailyReminderTextTests
             0,
             HabitResetPeriod.Daily,
             today,
-            DailyRepeatType.Daily,
+            DailyRepeatType.Monthly,
             1,
             null,
             today,
@@ -83,5 +83,32 @@ public class DailyReminderTextTests
         (var t, var body) = DailyReminderText.Build(snapshot, today);
         t.Should().Be(DailyReminderText.DefaultTitle);
         body.Should().ContainEquivalentOf("no dailies due");
+    }
+
+    [Fact]
+    public void Build_Includes_Tomorrow_Load()
+    {
+        var today = new DateOnly(2026, 4, 1);
+        var daily = new BoardItem(
+            Guid.NewGuid(),
+            "Morning run",
+            false,
+            0,
+            null,
+            null,
+            true,
+            true,
+            0,
+            HabitResetPeriod.Daily,
+            today,
+            DailyRepeatType.Daily,
+            1,
+            null,
+            null,
+            null);
+        var snapshot = new BoardSnapshot([], [daily], []);
+        (var _, var body) = DailyReminderText.Build(snapshot, today.AddDays(-1));
+        body.Should().Contain("Tomorrow:");
+        body.Should().Contain("Open Upcoming to plan.");
     }
 }

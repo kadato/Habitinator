@@ -26,6 +26,7 @@ public static class DailyReminderText
         string? dateFormat,
         int maxBodyLength = 1800)
     {
+        var tomorrow = todayUtc.AddDays(1);
         List<string> dailies = [.. snapshot.Dailies
             .Where(d => DailySchedule.IsDueOnDate(d, todayUtc))
             .Select(d => d.Title)
@@ -36,7 +37,15 @@ public static class DailyReminderText
             .OrderBy(t => t.TodoDueDate)
             .ThenBy(t => t.Title, StringComparer.Ordinal)];
 
-        if (dailies.Count == 0 && deadlineTodos.Count == 0)
+        List<string> tomorrowDailies = [.. snapshot.Dailies
+            .Where(d => DailySchedule.IsScheduledOn(d, tomorrow))
+            .Select(d => d.Title)
+            .OrderBy(t => t, StringComparer.Ordinal)];
+        List<BoardItem> tomorrowTodos = [.. snapshot.Todos
+            .Where(t => !t.IsCompleted && t.TodoDueDate == tomorrow)
+            .OrderBy(t => t.Title, StringComparer.Ordinal)];
+
+        if (dailies.Count == 0 && deadlineTodos.Count == 0 && tomorrowDailies.Count == 0 && tomorrowTodos.Count == 0)
         {
             return (DefaultTitle,
                 "You have no dailies due and no to-dos with a due date for today. Open the app to work on your habits and tasks.");
@@ -57,6 +66,30 @@ public static class DailyReminderText
             }
 
             AppendDeadlineTodos(sb, deadlineTodos, todayUtc, dateFormat);
+        }
+
+        var tomorrowTotal = tomorrowDailies.Count + tomorrowTodos.Count;
+        if (tomorrowTotal > 0)
+        {
+            if (sb.Length > 0)
+            {
+                sb.AppendLine();
+            }
+
+            sb.Append(CultureInfo.InvariantCulture, $"Tomorrow: {tomorrowTotal} scheduled");
+            if (tomorrowDailies.Count > 0 && tomorrowTodos.Count > 0)
+            {
+                sb.Append(CultureInfo.InvariantCulture, $", {tomorrowDailies.Count} dailies and {tomorrowTodos.Count} to-dos");
+            }
+            else if (tomorrowDailies.Count > 0)
+            {
+                sb.Append(CultureInfo.InvariantCulture, $", {tomorrowDailies.Count} dailies");
+            }
+            else
+            {
+                sb.Append(CultureInfo.InvariantCulture, $", {tomorrowTodos.Count} to-dos");
+            }
+            sb.Append(". Open Upcoming to plan.");
         }
 
         var body = sb.ToString();

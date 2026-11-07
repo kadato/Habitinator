@@ -1,5 +1,6 @@
 @using App.Shared.RCL.Models
 @using App.Shared.RCL.Services
+@implements IDisposable
 @inject IBoardDataService BoardData
 @inject IUserTimeZoneService TimeZoneService
 @inject IUserDateFormatService DateFormatService
@@ -9,7 +10,7 @@
 <div class="cal upcoming-panel">
     @if (_error is not null)
     {
-        <div class="cal-fallback">
+        <div class="cal-fallback" role="alert">
             <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Large" Class="cal-fallback__icon" aria-hidden="true" />
             <MudText Typo="Typo.subtitle2" Class="cal-fallback__title">Upcoming unavailable</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary">We couldn't load your upcoming schedule. Try again in a moment.</MudText>
@@ -38,94 +39,49 @@
                     <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" Class="cal-todaybtn" OnClick="GoToday">Today</MudButton>
                     <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Medium" Class="cal-navbtn" aria-label="@NextLabel" OnClick="Next" />
                 </div>
-                <div class="cal-titles" aria-live="polite" aria-atomic="true">
+                <div class="cal-titles">
                     <div class="cal-month">@HeaderTitle</div>
                     <div class="cal-sub">@HeadlineText</div>
                 </div>
-                <div class="cal-stats" role="list">
-                    <div class="cal-stat @(OverdueCount > 0 ? "cal-stat--alert" : "")" role="listitem">
-                        <span class="cal-stat__num">@OverdueCount</span>
-                        <span class="cal-stat__label">overdue</span>
-                    </div>
-                    <div class="cal-stat cal-stat--today" role="listitem">
-                        <span class="cal-stat__num">@TodayRemaining</span>
-                        <span class="cal-stat__label">due today</span>
-                    </div>
-                    <div class="cal-stat" role="listitem">
-                        <span class="cal-stat__num">@MonthTotal</span>
-                        <span class="cal-stat__label">in @MonthShort</span>
-                    </div>
-                </div>
             </div>
-            @if (_todayScheduled > 0)
-            {
-                <div class="cal-progress" aria-label="@($"{_todayDone} of {_todayScheduled} dailies done today")">
-                    <div class="cal-progress__top">
-                        <span>Today: @_todayDone of @_todayScheduled dailies done</span>
-                        <span class="cal-progress__pct">@TodayPct%</span>
-                    </div>
-                    <div class="cal-progress__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@TodayPct">
-                        <div class="cal-progress__fill" style="width: @(TodayPct)%"></div>
-                    </div>
-                </div>
-            }
             <div class="cal-controls">
                 <div class="cal-seg cal-seg--primary" role="group" aria-label="Calendar view">
                     <button type="button" class="@ViewBtnClass(CalView.Day)" aria-pressed="@(_view == CalView.Day)" @onclick="() => SetView(CalView.Day)">Day</button>
                     <button type="button" class="@ViewBtnClass(CalView.Week)" aria-pressed="@(_view == CalView.Week)" @onclick="() => SetView(CalView.Week)">Week</button>
-                    <button type="button" class="@ViewBtnClass(CalView.Next7)" aria-pressed="@(_view == CalView.Next7)" @onclick="() => SetView(CalView.Next7)">7 days</button>
                     <button type="button" class="@ViewBtnClass(CalView.Month)" aria-pressed="@(_view == CalView.Month)" @onclick="() => SetView(CalView.Month)">Month</button>
                 </div>
-                <MudMenu AnchorOrigin="Origin.BottomRight"
-                         TransformOrigin="Origin.TopRight"
-                         Dense="true"
-                         PopoverClass="cal-filter-menu-popover">
-                    <ActivatorContent Context="filterMenu">
-                        <button type="button"
-                                class="cal-filter-trigger"
-                                aria-haspopup="true"
-                                aria-label="@($"Filter items, currently {FilterLabel}")"
-                                title="@($"Filter items, currently {FilterLabel}")"
-                                @onclick="@(e => filterMenu.ToggleAsync(e))">
-                            <span class="cal-filter-trigger__label">Filter: @FilterLabel</span>
-                            <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Size="Size.Small" Class="cal-filter-trigger__chevron" aria-hidden="true" />
-                        </button>
-                    </ActivatorContent>
-                    <ChildContent>
-                        <MudMenuItem OnClick="() => SetFilter(UpcomingFilter.All)" aria-label="Show all items">
-                            <div class="d-flex align-center gap-2">
-                                @if (_filter == UpcomingFilter.All)
-                                {
-                                    <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Primary" aria-hidden="true" />
-                                }
-                                <MudText Typo="Typo.body2">All</MudText>
-                            </div>
-                        </MudMenuItem>
-                        <MudMenuItem OnClick="() => SetFilter(UpcomingFilter.Dailies)" aria-label="Show dailies only">
-                            <div class="d-flex align-center gap-2">
-                                @if (_filter == UpcomingFilter.Dailies)
-                                {
-                                    <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Primary" aria-hidden="true" />
-                                }
-                                <MudText Typo="Typo.body2">Dailies</MudText>
-                            </div>
-                        </MudMenuItem>
-                        <MudMenuItem OnClick="() => SetFilter(UpcomingFilter.Todos)" aria-label="Show to-dos only">
-                            <div class="d-flex align-center gap-2">
-                                @if (_filter == UpcomingFilter.Todos)
-                                {
-                                    <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Primary" aria-hidden="true" />
-                                }
-                                <MudText Typo="Typo.body2">To-dos</MudText>
-                            </div>
-                        </MudMenuItem>
-                    </ChildContent>
-                </MudMenu>
+                <div class="cal-seg cal-seg--filter" role="group" aria-label="Filter calendar">
+                    <button type="button" class="@FilterBtnClass(UpcomingFilter.All)" aria-pressed="@(_filter == UpcomingFilter.All)" aria-label="Show everything for the selected day" @onclick="() => SetFilter(UpcomingFilter.All)">All (@FilterAllCount)</button>
+                    <button type="button" class="@FilterBtnClass(UpcomingFilter.Dailies)" aria-pressed="@(_filter == UpcomingFilter.Dailies)" aria-label="Show only dailies for the selected day" @onclick="() => SetFilter(UpcomingFilter.Dailies)">Dailies (@FilterDailiesCount)</button>
+                    <button type="button" class="@FilterBtnClass(UpcomingFilter.Todos)" aria-pressed="@(_filter == UpcomingFilter.Todos)" aria-label="Show only to-dos for the selected day" @onclick="() => SetFilter(UpcomingFilter.Todos)">To-dos (@FilterTodosCount)</button>
+                </div>
+            </div>
+            <div class="cal-progress-row">
+                @if (_todayDailyScheduled > 0)
+                {
+                    <div class="cal-progress">
+                        <span class="cal-progress__label">Dailies @_todayDailyDone/@_todayDailyScheduled</span>
+                        <div class="cal-progress__track" role="progressbar" aria-label="@($"Dailies today: {_todayDailyDone} of {_todayDailyScheduled} done")" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@TodayDailyPct">
+                            <div class="cal-progress__fill" style="width: @(TodayDailyPct)%"></div>
+                        </div>
+                        <span class="cal-progress__pct">@TodayDailyPct%</span>
+                    </div>
+                }
+                @if (_todayTodoTotal > 0)
+                {
+                    <div class="cal-progress">
+                        <span class="cal-progress__label">To-dos @_todayTodoDone/@_todayTodoTotal</span>
+                        <div class="cal-progress__track cal-progress__track--todo" role="progressbar" aria-label="@($"To-dos due today: {_todayTodoDone} of {_todayTodoTotal} done")" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@TodayTodoPct">
+                            <div class="cal-progress__fill cal-progress__fill--todo" style="width: @(TodayTodoPct)%"></div>
+                        </div>
+                        <span class="cal-progress__pct">@TodayTodoPct%</span>
+                    </div>
+                }
             </div>
         </section>
 
         <div class="cal-body">
-            <div class="@SideClass">
+            <div class="cal-side">
                 @if (HasOverdueCard)
                 {
                     <MudPaper Class="cal-card cal-card--overdue" Elevation="0" Outlined="true" id="upcoming-overdue">
@@ -135,26 +91,41 @@
                             </span>
                             <div class="cal-card__titles">
                                 <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="cal-card__title">Overdue</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">@_overdue.Count overdue to-do(s)</MudText>
                             </div>
-                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Class="text-transform-none" OnClick="MoveOverdueToTodayAsync" Disabled="_bulkMoving">Move all to today</MudButton>
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Class="text-transform-none" OnClick="MoveOverdueToTodayAsync" Disabled="_bulkMoving">@(_bulkMoving ? "Moving…" : $"Move all {_overdue.Count} to today")</MudButton>
                         </div>
                         <ul class="cal-list">
-                            @foreach (var todo in _overdue)
+                            @foreach (var todo in GetVisibleOverdue())
                             {
                                 <li class="cal-row" @key="todo.Id">
                                     <span class="cal-row__icon cal-row__icon--todo" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Small" /></span>
                                     <div class="cal-row__text">
-                                        <div class="cal-row__title">@todo.Title</div>
+                                        <button type="button" class="cal-row__titlebtn" @onclick="() => OpenTodoEditorAsync(todo)">@todo.Title</button>
                                         <div class="cal-row__meta">@TodoDueRelativeText.Format(todo.TodoDueDate!.Value, _today)</div>
                                     </div>
                                     <div class="cal-row__actions">
-                                        <MudIconButton Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="cal-iconbtn" aria-label="@TodoCompleteLabel(todo)" OnClick="@(() => ToggleTodoAsync(todo))" Disabled="@IsBusy(todo.Id)" />
-                                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Class="text-transform-none cal-pushbtn" OnClick="@(() => MoveTodoToTodayAsync(todo))" Disabled="@IsBusy(todo.Id)">Today</MudButton>
+                                        <MudIconButton Icon="@Icons.Material.Filled.PlusOne" Size="Size.Small" Class="cal-iconbtn" aria-label="@($"Defer {todo.Title} by one day")" OnClick="@(() => ShiftTodoAsync(todo, 1))" Disabled="@(IsBusy(todo.Id) || _bulkMoving)" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="cal-iconbtn" aria-label="@TodoCompleteLabel(todo)" OnClick="@(() => ToggleTodoAsync(todo))" Disabled="@(IsBusy(todo.Id) || _bulkMoving)" />
+                                        <MudMenu Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" PopoverClass="cal-menu-popover">
+                                            <ActivatorContent Context="overdueMenu">
+                                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Class="cal-iconbtn" aria-label="@($"More actions for {todo.Title}")" OnClick="@(e => overdueMenu.ToggleAsync(e))" Disabled="@(IsBusy(todo.Id) || _bulkMoving)" />
+                                            </ActivatorContent>
+                                            <ChildContent>
+                                                <MudMenuItem OnClick="@(() => MoveTodoToTodayAsync(todo))">Move to today</MudMenuItem>
+                                                <MudMenuItem OnClick="@(() => ShiftTodoAsync(todo, 1))">Defer by one day</MudMenuItem>
+                                                <MudMenuItem OnClick="@(() => OpenTodoEditorAsync(todo))">Edit…</MudMenuItem>
+                                            </ChildContent>
+                                        </MudMenu>
                                     </div>
                                 </li>
                             }
                         </ul>
+                        @if (_overdue.Count > OverduePageSize)
+                        {
+                            <button type="button" class="cal-link cal-expand" @onclick="ToggleOverdueExpanded">
+                                @(_showAllOverdue ? "Show less" : $"Show all {_overdue.Count} overdue")
+                            </button>
+                        }
                     </MudPaper>
                 }
 
@@ -170,7 +141,7 @@
                         <div class="cal-agenda__side">
                             @if (SelectedVisibleCount > 0)
                             {
-                                <span class="cal-pill" aria-label="@SelectedVisibleCount items">@SelectedVisibleCount</span>
+                                <span class="cal-pill" aria-label="@SelectedVisibleCount items for the selected day">@SelectedVisibleCount</span>
                             }
                             <div class="cal-agenda__nav" role="group" aria-label="Move selected day">
                                 <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Size="Size.Small" Class="cal-daystep" aria-label="Previous day" OnClick="PrevDay" />
@@ -178,10 +149,32 @@
                             </div>
                         </div>
                     </div>
+                    @if (SelectedVisibleCount > 0)
+                    {
+                    <div class="cal-agenda__actions">
+                        @if (ShowTodos)
+                        {
+                            @QuickAddForm
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">To add a to-do, <button type="button" class="cal-link cal-link--inline" @onclick="() => SetFilter(UpcomingFilter.Todos)">show to-dos</button>.</MudText>
+                        }
+                    </div>
+                    }
                     @if (SelectedVisibleCount == 0)
                     {
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Nothing scheduled.</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="cal-hint">A clear day. Use the board to add a daily or to-do.</MudText>
+                        <div class="cal-empty">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@EmptyDayText</MudText>
+                            @if (ShowTodos)
+                            {
+                                @QuickAddForm
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">To add a to-do, <button type="button" class="cal-link cal-link--inline" @onclick="() => SetFilter(UpcomingFilter.Todos)">show to-dos</button>.</MudText>
+                            }
+                        </div>
                     }
                     else
                     {
@@ -189,30 +182,33 @@
                         @if (ShowDailies && SelectedDailies.Count > 0)
                         {
                             <div class="cal-agenda-col">
-                            <div class="cal-group">Dailies</div>
+                            <div class="cal-group">Dailies, repeating</div>
                             <ul class="cal-list">
                                 @foreach (var daily in SelectedDailies)
                                 {
                                     @if (_selected == _today)
                                     {
-                                        <li class="cal-row" @key="daily.Id">
+                                        <li class="cal-row cal-row--check" @key="daily.Id">
                                             <MudCheckBox T="bool"
                                                          Value="@IsCheckedToday(daily)"
                                                          ValueChanged="@(v => ToggleTodayAsync(daily))"
-                                                         Label="@daily.Title"
-                                                         Class="ma-0 upcoming-check"
+                                                         aria-label="@($"Mark {daily.Title} complete")"
+                                                         Class="ma-0 upcoming-check upcoming-check--box"
                                                          Color="Color.Primary"
                                                          Dense="true" />
-                                            @if (daily.Counter > 0)
-                                            {
-                                                <span class="cal-streak" title="Daily streak: @daily.Counter days">
-                                                    <MudIcon Icon="@Icons.Material.Filled.Whatshot" Size="Size.Small" aria-hidden="true" />
-                                                    @daily.Counter
-                                                </span>
-                                            }
-                                        </li>
-                                        <li class="cal-row__sub" @key="@($"sub-{daily.Id}")">
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@UpcomingSchedule.DescribeDaily(daily)</MudText>
+                                            <div class="cal-row__text">
+                                                <button type="button" class="cal-row__titlebtn" @onclick="() => OpenDailyEditorAsync(daily)">@daily.Title</button>
+                                            </div>
+                                            <div class="cal-row__actions">
+                                                @if (daily.Counter > 0)
+                                                {
+                                                    <span class="cal-streak" title="Daily streak: @daily.Counter days" aria-label="@daily.Counter day streak for @daily.Title">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Whatshot" Size="Size.Small" aria-hidden="true" />
+                                                        @daily.Counter
+                                                    </span>
+                                                }
+                                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="cal-iconbtn" aria-label="@($"Edit {daily.Title}")" OnClick="@(() => OpenDailyEditorAsync(daily))" />
+                                            </div>
                                         </li>
                                     }
                                     else
@@ -220,8 +216,11 @@
                                         <li class="cal-row" @key="daily.Id">
                                             <span class="cal-row__icon cal-row__icon--daily" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Repeat" Size="Size.Small" /></span>
                                             <div class="cal-row__text">
-                                                <div class="cal-row__title">@daily.Title</div>
+                                                <button type="button" class="cal-row__titlebtn" @onclick="() => OpenDailyEditorAsync(daily)">@daily.Title</button>
                                                 <div class="cal-row__meta">@UpcomingSchedule.DescribeDaily(daily)</div>
+                                            </div>
+                                            <div class="cal-row__actions">
+                                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="cal-iconbtn" aria-label="@($"Edit {daily.Title}")" OnClick="@(() => OpenDailyEditorAsync(daily))" />
                                             </div>
                                         </li>
                                     }
@@ -232,23 +231,28 @@
                         @if (ShowTodos && SelectedTodos.Count > 0)
                         {
                             <div class="cal-agenda-col">
-                            <div class="cal-group">To-dos</div>
+                            <div class="cal-group">To-dos, one-off</div>
                             <ul class="cal-list">
                                 @foreach (var todo in SelectedTodos)
                                 {
                                     <li class="cal-row" @key="todo.Id">
                                         <span class="cal-row__icon cal-row__icon--todo" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Small" /></span>
                                         <div class="cal-row__text">
-                                            <div class="cal-row__title">@todo.Title</div>
-                                            <div class="cal-row__meta">@TodoDueRelativeText.Format(todo.TodoDueDate!.Value, _today)</div>
+                                            <button type="button" class="cal-row__titlebtn" @onclick="() => OpenTodoEditorAsync(todo)">@todo.Title</button>
                                         </div>
                                         <div class="cal-row__actions">
-                                            <MudIconButton Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="cal-iconbtn" aria-label="@TodoCompleteLabel(todo)" OnClick="@(() => ToggleTodoAsync(todo))" Disabled="@IsBusy(todo.Id)" />
-                                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Class="text-transform-none cal-pushbtn" OnClick="@(() => ShiftTodoAsync(todo, 1))" Disabled="@IsBusy(todo.Id)">+1 day</MudButton>
-                                            @if (todo.TodoDueDate != _today)
-                                            {
-                                                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Class="text-transform-none cal-pushbtn" OnClick="@(() => MoveTodoToDateAsync(todo, _today))" Disabled="@IsBusy(todo.Id)">Today</MudButton>
-                                            }
+                                            <MudIconButton Icon="@Icons.Material.Filled.PlusOne" Size="Size.Small" Class="cal-iconbtn" aria-label="@($"Defer {todo.Title} by one day")" OnClick="@(() => ShiftTodoAsync(todo, 1))" Disabled="@(IsBusy(todo.Id) || _bulkMoving)" />
+                                            <MudIconButton Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="cal-iconbtn" aria-label="@TodoCompleteLabel(todo)" OnClick="@(() => ToggleTodoAsync(todo))" Disabled="@(IsBusy(todo.Id) || _bulkMoving)" />
+                                            <MudMenu Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" PopoverClass="cal-menu-popover">
+                                                <ActivatorContent Context="todoMenu">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Class="cal-iconbtn" aria-label="@($"More actions for {todo.Title}")" OnClick="@(e => todoMenu.ToggleAsync(e))" Disabled="@(IsBusy(todo.Id) || _bulkMoving)" />
+                                                </ActivatorContent>
+                                                <ChildContent>
+                                                    <MudMenuItem OnClick="@(() => MoveTodoToDateAsync(todo, _today))" Disabled="@(todo.TodoDueDate == _today)">Move to today</MudMenuItem>
+                                                    <MudMenuItem OnClick="@(() => ShiftTodoAsync(todo, 1))">Defer by one day</MudMenuItem>
+                                                    <MudMenuItem OnClick="@(() => OpenTodoEditorAsync(todo))">Edit…</MudMenuItem>
+                                                </ChildContent>
+                                            </MudMenu>
                                         </div>
                                     </li>
                                 }
@@ -263,35 +267,37 @@
             @if (_view == CalView.Month)
             {
                 <section class="cal-grid-card cal-grid-card--month" aria-label="@($"{MonthTitle} calendar")">
+                    <div class="cal-legend" aria-hidden="true">
+                        <span class="cal-legend__item"><span class="cal-dot cal-dot--daily">1</span> Daily</span>
+                        <span class="cal-legend__item"><span class="cal-dot cal-dot--todo">1</span> To-do</span>
+                    </div>
                     <div class="cal-week" aria-hidden="true">
-                        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                        @foreach (var label in OrderedWeekdayLabels())
+                        {
+                            <span>@label</span>
+                        }
                     </div>
                     <div class="cal-grid">
                         @foreach (var date in GridCells())
                         {
                             var dailies = CellDailies(date);
                             var todos = CellTodos(date);
-                            var total = dailies.Count + todos.Count;
                             var chips = MonthChips(dailies, todos);
                             var shown = chips.Take(3).ToList();
-                            var extra = chips.Count - shown.Count;
+                            var extra = MonthOverflowCount(dailies, todos, shown.Count);
                             <button type="button"
                                     class="@CellClass(date)"
-                                    aria-label="@CellAria(date, total)"
+                                    aria-label="@CellAria(date, dailies, todos)"
                                     aria-current="@(date == _selected ? "date" : null)"
                                     @onclick="() => SelectDay(date)"
                                     @key="date">
                                 <span class="cal-cell__top">
                                     <span class="cal-cell__num">@date.Day</span>
-                                    @if (date == _today)
-                                    {
-                                        <span class="cal-cell__todaydot" aria-hidden="true"></span>
-                                    }
                                 </span>
                                 <span class="cal-cell__chips">
                                     @foreach (var chip in shown)
                                     {
-                                        <span class="cal-chip @ChipClass(chip)" title="@chip.Hint">@ChipLabel(chip)</span>
+                                        <span class="cal-chip @ChipClass(chip)" title="@chip.Hint"><span class="cal-chip__label">@ChipLabel(chip)</span></span>
                                     }
                                     @if (extra > 0)
                                     {
@@ -313,7 +319,7 @@
                     </div>
                 </section>
             }
-            else if (_view == CalView.Week || _view == CalView.Next7)
+            else if (_view == CalView.Week)
             {
                 <section class="cal-grid-card cal-grid-card--week" aria-label="@GridAriaLabel">
                     <div class="cal-grid cal-week-grid">
@@ -321,13 +327,12 @@
                         {
                             var dailies = CellDailies(date);
                             var todos = CellTodos(date);
-                            var total = dailies.Count + todos.Count;
                             var chips = CellChips(dailies, todos);
                             var shown = chips.Take(5).ToList();
                             var extra = chips.Count - shown.Count;
                             <button type="button"
                                     class="@(CellClass(date) + " cal-cell--week")"
-                                    aria-label="@CellAria(date, total)"
+                                    aria-label="@CellAria(date, dailies, todos)"
                                     aria-current="@(date == _selected ? "date" : null)"
                                     @onclick="() => SelectDay(date)"
                                     @key="date">
@@ -338,7 +343,7 @@
                                 <span class="cal-cell__chips">
                                     @foreach (var chip in shown)
                                     {
-                                        <span class="cal-chip @ChipClass(chip)" title="@chip.Hint">@ChipLabel(chip)</span>
+                                        <span class="cal-chip @ChipClass(chip)" title="@chip.Hint"><span class="cal-chip__label">@ChipLabel(chip)</span></span>
                                     }
                                     @if (extra > 0)
                                     {
@@ -363,17 +368,16 @@
             else if (_view == CalView.Day)
             {
                 <section class="cal-grid-card cal-grid-card--strip" aria-label="@($"Days around {FormatDate(_selected)}")">
-                    <div class="cal-strip" role="listbox" aria-label="Choose a day">
+                    <div class="cal-strip" role="group" aria-label="Choose a day">
                         @foreach (var date in DayStripCells())
                         {
                             var dailies = CellDailies(date);
                             var todos = CellTodos(date);
                             var total = dailies.Count + todos.Count;
                             <button type="button"
-                                    role="option"
-                                    aria-selected="@(date == _selected)"
                                     class="@(CellClass(date) + " cal-cell--strip")"
-                                    aria-label="@CellAria(date, total)"
+                                    aria-label="@CellAria(date, dailies, todos)"
+                                    aria-current="@(date == _selected ? "date" : null)"
                                     @onclick="() => SelectDay(date)"
                                     @key="date">
                                 <span class="cal-cell__dow">@date.ToString("ddd")</span>
@@ -400,3 +404,16 @@
         </div>
     }
 </div>
+
+@code {
+    // Single quick-add form shared by the agenda actions bar and the empty
+    // state so the two never drift.
+    private RenderFragment QuickAddForm => @<form class="cal-quickadd" @onsubmit="AddTodoQuickAsync" @onsubmit:preventDefault="true">
+        <input type="text" class="cal-quickadd__input" placeholder="Add a to-do for @SelectedLabel…" aria-label="New to-do title for @FormatDate(_selected)"
+               @bind="_newTodoTitle" @bind:event="oninput" maxlength="200" autocomplete="off" />
+        <button type="submit" class="cal-addbtn" disabled="@(_addingTodo || string.IsNullOrWhiteSpace(_newTodoTitle))" aria-busy="@_addingTodo">
+            <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" aria-hidden="true" />
+            <span>@(_addingTodo ? "Adding…" : "Add")</span>
+        </button>
+    </form>;
+}

@@ -1,18 +1,21 @@
 #pragma warning disable S8949, S6966, IDE0028, IDE0042, CA1859
 using System.Globalization;
 
+using App.Shared.RCL.Components.Dialogs;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Routing;
 
 using MudBlazor;
 
 namespace App.Shared.RCL.Components;
 
-public partial class UpcomingPanel
+public partial class UpcomingPanel : IDisposable
 {
-
     private enum UpcomingFilter { All, Dailies, Todos }
-    private enum CalView { Day, Week, Next7, Month }
+    private enum CalView { Day, Week, Month }
 
     private sealed record CalChip(string Title, string Hint, bool IsTodo, bool Done, bool IsRoutine);
 
@@ -22,44 +25,63 @@ public partial class UpcomingPanel
     private BoardSnapshot? _snapshot;
     private IReadOnlyList<BoardItem> _overdue = [];
     private UpcomingFilter _filter = UpcomingFilter.All;
-    private CalView _view = CalView.Month;
+    private CalView _view = CalView.Day;
     private bool _bulkMoving;
     private readonly HashSet<Guid> _busy = [];
-    private int _todayScheduled;
-    private int _todayDone;
+    private int _todayDailyScheduled;
+    private int _todayDailyDone;
+    private int _todayTodoTotal;
+    private int _todayTodoDone;
     private int _todayRemainingCache;
-    private int _monthTotalCache;
+    private int _selectedAllDailies;
+    private int _selectedAllTodos;
+    private DayOfWeek _weekStartDay = DayOfWeek.Monday;
     private IReadOnlyList<BoardItem> _selectedDailiesCache = [];
     private IReadOnlyList<BoardItem> _selectedTodosCache = [];
     private Dictionary<DateOnly, (IReadOnlyList<BoardItem> Dailies, IReadOnlyList<BoardItem> Todos)> _cellCache = new();
     private int _visibleYear;
     private int _visibleMonth;
     private DateOnly _selected;
-    private DateOnly _next7Anchor;
     private bool _calInit;
+    private bool _addingTodo;
+    private string _newTodoTitle = string.Empty;
+
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    [Inject] private IDialogService Dialogs { get; set; } = default!;
+    [Inject] private IUndoService UndoService { get; set; } = default!;
+    [Inject] private IUserPreferencesService PreferencesService { get; set; } = default!;
 
     private bool ShowDailies => _filter != UpcomingFilter.Todos;
     private bool ShowTodos => _filter != UpcomingFilter.Dailies;
     private bool HasOverdueCard => ShowTodos && _overdue.Count > 0;
-    private string SideClass => HasOverdueCard ? "cal-side" : "cal-side cal-side--solo";
     private int OverdueCount => _overdue.Count;
+
+    private const int OverduePageSize = 4;
+    private bool _showAllOverdue;
+    private IReadOnlyList<BoardItem> GetVisibleOverdue() => _showAllOverdue ? _overdue : _overdue.Take(OverduePageSize).ToList();
+
+    private void ToggleOverdueExpanded() => _showAllOverdue = !_showAllOverdue;
 
     private int TodayRemaining => _todayRemainingCache;
 
-    private int MonthTotal => _monthTotalCache;
+    private int TodayDailyPct => _todayDailyScheduled == 0 ? 100 : (int)Math.Round(100.0 * _todayDailyDone / _todayDailyScheduled);
+    private int TodayTodoPct => _todayTodoTotal == 0 ? 100 : (int)Math.Round(100.0 * _todayTodoDone / _todayTodoTotal);
 
-    private int TodayPct => _todayScheduled == 0 ? 100 : (int)Math.Round(100.0 * _todayDone / _todayScheduled);
+    private int FilterAllCount => _selectedAllDailies + _selectedAllTodos;
 
-    private string FilterLabel => _filter switch
-    {
-        UpcomingFilter.Dailies => "Dailies",
-        UpcomingFilter.Todos => "To-dos",
-        _ => "All",
-    };
+    private int FilterDailiesCount => _selectedAllDailies;
+
+    private int FilterTodosCount => _selectedAllTodos;
 
     private string MonthTitle => new DateOnly(_visibleYear, _visibleMonth, 1).ToString("MMMM yyyy", CultureInfo.CurrentCulture);
-    private string MonthShort => new DateOnly(_visibleYear, _visibleMonth, 1).ToString("MMM", CultureInfo.CurrentCulture);
-    private DateOnly WeekStart => _selected.AddDays(-(((int)_selected.DayOfWeek + 6) % 7));
+    private DateOnly WeekStart
+    {
+        get
+        {
+            var diff = ((int)_selected.DayOfWeek - (int)_weekStartDay + 7) % 7;
+            return _selected.AddDays(-diff);
+        }
+    }
     private string WeekRangeTitle
     {
         get
@@ -75,21 +97,18 @@ public partial class UpcomingPanel
     {
         CalView.Day => SelectedLabel,
         CalView.Week => WeekRangeTitle,
-        CalView.Next7 => SevenRangeTitle,
         _ => MonthTitle,
     };
     private string PrevLabel => _view switch
     {
         CalView.Day => "Previous day",
         CalView.Week => "Previous week",
-        CalView.Next7 => "Previous 7 days",
         _ => "Previous month",
     };
     private string NextLabel => _view switch
     {
         CalView.Day => "Next day",
         CalView.Week => "Next week",
-        CalView.Next7 => "Next 7 days",
         _ => "Next month",
     };
     private string SelectedAnchorId => $"upcoming-day-{_selected:yyyy-MM-dd}";
@@ -98,11 +117,13 @@ public partial class UpcomingPanel
     {
         get
         {
-            if (OverdueCount > 0 && TodayRemaining > 0)
+            // The overdue clause checks ShowTodos first. Under the Dailies
+            // filter there is no overdue card to act on.
+            if (ShowTodos && OverdueCount > 0 && TodayRemaining > 0)
             {
                 return $"{OverdueCount} overdue, {TodayRemaining} due today";
             }
-            if (OverdueCount > 0)
+            if (ShowTodos && OverdueCount > 0)
             {
                 return $"{OverdueCount} overdue to catch up on";
             }
@@ -120,12 +141,56 @@ public partial class UpcomingPanel
 
     private int SelectedVisibleCount => SelectedDailies.Count + SelectedTodos.Count;
 
+    private string EmptyDayText => (_selectedAllDailies + _selectedAllTodos) > 0
+        ? "Nothing matches this filter for the selected day."
+        : "Nothing scheduled for this day.";
+
     private string SelectedLabel => DayLabel(_selected);
 
     protected override async Task OnInitializedAsync()
     {
+        Nav.LocationChanged += OnLocationChanged;
         await LoadPersistedViewStateAsync();
+        await LoadWeekStartAsync();
+        ApplyQueryDate();
         await LoadAsync();
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (ApplyQueryDate())
+        {
+            RebuildCaches();
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private bool ApplyQueryDate()
+    {
+        try
+        {
+            var uri = Nav.ToAbsoluteUri(Nav.Uri);
+            var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+            if (query.TryGetValue("date", out var rawValues))
+            {
+                var raw = rawValues.ToString().Trim();
+                if (!string.IsNullOrWhiteSpace(raw)
+                    && DateOnly.TryParseExact(raw, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+                {
+                    _selected = parsed;
+                    _visibleYear = parsed.Year;
+                    _visibleMonth = parsed.Month;
+                    _calInit = true;
+                    return true;
+                }
+            }
+        }
+        catch
+        {
+            // Query parsing is best effort.
+        }
+
+        return false;
     }
 
     private async Task ReloadAsync()
@@ -152,15 +217,17 @@ public partial class UpcomingPanel
         _snapshot = snapshot;
         _today = DailySchedule.LocalToday(TimeZoneService);
         _overdue = UpcomingSchedule.GetOverdueTodos(snapshot, _today);
-        _todayScheduled = snapshot.Dailies.Count(d => DailySchedule.IsScheduledOn(d, _today));
+        _todayDailyScheduled = snapshot.Dailies.Count(d => DailySchedule.IsScheduledOn(d, _today));
         var todayDue = snapshot.Dailies.Count(d => DailySchedule.IsDueOnDate(d, _today));
-        _todayDone = Math.Max(0, _todayScheduled - todayDue);
+        _todayDailyDone = Math.Max(0, _todayDailyScheduled - todayDue);
+        var todayTodos = snapshot.Todos.Where(t => t.TodoDueDate == _today).ToList();
+        _todayTodoTotal = todayTodos.Count;
+        _todayTodoDone = todayTodos.Count(t => t.IsCompleted);
         if (!_calInit)
         {
             _visibleYear = _today.Year;
             _visibleMonth = _today.Month;
             _selected = _today;
-            _next7Anchor = _today;
             _calInit = true;
         }
         RebuildCaches();
@@ -171,7 +238,6 @@ public partial class UpcomingPanel
         if (_snapshot is null)
         {
             _todayRemainingCache = 0;
-            _monthTotalCache = 0;
             _selectedDailiesCache = [];
             _selectedTodosCache = [];
             _cellCache = new();
@@ -186,7 +252,6 @@ public partial class UpcomingPanel
                 if (_selected == default)
                 {
                     _selected = _today;
-                    _next7Anchor = _today;
                 }
             }
             else
@@ -199,11 +264,7 @@ public partial class UpcomingPanel
         _todayRemainingCache = (showDailies ? _snapshot.Dailies.Count(d => DailySchedule.IsDueOnDate(d, _today)) : 0)
             + (showTodos ? _snapshot.Todos.Count(t => !t.IsCompleted && t.TodoDueDate == _today) : 0);
         var allDates = new HashSet<DateOnly>(GridCells());
-        if (_view == CalView.Next7)
-        {
-            allDates.UnionWith(Next7Cells());
-        }
-        else if (_view == CalView.Week)
+        if (_view == CalView.Week)
         {
             allDates.UnionWith(WeekCells());
         }
@@ -241,21 +302,18 @@ public partial class UpcomingPanel
             b.Dailies.Sort((a, b2) => string.Compare(a.Title, b2.Title, StringComparison.Ordinal));
             b.Todos.Sort((a, b2) => string.Compare(a.Title, b2.Title, StringComparison.Ordinal));
         }
-        _monthTotalCache = byDate
-            .Where(kv => kv.Key.Year == _visibleYear && kv.Key.Month == _visibleMonth)
-            .Sum(v => v.Value.Dailies.Count + v.Value.Todos.Count) + (showTodos ? _overdue.Count : 0);
         var next = new Dictionary<DateOnly, (IReadOnlyList<BoardItem> Dailies, IReadOnlyList<BoardItem> Todos)>(byDate.Count);
         foreach (var kv in byDate)
         {
             next[kv.Key] = (kv.Value.Dailies, kv.Value.Todos);
         }
         _cellCache = next;
-        _selectedDailiesCache = showDailies
-            ? [.. _snapshot.Dailies.Where(d => DailySchedule.IsScheduledOn(d, _selected)).OrderBy(d => d.Title, StringComparer.Ordinal)]
-            : [];
-        _selectedTodosCache = showTodos
-            ? [.. _snapshot.Todos.Where(t => !t.IsCompleted && t.TodoDueDate == _selected).OrderBy(t => t.Title, StringComparer.Ordinal)]
-            : [];
+        var allDailiesForSelected = _snapshot.Dailies.Where(d => DailySchedule.IsScheduledOn(d, _selected)).OrderBy(d => d.Title, StringComparer.Ordinal).ToList();
+        var allTodosForSelected = _snapshot.Todos.Where(t => !t.IsCompleted && t.TodoDueDate == _selected).OrderBy(t => t.Title, StringComparer.Ordinal).ToList();
+        _selectedAllDailies = allDailiesForSelected.Count;
+        _selectedAllTodos = allTodosForSelected.Count;
+        _selectedDailiesCache = showDailies ? allDailiesForSelected : [];
+        _selectedTodosCache = showTodos ? allTodosForSelected : [];
     }
 
     private async Task LoadAsync()
@@ -274,6 +332,19 @@ public partial class UpcomingPanel
         finally
         {
             _loading = false;
+        }
+    }
+
+    private async Task LoadWeekStartAsync()
+    {
+        try
+        {
+            var prefs = await PreferencesService.GetAsync();
+            _weekStartDay = prefs.WeekStartDay;
+        }
+        catch
+        {
+            _weekStartDay = DayOfWeek.Monday;
         }
     }
 
@@ -312,6 +383,11 @@ public partial class UpcomingPanel
         {
             _view = view;
         }
+        else if (string.Equals(state.View, "Next7", StringComparison.OrdinalIgnoreCase))
+        {
+            // Retired rolling view maps to the calendar week.
+            _view = CalView.Week;
+        }
 
         if (Enum.TryParse<UpcomingFilter>(state.Filter, ignoreCase: true, out var filter))
         {
@@ -336,19 +412,6 @@ public partial class UpcomingPanel
         _selected = date;
         _visibleYear = date.Year;
         _visibleMonth = date.Month;
-        if (_view == CalView.Next7)
-        {
-            // Tapping a visible day only moves the agenda selection. The 7-day
-            // window follows only when the selection leaves it (day steppers).
-            if (_selected < _next7Anchor)
-            {
-                _next7Anchor = _selected;
-            }
-            else if (_selected > _next7Anchor.AddDays(6))
-            {
-                _next7Anchor = _selected.AddDays(-6);
-            }
-        }
         RebuildCaches();
     }
 
@@ -361,13 +424,6 @@ public partial class UpcomingPanel
         {
             PrevMonth();
         }
-        else if (_view == CalView.Next7)
-        {
-            // Top navigation moves the whole 7-day window, keeping the agenda
-            // selection at the same offset inside it.
-            _next7Anchor = _next7Anchor.AddDays(-7);
-            SelectDay(_selected.AddDays(-7));
-        }
         else
         {
             SelectDay(_selected.AddDays(_view == CalView.Day ? -1 : -7));
@@ -379,11 +435,6 @@ public partial class UpcomingPanel
         if (_view == CalView.Month)
         {
             NextMonth();
-        }
-        else if (_view == CalView.Next7)
-        {
-            _next7Anchor = _next7Anchor.AddDays(7);
-            SelectDay(_selected.AddDays(7));
         }
         else
         {
@@ -412,7 +463,6 @@ public partial class UpcomingPanel
         _visibleYear = _today.Year;
         _visibleMonth = _today.Month;
         _selected = _today;
-        _next7Anchor = _today;
         RebuildCaches();
     }
 
@@ -423,29 +473,29 @@ public partial class UpcomingPanel
     private List<DateOnly> GridCells()
     {
         var first = new DateOnly(_visibleYear, _visibleMonth, 1);
-        var lead = ((int)first.DayOfWeek + 6) % 7;
+        var lead = ((int)first.DayOfWeek - (int)_weekStartDay + 7) % 7;
         var start = first.AddDays(-lead);
         return Enumerable.Range(0, 42).Select(start.AddDays).ToList();
     }
 
     private List<DateOnly> WeekCells() => Enumerable.Range(0, 7).Select(WeekStart.AddDays).ToList();
 
-    private List<DateOnly> Next7Cells() => Enumerable.Range(0, 7).Select(_next7Anchor.AddDays).ToList();
-
     private List<DateOnly> DayStripCells() => Enumerable.Range(-3, 7).Select(_selected.AddDays).ToList();
 
-    private List<DateOnly> RangeCells() => _view == CalView.Next7 ? Next7Cells() : WeekCells();
+    private List<DateOnly> RangeCells() => WeekCells();
 
-    private static string RangeTitle(DateOnly start, DateOnly end) =>
-        start.Year != end.Year
-            ? $"{start:MMM d, yyyy} - {end:MMM d, yyyy}"
-            : $"{start:MMM d} - {end:MMM d}, {end:yyyy}";
+    private string GridAriaLabel => $"Week of {WeekRangeTitle} calendar";
 
-    private string SevenRangeTitle => RangeTitle(_next7Anchor, _next7Anchor.AddDays(6));
-
-    private string GridAriaLabel => _view == CalView.Next7
-        ? $"Next 7 days {SevenRangeTitle} calendar"
-        : $"Week of {WeekRangeTitle} calendar";
+    private List<string> OrderedWeekdayLabels()
+    {
+        List<string> labels = [];
+        for (var i = 0; i < 7; i++)
+        {
+            var dow = (DayOfWeek)(((int)_weekStartDay + i) % 7);
+            labels.Add(CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames[(int)dow]);
+        }
+        return labels;
+    }
 
     private IReadOnlyList<BoardItem> CellDailies(DateOnly date)
     {
@@ -488,8 +538,8 @@ public partial class UpcomingPanel
     }
 
     /// <summary>
-    /// Month cells collapse repeating dailies into one routine chip so the same
-    /// habits do not repeat on every day. Week cells keep every item.
+    /// Month cells collapse repeating dailies into one routine chip. Month cells show at most
+    /// two to-dos. Week cells keep every item.
     /// </summary>
     private List<CalChip> MonthChips(IReadOnlyList<BoardItem> dailies, IReadOnlyList<BoardItem> todos)
     {
@@ -511,8 +561,32 @@ public partial class UpcomingPanel
                 chips.Add(new CalChip($"{dailies.Count} dailies", hint, false, false, true));
             }
         }
-        chips.AddRange(todos.Select(t => new CalChip(t.Title, t.TodoDueDate is { } due ? $"{t.Title} ({TodoDueRelativeText.Format(due, _today)})" : t.Title, true, false, false)));
+        var visibleTodos = todos.Take(2).Select(t => new CalChip(t.Title, t.TodoDueDate is { } due ? $"{t.Title} ({TodoDueRelativeText.Format(due, _today)})" : t.Title, true, false, false));
+        chips.AddRange(visibleTodos);
         return chips;
+    }
+
+    /// <summary>
+    /// Overflow count without rebuilding chip lists. The total mirrors
+    /// <see cref="MonthChips"/>. Routine collapse compresses dailies to one.
+    /// The Dailies filter keeps every daily.
+    /// </summary>
+    private int MonthOverflowCount(IReadOnlyList<BoardItem> dailies, IReadOnlyList<BoardItem> todos, int shown)
+    {
+        int total;
+        if (_filter == UpcomingFilter.Dailies)
+        {
+            total = dailies.Count;
+        }
+        else if (dailies.Count > 1)
+        {
+            total = todos.Count + 1;
+        }
+        else
+        {
+            total = dailies.Count + todos.Count;
+        }
+        return Math.Max(0, total - shown);
     }
 
     private static string ChipClass(CalChip chip)
@@ -546,9 +620,14 @@ public partial class UpcomingPanel
         {
             cls += " cal-cell--selected";
         }
-        if (date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+        if (date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday
+            && date != _today && date != _selected)
         {
             cls += " cal-cell--weekend";
+        }
+        if (CellDailies(date).Count + CellTodos(date).Count >= 4)
+        {
+            cls += " cal-cell--busy";
         }
         return cls;
     }
@@ -565,7 +644,17 @@ public partial class UpcomingPanel
         };
     }
 
-    private string CellAria(DateOnly date, int total) => $"{DayLabel(date)}, {FormatDate(date)}, {total} items";
+    private string CellAria(DateOnly date, IReadOnlyList<BoardItem> dailies, IReadOnlyList<BoardItem> todos)
+    {
+        var total = dailies.Count + todos.Count;
+        if (total == 0)
+        {
+            return $"{DayLabel(date)}, {FormatDate(date)}, no items";
+        }
+        var names = dailies.Select(d => d.Title).Concat(todos.Select(t => t.Title)).Take(2).ToList();
+        var suffix = total > names.Count ? $" and {total - names.Count} more" : string.Empty;
+        return $"{DayLabel(date)}, {FormatDate(date)}, {total} items: {string.Join(", ", names)}{suffix}";
+    }
 
     private bool IsCheckedToday(BoardItem daily) =>
         DailySchedule.IsCompletedForToday(daily.DailyLastCompletedOn, daily.IsCompleted, _today);
@@ -657,13 +746,33 @@ public partial class UpcomingPanel
         {
             return;
         }
+        var count = _overdue.Count;
+        if (count > 3)
+        {
+            var confirmed = await Dialogs.ShowMessageBoxAsync(
+                $"Move {count} overdue to-dos to today?",
+                "All selected to-dos become due today. You can still move the to-dos back one by one.",
+                "Move all",
+                null,
+                "Cancel");
+            if (confirmed != true)
+            {
+                return;
+            }
+        }
         _bulkMoving = true;
         try
         {
-            foreach (var todo in _overdue)
+            // One undo entry for the whole move: the data service registers an
+            // undo per update, and the batch collapses them into a single
+            // "Moved N overdue to-dos to today" snackbar with an Undo button.
+            using (UndoService.BeginBatch($"Moved {count} overdue to-dos to today"))
             {
-                var args = UpdateTodoArgs.From(todo) with { DueDate = _today };
-                await BoardData.UpdateTodoAsync(todo.Id, args);
+                foreach (var todo in _overdue)
+                {
+                    var args = UpdateTodoArgs.From(todo) with { DueDate = _today };
+                    await BoardData.UpdateTodoAsync(todo.Id, args);
+                }
             }
             await RefreshAsync();
         }
@@ -677,7 +786,77 @@ public partial class UpcomingPanel
         }
     }
 
+    private async Task OpenTodoEditorAsync(BoardItem todo)
+    {
+        try
+        {
+            var parameters = new DialogParameters<EditTodoDialog> { { x => x.Item, todo } };
+            var dialog = await Dialogs.ShowAsync<EditTodoDialog>(string.Empty, parameters, DialogDefaults.SmallEditor);
+            await dialog.Result;
+            await RefreshAsync();
+        }
+        catch (Exception)
+        {
+            await Notifier.NotifyAsync("Could not open the to-do editor.", Severity.Error);
+        }
+    }
+
+    private async Task OpenDailyEditorAsync(BoardItem daily)
+    {
+        try
+        {
+            var parameters = new DialogParameters<EditDailyDialog> { { x => x.Item, daily } };
+            var dialog = await Dialogs.ShowAsync<EditDailyDialog>(string.Empty, parameters, DialogDefaults.SmallEditor);
+            await dialog.Result;
+            await RefreshAsync();
+        }
+        catch (Exception)
+        {
+            await Notifier.NotifyAsync("Could not open the daily editor.", Severity.Error);
+        }
+    }
+
+    private async Task AddTodoQuickAsync()
+    {
+        if (_addingTodo)
+        {
+            return;
+        }
+        var title = _newTodoTitle.Trim();
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return;
+        }
+        _addingTodo = true;
+        try
+        {
+            // Inline capture: the title is known upfront, so one create plus
+            // the due-date patch produces exactly the row the user typed.
+            // No editor round-trip, no junk row when abandoned.
+            // One batch so a single undo reverts the whole add.
+            using (UndoService.BeginBatch($"Added \"{title}\""))
+            {
+                var item = await BoardData.CreateItemAsync(BoardSection.Todo, title);
+                if (item is not null)
+                {
+                    await BoardData.UpdateTodoAsync(item.Id, UpdateTodoArgs.From(item) with { DueDate = _selected });
+                }
+            }
+            _newTodoTitle = string.Empty;
+            await RefreshAsync();
+        }
+        catch (Exception)
+        {
+            await Notifier.NotifyAsync("Could not add this to-do. Try again.", Severity.Error);
+        }
+        finally
+        {
+            _addingTodo = false;
+        }
+    }
+
     private string ViewBtnClass(CalView v) => _view == v ? "cal-seg__btn cal-seg__btn--active" : "cal-seg__btn";
+    private string FilterBtnClass(UpcomingFilter f) => _filter == f ? "cal-seg__btn cal-seg__btn--active" : "cal-seg__btn";
 
     private string FormatDate(DateOnly date)
     {
@@ -688,6 +867,20 @@ public partial class UpcomingPanel
         catch
         {
             return date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        }
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            Nav.LocationChanged -= OnLocationChanged;
         }
     }
 }

@@ -27,6 +27,9 @@ public sealed class UserPreferences
 
     public bool EnableKeyboardShortcuts { get; set; } = true;
 
+    /// <summary>First day of the calendar week in Upcoming and Stats.</summary>
+    public DayOfWeek WeekStartDay { get; set; } = DayOfWeek.Monday;
+
     public AiPreferences Ai { get; set; } = new();
 
     public static UserPreferences CreateDefault()

@@ -55,7 +55,7 @@
             <MudStack Spacing="2">
                 <MudText Typo="Typo.subtitle1" Class="mb-1">Account</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
-                    How your name and dates are shown across the app.
+                    How the app shows your name.
                 </MudText>
                 <MudTextField T="string" Label="Display name"
                               Variant="Variant.Outlined"
@@ -67,19 +67,6 @@
                               Value="_displayName"
                               ValueChanged="OnDisplayNameChanged"
                               OnBlur="AutoSaveAsync"/>
-                <MudTextField T="string"
-                              Label="Date format"
-                              Variant="Variant.Outlined"
-                              dense="true"
-                              Value="_model.DateFormat"
-                              ValueChanged="OnDateFormatChanged"
-                              Immediate="true"
-                              Error="@(_dateFormatError is not null)"
-                              ErrorText="@_dateFormatError"
-                              OnBlur="AutoSaveAsync"/>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                    Preview: @_datePreview
-                </MudText>
             </MudStack>
         </MudPaper>
 
@@ -132,10 +119,29 @@
 
         <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
-                <MudText Typo="Typo.subtitle1" Class="mb-1">Day start and timezone</MudText>
+                <MudText Typo="Typo.subtitle1" Class="mb-1">Date and time</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
-                    Set when your day starts and override the detected timezone if you travel or prefer a fixed zone.
+                    Date format, week start, day start, and timezone. Upcoming uses these for the calendar.
                 </MudText>
+                <MudTextField T="string"
+                              Label="Date format"
+                              Variant="Variant.Outlined"
+                              dense="true"
+                              Value="_model.DateFormat"
+                              ValueChanged="OnDateFormatChanged"
+                              Immediate="true"
+                              Error="@(_dateFormatError is not null)"
+                              ErrorText="@_dateFormatError"
+                              OnBlur="AutoSaveAsync"/>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    Preview: @_datePreview
+                </MudText>
+                <MudSelect T="DayOfWeek" Label="Week starts on" Variant="Variant.Outlined" dense="true"
+                           Value="_model.WeekStartDay" ValueChanged="OnWeekStartChanged">
+                    <MudSelectItem Value="@DayOfWeek.Monday">Monday</MudSelectItem>
+                    <MudSelectItem Value="@DayOfWeek.Sunday">Sunday</MudSelectItem>
+                    <MudSelectItem Value="@DayOfWeek.Saturday">Saturday</MudSelectItem>
+                </MudSelect>
                 <MudTimePicker Label="Day starts at"
                                Time="_dayStart"
                                TimeChanged="OnDayStartChanged"

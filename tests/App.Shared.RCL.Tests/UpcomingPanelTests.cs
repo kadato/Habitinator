@@ -25,7 +25,9 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
     private readonly IUserDateFormatService _dateFormat = Substitute.For<IUserDateFormatService>();
     private readonly IUserNotifier _notifier = Substitute.For<IUserNotifier>();
     private readonly IUpcomingViewStateStore _viewState = Substitute.For<IUpcomingViewStateStore>();
-    private readonly IRenderedComponent<MudPopoverProvider> _popoverProvider;
+    private readonly IUserPreferencesService _prefs = Substitute.For<IUserPreferencesService>();
+    private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
+    private readonly IUndoService _undo = Substitute.For<IUndoService>();
 
     public UpcomingPanelTests()
     {
@@ -36,8 +38,12 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
         _ctx.Services.AddSingleton(_dateFormat);
         _ctx.Services.AddSingleton(_notifier);
         _ctx.Services.AddSingleton(_viewState);
-        _popoverProvider = _ctx.Render<MudPopoverProvider>();
+        _ctx.Services.AddSingleton(_prefs);
+        _ctx.Services.AddSingleton(_dialogs);
+        _ctx.Services.AddSingleton(_undo);
+        _ctx.Render<MudPopoverProvider>();
         _viewState.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<UpcomingViewState?>(null));
+        _prefs.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(UserPreferences.CreateDefault()));
         _dateFormat.Format(Arg.Any<DateOnly>()).Returns(x => ((DateOnly)x[0]!).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
     }
 
@@ -59,6 +65,9 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
             DailyWeekdays: DailyWeekdays.From(DayOfWeek.Monday, DayOfWeek.Wednesday));
         var snapshot = new BoardSnapshot([], [daily], [overdue]);
         _boardData.GetSnapshotAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(snapshot));
+        // Month grid shows neighbouring days (Tomorrow) and chip hints (Mon, Wed).
+        _viewState.GetAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<UpcomingViewState?>(new UpcomingViewState("Month", "All")));
 
         var cut = _ctx.Render<UpcomingPanel>();
         cut.WaitForState(() => cut.Markup.Contains("Gym"), TimeSpan.FromSeconds(5));
@@ -118,7 +127,8 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
 
         var weekBtn = cut.FindAll("button").Single(b => b.TextContent.Trim() == "Week");
         weekBtn.ClassList.Should().Contain("cal-seg__btn--active");
-        cut.Find(".cal-filter-trigger").TextContent.Should().Contain("Filter: Dailies");
+        var dailiesBtn = cut.FindAll("button").Single(b => b.TextContent.Contains("Dailies"));
+        dailiesBtn.ClassList.Should().Contain("cal-seg__btn--active");
     }
 
     [Fact]
@@ -137,9 +147,7 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
                 Arg.Any<CancellationToken>()),
             TimeSpan.FromSeconds(5));
 
-        cut.Find(".cal-filter-trigger").Click();
-        cut.WaitForState(() => _popoverProvider.Markup.Contains("Dailies"), TimeSpan.FromSeconds(5));
-        _popoverProvider.FindAll(".mud-menu-item").Single(e => e.TextContent.Contains("Dailies")).Click();
+        cut.FindAll("button").Single(b => b.TextContent.Contains("Dailies")).Click();
         cut.WaitForAssertion(() =>
             _viewState.Received().SetAsync(
                 Arg.Is<UpcomingViewState>(s => s.Filter == "Dailies"),
@@ -148,12 +156,12 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
     }
 
     [Fact]
-    public void Next7_Selecting_Day_Keeps_Window_And_Moves_Agenda()
+    public void Week_Selecting_Day_Keeps_Window_And_Moves_Agenda()
     {
         _boardData.GetSnapshotAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new BoardSnapshot([], [], [])));
         _viewState.GetAsync(Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<UpcomingViewState?>(new UpcomingViewState("Next7", "All")));
+            .Returns(Task.FromResult<UpcomingViewState?>(new UpcomingViewState("Week", "All")));
 
         var cut = _ctx.Render<UpcomingPanel>();
         cut.WaitForState(() => cut.FindAll(".cal-week-grid button").Count == 7, TimeSpan.FromSeconds(5));
@@ -169,7 +177,28 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
     }
 
     [Fact]
-    public void Next7_Top_Nav_Moves_Window()
+    public void Week_Top_Nav_Moves_Window()
+    {
+        _boardData.GetSnapshotAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new BoardSnapshot([], [], [])));
+        _viewState.GetAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<UpcomingViewState?>(new UpcomingViewState("Week", "All")));
+
+        var cut = _ctx.Render<UpcomingPanel>();
+        cut.WaitForState(() => cut.FindAll(".cal-week-grid button").Count == 7, TimeSpan.FromSeconds(5));
+        var firstBefore = ExtractDate(cut.FindAll(".cal-week-grid button")[0].GetAttribute("aria-label"));
+
+        cut.Find("button[aria-label='Next week']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var firstAfter = ExtractDate(cut.FindAll(".cal-week-grid button")[0].GetAttribute("aria-label"));
+            firstAfter.Should().Be(firstBefore.AddDays(7));
+        }, TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public void Retired_Next7_Maps_To_Week()
     {
         _boardData.GetSnapshotAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new BoardSnapshot([], [], [])));
@@ -177,16 +206,10 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
             .Returns(Task.FromResult<UpcomingViewState?>(new UpcomingViewState("Next7", "All")));
 
         var cut = _ctx.Render<UpcomingPanel>();
-        cut.WaitForState(() => cut.FindAll(".cal-week-grid button").Count == 7, TimeSpan.FromSeconds(5));
-        var firstBefore = ExtractDate(cut.FindAll(".cal-week-grid button")[0].GetAttribute("aria-label"));
+        cut.WaitForState(() => cut.Markup.Contains("Nothing scheduled"), TimeSpan.FromSeconds(5));
 
-        cut.Find("button[aria-label='Next 7 days']").Click();
-
-        cut.WaitForAssertion(() =>
-        {
-            var firstAfter = ExtractDate(cut.FindAll(".cal-week-grid button")[0].GetAttribute("aria-label"));
-            firstAfter.Should().Be(firstBefore.AddDays(7));
-        }, TimeSpan.FromSeconds(5));
+        var weekBtn = cut.FindAll("button").Single(b => b.TextContent.Trim() == "Week");
+        weekBtn.ClassList.Should().Contain("cal-seg__btn--active");
     }
 
     private static DateOnly ExtractDate(string? ariaLabel)
@@ -207,9 +230,10 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
         var cut = _ctx.Render<UpcomingPanel>();
         cut.WaitForState(() => cut.Markup.Contains("Nothing scheduled"), TimeSpan.FromSeconds(5));
 
-        // Defaults are Month and All.
-        var monthBtn = cut.FindAll("button").Single(b => b.TextContent.Trim() == "Month");
-        monthBtn.ClassList.Should().Contain("cal-seg__btn--active");
-        cut.Find(".cal-filter-trigger").TextContent.Should().Contain("Filter: All");
+        // Defaults are Day and All.
+        var dayBtn = cut.FindAll("button").Single(b => b.TextContent.Trim() == "Day");
+        dayBtn.ClassList.Should().Contain("cal-seg__btn--active");
+        var allBtn = cut.FindAll("button").Single(b => b.TextContent.Contains("All ("));
+        allBtn.ClassList.Should().Contain("cal-seg__btn--active");
     }
 }

@@ -4,7 +4,7 @@
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: var(--space-6);
+    gap: var(--space-4);
 }
 
 .cal ::selection {
@@ -16,6 +16,18 @@
     margin: 0;
     flex: 1 1 auto;
     min-width: 0;
+}
+
+/* Box-only check used in the today list. The title lives in the text column
+   next to it, so the checkbox never shares a label line with the streak. */
+::deep .upcoming-check--box {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    margin-top: 0.1rem !important;
+}
+
+::deep .upcoming-check--box .mud-checkbox-label {
+    display: none !important;
 }
 
 .cal-fallback {
@@ -42,17 +54,17 @@
 .cal-top {
     display: flex;
     flex-direction: column;
-    gap: var(--space-5);
-    padding: var(--space-6);
-    background: var(--mud-palette-surface);
-    border: 1px solid var(--hab-border-card);
-    border-radius: var(--radius-2xl);
+    gap: var(--space-2);
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
 }
 
 .cal-top__row {
     display: flex;
     align-items: center;
-    gap: var(--space-5);
+    gap: var(--space-3);
     flex-wrap: wrap;
 }
 
@@ -65,10 +77,15 @@
 
 /* MudButton and MudIconButton roots are rendered by MudBlazor, so ::deep reaches the merged classes. */
 ::deep .cal-navbtn {
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2.75rem;
+    height: 2.75rem;
     border-radius: var(--radius-md) !important;
     border: 1px solid var(--mud-palette-divider) !important;
+}
+
+::deep .cal-navbtn:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
 }
 
 ::deep .cal-navbtn:hover {
@@ -77,6 +94,9 @@
 }
 
 ::deep .cal-todaybtn {
+    height: 2.5rem;
+    min-height: 2.5rem !important;
+    padding: 0 1rem !important;
     text-transform: none;
     font-weight: 700;
     border-radius: var(--radius-md);
@@ -88,7 +108,7 @@
 }
 
 .cal-month {
-    font-size: 1.6rem;
+    font-size: 1.2rem;
     font-weight: 800;
     letter-spacing: -0.03em;
     line-height: 1.15;
@@ -98,84 +118,237 @@
 }
 
 .cal-sub {
-    font-size: 0.86rem;
+    font-size: 0.8rem;
     color: var(--mud-palette-text-secondary);
-    margin-top: 0.25rem;
+    margin-top: 2px;
 }
 
-.cal-stats {
-    display: flex;
-    gap: var(--space-2);
-    flex-wrap: wrap;
-    margin-left: auto;
-}
-
-.cal-stat {
-    display: flex;
-    align-items: baseline;
-    gap: 0.4rem;
-    padding: 0.5rem 0.85rem;
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: var(--radius-pill);
-    background: var(--mud-palette-background-gray);
-    font-variant-numeric: tabular-nums;
-}
-
-.cal-stat__num {
-    font-weight: 800;
-    font-size: 1rem;
-    letter-spacing: -0.02em;
-    color: var(--mud-palette-text-primary);
-}
-
-.cal-stat__label {
-    font-size: 0.75rem;
-    color: var(--mud-palette-text-secondary);
-    white-space: nowrap;
-}
-
-.cal-stat--today {
-    border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, transparent);
-    background: color-mix(in srgb, var(--mud-palette-primary) 10%, var(--mud-palette-surface));
-}
-
-.cal-stat--today .cal-stat__num {
+.cal-link {
+    font: inherit;
+    font-size: inherit;
+    font-weight: 700;
     color: var(--mud-palette-primary);
+    background: transparent;
+    border: none;
+    padding: 0.35rem 0.5rem;
+    margin-left: 0.35rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
 }
 
-.cal-stat--alert {
-    border-color: color-mix(in srgb, var(--mud-palette-error) 40%, transparent);
-    background: color-mix(in srgb, var(--mud-palette-error) 8%, var(--mud-palette-surface));
+.cal-link:hover {
+    background: color-mix(in srgb, var(--mud-palette-primary) 10%, transparent);
 }
 
-.cal-stat--alert .cal-stat__num {
-    color: var(--mud-palette-error);
+.cal-link:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+/* Inline variant used inside hint sentences. */
+.cal-link--inline {
+    min-height: 0;
+    padding: 0 0.15rem;
+    margin-left: 0;
+    display: inline;
 }
 
 .cal-progress {
     display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    max-width: 42rem;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+    flex: 1 1 18rem;
+    max-width: 28rem;
+    min-width: min(100%, 14rem);
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: var(--radius-md);
+    padding: 0.35rem 0.6rem;
 }
 
-.cal-progress__top {
+.cal-progress-row {
     display: flex;
-    justify-content: space-between;
-    gap: var(--space-4);
-    font-size: 0.8rem;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: var(--space-2) var(--space-3);
+}
+
+.cal-agenda__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    padding: 0.5rem 0.25rem 0.75rem;
+    border-bottom: 1px solid var(--mud-palette-divider);
+    margin-bottom: 0.5rem;
+}
+
+/* Primary agenda action. Native button on purpose: the page owns the
+   cal-* control system, and a MudButton brings a different ripple,
+   elevation, and density that never matches the segment and stat rows. */
+.cal-addbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 2.75rem;
+    padding: 0.55rem 1rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    background: var(--mud-palette-primary);
+    color: #fff;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.cal-addbtn:hover {
+    filter: brightness(0.94);
+}
+
+.cal-addbtn:active {
+    filter: brightness(0.88);
+}
+
+.cal-addbtn:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.cal-addbtn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    filter: none;
+}
+
+.cal-addbtn ::deep .mud-icon-root {
+    font-size: 1.1rem !important;
+}
+
+/* Inline capture: title input plus add button in one row. */
+.cal-quickadd {
+    display: flex;
+    gap: var(--space-2);
+    align-items: stretch;
+    width: 100%;
+    min-width: 0;
+}
+
+.cal-quickadd__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 2.75rem;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: var(--radius-md);
+    background: var(--mud-palette-surface);
+    color: var(--mud-palette-text-primary);
+    font: inherit;
+    font-size: 0.9rem;
+}
+
+.cal-quickadd__input::placeholder {
     color: var(--mud-palette-text-secondary);
+    opacity: 0.8;
+}
+
+.cal-quickadd__input:hover {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 45%, transparent);
+}
+
+.cal-quickadd__input:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+    border-color: var(--mud-palette-primary);
+}
+
+.cal-quickadd .cal-addbtn {
+    flex-shrink: 0;
+}
+
+/* Dot legend: only the phone month view is dots-only, so the legend
+   only shows there. Dots stay aria-hidden; cells announce via aria-label. */
+.cal-legend {
+    display: none;
+}
+
+/* Empty day: the add action lives with the empty text so the next step
+   is co-located instead of detached above a divider. */
+.cal-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: 0.75rem 0.25rem;
+}
+
+.cal-row__titlebtn {
+    font: inherit;
+    background: transparent;
+    border: none;
+    padding: 0.35rem 0;
+    width: 100%;
+    min-height: 2.75rem;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    text-align: left;
+    color: var(--mud-palette-text-primary);
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.4;
+    cursor: pointer;
+    overflow-wrap: break-word;
+    word-break: normal;
+    border-radius: 4px;
+}
+
+.cal-row__titlebtn:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.cal-row__titlebtn:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.cal-progress__label {
+    font-size: 0.78rem;
+    font-weight: 650;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
 }
 
 .cal-progress__pct {
     font-variant-numeric: tabular-nums;
     font-weight: 700;
+    font-size: 0.78rem;
     color: var(--mud-palette-text-primary);
+    flex-shrink: 0;
 }
 
 .cal-progress__track {
-    height: 8px;
-    border-radius: var(--radius-pill);
+    flex: 1 1 auto;
+    min-width: 3rem;
+    height: 6px;
+    border-radius: var(--radius-sm);
     background: color-mix(in srgb, var(--mud-palette-text-secondary) 16%, transparent);
     overflow: hidden;
 }
@@ -186,13 +359,22 @@
     background: var(--mud-palette-primary);
 }
 
+.cal-progress__track--todo {
+    background: color-mix(in srgb, var(--hab-type-todo-ink) 18%, transparent);
+}
+
+.cal-progress__fill--todo {
+    background: var(--hab-type-todo-ink);
+}
+
 .cal-controls {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
-    flex-wrap: wrap;
-    padding-top: var(--space-2);
-    border-top: 1px solid var(--mud-palette-divider);
+    gap: var(--space-2);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
 }
 
 .cal-seg {
@@ -202,6 +384,7 @@
     border: 1px solid var(--mud-palette-divider);
     border-radius: var(--radius-lg);
     background: var(--mud-palette-background-gray);
+    flex-shrink: 0;
 }
 
 .cal-seg--primary {
@@ -212,49 +395,12 @@
     scrollbar-width: thin;
 }
 
-.cal-filter-trigger {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    min-height: 44px;
-    padding: 0.45rem 0.85rem;
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: var(--radius-lg);
-    background: var(--mud-palette-background-gray);
-    color: var(--mud-palette-text-secondary);
-    font: inherit;
-    font-size: 0.82rem;
-    font-weight: 650;
-    cursor: pointer;
-    white-space: nowrap;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.cal-filter-trigger:hover {
-    color: var(--mud-palette-text-primary);
-    border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, transparent);
-}
-
-.cal-filter-trigger:focus-visible {
-    outline: 2px solid var(--mud-palette-primary);
-    outline-offset: 2px;
-}
-
-.cal-filter-trigger__label {
-    white-space: nowrap;
-    line-height: 1;
-}
-
-.cal-filter-trigger__chevron {
-    opacity: 0.7;
-}
-
-.cal-filter-trigger ::deep .mud-icon-root {
-    flex-shrink: 0;
-    align-self: center;
-    margin: 0 !important;
+.cal-seg--filter {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: thin;
 }
 
 .cal-seg__btn {
@@ -267,9 +413,11 @@
     padding: 0.45rem 0.85rem;
     border-radius: var(--radius-md);
     cursor: pointer;
-    min-height: 38px;
+    min-height: 44px;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .cal-seg__btn:hover {
@@ -293,15 +441,38 @@
 .cal-body {
     display: flex;
     flex-direction: column;
-    gap: var(--space-5);
+    gap: var(--space-4);
     align-items: stretch;
     min-width: 0;
+}
+
+@media (min-width: 1100px) {
+    .cal-body {
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Overdue and Today sit next to each other in the first screen.
+       The calendar grid follows full-width as the secondary layer.
+       Widths are capped board-style so rows stay dense, not stretched. */
+    .cal-body .cal-side {
+        display: grid;
+        grid-template-columns: minmax(19rem, 26rem) minmax(24rem, 36rem);
+        justify-content: start;
+        gap: var(--space-5);
+        align-items: start;
+    }
+
+    .cal-body .cal-side > :only-child {
+        grid-column: 1 / -1;
+        max-width: 60rem;
+    }
 }
 
 .cal-grid-card {
     background: var(--mud-palette-surface);
     border: 1px solid var(--hab-border-card);
-    border-radius: var(--radius-2xl);
+    border-radius: var(--space-5);
     padding: var(--space-5);
     min-width: 0;
     width: 100%;
@@ -331,8 +502,8 @@
 .cal-cell {
     border: 1px solid var(--mud-palette-divider);
     background: var(--mud-palette-surface);
-    border-radius: var(--radius-xl);
-    min-height: 7.5rem;
+    border-radius: var(--radius-md);
+    min-height: 6rem;
     padding: 0.7rem 0.7rem 0.6rem;
     display: flex;
     flex-direction: column;
@@ -366,6 +537,14 @@
     background: color-mix(in srgb, var(--mud-palette-background-gray) 28%, var(--mud-palette-surface));
 }
 
+.cal-cell--busy {
+    border-color: color-mix(in srgb, var(--mud-palette-warning) 55%, transparent);
+    background: color-mix(in srgb, var(--mud-palette-warning) 8%, var(--mud-palette-surface));
+}
+
+/* Today and selection win over busy: the most important day keeps its
+   identity on the busiest days. Busy is declared first on purpose. */
+
 .cal-cell--today {
     border-color: color-mix(in srgb, var(--mud-palette-primary) 60%, transparent);
     background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
@@ -379,7 +558,7 @@
 }
 
 .cal-cell--week {
-    min-height: 11rem;
+    min-height: 9rem;
 }
 
 .cal-cell__top {
@@ -417,7 +596,7 @@
     justify-content: center;
     min-width: 1.9rem;
     height: 1.9rem;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-md);
 }
 
 .cal-cell--today .cal-cell__num {
@@ -430,18 +609,6 @@
     background: color-mix(in srgb, var(--mud-palette-primary) 16%, transparent);
     color: var(--mud-palette-primary);
     padding: 0 0.35rem;
-}
-
-.cal-cell__todaydot {
-    width: 0.45rem;
-    height: 0.45rem;
-    border-radius: var(--radius-pill);
-    background: var(--mud-palette-primary);
-    flex-shrink: 0;
-}
-
-.cal-cell--today .cal-cell__todaydot {
-    display: none;
 }
 
 .cal-cell__chips {
@@ -459,25 +626,31 @@
 .cal-chip {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.3rem;
     max-width: 100%;
     min-width: 0;
     overflow: hidden;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1.4;
+    padding: 0.12rem 0.4rem 0.12rem 0.35rem;
+    border-radius: 6px;
+    border: 1px solid transparent;
+}
+
+.cal-chip__label {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 0.76rem;
-    font-weight: 600;
-    line-height: 1.5;
-    padding: 0.18rem 0.55rem 0.18rem 0.45rem;
-    border-radius: 7px;
-    border: 1px solid transparent;
 }
 
 .cal-chip::before {
     content: "";
-    width: 0.42rem;
-    height: 0.42rem;
-    border-radius: var(--radius-pill);
+    width: 0.35rem;
+    height: 0.35rem;
+    border-radius: var(--radius-sm);
     flex-shrink: 0;
 }
 
@@ -535,6 +708,13 @@
     margin-top: auto;
 }
 
+@media (min-width: 600px) {
+    .cal-grid-card--month .cal-cell__dots,
+    .cal-grid-card--week .cal-cell__dots {
+        display: none;
+    }
+}
+
 .cal-dot {
     display: inline-flex;
     align-items: center;
@@ -542,7 +722,7 @@
     min-width: 1.4rem;
     height: 1.2rem;
     padding: 0 0.35rem;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     font-size: 0.7rem;
     font-weight: 750;
     font-variant-numeric: tabular-nums;
@@ -563,7 +743,7 @@
     width: 0.4rem;
     height: 0.4rem;
     padding: 0;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     background: color-mix(in srgb, var(--mud-palette-text-secondary) 25%, transparent);
 }
 
@@ -591,35 +771,42 @@
     margin-top: 0;
 }
 
-/* Agenda row: full width below calendar. */
+/* Agenda column: overdue stacks above the day agenda. */
 
 .cal-side {
-    display: grid;
-    grid-template-columns: minmax(20rem, 23rem) minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
     gap: var(--space-5);
     min-width: 0;
     width: 100%;
-    align-items: start;
+    align-items: stretch;
 }
 
-/* With no overdue card the agenda spans the full row instead of squeezing
-   into the narrow first track, which crushed the Dailies and To-dos columns
-   until titles wrapped letter by letter. */
-.cal-side--solo {
-    grid-template-columns: minmax(0, 1fr);
-}
+/* With no overdue card the agenda keeps the single-column flow. */
 
 /* Card roots are MudPaper elements, so ::deep reaches the merged classes. */
 ::deep .cal-card {
     width: 100%;
     min-width: 0;
-    padding: 1.25rem 1.25rem 1rem;
-    border-radius: var(--radius-2xl) !important;
+    padding: 1rem 1rem 0.75rem;
+    border-radius: var(--space-5) !important;
 }
 
 ::deep .cal-card--overdue {
     border-color: color-mix(in srgb, var(--mud-palette-error) 30%, var(--mud-palette-divider)) !important;
     background: color-mix(in srgb, var(--mud-palette-error) 4%, var(--mud-palette-surface)) !important;
+}
+
+/* Overdue rows are compact: four fit before the expander so the
+   Today card head stays in the first viewport. */
+::deep .cal-card--overdue .cal-row {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.cal-expand {
+    width: 100%;
+    margin-top: 0.25rem;
 }
 
 ::deep .cal-card--agenda {
@@ -631,7 +818,7 @@
     align-items: center;
     gap: 0.9rem;
     margin-bottom: 0.5rem;
-    padding: 0.25rem 0.25rem 0.9rem;
+    padding: 0.25rem 0.25rem 0.6rem;
     border-bottom: 1px solid var(--mud-palette-divider);
 }
 
@@ -646,7 +833,7 @@
     justify-content: center;
     width: 2.5rem;
     height: 2.5rem;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     flex-shrink: 0;
 }
 
@@ -681,9 +868,9 @@
 
 .cal-agenda__side {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.35rem;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
     flex-shrink: 0;
 }
 
@@ -693,10 +880,15 @@
 }
 
 ::deep .cal-daystep {
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2.75rem;
+    height: 2.75rem;
     border-radius: var(--radius-md) !important;
     border: 1px solid var(--mud-palette-divider) !important;
+}
+
+::deep .cal-daystep:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
 }
 
 ::deep .cal-daystep:hover {
@@ -709,7 +901,7 @@
     align-items: center;
     min-height: 1.6rem;
     padding: 0.2rem 0.65rem;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-md);
     background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
     color: var(--mud-palette-primary);
     font-size: 0.75rem;
@@ -732,9 +924,16 @@
 
 .cal-agenda-cols {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: var(--space-5);
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
     align-items: start;
+}
+
+@media (min-width: 700px) and (max-width: 1099.98px) {
+    .cal-agenda-cols {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: var(--space-5);
+    }
 }
 
 .cal-agenda-col {
@@ -748,10 +947,12 @@
 }
 
 .cal-row {
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
-    padding: 0.8rem 0.6rem;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    column-gap: 0.75rem;
+    row-gap: 0.15rem;
+    padding: 0.75rem 0.6rem;
     min-width: 0;
     border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 70%, transparent);
     border-radius: var(--radius-md);
@@ -773,10 +974,15 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    border-radius: 9px;
+    width: 2.25rem;
+    height: 2.25rem;
+    margin-top: 0.1rem;
+    border-radius: var(--radius-md);
     flex-shrink: 0;
+}
+
+.cal-row__icon ::deep .mud-icon-root {
+    font-size: 1.15rem !important;
 }
 
 .cal-row__icon--daily {
@@ -794,30 +1000,23 @@
 .cal-row__text {
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    gap: 0.15rem;
     min-width: 0;
     flex: 1 1 auto;
+    align-self: center;
 }
 
-.cal-row__title {
-    font-size: 0.92rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    color: var(--mud-palette-text-primary);
-    overflow-wrap: anywhere;
-    line-height: 1.4;
+.cal-row--check .cal-row__text {
+    align-self: center;
 }
 
 .cal-row__meta {
     font-size: 0.76rem;
     color: var(--mud-palette-text-secondary);
     line-height: 1.45;
-    margin-top: 0.15rem;
-}
-
-.cal-row__sub {
-    list-style: none;
-    margin: -0.3rem 0 0.4rem 2.1rem;
-    padding: 0;
+    margin-top: 0;
+    overflow-wrap: anywhere;
 }
 
 .cal-row__actions {
@@ -826,25 +1025,25 @@
     gap: 0.35rem;
     flex-shrink: 0;
     margin-left: auto;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+    align-self: center;
+    min-height: 2.75rem;
 }
 
 ::deep .cal-iconbtn {
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2.75rem;
+    height: 2.75rem;
     border-radius: var(--radius-md) !important;
     border: 1px solid transparent !important;
+}
+
+::deep .cal-iconbtn:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
 }
 
 ::deep .cal-iconbtn:hover {
     border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, transparent) !important;
     background: color-mix(in srgb, var(--mud-palette-primary) 10%, transparent);
-}
-
-::deep .cal-pushbtn {
-    min-height: 2.25rem;
-    white-space: nowrap;
 }
 
 .cal-streak {
@@ -858,7 +1057,7 @@
     font-variant-numeric: tabular-nums;
     color: var(--hab-accent-streak);
     background: color-mix(in srgb, var(--hab-accent-streak) 12%, transparent);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     padding: 0.2rem 0.55rem;
     flex-shrink: 0;
     margin: auto 0;
@@ -870,10 +1069,6 @@
     margin: 0 !important;
 }
 
-.cal-hint {
-    margin-top: 0.25rem;
-}
-
 .cal-skel-grid {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -881,17 +1076,7 @@
 }
 
 .cal-skel-cell {
-    border-radius: var(--radius-xl);
-}
-
-@media (max-width: 1100px) {
-    .cal-side {
-        grid-template-columns: 1fr;
-    }
-
-    .cal-agenda-cols {
-        grid-template-columns: 1fr 1fr;
-    }
+    border-radius: var(--space-5);
 }
 
 @media (max-width: 959.98px) {
@@ -900,11 +1085,11 @@
     }
 
     .cal-cell {
-        min-height: 6.4rem;
+        min-height: 5.4rem;
     }
 
     .cal-cell--week {
-        min-height: 9rem;
+        min-height: 8rem;
     }
 }
 
@@ -919,21 +1104,56 @@
         padding-bottom: var(--space-2);
         scrollbar-width: thin;
         scrollbar-color: var(--mud-palette-text-disabled) transparent;
+        scroll-snap-type: x proximity;
+    }
+
+    .cal-cell--strip {
+        scroll-snap-align: center;
     }
 }
 
 @media (max-width: 599.98px) {
     .cal-top {
-        padding: var(--space-4);
+        padding: 0;
     }
 
     .cal-top__row {
-        gap: var(--space-3);
+        gap: var(--space-2);
     }
 
-    .cal-stats {
-        margin-left: 0;
+    /* Meters share one row on phones so the Today card head
+       stays in the first viewport. */
+    .cal-progress-row {
+        flex-wrap: nowrap;
+    }
+
+    .cal-progress {
+        min-width: 0;
+        flex: 1 1 0;
+        padding: 0.3rem 0.5rem;
+    }
+
+    .cal-progress__label {
+        font-size: 0.72rem;
+    }
+
+    .cal-controls {
+        align-items: stretch;
         width: 100%;
+    }
+
+    .cal-controls .cal-seg {
+        max-width: 100%;
+    }
+
+    /* Week cells stack as full-width cards on phones, so chips carry the
+       signal and numeric dots would only duplicate them. */
+    .cal-grid-card--week .cal-cell__dots {
+        display: none;
+    }
+
+    ::deep .cal-card {
+        padding: 1rem 1rem 0.75rem;
     }
 
     .cal-grid-card {
@@ -955,6 +1175,22 @@
         display: none;
     }
 
+    .cal-legend {
+        display: flex;
+        gap: var(--space-4);
+        align-items: center;
+        padding: 0 0.25rem var(--space-2);
+        font-size: 0.75rem;
+        font-weight: 650;
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .cal-legend__item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
     .cal-grid-card--month .cal-cell__num {
         min-width: 1.6rem;
         height: 1.6rem;
@@ -974,11 +1210,11 @@
     }
 
     .cal-month {
-        font-size: 1.25rem;
+        font-size: 1.05rem;
     }
 
     .cal-controls {
-        align-items: stretch;
+        align-items: center;
     }
 }
 
@@ -1002,8 +1238,8 @@
         height: 2.75rem !important;
     }
 
-    ::deep .cal-pushbtn {
-        min-height: 2.75rem !important;
+    .cal-addbtn {
+        min-height: 2.75rem;
     }
 
     ::deep .cal-navbtn {
@@ -1019,6 +1255,7 @@
 
 @media (prefers-reduced-motion: reduce) {
     .cal-cell,
+    .cal-addbtn,
     .cal-seg__btn {
         transition: none;
     }

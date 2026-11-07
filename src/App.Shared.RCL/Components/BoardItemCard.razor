@@ -202,12 +202,12 @@
             <div class="board-card__foot-left">
                 @if (Section == BoardSection.Todo && Item.TodoDueDate is { } due)
                 {
-                    <div class="@TodoDueCssClass(due)" title="@TodoDueTitle()">
+                    <a href="@($"/upcoming?date={due:yyyy-MM-dd}")" class="@TodoDueCssClass(due)" title="Open this date in Upcoming">
                         <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" aria-hidden="true" />
                         <span class="board-todo-due__date">@DateFormatService.Format(due)</span>
                         <span class="board-todo-due__sep" aria-hidden="true">,</span>
                         <span class="board-todo-due__relative">@TodoDueRelativeLabel(due)</span>
-                    </div>
+                    </a>
                 }
                 @if (Section == BoardSection.Daily && OverdueSince is { } overdueSince)
                 {

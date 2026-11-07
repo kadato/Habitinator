@@ -184,7 +184,7 @@
     color: var(--mud-palette-text-secondary);
     background: var(--mud-palette-background-gray);
     border: 1px solid var(--mud-palette-divider);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     cursor: pointer;
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1, "zero" 1;
@@ -265,6 +265,12 @@
     font-weight: 600;
     line-height: 1;
     color: var(--mud-palette-text-secondary);
+    text-decoration: none;
+}
+
+a.board-todo-due:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
 }
 
 .board-todo-due--overdue {
@@ -532,7 +538,7 @@
     color: var(--hab-accent-streak) !important; /* amber/orange active flame */
     background: color-mix(in srgb, var(--hab-accent-streak) 14%, transparent);
     border: 1px solid color-mix(in srgb, var(--hab-accent-streak) 32%, transparent);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     padding: 0.15rem 0.55rem;
     font-weight: 800;
     letter-spacing: -0.01em;

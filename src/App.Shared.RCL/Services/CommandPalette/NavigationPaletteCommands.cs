@@ -17,7 +17,8 @@ internal sealed class NavigationPaletteCommands(
     IUserNotifier notifier,
     Action close,
     Func<Task> notifyRefresh,
-    BoardUiSessionState? uiSession = null)
+    BoardUiSessionState? uiSession = null,
+    IUserTimeZoneService? timeZoneService = null)
 {
     private readonly NavigationManager _nav = nav;
     private readonly IBoardDataService _boardData = boardData;
@@ -27,6 +28,7 @@ internal sealed class NavigationPaletteCommands(
     private readonly Action _close = close;
     private readonly Func<Task> _notifyRefresh = notifyRefresh;
     private readonly BoardUiSessionState? _uiSession = uiSession;
+    private readonly IUserTimeZoneService? _timeZoneService = timeZoneService;
 
     private const string NavigationCategory = "Navigation";
     private const string AppearanceCategory = "Appearance";
@@ -64,6 +66,24 @@ internal sealed class NavigationPaletteCommands(
             ShortcutBadge: "G U",
             Action: () => NavigateAsync("/upcoming"),
             Keywords: ["upcoming", "calendar", "schedule", "due", "next", "week"]));
+
+        list.Add(new(
+            Id: "nav-upcoming-today",
+            Title: "Upcoming today",
+            Subtitle: "Open Upcoming on today's agenda",
+            Category: NavigationCategory,
+            Icon: Icons.Material.Filled.Today,
+            Action: () => NavigateAsync($"/upcoming?date={DateOnly.FromDateTime(DateTime.UtcNow):yyyy-MM-dd}"),
+            Keywords: ["upcoming", "today", "agenda", "plan"]));
+
+        list.Add(new(
+            Id: "nav-upcoming-overdue",
+            Title: "Upcoming overdue",
+            Subtitle: "Open Upcoming to catch up on overdue to-dos",
+            Category: NavigationCategory,
+            Icon: Icons.Material.Filled.WarningAmber,
+            Action: () => NavigateAsync("/upcoming#upcoming-overdue"),
+            Keywords: ["upcoming", "overdue", "late", "catchup", "todos"]));
 
         if (_uiSession is not null)
         {
@@ -263,8 +283,20 @@ internal sealed class NavigationPaletteCommands(
         try
         {
             var snapshot = await _boardData.GetSnapshotAsync();
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
-            var missed = DailySchedule.GetYesterdayUncompletedDailies(snapshot.Dailies, today);
+            UserPreferences prefs;
+            try
+            {
+                prefs = await _preferences.GetAsync();
+            }
+            catch
+            {
+                prefs = new UserPreferences();
+            }
+
+            // Use the same calendar the board uses. The manual check-in then agrees with
+            // the automatic prompt about which day is "yesterday".
+            var today = DailySchedule.LocalToday(_timeZoneService, prefs.DayStartLocalTime);
+            var missed = DailySchedule.GetYesterdayUncompletedDailies(snapshot.Dailies, today, _timeZoneService);
 
             if (missed.Count == 0)
             {

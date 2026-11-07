@@ -57,7 +57,7 @@ html.light-theme #habitinator-wasm-splash {
     width: 180px;
     height: 3px;
     background: var(--hab-track-subtle);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     overflow: hidden;
 }
 
@@ -67,7 +67,7 @@ html.light-theme #habitinator-wasm-splash {
     min-width: 4%;
     max-width: 100%;
     background: var(--hab-brand, #2563eb);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     transform: scaleX(var(--progress, 0.05));
     transform-origin: left;
 }
@@ -114,7 +114,7 @@ html {
     }
     html::-webkit-scrollbar-thumb {
         background: var(--scrollbar-thumb);
-        border-radius: var(--radius-pill);
+        border-radius: var(--radius-sm);
     }
     html::-webkit-scrollbar-track {
         background: var(--scrollbar-track);
@@ -959,7 +959,7 @@ input[type="number"].mud-input-slot {
     flex-shrink: 0;
     width: var(--size);
     height: var(--size);
-    border-radius: 50%;
+    border-radius: var(--radius-sm);
     background: color-mix(in srgb, var(--toast-accent, var(--mud-palette-primary)) 14%, transparent);
     color: var(--toast-accent, var(--mud-palette-primary));
 }
@@ -999,7 +999,7 @@ input[type="number"].mud-input-slot {
     flex-shrink: 0;
     width: var(--size);
     height: var(--size);
-    border-radius: 50%;
+    border-radius: var(--radius-sm);
     background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
     color: var(--mud-palette-primary);
 }
@@ -1334,7 +1334,7 @@ input[type="number"].mud-input-slot {
     padding: 0.4rem 0.7rem;
     background: color-mix(in srgb, var(--mud-palette-primary) 7%, var(--mud-palette-surface));
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     font-family: var(--hab-font-mono);
     font-size: 0.72rem;
     font-weight: 700;
@@ -1342,7 +1342,7 @@ input[type="number"].mud-input-slot {
     color: var(--mud-palette-text-secondary);
 }
 .stats-day-summary__count { color: var(--mud-palette-text-primary); }
-.stats-day-summary__dot { width: 3px; height: 3px; border-radius: 50%; background: var(--mud-palette-text-disabled); flex-shrink: 0; }
+.stats-day-summary__dot { width: 3px; height: 3px; border-radius: var(--radius-sm); background: var(--mud-palette-text-disabled); flex-shrink: 0; }
 .stats-day-timeline { display: flex; flex-direction: column; gap: 0; border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 55%, transparent); border-radius: var(--radius-lg); overflow: hidden; background: var(--mud-palette-surface); }
 .stats-day-event { display: grid; grid-template-columns: 64px 24px 1fr; gap: 0.65rem; align-items: center; padding: 0.75rem 0.85rem; border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 35%, transparent); background: var(--mud-palette-surface); }
 .stats-day-event:last-child { border-bottom: none; }
@@ -1523,6 +1523,27 @@ input[type="number"].mud-input-slot {
 }
 
 .stats-filter-menu-popover .mud-menu-list {
+    padding: 0.35rem !important;
+}
+
+/* Upcoming agenda row menus. Same popover system as the stats filters:
+   the popover is teleported outside the component, so the rules live here.
+   This keeps the reschedule menus on one radius, border, and shadow instead
+   of the MudBlazor default. */
+.cal-menu-popover {
+    z-index: calc(var(--mud-zindex-popover, 1300) + 1) !important;
+    overflow: hidden !important;
+}
+
+.mud-popover.cal-menu-popover {
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    border-radius: var(--radius-xl) !important;
+    border: 1px solid var(--mud-palette-divider) !important;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16) !important;
+}
+
+.cal-menu-popover .mud-menu-list {
     padding: 0.35rem !important;
 }
 
@@ -1787,7 +1808,7 @@ input[type="number"].mud-input-slot {
 .ai-dropdown-badge {
     font-size: 0.6875rem !important;
     padding: 2px 7px !important;
-    border-radius: var(--radius-pill) !important;
+    border-radius: var(--radius-sm) !important;
     background: var(--mud-palette-background) !important;
     border: 1px solid var(--mud-palette-lines-default) !important;
     color: var(--mud-palette-text-secondary) !important;
@@ -1848,7 +1869,7 @@ input[type="number"].mud-input-slot {
     height: 14px;
     border: 2px solid currentColor;
     border-right-color: transparent;
-    border-radius: 50%;
+    border-radius: var(--radius-sm);
     animation: ai-spin 0.75s linear infinite;
     vertical-align: middle;
     flex-shrink: 0;
@@ -1891,7 +1912,7 @@ input[type="number"].mud-input-slot {
 .ai-dot {
     width: 4px;
     height: 4px;
-    border-radius: 50%;
+    border-radius: var(--radius-sm);
     background-color: var(--mud-palette-primary);
     animation: ai-dot-pulse 1.4s infinite ease-in-out both;
 }
@@ -1931,7 +1952,7 @@ input[type="number"].mud-input-slot {
     background: var(--mud-palette-action-default-hover);
     border: 1px solid var(--mud-palette-primary);
     padding: 1px 6px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     font-weight: 600;
     line-height: 1.2;
 }

@@ -3,9 +3,10 @@ using System.Text.Json;
 namespace App.Shared.RCL.Services;
 
 /// <summary>
-///     Persists the upcoming calendar view (Day/Week/7 days/Month) and item filter
-///     (All/Dailies/To-dos) in the local settings store so the tabs survive
-///     navigation and reloads. Keyed per account.
+///     Persists the upcoming calendar view and item filter in the local settings store.
+///     Valid views are Day, Week, and Month. Valid filters are All, Dailies, and To-dos.
+///     Tabs survive navigation and reloads. Keys use the account id.
+///     The retired Next7 value maps to Week on load.
 /// </summary>
 public sealed class UpcomingViewStateStore : IUpcomingViewStateStore
 {

@@ -268,6 +268,16 @@ public partial class UserPreferencesSection
         await AutoSaveAsync();
     }
 
+    private async Task OnWeekStartChanged(DayOfWeek value)
+    {
+        if (_model is null)
+        {
+            return;
+        }
+        _model.WeekStartDay = value;
+        await AutoSaveAsync();
+    }
+
     private async Task OnTimeZoneChanged(string value)
     {
         if (_model is null)

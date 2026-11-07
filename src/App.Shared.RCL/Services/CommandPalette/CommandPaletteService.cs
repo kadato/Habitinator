@@ -39,12 +39,13 @@ public sealed class CommandPaletteService : ICommandPaletteService
         IUserDataExportService? export = null,
         IJSRuntime? js = null,
         ITimerSessionLogService? timerSessionLog = null,
-        BoardUiSessionState? uiSession = null)
+        BoardUiSessionState? uiSession = null,
+        IUserTimeZoneService? timeZoneService = null)
     {
         _boardData = boardData;
         Action close = Close;
         Func<Task> notifyRefresh = NotifyBoardRefreshAsync;
-        _navigation = new NavigationPaletteCommands(nav, boardData, dialogs, preferences, notifier, close, notifyRefresh, uiSession);
+        _navigation = new NavigationPaletteCommands(nav, boardData, dialogs, preferences, notifier, close, notifyRefresh, uiSession, timeZoneService);
         _board = new BoardPaletteCommands(
             boardData,
             undo,

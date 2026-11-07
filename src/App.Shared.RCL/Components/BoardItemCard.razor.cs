@@ -148,11 +148,6 @@ public partial class BoardItemCard
         };
     }
 
-    private static string? TodoDueTitle()
-    {
-        return null;
-    }
-
     private string TodoDueRelativeLabel(DateOnly due) =>
         TodoDueRelativeText.Format(due, BoardToday());
 

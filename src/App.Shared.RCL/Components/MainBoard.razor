@@ -26,35 +26,15 @@
     @if (BoardSync.IsOffline)
     {
         <MudAlert Severity="Severity.Info" Dense="true" Class="my-1" role="status">
-            <div class="d-flex align-center flex-wrap gap-2">
-                <span>
-                    Working offline. Changes are saved safely on this device and will sync when you reconnect.
-                    @if (BoardSync.PendingCount > 0)
-                    {
-                        <span> @BoardSync.PendingCount waiting to sync.</span>
-                    }
-                    @if (BoardSync.LastSyncedUtc is { } offlineSyncedAt)
-                    {
-                        <span> Last synced @DateFormatService.Format(offlineSyncedAt.LocalDateTime).</span>
-                    }
-                </span>
-                @if (BoardSync.PendingCount > 0)
-                {
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@BoardSync.IsSyncing" OnClick="() => BoardSyncRequestor.RequestSync()">Sync now</MudButton>
-                }
-            </div>
+            Working offline. The app saves changes on this device and syncs when you reconnect.
         </MudAlert>
     }
-    else if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage) || BoardSync.PendingCount > 0)
+    else if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage))
     {
         <MudAlert Severity="Severity.Warning" Dense="true" Class="my-1" role="status">
             <div class="d-flex align-center flex-wrap gap-2">
                 <span>
-                    @(BoardSync.SyncProblemMessage ?? "Some changes have not synced yet.")
-                    @if (BoardSync.PendingCount > 0)
-                    {
-                        <span> @BoardSync.PendingCount waiting.</span>
-                    }
+                    @BoardSync.SyncProblemMessage
                 </span>
                 <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@BoardSync.IsSyncing" OnClick="() => BoardSyncRequestor.RequestSync()">Retry now</MudButton>
             </div>
@@ -307,15 +287,15 @@
                     <div class="board-section-switcher" role="group" aria-label="Loading board sections" aria-busy="true">
                         <button type="button" class="board-section-switcher__btn board-section-switcher__btn--active" disabled aria-pressed="true">
                             <span class="board-section-switcher__label">Habits</span>
-                            <MudSkeleton Width="24px" Height="20px" SkeletonType="SkeletonType.Rectangle" Class="rounded-pill" />
+                            <MudSkeleton Width="24px" Height="20px" SkeletonType="SkeletonType.Rectangle" Class="rounded" />
                         </button>
                         <button type="button" class="board-section-switcher__btn" disabled aria-pressed="false">
                             <span class="board-section-switcher__label">Dailies</span>
-                            <MudSkeleton Width="24px" Height="20px" SkeletonType="SkeletonType.Rectangle" Class="rounded-pill" />
+                            <MudSkeleton Width="24px" Height="20px" SkeletonType="SkeletonType.Rectangle" Class="rounded" />
                         </button>
                         <button type="button" class="board-section-switcher__btn" disabled aria-pressed="false">
                             <span class="board-section-switcher__label">To-dos</span>
-                            <MudSkeleton Width="24px" Height="20px" SkeletonType="SkeletonType.Rectangle" Class="rounded-pill" />
+                            <MudSkeleton Width="24px" Height="20px" SkeletonType="SkeletonType.Rectangle" Class="rounded" />
                         </button>
                     </div>
                     <BoardColumnSkeleton Section="BoardSection.Habit" />

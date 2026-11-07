@@ -60,7 +60,7 @@
         {
             if (alertsEnabled && isOffline && !_wasOffline)
             {
-                await UserNotifier.NotifyAsync("You are offline. The client sends changes when you reconnect.", Severity.Warning);
+                await UserNotifier.NotifyAsync("Working offline. The app saves changes on this device and syncs when you reconnect.", Severity.Warning);
             }
             else if (alertsEnabled && !isOffline && !string.IsNullOrEmpty(problem) && !string.Equals(problem, _lastProblem, StringComparison.Ordinal))
             {

@@ -42,14 +42,15 @@ public sealed class SyncStatusIndicatorTests : IAsyncDisposable
     }
 
     [Fact]
-    public void FullRow_ShowsPendingCount_And_Retry_Calls_RequestSync()
+    public void FullRow_ShowsError_And_Retry_Calls_RequestSync()
     {
         _boardSync.SyncProblemMessage = "boom";
         _boardSync.PendingCount = 2;
 
         var cut = _ctx.Render<SyncStatusIndicator>(p => p.Add(x => x.IconOnly, false));
 
-        cut.Markup.Should().Contain("2 pending");
+        cut.Markup.Should().Contain("Sync issue");
+        cut.Markup.Should().NotContain("pending");
         var retry = cut.Find(".sync-row__retry");
         retry.TextContent.Should().Contain("Retry now");
 
@@ -82,18 +83,20 @@ public sealed class SyncStatusIndicatorTests : IAsyncDisposable
         var cut = _ctx.Render<SyncStatusIndicator>(p => p.Add(x => x.IconOnly, false));
 
         cut.FindAll(".sync-row__retry").Should().BeEmpty();
-        cut.Markup.Should().Contain("Not synced");
+        cut.Markup.Should().Contain("Up to date");
     }
 
     [Fact]
-    public void IconOnly_AnnouncesPendingCount_In_Aria_Label()
+    public void IconOnly_HidesPendingCount_In_Aria_Label()
     {
         _boardSync.PendingCount = 3;
 
         var cut = _ctx.Render<SyncStatusIndicator>(p => p.Add(x => x.IconOnly, true));
 
         var button = cut.Find(".sync-icon-btn");
-        button.GetAttribute("aria-label").Should().Contain("3 pending");
+        button.GetAttribute("aria-label").Should().Contain("Up to date");
+        button.GetAttribute("aria-label").Should().NotContain("pending");
+        cut.Markup.Should().NotContain("sync-badge");
     }
 
     [Fact]

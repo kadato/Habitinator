@@ -18,10 +18,6 @@
     {
         <MudAlert Severity="Severity.Warning" Dense="true" Class="my-1" role="status">
             You are offline. Last saved stats.
-            @if (BoardSync.PendingCount > 0)
-            {
-                <span> @BoardSync.PendingCount waiting.</span>
-            }
         </MudAlert>
     }
     @if (_error is not null)

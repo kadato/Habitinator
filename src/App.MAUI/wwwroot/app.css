@@ -44,7 +44,7 @@
     width: 180px;
     height: 3px;
     background: var(--hab-track-subtle);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     overflow: hidden;
 }
 
@@ -52,7 +52,7 @@
     height: 100%;
     width: 35%;
     background: #2563eb;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
 }
 
 .maui-splash__hint {

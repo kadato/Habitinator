@@ -843,7 +843,7 @@ public static class OAuthApiRoutes
                     padding: 0.25rem 0.75rem;
                     background: rgba(59, 130, 246, 0.15);
                     color: var(--primary);
-                    border-radius: 9999px;
+                    border-radius: 6px;
                     font-size: 0.8125rem;
                     font-weight: 600;
                     margin-bottom: 0.75rem;

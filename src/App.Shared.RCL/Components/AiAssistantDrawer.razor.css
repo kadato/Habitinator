@@ -107,7 +107,7 @@
 .ai-dropdown-badge {
     font-size: 0.6875rem !important;
     padding: 2px 7px !important;
-    border-radius: var(--radius-pill) !important;
+    border-radius: var(--radius-sm) !important;
     background: var(--mud-palette-background) !important;
     border: 1px solid var(--mud-palette-lines-default) !important;
     color: var(--mud-palette-text-secondary) !important;
@@ -227,7 +227,7 @@
 .ai-bubble-model-pill {
     font-size: 0.6875rem;
     padding: 1px 6px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     background: var(--mud-palette-background);
     border: 1px solid var(--mud-palette-lines-default);
     color: var(--mud-palette-text-secondary);
@@ -271,7 +271,7 @@
     font-size: 0.6875rem;
     font-weight: 700;
     padding: 2px 8px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     text-transform: uppercase;
     letter-spacing: 0.03em;
     flex-shrink: 0;
@@ -629,7 +629,7 @@
 .ai-dot {
     width: 4px;
     height: 4px;
-    border-radius: 50%;
+    border-radius: var(--radius-sm);
     background-color: var(--mud-palette-primary);
     animation: ai-dot-pulse 1.4s infinite ease-in-out both;
 }
@@ -668,7 +668,7 @@
     background: var(--mud-palette-action-default-hover);
     border: 1px solid var(--mud-palette-primary);
     padding: 1px 6px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     font-weight: 600;
     line-height: 1.2;
 }

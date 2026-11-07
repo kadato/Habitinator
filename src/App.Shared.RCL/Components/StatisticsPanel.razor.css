@@ -638,11 +638,11 @@
     background: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
     padding: 0.15rem 0.45rem;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     font-family: var(--hab-font-mono);
     font-variant-numeric: tabular-nums;
 }
-.stats-eyebrow__dot { width: 3px; height: 3px; border-radius: 50%; background: var(--mud-palette-text-disabled); flex-shrink: 0; }
+.stats-eyebrow__dot { width: 3px; height: 3px; border-radius: var(--radius-sm); background: var(--mud-palette-text-disabled); flex-shrink: 0; }
 
 .stats-hero-card {
     position: relative;
@@ -669,7 +669,7 @@
     gap: 0.3rem;
     border: 1px solid var(--mud-palette-divider);
     padding: 6px 10px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     background: var(--mud-palette-background-gray);
     font-family: var(--hab-font-mono);
     font-size: 0.68rem;

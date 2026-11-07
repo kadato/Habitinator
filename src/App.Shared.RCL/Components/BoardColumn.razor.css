@@ -306,7 +306,7 @@
     justify-content: center;
     width: 2.75rem;
     height: 2.75rem;
-    border-radius: 50%;
+    border-radius: var(--radius-sm);
     margin-bottom: var(--space-5);
     color: var(--mud-palette-text-secondary);
     background: color-mix(in srgb, var(--mud-palette-text-secondary) 10%, transparent);

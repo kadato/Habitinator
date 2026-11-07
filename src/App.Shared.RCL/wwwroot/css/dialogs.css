@@ -299,7 +299,7 @@
     color: var(--mud-palette-text-secondary);
     background: color-mix(in srgb, var(--mud-palette-text-primary) 7%, transparent);
     padding: 0.15rem 0.4rem;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
 }
 .hab-checklist__list { display: flex; flex-direction: column; }
 .edit-daily-checklist { display: contents; }
@@ -420,7 +420,7 @@
     padding: 0.2rem 0.2rem 0.2rem 0.55rem;
     background: color-mix(in srgb, var(--mud-palette-primary) 10%, var(--mud-palette-surface));
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 18%, var(--mud-palette-divider));
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     font-size: 0.75rem;
     line-height: 1.2;
     color: var(--mud-palette-primary);
@@ -445,7 +445,7 @@
     width: 1.25rem !important;
     height: 1.25rem !important;
     border: none !important;
-    border-radius: 50% !important;
+    border-radius: var(--radius-sm) !important;
     background: color-mix(in srgb, currentColor 12%, transparent) !important;
     color: inherit !important;
     cursor: pointer !important;
@@ -931,7 +931,7 @@
     gap: 0.3rem;
     border: 1px solid var(--mud-palette-divider);
     padding: 6px 10px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     background: var(--mud-palette-background-gray);
     font-family: var(--hab-font-mono);
     font-size: 0.68rem;
@@ -1006,7 +1006,7 @@
         transform: translateX(-50%);
         width: 40px;
         height: 4px;
-        border-radius: var(--radius-pill);
+        border-radius: var(--radius-sm);
         background: color-mix(in srgb, var(--mud-palette-text-primary) 22%, transparent);
         z-index: 4;
         pointer-events: none;

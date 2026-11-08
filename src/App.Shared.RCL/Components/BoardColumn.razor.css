@@ -1,25 +1,5 @@
-.board-column {
-    min-height: 18rem;
-    height: 100%;
-    border-radius: var(--space-6);
-    overflow: hidden;
-    background: var(--mud-palette-background-gray);
-    border: 1px solid var(--hab-border-card);
-}
-
-.board-column ::deep .mud-card-header,
-.board-column ::deep .mud-card-content,
-.board-column ::deep .mud-card-actions {
-    background: transparent;
-}
-
-.board-column ::deep .mud-card-header {
-    padding: var(--space-2) 0.85rem 0.2rem !important;
-}
-
-.board-column ::deep .mud-card-content {
-    padding: 0 0.85rem 0.65rem !important;
-}
+/* .board-column is a MudCard root. It renders without the component scope attribute.
+   Rules that target the root are in global app.css. This file keeps rules for plain elements inside the column. */
 
 .board-title {
     font-weight: 600;
@@ -50,22 +30,10 @@
     font-feature-settings: "tnum" 1, "zero" 1;
 }
 
-.board-column--habit .board-count-badge {
-    background-color: color-mix(in srgb, var(--hab-type-habit) 15%, transparent);
-    color: var(--hab-type-habit);
-}
+/* Per-type badge colors are in global app.css. The badge is on the
+   MudCard root. The root renders without the component scope attribute. */
 
-.board-column--daily .board-count-badge {
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 15%, transparent);
-    color: var(--mud-palette-primary);
-}
-
-.board-column--todo .board-count-badge {
-    background-color: color-mix(in srgb, var(--hab-type-todo) 15%, transparent);
-    color: var(--hab-type-todo);
-}
-
-/* Column filter toolbar: sits inside MudCardContent, 100% width matching input box */
+/* The column filter toolbar is inside MudCardContent. It spans 100% width. It matches the input box. */
 .board-filter-toolbar {
     width: 100% !important;
     display: flex !important;
@@ -76,8 +44,8 @@
 }
 
 .board-filter-btn {
-    flex: 1 1 0px !important;
-    width: 0 !important;
+    flex: 1 1 auto !important;
+    width: auto !important;
     min-width: 0 !important;
     height: 32px !important;
     min-height: 32px !important;
@@ -100,6 +68,23 @@
     text-overflow: ellipsis !important;
     touch-action: manipulation !important;
     -webkit-tap-highlight-color: transparent !important;
+}
+
+@media (max-width: 399.98px) {
+    .board-filter-btn {
+        padding-left: var(--space-2) !important;
+        padding-right: var(--space-2) !important;
+        font-size: 0.75rem !important;
+    }
+}
+
+/* The filter hint explains the active filter. The hint shows only when a non-default filter is active. All, Due, and Active show no hint. */
+.board-filter-hint {
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--mud-palette-text-secondary);
+    padding: 0 0.1rem;
+    margin: 0 0 var(--space-2) 0;
 }
 
 .board-filter-btn:focus,
@@ -130,6 +115,11 @@
 .board-add-wrap ::deep .mud-input-outlined {
     background: var(--mud-palette-surface);
     border-radius: 0.65rem;
+}
+
+/* The add field shows its action state. The adornment button uses the primary color when the field has focus or text. */
+.board-add-wrap:focus-within ::deep .mud-input-adornment-end .mud-icon-button {
+    color: var(--mud-palette-primary) !important;
 }
 
 .board-list {
@@ -175,35 +165,18 @@
 
 .board-sortable-drag {
     opacity: 0.92;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2) !important;
+    box-shadow: var(--hab-shadow-sm), 0 12px 30px rgba(0, 0, 0, 0.2) !important;
 }
 
 .board-sortable-fallback-drag {
     opacity: 0.92;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2) !important;
+    box-shadow: var(--hab-shadow-sm), 0 12px 30px rgba(0, 0, 0, 0.2) !important;
     z-index: var(--z-max) !important;
     pointer-events: none !important;
 }
 
-.board-column ::deep .board-col-foot {
-    border-top: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
-    margin-top: var(--space-1);
-    padding-top: var(--space-3) !important;
-}
-
 @media (max-width: 959.98px) {
-    .board-column {
-        min-height: auto;
-    }
-
-    .board-column ::deep .board-filter-btn.mud-button-root {
-        min-height: 44px !important;
-        padding-left: var(--space-2) !important;
-        padding-right: var(--space-2) !important;
-        font-size: 0.8rem !important;
-    }
-
-    .board-filter-btn {
+    .board-filter-toolbar .board-filter-btn {
         height: 44px !important;
         min-height: 44px !important;
     }
@@ -215,33 +188,12 @@
         min-height: 44px !important;
     }
 
-    /* Info and add-field buttons keep a 44px hit target on touch,
-       at every viewport width. */
-    .board-column ::deep .board-column-info-btn .mud-icon-button {
-        width: 44px !important;
-        height: 44px !important;
-        min-width: 44px !important;
-        min-height: 44px !important;
-        padding: 0 !important;
-    }
-
+    /* Info and add-field buttons keep a 44px hit target on touch at every viewport width. Mud roots are in global app.css. */
     .board-add-wrap ::deep .mud-input-adornment-end .mud-icon-button {
         width: 44px !important;
         height: 44px !important;
         min-width: 44px !important;
         min-height: 44px !important;
-    }
-}
-
-@media (max-width: 479.98px) {
-    .board-column ::deep .mud-card-header {
-        padding-left: 0.65rem !important;
-        padding-right: 0.65rem !important;
-    }
-
-    .board-column ::deep .mud-card-content {
-        padding-left: 0.65rem !important;
-        padding-right: 0.65rem !important;
     }
 }
 
@@ -254,30 +206,11 @@
     color: var(--mud-palette-text-secondary);
 }
 
-.board-column ::deep .board-column-info-btn {
-    opacity: 0.7;
-    margin-left: -6px !important;
-}
-
 @media (max-width: 959.98px) {
-    .board-column ::deep .board-column-info-btn .mud-icon-button {
-        width: 44px !important;
-        height: 44px !important;
-        padding: 0 !important;
-    }
-
     .board-add-wrap ::deep .mud-input-adornment-end .mud-icon-button {
         width: 44px !important;
         height: 44px !important;
     }
-
-    .board-columns-mobile .mud-button-root:not(.mud-icon-button) {
-        min-height: 44px;
-    }
-}
-
-.board-column ::deep .board-column-info-btn .mud-icon-button {
-    padding: 3px !important;
 }
 
 .board-column-header-row {
@@ -293,11 +226,11 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: var(--space-8) var(--space-6);
+    padding: var(--space-6) var(--space-4);
     border: 1.5px dashed color-mix(in srgb, var(--mud-palette-text-primary) 12%, transparent);
     border-radius: var(--space-5);
     background-color: color-mix(in srgb, var(--mud-palette-background-gray) 25%, transparent);
-    margin: var(--space-4) 0;
+    margin: var(--space-3) 0;
 }
 
 .empty-state-icon-container {

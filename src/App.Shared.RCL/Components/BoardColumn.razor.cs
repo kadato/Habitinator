@@ -32,14 +32,12 @@ public partial class BoardColumn : IAsyncDisposable
     private bool _draftError;
     private bool _isAdding;
     private string? _duplicateExistingTitle;
-    private Guid? _duplicateExistingId;
     private bool _duplicateConfirmed;
 
     private void ClearDraftError()
     {
         _draftError = false;
         _duplicateExistingTitle = null;
-        _duplicateExistingId = null;
         _duplicateConfirmed = false;
     }
 
@@ -96,7 +94,7 @@ public partial class BoardColumn : IAsyncDisposable
         }
         catch (Exception)
         {
-            // Ignored, filters simply won't persist
+            // Ignored. Filters do not persist.
         }
     }
 
@@ -129,12 +127,49 @@ public partial class BoardColumn : IAsyncDisposable
 
     private string GetColumnFilterName() => Section switch
     {
-        BoardSection.Habit => _habitFilter.ToString(),
-        BoardSection.Daily => _dailyFilter.ToString(),
+        BoardSection.Habit => _habitFilter switch
+        {
+            HabitListFilter.Weak => "New",
+            HabitListFilter.Strong => "Established",
+            _ => "All"
+        },
+        BoardSection.Daily => _dailyFilter switch
+        {
+            DailyListFilter.Due => "Due now",
+            DailyListFilter.NotDue => "Later",
+            _ => "All"
+        },
         _ => _todoFilter.ToString()
     };
 
-    private const string ResetFilterLabel = "Show all";
+    private string GetResetFilterLabel() => Section switch
+    {
+        BoardSection.Habit => "Show all habits",
+        BoardSection.Daily => "Show all dailies",
+        _ => "Show all to-dos"
+    };
+
+    private string? GetFilterHint() => Section switch
+    {
+        BoardSection.Habit => _habitFilter switch
+        {
+            HabitListFilter.Weak => "New habits with fewer than 3 logs.",
+            HabitListFilter.Strong => "Established habits with 3 or more logs.",
+            _ => null
+        },
+        BoardSection.Daily => _dailyFilter switch
+        {
+            DailyListFilter.NotDue => "Dailies for later. Not due today.",
+            _ => null
+        },
+        BoardSection.Todo => _todoFilter switch
+        {
+            TodoListFilter.Scheduled => "Open to-dos with a due date.",
+            TodoListFilter.Done => "Completed to-dos.",
+            _ => null
+        },
+        _ => null
+    };
 
     private void ResetColumnFilter()
     {
@@ -289,9 +324,8 @@ public partial class BoardColumn : IAsyncDisposable
                     && serverItem.DailyRepeat == overrideItem.DailyRepeat
                     && serverItem.DailyRepeatInterval == overrideItem.DailyRepeatInterval
                     && serverItem.DailyWeekdays == overrideItem.DailyWeekdays;
-                // Note: We intentionally do NOT check Counter, the streak, here because the server
-                // automatically increments/updates it upon completion, which would prevent
-                // the optimistic override from being pruned.
+                // The server increments the streak on completion, so this method skips Counter.
+                // This keeps pruning of the optimistic override working.
             }
             else if (Section == BoardSection.Todo)
             {
@@ -509,9 +543,9 @@ public partial class BoardColumn : IAsyncDisposable
     {
         return Section switch
         {
-            BoardSection.Habit => "Use + / − to log. Open the title for notes and counters.",
-            BoardSection.Daily => "Check off when done today. Open the title for details.",
-            BoardSection.Todo => "Drag to reorder on Active. Open the title for details.",
+            BoardSection.Habit => "Press + or - to log.",
+            BoardSection.Daily => "Check off when done today.",
+            BoardSection.Todo => "Drag to reorder on Active.",
             _ => string.Empty
         };
     }
@@ -689,13 +723,11 @@ public partial class BoardColumn : IAsyncDisposable
                 if (existing is not null)
                 {
                     _duplicateExistingTitle = existing.Title;
-                    _duplicateExistingId = existing.Id;
                     return;
                 }
             }
 
             _duplicateExistingTitle = null;
-            _duplicateExistingId = null;
             _duplicateConfirmed = false;
             var newId = Guid.NewGuid();
             BoardItem tempItem = new(
@@ -718,14 +750,12 @@ public partial class BoardColumn : IAsyncDisposable
     {
         _duplicateConfirmed = true;
         _duplicateExistingTitle = null;
-        _duplicateExistingId = null;
         await AddFromDraftAsync();
     }
 
     private void CancelDuplicate()
     {
         _duplicateExistingTitle = null;
-        _duplicateExistingId = null;
         _duplicateConfirmed = false;
     }
 
@@ -832,7 +862,7 @@ public partial class BoardColumn : IAsyncDisposable
 
         var confirmed = await DialogService.ShowMessageBoxAsync(
             "Delete all done to-dos?",
-            $"This will permanently remove {toDelete.Count} done to-do(s). This cannot be undone.",
+            $"This will permanently remove {toDelete.Count} {(toDelete.Count == 1 ? "done to-do" : "done to-dos")}. This cannot be undone.",
             "Delete all",
             null,
             "Cancel");
@@ -861,13 +891,13 @@ public partial class BoardColumn : IAsyncDisposable
             if (deleted < toDelete.Count)
             {
                 await Notifier.NotifyAsync(
-                    $"Removed {deleted} of {toDelete.Count} to-do(s). Some could not be deleted.",
+                    $"Removed {deleted} of {toDelete.Count} to-dos. Some to-dos stayed. Try again.",
                     Severity.Warning);
             }
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync("Something went wrong. Check your connection. Try again.", Severity.Error);
+            await Notifier.NotifyAsync("We could not delete done to-dos. Nothing was removed. Check your connection. Try again.", Severity.Error);
         }
     }
 
@@ -881,14 +911,14 @@ public partial class BoardColumn : IAsyncDisposable
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync($"Habitinator could not {action}. Check your connection. Try again.", Severity.Error);
+            await Notifier.NotifyAsync($"We could not {action}. We reverted your change. It is safe to retry. Check your connection. Try again.", Severity.Error);
             return false;
         }
     }
 
     /// <summary>
-    ///     Applies an optimistic UI change, awaits the server mutation, and rolls the optimistic change back
-    ///     on failure. All board mutations should go through this so optimistic state stays consistent.
+    ///     Applies the optimistic UI change. It awaits the server mutation. It rolls the change back
+    ///     on failure. Send all board mutations through this method. It keeps optimistic state consistent.
     /// </summary>
     private async Task ApplyMutationAsync(Action apply, Action rollback, Func<Task> mutation, string action)
     {

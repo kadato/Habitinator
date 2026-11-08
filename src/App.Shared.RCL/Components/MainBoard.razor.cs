@@ -33,6 +33,7 @@ public partial class MainBoard : IAsyncDisposable
     private DotNetObjectReference<MainBoard>? _selfRef;
     private ElementReference _swipeAreaRef;
     private bool? _isMobileViewport;
+    private bool? _isPhoneViewport;
     private bool _swipeInitialized;
     private DateTimeOffset _lastLocalMutationTime = DateTimeOffset.MinValue;
     private PersistingComponentStateSubscription _subscription;
@@ -75,17 +76,16 @@ public partial class MainBoard : IAsyncDisposable
             ? "board-section-switcher__btn board-section-switcher__btn--active"
             : "board-section-switcher__btn";
 
-    private Dictionary<string, object> GetTabAttributes(int index) => new()
-    {
-        ["aria-pressed"] = _mobileSectionIndex == index ? "true" : "false",
-    };
-
     private string GetTagsTriggerClass() =>
         SelectedFilterTagCount > 0
             ? "board-trigger-btn board-trigger-btn--active"
             : "board-trigger-btn";
 
     private string GetTagsTriggerTitle() => _cachedTagsTriggerTitle;
+
+    private Origin TagsMenuAnchor => _isPhoneViewport == true ? Origin.TopRight : Origin.BottomRight;
+
+    private Origin TagsMenuTransform => _isPhoneViewport == true ? Origin.BottomRight : Origin.TopRight;
 
     private void OnMobileSectionKeyDown(KeyboardEventArgs e)
     {
@@ -536,7 +536,7 @@ public partial class MainBoard : IAsyncDisposable
         }
         catch
         {
-            await Notifier.NotifyAsync("Could not load demo data. Check your connection. Try again.", MudBlazor.Severity.Error);
+            await Notifier.NotifyAsync("We could not load demo data. Nothing changed. Check your connection. Try again.", MudBlazor.Severity.Error);
             return;
         }
 
@@ -583,10 +583,12 @@ public partial class MainBoard : IAsyncDisposable
             try
             {
                 _isMobileViewport = await JS.InvokeAsync<bool>("HabitinatorBoardViewport.isMobile");
+                _isPhoneViewport = await JS.InvokeAsync<bool>("HabitinatorBoardViewport.isPhone");
             }
             catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or InvalidOperationException)
             {
                 _isMobileViewport = false;
+                _isPhoneViewport = false;
             }
             await JS.InvokeVoidAsync("HabitinatorBoardViewport.watch", _selfRef);
             if (_isMobileViewport is true)
@@ -649,8 +651,24 @@ public partial class MainBoard : IAsyncDisposable
     }
 
     /// <summary>
-    /// Swipe gestures belong to the mobile branch only. The swipe area ref exists solely while
-    /// that branch is mounted, so init follows the ref and destroy follows the branch switch.
+    /// HabitinatorBoardViewport calls this when the viewport crosses the phone breakpoint.
+    /// On phones the search row becomes a bottom thumb bar. The tags menu opens upward.
+    /// </summary>
+    [JSInvokable]
+    public async Task OnPhoneViewportChanged(bool isPhone)
+    {
+        if (_isPhoneViewport == isPhone)
+        {
+            return;
+        }
+
+        _isPhoneViewport = isPhone;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Swipe gestures belong to the mobile branch only. The swipe area ref exists only while
+    /// that branch is mounted. Init follows the ref. Destroy follows the branch switch.
     /// </summary>
     private async Task EnsureSwipeAsync()
     {
@@ -667,7 +685,7 @@ public partial class MainBoard : IAsyncDisposable
             }
             catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or InvalidOperationException)
             {
-                // Ignored during page navigation/disposal
+                // Ignored during page navigation or disposal.
             }
         }
         else if (_isMobileViewport is not true && _swipeInitialized)
@@ -704,7 +722,7 @@ public partial class MainBoard : IAsyncDisposable
         {
             _loadError = ex is InvalidOperationException
                 ? ex.Message
-                : "Could not load your board. Please try again.";
+                : "We could not load your board. Your local copy is safe. Check your connection. Try again.";
             await Notifier.NotifyAsync(_loadError, MudBlazor.Severity.Error);
         }
         finally
@@ -1122,7 +1140,7 @@ public partial class MainBoard : IAsyncDisposable
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync("Could not create item.", Severity.Error);
+            await Notifier.NotifyAsync("We could not create that item. Nothing was added. Check your connection. Try again.", Severity.Error);
         }
         finally
         {

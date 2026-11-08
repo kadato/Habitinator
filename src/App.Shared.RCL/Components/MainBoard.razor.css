@@ -136,14 +136,14 @@
     .board-section-switcher {
         display: flex;
         position: sticky;
-        top: calc(var(--app-top-bar-offset, 4.25rem) + var(--space-2));
+        top: calc(var(--app-top-bar-offset, 4.25rem) + var(--space-1));
         z-index: 100;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+        box-shadow: var(--hab-shadow-sm);
     }
 
     /* Compact panel content spacing on mobile */
     .board-section-tab-content {
-        padding-top: 0.2rem;
+        padding-top: 0 !important;
     }
 }
 
@@ -158,16 +158,12 @@
 .board-columns-grid {
     flex-shrink: 0;
     margin-top: -12px !important;
+    max-width: 72rem;
+    margin-inline: auto;
+    width: 100%;
 }
 
-.board-stat-strip {
-    border-radius: 0.875rem;
-    background: var(--mud-palette-surface);
-    border: 1px solid var(--hab-border-card);
-    margin-bottom: var(--space-4) !important;
-    padding-top: var(--space-3) !important;
-    padding-bottom: var(--space-3) !important;
-}
+/* .board-stat-strip is a MudPaper root. It renders without the component scope attribute. All of its rules are in global app.css. */
 
 .board-tags-menu-body {
     /* Natural height. The popover is the single scroller. The body has
@@ -193,13 +189,13 @@
     }
 }
 
-/* Centered search and tags filter row on desktop */
+/* On desktop the search and tags filter row aligns left. It lines up with the column edges. */
 .board-stat-strip-row {
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
     align-items: center !important;
-    justify-content: center !important;
+    justify-content: flex-start !important;
     gap: 0.65rem var(--space-5) !important;
     width: 100% !important;
 }
@@ -209,10 +205,10 @@
     flex-direction: row !important;
     flex-wrap: nowrap !important;
     align-items: center !important;
-    justify-content: center !important;
-    gap: var(--space-1) !important;
+    justify-content: flex-start !important;
+    gap: var(--space-2) !important;
     min-width: 0 !important;
-    width: auto !important;
+    width: 100% !important;
     max-width: none !important;
 }
 
@@ -376,7 +372,7 @@
     }
 
     .board-archive-trigger {
-        order: 1 !important;
+        order: 3 !important;
         margin: 0 !important;
         flex: 0 0 auto !important;
         width: 44px !important;
@@ -412,7 +408,7 @@
     }
 
     .board-search-wrapper {
-        order: 3 !important;
+        order: 1 !important;
         flex: 1 1 0% !important;
         flex-grow: 1 !important;
         width: 100% !important;
@@ -457,12 +453,7 @@
         padding-right: 0 !important;
     }
 
-    .board-stat-strip {
-        width: 100% !important;
-        margin-left: 0 !important;
-        margin-right: 0 !important;
-        box-sizing: border-box !important;
-    }
+    /* The strip is a MudPaper root. Its width rules are in global app.css. */
 
     .board-section-switcher {
         width: 100% !important;
@@ -475,10 +466,10 @@
         width: 100% !important;
         padding-left: 0 !important;
         padding-right: 0 !important;
-        padding-top: var(--space-1) !important;
+        padding-top: 0 !important;
         margin-left: 0 !important;
         margin-right: 0 !important;
-        margin-top: var(--space-1) !important;
+        margin-top: 0 !important;
         box-sizing: border-box !important;
     }
 
@@ -490,9 +481,9 @@
         box-sizing: border-box !important;
     }
 
-    /* Hide column card header and chrome completely in mobile tabbed view so the
-       filter toolbar, add-field, item cards and footer span the same full width
-       as the section switcher above them so edges align cleanly. */
+    /* On mobile the tabbed view uses a slim column header. The card has no background, border, or shadow.
+       Filter toolbar, add field, cards, and footer span the same full width as the section switcher.
+       The h2 title, count, and About button stay visible. They keep column identity and help text. */
     .board-columns-mobile ::deep .board-column {
         background: transparent !important;
         border: none !important;
@@ -500,13 +491,17 @@
         box-shadow: none !important;
     }
 
-    .board-columns-mobile ::deep .mud-card-header,
+    .board-columns-mobile ::deep .mud-card-header {
+        display: block !important;
+        padding: 0.6rem 0 0.2rem !important;
+    }
+
     .board-columns-mobile ::deep .board-column-header-row {
-        display: none !important;
+        display: flex !important;
     }
 
     .board-columns-mobile ::deep .mud-card-content {
-        padding: 0.6rem 0 !important;
+        padding: 0 0 0.6rem !important;
     }
 
     .board-columns-mobile ::deep .board-col-foot {
@@ -524,6 +519,20 @@
        MudPaper, so scoped selectors never match the popover or the panel. */
 
     /* Section tabs on mobile: equal-width buttons so all three fit and are easy to tap. */
+}
+
+/* On phones the search row leaves the top. It becomes a sticky bottom thumb bar.
+   The bar rule is in global app.css because the strip is a MudPaper root.
+   The stage keeps the last card scrollable above the bar. */
+@media (max-width: 767.98px) {
+    .board-columns-stage {
+        padding-bottom: 4.5rem !important;
+    }
+
+    /* The column header is slimmer now that the top stack is shorter. */
+    .board-columns-mobile ::deep .mud-card-header {
+        padding: 0.4rem 0 0.2rem !important;
+    }
 }
 
 @media (pointer: coarse) {
@@ -548,7 +557,7 @@
     white-space: nowrap;
     opacity: 0.8;
     font-size: 0.75rem;
-    margin-left: var(--space-1);
+    margin-left: auto;
     background: transparent;
     border: none;
     padding: 0;

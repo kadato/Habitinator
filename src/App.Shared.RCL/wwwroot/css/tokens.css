@@ -72,6 +72,9 @@
     /* Card container borders. Softer than the divider line, theme-aware. */
     --hab-border-card: light-dark(rgba(15, 23, 42, 0.10), rgba(255, 255, 255, 0.06));
 
+    /* Cards, columns, and skeletons share this small elevation. */
+    --hab-shadow-sm: 0 1px 2px light-dark(rgba(15, 23, 42, 0.08), rgba(0, 0, 0, 0.45));
+
     /* Splash ink that survives pre-theme rendering, light and dark */
     --hab-ink-inverse: light-dark(#1e293b, #f1f5f9);
     --hab-ink-faint: light-dark(rgba(0, 0, 0, 0.35), rgba(255, 255, 255, 0.45));

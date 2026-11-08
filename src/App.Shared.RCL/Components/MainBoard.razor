@@ -55,15 +55,15 @@
     {
         <div class="board-load-fallback">
             <MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Large" Class="board-load-fallback__icon"  aria-hidden="true" />
-            <MudText Typo="Typo.subtitle2" Class="board-load-fallback__title">We couldn't load your board</MudText>
-            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="board-load-fallback__hint">Check your connection and try again.</MudText>
+            <MudText Typo="Typo.subtitle2" Class="board-load-fallback__title">We could not load your board</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="board-load-fallback__hint">Your local copy is safe. Check your connection. Try again.</MudText>
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
                        Disabled="@_isLoading"
                        OnClick="RetryLoadAsync"
                        Size="Size.Small"
                        Class="mt-2">
-                Retry
+                Retry loading board
             </MudButton>
         </div>
     }
@@ -80,7 +80,7 @@
                        OnClick="RetryLoadAsync"
                        Size="Size.Small"
                        Class="mt-2">
-                Retry
+                Retry loading board
             </MudButton>
         </div>
     }
@@ -115,8 +115,8 @@
 
                     </div>
                     <div class="board-tags-menu-activator">
-                        <MudMenu AnchorOrigin="Origin.BottomRight"
-                                 TransformOrigin="Origin.TopRight"
+                        <MudMenu AnchorOrigin="@TagsMenuAnchor"
+                                 TransformOrigin="@TagsMenuTransform"
                                  PopoverFixed="true"
                                  RelativeWidth="DropdownWidth.Ignore"
                                  PopoverClass="board-tags-menu-popover">
@@ -162,16 +162,31 @@
                                         </MudButton>
                                     </MudStack>
                                 </MudPaper>
+                                <MudMenuItem OnClick="OpenArchivedItemsDialogAsync" Icon="@Icons.Material.Filled.Archive">Open archive</MudMenuItem>
                             </ChildContent>
                         </MudMenu>
                     </div>
                     <button type="button"
                             class="board-trigger-btn board-archive-trigger"
-                            aria-label="Archive"
-                            title="Archive"
+                            aria-label="Open archive"
+                            title="Open archive"
                             @onclick="OpenArchivedItemsDialogAsync">
                         <MudIcon Icon="@Icons.Material.Filled.Archive" Class="board-trigger-icon" aria-hidden="true" />
                         <span class="board-trigger-label app-show-desktop-only">Archive</span>
+                    </button>
+                    <button type="button"
+                            class="board-trigger-btn board-bar-extra board-bar-extra--command"
+                            aria-label="Command palette (Ctrl+K)"
+                            title="Open command palette (Ctrl+K)"
+                            @onclick="() => CommandPalette.Toggle()">
+                        <MudIcon Icon="@Icons.Material.Filled.Keyboard" Class="board-trigger-icon" aria-hidden="true" />
+                    </button>
+                    <button type="button"
+                            class="board-trigger-btn board-bar-extra board-bar-extra--ai"
+                            aria-label="AI assistant"
+                            title="Open AI assistant"
+                            @onclick="() => UiSessionState.ToggleAiDrawer()">
+                        <MudIcon Icon="@Icons.Material.Filled.SmartToy" Class="board-trigger-icon" aria-hidden="true" />
                     </button>
                     @if (_shortcutsEnabled)
                     {
@@ -213,40 +228,46 @@
             @if (_isMobileViewport.GetValueOrDefault())
             {
                 <div class="board-columns-mobile" @ref="_swipeAreaRef">
-                <div class="board-section-switcher" role="group" aria-label="Board sections">
+                <div class="board-section-switcher" role="tablist" aria-label="Board sections">
                     <button type="button"
+                            role="tab"
                             id="board-tab-0"
-                            @attributes="GetTabAttributes(0)"
                             aria-controls="board-tab-panel-0"
+                            aria-selected="@(_mobileSectionIndex == 0)"
+                            tabindex="@(_mobileSectionIndex == 0 ? "0" : "-1")"
                             class="@GetSectionSwitcherClass(0)"
                             @onclick="() => SetMobileSectionIndex(0)"
                             @onkeydown="OnMobileSectionKeyDown">
                         <span class="board-section-switcher__label">Habits</span>
-                        <span class="board-section-switcher__count" title="@FilteredHabits.Count habits">@FilteredHabits.Count</span>
+                        <span class="board-section-switcher__count">@FilteredHabits.Count</span>
                     </button>
                     <button type="button"
+                            role="tab"
                             id="board-tab-1"
-                            @attributes="GetTabAttributes(1)"
                             aria-controls="board-tab-panel-1"
+                            aria-selected="@(_mobileSectionIndex == 1)"
+                            tabindex="@(_mobileSectionIndex == 1 ? "0" : "-1")"
                             class="@GetSectionSwitcherClass(1)"
                             @onclick="() => SetMobileSectionIndex(1)"
                             @onkeydown="OnMobileSectionKeyDown">
                         <span class="board-section-switcher__label">Dailies</span>
-                        <span class="board-section-switcher__count" title="@DailiesDueOpenCount due and open">@DailiesDueOpenCount</span>
+                        <span class="board-section-switcher__count">@DailiesDueOpenCount</span>
                     </button>
                     <button type="button"
+                            role="tab"
                             id="board-tab-2"
-                            @attributes="GetTabAttributes(2)"
                             aria-controls="board-tab-panel-2"
+                            aria-selected="@(_mobileSectionIndex == 2)"
+                            tabindex="@(_mobileSectionIndex == 2 ? "0" : "-1")"
                             class="@GetSectionSwitcherClass(2)"
                             @onclick="() => SetMobileSectionIndex(2)"
                             @onkeydown="OnMobileSectionKeyDown">
                         <span class="board-section-switcher__label">To-dos</span>
-                        <span class="board-section-switcher__count" title="@OpenTodoCount open">@OpenTodoCount</span>
+                        <span class="board-section-switcher__count">@OpenTodoCount</span>
                     </button>
                 </div>
 
-                <div class="board-section-tab-content" id="board-tab-panel-@_mobileSectionIndex" role="region" aria-labelledby="board-tab-@_mobileSectionIndex">
+                <div class="board-section-tab-content" id="board-tab-panel-@_mobileSectionIndex" role="tabpanel" tabindex="0" aria-labelledby="board-tab-@_mobileSectionIndex">
                     @foreach (var col in BoardColumns)
                     {
                         if (col.Section == (BoardSection)_mobileSectionIndex)

@@ -32,7 +32,7 @@
 
 <a class="skip-link" href="#main-content">Skip to main content</a>
 
-<MudLayout Class="app-shell-layout">
+<MudLayout Class="app-shell-layout app-shell--web">
     <AuthorizeView>
         <Authorized Context="auth">
             <MudAppBar Elevation="0" Dense="true" Class="app-top-bar" ToolBarClass="app-top-bar-toolbar" role="banner">
@@ -53,7 +53,7 @@
                                 <span class="d-inline-flex align-center sync-indicator-wrap">
                                     <SyncStatusIndicator IconOnly="true" />
                                 </span>
-                                <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                <MudIconButton Icon="@Icons.Material.Filled.Keyboard"
                                                Color="Color.Primary"
                                                Size="Size.Medium"
                                                aria-label="Command palette (Ctrl+K)"

@@ -7,6 +7,7 @@ using App.Shared.RCL.Services;
 
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
+using Microsoft.JSInterop;
 
 using MudBlazor;
 
@@ -50,6 +51,11 @@ public partial class UpcomingPanel : IDisposable
     [Inject] private IDialogService Dialogs { get; set; } = default!;
     [Inject] private IUndoService UndoService { get; set; } = default!;
     [Inject] private IUserPreferencesService PreferencesService { get; set; } = default!;
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private ElementReference _calBodyRef;
+    private DotNetObjectReference<UpcomingPanel>? _swipeRef;
+    private bool _swipeInit;
 
     private bool ShowDailies => _filter != UpcomingFilter.Todos;
     private bool ShowTodos => _filter != UpcomingFilter.Dailies;
@@ -93,9 +99,11 @@ public partial class UpcomingPanel : IDisposable
                 : $"{s:MMM d} - {e:MMM d}, {e:yyyy}";
         }
     }
-    private string HeaderTitle => _view switch
+    private string StepperLabel => _view switch
     {
-        CalView.Day => SelectedLabel,
+        CalView.Day => Math.Abs(_selected.DayNumber - _today.DayNumber) <= 1
+            ? SelectedLabel
+            : _selected.ToString("ddd, MMM d", CultureInfo.CurrentCulture),
         CalView.Week => WeekRangeTitle,
         _ => MonthTitle,
     };
@@ -154,6 +162,46 @@ public partial class UpcomingPanel : IDisposable
         await LoadWeekStartAsync();
         ApplyQueryDate();
         await LoadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The swipe area mounts with the loaded calendar, not on first paint.
+        if (!_loading && _error is null && !_swipeInit && _calBodyRef.Context is not null)
+        {
+            _swipeInit = true;
+            try
+            {
+                await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardSwipe.js");
+                _swipeRef ??= DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("HabitinatorBoardSwipe.init", _calBodyRef, _swipeRef, "OnUpcomingSwipeAsync", true);
+            }
+            catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or InvalidOperationException)
+            {
+                // Ignored during page navigation or hot reload.
+                _swipeInit = false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// HabitinatorBoardSwipe calls this on a horizontal swipe over the calendar.
+    /// Left means next. Right means previous. The chevron buttons work the same way.
+    /// </summary>
+    [JSInvokable]
+    public Task OnUpcomingSwipeAsync(int direction)
+    {
+        if (direction > 0)
+        {
+            Next();
+        }
+        else
+        {
+            Prev();
+        }
+
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
@@ -881,6 +929,8 @@ public partial class UpcomingPanel : IDisposable
         if (disposing)
         {
             Nav.LocationChanged -= OnLocationChanged;
+            _swipeRef?.Dispose();
+            _swipeRef = null;
         }
     }
 }

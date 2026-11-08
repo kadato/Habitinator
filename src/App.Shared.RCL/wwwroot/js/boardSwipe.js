@@ -1,5 +1,5 @@
 globalThis.HabitinatorBoardSwipe = {
-    init: function (element, dotNetRef) {
+    init: function (element, dotNetRef, methodName, trackFromInteractive) {
         if (!element || element.dataset.habitinatorSwipe === "1") return;
         element.dataset.habitinatorSwipe = "1";
 
@@ -15,7 +15,10 @@ globalThis.HabitinatorBoardSwipe = {
                 return;
             }
             var t = e.target;
-            if (t?.closest?.(ignoreSelector)) {
+            // Calendar surfaces opt in to tracking from interactive elements. Taps still click through because listeners are passive.
+            // Only a real horizontal swipe moves the calendar. Everywhere else a swipe that starts on a control is ignored.
+            // Buttons keep their own gestures.
+            if (!trackFromInteractive && t?.closest?.(ignoreSelector)) {
                 tracking = false;
                 return;
             }
@@ -33,7 +36,7 @@ globalThis.HabitinatorBoardSwipe = {
             var dy = touch.clientY - startY;
             if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
             if (dotNetRef) {
-                dotNetRef.invokeMethodAsync("OnSwipeSectionAsync", dx < 0 ? 1 : -1);
+                dotNetRef.invokeMethodAsync(methodName || "OnSwipeSectionAsync", dx < 0 ? 1 : -1);
             }
         };
 

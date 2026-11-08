@@ -444,6 +444,8 @@
     gap: var(--space-4);
     align-items: stretch;
     min-width: 0;
+    /* Horizontal swipes move the calendar. The browser keeps vertical scrolling. */
+    touch-action: pan-y;
 }
 
 @media (min-width: 1100px) {
@@ -769,6 +771,17 @@
 .cal-cell--strip .cal-cell__dots {
     justify-content: center;
     margin-top: 0;
+}
+
+/* Selected and focused strip days use an inset ring. They never use an outline. The strip scrolls horizontally, so an outside ring clips at the top and bottom edges. */
+.cal-cell--strip.cal-cell--selected {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--mud-palette-primary);
+}
+
+.cal-cell--strip:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--mud-palette-primary);
 }
 
 /* Agenda column: overdue stacks above the day agenda. */
@@ -1098,17 +1111,74 @@
         grid-template-columns: 1fr;
     }
 
+    /* All seven days share the row. The row does not scroll. Each day stays tappable. Swiping the strip moves to the next or previous period. */
     .cal-strip {
-        grid-template-columns: repeat(7, minmax(4rem, 1fr));
-        overflow-x: auto;
-        padding-bottom: var(--space-2);
-        scrollbar-width: thin;
-        scrollbar-color: var(--mud-palette-text-disabled) transparent;
-        scroll-snap-type: x proximity;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        overflow-x: visible;
+        gap: 4px;
+        padding-bottom: 0;
+        scrollbar-width: none;
+        scroll-snap-type: none;
     }
 
     .cal-cell--strip {
-        scroll-snap-align: center;
+        scroll-snap-align: none;
+    }
+}
+
+/* On phones the day stepper becomes a full-width control. Prev, today, and next share the row instead of huddling top-left. The two tab strips stack full-width with equal buttons instead of two cut-off scrollers. */
+@media (max-width: 767.98px) {
+    .cal-top__row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    /* The desktop 16rem basis is a min-width there. In a column layout it becomes a min-height. That leaves a dead gap under the titles. */
+    .cal-top__row .cal-titles {
+        flex: 0 0 auto;
+    }
+
+    .cal-nav {
+        width: 100%;
+    }
+
+    .cal-nav ::deep .cal-daystep,
+    .cal-nav ::deep .cal-navbtn {
+        flex: 0 0 auto;
+    }
+
+    .cal-nav ::deep .cal-todaybtn {
+        flex: 1 1 auto;
+        min-height: 44px;
+    }
+
+    .cal-controls {
+        flex-direction: column;
+        align-items: stretch;
+        overflow-x: visible;
+    }
+
+    .cal-controls .cal-seg {
+        max-width: none;
+        width: 100%;
+        overflow-x: visible;
+    }
+
+    .cal-controls .cal-seg__btn {
+        flex: 1 1 0;
+    }
+
+    /* Card heads wrap instead of squeezing the action off-screen. The agenda
+       head always takes two lines on phones: title and count up top, date
+       and day stepper on a full-width row below. */
+    .cal-card__head {
+        gap: var(--space-2);
+        flex-wrap: wrap;
+    }
+
+    .cal-card--agenda .cal-card__head .cal-agenda__side {
+        flex: 1 1 100%;
+        justify-content: space-between;
     }
 }
 

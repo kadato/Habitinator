@@ -33,6 +33,7 @@ public partial class BoardItemCard
     [Parameter] public DateOnly? OverdueSince { get; set; }
 
     private bool _subtasksExpanded = true;
+    private bool _tagsExpanded;
     private BoardItem? _parsedForItem;
     private IReadOnlyList<DailyChecklistItem> _checklist = [];
     private List<string> _tagsList = [];
@@ -63,6 +64,7 @@ public partial class BoardItemCard
     private BoardSection? _lastRenderedSection;
     private bool? _lastRenderedCanReorder;
     private bool? _lastRenderedSubtasksExpanded;
+    private bool? _lastRenderedTagsExpanded;
     private DateOnly? _lastRenderedOverdueSince;
 
     protected override bool ShouldRender()
@@ -71,6 +73,7 @@ public partial class BoardItemCard
                || _lastRenderedSection != Section
                || _lastRenderedCanReorder != CanReorder
                || _lastRenderedSubtasksExpanded != _subtasksExpanded
+               || _lastRenderedTagsExpanded != _tagsExpanded
                || _lastRenderedOverdueSince != OverdueSince
                || _lastRenderedIsBusy != IsBusy;
     }
@@ -83,6 +86,7 @@ public partial class BoardItemCard
         _lastRenderedSection = Section;
         _lastRenderedCanReorder = CanReorder;
         _lastRenderedSubtasksExpanded = _subtasksExpanded;
+        _lastRenderedTagsExpanded = _tagsExpanded;
         _lastRenderedOverdueSince = OverdueSince;
         _lastRenderedIsBusy = IsBusy;
     }
@@ -90,6 +94,11 @@ public partial class BoardItemCard
     private void ToggleSubtasksExpand()
     {
         _subtasksExpanded = !_subtasksExpanded;
+    }
+
+    private void ToggleTagsExpand()
+    {
+        _tagsExpanded = !_tagsExpanded;
     }
 
     private static string GetRowClass(BoardSection section, BoardItem item)
@@ -164,9 +173,9 @@ public partial class BoardItemCard
     {
         return (Item.TrackPlus, Item.TrackMinus) switch
         {
-            (true, true) => "+ count and − count",
-            (true, false) => "+ count only",
-            (false, true) => "− count only",
+            (true, true) => $"Positive logs {Item.Counter} and negative logs {Item.NegativeCounter}",
+            (true, false) => $"Positive logs {Item.Counter}",
+            (false, true) => $"Negative logs {Item.NegativeCounter}",
             _ => "Counters"
         };
     }
@@ -176,7 +185,7 @@ public partial class BoardItemCard
         return section switch
         {
             BoardSection.Todo => item.TodoDueDate is not null,
-            BoardSection.Habit => true,
+            BoardSection.Habit => item.TrackPlus || item.TrackMinus || item.ResetPeriod != HabitResetPeriod.Daily,
             BoardSection.Daily => OverdueSince is not null,
             _ => false
         };
@@ -207,9 +216,20 @@ public partial class BoardItemCard
 
     private string GetTitleAriaLabel()
     {
-        if (Section == BoardSection.Habit && (Item.TrackPlus || Item.TrackMinus))
+        if (Section == BoardSection.Habit)
         {
-            return $"Open details for {Item.Title}. Press plus to log positive. Press minus to log negative.";
+            if (Item.TrackPlus && Item.TrackMinus)
+            {
+                return $"Open details for {Item.Title}. Press plus to log positive. Press minus to log negative.";
+            }
+            if (Item.TrackPlus)
+            {
+                return $"Open details for {Item.Title}. Press plus to log positive.";
+            }
+            if (Item.TrackMinus)
+            {
+                return $"Open details for {Item.Title}. Press minus to log negative.";
+            }
         }
 
         return $"Open details for {Item.Title}";
@@ -217,11 +237,38 @@ public partial class BoardItemCard
 
     private string GetTitleHint()
     {
-        if (Section == BoardSection.Habit && (Item.TrackPlus || Item.TrackMinus))
+        if (Section == BoardSection.Habit)
         {
-            return "Open details. Shortcut: + logs positive, - logs negative.";
+            if (Item.TrackPlus && Item.TrackMinus)
+            {
+                return "Open details. Shortcuts: + logs positive and - logs negative.";
+            }
+            if (Item.TrackPlus)
+            {
+                return "Open details. Shortcut: + logs positive.";
+            }
+            if (Item.TrackMinus)
+            {
+                return "Open details. Shortcut: - logs negative.";
+            }
         }
 
         return "Open details";
+    }
+
+    private string? GetTitleKeyShortcuts()
+    {
+        if (Section != BoardSection.Habit)
+        {
+            return null;
+        }
+
+        return (Item.TrackPlus, Item.TrackMinus) switch
+        {
+            (true, true) => "+ -",
+            (true, false) => "+",
+            (false, true) => "-",
+            _ => null
+        };
     }
 }

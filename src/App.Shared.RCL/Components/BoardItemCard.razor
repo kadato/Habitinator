@@ -55,37 +55,29 @@
         </div>
     }
     <div class="board-card__head">
-        <button type="button" class="board-card__title" @onclick="OnOpenEditor" @onkeydown="OnTitleKeyDown" aria-label="@GetTitleAriaLabel()" title="@GetTitleHint()">
+        <button type="button" class="board-card__title" @onclick="OnOpenEditor" @onkeydown="OnTitleKeyDown" aria-label="@GetTitleAriaLabel()" title="@GetTitleHint()" aria-keyshortcuts="@GetTitleKeyShortcuts()">
             <span class="board-card__title-text">@Item.Title</span>
+            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="board-card__title-chevron" aria-hidden="true" />
         </button>
         <div class="board-card__head-actions">
-            @if (Section == BoardSection.Daily)
+            @if (Section == BoardSection.Daily && Item.Counter > 0)
             {
-                @if (Item.Counter > 0)
-                {
-                    <div class="board-streak board-streak--active" title="Daily streak: @Item.Counter days" role="img" aria-label="@($"Daily streak {Item.Counter} days")">
-                        <MudIcon Icon="@Icons.Material.Filled.Whatshot" Size="Size.Small" Class="streak-flame-icon" aria-hidden="true" />
-                        <span class="board-streak__text">@Item.Counter</span>
-                    </div>
-                }
-                else
-                {
-                    <div class="board-streak board-streak--inactive" title="No current streak" role="img" aria-label="No current streak">
-                        <MudIcon Icon="@Icons.Material.Outlined.Whatshot" Size="Size.Small" Class="streak-flame-icon-inactive" aria-hidden="true" />
-                        <span class="board-streak__text">0</span>
-                    </div>
-                }
+                <div class="board-streak board-streak--active" title="Daily streak: @Item.Counter days" role="img" aria-label="@($"Daily streak {Item.Counter} days")">
+                    <MudIcon Icon="@Icons.Material.Filled.Whatshot" Size="Size.Small" Class="streak-flame-icon" aria-hidden="true" />
+                    <span class="board-streak__text">@Item.Counter</span>
+                </div>
             }
             <MudMenu AnchorOrigin="Origin.BottomRight"
                      TransformOrigin="Origin.TopRight"
-                     Dense="true">
+                     Dense="true"
+                     aria-label="@($"Options for {Item.Title}")">
                 <ActivatorContent Context="itemMenu">
                     <span @onclick:stopPropagation="true">
                         <MudIconButton Icon="@Icons.Material.Filled.MoreVert"
                                        Size="Size.Small"
                                        Class="ma-0 board-card__delete"
-                                       title="Options"
-                                       aria-label="Options"
+                                       title="@($"Options for {Item.Title}")"
+                                       aria-label="@($"Options for {Item.Title}")"
                                        OnClick="@(e => itemMenu.ToggleAsync(e))"/>
                     </span>
                 </ActivatorContent>
@@ -139,13 +131,22 @@
             @if (TagsList.Count > 0)
             {
                 <div class="board-card__tags">
-                    @if (TagsList.Count <= 3)
+                    @if (_tagsExpanded || TagsList.Count <= 3)
                     {
                         @foreach (var tag in TagsList)
                         {
                             <span @key="tag" class="board-card__tag-badge" style="@TagBadgeStyle(tag)" title="@tag">
                                 <span class="board-card__tag-badge__text">@tag</span>
                             </span>
+                        }
+                        @if (_tagsExpanded && TagsList.Count > 3)
+                        {
+                            <button type="button"
+                                    class="board-card__tag-badge board-card__tag-badge--more"
+                                    aria-expanded="true"
+                                    aria-label="@($"Show less, {TagsList.Count} tags")"
+                                    @onclick="ToggleTagsExpand"
+                                    @onclick:stopPropagation="true">Show less</button>
                         }
                     }
                     else
@@ -156,7 +157,13 @@
                                 <span class="board-card__tag-badge__text">@tag</span>
                             </span>
                         }
-                        <span class="board-card__tag-badge board-card__tag-badge--more" title='@(string.Join(", ", TagsList.Skip(2)))' tabindex="0" role="img" aria-label="@($"More tags: {string.Join(", ", TagsList.Skip(2))}")">+@(TagsList.Count - 2)</span>
+                        <button type="button"
+                                class="board-card__tag-badge board-card__tag-badge--more"
+                                aria-expanded="false"
+                                aria-label="@($"Show all {TagsList.Count} tags, +{TagsList.Count - 2} more: {string.Join(", ", TagsList)}")"
+                                title="@(string.Join(", ", TagsList.Skip(2)))"
+                                @onclick="ToggleTagsExpand"
+                                @onclick:stopPropagation="true">+@(TagsList.Count - 2)</button>
                     }
                 </div>
             }
@@ -202,10 +209,9 @@
             <div class="board-card__foot-left">
                 @if (Section == BoardSection.Todo && Item.TodoDueDate is { } due)
                 {
-                    <a href="@($"/upcoming?date={due:yyyy-MM-dd}")" class="@TodoDueCssClass(due)" title="Open this date in Upcoming">
+                    <a href="@($"/upcoming?date={due:yyyy-MM-dd}")" class="@TodoDueCssClass(due)" title="Open this date in Upcoming. The Back button returns here." aria-label="@($"Open {DateFormatService.Format(due)}, {TodoDueRelativeLabel(due)}, in Upcoming. The Back button returns here.")">
                         <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" aria-hidden="true" />
                         <span class="board-todo-due__date">@DateFormatService.Format(due)</span>
-                        <span class="board-todo-due__sep" aria-hidden="true">,</span>
                         <span class="board-todo-due__relative">@TodoDueRelativeLabel(due)</span>
                     </a>
                 }

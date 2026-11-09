@@ -115,7 +115,7 @@ jobs:
 
       - name: Publish test results to GitHub Checks
         if: always()
-        uses: EnricoMi/publish-unit-test-result-action@7622c5bf3d112a72ab4fa3951c2aa5723d8ab92d
+        uses: EnricoMi/publish-unit-test-result-action@da5b7be67623cd59bbbd1a0ce4f022050a55605f
         with:
           check_name: Test results by suite
           files: TestResults/**/*.trx

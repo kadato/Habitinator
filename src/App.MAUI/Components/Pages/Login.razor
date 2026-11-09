@@ -20,13 +20,13 @@
 
         <div class="mb-3">
             <label for="email">Email</label>
-            <input class="form-control" id="email" type="email" autocomplete="email"
+            <input class="form-control" id="email" type="email" autocomplete="email" inputmode="email" enterkeyhint="next"
                    value="@_email" @oninput="OnEmailInput" @attributes="FormControlAttrs"
                    aria-invalid="@(_hasError ? "true" : null)" aria-describedby="@(_hasError ? "auth-error" : null)"/>
         </div>
         <div class="mb-3">
             <label for="password">Password</label>
-            <input class="form-control" id="password" type="password" autocomplete="current-password"
+            <input class="form-control" id="password" type="password" autocomplete="current-password" enterkeyhint="go"
                    value="@_password" @oninput="OnPasswordInput" @attributes="FormControlAttrs"
                    aria-invalid="@(_hasError ? "true" : null)" aria-describedby="@(_hasError ? "auth-error" : null)"/>
         </div>

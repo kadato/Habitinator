@@ -2,13 +2,13 @@
 
 <div class="mb-3">
     <label for="email">Email</label>
-    <input class="form-control" id="email" name="Email" type="email" required autocomplete="email" value=""
+    <input class="form-control" id="email" name="Email" type="email" required autocomplete="email" inputmode="email" enterkeyhint="next" value=""
            aria-invalid="@(HasError ? "true" : null)" aria-describedby="@(HasError ? ErrorId : null)"/>
 </div>
 <div class="mb-3">
     <label for="password">Password</label>
     <input class="form-control" id="password" name="Password" type="password" required
-           autocomplete="current-password" value=""
+           autocomplete="current-password" enterkeyhint="go" value=""
            aria-invalid="@(HasError ? "true" : null)" aria-describedby="@(HasError ? ErrorId : null)"/>
 </div>
 <div class="form-check mb-3">

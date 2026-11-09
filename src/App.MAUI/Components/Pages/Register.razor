@@ -23,13 +23,13 @@
 
         <div class="mb-3">
             <label for="reg-email">Email</label>
-            <input class="form-control" id="reg-email" type="email" autocomplete="email"
+            <input class="form-control" id="reg-email" type="email" autocomplete="email" inputmode="email" enterkeyhint="next"
                    value="@_email" @oninput="OnEmailInput" @attributes="FormControlAttrs"
                    aria-invalid="@(_hasError ? "true" : null)" aria-describedby="@(_hasError ? "auth-error" : null)"/>
         </div>
         <div class="mb-3">
             <label for="reg-password">Password</label>
-            <input class="form-control" id="reg-password" type="password" minlength="8" autocomplete="new-password"
+            <input class="form-control" id="reg-password" type="password" minlength="8" autocomplete="new-password" enterkeyhint="go"
                    title="At least 8 characters."
                    value="@_password" @oninput="OnPasswordInput" @attributes="FormControlAttrs"
                    aria-invalid="@(_hasError ? "true" : null)" aria-describedby="@(_hasError ? "auth-error" : null)"/>

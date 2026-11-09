@@ -77,10 +77,11 @@
     background: transparent;
     border: none;
     outline: none;
-    font-size: 0.9375rem;
+    font-size: 16px;
     font-family: inherit;
     color: var(--mud-palette-text-primary);
     caret-color: var(--mud-palette-primary);
+    min-width: 0;
 }
 
 .cmd-palette-input::placeholder {
@@ -329,5 +330,48 @@
     to {
         opacity: 1;
         transform: scale(1);
+    }
+}
+
+/* Phones: the palette docks near the top. The notch stays clear of the palette. Above the keyboard, the palette stays visible. When the keyboard opens, the footer hides. */
+@media (max-width: 599.98px) {
+    .cmd-palette-backdrop {
+        padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+        padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
+        padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
+        align-items: flex-start;
+    }
+
+    .cmd-palette-dialog {
+        width: 100%;
+        max-height: calc(92dvh - env(safe-area-inset-bottom, 0px) - var(--kb-height, 0px));
+    }
+
+    .cmd-palette-header {
+        min-height: 52px;
+    }
+
+    .cmd-palette-close-btn {
+        min-width: 44px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .cmd-palette-results {
+        max-height: min(50dvh, 360px);
+    }
+
+    .cmd-palette-item {
+        min-height: 48px;
+    }
+
+    .cmd-palette-footer {
+        padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+    }
+
+    html.kb-open .cmd-palette-footer {
+        display: none;
     }
 }

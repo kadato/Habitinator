@@ -301,6 +301,9 @@
     position: sticky;
     bottom: 0;
     z-index: 20;
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+    padding-bottom: calc(max(1rem, env(safe-area-inset-bottom, 0px)) + var(--kb-height, 0px));
 }
 
 .ai-input-row {
@@ -333,7 +336,7 @@
 
 .ai-text-field ::deep .mud-input-slot {
     padding: 12px 14px !important;
-    font-size: 0.875rem;
+    font-size: 16px;
     line-height: 1.4;
 }
 
@@ -684,6 +687,17 @@
     right: 0 !important;
     height: 100dvh !important;
     overflow-x: clip !important;
+    padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Keyboard open: the drawer body scrolls above the keyboard. The footer stays above the keyboard. Most browsers shrink dvh. --kb-height covers the rest. */
+html.kb-open .ai-assistant-drawer {
+    height: calc(100dvh - var(--kb-height, 0px)) !important;
+}
+
+.ai-drawer-body {
+    scroll-padding-bottom: calc(var(--kb-height, 0px) + 5rem);
+    overscroll-behavior: contain;
 }
 
 /* Closed overlay panels stay translated off-screen. Hide them so they never
@@ -696,14 +710,14 @@
 /* Touch pointers get full-size header and prompt targets. */
 @media (pointer: coarse) {
     .ai-header-btn {
-        width: 40px !important;
-        height: 40px !important;
-        min-width: 40px !important;
-        min-height: 40px !important;
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
     }
 
     .ai-model-pill {
-        min-height: 40px !important;
+        min-height: 44px !important;
     }
 
     .ai-model-pill__name {

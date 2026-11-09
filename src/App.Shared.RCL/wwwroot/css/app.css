@@ -2300,3 +2300,35 @@ input[type="number"].mud-input-slot {
     font-size: 0.8rem !important;
     line-height: 1.4 !important;
 }
+
+/* On-screen keyboard: keep scroll areas and sticky footers clear of the keyboard. keyboardViewport.js sets --kb-height from visualViewport. Most browsers shrink dvh. --kb-height covers sticky footers and older WebViews. */
+.ai-drawer-body,
+.hab-modal__body,
+.edit-daily-body,
+.cmd-palette-results {
+    scroll-padding-bottom: calc(var(--kb-height, 0px) + 5rem);
+}
+
+.ai-drawer-footer,
+.hab-modal__footer,
+.cmd-palette-footer {
+    padding-bottom: calc(max(0.85rem, env(safe-area-inset-bottom, 0px)) + var(--kb-height, 0px)) !important;
+}
+
+/* iOS Safari zooms any field under 16px on focus. This rule sets the rest of the app inputs to 16px. The sheet layout keeps its size on phones. */
+.cmd-palette-input,
+.ai-text-field input.mud-input-slot,
+.board-search-field input.mud-input-slot,
+.board-add-field input.mud-input-slot {
+    font-size: 16px !important;
+}
+
+@media (max-width: 959.98px) {
+    .cmd-palette-input,
+    .ai-text-field input.mud-input-slot,
+    .ai-text-field textarea.mud-input-slot,
+    .board-search-field input.mud-input-slot,
+    .search-container input {
+        font-size: 16px !important;
+    }
+}

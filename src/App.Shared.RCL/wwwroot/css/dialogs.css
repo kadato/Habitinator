@@ -1150,6 +1150,18 @@
     }
 }
 
+/* Keyboard open: bottom sheets stay above the keyboard. The keyboard no longer covers the focused field. keyboardViewport.js sets --kb-height. */
+html.kb-open .hab-modal,
+html.kb-open .edit-daily-shell,
+html.kb-open .daily-yesterday-shell {
+    max-height: calc(92dvh - env(safe-area-inset-bottom, 0px) - var(--kb-height, 0px)) !important;
+}
+
+html.kb-open .hab-modal__body,
+html.kb-open .edit-daily-body {
+    scroll-padding-bottom: calc(var(--kb-height, 0px) + 6rem);
+}
+
 /* Phones: editors rise from the bottom as sheets, inside thumb reach,
    with the footer clear of the home indicator. */
 @media (max-width: 599.98px) {

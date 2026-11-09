@@ -89,4 +89,7 @@
     --hab-modal-wide-max-w: 34rem;
     --hab-modal-radius: 16px;
     --hab-modal-header-h: 56px;
+
+    /* keyboardViewport.js sets the on-screen keyboard height at runtime. */
+    --kb-height: 0px;
 }

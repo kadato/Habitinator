@@ -27,7 +27,13 @@
                 }
                 <MudIcon Icon="@Icons.Material.Filled.Search" Class="cmd-palette-search-icon" aria-hidden="true" />
                 <input class="cmd-palette-input"
-                       type="text"
+                       type="search"
+                       inputmode="search"
+                       enterkeyhint="search"
+                       autocapitalize="off"
+                       autocomplete="off"
+                       autocorrect="off"
+                       spellcheck="false"
                        placeholder="@GetSearchPlaceholder()"
                        value="@_query"
                        @oninput="OnQueryInput"

@@ -432,7 +432,11 @@
                               Immediate="true"
                               OnKeyDown="HandleKeyDown"
                               Disabled="BoardSync.IsOffline || _isSending || _isStreaming"
-                              Class="ai-text-field flex-grow-1" />
+                              Class="ai-text-field flex-grow-1"
+                              InputMode="@InputMode.text"
+                              enterkeyhint="send"
+                              autocomplete="off"
+                              autocapitalize="sentences" />
                 <MudButton Variant="Variant.Filled"
                            Color="@(_isStreaming ? Color.Error : Color.Primary)"
                            Class="ai-send-btn"

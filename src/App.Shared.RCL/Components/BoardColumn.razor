@@ -144,7 +144,11 @@
                           OnAdornmentClick="AddFromDraftAsync"
                           Error="@_draftError"
                           ErrorText="Add a title first."
-                          Immediate="true"/>
+                          Immediate="true"
+                          InputMode="@InputMode.text"
+                          enterkeyhint="done"
+                          autocomplete="off"
+                          autocapitalize="sentences"/>
             @if (_duplicateExistingTitle is not null)
             {
                 <div class="board-duplicate-warning mt-1">

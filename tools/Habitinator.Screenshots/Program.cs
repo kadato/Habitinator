@@ -56,13 +56,19 @@ foreach (var (themeName, scheme) in new[] { ("light", ColorScheme.Light), ("dark
     await LoginAsGuestAsync(page, baseUrl);
 
     // Board + edit dialogs
-    await CaptureBoardScreensAsync(page, themeName);
+    await CaptureBoardScreensAsync(page, baseUrl, themeName);
+
+    // AI assistant drawer
+    await CaptureAiAssistantAsync(page, baseUrl, themeName);
 
     // Running focus timer
     await CaptureTimerAsync(page, themeName);
 
     // Statistics + day detail dialog
     await CaptureStatisticsScreensAsync(page, baseUrl, themeName);
+
+    // Upcoming calendar
+    await CaptureUpcomingAsync(page, baseUrl, themeName);
 
     // Settings
     await CaptureSettingsAsync(page, baseUrl, themeName);
@@ -110,10 +116,13 @@ async Task LoginAsGuestAsync(IPage page, string baseUrl)
     await Task.Delay(800);
 }
 
-async Task CaptureBoardScreensAsync(IPage page, string theme)
+async Task CaptureBoardScreensAsync(IPage page, string baseUrl, string theme)
 {
     // Board. Mobile tab layout, Habits tab is default.
-    await page.Locator(".board-section-switcher").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
+    await GotoAsync(page, baseUrl, "/");
+    await page.Locator(".board-shell").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 60_000 });
+    await DismissCatchUpDialogIfPresentAsync(page);
+    await page.Locator(".board-section-switcher").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 60_000 });
     await Task.Delay(500);
     await CaptureAsync(page, "board", theme);
 
@@ -133,6 +142,62 @@ async Task CaptureBoardScreensAsync(IPage page, string theme)
     var dailyDialog = await OpenEditDialogAsync(page, "daily");
     await CaptureAsync(page, "edit-daily", theme);
     await CloseDialogAsync(dailyDialog);
+}
+
+async Task CaptureAiAssistantAsync(IPage page, string baseUrl, string theme)
+{
+    // The drawer opens from the board. Make sure we are back on the board root.
+    await GotoAsync(page, baseUrl, "/");
+    await page.Locator(".board-shell").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 60_000 });
+    await DismissCatchUpDialogIfPresentAsync(page);
+    await Task.Delay(400);
+
+    // Send a real message through the drawer and wait for the live answer.
+    // The demo guest has no API key saved, so the server falls back to the
+    // repo .env OPENCODE_API_KEY for these screenshot runs.
+    var aiButton = page.GetByRole(AriaRole.Button, new() { Name = "AI assistant" });
+    // The board reloads its data after the Goto above, so the AI button wait uses the same 60-second budget as the board shell wait.
+    await aiButton.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 60_000 });
+    await aiButton.ClickAsync();
+    await page.Locator("#ai-messages-scroll-area").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+    await Task.Delay(500);
+
+    var prompt = page.GetByPlaceholder("Ask AI...");
+    await prompt.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+    await prompt.FillAsync("What should I focus on today?");
+    await page.GetByRole(AriaRole.Button, new() { Name = "Send message" }).ClickAsync();
+
+    // The user bubble proves the send started. The button returns to
+    // "Send message" once streaming finishes.
+    await page.Locator(".ai-message--user", new() { HasText = "What should I focus on today?" })
+        .WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
+    await page.GetByRole(AriaRole.Button, new() { Name = "Send message" })
+        .WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 180_000 });
+
+    var lastAnswer = page.Locator(".ai-message--assistant").Last.Locator(".ai-rendered-markdown");
+    await lastAnswer.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+    var answerText = (await lastAnswer.InnerTextAsync())?.Trim() ?? string.Empty;
+    if (answerText.Length < 20 || answerText.StartsWith("⚠️", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("The AI answer did not arrive. Refusing to screenshot an empty chat.");
+    }
+
+    // Scroll the user bubble to the top of the scroll area. The capture then shows the question and the start of the answer.
+    await page.EvaluateAsync("document.querySelector('#ai-messages-scroll-area .ai-message--user')?.scrollIntoView({ block: 'start' })");
+    await Task.Delay(600);
+    await CaptureAsync(page, "ai-assistant", theme);
+
+    var closeButton = page.GetByRole(AriaRole.Button, new() { Name = "Close assistant" });
+    if (await closeButton.CountAsync() > 0)
+    {
+        await closeButton.First.ClickAsync();
+        await Task.Delay(400);
+    }
+    else
+    {
+        await page.Keyboard.PressAsync("Escape");
+        await Task.Delay(400);
+    }
 }
 
 async Task CaptureTimerAsync(IPage page, string theme)
@@ -155,24 +220,24 @@ async Task CaptureTimerAsync(IPage page, string theme)
     await Task.Delay(500);
 
     // Start the stopwatch and let it tick for a couple of seconds
-    var startBtn = page.Locator(".timer-icon-btn--start:not([disabled])");
-    await startBtn.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 10_000 });
-    await startBtn.ClickAsync();
+    var startBtn = page.Locator("button[aria-label=\"Start timer\"]:not([disabled]), button[aria-label=\"Resume timer\"]:not([disabled])");
+    await startBtn.First.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+    await startBtn.First.ClickAsync();
     await Task.Delay(3000);
 
     await CaptureAsync(page, "timer", theme);
 
     // Pause, then reset so the next theme starts clean
-    var pauseBtn = page.Locator(".timer-icon-btn--pause:not([disabled])");
+    var pauseBtn = page.Locator("button[aria-label=\"Pause timer\"]:not([disabled])");
     if (await pauseBtn.CountAsync() > 0)
     {
-        await pauseBtn.ClickAsync();
+        await pauseBtn.First.ClickAsync();
         await Task.Delay(500);
     }
     var resetBtn = page.Locator("button[aria-label=\"Reset timer\"]:not([disabled])");
     if (await resetBtn.CountAsync() > 0)
     {
-        await resetBtn.ClickAsync();
+        await resetBtn.First.ClickAsync();
         await Task.Delay(300);
     }
 }
@@ -191,6 +256,27 @@ async Task CaptureStatisticsScreensAsync(IPage page, string baseUrl, string them
     await CaptureAsync(page, "activity-day-detail", theme);
     await detailDialog.GetByRole(AriaRole.Button, new() { Name = "Close" }).ClickAsync();
     await detailDialog.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 15_000 });
+}
+
+async Task CaptureUpcomingAsync(IPage page, string baseUrl, string theme)
+{
+    await GotoAsync(page, baseUrl, "/upcoming");
+    await page.Locator(".upcoming-panel").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
+    // .cal-body only renders after data loads. The skeleton also uses .cal-top, so it is not a load marker.
+    // The server prerenders one state, and the WASM runtime briefly swaps back to the
+    // skeleton on takeover. Wait until the loaded DOM stays put, then capture.
+    const string loadedExpr = "() => document.querySelectorAll('.cal-body').length > 0 && document.querySelectorAll('.cal-skel-grid').length === 0";
+    for (var attempt = 0; attempt < 3; attempt++)
+    {
+        await page.WaitForFunctionAsync(loadedExpr, null, new() { Timeout = 30_000 });
+        await Task.Delay(2000);
+        if (await page.EvaluateAsync<bool>(loadedExpr))
+        {
+            break;
+        }
+    }
+    await Task.Delay(800);
+    await CaptureAsync(page, "upcoming", theme);
 }
 
 async Task CaptureSettingsAsync(IPage page, string baseUrl, string theme)
@@ -214,14 +300,17 @@ async Task<ILocator> OpenEditDialogAsync(IPage page, string section)
 
 static async Task CloseDialogAsync(ILocator dialog)
 {
-    await dialog.Locator(".edit-daily-header__close").ClickAsync();
+    var close = dialog.Locator(".hab-modal__close, .edit-daily-header__close");
+    await close.First.ClickAsync();
     await dialog.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 15_000 });
 }
 
 static async Task GotoAsync(IPage page, string baseUrl, string relativeUrl)
 {
     WriteLine($"Navigating to: {relativeUrl}");
-    await page.GotoAsync($"{baseUrl}{relativeUrl}", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+    // The board holds a SignalR socket open, so NetworkIdle never settles.
+    // The Load event fires first, and the selector waits after every navigation prove the page loaded.
+    await page.GotoAsync($"{baseUrl}{relativeUrl}", new PageGotoOptions { WaitUntil = WaitUntilState.Load });
 }
 
 async Task CaptureAsync(IPage page, string name, string theme)
@@ -264,7 +353,7 @@ static async Task DismissCatchUpDialogIfPresentAsync(IPage page)
         return;
     }
 
-    await dialog.Locator(".daily-yesterday-header__close-btn").ClickAsync(new() { Timeout = 10_000 });
+    await dialog.Locator(".hab-modal__close, .daily-yesterday-header__close-btn").First.ClickAsync(new() { Timeout = 10_000 });
     await dialog.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 15_000 });
 }
 

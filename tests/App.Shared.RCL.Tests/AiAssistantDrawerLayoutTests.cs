@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using App.Shared.RCL.Components;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
@@ -98,4 +100,56 @@ public sealed class AiAssistantDrawerLayoutTests : IAsyncDisposable
         cut.FindAll(".ai-message-bubble .ai-message-actions").Should().BeEmpty(
             "action bars live below the bubble, never over tiny message text");
     }
+
+    [Fact]
+    public async Task Boot_Restore_Replaces_Prerender_Greeting_With_Stored_History()
+    {
+        // Server prerendering has no local storage, so the drawer boots with
+        // the greeting. Once the interactive runtime answers, stored threads
+        // load and replace the greeting. The newest thread becomes active.
+        // The test throws from storage to simulate prerendering with no browser runtime.
+        var getItem = _ctx.JSInterop.Setup<string?>("localStorage.getItem", _ => true);
+        getItem.SetException(new InvalidOperationException("no browser runtime during prerender"));
+        var cut = _ctx.Render<AiAssistantDrawer>();
+        await cut.WaitForAssertionAsync(() => cut.FindAll(".ai-message--assistant").Should().HaveCount(1),
+            TimeSpan.FromSeconds(5));
+
+        // From here on storage answers. The interactive runtime takes over.
+        getItem.SetResult(StoredJson(
+            ("old-thread", "Old", new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), "old question"),
+            ("new-thread", "New", new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc), "newer question")));
+        cut.Render();
+
+        await cut.WaitForAssertionAsync(() =>
+        {
+            cut.FindAll(".ai-message--user").Should().HaveCount(1);
+            cut.Find(".ai-message--user").TextContent.Should().Contain("newer question");
+        }, TimeSpan.FromSeconds(5));
+        cut.Markup.Should().NotContain("Hi! I can help plan", "the prerender greeting is replaced, not kept");
+        cut.Markup.Should().NotContain("old question", "the newest stored thread becomes active");
+
+        cut.Render();
+        await cut.WaitForAssertionAsync(() => cut.FindAll(".ai-message--user").Should().HaveCount(1),
+            TimeSpan.FromSeconds(5));
+    }
+
+    private static string StoredJson(params (string Id, string Title, DateTime UpdatedAt, string Question)[] threads) =>
+        JsonSerializer.Serialize(threads.Select(t => new
+        {
+            t.Id,
+            t.Title,
+            t.UpdatedAt,
+            Messages = new[]
+            {
+                new
+                {
+                    Role = "user",
+                    Content = t.Question,
+                    Model = (string?)null,
+                    ToolCallId = (string?)null,
+                    Name = (string?)null,
+                    ToolCalls = (object?)null
+                }
+            }
+        }));
 }

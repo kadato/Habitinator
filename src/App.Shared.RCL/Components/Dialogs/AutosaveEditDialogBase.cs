@@ -133,7 +133,7 @@ public abstract class AutosaveEditDialogBase<TResult> : ComponentBase, IAsyncDis
 
     protected virtual async Task OnSaveErrorAsync(Exception exception)
     {
-        await Notifier.NotifyAsync("Could not save changes. Check your connection and try again.", Severity.Warning, CancellationToken.None);
+        await Notifier.NotifyAsync("Couldn't save. Try again.", Severity.Warning, CancellationToken.None);
     }
 
     /// <summary>

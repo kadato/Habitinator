@@ -25,15 +25,17 @@
 }
 else if (BottomBar)
 {
+    @* Guests have no tabs to switch. Render nothing so the welcome and auth
+       pages get the full viewport instead of a lone Board pill. *@
+    @if (Session.IsLoggedIn)
+    {
     <nav class="app-bottom-nav" role="navigation" aria-label="Main navigation">
         @BottomNavItem("/", "", NavLinkMatch.All, Icons.Material.Filled.SpaceDashboard, "Board")
-        @if (Session.IsLoggedIn)
-        {
-            @BottomNavItem("/upcoming", "upcoming", NavLinkMatch.Prefix, Icons.Material.Filled.CalendarMonth, "Upcoming")
-            @BottomNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Stats")
-            @BottomNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Settings, "Settings")
-        }
+        @BottomNavItem("/upcoming", "upcoming", NavLinkMatch.Prefix, Icons.Material.Filled.CalendarMonth, "Upcoming")
+        @BottomNavItem("/stats", "stats", NavLinkMatch.Prefix, Icons.Material.Filled.BarChart, "Stats")
+        @BottomNavItem("/settings", "settings", NavLinkMatch.Prefix, Icons.Material.Filled.Settings, "Settings")
     </nav>
+    }
 }
 else
 {

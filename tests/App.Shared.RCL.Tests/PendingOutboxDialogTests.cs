@@ -66,9 +66,9 @@ public sealed class PendingOutboxDialogTests : IAsyncDisposable
         await provider.WaitForStateAsync(() => provider.Markup.Contains("Drink Water"), TimeSpan.FromSeconds(5));
 
         provider.Markup.Should().Contain("Created \"Drink Water\"");
-        provider.Markup.Should().Contain("Waiting to sync");
+        provider.Markup.Should().Contain("Waiting");
         provider.Markup.Should().Contain("Updated daily \"Morning Jog\"");
-        provider.Markup.Should().Contain("Paused after retries");
+        provider.Markup.Should().Contain("Paused");
         provider.Markup.Should().Contain("Sync all now");
     }
 }

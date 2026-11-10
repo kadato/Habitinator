@@ -70,7 +70,7 @@ public sealed class EditDailyDialogChecklistTests : IAsyncDisposable
 
         provider.Markup.Should().Contain("Subtask one");
         provider.Markup.Should().Contain("Subtask two");
-        provider.Markup.Should().Contain("New checklist item");
+        provider.Markup.Should().Contain("Add step");
     }
 
     [Fact]
@@ -83,8 +83,8 @@ public sealed class EditDailyDialogChecklistTests : IAsyncDisposable
         var parameters = new DialogParameters<EditDailyDialog> { { x => x.Item, item } };
 
         await provider.InvokeAsync(async () => await dialogs.ShowAsync<EditDailyDialog>(string.Empty, parameters));
-        await provider.WaitForStateAsync(() => provider.Markup.Contains("New checklist item"), TimeSpan.FromSeconds(5));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Add step"), TimeSpan.FromSeconds(5));
 
-        provider.Markup.Should().Contain("New checklist item");
+        provider.Markup.Should().Contain("Add step");
     }
 }

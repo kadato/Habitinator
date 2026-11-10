@@ -29,14 +29,14 @@
     }
     @if (Value.Count == 0)
     {
-        <div style="padding:0.7rem 0.85rem; font-size:0.8rem; color:var(--mud-palette-text-secondary); text-align:center;">No steps yet. Add a checklist to break work into pieces.</div>
+        <div style="padding:0.7rem 0.85rem; font-size:0.8rem; color:var(--mud-palette-text-secondary); text-align:center;">No steps yet.</div>
     }
     <button type="button" class="edit-daily-checklist__add" @onclick="AddChecklistLine">
         <svg class="edit-daily-checklist__add-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: block;">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
-        <span class="edit-daily-checklist__add-text">New checklist item</span>
+        <span class="edit-daily-checklist__add-text">Add step</span>
     </button>
 </div>
 

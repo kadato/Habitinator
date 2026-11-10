@@ -153,19 +153,19 @@ public partial class BoardColumn : IAsyncDisposable
     {
         BoardSection.Habit => _habitFilter switch
         {
-            HabitListFilter.Weak => "New habits with fewer than 3 logs.",
-            HabitListFilter.Strong => "Established habits with 3 or more logs.",
+            HabitListFilter.Weak => "Fewer than 3 logs.",
+            HabitListFilter.Strong => "3 or more logs.",
             _ => null
         },
         BoardSection.Daily => _dailyFilter switch
         {
-            DailyListFilter.NotDue => "Dailies for later. Not due today.",
+            DailyListFilter.NotDue => "Not due today.",
             _ => null
         },
         BoardSection.Todo => _todoFilter switch
         {
-            TodoListFilter.Scheduled => "Open to-dos with a due date.",
-            TodoListFilter.Done => "Completed to-dos.",
+            TodoListFilter.Scheduled => "With a due date.",
+            TodoListFilter.Done => "Done.",
             _ => null
         },
         _ => null
@@ -521,9 +521,9 @@ public partial class BoardColumn : IAsyncDisposable
     {
         return Section switch
         {
-            BoardSection.Habit => "Add long-term habits to build or break. Log progress with + or -.",
-            BoardSection.Daily => "Add recurring routines. Check them off when done for the day.",
-            BoardSection.Todo => "Add single tasks. Set deadlines and checklists.",
+            BoardSection.Habit => "Add a habit to begin.",
+            BoardSection.Daily => "Add a daily to begin.",
+            BoardSection.Todo => "Add a to-do to begin.",
             _ => "Add an item above to start."
         };
     }
@@ -532,22 +532,16 @@ public partial class BoardColumn : IAsyncDisposable
     {
         return Section switch
         {
-            BoardSection.Habit => "Habits track long-term goals without a final done state. Use counters to log progress.",
-            BoardSection.Daily => "Dailies repeat on set schedules like daily or weekly. They reset at midnight. Check them off each period to keep your streak.",
-            BoardSection.Todo => "To-Dos are single tasks with due dates, checklists, and notes.",
+            BoardSection.Habit => "Long-term goals. Log with + or -.",
+            BoardSection.Daily => "Repeats on schedule. Check off each period.",
+            BoardSection.Todo => "One-time tasks with due dates.",
             _ => string.Empty
         };
     }
 
-    private string GetFooterText()
+    private static string GetFooterText()
     {
-        return Section switch
-        {
-            BoardSection.Habit => "Press + or - to log.",
-            BoardSection.Daily => "Check off when done today.",
-            BoardSection.Todo => "Drag to reorder on Active.",
-            _ => string.Empty
-        };
+        return string.Empty;
     }
 
     private string GetAccentClass()
@@ -897,7 +891,7 @@ public partial class BoardColumn : IAsyncDisposable
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync("We could not delete done to-dos. Nothing was removed. Check your connection. Try again.", Severity.Error);
+            await Notifier.NotifyAsync("Couldn't delete. Try again.", Severity.Error);
         }
     }
 
@@ -911,7 +905,7 @@ public partial class BoardColumn : IAsyncDisposable
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync($"We could not {action}. We reverted your change. It is safe to retry. Check your connection. Try again.", Severity.Error);
+            await Notifier.NotifyAsync($"Couldn't {action}. Reverted. Try again.", Severity.Error);
             return false;
         }
     }

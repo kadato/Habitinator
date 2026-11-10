@@ -43,9 +43,9 @@
                 {
                     <div class="search-container">
                         <MudTextField @bind-Value="_searchQuery"
-                                      Placeholder="Search archived items..."
-                                      aria-label="Search archived items"
-                                      AdornmentAriaLabel="Search archived items"
+                                      Placeholder="Search archive..."
+                                      aria-label="Search archive"
+                                      AdornmentAriaLabel="Search archive"
                                       Adornment="Adornment.Start"
                                       AdornmentIcon="@Icons.Material.Filled.Search"
                                       Variant="Variant.Outlined"
@@ -75,8 +75,8 @@
                     {
                         <div class="empty-state">
                             <MudIcon Icon="@Icons.Material.Filled.Inbox" Class="empty-icon"  aria-hidden="true" />
-                            <div class="empty-text">No archived items</div>
-                            <div class="empty-subtext">@(string.IsNullOrWhiteSpace(_searchQuery) ? "Nothing archived in this section." : "Try a different search.")</div>
+                            <div class="empty-text">Empty</div>
+                            <div class="empty-subtext">@(string.IsNullOrWhiteSpace(_searchQuery) ? "Nothing here." : "Try another search.")</div>
                         </div>
                     }
                     else
@@ -192,7 +192,7 @@
         }
     }
 
-    /// <summary>Called from touch gestures. Swipe left or right to switch category tabs.</summary>
+    /// <summary>Touch gestures call this method. Swipe left or right switches category tabs.</summary>
     [JSInvokable]
     public Task OnModalSwipeAsync(int direction)
     {
@@ -209,7 +209,7 @@
         return Task.CompletedTask;
     }
 
-    /// <summary>Called from touch gestures. Swipe down on the header closes the dialog.</summary>
+    /// <summary>Touch gestures call this method. Swipe down on the header closes the dialog.</summary>
     [JSInvokable]
     public Task OnModalSwipeDownAsync()
     {

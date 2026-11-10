@@ -118,6 +118,15 @@
     }
 }
 
+/* Small phones may report a fine pointer. Keep the same 44px target. */
+@media (max-width: 599.98px) {
+    .hab-modal__close,
+    .edit-daily-header__close {
+        width: 44px; height: 44px;
+        min-width: 44px; min-height: 44px;
+    }
+}
+
 /* Hero title field -- large, editorial, like card title expanded */
 .hab-modal__title-field,
 .hab-modal__notes,
@@ -310,6 +319,7 @@
     padding: 0.35rem 0.65rem 0.35rem 0.4rem;
     border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 45%, transparent);
     background: var(--mud-palette-surface);
+    min-width: 0;
 }
 .edit-daily-checklist__row:last-of-type { border-bottom: none; }
 .edit-daily-checklist__row:has(.mud-checkbox-checked) { background: color-mix(in srgb, var(--hab-accent-success) 4%, var(--mud-palette-surface)); }
@@ -317,7 +327,10 @@
     background: color-mix(in srgb, var(--mud-palette-primary) 7%, var(--mud-palette-surface));
 }
 .edit-daily-checklist__input .mud-input-outlined-border { border: none !important; }
-.edit-daily-checklist__input .mud-input-root { color: var(--mud-palette-text-primary); }
+.edit-daily-checklist__input { flex: 1 1 auto !important; min-width: 0 !important; }
+.edit-daily-checklist__input .mud-input-control { min-width: 0 !important; }
+.edit-daily-checklist__input .mud-input-root { color: var(--mud-palette-text-primary); min-width: 0 !important; }
+.edit-daily-checklist__input input { min-width: 0 !important; text-overflow: ellipsis !important; }
 .edit-daily-checklist__input .mud-input-root:focus-within,
 .edit-daily-checklist__input input:focus-visible {
     outline: 2px solid var(--mud-palette-primary) !important;

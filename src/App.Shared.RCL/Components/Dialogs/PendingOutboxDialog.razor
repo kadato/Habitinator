@@ -13,7 +13,7 @@
                 <div class="hab-modal__topbar hab-modal__topbar--minimal">
                     <DialogCloseButton OnClose="Close" />
                 </div>
-                <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Pending changes</MudText>
+                <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Pending</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">
                     @if (Pending.Count > 0)
                     {
@@ -35,11 +35,11 @@
                                 <MudText Typo="Typo.body2" Class="font-weight-bold">@FormatOperation(op)</MudText>
                                 @if (op.AttemptCount >= 8)
                                 {
-                                    <MudText Typo="Typo.caption" Color="Color.Warning">Paused after retries</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Warning">Paused</MudText>
                                 }
                                 else
                                 {
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Waiting to sync</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Waiting</MudText>
                                 }
                                 <MudStack Row="true" Spacing="1" Class="mt-1">
                                     <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => DiscardAsync(op.OperationId))">Discard</MudButton>
@@ -54,7 +54,7 @@
                 }
                 @if (Conflicts.Count > 0)
                 {
-                    <MudText Typo="Typo.subtitle2" Class="mt-3 font-weight-bold">Recent merges</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="mt-3 font-weight-bold">Merges</MudText>
                     <ul class="sync-conflict-list">
                         @foreach (var conflict in Conflicts)
                         {

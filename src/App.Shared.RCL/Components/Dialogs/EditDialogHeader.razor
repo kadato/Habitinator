@@ -22,7 +22,6 @@
         {
             <MudText Typo="Typo.subtitle1" Class="font-weight-bold mb-2" Style="letter-spacing:-0.02em;">@TitleText</MudText>
         }
-        <MudText Typo="Typo.caption" Class="edit-daily-label-header">Title</MudText>
         <MudTextField @ref="_titleInput"
                       Value="@_title"
                       ValueChanged="@((string value) => OnTitleValueChanged(value))"
@@ -86,11 +85,11 @@
         }
     }
 
-    /// <summary>Called from touch gestures. Swipe down on the header closes the dialog.</summary>
+    /// <summary>Touch gestures call this method. Swipe down on the header closes the dialog.</summary>
     [JSInvokable]
     public Task OnModalSwipeDownAsync() => OnClose.InvokeAsync();
 
-    /// <summary>Desktop keeps autofocus. Touch devices and MAUI open dialogs unfocused. The keyboard stays down.</summary>
+    /// <summary>Desktop keeps autofocus. Touch devices and MAUI open dialogs unfocused, so the keyboard stays down.</summary>
     private async Task<bool> ShouldAutoFocusAsync()
     {
         try

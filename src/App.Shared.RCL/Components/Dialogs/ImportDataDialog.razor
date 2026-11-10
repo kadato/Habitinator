@@ -9,7 +9,7 @@
         <div class="hab-modal hab-modal--neutral" data-dialog-label="Import data" aria-label="Import data" role="group">
             @if (BoardSync.IsOffline)
             {
-                <MudAlert Severity="Severity.Warning" Dense="true" Class="mx-3 mt-2" role="status">You are offline. The backup stays on this device. It restores on reconnect.</MudAlert>
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mx-3 mt-2" role="status">Offline. Restores on reconnect.</MudAlert>
             }
             <div class="hab-modal__header">
                 <div class="hab-modal__topbar hab-modal__topbar--minimal">
@@ -17,7 +17,7 @@
                 </div>
                 <MudText Typo="Typo.h6" Class="font-weight-bold mb-1">Import data</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
-                    Paste an export file below. Restore replaces every board item and activity event on this account. Preferences in the file replace yours.
+                    Paste a backup. Restore replaces everything.
                 </MudText>
             </div>
             <div class="hab-modal__body">
@@ -26,7 +26,7 @@
                           @bind-Value:after="ClearPreview"
                           Variant="Variant.Outlined"
                           Lines="12"
-                          Placeholder="Paste habitinator-export-....json here"
+                          Placeholder="Paste backup JSON here"
                           aria-label="Export file contents as JSON"
                           Class="export-textarea mb-3"/>
             @if (_error is not null)
@@ -82,7 +82,7 @@
         var json = _json;
         if (string.IsNullOrEmpty(json) || json.Length > 5_000_000)
         {
-            _error = json is { Length: > 5_000_000 } ? "Backup is too large to preview." : "Paste a backup first.";
+            _error = json is { Length: > 5_000_000 } ? "Too large to preview." : "Paste a backup.";
             _parsed = null;
             _preview = null;
             return;
@@ -97,7 +97,7 @@
             }
             catch (System.Text.Json.JsonException)
             {
-                _error = "The text is not valid JSON.";
+                _error = "Not valid JSON.";
                 _parsed = null;
                 _preview = null;
                 return;
@@ -133,8 +133,8 @@
     {
         if (_importing || _parsed is null) return;
         var confirmed = await DialogService.ShowMessageBoxAsync(
-            "Restore this backup?",
-            "This replaces every board item and activity event on your account. This cannot be undone.",
+            "Restore backup?",
+            "Replaces everything. Cannot be undone.",
             "Restore backup",
             null,
             "Cancel");

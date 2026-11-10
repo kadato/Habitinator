@@ -8,11 +8,11 @@ public static partial class FocusDurationInput
 {
     /// <summary>Help copy for the UI tooltip. Plain text, can include line breaks.</summary>
     public const string HelpTooltip =
-        "Optional. When the running timer reaches this length, a \"time's up\" notice runs once. Leave empty for no end alert.\n\n"
-        + "You can use minutes, seconds, and h:mm or h:mm:ss. Examples: 25 (25 min), 1:15 (1 h 15 min), 0:0:30 (30 s), 0:1:5 (1 min 5 s), 90s, 5m30s, 1h1m1s, 1:0:0 (1 h), 0:5:0 (5 min). Max 23:59:59.";
+        "Optional alert when timer reaches this length. Empty = no alert.\n"
+        + "Examples: 25, 25m, 1:15, 1h 30m. Max 23:59:59.";
 
     public const string ParseErrorHint =
-        "Not recognized. Use minutes (25), 1:20 (1 h 20 min), 0:0:45 (h:mm:ss), 90s, 5m30s, 1h1m, or 1h2m3s. Max 23:59:59, or leave empty for no alert.";
+        "Try 25, 25m, 1:15, or 90s. Empty = no alert. Max 23:59:59.";
 
     public static TimeSpan MaxFocusDuration { get; } = new(23, 59, 59);
 

@@ -691,7 +691,7 @@ internal sealed class BoardPaletteCommands(
         }
         catch
         {
-            await _notifier.NotifyAsync("Could not create item.", Severity.Error);
+            await _notifier.NotifyAsync("Couldn't create item.", Severity.Error);
         }
         finally
         {
@@ -749,7 +749,7 @@ internal sealed class BoardPaletteCommands(
         }
         catch
         {
-            await _notifier.NotifyAsync("Could not create item.", Severity.Error);
+            await _notifier.NotifyAsync("Couldn't create item.", Severity.Error);
         }
         finally
         {
@@ -935,7 +935,7 @@ internal sealed class BoardPaletteCommands(
         {
             await _boardData.DeleteItemAsync(section, itemId);
             await _notifyRefresh();
-        }, "Could not delete item.");
+        }, "Couldn't delete item.");
     }
 
     private async Task<bool> TryNotifyAsync(Func<Task> work, string errorMessage)
@@ -989,7 +989,7 @@ internal sealed class BoardPaletteCommands(
                 var itemWord = deleted == 1 ? KwTodoDash : KwTodoDashes;
                 await _notifier.NotifyAsync($"Deleted {deleted} completed {itemWord}.", Severity.Success);
             }
-        }, "Could not delete completed to-dos.");
+        }, "Couldn't delete to-dos.");
     }
 
     public async Task ArchiveCompletedTodosAsync()
@@ -1029,7 +1029,7 @@ internal sealed class BoardPaletteCommands(
                 var itemWord = archived == 1 ? KwTodoDash : KwTodoDashes;
                 await _notifier.NotifyAsync($"Archived {archived} completed {itemWord}.", Severity.Success);
             }
-        }, "Could not archive completed to-dos.");
+        }, "Couldn't archive.");
     }
     private async Task<List<CommandItem>> GetManageItemsSubActionsAsync()
     {

@@ -3,14 +3,14 @@
 
 <MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content">
     <DialogContent>
-        <div class="hab-modal hab-modal--neutral" data-dialog-label="Sync conflicts" aria-label="Sync conflicts" role="group">
+        <div class="hab-modal hab-modal--neutral" data-dialog-label="Conflicts" aria-label="Conflicts" role="group">
             <div class="hab-modal__grabber" aria-hidden="true"></div>
             <div class="hab-modal__header">
                 <div class="hab-modal__topbar hab-modal__topbar--minimal">
                     <DialogCloseButton OnClose="Close" />
                 </div>
-                <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Sync conflicts</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Each row kept one side automatically. Newest first.</MudText>
+                <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Conflicts</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Newest kept.</MudText>
             </div>
             <div class="hab-modal__body">
                 <ul class="sync-conflict-list">

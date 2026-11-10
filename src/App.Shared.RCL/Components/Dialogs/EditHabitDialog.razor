@@ -19,7 +19,6 @@
 
         <div class="hab-modal__section hab-modal__section--plain">
             <span class="hab-modal__section-label">Counters</span>
-            <span class="edit-daily-label-body" style="margin:0 0 0.35rem 0;">Adjust + count</span>
             <div class="counter-adjust">
                 <button type="button" class="counter-adjust__btn counter-adjust__btn--bad" aria-label="Decrease + count" @onclick="DecrementPlusLocal" disabled="@(_counter < 1)">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -29,7 +28,6 @@
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 </button>
             </div>
-            <span class="edit-daily-label-body" style="margin:0.5rem 0 0.35rem 0;">Adjust − count</span>
             <div class="counter-adjust">
                 <button type="button" class="counter-adjust__btn counter-adjust__btn--bad" aria-label="Decrease − count" @onclick="DecrementMinusLocal" disabled="@(_negativeCounter < 1)">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -80,7 +78,7 @@
 
         <div class="hab-advanced @(_advancedOpen ? "hab-advanced--open" : string.Empty)">
             <button type="button" class="hab-advanced__trigger" @onclick="() => _advancedOpen = !_advancedOpen" aria-expanded="@(_advancedOpen ? "true" : "false")">
-                <span>Tracking and reset</span>
+                <span>Tracking</span>
                 <span class="hab-advanced__chevron" aria-hidden="true">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                 </span>
@@ -91,7 +89,7 @@
                     <div class="hab-modal__section">
                         <span class="hab-modal__section-label">
                             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path><path d="M12 8v8"></path></svg>
-                            Track which counters
+                            Counters
                         </span>
                         <div class="habit-track">
                             <button type="button"
@@ -118,18 +116,16 @@
                                 <span class="habit-track__label">Minus</span>
                             </button>
                         </div>
-                        <span style="font-size:0.72rem; color:var(--mud-palette-text-secondary); margin-top:0.1rem;">At least one counter stays on. Counters show on the board card.</span>
                     </div>
 
                     <div class="hab-modal__section hab-modal__section--plain">
-                        <MudText Typo="Typo.caption" Class="edit-daily-label-body" Style="margin-bottom:0.35rem;">Reset counter</MudText>
                         <MudSelect T="HabitResetPeriod"
                                    @bind-Value="_resetPeriod"
                                    @bind-Value:after="() => { _ = SaveNowAsync(); }"
                                    Variant="Variant.Outlined"
                                    Class="hab-modal__field edit-habit-select"
                                    Margin="Margin.Dense"
-                                   aria-label="Reset counter"
+                                   aria-label="Reset"
                                    AnchorOrigin="Origin.BottomLeft"
                                    TransformOrigin="Origin.TopLeft"
                                    Dense="true">

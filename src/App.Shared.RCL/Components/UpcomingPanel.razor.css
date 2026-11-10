@@ -1126,59 +1126,224 @@
     }
 }
 
-/* On phones the day stepper becomes a full-width control. Prev, today, and next share the row instead of huddling top-left. The two tab strips stack full-width with equal buttons instead of two cut-off scrollers. */
+/* On phones the header collapses to a dense toolbar. The stepper stays one
+   row, view and filter stay stacked but dense, and progress becomes
+   slim caption meters. This keeps the agenda head inside the first viewport. */
 @media (max-width: 767.98px) {
-    .cal-top__row {
-        flex-direction: column;
-        align-items: stretch;
+    .cal {
+        gap: 0.75rem;
     }
 
-    /* The desktop 16rem basis is a min-width there. In a column layout it becomes a min-height. That leaves a dead gap under the titles. */
+    .cal-top {
+        gap: 0.4rem;
+    }
+
+    .cal-top__row {
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 0.5rem;
+    }
+
+    /* The desktop 16rem basis is a min-width there. In a row layout it would
+       squeeze the stepper, so the headline hides on phones. Progress bars
+       and the overdue card already carry the same counts. */
     .cal-top__row .cal-titles {
-        flex: 0 0 auto;
+        display: none;
+    }
+
+    .cal-sub {
+        font-size: 0.72rem;
+        margin-top: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .cal-nav {
         width: 100%;
+        flex: 1 1 auto;
+        min-width: 0;
+        gap: 0.4rem;
     }
 
     .cal-nav ::deep .cal-daystep,
     .cal-nav ::deep .cal-navbtn {
         flex: 0 0 auto;
+        width: 2.5rem !important;
+        height: 2.5rem !important;
+        min-height: 0 !important;
     }
 
     .cal-nav ::deep .cal-todaybtn {
         flex: 1 1 auto;
-        min-height: 44px;
+        min-height: 2.5rem !important;
+        height: 2.5rem;
+        padding: 0 0.75rem !important;
+        font-size: 0.83rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .cal-controls {
         flex-direction: column;
         align-items: stretch;
         overflow-x: visible;
+        gap: 0.5rem;
+        padding-bottom: 0;
     }
 
     .cal-controls .cal-seg {
         max-width: none;
         width: 100%;
+        flex: 0 0 auto;
         overflow-x: visible;
+        padding: 2px;
     }
 
     .cal-controls .cal-seg__btn {
         flex: 1 1 0;
+        min-height: 2.25rem;
+        padding: 0.4rem 0.5rem;
+        font-size: 0.78rem;
     }
 
-    /* Card heads wrap instead of squeezing the action off-screen. The agenda
-       head always takes two lines on phones: title and count up top, date
-       and day stepper on a full-width row below. */
+    .cal-progress-row {
+        flex-wrap: nowrap;
+        gap: 0.5rem;
+    }
+
+    .cal-progress {
+        padding: 0.28rem 0.5rem;
+        gap: 0.4rem;
+    }
+
+    .cal-progress__label {
+        font-size: 0.7rem;
+    }
+
+    .cal-progress__pct {
+        font-size: 0.7rem;
+    }
+
+    .cal-progress__track {
+        height: 4px;
+    }
+
+    /* Day view: the strip moves above the agenda on phones so the day can
+       change without scrolling past every row. The agenda day stepper is
+       then a third duplicate, so it hides in Day view only. */
+    .cal-body {
+        gap: 0.75rem;
+    }
+
+    .cal-body--day {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .cal-body--day .cal-grid-card--strip {
+        order: -1;
+        position: sticky;
+        top: 0.5rem;
+        z-index: 5;
+    }
+
+    .cal-body .cal-side {
+        gap: 0.75rem;
+    }
+
+    /* Card heads stay one line on phones. The count pill duplicates the
+       All filter count, so it hides to save the second line. */
     .cal-card__head {
-        gap: var(--space-2);
-        flex-wrap: wrap;
+        gap: 0.5rem;
+        flex-wrap: nowrap;
+        align-items: center;
+        padding: 0.25rem 0 0.5rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .cal-card__icon {
+        width: 2rem;
+        height: 2rem;
+    }
+
+    .cal-card__title {
+        font-size: 0.95rem;
     }
 
     .cal-card--agenda .cal-card__head .cal-agenda__side {
-        flex: 1 1 100%;
-        justify-content: space-between;
+        flex: 0 0 auto;
+        justify-content: flex-end;
+    }
+
+    .cal-pill {
+        display: none;
+    }
+
+    .cal-card--agenda-day .cal-agenda__nav {
+        display: none;
+    }
+
+    ::deep .cal-daystep {
+        width: 2.25rem !important;
+        height: 2.25rem !important;
+    }
+
+    .cal-group {
+        margin: 0.5rem 0 0.15rem;
+    }
+
+    .cal-agenda__actions {
+        padding: 0.4rem 0 0.5rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .cal-quickadd {
+        gap: 0.5rem;
+    }
+
+    .cal-quickadd__input {
+        min-height: 2.5rem;
+        padding: 0.45rem 0.7rem;
+        font-size: 0.85rem;
+    }
+
+    .cal-addbtn {
+        min-height: 2.5rem;
+        padding: 0.45rem 0.8rem;
+        font-size: 0.82rem;
+    }
+
+    .cal-row {
+        padding: 0.55rem 0.5rem;
+        column-gap: 0.55rem;
+    }
+
+    .cal-row__icon {
+        width: 2rem;
+        height: 2rem;
+    }
+
+    .cal-row__titlebtn {
+        min-height: 0;
+        padding: 0.2rem 0;
+        font-size: 0.88rem;
+    }
+
+    .cal-row__meta {
+        font-size: 0.72rem;
+    }
+
+    .cal-row__actions {
+        min-height: 0;
+        gap: 0.1rem;
+    }
+
+    ::deep .cal-iconbtn {
+        width: 2.25rem !important;
+        height: 2.25rem !important;
     }
 }
 
@@ -1188,46 +1353,34 @@
     }
 
     .cal-top__row {
-        gap: var(--space-2);
+        gap: 0.5rem;
     }
 
     /* Meters share one row on phones so the Today card head
        stays in the first viewport. */
     .cal-progress-row {
         flex-wrap: nowrap;
+        gap: 0.5rem;
     }
 
     .cal-progress {
         min-width: 0;
         flex: 1 1 0;
-        padding: 0.3rem 0.5rem;
+        padding: 0.28rem 0.5rem;
     }
 
     .cal-progress__label {
-        font-size: 0.72rem;
+        font-size: 0.7rem;
     }
 
-    .cal-controls {
-        align-items: stretch;
-        width: 100%;
-    }
-
-    .cal-controls .cal-seg {
-        max-width: 100%;
-    }
-
-    /* Week cells stack as full-width cards on phones, so chips carry the
-       signal and numeric dots would only duplicate them. */
-    .cal-grid-card--week .cal-cell__dots {
-        display: none;
-    }
-
+    /* Phone grid cards are dense. Padding and gaps shrink so the
+       calendar reads as a picker, not a second page. */
     ::deep .cal-card {
-        padding: 1rem 1rem 0.75rem;
+        padding: 0.75rem 0.75rem 0.6rem;
     }
 
     .cal-grid-card {
-        padding: var(--space-3);
+        padding: 0.6rem;
     }
 
     .cal-grid,
@@ -1235,22 +1388,102 @@
         gap: 4px;
     }
 
+    /* Day strip: seven equal tappable days. Dots wrap instead of
+       overflowing the selected ring. */
+    .cal-grid-card--strip {
+        padding: 0.5rem;
+    }
+
+    .cal-strip {
+        gap: 4px;
+    }
+
+    .cal-cell--strip {
+        min-height: 3.9rem;
+        padding: 0.45rem 0.2rem 0.4rem;
+    }
+
+    .cal-cell--strip .cal-cell__dow {
+        font-size: 0.62rem;
+    }
+
+    .cal-cell--strip .cal-cell__num {
+        min-width: 1.5rem;
+        height: 1.5rem;
+        font-size: 0.85rem;
+    }
+
+    .cal-cell--strip .cal-cell__dots {
+        gap: 2px;
+        min-height: 1rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 2px;
+    }
+
+    .cal-dot {
+        min-width: 1.05rem;
+        height: 1rem;
+        padding: 0 0.25rem;
+        font-size: 0.62rem;
+    }
+
+    /* Week on phones is a compact day picker. The agenda below already
+       shows titles, so cells show counts only instead of five chips. */
+    .cal-week-grid {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .cal-cell--week {
+        min-height: 0;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 0.6rem;
+        gap: 0.5rem;
+    }
+
+    .cal-cell--week .cal-cell__top {
+        justify-content: flex-start;
+        gap: 0.5rem;
+        flex: 0 0 auto;
+    }
+
+    .cal-cell--week .cal-cell__chips,
+    .cal-cell--week .cal-more {
+        display: none;
+    }
+
+    .cal-cell--week .cal-cell__dots {
+        display: flex;
+        margin-top: 0;
+        margin-left: auto;
+    }
+
     .cal-grid-card--month .cal-cell {
-        min-height: 3.6rem;
-        padding: 0.35rem 0.3rem;
+        min-height: 2.9rem;
+        padding: 0.3rem 0.25rem 0.32rem;
         border-radius: var(--radius-md);
+        gap: 0.25rem;
     }
 
     .cal-grid-card--month .cal-cell__chips {
         display: none;
     }
 
+    .cal-grid-card--month .cal-cell__dots {
+        gap: 2px;
+        min-height: 1rem;
+        flex-wrap: wrap;
+    }
+
     .cal-legend {
         display: flex;
-        gap: var(--space-4);
+        gap: 0.75rem;
         align-items: center;
-        padding: 0 0.25rem var(--space-2);
-        font-size: 0.75rem;
+        padding: 0 0.25rem 0.4rem;
+        font-size: 0.7rem;
         font-weight: 650;
         color: var(--mud-palette-text-secondary);
     }
@@ -1262,29 +1495,13 @@
     }
 
     .cal-grid-card--month .cal-cell__num {
-        min-width: 1.6rem;
-        height: 1.6rem;
-        font-size: 0.88rem;
-    }
-
-    .cal-week-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .cal-cell--week {
-        min-height: 0;
-    }
-
-    .cal-cell--week .cal-cell__chips {
-        min-height: 0;
+        min-width: 1.4rem;
+        height: 1.4rem;
+        font-size: 0.8rem;
     }
 
     .cal-month {
         font-size: 1.05rem;
-    }
-
-    .cal-controls {
-        align-items: center;
     }
 }
 
@@ -1320,6 +1537,46 @@
     ::deep .cal-daystep {
         width: 2.75rem !important;
         height: 2.75rem !important;
+    }
+}
+
+/* Touch phones keep the dense toolbar. The coarse defaults above would
+   restore 44px targets and undo the compact layout. */
+@media (max-width: 767.98px) and (pointer: coarse) {
+    .cal-seg__btn {
+        min-height: 2.25rem;
+        padding: 0.4rem 0.5rem;
+    }
+
+    ::deep .cal-iconbtn {
+        width: 2.25rem !important;
+        height: 2.25rem !important;
+    }
+
+    .cal-addbtn {
+        min-height: 2.5rem;
+    }
+
+    ::deep .cal-navbtn {
+        width: 2.5rem !important;
+        height: 2.5rem !important;
+    }
+
+    ::deep .cal-daystep {
+        width: 2.25rem !important;
+        height: 2.25rem !important;
+    }
+
+    .cal-cell--strip {
+        min-height: 3.9rem;
+    }
+
+    .cal-grid-card--month .cal-cell {
+        min-height: 2.9rem;
+    }
+
+    .cal-cell--week {
+        min-height: 0;
     }
 }
 

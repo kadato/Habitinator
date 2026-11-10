@@ -18,14 +18,13 @@
         <div class="hab-modal hab-modal--neutral hab-modal--wide hab-modal--day-details" data-dialog-label="Day details" aria-label="Day details" role="group">
             @if (BoardSync.IsOffline)
             {
-                <MudAlert Severity="Severity.Warning" Dense="true" Class="mx-3 mt-2" role="status">You are offline. Last saved details.</MudAlert>
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mx-3 mt-2" role="status">Offline. Saved details.</MudAlert>
             }
             <div class="hab-modal__grabber" aria-hidden="true"></div>
             <div class="hab-modal__header" @ref="_headerRef">
                 <div class="hab-modal__topbar hab-modal__topbar--minimal">
                     <DialogCloseButton OnClose="CloseDialog" />
                 </div>
-                <MudText Typo="Typo.h6" Class="font-weight-bold">Day details</MudText>
                 <div class="day-stepper" role="group" aria-label="Change day">
                     <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
                                    aria-label="Previous day"
@@ -56,8 +55,8 @@
         {
             <div class="dialog-inline-fallback">
                 <MudIcon Icon="@Icons.Material.Filled.EventBusy" Size="Size.Large" Class="dialog-inline-fallback__icon"  aria-hidden="true" />
-                <MudText Typo="Typo.subtitle2" Class="dialog-inline-fallback__title">Could not load details</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Check your connection and try again.</MudText>
+                <MudText Typo="Typo.subtitle2" Class="dialog-inline-fallback__title">Couldn't load</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Check connection and try again.</MudText>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="ReloadAsync">Retry</MudButton>
             </div>
         }
@@ -74,8 +73,7 @@
             }
             <div class="stats-day-empty">
                 <MudIcon Icon="@Icons.Material.Filled.EventBusy" Size="Size.Large" Class="stats-day-empty__icon"  aria-hidden="true" />
-                <MudText Typo="Typo.subtitle2" Class="font-weight-bold">No activity this day</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Logs for habits, dailies, todos and focus sessions appear here.</MudText>
+                <MudText Typo="Typo.subtitle2" Class="font-weight-bold">Nothing here</MudText>
             </div>
         }
         else if (_detail is not null)
@@ -118,7 +116,7 @@
                                    Disabled="@_completing"
                                    StartIcon="@Icons.Material.Filled.Close"
                                    OnClick="ToggleTodayAsync">
-                            Mark not done
+                            Not done
                         </MudButton>
                     }
                     else
@@ -129,7 +127,7 @@
                                    Disabled="@(_completing || !_canToggleToday)"
                                    StartIcon="@Icons.Material.Filled.Check"
                                    OnClick="ToggleTodayAsync">
-                            Mark done for today
+                            Done today
                         </MudButton>
                     }
                 }
@@ -141,7 +139,7 @@
                                Disabled="@_completing"
                                StartIcon="@Icons.Material.Filled.NextPlan"
                                OnClick="SkipShownDateAsync">
-                        Skip this day
+                        Skip
                     </MudButton>
                     <MudButton Variant="Variant.Filled"
                                Color="Color.Primary"
@@ -149,7 +147,7 @@
                                Disabled="@(_completing || !_canCompleteShownDate)"
                                StartIcon="@Icons.Material.Filled.Check"
                                OnClick="CompleteShownDateAsync">
-                        Mark done for this day
+                        Done
                     </MudButton>
                 }
             </div>
@@ -224,7 +222,7 @@
         }
     }
 
-    /// <summary>Called from touch gestures. Swipe left for next day, right for previous.</summary>
+    /// <summary>Touch gestures call this method. Swipe left shows the next day. Swipe right shows the previous day.</summary>
     [JSInvokable]
     public Task OnModalSwipeAsync(int direction)
     {
@@ -236,7 +234,7 @@
         return StepDayAsync(direction > 0 ? 1 : -1);
     }
 
-    /// <summary>Called from touch gestures. Swipe down on the header closes the dialog.</summary>
+    /// <summary>Touch gestures call this method. Swipe down on the header closes the dialog.</summary>
     [JSInvokable]
     public Task OnModalSwipeDownAsync()
     {

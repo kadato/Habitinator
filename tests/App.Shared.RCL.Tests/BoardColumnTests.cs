@@ -88,6 +88,6 @@ public sealed class BoardColumnTests : IAsyncDisposable
             .Add(p => p.Items, [completedTodo]));
 
         cut.Markup.Should().NotContain("board-row--done");
-        cut.Markup.Should().Contain("The \"Active\" filter hides 1 items.");
+        cut.Markup.Should().Contain("\"Active\" hides 1.");
     }
 }

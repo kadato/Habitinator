@@ -110,10 +110,10 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         };
 
         await provider.InvokeAsync(async () => await dialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters));
-        await provider.WaitForStateAsync(() => provider.Markup.Contains("Mark done for this day"), TimeSpan.FromSeconds(5));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Done"), TimeSpan.FromSeconds(5));
 
         // Act
-        var button = provider.FindAll("button").First(b => b.TextContent.Contains("Mark done for this day"));
+        var button = provider.FindAll("button").First(b => b.TextContent.Contains("Done"));
         await provider.InvokeAsync(() => button.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
 
         // Assert
@@ -149,9 +149,9 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         {
             dialogRef = await dialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters);
         });
-        await provider.WaitForStateAsync(() => provider.Markup.Contains("Mark done for this day"), TimeSpan.FromSeconds(5));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Done"), TimeSpan.FromSeconds(5));
 
-        var button = provider.FindAll("button").First(b => b.TextContent.Contains("Mark done for this day"));
+        var button = provider.FindAll("button").First(b => b.TextContent.Contains("Done"));
         await provider.InvokeAsync(() => button.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
         var close = provider.Find("button.hab-modal__close");
         await provider.InvokeAsync(() => close.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
@@ -227,11 +227,11 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         };
 
         await provider.InvokeAsync(async () => await dialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters));
-        await provider.WaitForStateAsync(() => provider.Markup.Contains("Skip this day"), TimeSpan.FromSeconds(5));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Skip"), TimeSpan.FromSeconds(5));
 
         provider.Markup.Should().Contain("hab-modal__footer--end");
-        provider.Markup.Should().Contain("Skip this day");
-        provider.Markup.Should().Contain("Mark done for this day");
+        provider.Markup.Should().Contain("Skip");
+        provider.Markup.Should().Contain("Done");
     }
 
     [Fact]
@@ -277,9 +277,9 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         };
 
         await provider.InvokeAsync(async () => await dialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters));
-        await provider.WaitForStateAsync(() => provider.Markup.Contains("Mark done for today"), TimeSpan.FromSeconds(5));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Done today"), TimeSpan.FromSeconds(5));
 
-        var button = provider.FindAll("button").First(b => b.TextContent.Contains("Mark done for today"));
+        var button = provider.FindAll("button").First(b => b.TextContent.Contains("Done today"));
         await provider.InvokeAsync(() => button.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
 
         await _boardData.Received(1).ToggleItemAsync(BoardSection.Daily, itemId, Arg.Any<CancellationToken>());
@@ -311,12 +311,12 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         };
 
         await provider.InvokeAsync(async () => await dialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters));
-        await provider.WaitForStateAsync(() => provider.Markup.Contains("Mark done for this day"), TimeSpan.FromSeconds(5));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Done"), TimeSpan.FromSeconds(5));
 
         provider.Markup.Should().Contain("hab-modal__footer--end");
-        var skip = provider.FindAll("button").First(b => b.TextContent.Contains("Skip this day"));
+        var skip = provider.FindAll("button").First(b => b.TextContent.Contains("Skip"));
         skip.HasAttribute("disabled").Should().BeFalse();
-        var mark = provider.FindAll("button").First(b => b.TextContent.Contains("Mark done for this day"));
+        var mark = provider.FindAll("button").First(b => b.TextContent.Contains("Done"));
         mark.HasAttribute("disabled").Should().BeFalse();
         await provider.InvokeAsync(() => mark.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
 
@@ -348,7 +348,7 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         };
 
         await provider.InvokeAsync(async () => await dialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters));
-        await provider.WaitForStateAsync(() => provider.Markup.Contains("No activity this day"), TimeSpan.FromSeconds(5));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Nothing here"), TimeSpan.FromSeconds(5));
 
         provider.Markup.Should().NotContain("Dailies this day");
         provider.Markup.Should().NotContain("Workout");
@@ -380,7 +380,7 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         };
 
         await provider.InvokeAsync(async () => await dialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters));
-        await provider.WaitForStateAsync(() => provider.Markup.Contains("No activity this day"), TimeSpan.FromSeconds(5));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Nothing here"), TimeSpan.FromSeconds(5));
 
         provider.Markup.Should().NotContain("Dailies this day");
         await _boardData.DidNotReceive().SkipDailyForDateAsync(Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>());
@@ -419,12 +419,12 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         };
 
         await provider.InvokeAsync(async () => await dialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters));
-        await provider.WaitForStateAsync(() => provider.Markup.Contains("Skip this day"), TimeSpan.FromSeconds(5));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Skip"), TimeSpan.FromSeconds(5));
 
         provider.Markup.Should().Contain("hab-modal__footer--end");
-        var skip = provider.FindAll("button").First(b => b.TextContent.Contains("Skip this day"));
+        var skip = provider.FindAll("button").First(b => b.TextContent.Contains("Skip"));
         skip.HasAttribute("disabled").Should().BeFalse();
-        var mark = provider.FindAll("button").First(b => b.TextContent.Contains("Mark done for this day"));
+        var mark = provider.FindAll("button").First(b => b.TextContent.Contains("Done"));
         mark.HasAttribute("disabled").Should().BeFalse();
         await provider.InvokeAsync(() => mark.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
 
@@ -458,7 +458,7 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         };
 
         await provider.InvokeAsync(async () => await dialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters));
-        await provider.WaitForStateAsync(() => provider.Markup.Contains("No activity this day"), TimeSpan.FromSeconds(5));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Nothing here"), TimeSpan.FromSeconds(5));
 
         provider.Markup.Should().NotContain("Dailies this day");
         provider.Markup.Should().NotContain("Workout");
@@ -498,9 +498,9 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
 
         provider.Markup.Should().Contain("hab-modal__footer--end");
         provider.Markup.Should().Contain("Monthly");
-        var skip = provider.FindAll("button").First(b => b.TextContent.Contains("Skip this day"));
+        var skip = provider.FindAll("button").First(b => b.TextContent.Contains("Skip"));
         skip.HasAttribute("disabled").Should().BeFalse();
-        var mark = provider.FindAll("button").First(b => b.TextContent.Contains("Mark done for this day"));
+        var mark = provider.FindAll("button").First(b => b.TextContent.Contains("Done"));
         mark.HasAttribute("disabled").Should().BeFalse();
     }
 

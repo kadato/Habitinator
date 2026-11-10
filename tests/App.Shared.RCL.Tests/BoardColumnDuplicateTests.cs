@@ -65,7 +65,7 @@ public sealed class BoardColumnDuplicateTests : IAsyncDisposable
         cut.Find("input").Input("Resume and portfolio polish");
         cut.Find("button[aria-label='Add todo']").Click();
 
-        cut.Markup.Should().Contain("Similar item exists");
+        cut.Markup.Should().Contain("Already exists");
         cut.Markup.Should().Contain("Resume and portfolio polish");
         _boardData.DidNotReceiveWithAnyArgs().CreateItemAsync(
             Arg.Any<BoardSection>(), Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
@@ -86,9 +86,9 @@ public sealed class BoardColumnDuplicateTests : IAsyncDisposable
 
         cut.Find("input").Input("Resume and portfolio polish");
         cut.Find("button[aria-label='Add todo']").Click();
-        cut.Markup.Should().Contain("Similar item exists");
+        cut.Markup.Should().Contain("Already exists");
 
-        cut.FindAll("button").First(b => b.TextContent.Contains("Create anyway", StringComparison.Ordinal))
+        cut.FindAll("button").First(b => b.TextContent.Contains("Add anyway", StringComparison.Ordinal))
             .Click();
 
         cut.WaitForAssertion(() => _boardData.ReceivedWithAnyArgs(1).CreateItemAsync(
@@ -112,6 +112,6 @@ public sealed class BoardColumnDuplicateTests : IAsyncDisposable
 
         cut.WaitForAssertion(() => _boardData.ReceivedWithAnyArgs(1).CreateItemAsync(
             Arg.Any<BoardSection>(), Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>()));
-        cut.Markup.Should().NotContain("Similar item exists");
+        cut.Markup.Should().NotContain("Already exists");
     }
 }

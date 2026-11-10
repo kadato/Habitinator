@@ -44,7 +44,9 @@
 }
 
 .board-filter-btn {
-    flex: 1 1 auto !important;
+    /* flex-basis 0 shares the row evenly. Basis auto sizes from the longest
+       label first, so All / New / Established came out uneven. */
+    flex: 1 1 0% !important;
     width: auto !important;
     min-width: 0 !important;
     height: 32px !important;
@@ -289,5 +291,25 @@
 @supports (container-type: scroll-state) {
     .board-sortable-list {
         container-type: scroll-state;
+    }
+}
+
+/* Phones: reclaim vertical space. Badge, About button, and filter hint
+   are supplementary; the h2 title keeps column identity. */
+@media (max-width: 767.98px) {
+    .board-count-badge {
+        display: none !important;
+    }
+
+    ::deep .board-column-info-btn {
+        display: none !important;
+    }
+
+    .board-title {
+        font-size: 0.8rem !important;
+    }
+
+    .board-filter-hint {
+        display: none !important;
     }
 }

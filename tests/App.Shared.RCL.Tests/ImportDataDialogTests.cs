@@ -61,7 +61,7 @@ public sealed class ImportDataDialogTests : IAsyncDisposable
         await dialog.InvokeAsync(() => dialog.FindComponent<MudTextField<string>>().Instance.ValueChanged.InvokeAsync("not json"));
         await ClickButtonAsync(dialog, "Validate");
 
-        dialog.Markup.Should().Contain("not valid JSON");
+        dialog.Markup.Should().Contain("Not valid JSON");
         await _import.DidNotReceiveWithAnyArgs().ImportAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
@@ -77,7 +77,7 @@ public sealed class ImportDataDialogTests : IAsyncDisposable
         await ClickButtonAsync(dialog, "Validate");
 
         var restoreClick = dialog.InvokeAsync(() => ClickButtonAsync(dialog, "Restore"));
-        await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Restore this backup?"), TimeSpan.FromSeconds(5));
+        await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Restore backup?"), TimeSpan.FromSeconds(5));
         var confirmButton = _dialogProvider.FindAll("button").First(b => b.TextContent.Contains("Restore backup"));
         await confirmButton.ClickAsync();
         await restoreClick;

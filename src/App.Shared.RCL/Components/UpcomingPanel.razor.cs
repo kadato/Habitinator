@@ -150,8 +150,8 @@ public partial class UpcomingPanel : IDisposable
     private int SelectedVisibleCount => SelectedDailies.Count + SelectedTodos.Count;
 
     private string EmptyDayText => (_selectedAllDailies + _selectedAllTodos) > 0
-        ? "Nothing matches this filter for the selected day."
-        : "Nothing scheduled for this day.";
+        ? "No matches for this filter."
+        : "Nothing scheduled.";
 
     private string SelectedLabel => DayLabel(_selected);
 
@@ -375,7 +375,7 @@ public partial class UpcomingPanel : IDisposable
         catch (Exception ex)
         {
             _error = ex.Message;
-            try { await Notifier.NotifyAsync("Could not load upcoming schedule. Please try again.", Severity.Error); } catch (Exception) { /* Best-effort toast. Fallback UI already indicates the failure. */ }
+            try { await Notifier.NotifyAsync("Couldn't load schedule. Try again.", Severity.Error); } catch (Exception) { /* Best-effort toast. Fallback UI already indicates the failure. */ }
         }
         finally
         {
@@ -716,7 +716,7 @@ public partial class UpcomingPanel : IDisposable
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync("Could not update this daily. Check your connection. Try again.", Severity.Error);
+            await Notifier.NotifyAsync("Couldn't update daily. Try again.", Severity.Error);
         }
     }
 
@@ -733,7 +733,7 @@ public partial class UpcomingPanel : IDisposable
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync("Could not update this to-do. Check your connection. Try again.", Severity.Error);
+            await Notifier.NotifyAsync("Couldn't update to-do. Try again.", Severity.Error);
         }
         finally
         {
@@ -756,7 +756,7 @@ public partial class UpcomingPanel : IDisposable
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync("Could not reschedule this to-do. Try again.", Severity.Error);
+            await Notifier.NotifyAsync("Couldn't move to-do. Try again.", Severity.Error);
         }
         finally
         {
@@ -780,7 +780,7 @@ public partial class UpcomingPanel : IDisposable
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync("Could not reschedule this to-do. Try again.", Severity.Error);
+            await Notifier.NotifyAsync("Couldn't move to-do. Try again.", Severity.Error);
         }
         finally
         {
@@ -826,7 +826,7 @@ public partial class UpcomingPanel : IDisposable
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync("Could not move overdue to-dos. Try again.", Severity.Error);
+            await Notifier.NotifyAsync("Couldn't move overdue. Try again.", Severity.Error);
         }
         finally
         {
@@ -845,7 +845,7 @@ public partial class UpcomingPanel : IDisposable
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync("Could not open the to-do editor.", Severity.Error);
+            await Notifier.NotifyAsync("Couldn't open editor.", Severity.Error);
         }
     }
 
@@ -860,7 +860,7 @@ public partial class UpcomingPanel : IDisposable
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync("Could not open the daily editor.", Severity.Error);
+            await Notifier.NotifyAsync("Couldn't open editor.", Severity.Error);
         }
     }
 
@@ -895,7 +895,7 @@ public partial class UpcomingPanel : IDisposable
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync("Could not add this to-do. Try again.", Severity.Error);
+            await Notifier.NotifyAsync("Couldn't add to-do. Try again.", Severity.Error);
         }
         finally
         {

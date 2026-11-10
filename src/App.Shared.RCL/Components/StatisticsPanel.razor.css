@@ -555,6 +555,20 @@
     .stats-week-bar-wrap {
         min-width: 12px;
     }
+
+    .stats-daily-streak-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.3rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .stats-daily-streak-stat {
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        padding: 0.3rem 0.4rem;
+    }
 }
 
 /* Consistency blocks - similar styling for habits and dailies */
@@ -826,5 +840,20 @@
         min-width: 0;
         text-align: center;
         justify-content: center;
+    }
+}
+
+/* Mobile only: hide duplicated range and Filters header to save vertical space. */
+@media (max-width: 767.98px) {
+    .stats-sidebar-range {
+        display: none;
+    }
+
+    .stats-filter-card__header {
+        display: none;
+    }
+
+    .stats-sidebar-range__label {
+        display: none;
     }
 }

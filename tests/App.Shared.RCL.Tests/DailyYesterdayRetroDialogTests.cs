@@ -65,7 +65,7 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
         await provider.InvokeAsync(async () => await dialogService.ShowAsync<DailyYesterdayRetroDialog>(string.Empty, parameters));
 
         // Assert
-        provider.Markup.Should().Contain("Yesterday's dailies");
+        provider.Markup.Should().Contain("Yesterday");
         provider.Markup.Should().Contain("Drink 2L Water");
         provider.Markup.Should().Contain("Read 20 pages");
         provider.Markup.Should().Contain("Save");

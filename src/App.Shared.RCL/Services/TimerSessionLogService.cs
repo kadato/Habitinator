@@ -57,7 +57,7 @@ public sealed class TimerSessionLogService(
             return new TimerSessionLogResult(
                 true,
                 boardProgressed,
-                $"Timer stopped ({duration:hh\\:mm\\:ss}), but Habitinator could not update the board. Check your connection. Try again.");
+                $"Timer stopped ({duration:hh\\:mm\\:ss}), but Habitinator could not update the board. Try again.");
         }
 
         if (string.IsNullOrWhiteSpace(targetId))

@@ -143,7 +143,7 @@
                           AdornmentAriaLabel="@GetAddPlaceholder()"
                           OnAdornmentClick="AddFromDraftAsync"
                           Error="@_draftError"
-                          ErrorText="Add a title first."
+                          ErrorText="Add a title."
                           Immediate="true"
                           InputMode="@InputMode.text"
                           enterkeyhint="done"
@@ -152,14 +152,14 @@
             @if (_duplicateExistingTitle is not null)
             {
                 <div class="board-duplicate-warning mt-1">
-                    <MudText Typo="Typo.caption">Similar item exists: '@_duplicateExistingTitle'. Create anyway?</MudText>
+                    <MudText Typo="Typo.caption">Already exists: '@_duplicateExistingTitle'.</MudText>
                     <div class="d-flex gap-2 mt-1">
                         <MudButton Size="Size.Small"
                                    Variant="Variant.Filled"
                                    Color="Color.Primary"
                                    Class="text-transform-none"
                                    OnClick="CreateDuplicateAnywayAsync">
-                            Create anyway
+                            Add anyway
                         </MudButton>
                         <MudButton Size="Size.Small"
                                    Variant="Variant.Text"
@@ -186,7 +186,7 @@
                             <MudIcon Icon="@Icons.Material.Outlined.SearchOff" Class="empty-state-icon" aria-hidden="true" />
                         </div>
                         <MudText Typo="Typo.subtitle2" Class="empty-state-title">No matches found</MudText>
-                        <MudText Typo="Typo.caption" Class="empty-state-desc">Try adjusting your search text or removing selected tags.</MudText>
+                        <MudText Typo="Typo.caption" Class="empty-state-desc">Try a different search or clear tags.</MudText>
                     }
                     else if (IsColumnFilterHidingAll)
                     {
@@ -194,7 +194,7 @@
                             <MudIcon Icon="@Icons.Material.Outlined.FilterListOff" Class="empty-state-icon" aria-hidden="true" />
                         </div>
                         <MudText Typo="Typo.subtitle2" Class="empty-state-title">No matches for this filter</MudText>
-                        <MudText Typo="Typo.caption" Class="empty-state-desc">The "@GetColumnFilterName()" filter hides @EffectiveCount items.</MudText>
+                        <MudText Typo="Typo.caption" Class="empty-state-desc">"@GetColumnFilterName()" hides @EffectiveCount.</MudText>
                         <MudButton Size="Size.Small"
                                    Variant="Variant.Text"
                                    Color="Color.Primary"
@@ -238,9 +238,12 @@
         </div>
     </MudCardContent>
 
-    <MudCardActions Class="board-col-foot pb-3 pt-0">
-        <MudText Typo="Typo.caption" Color="Color.Secondary">@GetFooterText()</MudText>
-    </MudCardActions>
+    @if (!string.IsNullOrEmpty(GetFooterText()))
+    {
+        <MudCardActions Class="board-col-foot pb-3 pt-0">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@GetFooterText()</MudText>
+        </MudCardActions>
+    }
 </MudCard>
 
 @code {

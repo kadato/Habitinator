@@ -316,7 +316,7 @@ internal sealed class NavigationPaletteCommands(
         }
         catch
         {
-            await _notifier.NotifyAsync("Could not open yesterday's dailies check-in.", Severity.Error);
+            await _notifier.NotifyAsync("Couldn't open yesterday's dailies check-in.", Severity.Error);
         }
     }
 

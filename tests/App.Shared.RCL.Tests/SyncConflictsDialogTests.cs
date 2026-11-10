@@ -53,7 +53,7 @@ public sealed class SyncConflictsDialogTests : IAsyncDisposable
         await provider.InvokeAsync(async () => await dialogService.ShowAsync<SyncConflictsDialog>(string.Empty, parameters));
         await provider.WaitForStateAsync(() => provider.Markup.Contains("Run"), TimeSpan.FromSeconds(5));
 
-        provider.Markup.Should().Contain("Sync conflicts");
+        provider.Markup.Should().Contain("Conflicts");
         provider.Markup.Should().Contain("Run");
         provider.Markup.Should().Contain("Kept this device");
         provider.Markup.Should().Contain("Changed: title, counter");

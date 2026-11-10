@@ -750,7 +750,9 @@ input[type="number"].mud-input-slot {
         --app-bottom-nav-offset: calc(4.5rem + env(safe-area-inset-bottom, 0px));
     }
 
-    .app-shell-layout .app-shell-main.mud-main-content {
+    /* Guests get no bottom bar, so only reserve the space when the bar exists.
+       Without this the welcome page ends in a tall empty gap. */
+    .app-shell-layout:has(.app-bottom-nav) .app-shell-main.mud-main-content {
         padding-bottom: var(--app-bottom-nav-offset) !important;
     }
 
@@ -780,7 +782,17 @@ input[type="number"].mud-input-slot {
     }
 
     .app-shell--web .app-shell-layout .app-shell-main.mud-main-content {
-        padding-top: var(--space-2) !important;
+        padding-top: max(var(--space-2), env(safe-area-inset-top, 0px)) !important;
+    }
+
+    /* Guests keep the top bar, so keep the offset. Without this the auth
+       header logo slides under the fixed bar and looks cropped. */
+    .app-shell--web:has(.app-top-bar--guest) {
+        --app-top-bar-offset: 4.25rem;
+    }
+
+    .app-shell--web:has(.app-top-bar--guest) .app-shell-main.mud-main-content {
+        padding-top: calc(4.25rem + var(--space-1)) !important;
     }
 }
 
@@ -1461,6 +1473,15 @@ input[type="number"].mud-input-slot {
         font-size: 16px !important;
     }
 
+    /* iOS Safari zooms any field under 16px on focus. Mud inputs inherit small
+       sizes from dense and editor styles, so pin every text entry to 16px on
+       touch. Layout stays intact because sheets and cards scroll. */
+    input.mud-input-slot,
+    textarea.mud-input-slot,
+    select.mud-input-slot {
+        font-size: 16px !important;
+    }
+
     /* Dense menu rows get a full 44px touch target. Card kebab menus and tag filters use the dense rows.
        Desktop fine pointers keep the compact rows. */
     .mud-menu-item {
@@ -1471,6 +1492,41 @@ input[type="number"].mud-input-slot {
     .ai-thread-delete.mud-icon-button {
         min-width: 44px !important;
         min-height: 44px !important;
+    }
+
+    /* Palette drilldown chevrons match the 48px palette rows. */
+    .cmd-palette-drilldown-btn {
+        min-width: 44px !important;
+        min-height: 44px !important;
+    }
+
+    /* Modal close buttons keep a full thumb target on touch. */
+    .hab-modal__close,
+    .edit-daily-header__close {
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+    }
+}
+
+/* Tablets and phones report widths, not pointers. Pin Mud text entry to 16px
+   there too so iOS never zooms and pushes sheets under the keyboard. */
+@media (max-width: 959.98px) {
+    input.mud-input-slot,
+    textarea.mud-input-slot,
+    select.mud-input-slot {
+        font-size: 16px !important;
+    }
+}
+
+/* Phones: the page owns the scroll and the fixed bottom bar owns navigation.
+   Disable pull-to-refresh so a board scroll never reloads the page by
+   accident. Retry and sync controls stay where the failure happens. */
+@media (max-width: 767.98px) {
+    html,
+    body {
+        overscroll-behavior-y: none !important;
     }
 }
 
@@ -1713,21 +1769,38 @@ input[type="number"].mud-input-slot {
     }
 }
 
-/* On phones the search row leaves the top. It becomes a sticky bottom thumb
+/* On phones the search row leaves the top. It becomes a fixed bottom thumb
    bar. Search, tags, and archive stay in thumb reach above the bottom nav.
-   The bar sticks to the viewport bottom while scrolling. It settles into flow at page end.
+   Fixed, not sticky: sticky re-seats itself while scrolling and lands at a
+   different height per tab, so the bar jumped between tabs and vibrated
+   mid-scroll. The stage keeps bottom padding so the last card scrolls clear.
    This applies to web only. MAUI keeps its own top bar with the same actions. */
 @media (max-width: 767.98px) {
     .app-shell--web .board-stat-strip {
-        order: 10 !important;
-        position: sticky !important;
+        position: fixed !important;
+        top: auto !important;
+        /* left + right pin the bar. Width must stay auto: the tablet rule sets
+           width 100%, which would ignore right and clip past the viewport. */
+        width: auto !important;
+        max-width: none !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        left: max(var(--space-5), env(safe-area-inset-left, 0px)) !important;
+        right: max(var(--space-5), env(safe-area-inset-right, 0px)) !important;
         bottom: calc(var(--app-bottom-nav-offset, 4.5rem) + 0.5rem) !important;
         z-index: 500 !important;
         background: var(--mud-palette-surface);
         border: 1px solid var(--hab-border-card) !important;
         border-radius: var(--radius-xl) !important;
         box-shadow: 0 -2px 12px color-mix(in srgb, var(--mud-palette-text-primary) 12%, transparent), var(--hab-shadow-sm) !important;
-        margin-bottom: var(--space-2) !important;
+        margin-bottom: 0 !important;
+        padding-left: var(--space-3) !important;
+        padding-right: var(--space-3) !important;
+    }
+
+    /* Above the on-screen keyboard the bar would hide the field being typed in. */
+    html.kb-open .app-shell--web .board-stat-strip {
+        bottom: calc(var(--app-bottom-nav-offset, 4.5rem) + 0.5rem + var(--kb-height, 0px)) !important;
     }
 
     /* Command palette and AI assistant move to the thumb bar on web phones. */
@@ -2331,4 +2404,106 @@ input[type="number"].mud-input-slot {
     .search-container input {
         font-size: 16px !important;
     }
+}
+
+/* AI assistant drawer root is rendered by MudBlazor, so scoped CSS never matches it.
+   Keep these global. The temporary drawer must not set a left offset on phones,
+   or the panel shifts left and clips content. */
+.ai-assistant-drawer {
+    left: auto !important;
+    right: 0 !important;
+    max-width: 100% !important;
+    overflow-x: clip !important;
+    box-sizing: border-box !important;
+}
+
+@media (max-width: 599.98px) {
+    .ai-assistant-drawer {
+        width: 100% !important;
+        max-width: 100% !important;
+        left: auto !important;
+        right: 0 !important;
+    }
+}
+
+/* Closed temporary drawer must never block the board thumb bar. Scoped CSS
+   cannot target the MudDrawer root, so keep this global. */
+.ai-assistant-drawer.mud-drawer--closed {
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Grabber handle. Shown only when the assistant renders as a bottom sheet. */
+.ai-drawer-grabber {
+    display: none;
+}
+
+/* Phones get the assistant as a bottom sheet like the edit modals: the
+   grabber and swipe-down close it, and the input sits inside thumb reach.
+   MudBlazor marks the anchor on the drawer root, hence the pos-bottom hook.
+   The anchor itself comes from HabitinatorBoardViewport, same query. */
+@media (max-width: 767.98px) {
+    .mud-drawer-pos-bottom.ai-assistant-drawer {
+        top: auto !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 92dvh !important;
+        max-height: 92dvh !important;
+        border-radius: var(--hab-modal-radius) var(--hab-modal-radius) 0 0 !important;
+        overflow: hidden !important;
+    }
+
+    .mud-drawer-pos-bottom .ai-drawer-grabber {
+        display: block;
+        width: 40px;
+        height: 4px;
+        margin: 8px auto 0;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--mud-palette-text-primary) 22%, transparent);
+        flex-shrink: 0;
+    }
+
+    html.kb-open .mud-drawer-pos-bottom.ai-assistant-drawer {
+        height: calc(92dvh - var(--kb-height, 0px)) !important;
+        max-height: calc(92dvh - var(--kb-height, 0px)) !important;
+    }
+}
+
+/* Mobile declutter: show only useful info, hide secondary hints. */
+@media (max-width: 600px) {
+  .board-filter-hint,
+  .board-duplicate-warning,
+  .cal-legend,
+  .stats-daily-legend,
+  .ai-hint-shortcuts,
+  .ai-safe-tools-tag .ai-safe-tools-icon,
+  .timer-pomodoro-info-container[title],
+  .board-column-info-popover,
+  .stats-kpi-card__label {
+    font-size: 0.72rem !important;
+  }
+  .board-filter-hint,
+  .ai-hint-shortcuts,
+  .cmd-palette-footer {
+    display: none !important;
+  }
+  /* Tighter cards on phones */
+  .board-columns-mobile .mud-card,
+  .cal-card,
+  .stats-dashboard-card {
+    border-radius: 12px !important;
+  }
+  .empty-board-onboarding .mud-list-item-text {
+    font-size: 0.85rem !important;
+  }
+  /* Shorten AI drawer footer */
+  .ai-drawer-footer {
+    padding: 0.6rem 0.75rem !important;
+  }
+  .ai-input-hint {
+    display: none !important;
+  }
 }

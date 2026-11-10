@@ -12,8 +12,8 @@
     {
         <div class="cal-fallback" role="alert">
             <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Large" Class="cal-fallback__icon" aria-hidden="true" />
-            <MudText Typo="Typo.subtitle2" Class="cal-fallback__title">Upcoming unavailable</MudText>
-            <MudText Typo="Typo.caption" Color="Color.Secondary">We couldn't load your upcoming schedule. Try again in a moment.</MudText>
+            <MudText Typo="Typo.subtitle2" Class="cal-fallback__title">Couldn't load</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">Check connection and try again.</MudText>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="ReloadAsync">Retry</MudButton>
         </div>
     }
@@ -79,7 +79,7 @@
             </div>
         </section>
 
-        <div class="cal-body" @ref="_calBodyRef">
+        <div class="cal-body @($"cal-body--{_view.ToString().ToLowerInvariant()}")" @ref="_calBodyRef">
             <div class="cal-side">
                 @if (HasOverdueCard)
                 {
@@ -128,7 +128,7 @@
                     </MudPaper>
                 }
 
-                <MudPaper Class="cal-card cal-card--agenda" Elevation="0" Outlined="true" id="@SelectedAnchorId" aria-live="polite" aria-atomic="false">
+                <MudPaper Class="@($"cal-card cal-card--agenda cal-card--agenda-{_view.ToString().ToLowerInvariant()}")" Elevation="0" Outlined="true" id="@SelectedAnchorId" aria-live="polite" aria-atomic="false">
                     <div class="cal-card__head">
                         <span class="cal-card__icon cal-card__icon--agenda" aria-hidden="true">
                             <MudIcon Icon="@Icons.Material.Filled.Event" Size="Size.Small" />
@@ -156,7 +156,7 @@
                         }
                         else
                         {
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">To add a to-do, <button type="button" class="cal-link cal-link--inline" @onclick="() => SetFilter(UpcomingFilter.Todos)">show to-dos</button>.</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Show <button type="button" class="cal-link cal-link--inline" @onclick="() => SetFilter(UpcomingFilter.Todos)">to-dos</button> to add.</MudText>
                         }
                     </div>
                     }
@@ -170,7 +170,7 @@
                             }
                             else
                             {
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">To add a to-do, <button type="button" class="cal-link cal-link--inline" @onclick="() => SetFilter(UpcomingFilter.Todos)">show to-dos</button>.</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Show <button type="button" class="cal-link cal-link--inline" @onclick="() => SetFilter(UpcomingFilter.Todos)">to-dos</button> to add.</MudText>
                             }
                         </div>
                     }
@@ -180,7 +180,7 @@
                         @if (ShowDailies && SelectedDailies.Count > 0)
                         {
                             <div class="cal-agenda-col">
-                            <div class="cal-group">Dailies, repeating</div>
+                            <div class="cal-group">Dailies</div>
                             <ul class="cal-list">
                                 @foreach (var daily in SelectedDailies)
                                 {
@@ -229,7 +229,7 @@
                         @if (ShowTodos && SelectedTodos.Count > 0)
                         {
                             <div class="cal-agenda-col">
-                            <div class="cal-group">To-dos, one-off</div>
+                            <div class="cal-group">To-dos</div>
                             <ul class="cal-list">
                                 @foreach (var todo in SelectedTodos)
                                 {
@@ -407,7 +407,7 @@
     // Single quick-add form shared by the agenda actions bar and the empty
     // state so the two never drift.
     private RenderFragment QuickAddForm => @<form class="cal-quickadd" @onsubmit="AddTodoQuickAsync" @onsubmit:preventDefault="true">
-        <input type="text" class="cal-quickadd__input" placeholder="Add a to-do for @SelectedLabel…" aria-label="New to-do title for @FormatDate(_selected)"
+        <input type="text" class="cal-quickadd__input" placeholder="Add to-do" aria-label="Add to-do"
                @bind="_newTodoTitle" @bind:event="oninput" maxlength="200" autocomplete="off" />
         <button type="submit" class="cal-addbtn" disabled="@(_addingTodo || string.IsNullOrWhiteSpace(_newTodoTitle))" aria-busy="@_addingTodo">
             <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" aria-hidden="true" />

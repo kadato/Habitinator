@@ -12,9 +12,6 @@
                 <MudText Typo="Typo.h6" Class="font-weight-bold mb-1">
                     Set session target
                 </MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">
-                    Enter a custom label for this focus session. This applies to both Pomodoro and Stopwatch modes.
-                </MudText>
             </div>
             <div class="hab-modal__body">
                 <MudTextField @ref="_targetInput"
@@ -22,7 +19,7 @@
                               @bind-Value="_targetText"
                               AutoFocus="false"
                               Label="Target label"
-                              Placeholder="Study Math, Project Refactor, Inbox Zero"
+                              Placeholder="e.g. Study, Workout"
                               Variant="Variant.Outlined"
                               Margin="Margin.Dense"
                               Immediate="true"

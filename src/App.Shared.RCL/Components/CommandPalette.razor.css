@@ -340,6 +340,9 @@
         padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
         padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
         align-items: flex-start;
+        /* Full-screen blur is costly on low-end phones. The dim alone separates layers. */
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
     }
 
     .cmd-palette-dialog {
@@ -367,7 +370,16 @@
         min-height: 48px;
     }
 
+    .cmd-palette-drilldown-btn {
+        min-width: 44px;
+        min-height: 44px;
+        align-items: center;
+        justify-content: center;
+    }
+
     .cmd-palette-footer {
+        flex-wrap: wrap;
+        gap: 6px 12px;
         padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
     }
 

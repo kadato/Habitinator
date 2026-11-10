@@ -59,6 +59,7 @@ public partial class MainBoard : IAsyncDisposable
     private int _cachedDailiesDueOpenCount;
     private int _cachedOpenTodoCount;
     private CancellationTokenSource? _searchDebounceCts;
+    private MudMenu? _tagsMenu;
 
     private sealed record ColumnSpec(BoardSection Section, IReadOnlyList<BoardItem> Items, bool IsExcluded);
 
@@ -536,7 +537,7 @@ public partial class MainBoard : IAsyncDisposable
         }
         catch
         {
-            await Notifier.NotifyAsync("We could not load demo data. Nothing changed. Check your connection. Try again.", MudBlazor.Severity.Error);
+            await Notifier.NotifyAsync("Couldn't load demo. Try again.", MudBlazor.Severity.Error);
             return;
         }
 
@@ -667,8 +668,8 @@ public partial class MainBoard : IAsyncDisposable
     }
 
     /// <summary>
-    /// Swipe gestures belong to the mobile branch only. The swipe area ref exists only while
-    /// that branch is mounted. Init follows the ref. Destroy follows the branch switch.
+    /// Swipe gestures work in the mobile branch only. The swipe area ref exists only while
+    /// that branch is mounted. The handler starts init from the ref. The handler destroys on branch switch.
     /// </summary>
     private async Task EnsureSwipeAsync()
     {
@@ -722,7 +723,7 @@ public partial class MainBoard : IAsyncDisposable
         {
             _loadError = ex is InvalidOperationException
                 ? ex.Message
-                : "We could not load your board. Your local copy is safe. Check your connection. Try again.";
+                : "Couldn't load board. Try again.";
             await Notifier.NotifyAsync(_loadError, MudBlazor.Severity.Error);
         }
         finally
@@ -1140,7 +1141,7 @@ public partial class MainBoard : IAsyncDisposable
         }
         catch (Exception)
         {
-            await Notifier.NotifyAsync("We could not create that item. Nothing was added. Check your connection. Try again.", Severity.Error);
+            await Notifier.NotifyAsync("Couldn't add item. Try again.", Severity.Error);
         }
         finally
         {
@@ -1187,6 +1188,19 @@ public partial class MainBoard : IAsyncDisposable
 
     private async Task OpenArchivedItemsDialogAsync()
     {
+        try
+        {
+            if (_tagsMenu is not null)
+            {
+                await _tagsMenu.CloseMenuAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Ignore close failures. The tags menu may already be closed. The handler logs the error and opens the archive dialog.
+            System.Diagnostics.Debug.WriteLine(ex.Message);
+        }
+
         var dialog = await DialogService.ShowAsync<ArchivedItemsDialog>(string.Empty, DialogDefaults.Wide);
         await dialog.Result;
 

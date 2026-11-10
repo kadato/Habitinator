@@ -69,7 +69,7 @@
             {
                 <div class="hab-modal__section" style="padding:0.7rem 0.75rem;">
                     <span class="hab-modal__section-label" id="edit-daily-weekdays-label">Weekdays</span>
-                    <div class="edit-daily-weekdays" role="group" aria-labelledby="edit-daily-weekdays-label">
+                    <div class="edit-daily-weekdays" role="group" aria-labelledby="edit-daily-weekdays-label" title="@WeekdayHint()">
                         @foreach (var day in WeekdayOrder)
                         {
                             var selected = DailyWeekdays.Has(_weekdays, day);
@@ -82,9 +82,6 @@
                                        OnClick="@(() => ToggleWeekday(day))">@WeekdayShort(day)</MudButton>
                         }
                     </div>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mt-1">
-                        @WeekdayHint()
-                    </MudText>
                 </div>
             }
 
@@ -144,13 +141,12 @@
                         </div>
                     }
                 </div>
-                <span class="hab-modal__section-label" style="margin-top:0.6rem;">Adjust the streak</span>
                 <div class="edit-daily-streak-input">
-                    <MudNumericField @bind-Value="_counter" @bind-Value:after="() => ScheduleSave(400)" Variant="Variant.Outlined" Class="edit-daily-streak-input__field" Min="0" Max="9999" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Adjust the streak"/>
+                    <MudNumericField @bind-Value="_counter" @bind-Value:after="() => ScheduleSave(400)" Variant="Variant.Outlined" Class="edit-daily-streak-input__field" Min="0" Max="9999" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Streak"/>
                 </div>
                 <button type="button" class="edit-daily-heatmap-btn" style="margin-top:0.6rem;" @onclick="OpenHeatmapDialogAsync">
                     <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" Class="edit-daily-heatmap-btn__icon" aria-hidden="true" />
-                    <span>View heatmap</span>
+                    <span>Heatmap</span>
                     <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none" style="margin-left:auto; opacity:0.55;"><polyline points="9 18 15 12 9 6"></polyline></svg>
                 </button>
             </div>
@@ -273,15 +269,15 @@
     {
         if (_weekdays == 0)
         {
-            return "No days selected repeats on the start date's weekday.";
+            return "Uses start date weekday.";
         }
 
         if (_repeatInterval == 1)
         {
-            return "Due on the selected days every week.";
+            return "Every week on these days.";
         }
 
-        return $"Due on the selected days every {_repeatInterval} weeks.";
+        return $"Every {_repeatInterval} weeks.";
     }
     private Task ToggleWeekday(DayOfWeek day)
     {

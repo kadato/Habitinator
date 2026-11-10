@@ -26,7 +26,7 @@
     @if (BoardSync.IsOffline)
     {
         <MudAlert Severity="Severity.Info" Dense="true" Class="my-1" role="status">
-            Working offline. The app saves changes on this device and syncs when you reconnect.
+            Offline. Changes save here and sync later.
         </MudAlert>
     }
     else if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage))
@@ -43,7 +43,7 @@
     @if (!ClientSession.IsLoggedIn && _initialLoadComplete && HasBoardItems())
     {
         <MudAlert Severity="Severity.Info" Dense="true" Class="my-1" role="status">
-            You are signed out and offline. You see your last local copy. Connect to sign in.
+            Offline. Showing saved copy. Connect to sign in.
         </MudAlert>
     }
     @if (_isLoading && _initialLoadComplete)
@@ -55,15 +55,15 @@
     {
         <div class="board-load-fallback">
             <MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Large" Class="board-load-fallback__icon"  aria-hidden="true" />
-            <MudText Typo="Typo.subtitle2" Class="board-load-fallback__title">We could not load your board</MudText>
-            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="board-load-fallback__hint">Your local copy is safe. Check your connection. Try again.</MudText>
+            <MudText Typo="Typo.subtitle2" Class="board-load-fallback__title">Couldn't load board</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="board-load-fallback__hint">Check connection and try again.</MudText>
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
                        Disabled="@_isLoading"
                        OnClick="RetryLoadAsync"
                        Size="Size.Small"
                        Class="mt-2">
-                Retry loading board
+                Retry
             </MudButton>
         </div>
     }
@@ -72,15 +72,15 @@
     {
         <div class="board-load-fallback">
             <MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Large" Class="board-load-fallback__icon" aria-hidden="true" />
-            <MudText Typo="Typo.subtitle2" Class="board-load-fallback__title">You are offline with no local copy yet</MudText>
-            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="board-load-fallback__hint">Connect once to load your board. It stays on this device after that.</MudText>
+            <MudText Typo="Typo.subtitle2" Class="board-load-fallback__title">You're offline</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="board-load-fallback__hint">Connect once to load.</MudText>
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
                        Disabled="@_isLoading"
                        OnClick="RetryLoadAsync"
                        Size="Size.Small"
                        Class="mt-2">
-                Retry loading board
+                Retry
             </MudButton>
         </div>
     }
@@ -120,7 +120,7 @@
 
                     </div>
                     <div class="board-tags-menu-activator">
-                        <MudMenu AnchorOrigin="@TagsMenuAnchor"
+                        <MudMenu @ref="_tagsMenu" AnchorOrigin="@TagsMenuAnchor"
                                  TransformOrigin="@TagsMenuTransform"
                                  PopoverFixed="true"
                                  RelativeWidth="DropdownWidth.Ignore"
@@ -141,7 +141,7 @@
                                     <MudText Typo="Typo.subtitle1" Class="mb-1">Tags</MudText>
                                     @if (GetAllTagNamesForMenu().Count == 0)
                                     {
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">No tags on the board yet. Add tags in an item's details.</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">No tags yet.</MudText>
                                     }
                                     else
                                     {
@@ -196,10 +196,11 @@
                     @if (_shortcutsEnabled)
                     {
                         <button type="button"
-                                class="board-shortcuts-hint mud-text-secondary"
+                                class="board-shortcuts-hint mud-text-secondary app-show-desktop-only"
                                 title="Press Ctrl+K or Cmd+K to open command palette"
+                                aria-label="Open command palette (Ctrl+K)"
                                 @onclick="() => CommandPalette.Toggle()">
-                            Press <kbd class="board-kbd">Ctrl+K</kbd> for commands
+                            <kbd class="board-kbd">Ctrl</kbd><span class="board-shortcuts-hint__plus" aria-hidden="true">+</span><kbd class="board-kbd">K</kbd>
                         </button>
                     }
                 </div>

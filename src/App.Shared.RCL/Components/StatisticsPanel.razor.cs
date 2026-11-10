@@ -149,7 +149,7 @@ public partial class StatisticsPanel : IDisposable
         }
 
         _error = ex.Message;
-        await SafeNotifyAsync("Could not load statistics. Please try again.", Severity.Error);
+        await SafeNotifyAsync("Couldn't load stats. Try again.", Severity.Error);
     }
 
     private async Task<bool> TryApplyOfflineOverviewAsync(string periodKey, string? tagFilter, Task<Dictionary<Guid, int>>? streaksTask = null)
@@ -647,7 +647,7 @@ public partial class StatisticsPanel : IDisposable
 
         if (_data != null)
         {
-            await SafeNotifyAsync("Could not refresh statistics. Showing last available data.", Severity.Warning);
+            await SafeNotifyAsync("Couldn't refresh. Showing saved.", Severity.Warning);
             return;
         }
 
@@ -662,7 +662,7 @@ public partial class StatisticsPanel : IDisposable
         _dailyCellIndices.Clear();
         _habitCellIndices.Clear();
         _dailyRatioCache.Clear();
-        await SafeNotifyAsync("Could not load statistics. Please try again.", Severity.Error);
+        await SafeNotifyAsync("Couldn't load stats. Try again.", Severity.Error);
     }
 
     private Dictionary<(int Row, int Col), ActivityHeatmapCellDto> GetDailyCellIndex(DailyContributionGraphDto daily)
@@ -934,7 +934,7 @@ public partial class StatisticsPanel : IDisposable
             _error = ex.Message;
             try
             {
-                await Notifier.NotifyAsync("Could not refresh statistics. Please try again.", Severity.Error);
+                await Notifier.NotifyAsync("Couldn't refresh. Try again.", Severity.Error);
             }
             catch (Exception notifyEx)
             {

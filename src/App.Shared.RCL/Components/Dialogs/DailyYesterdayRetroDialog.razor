@@ -12,7 +12,7 @@
            ContentClass="hab-modal-content"
            OnBackdropClick="CloseAsync">
     <DialogContent>
-        <div class="hab-modal hab-modal--daily" data-dialog-label="Yesterday's dailies" aria-label="Yesterday's dailies" role="group" @onclick:stopPropagation="true">
+        <div class="hab-modal hab-modal--daily" data-dialog-label="Yesterday" aria-label="Yesterday" role="group" @onclick:stopPropagation="true">
             <div class="hab-modal__grabber" aria-hidden="true"></div>
             <div class="hab-modal__header" @ref="_headerRef">
                 <div class="hab-modal__topbar hab-modal__topbar--minimal">
@@ -20,10 +20,10 @@
                 </div>
                 <div class="d-flex align-center gap-2">
                     <MudIcon Icon="@Icons.Material.Filled.History" Color="Color.Primary" Size="Size.Medium"  aria-hidden="true" />
-                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold" Style="letter-spacing:-0.02em;">Yesterday's dailies</MudText>
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold" Style="letter-spacing:-0.02em;">Yesterday</MudText>
                 </div>
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
-                    You did not finish these dailies on <strong class="daily-yesterday-date">@_dueOnFormatted</strong>. Check off each daily you completed that day.
+                    You did not finish these dailies on <strong class="daily-yesterday-date">@_dueOnFormatted</strong>. Check what you did.
                 </MudText>
             </div>
 
@@ -128,7 +128,7 @@
         }
     }
 
-    /// <summary>Called from touch gestures. Swipe down on the header saves and closes.</summary>
+    /// <summary>Touch gestures call this method. Swipe down on the header saves and closes.</summary>
     [JSInvokable]
     public Task OnModalSwipeDownAsync() => CloseAsync();
 

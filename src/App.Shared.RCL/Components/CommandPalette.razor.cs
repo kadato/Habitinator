@@ -752,14 +752,14 @@ public partial class CommandPalette : IDisposable
             return "Filter by section (@habits, @dailies, @todos)...";
         }
 
-        return "Type a command or search. Try >, ?, #tag, !urgent, add todo ...";
+        return "Search...";
     }
 
     public string GetSearchResultsStatus()
     {
         if (_flatVisibleItems.Count == 0)
         {
-            return "No matching commands or items";
+            return "No matches";
         }
 
         return $"{_flatVisibleItems.Count} commands and items found";

@@ -55,7 +55,7 @@
             <div class="cmd-palette-results" id="cmd-palette-results" role="listbox" aria-label="Commands and search results">
                 @if (_flatVisibleItems.Count == 0)
                 {
-                    <div class="cmd-palette-empty">No matching commands or items</div>
+                    <div class="cmd-palette-empty">No matches</div>
                 }
                 else
                 {
@@ -113,7 +113,7 @@
             </div>
 
             <!-- Bottom helper bar -->
-            <div class="cmd-palette-footer" aria-hidden="true">
+            <div class="cmd-palette-footer app-show-desktop-only" aria-hidden="true">
                 <span class="cmd-palette-footer-item"><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
                 <span class="cmd-palette-footer-item"><kbd>↵</kbd> Select</span>
                 <span class="cmd-palette-footer-item"><kbd>→</kbd> Actions</span>

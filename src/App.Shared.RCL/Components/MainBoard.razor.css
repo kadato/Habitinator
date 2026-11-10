@@ -521,9 +521,9 @@
     /* Section tabs on mobile: equal-width buttons so all three fit and are easy to tap. */
 }
 
-/* On phones the search row leaves the top. It becomes a sticky bottom thumb bar.
+/* On phones the search row leaves the top. It becomes a fixed bottom thumb bar.
    The bar rule is in global app.css because the strip is a MudPaper root.
-   The stage keeps the last card scrollable above the bar. */
+   The stage keeps bottom padding so the last card scrolls clear of the bar. */
 @media (max-width: 767.98px) {
     .board-columns-stage {
         padding-bottom: 4.5rem !important;
@@ -532,6 +532,43 @@
     /* The column header is slimmer now that the top stack is shorter. */
     .board-columns-mobile ::deep .mud-card-header {
         padding: 0.4rem 0 0.2rem !important;
+    }
+}
+
+/* Narrow phones: four thumb actions share 360-390px. Shrink gaps and
+   keep the search field from clipping its placeholder text. */
+@media (max-width: 429.98px) {
+    .board-stat-filters {
+        gap: var(--space-1) !important;
+    }
+
+    .board-search-wrapper {
+        min-width: 0 !important;
+    }
+
+    .board-search-pill ::deep .mud-input-slot input {
+        text-overflow: ellipsis !important;
+    }
+
+    .board-tags-menu-activator .board-trigger-btn {
+        padding-left: var(--space-3) !important;
+        padding-right: var(--space-3) !important;
+    }
+}
+
+/* Very narrow phones: tags go icon-only so search keeps room. */
+@media (max-width: 374.98px) {
+    .board-tags-menu-activator .board-trigger-btn .board-trigger-label,
+    .board-tags-menu-activator .board-trigger-btn .board-trigger-chevron {
+        display: none !important;
+    }
+
+    .board-tags-menu-activator .board-trigger-btn {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        width: 44px !important;
+        min-width: 44px !important;
+        max-width: 44px !important;
     }
 }
 
@@ -554,21 +591,33 @@
 .board-shortcuts-hint {
     display: inline-flex;
     align-items: center;
+    gap: 2px;
     white-space: nowrap;
-    opacity: 0.8;
-    font-size: 0.75rem;
     margin-left: auto;
-    background: transparent;
-    border: none;
-    padding: 0;
+    background: color-mix(in srgb, var(--mud-palette-background-gray) 55%, transparent);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: var(--radius-md);
+    padding: 4px 8px;
     cursor: pointer;
     font-family: inherit;
-    color: inherit;
-    transition: opacity 0.1s ease;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
 }
 
-.board-shortcuts-hint:hover {
-    opacity: 1;
+.board-shortcuts-hint:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.board-shortcuts-hint__plus {
+    opacity: 0.7;
+    margin: 0 1px;
+}
+
+/* Keycaps sit on the surface so they read against the pill tint. */
+.board-shortcuts-hint .board-kbd {
+    background: var(--mud-palette-surface);
 }
 
 .board-kbd {
@@ -640,6 +689,12 @@
     max-width: 28ch;
 }
 
+@media (max-width: 599.98px) {
+    .board-load-fallback {
+        padding: 1.25rem 1rem;
+    }
+}
+
 /* Phones: single-column tag rows for thumb-friendly tapping. */
 @media (max-width: 599.98px) {
     .board-tag-filter-grid {
@@ -651,5 +706,17 @@
 @media (pointer: coarse) {
     .board-tag-filter-grid .mud-checkbox {
         min-height: 44px;
+    }
+}
+
+/* Phones: slimmer load fallback. The icon is decorative; the title and hint carry the message. */
+@media (max-width: 767.98px) {
+    .board-load-fallback {
+        padding: 1.25rem !important;
+    }
+
+    .board-load-fallback__icon,
+    .board-empty-icon {
+        display: none !important;
     }
 }

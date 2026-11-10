@@ -50,7 +50,7 @@ public partial class UserPreferencesSection
         catch (Exception ex)
         {
             _loadError = ex.Message;
-            try { await Notifier.NotifyAsync("Could not load preferences. Please try again.", Severity.Error); } catch (Exception) { /* Best-effort toast. Fallback UI already indicates the failure. */ }
+            try { await Notifier.NotifyAsync("Couldn't load preferences. Try again.", Severity.Error); } catch (Exception) { /* Best-effort toast. Fallback UI already indicates the failure. */ }
         }
         finally
         {
@@ -73,7 +73,7 @@ public partial class UserPreferencesSection
         catch (Exception ex)
         {
             _loadError = ex.Message;
-            try { await Notifier.NotifyAsync("Could not load preferences. Please try again.", Severity.Error); } catch (Exception) { /* Best-effort toast. Fallback UI already indicates the failure. */ }
+            try { await Notifier.NotifyAsync("Couldn't load preferences. Try again.", Severity.Error); } catch (Exception) { /* Best-effort toast. Fallback UI already indicates the failure. */ }
         }
         finally
         {
@@ -228,7 +228,7 @@ public partial class UserPreferencesSection
         }
         catch (Exception ex)
         {
-            await Notifier.NotifyAsync($"Could not save preferences: {ex.Message}", Severity.Error);
+            await Notifier.NotifyAsync($"Couldn't save: {ex.Message}", Severity.Error);
         }
     }
 

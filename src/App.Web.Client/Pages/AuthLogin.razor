@@ -4,12 +4,12 @@
 @inject NavigationManager Navigation
 
 <PageMeta Title="@PageTitles.Page("Sign in")"
-          Description="Sign in to your Habitinator account or continue as demo guest."
+          Description="Sign in to Habitinator."
           CanonicalPath="/auth/login"
           Robots="@SeoDefaults.IndexRobots"/>
 
 <AuthPageShell Title="Sign in"
-               Subtitle="Sign in with your email and password. Or continue as demo guest."
+               Subtitle="Email and password to sign in."
                MaxWidth="28rem">
     <ChildContent>
         @if (!string.IsNullOrWhiteSpace(_message))
@@ -36,7 +36,7 @@
 
         <div class="auth-form-divider" role="presentation">or</div>
 
-        <form method="post" action="/api/auth/guest-login">
+        <form method="post" action="/api/auth/guest-login" class="d-flex flex-column guest-login-form" onsubmit="return habitinatorGuestSubmit(this)">
             @if (!string.IsNullOrWhiteSpace(ReturnUrl))
             {
                 <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
@@ -46,8 +46,9 @@
                        Color="Color.Secondary"
                        FullWidth="true"
                        Size="Size.Large">
-                Continue as demo guest
+                <span class="guest-login-label">Try demo</span>
             </MudButton>
+            <p class="guest-login-status" role="status" hidden>Seeding your demo board… this takes a few seconds.</p>
         </form>
     </ChildContent>
     <Footer>

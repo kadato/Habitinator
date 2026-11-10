@@ -1,7 +1,7 @@
 @inject NavigationManager Nav
 
 <AuthPageShell Title="Welcome to Habitinator"
-               Subtitle="You track habits, dailies, and to-dos on one board."
+               Subtitle="Habits, dailies, and to-dos in one place."
                Class="auth-landing">
     <ChildContent>
         @if (_showDeletedMessage)
@@ -32,20 +32,18 @@
 
         <div class="auth-landing__guest-block">
             <div class="auth-form-divider" role="presentation">or</div>
-            <p class="auth-landing__guest-hint">
-                Prefer to look around first? The demo guest loads sample board data.
-            </p>
             <div class="auth-landing__guest-paper guest-login-paper">
                 @if (UseCookieGuestLogin)
                 {
-                    <form method="post" action="/api/auth/guest-login" class="d-flex flex-column">
+                    <form method="post" action="/api/auth/guest-login" class="d-flex flex-column guest-login-form" onsubmit="return habitinatorGuestSubmit(this)">
                         <MudButton ButtonType="ButtonType.Submit"
                                    Variant="Variant.Outlined"
                                    Color="Color.Secondary"
                                    FullWidth="true"
                                    Size="Size.Large">
-                            Continue as demo guest
+                            <span class="guest-login-label">Continue as demo guest</span>
                         </MudButton>
+                        <p class="guest-login-status" role="status" hidden>Loading demo…</p>
                     </form>
                 }
                 else
@@ -56,7 +54,7 @@
                                Size="Size.Large"
                                Disabled="@_guestBusy"
                                OnClick="ContinueAsGuestAsync">
-                        Continue as demo guest
+                        @(_guestBusy ? "Loading demo board…" : "Continue as demo guest")
                     </MudButton>
                 }
             </div>

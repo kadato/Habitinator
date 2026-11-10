@@ -6,14 +6,14 @@
 @inject IBoardLocalStoreLifecycle LocalBoardLifecycle
 
 <PageMeta Title="@PageTitles.Page("Settings")"
-          Description="Notification preferences, account, and app settings."
+          Description="App settings."
           CanonicalPath="/settings"/>
 
 <h1 class="hab-visually-hidden" tabindex="-1">Settings</h1>
 
 <AuthorizeView>
     <NotAuthorized>
-        <SignInPrompt Title="Settings" Message="Sign in to manage notification preferences."/>
+        <SignInPrompt Title="Settings" Message="Sign in for settings."/>
     </NotAuthorized>
     <Authorized>
         <div class="settings-page-wrapper">
@@ -35,7 +35,7 @@
                             <MudText Typo="Typo.subtitle1" Class="mb-1">Session</MudText>
                             <SyncStatusIndicator IconOnly="false" Flush />
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">
-                                Sign out of Habitinator on this device.
+                                Sign out on this device.
                             </MudText>
                             <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Logout" OnClick="LogoutAsync">
                                 Log out

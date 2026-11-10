@@ -224,6 +224,20 @@
     padding: var(--space-4);
 }
 
+/* Shown after the guest form posts, while the browser navigates to the board. */
+.guest-login-status {
+    margin: 0.65rem 0 0;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    text-align: center;
+    color: var(--mud-palette-text-secondary);
+}
+
+.guest-login-form button[aria-busy="true"] {
+    opacity: 0.75;
+    cursor: wait;
+}
+
 @media (min-width: 768px) {
     .auth-page {
         min-height: min(100%, calc(100dvh - 5rem));

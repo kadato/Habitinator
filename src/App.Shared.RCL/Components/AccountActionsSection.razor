@@ -14,13 +14,13 @@
     @if (BoardSync.IsOffline)
     {
         <MudAlert Severity="Severity.Warning" Dense="true" role="status">
-            You are offline. This screen shows the last saved copy. Imports wait on this device.
+            Offline. Showing saved copy.
         </MudAlert>
     }
     @if (ImportService is RemoteUserDataImportService pendingImport && pendingImport.HasPendingImport())
     {
         <MudAlert Severity="Severity.Info" Dense="true" role="status">
-            A backup waits here. To restore it, reconnect and open Import.
+            Backup ready. Reconnect to restore.
         </MudAlert>
     }
     @if (Export is RemoteUserDataExportService cachedExport && cachedExport.TryGetCachedExport(out _, out var cachedAt) && cachedAt is not null)
@@ -36,7 +36,7 @@
         <MudStack Spacing="2">
             <MudText Typo="Typo.subtitle1" Class="mb-1">Change password</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
-                Update your password. You will stay signed in after the change.
+                You stay signed in.
             </MudText>
             <MudTextField T="string" Label="Current password" InputType="InputType.Password" Variant="Variant.Outlined" dense="true"
                           Value="_currentPassword" ValueChanged="v => _currentPassword = v" />
@@ -54,8 +54,7 @@
         <MudStack Spacing="2">
             <MudText Typo="Typo.subtitle1" Class="mb-1">Export your data</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
-                Download everything Habitinator stores for your account as a JSON file, including board items, activity history, preferences, and notification settings.
-                Exports cover up to 50,000 rows. Bigger accounts fail with an error instead of a partial file.
+                Download your data as JSON. Max 50,000 rows.
             </MudText>
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="_exporting" OnClick="ExportDataAsync">
                 Export data
@@ -67,7 +66,7 @@
         <MudStack Spacing="2">
             <MudText Typo="Typo.subtitle1" Class="mb-1">Import your data</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
-                Restore a backup exported from Settings. This replaces every board item and activity event on your account.
+                Restore replaces everything.
             </MudText>
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OpenImportDialogAsync">
                 Import data
@@ -79,8 +78,7 @@
         <MudStack Spacing="2">
             <MudText Typo="Typo.subtitle1" Class="mb-1">Delete account</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
-                Permanently delete your account and all of your data. This cannot be undone.
-                Deleted items leave sync at once. The server purges soft-deleted rows after its retention period.
+                Delete account and all data. Cannot be undone.
             </MudText>
             <MudButton Variant="Variant.Outlined" Color="Color.Error" Disabled="_deleting" OnClick="DeleteAccountAsync">
                 Delete account
@@ -118,7 +116,7 @@
             catch when (BoardSync.IsOffline && Export is RemoteUserDataExportService cached && cached.TryGetCachedExport(out var cachedDto, out _) && cachedDto is not null)
             {
                 data = cachedDto;
-                await Notifier.NotifyAsync("Offline. Last saved export.", Severity.Warning);
+                await Notifier.NotifyAsync("Offline. Saved export.", Severity.Warning);
             }
 
             var json = await Task.Run(() => System.Text.Json.JsonSerializer.Serialize(data, JsonDefaults.Export));
@@ -168,13 +166,13 @@
         if (_savingPassword) return;
         if (string.IsNullOrWhiteSpace(_currentPassword) || string.IsNullOrWhiteSpace(_newPassword))
         {
-            await Notifier.NotifyAsync("Enter your current password and a new password.", Severity.Warning);
+            await Notifier.NotifyAsync("Enter current and new password.", Severity.Warning);
             return;
         }
 
         if (!_newPassword.Equals(_confirmPassword, StringComparison.Ordinal))
         {
-            await Notifier.NotifyAsync("New password confirmation does not match.", Severity.Warning);
+            await Notifier.NotifyAsync("Passwords do not match.", Severity.Warning);
             return;
         }
 
@@ -203,7 +201,7 @@
 
         var confirmed = await DialogService.ShowMessageBoxAsync(
             "Delete your account?",
-            "This permanently deletes your account and all of your data. This cannot be undone.",
+            "Delete account and all data? Cannot be undone.",
             "Delete account",
             null,
             "Cancel");
@@ -216,7 +214,7 @@
         try
         {
             await AccountActions.DeleteAccountAsync();
-            await Notifier.NotifyAsync("Your account has been deleted.", Severity.Success);
+            await Notifier.NotifyAsync("Account deleted.", Severity.Success);
             if (OnAccountDeleted.HasDelegate)
             {
                 await OnAccountDeleted.InvokeAsync();

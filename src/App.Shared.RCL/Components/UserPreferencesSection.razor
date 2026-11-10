@@ -15,7 +15,7 @@
         <div class="settings-load-fallback">
             <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Large" Class="settings-load-fallback__icon"  aria-hidden="true" />
             <MudText Typo="Typo.subtitle2" Class="settings-load-fallback__title">Preferences unavailable</MudText>
-            <MudText Typo="Typo.caption" Color="Color.Secondary">We couldn't load your preferences. Check your connection and try again.</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">Couldn't load preferences. Try again.</MudText>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="RetryLoadAsync">Retry</MudButton>
         </div>
     }
@@ -54,9 +54,6 @@
         <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
                 <MudText Typo="Typo.subtitle1" Class="mb-1">Account</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
-                    How the app shows your name.
-                </MudText>
                 <MudTextField T="string" Label="Display name"
                               Variant="Variant.Outlined"
                               dense="true"
@@ -73,9 +70,6 @@
         <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
                 <MudText Typo="Typo.subtitle1" Class="mb-1">Pomodoro Timer</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
-                    Customize focus and break durations for the Pomodoro timer.
-                </MudText>
                 <MudGrid>
                     <MudItem xs="12" sm="6">
                         <MudNumericField T="int" Label="Work duration (minutes)"
@@ -120,9 +114,6 @@
         <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
                 <MudText Typo="Typo.subtitle1" Class="mb-1">Date and time</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
-                    Date format, week start, day start, and timezone. Upcoming uses these for the calendar.
-                </MudText>
                 <MudTextField T="string"
                               Label="Date format"
                               Variant="Variant.Outlined"
@@ -160,7 +151,7 @@
                 </MudSelect>
                 @if (_timeZonesLoading)
                 {
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">Loading timezones...</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Loading...</MudText>
                 }
                 <MudText Typo="Typo.caption" Color="Color.Secondary">
                     Current: @_resolvedTimeZoneLabel
@@ -171,9 +162,6 @@
         <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
                 <MudText Typo="Typo.subtitle1" Class="mb-1">Theme</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
-                    Sync with your system theme or pin a specific mode.
-                </MudText>
                 <div class="d-flex flex-row align-center flex-wrap gap-2">
                     <MudSwitch T="bool"
                                Value="_useSystemTheme"
@@ -198,9 +186,6 @@
         <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
                 <MudText Typo="Typo.subtitle1" Class="mb-1">Keyboard Shortcuts</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
-                    Enable keyboard shortcuts to move through and control the app quickly.
-                </MudText>
                 <MudSwitch T="bool" Label="Enable keyboard shortcuts" Color="Color.Primary"
                            Value="_model.EnableKeyboardShortcuts" ValueChanged="OnEnableKeyboardShortcutsChanged" />
             </MudStack>

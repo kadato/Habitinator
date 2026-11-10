@@ -80,7 +80,7 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => buttons[0].Instance.OnClick.InvokeAsync(null));
 
         // Assert
-        await _notifier.Received(1).NotifyAsync("Enter your current password and a new password.", Severity.Warning);
+        await _notifier.Received(1).NotifyAsync("Enter current and new password.", Severity.Warning);
         await _accountActions.DidNotReceiveWithAnyArgs().ChangePasswordAsync(null!, null!);
     }
 
@@ -101,7 +101,7 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => buttons[0].Instance.OnClick.InvokeAsync(null));
 
         // Assert
-        await _notifier.Received(1).NotifyAsync("New password confirmation does not match.", Severity.Warning);
+        await _notifier.Received(1).NotifyAsync("Passwords do not match.", Severity.Warning);
         await _accountActions.DidNotReceiveWithAnyArgs().ChangePasswordAsync(null!, null!);
     }
 
@@ -175,7 +175,7 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
 
         // Assert
         await _accountActions.Received(1).DeleteAccountAsync();
-        await _notifier.Received(1).NotifyAsync("Your account has been deleted.", Severity.Success);
+        await _notifier.Received(1).NotifyAsync("Account deleted.", Severity.Success);
 
         var nav = _ctx.Services.GetRequiredService<NavigationManager>();
         nav.Uri.Should().Be("http://localhost/?accountDeleted=1");
@@ -269,7 +269,7 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => buttons[2].Instance.OnClick.InvokeAsync(null));
 
         // Assert
-        await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Paste an export file below"), TimeSpan.FromSeconds(5));
-        _dialogProvider.Markup.Should().Contain("Restore replaces every board item");
+        await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Paste a backup"), TimeSpan.FromSeconds(5));
+        _dialogProvider.Markup.Should().Contain("Restore replaces everything");
     }
 }

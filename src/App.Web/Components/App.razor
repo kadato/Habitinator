@@ -160,6 +160,7 @@
             "_content/App.Shared.RCL/js/boardUiState.js": "@Assets["_content/App.Shared.RCL/js/boardUiState.js"]",
             "_content/App.Shared.RCL/js/commandPalette.js": "@Assets["_content/App.Shared.RCL/js/commandPalette.js"]",
             "_content/App.Shared.RCL/js/boardSwipe.js": "@Assets["_content/App.Shared.RCL/js/boardSwipe.js"]",
+            "_content/App.Shared.RCL/js/mobileBack.js": "@Assets["_content/App.Shared.RCL/js/mobileBack.js"]",
             "_content/App.Shared.RCL/js/boardViewport.js": "@Assets["_content/App.Shared.RCL/js/boardViewport.js"]",
             "_content/App.Shared.RCL/js/keyboardViewport.js": "@Assets["_content/App.Shared.RCL/js/keyboardViewport.js"]",
             "_content/App.Shared.RCL/js/modalSwipe.js": "@Assets["_content/App.Shared.RCL/js/modalSwipe.js"]"
@@ -233,6 +234,31 @@
         if (form) {
             form.submit();
         }
+    };
+    // Demo guest login posts a plain form and navigates. Blazor cannot show progress during the post. The script disables the button and shows the wait message.
+    window.habitinatorGuestSubmit = function (form) {
+        try {
+            if (!form || form.dataset.submitted === '1') {
+                return form && form.dataset.submitted !== '1';
+            }
+            form.dataset.submitted = '1';
+            var btn = form.querySelector('button');
+            if (btn) {
+                btn.disabled = true;
+                btn.setAttribute('aria-busy', 'true');
+                var label = btn.querySelector('.guest-login-label');
+                if (label) {
+                    label.textContent = 'Loading demo board…';
+                }
+            }
+            var status = form.querySelector('.guest-login-status');
+            if (status) {
+                status.hidden = false;
+            }
+        } catch {
+            // If feedback fails, still allow the login.
+        }
+        return true;
     };
 </script>
 <script>

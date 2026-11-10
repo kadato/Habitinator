@@ -97,6 +97,11 @@ public sealed partial class LocalFirstBoardDataService(
     // GetSnapshotAsync stays local-only so first paint never waits on network.
     private async Task<BoardSnapshot?> TryFetchAndReplaceIfEmptyAsync(string userKey, CancellationToken cancellationToken)
     {
+        if (syncStatus.IsPaused)
+        {
+            return null;
+        }
+
         BoardSnapshot? fresh = null;
         try
         {

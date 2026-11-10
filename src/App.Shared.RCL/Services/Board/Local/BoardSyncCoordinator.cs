@@ -86,16 +86,16 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
     private async Task RunPullAndDrainCoreAsync(bool notifyOnProgress, CancellationToken cancellationToken, bool bypassPause = false)
     {
         EnsurePausePreferenceLoaded();
+        if (_status.IsPaused && !bypassPause)
+        {
+            _status.SetProblem(PausedProblemMessage);
+            await RefreshPendingCountAsync(cancellationToken);
+            return;
+        }
+
         _status.SetSyncing(true);
         try
         {
-            if (_status.IsPaused && !bypassPause)
-            {
-                _status.SetProblem(PausedProblemMessage);
-                await RefreshPendingCountAsync(cancellationToken);
-                return;
-            }
-
             _status.RefreshConnectivity(_isOfflineProbe);
             if (_status.IsOffline)
             {
@@ -163,7 +163,7 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Board sync tick failed.");
-            _status.SetProblem("Could not reach the server. Board changes will sync when connection is restored.");
+            _status.SetProblem("Offline. Will sync when online.");
         }
         finally
         {
@@ -217,6 +217,7 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
         {
             var boardPending = await _board.GetPendingOutboxCountAsync(cancellationToken);
             var activityPending = 0;
+            var settingsPending = 0;
             try
             {
                 using var scope = _services.CreateScope();
@@ -224,13 +225,25 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
                 {
                     activityPending = await remote.GetPendingCountAsync(cancellationToken);
                 }
+
+                if (scope.ServiceProvider.GetService<INotificationSettingsService>() is ISettingsSyncFlush notificationFlush
+                    && notificationFlush.HasPending())
+                {
+                    settingsPending++;
+                }
+
+                if (scope.ServiceProvider.GetService<IUserPreferencesService>() is ISettingsSyncFlush prefsFlush
+                    && prefsFlush.HasPending())
+                {
+                    settingsPending++;
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogTrace(ex, "Could not read activity pending count.");
             }
 
-            _status.SetPendingCount(boardPending + activityPending);
+            _status.SetPendingCount(boardPending + activityPending + settingsPending);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

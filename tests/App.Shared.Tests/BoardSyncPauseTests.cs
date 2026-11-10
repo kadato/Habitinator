@@ -92,6 +92,69 @@ public sealed class BoardSyncPauseTests
     }
 
     [Fact]
+    public async Task AutomaticRun_WhenPaused_DoesNotSetSyncing()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var syncingSeen = false;
+        harness.Status.Changed += (_, _) =>
+        {
+            if (harness.Status.IsSyncing)
+            {
+                syncingSeen = true;
+            }
+        };
+        harness.Status.SetPaused(true);
+
+        await harness.Coordinator.RunPullAndDrainAsync(true, ct);
+
+        syncingSeen.Should().BeFalse();
+        harness.Status.IsSyncing.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetItem_WhenPaused_MakesNoNetworkCalls()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        harness.Status.SetPaused(true);
+
+        var item = await harness.Board.GetItemAsync(Guid.NewGuid(), ct);
+
+        item.Should().BeNull();
+        harness.Server.HitCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task StatsOverview_WhenStatusPaused_BuildsLocallyWithoutNetwork()
+    {
+        var handler = new StatsCountingHandler();
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var id = Guid.NewGuid();
+        await harness.Board.CreateItemAsync(BoardSection.Daily, "Read", id, ct);
+        await harness.Board.GetSnapshotAsync(ct);
+        var services = new ServiceCollection();
+        services.AddSingleton<IBoardDataService>(harness.Board);
+        var provider = services.BuildServiceProvider();
+        using var offline = new OfflineActivityStatisticsProvider(
+            provider,
+            new FakeEventStore(),
+            NullLogger<OfflineActivityStatisticsProvider>.Instance);
+        var expected = await offline.BuildOverviewAsync(null, null, ct);
+        handler.Responder = _ => JsonResponse(HttpStatusCode.OK, expected);
+        var remote = new RemoteActivityStatisticsReader(new StubStatsHttpFactory(handler), new StubSettingsStore([]));
+        var syncStatus = new BoardSyncStatus();
+        syncStatus.SetPaused(true);
+        var reader = new PauseAwareActivityStatisticsReader(remote, offline, new StubSettingsStore([]), syncStatus);
+
+        var actual = await reader.GetOverviewAsync(null, null, ct);
+
+        handler.HitCount.Should().Be(0);
+        JsonSerializer.Serialize(actual, JsonDefaults.Api).Should().Be(JsonSerializer.Serialize(expected, JsonDefaults.Api));
+    }
+
+    [Fact]
     public async Task SyncNow_WhenPaused_BypassesPauseAndDrainsOutbox()
     {
         var harness = new Harness();

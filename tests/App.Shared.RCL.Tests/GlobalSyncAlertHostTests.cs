@@ -46,7 +46,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
 
         // Assert - one offline toast, then silence until the next transition
         await cut.WaitForAssertionAsync(async () => await _notifier.Received(1).NotifyAsync(
-            "Working offline. The app saves changes on this device and syncs when you reconnect.",
+            "Offline. Changes save here and sync later.",
             Severity.Warning));
     }
 
@@ -116,11 +116,29 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
 
         // Assert - the offline toast fires, the sync-issue toast stays suppressed
         await cut.WaitForAssertionAsync(async () => await _notifier.Received(1).NotifyAsync(
-            "Working offline. The app saves changes on this device and syncs when you reconnect.",
+            "Offline. Changes save here and sync later.",
             Severity.Warning));
         await _notifier.DidNotReceive().NotifyAsync(
             Arg.Is<string>(m => m.StartsWith("Sync issue:", StringComparison.Ordinal)),
             Arg.Any<Severity>());
+    }
+
+    [Fact]
+    public async Task No_Alerts_When_Paused()
+    {
+        // Arrange - pausing is intentional, not a sync failure
+        _settingsService.Settings = new NotificationSettings { SyncFailureAlertsEnabled = true };
+        _boardSync.IsPaused = false;
+        _boardSync.SyncProblemMessage = null;
+        var cut = _ctx.Render<GlobalSyncAlertHost>();
+
+        // Act - transition to paused with the paused problem message
+        _boardSync.IsPaused = true;
+        _boardSync.SyncProblemMessage = "Sync paused to save server usage. Changes stay on this device until you choose Sync now.";
+        await cut.InvokeAsync(_boardSync.RaiseChanged);
+
+        // Assert - no error toast for the intentional pause
+        await _notifier.DidNotReceive().NotifyAsync(Arg.Any<string>(), Arg.Any<Severity>());
     }
 
     [Fact]

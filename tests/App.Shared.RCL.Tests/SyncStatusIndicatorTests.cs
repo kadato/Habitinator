@@ -116,7 +116,7 @@ public sealed class SyncStatusIndicatorTests : IAsyncDisposable
         var cut = _ctx.Render<SyncStatusIndicator>(p => p.Add(x => x.IconOnly, true));
 
         await cut.InvokeAsync(() => cut.Find(".sync-icon-btn").Click());
-        await provider.WaitForStateAsync(() => provider.Markup.Contains("Sync conflicts"), TimeSpan.FromSeconds(5));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Conflicts"), TimeSpan.FromSeconds(5));
 
         provider.Markup.Should().Contain("Run");
         provider.Markup.Should().Contain("Kept this device");

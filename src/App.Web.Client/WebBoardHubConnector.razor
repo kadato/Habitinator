@@ -1,8 +1,11 @@
 @inject IJSRuntime JS
 @inject BoardRemoteNotifyBridge RefreshBridge
 @inject IInitialBoardLoadGate InitialBoardLoad
+@inject BoardSyncStatus SyncStatus
+@inject BoardSyncPausePreference PausePreference
 @using Microsoft.JSInterop
 @using global::App.Shared.RCL.Services
+@using global::App.Shared.RCL.Services.Board.Local
 @implements IAsyncDisposable
 
 @code {
@@ -13,6 +16,7 @@
     {
         if (firstRender)
         {
+            PausePreference.PausedChanged += OnPauseChanged;
             if (InitialBoardLoad.IsComplete)
             {
                 await StartHubAsync();
@@ -30,15 +34,30 @@
         _ = InvokeAsync(StartHubAsync);
     }
 
+    private void OnPauseChanged(object? sender, bool paused)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            if (paused)
+            {
+                await StopHubAsync();
+            }
+            else
+            {
+                await StartHubAsync();
+            }
+        });
+    }
+
     private async Task StartHubAsync()
     {
-        if (_hubStarted)
+        if (_hubStarted || SyncStatus.IsPaused)
         {
             return;
         }
 
         _hubStarted = true;
-        _dotNetRef = DotNetObjectReference.Create(RefreshBridge);
+        _dotNetRef ??= DotNetObjectReference.Create(RefreshBridge);
         try
         {
             await JS.InvokeVoidAsync("habitinatorLoadScript", "lib/microsoft-signalr/signalr.min.js");
@@ -63,34 +82,44 @@
         }
     }
 
+    private async Task StopHubAsync()
+    {
+        if (!_hubStarted)
+        {
+            return;
+        }
+
+        _hubStarted = false;
+        try
+        {
+            await JS.InvokeVoidAsync("HabitinatorBoardHub.stop");
+        }
+        catch (JSDisconnectedException)
+        {
+            // Ignored during page navigation
+        }
+        catch (JSException)
+        {
+            // Ignored during page navigation
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignored during page navigation
+        }
+        catch (InvalidOperationException)
+        {
+            // Ignored during page navigation
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         InitialBoardLoad.Completed -= OnInitialBoardLoadCompleted;
-        if (_hubStarted)
-        {
-            try
-            {
-                await JS.InvokeVoidAsync("HabitinatorBoardHub.stop");
-            }
-            catch (JSDisconnectedException)
-            {
-                // Ignored during page navigation
-            }
-            catch (JSException)
-            {
-                // Ignored during page navigation
-            }
-            catch (TaskCanceledException)
-            {
-                // Ignored during page navigation
-            }
-            catch (InvalidOperationException)
-            {
-                // Ignored during page navigation
-            }
-        }
+        PausePreference.PausedChanged -= OnPauseChanged;
+        await StopHubAsync();
 
         _dotNetRef?.Dispose();
+        _dotNetRef = null;
     }
 
 }

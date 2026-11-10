@@ -158,9 +158,9 @@ else
     private string GetSyncStatusTooltip()
     {
         if (BoardSync.IsPaused)
-            return "Automatic sync is off. Changes stay on this device until you choose Sync now.";
+            return "Auto-sync off. Changes stay here until Sync now.";
         if (BoardSync.IsOffline)
-            return "Working offline. The app saves changes on this device and syncs when you reconnect.";
+            return "Offline. Changes save here and sync later.";
         if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage))
             return $"Sync issue: {BoardSync.SyncProblemMessage}.";
         if (BoardSync.IsSyncing)

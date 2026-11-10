@@ -22,7 +22,13 @@ public sealed class BoardRemoteNotifyBridge(IRemoteBoardRefreshService refresh, 
     {
         try
         {
-            services.GetService<IBoardSyncRequestor>()?.RequestSync();
+            var paused = services.GetService<IBoardSyncStatus>()?.IsPaused
+                ?? services.GetService<BoardSyncStatus>()?.IsPaused
+                ?? false;
+            if (!paused)
+            {
+                services.GetService<IBoardSyncRequestor>()?.RequestSync();
+            }
         }
         catch
         {

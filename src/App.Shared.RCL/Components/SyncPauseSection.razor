@@ -8,9 +8,6 @@
 <MudPaper Class="pa-4 mb-3" Elevation="0" Outlined="true">
     <MudStack Spacing="2">
         <MudText Typo="Typo.subtitle1" Class="mb-1">Data saver</MudText>
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">
-            Pause automatic sync. The app keeps working and saves changes on this device.
-        </MudText>
         <MudSwitch T="bool"
                    Label="Pause automatic sync"
                    Color="Color.Primary"
@@ -19,7 +16,11 @@
         @if (_paused)
         {
             <MudText Typo="Typo.caption" Color="Color.Warning">
-                Automatic sync is off. Changes stay on this device until you choose Sync now.
+                Auto-sync off. Changes stay here until Sync now.
+                @if (BoardSync.PendingCount > 0)
+                {
+                    <span>@BoardSync.PendingCount waiting.</span>
+                }
             </MudText>
             <div>
                 <MudButton Variant="Variant.Filled"
@@ -30,12 +31,6 @@
                     Sync now
                 </MudButton>
             </div>
-        }
-        else
-        {
-            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                Automatic sync is on.
-            </MudText>
         }
     </MudStack>
 </MudPaper>

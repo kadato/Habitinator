@@ -52,17 +52,18 @@
         }
 
         var isOffline = BoardSync.IsOffline;
+        var isPaused = BoardSync.IsPaused;
         var problem = BoardSync.SyncProblemMessage;
         var conflictCount = BoardSync.RecentConflicts.Count;
         var alertsEnabled = _settings is null || _settings.SyncFailureAlertsEnabled;
 
         try
         {
-            if (alertsEnabled && isOffline && !_wasOffline)
+            if (alertsEnabled && isOffline && !_wasOffline && !isPaused)
             {
-                await UserNotifier.NotifyAsync("Working offline. The app saves changes on this device and syncs when you reconnect.", Severity.Warning);
+                await UserNotifier.NotifyAsync("Offline. Changes save here and sync later.", Severity.Warning);
             }
-            else if (alertsEnabled && !isOffline && !string.IsNullOrEmpty(problem) && !string.Equals(problem, _lastProblem, StringComparison.Ordinal))
+            else if (alertsEnabled && !isOffline && !isPaused && !string.IsNullOrEmpty(problem) && !string.Equals(problem, _lastProblem, StringComparison.Ordinal))
             {
                 await UserNotifier.NotifyAsync($"Sync issue: {problem}", Severity.Error);
             }
@@ -71,7 +72,7 @@
             {
                 var latest = BoardSync.RecentConflicts[0];
                 var detail = string.IsNullOrWhiteSpace(latest.ChangedFields) ? string.Empty : $" ({latest.ChangedFields})";
-                await UserNotifier.NotifyAsync($"The client merged {latest.Title}{detail}. Tap the sync icon for details.", Severity.Info);
+                await UserNotifier.NotifyAsync($"Merged {latest.Title}{detail}. See sync for details.", Severity.Info);
             }
         }
         catch

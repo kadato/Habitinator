@@ -15,7 +15,7 @@ public sealed class PauseAwareActivityStatisticsReader(
     ILocalSettingsStore? store = null,
     IBoardSyncStatus? syncStatus = null) : IActivityStatisticsReader
 {
-    private bool IsPaused => BoardSyncPausePreference.IsPausedIn(store);
+    private bool IsPaused => BoardSyncPausePreference.IsPausedIn(store) || (syncStatus?.IsPaused ?? false);
 
     private bool ShouldUseOfflineProvider =>
         IsPaused || (syncStatus?.IsOffline ?? false);

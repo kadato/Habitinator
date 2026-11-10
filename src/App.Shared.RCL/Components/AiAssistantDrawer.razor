@@ -522,6 +522,12 @@
     private DotNetObjectReference<AiAssistantDrawer>? _sheetRef;
     private ElementReference _sheetHeaderRef;
 
+    /// <summary>Id of the greeting created into an empty state. Boot restore removes it after stored threads load. Server prerendering has no local storage, so stored threads always arrive after the greeting.</summary>
+    private string? _bootGreetingId;
+
+    /// <summary>True after the drawer reads stored threads from the interactive runtime. The drawer retries while storage stays unreachable.</summary>
+    private bool _threadsRestored;
+
     private Anchor DrawerAnchor => _isPhoneSheet ? Anchor.Bottom : Anchor.Right;
 
     protected override async Task OnInitializedAsync()
@@ -546,6 +552,7 @@
             };
             _threads.Add(thread);
             _activeThreadId = thread.Id;
+            _bootGreetingId ??= thread.Id;
         }
         else if (string.IsNullOrEmpty(_activeThreadId) || _threads.All(t => t.Id != _activeThreadId))
         {
@@ -559,6 +566,11 @@
         {
             _sheetScriptsStarted = true;
             await StartSheetScriptsAsync();
+        }
+
+        if (!_threadsRestored)
+        {
+            await RestoreThreadsAfterBootAsync();
         }
     }
 
@@ -710,7 +722,8 @@
 
     private static readonly JsonSerializerOptions ThreadJsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    private async Task LoadThreadsAsync()
+    /// <summary>Reads stored threads. Returns false when storage is unreachable so the caller can retry later. Skips threads that are already loaded.</summary>
+    private async Task<bool> LoadThreadsAsync()
     {
         try
         {
@@ -720,8 +733,13 @@
                 var stored = await Task.Run(() => JsonSerializer.Deserialize<List<StoredThread>>(json, ThreadJsonOptions));
                 if (stored is not null)
                 {
+                    var knownIds = _threads.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
                     foreach (var s in stored.Take(20))
                     {
+                        if (knownIds.Contains(s.Id ?? string.Empty))
+                        {
+                            continue;
+                        }
                         var entries = s.Messages?.Take(100).Select(m => new ChatEntry { Message = m }).ToList() ?? [];
                         if (entries.Count == 0)
                         {
@@ -731,10 +749,40 @@
                     }
                 }
             }
+            return true;
         }
         catch
         {
             // Ignore load failures. Chat stays usable without local history.
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Server prerendering has no local storage, so the first load always starts
+    /// with the greeting. Once the interactive runtime takes over, this pulls stored
+    /// threads in and resumes the most recent one. Returning users see their history.
+    /// </summary>
+    private async Task RestoreThreadsAfterBootAsync()
+    {
+        var greeting = _bootGreetingId is null
+            ? null
+            : _threads.FirstOrDefault(t => t.Id == _bootGreetingId && t.Entries.Count == 1);
+        if (!await LoadThreadsAsync())
+        {
+            return;
+        }
+        _threadsRestored = true;
+        if (greeting is not null && _threads.Count > 1)
+        {
+            _threads.Remove(greeting);
+            var newest = _threads.MaxBy(t => t.UpdatedAt);
+            if (newest is not null)
+            {
+                _activeThreadId = newest.Id;
+            }
+            EnsureThread();
+            StateHasChanged();
         }
     }
 

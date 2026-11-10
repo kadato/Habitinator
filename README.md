@@ -62,7 +62,24 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 </picture>
 </p>
 
+<br>
+
+<p align="center">
+<strong>Upcoming</strong> | <strong>AI assistant</strong><br><br>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/automation/screenshots/upcoming-dark.png">
+  <img alt="Upcoming todos and dailies" src="./docs/automation/screenshots/upcoming-light.png" width="220">
+</picture>
+&nbsp;&nbsp;
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/automation/screenshots/ai-assistant-dark.png">
+  <img alt="AI assistant drawer" src="./docs/automation/screenshots/ai-assistant-light.png" width="220">
+</picture>
+</p>
+
 </div>
+
+To regenerate these shots, run `pwsh ./tools/Habitinator.Screenshots/run.ps1` from the repo root. The script drives Playwright with a mobile viewport in light and dark themes.
 
 ---
 

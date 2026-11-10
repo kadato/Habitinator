@@ -99,7 +99,7 @@ public sealed class AiPreferencesTests
     {
         Assert.Equal("Muse Spark 1.3 Contributor", AiModelCatalog.GetModelDisplayName("muse-spark-1.3-contributor"));
         Assert.Equal("Muse Spark 1.3 Contributor (muse-spark-1.3-contributor)", AiModelCatalog.GetModelFullName("muse-spark-1.3-contributor"));
-        Assert.Equal("Muse Spark 1.3..", AiModelCatalog.GetModelShortName("muse-spark-1.3-contributor"));
+        Assert.Equal("Muse Spark 1.3 Contributor", AiModelCatalog.GetModelShortName("muse-spark-1.3-contributor"));
 
         Assert.Equal("mimo-v2.5", AiModelCatalog.GetModelDisplayName("mimo-v2.5"));
         Assert.Equal("mimo-v2.5", AiModelCatalog.GetModelFullName("mimo-v2.5"));

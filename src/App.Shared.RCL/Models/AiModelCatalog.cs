@@ -117,8 +117,8 @@ public static class AiModelCatalog
             return "AI";
         }
 
-        var displayName = GetModelDisplayName(modelId);
-        return displayName.Length > 16 ? string.Concat(displayName.AsSpan(0, 14), "..") : displayName;
+        // Return the full display name. CSS ellipsis truncates the name in the header.
+        return GetModelDisplayName(modelId);
     }
 
     public static string GetModelTooltip(string displayName, string? description)

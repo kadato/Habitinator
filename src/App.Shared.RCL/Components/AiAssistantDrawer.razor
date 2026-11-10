@@ -1,3 +1,4 @@
+@using Microsoft.AspNetCore.Components
 @using App.Shared.RCL.Models
 @using App.Shared.RCL.Services
 @using System.Text.Json
@@ -13,22 +14,20 @@
 @inject IBoardSyncStatus BoardSync
 
 <MudDrawer @bind-Open="UiSessionState.IsAiDrawerOpen"
-           Anchor="Anchor.Right"
+           Anchor="@DrawerAnchor"
            Elevation="4"
            Variant="DrawerVariant.Temporary"
            Overlay="true"
-           Width="min(480px, 100vw)"
+           Width="min(480px, 100%)"
            Class="ai-assistant-drawer"
            ClipMode="DrawerClipMode.Never">
     <div class="ai-drawer-container d-flex flex-column h-100">
-        <div class="ai-drawer-header px-3 py-2 d-flex align-center justify-space-between gap-1">
-            <div class="d-flex align-center gap-2 min-w-0 flex-shrink-1">
+        <div class="ai-drawer-grabber" aria-hidden="true"></div>
+        <div class="ai-drawer-header px-3 py-2 d-flex align-center justify-space-between gap-1" @ref="_sheetHeaderRef">
+            <div class="d-flex align-center gap-2 min-w-0 flex-shrink-1 flex-grow-1 ai-header-main">
                 <div class="ai-header-avatar flex-shrink-0" aria-hidden="true">
                     <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small" Style="color: #ffffff !important;" />
                 </div>
-                <MudText Typo="Typo.subtitle2" Class="font-weight-bold text-truncate ai-header-title">
-                    Habitinator AI
-                </MudText>
                 @if (_preferences?.Ai.Enabled == true)
                 {
                     <MudMenu dense="true"
@@ -89,6 +88,12 @@
                         </ChildContent>
                     </MudMenu>
                 }
+                else
+                {
+                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold text-truncate ai-header-title">
+                        Habitinator AI
+                    </MudText>
+                }
             </div>
             <div class="d-flex align-center gap-0 flex-shrink-0">
                 <MudMenu Icon="@Icons.Material.Filled.Forum"
@@ -138,32 +143,46 @@
                 <MudIconButton Icon="@Icons.Material.Filled.Add"
                                Size="Size.Small"
                                Color="Color.Inherit"
-                               Class="ai-header-btn"
+                               Class="ai-header-btn ai-header-btn--collapse"
                                aria-label="New chat thread"
                                OnClick="NewThreadAsync" />
                 <MudIconButton Icon="@Icons.Material.Filled.DeleteSweep"
                                Size="Size.Small"
                                Color="Color.Inherit"
-                               Class="ai-header-btn"
+                               Class="ai-header-btn ai-header-btn--collapse"
                                aria-label="Clear chat history"
                                OnClick="ClearChat" />
                 <MudIconButton Icon="@Icons.Material.Filled.Settings"
                                Size="Size.Small"
                                Color="Color.Inherit"
-                               Class="ai-header-btn"
+                               Class="ai-header-btn ai-header-btn--collapse"
                                aria-label="AI settings"
                                OnClick="NavigateToSettings" />
+                <MudMenu Icon="@Icons.Material.Filled.MoreVert"
+                         Size="Size.Small"
+                         Color="Color.Inherit"
+                         Class="ai-header-more"
+                         aria-label="More assistant actions"
+                         Dense="true"
+                         AnchorOrigin="Origin.BottomRight"
+                         TransformOrigin="Origin.TopRight"
+                         PopoverClass="ai-model-menu-popover"
+                         PopoverFixed="true">
+                    <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="NewThreadAsync">New chat thread</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.DeleteSweep" OnClick="ClearChat">Clear chat history</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Settings" OnClick="NavigateToSettings">AI settings</MudMenuItem>
+                </MudMenu>
                 <MudIconButton Icon="@Icons.Material.Filled.Close"
                                Size="Size.Small"
                                Color="Color.Inherit"
-                               Class="ai-header-btn"
+                               Class="ai-header-btn ai-header-btn--close"
                                aria-label="Close assistant"
                                OnClick="() => UiSessionState.SetAiDrawer(false)" />
             </div>
         </div>
         @if (BoardSync.IsOffline)
         {
-            <MudAlert Severity="Severity.Info" Dense="true" Class="mx-3 mt-2" role="status">Working offline. AI needs an internet connection. Board edits still work.</MudAlert>
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mx-3 mt-2" role="status">Offline. AI needs internet.</MudAlert>
         }
 
         @if (_threads.Count > 1)
@@ -190,10 +209,10 @@
                     <div class="d-flex align-center justify-space-between">
                         <div>
                             <MudText Typo="Typo.subtitle2" Class="font-weight-bold mb-1">
-                                AI assistant is disabled
+                                AI is off
                             </MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                Enable the assistant in Settings to use board tools and habit coaching.
+                                Turn it on in Settings.
                             </MudText>
                         </div>
                         <MudButton Variant="Variant.Filled"
@@ -214,7 +233,7 @@
                         Ask about your board
                     </MudText>
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
-                        Plan today, check what is pending, or get habit ideas. Try /plan, /review, or @@ to mention an item.
+                        Plan today, check pending, or get ideas.
                     </MudText>
 
                     <div class="ai-prompts-grid">
@@ -243,48 +262,10 @@
                     var isLast = localIndex == ActiveEntries.Count - 1;
                     var isError = !isUser && (entry.Message.Content?.StartsWith("⚠️", StringComparison.Ordinal) == true);
                     <div class="ai-message @(isUser ? "ai-message--user" : "ai-message--assistant") d-flex flex-column">
-                        <div class="ai-message-bubble pa-3 rounded-xl position-relative">
+                        <div class="ai-message-bubble pa-3 rounded-lg position-relative">
                             @if (!isUser)
                             {
-                                var modelId = entry.Message.Model ?? _activeModel;
                                 var isCurrentlyStreaming = _isStreaming && isLast;
-                                <div class="d-flex align-center justify-space-between mb-2 pb-1 border-bottom">
-                                    <div class="d-flex align-center gap-1 min-w-0">
-                                        <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small" Color="Color.Primary" Class="flex-shrink-0" />
-                                        <MudText Typo="Typo.caption" Class="font-weight-bold flex-shrink-0">Habitinator AI</MudText>
-                                        @if (!string.IsNullOrWhiteSpace(modelId))
-                                        {
-                                            <span class="ai-bubble-model-pill" title="@GetModelFullName(modelId)">@GetModelShortName(modelId)</span>
-                                        }
-                                    </div>
-                                    <div class="d-flex align-center gap-1 flex-shrink-0">
-                                        @if (isCurrentlyStreaming)
-                                        {
-                                            <span class="ai-streaming-badge">Streaming...</span>
-                                        }
-                                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
-                                                       Size="Size.Small"
-                                                       Color="Color.Default"
-                                                       aria-label="Copy response"
-                                                       OnClick="() => CopyToClipboardAsync(entry.Message.Content)" />
-                                        @if (isLast && !_isSending)
-                                        {
-                                            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                                           Size="Size.Small"
-                                                           Color="Color.Default"
-                                                           aria-label="Regenerate response"
-                                                           OnClick="RegenerateAsync" />
-                                        }
-                                        @if (isError)
-                                        {
-                                            <MudIconButton Icon="@Icons.Material.Filled.Replay"
-                                                           Size="Size.Small"
-                                                           Color="Color.Warning"
-                                                           aria-label="Retry request"
-                                                           OnClick="RetryLastAsync" />
-                                        }
-                                    </div>
-                                </div>
                                 <div class="ai-rendered-markdown">
                                     @((MarkupString)MarkdownFormatter.ToHtml(entry.Message.Content))
                                     @if (isCurrentlyStreaming)
@@ -361,20 +342,49 @@
                             else
                             {
                                 <MudText Typo="Typo.body2" Class="white-space-pre-wrap">@entry.Message.Content</MudText>
-                                <div class="d-flex justify-end gap-1 mt-1">
+                            }
+                        </div>
+                        <div class="ai-message-actions">
+                            <div class="ai-message-actions-row" role="toolbar" aria-label="Message actions">
+                                @if (!isUser)
+                                {
                                     <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
                                                    Size="Size.Small"
-                                                   Color="Color.Inherit"
+                                                   Color="Color.Default"
+                                                   aria-label="Copy response"
+                                                   OnClick="() => CopyToClipboardAsync(entry.Message.Content)" />
+                                    @if (isLast && !_isSending)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                                       Size="Size.Small"
+                                                       Color="Color.Default"
+                                                       aria-label="Regenerate response"
+                                                       OnClick="RegenerateAsync" />
+                                    }
+                                    @if (isError)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Replay"
+                                                       Size="Size.Small"
+                                                       Color="Color.Warning"
+                                                       aria-label="Retry request"
+                                                       OnClick="RetryLastAsync" />
+                                    }
+                                }
+                                else
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                                   Size="Size.Small"
+                                                   Color="Color.Default"
                                                    aria-label="Copy message"
                                                    OnClick="() => CopyToClipboardAsync(entry.Message.Content)" />
                                     <MudIconButton Icon="@Icons.Material.Filled.Edit"
                                                    Size="Size.Small"
-                                                   Color="Color.Inherit"
+                                                   Color="Color.Default"
                                                    aria-label="Edit and resend"
                                                    Disabled="_isSending"
                                                    OnClick="() => EditUserMessageAsync(localIndex)" />
-                                </div>
-                            }
+                                }
+                            </div>
                         </div>
                     </div>
                 }
@@ -382,21 +392,13 @@
                 @if (_isSending && !_isStreaming)
                 {
                     <div class="ai-message ai-message--assistant d-flex flex-column">
-                        <div class="ai-message-bubble pa-3 rounded-xl d-flex align-center gap-3">
-                            <div class="ai-thinking-avatar flex-shrink-0">
-                                <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small" Color="Color.Primary" />
-                            </div>
-                            <div class="d-flex flex-column gap-1 min-w-0">
-                                <div class="d-flex align-center gap-2">
-                                    <span class="ai-thinking-title">Habitinator AI is thinking</span>
-                                    <span class="ai-typing-dots" aria-hidden="true">
-                                        <span class="ai-dot"></span>
-                                        <span class="ai-dot"></span>
-                                        <span class="ai-dot"></span>
-                                    </span>
-                                </div>
-                                <span class="ai-thinking-subtext">Consulting board state and coaching tools.</span>
-                            </div>
+                        <div class="ai-message-bubble ai-message-bubble--pending pa-3 rounded-lg" role="status">
+                            <span class="ai-visually-hidden">Working on your request…</span>
+                            <span class="ai-typing-dots" aria-hidden="true">
+                                <span class="ai-dot"></span>
+                                <span class="ai-dot"></span>
+                                <span class="ai-dot"></span>
+                            </span>
                         </div>
                     </div>
                 }
@@ -422,7 +424,7 @@
                 <MudTextField T="string"
                               Value="_inputText"
                               ValueChanged="OnInputChangedAsync"
-                              Placeholder="@(BoardSync.IsOffline ? "AI needs an internet connection" : "Ask Habitinator AI, /plan, /review, or @@item")"
+                              Placeholder="@(BoardSync.IsOffline ? "AI needs internet" : "Ask AI...")"
                               Variant="Variant.Outlined"
                               dense="true"
                               margin="Margin.None"
@@ -460,14 +462,13 @@
             <div class="ai-input-hint mt-2 d-flex align-center justify-space-between px-1">
                 <span class="ai-hint-shortcuts">
                     <kbd class="ai-kbd">Enter</kbd>
-                    <span class="ai-hint-sep">to send</span>
+                    <span class="ai-hint-sep">send</span>
                     <span class="ai-hint-dot">,</span>
-                    <kbd class="ai-kbd">Shift + Enter</kbd>
-                    <span class="ai-hint-sep">new line</span>
+                    
                 </span>
                 <span class="ai-safe-tools-tag">
                     <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" Class="ai-safe-tools-icon" />
-                    Safe board tools
+                    Safe tools
                 </span>
             </div>
         </div>
@@ -514,6 +515,15 @@
     private CancellationTokenSource? _streamCts;
     private UserPreferences? _preferences;
 
+    /// <summary>On phones, the drawer opens as a bottom sheet. On wider screens, the drawer docks on the side.</summary>
+    private bool _isPhoneSheet;
+
+    private bool _sheetScriptsStarted;
+    private DotNetObjectReference<AiAssistantDrawer>? _sheetRef;
+    private ElementReference _sheetHeaderRef;
+
+    private Anchor DrawerAnchor => _isPhoneSheet ? Anchor.Bottom : Anchor.Right;
+
     protected override async Task OnInitializedAsync()
     {
         UiSessionState.OnAiDrawerChanged += HandleDrawerChanged;
@@ -531,7 +541,7 @@
                 Title = "New chat",
                 Entries =
                 [
-                    new ChatEntry { Message = AiChatMessage.Assistant("Hello! I am your Habitinator AI assistant. I can help you plan your day, break down tasks, check off completed dailies, and coach your habits. What would you like to work on?", _activeModel) }
+                    new ChatEntry { Message = AiChatMessage.Assistant("Hi! I can help plan, break down tasks, and coach habits. What do you want to work on?", _activeModel) }
                 ]
             };
             _threads.Add(thread);
@@ -541,6 +551,84 @@
         {
             _activeThreadId = _threads[0].Id;
         }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_sheetScriptsStarted)
+        {
+            _sheetScriptsStarted = true;
+            await StartSheetScriptsAsync();
+        }
+    }
+
+    /// <summary>
+    /// On phones, this drawer opens as a bottom sheet. The drawer reads the
+    /// viewport once before the first open, so the first open uses the right
+    /// anchor. The drawer then tracks rotation. The header supports swipe down to close.
+    /// </summary>
+    private async Task StartSheetScriptsAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardViewport.js");
+            await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/modalSwipe.js");
+            await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/aiChat.js");
+            try
+            {
+                _isPhoneSheet = await JS.InvokeAsync<bool>("HabitinatorBoardViewport.isPhone");
+            }
+            catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or InvalidOperationException)
+            {
+                _isPhoneSheet = false;
+            }
+            _sheetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("HabitinatorBoardViewport.watchPhoneSheet", _sheetRef);
+            await JS.InvokeVoidAsync("HabitinatorModalSwipe.init", _sheetHeaderRef, _sheetRef,
+                new { horizontal = false, dismissDown = true });
+            await JS.InvokeVoidAsync("HabitinatorAiChat.initScrollArea");
+            if (_isPhoneSheet)
+            {
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // Ignored during page navigation
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignored during page navigation
+        }
+        catch (InvalidOperationException)
+        {
+            // Ignored during page navigation
+        }
+        catch (JSException)
+        {
+            _sheetScriptsStarted = false;
+        }
+    }
+
+    /// <summary>HabitinatorBoardViewport calls this when the viewport crosses the phone breakpoint. The call flips the sheet anchor.</summary>
+    [JSInvokable]
+    public async Task OnPhoneViewportChanged(bool isPhone)
+    {
+        if (_isPhoneSheet == isPhone)
+        {
+            return;
+        }
+
+        _isPhoneSheet = isPhone;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Touch gestures call this method. Swipe down on the header closes the sheet.</summary>
+    [JSInvokable]
+    public Task OnModalSwipeDownAsync()
+    {
+        UiSessionState.SetAiDrawer(false);
+        return Task.CompletedTask;
     }
 
     private void HandleDrawerChanged()
@@ -567,7 +655,18 @@
         }
         else
         {
-            _ = InvokeAsync(StateHasChanged);
+            _ = InvokeAsync(async () =>
+            {
+                try
+                {
+                    await JS.InvokeVoidAsync("HabitinatorAiChat.clearActions");
+                }
+                catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or InvalidOperationException)
+                {
+                    // Ignore the error. JS is unavailable, so there is nothing to clear.
+                }
+                StateHasChanged();
+            });
         }
     }
 
@@ -588,8 +687,6 @@
 
     private string GetActiveModelShortName() => AiModelCatalog.GetModelShortName(_activeModel);
 
-    private static string GetModelShortName(string? modelId) => AiModelCatalog.GetModelShortName(modelId);
-
     private static string GetModelFullName(string? modelId) => AiModelCatalog.GetModelFullName(modelId);
 
     private async Task SwitchModelAsync(string modelId)
@@ -605,7 +702,7 @@
             }
             catch
             {
-                // Best effort: preferences save is optional.
+                // Ignore save failures. Chat works without saved preferences.
             }
         }
         StateHasChanged();
@@ -637,7 +734,7 @@
         }
         catch
         {
-            // Best effort: local persistence and board reads must not break chat.
+            // Ignore load failures. Chat stays usable without local history.
         }
     }
 
@@ -660,7 +757,7 @@
         }
         catch
         {
-            // Best effort: local persistence and board reads must not break chat.
+            // Ignore load failures. Chat stays usable without local history.
         }
     }
 
@@ -731,7 +828,7 @@
         }
         catch
         {
-            // Best effort: local persistence and board reads must not break chat.
+            // Ignore load failures. Chat stays usable without local history.
         }
     }
 
@@ -768,7 +865,7 @@
         }
         catch
         {
-            // Best effort: local persistence and board reads must not break chat.
+            // Ignore load failures. Chat stays usable without local history.
         }
     }
 
@@ -980,7 +1077,7 @@
                 {
                     assistantEntry.Message.Content = (assistantEntry.Message.Content ?? string.Empty) + evt.Text;
                     StateHasChanged();
-                    await ScrollToBottomAsync();
+                    await ScrollToBottomIfNearAsync();
                 }
                 else if (evt.Type == "done")
                 {
@@ -1028,7 +1125,7 @@
             thread.UpdatedAt = DateTime.UtcNow;
             StateHasChanged();
             await PersistThreadsAsync();
-            await ScrollToBottomAsync();
+            await ScrollToBottomIfNearAsync();
         }
     }
 
@@ -1189,17 +1286,38 @@
             await Task.Delay(50);
             try
             {
-                await JS.InvokeVoidAsync("habitinatorLoadScript", CancellationToken.None, new object?[] { "_content/App.Shared.RCL/js/boardUiState.js" });
+                await JS.InvokeVoidAsync("habitinatorLoadScript", CancellationToken.None, new object?[] { "_content/App.Shared.RCL/js/aiChat.js" });
             }
             catch
             {
-                // Ignored. The scroll call below will fail and be caught too.
+                // Ignore the error. The outer catch handles the failed scroll call.
             }
-            await JS.InvokeVoidAsync("habitinatorScrollToBottom", CancellationToken.None, new object?[] { "ai-messages-scroll-area" });
+            await JS.InvokeVoidAsync("HabitinatorAiChat.scrollToBottom", CancellationToken.None);
         }
         catch
         {
-            // Best effort: local persistence and board reads must not break chat.
+            // Ignore load failures. Chat stays usable without local history.
+        }
+    }
+
+    /// <summary>The reader follows new tokens only when it is already near the bottom. Otherwise the reader shows a "Latest" jump button.</summary>
+    private async Task ScrollToBottomIfNearAsync()
+    {
+        try
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("habitinatorLoadScript", CancellationToken.None, new object?[] { "_content/App.Shared.RCL/js/aiChat.js" });
+            }
+            catch
+            {
+                // Ignore the error. The outer catch handles the failed scroll call.
+            }
+            await JS.InvokeVoidAsync("HabitinatorAiChat.scrollIfNear", CancellationToken.None);
+        }
+        catch
+        {
+            // Ignore load failures. Chat stays usable without local history.
         }
     }
 
@@ -1259,5 +1377,23 @@
         UiSessionState.OnAiDrawerChanged -= HandleDrawerChanged;
         _streamCts?.Cancel();
         _streamCts?.Dispose();
+        try
+        {
+            _ = JS.InvokeVoidAsync("HabitinatorModalSwipe.destroy", _sheetHeaderRef);
+        }
+        catch
+        {
+            // Ignored during disposal.
+        }
+        try
+        {
+            _ = JS.InvokeVoidAsync("HabitinatorBoardViewport.unwatchPhoneSheet");
+        }
+        catch
+        {
+            // Ignored during disposal.
+        }
+        _sheetRef?.Dispose();
+        _sheetRef = null;
     }
 }

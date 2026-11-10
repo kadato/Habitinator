@@ -1,7 +1,7 @@
 .ai-drawer-container {
     height: 100%;
     background-color: var(--mud-palette-background);
-    max-width: 100vw;
+    max-width: 100%;
 }
 
 /* Clean Header */
@@ -13,9 +13,14 @@
     z-index: 20;
 }
 
+.ai-header-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 .ai-header-avatar {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border-radius: var(--radius-sm, 6px);
     background-color: var(--mud-palette-primary);
     color: #ffffff !important;
@@ -28,7 +33,7 @@
 
 .ai-header-avatar ::deep .mud-icon-root,
 .ai-header-avatar .mud-icon-root {
-    font-size: 1.1rem !important;
+    font-size: 1.25rem !important;
     color: #ffffff !important;
     fill: #ffffff !important;
 }
@@ -55,7 +60,7 @@
 .ai-model-menu-container {
     display: inline-flex !important;
     align-items: center;
-    flex-shrink: 1;
+    flex: 1 1 auto;
     min-width: 0;
 }
 
@@ -63,11 +68,14 @@
 .ai-model-pill {
     display: inline-flex;
     align-items: center;
-    gap: 2px;
+    gap: 4px;
     padding: 2px 8px;
-    height: 26px;
-    min-height: 26px;
-    max-width: 130px;
+    height: 32px;
+    min-height: 32px;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    justify-content: space-between;
     border-radius: var(--radius-md);
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-lines-default);
@@ -78,8 +86,6 @@
     line-height: 1;
     cursor: pointer;
     user-select: none;
-    flex-shrink: 1;
-    min-width: 0;
     transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
 }
 
@@ -90,7 +96,8 @@
 }
 
 .ai-model-pill__name {
-    max-width: 95px;
+    flex: 1 1 auto;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -119,6 +126,19 @@
     align-items: center !important;
     margin-left: auto !important;
     box-sizing: border-box !important;
+}
+
+/* MudBlazor has no min-w-0 or text-truncate helpers, so the markup's
+   truncation classes were dead and long lines escaped their cards.
+   Scoped here, they fix every truncation inside the chat box. */
+.min-w-0 {
+    min-width: 0;
+}
+
+.text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Chat Body */
@@ -205,7 +225,7 @@
 .ai-message--user .ai-message-bubble {
     background-color: var(--mud-palette-primary);
     color: var(--mud-palette-primary-contrast-text);
-    border-radius: 12px 12px 3px 12px;
+    border-radius: 8px 8px 2px 8px;
     line-height: 1.5;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
@@ -220,39 +240,123 @@
     background-color: var(--mud-palette-surface);
     color: var(--mud-palette-text-primary);
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 12px 12px 12px 3px;
+    border-radius: 8px 8px 8px 2px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-.ai-bubble-model-pill {
-    font-size: 0.6875rem;
-    padding: 1px 6px;
-    border-radius: var(--radius-sm);
-    background: var(--mud-palette-background);
-    border: 1px solid var(--mud-palette-lines-default);
-    color: var(--mud-palette-text-secondary);
-    font-family: var(--hab-font-mono, monospace);
-    font-weight: 600;
-    cursor: help;
-    user-select: none;
-    transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+.ai-visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    white-space: nowrap !important;
 }
 
-.ai-bubble-model-pill:hover {
+/* Message actions sit below the bubble in normal flow. The grid 0fr trick
+   animates the expand, so hidden rows cost zero vertical space and shown
+   rows never cover message text, even on tiny bubbles. */
+.ai-message-actions {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    visibility: hidden;
+    transition: grid-template-rows 0.16s ease, opacity 0.16s ease, visibility 0.16s ease;
+}
+
+.ai-message-actions-row {
+    overflow: hidden;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+}
+
+.ai-message--assistant .ai-message-actions-row {
+    justify-content: flex-start;
+}
+
+.ai-message--user .ai-message-actions-row {
+    justify-content: flex-end;
+}
+
+.ai-message:hover .ai-message-actions,
+.ai-message:focus-within .ai-message-actions,
+.ai-message.show-actions .ai-message-actions {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    visibility: visible;
+}
+
+::deep .ai-message-actions-row .mud-icon-button {
+    opacity: 0.75;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+::deep .ai-message-actions-row .mud-icon-button:hover,
+::deep .ai-message-actions-row .mud-icon-button:focus-visible {
+    opacity: 1;
+}
+
+/* Jump-to-latest pill. JS toggles hidden while the reader is scrolled up. */
+.ai-jump-latest {
+    position: sticky;
+    bottom: 10px;
+    z-index: 5;
+    display: block;
+    width: max-content;
+    margin: 0 auto;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--mud-palette-lines-default);
+    background: var(--mud-palette-surface);
     color: var(--mud-palette-primary);
-    border-color: var(--mud-palette-primary);
-    background-color: var(--mud-palette-action-default-hover);
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.ai-jump-latest[hidden] {
+    display: none;
+}
+
+/* ::deep companions: MudMenu renders its root without this
+   component's scope attribute, so plain selectors never match it. */
+::deep .ai-model-menu-container {
+    display: inline-flex !important;
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+::deep .ai-model-pill {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+}
+
+::deep .ai-model-pill__name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Tool execution card */
 .ai-tools-card {
     background-color: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-lines-default);
+    min-width: 0;
 }
 
 .ai-tool-item {
     background: var(--mud-palette-background);
     border: 1px solid var(--mud-palette-lines-default);
+    min-width: 0;
+    overflow: hidden;
 }
 
 .ai-tool-name-code {
@@ -599,29 +703,7 @@
     word-break: break-word;
 }
 
-/* Thinking Card in Chat */
-.ai-thinking-avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: var(--radius-sm, 6px);
-    background: var(--mud-palette-action-default-hover);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid var(--mud-palette-lines-default);
-}
-
-.ai-thinking-title {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--mud-palette-text-primary);
-}
-
-.ai-thinking-subtext {
-    font-size: 0.72rem;
-    color: var(--mud-palette-text-secondary);
-}
-
+/* Typing dots and streaming caret. Honest motion only. */
 .ai-typing-dots {
     display: inline-flex;
     align-items: center;
@@ -665,26 +747,23 @@
     50% { opacity: 0; }
 }
 
-.ai-streaming-badge {
-    font-size: 0.65rem;
-    color: var(--mud-palette-primary);
-    background: var(--mud-palette-action-default-hover);
-    border: 1px solid var(--mud-palette-primary);
-    padding: 1px 6px;
-    border-radius: var(--radius-sm);
-    font-weight: 600;
-    line-height: 1.2;
+@media (prefers-reduced-motion: reduce) {
+    .ai-dot,
+    .ai-streaming-cursor {
+        animation: none !important;
+    }
 }
 
 /* The drawer is a Temporary overlay. It must never widen the page, open or closed.
    Fixed width caused a permanent horizontal scrollbar because the off-canvas
    panel sat 480px past the right edge. min() keeps it inside narrow screens. */
 .ai-assistant-drawer {
-    width: min(480px, 100vw) !important;
-    max-width: 100vw !important;
+    width: min(480px, 100%) !important;
+    max-width: 100% !important;
     position: fixed !important;
     top: 0 !important;
     right: 0 !important;
+    left: auto !important;
     height: 100dvh !important;
     overflow-x: clip !important;
     padding-top: env(safe-area-inset-top, 0px);
@@ -707,6 +786,11 @@ html.kb-open .ai-assistant-drawer {
     pointer-events: none !important;
 }
 
+/* Overflow menu: mobile only. Desktop keeps the individual icon buttons. */
+::deep .ai-header-more {
+    display: none !important;
+}
+
 /* Touch pointers get full-size header and prompt targets. */
 @media (pointer: coarse) {
     .ai-header-btn {
@@ -716,11 +800,121 @@ html.kb-open .ai-assistant-drawer {
         min-height: 44px !important;
     }
 
+    .ai-header-avatar {
+        width: 44px !important;
+        height: 44px !important;
+    }
+
     .ai-model-pill {
+        min-height: 44px !important;
+        height: 44px !important;
+    }
+}
+
+/* Phones: the drawer is full-viewport. Clip inner overflow and keep
+   header, body, and footer inside the viewport width. */
+@media (max-width: 599.98px) {
+    .ai-assistant-drawer {
+        width: 100% !important;
+        max-width: 100% !important;
+        left: auto !important;
+    }
+
+    .ai-drawer-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        overflow-x: clip !important;
+        box-sizing: border-box !important;
+    }
+
+    .ai-drawer-header,
+    .ai-drawer-body,
+    .ai-drawer-footer {
+        min-width: 0 !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        overflow-x: clip !important;
+    }
+
+    .ai-drawer-header {
+        flex-wrap: nowrap !important;
+    }
+
+    .ai-message--assistant {
+        max-width: 100% !important;
+    }
+
+    /* Five header buttons plus the model pill do not fit next to the title.
+       Drop the title first; the avatar keeps the brand.
+       NOTE: ::deep is required. MudText and MudIconButton render their own
+       roots, which never carry this component's scope attribute. */
+    ::deep .ai-header-title {
+        display: none !important;
+    }
+
+    .ai-drawer-header {
+        gap: 4px !important;
+    }
+
+    ::deep .ai-drawer-header .ai-header-btn {
+        width: 40px !important;
+        min-width: 40px !important;
+        height: 40px !important;
+        min-height: 40px !important;
+    }
+
+    .ai-model-pill {
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+    }
+
+    /* Keyboard hints are meaningless on touch keyboards, and the Safe board
+       tools badge explains nothing actionable on a phone. Desktop keeps both.
+       No clutter. */
+    .ai-hint-shortcuts {
+        display: none !important;
+    }
+
+    /* Collapse secondary actions into the overflow menu so Close stops
+       sharing a corner with four identical targets. */
+    ::deep .ai-header-btn--collapse {
+        display: none !important;
+    }
+
+    ::deep .ai-header-more {
+        display: inline-flex !important;
+    }
+
+    ::deep .ai-header-more .mud-icon-button {
+        width: 44px !important;
+        min-width: 44px !important;
+        height: 44px !important;
         min-height: 44px !important;
     }
 
-    .ai-model-pill__name {
-        max-width: 110px;
+    /* Close is the way out of a full-screen drawer. Make it the biggest
+       target in the row and lift it off the corner with a filled circle. */
+    ::deep .ai-drawer-header .ai-header-btn--close {
+        width: 48px !important;
+        min-width: 48px !important;
+        height: 48px !important;
+        min-height: 48px !important;
+        margin-left: 6px !important;
+        background-color: var(--mud-palette-action-default-hover) !important;
+        border-radius: 50% !important;
+    }
+
+    /* The Safe board tools badge explains nothing actionable on a phone.
+       Desktop keeps it. No clutter. */
+    ::deep .ai-input-hint {
+        display: none !important;
+    }
+}
+
+/* Smallest phones: the avatar goes too, so all five buttons stay reachable. */
+@media (max-width: 374.98px) {
+    .ai-header-avatar {
+        display: none !important;
     }
 }

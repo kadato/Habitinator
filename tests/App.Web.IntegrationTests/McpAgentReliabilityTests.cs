@@ -238,7 +238,7 @@ public sealed partial class McpAgentReliabilityTests(PostgresWebAppFactory facto
                 ["section"] = "Todo",
                 ["title"] = "Resume and portfolio polish",
             }));
-        dupe.Message.Should().Contain("Similar item exists");
+        dupe.Message.Should().Contain("Already exists");
         dupe.Message.Should().Contain("Resume and portfolio polish");
         dupe.Message.Should().Contain(first.Id.ToString("D"));
 
@@ -533,7 +533,7 @@ public sealed partial class McpAgentReliabilityTests(PostgresWebAppFactory facto
                 ["section"] = "Todo",
                 ["title"] = title,
             }));
-        dupe.Message.Should().Contain("Similar item exists");
+        dupe.Message.Should().Contain("Already exists");
         dupe.Message.Should().Contain(first.Id.ToString("D"));
 
         var forced = JsonSerializer.Deserialize<BoardItem>(

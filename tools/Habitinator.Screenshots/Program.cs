@@ -185,7 +185,7 @@ async Task CaptureStatisticsScreensAsync(IPage page, string baseUrl, string them
     await CaptureAsync(page, "statistics", theme);
 
     await ClickDiverseHeatmapDayAsync(page);
-    var detailDialog = page.Locator(".activity-day-detail-dialog");
+    var detailDialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Day details" });
     await detailDialog.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
     await Task.Delay(1000);
     await CaptureAsync(page, "activity-day-detail", theme);

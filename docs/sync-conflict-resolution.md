@@ -1,6 +1,6 @@
 # Sync conflict resolution strategy
 
-Habitinator is local-first with an outbound outbox queue. MAUI keeps the local mirror in SQLite. The web app keeps it in IndexedDB with an in-memory read cache. Both hosts run the same data service, `LocalFirstBoardDataService`, over the `IBoardLocalStore` contract. Sync runs in the background. On a version conflict, HTTP 409, the client resolves it without blocking you and without prompting you.
+Habitinator is local-first with an outbound outbox queue. MAUI keeps the local mirror in SQLite. The web app keeps it in IndexedDB with an in-memory read cache. Both hosts run the same data service, `LocalFirstBoardDataService`, over the `IBoardLocalStore` contract. Sync runs in the background. On HTTP 409, the client resolves the conflict without blocking you or prompting you.
 
 Resolution runs in two stages:
 
@@ -17,7 +17,7 @@ Before comparing timestamps, the system checks if the local version's contents m
 * Drag-and-drop ordering, `SortOrder`
 * Archive status, `IsArchived`
 
-If all user-facing content fields match exactly, the conflict is a trivial metadata collision. The client keeps the server version. It moves the local tracking timestamp to the server value and drops the duplicate outbox operation.
+If all user-facing content fields match exactly, the conflict is a trivial metadata collision. The client keeps the server version. The client moves the local tracking timestamp to the server value. The client drops the duplicate outbox operation.
 
 ## Last-Write-Wins (LWW)
 
@@ -32,11 +32,11 @@ The conversion is accurate to one network round trip. Two edits within that wind
 
 * **Local edit is newer, `LocalTime >= ServerTime`.** The client keeps the local device version. It rewrites the outbox entry with the server concurrency version and retries it. The server accepts the retry.
 * **Server edit is newer, `LocalTime < ServerTime`.** The client keeps the server version. It deletes the conflicting local outbox operation and writes the server properties into the local mirror.
-* **Additive operations never drop.** `HabitIncrement`, `HabitDecrement`, and `CompleteDailyForDate` retry on top of the server version so both sides count. The UI shows `counter (merged)` as a toast. The **sync icon** opens the merge log.
+* **The client never drops additive operations.** `HabitIncrement`, `HabitDecrement`, and `CompleteDailyForDate` retry on top of the server version. Both sides count. The UI shows `counter (merged)` as a toast. The **sync icon** opens the merge log.
 
 ## Offline queue health
 
-The client quarantines operations that fail 8 times, so one failed operation does not block newer ones. The **sync icon** shows the pending count. It opens a list with `AttemptCount`, `LastError`, **Retry**, and **Discard**. The pending count is the board outbox plus queued activity events. Failed settings writes stay on the device. The client sends them on the next read or save.
+The client quarantines operations that fail 8 times. One failed operation no longer blocks newer ones. The **sync icon** shows the pending count. The icon opens a list with `AttemptCount`, `LastError`, **Retry**, and **Discard**. The pending count is the board outbox plus queued activity events. Failed settings writes stay on the device. The client sends them on the next read or save.
 
 ## Why SQLite and IndexedDB can mirror PostgreSQL
 

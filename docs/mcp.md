@@ -2,7 +2,7 @@
 
 The server card lives at `/.well-known/mcp/server-card.json`. The capability catalog lives at `/.well-known/ai-catalog.json`. The agent skill lives at `/.well-known/agent-skills/habitinator/SKILL.md`. The auth guide lives at `/auth.md`. `Link` headers, `/.well-known/api-catalog`, and `llms.txt` advertise all four.
 
-The MCP endpoint is `POST /mcp`. It uses Streamable HTTP in stateless mode. Reads allow 1000 requests per minute in development and test environments, and 600 per minute in production. `delete_item`, `delete_tag`, and `import_data` allow 100 per minute in development and test environments, and 60 per minute in production.
+The MCP endpoint is `POST /mcp`. It uses Streamable HTTP in stateless mode. Read tools allow 1000 requests per minute in development and test environments. Read tools allow 600 per minute in production. `delete_item`, `delete_tag`, and `import_data` allow 100 per minute in development and test environments. These three tools allow 60 per minute in production.
 
 ## Authentication
 
@@ -56,7 +56,7 @@ opencode mcp add habitinator --url https://habitinator.app/mcp
 
 ### Connect with personal tokens
 
-Tokens are minted in the Settings panel under Settings, AI assistant, External AI access (MCP). Tokens support three scopes. `full` gives complete access. `tracking_only` gives read tools, habit and daily completion, and timer logging. `read_only` gives read tools, prompts, and resources. The panel tests each token and copies the client config with the token filled in. The panel lists and revokes tokens. Revocation takes effect immediately.
+Mint tokens under Settings, AI assistant, External AI access for MCP. Tokens support three scopes. `full` gives complete access. `tracking_only` gives read tools, habit and daily completion, and timer logging. `read_only` gives read tools, prompts, and resources. The panel tests each token and copies the client config with the token filled in. The panel lists and revokes tokens. Revocation takes effect immediately.
 
 ### Client configs
 
@@ -123,7 +123,7 @@ curl -s -X POST $BASE/mcp \
 
 ### Approve headless access without pasted secrets
 
-Terminal agents that cannot open a browser use the OAuth device authorization grant (RFC 8628). The agent calls `POST /oauth/device/authorize` with its `client_id` and shows you the `verification_uri` and the short `user_code`. You approve once in your browser. The agent polls `POST /oauth/token` with `grant_type` `urn:ietf:params:oauth:grant-type:device_code` until it holds an `access_token` and a `refresh_token`. Device codes expire in 10 minutes. Each code works once. The server binds each code to the requesting `client_id`. Refresh tokens rotate on use. The [auth guide](https://habitinator.app/auth.md) documents the full flow.
+Terminal agents that cannot open a browser use the OAuth device authorization grant defined in RFC 8628. The agent calls `POST /oauth/device/authorize` with its `client_id` and shows you the `verification_uri` and the short `user_code`. You approve once in your browser. The agent polls `POST /oauth/token` with `grant_type` `urn:ietf:params:oauth:grant-type:device_code` until it holds an `access_token` and a `refresh_token`. Device codes expire in 10 minutes. Each code works once. The server binds each code to the requesting `client_id`. Refresh tokens rotate on use. The [auth guide](https://habitinator.app/auth.md) documents the full flow.
 
 ## Call order
 

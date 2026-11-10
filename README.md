@@ -14,7 +14,7 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 
 **Live Demo.** [habitinator.app](https://habitinator.app)
 
-[Demo](https://habitinator.app) | [Preview](#preview) | [Download](#download-and-install) | [Features](#key-features) | [Tech stack](#technology-stack) | [Getting started](#getting-started)
+[Demo](https://habitinator.app) | [Preview](#preview) | [Download](#download-and-install) | [Features](#key-features) | [Tech stack](#technology-stack)
 
 </div>
 
@@ -63,8 +63,6 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 </p>
 
 </div>
-
-> Regenerate screenshots with `tools/Habitinator.Screenshots/run.ps1`. The script uses Playwright with a mobile viewport in light and dark themes.
 
 ---
 
@@ -116,10 +114,15 @@ dotnet build -t:Run -f net11.0-android
 
 ## Key features
 
-- **Core planner.** Track habits, dailies, and to-dos. Organize them with tags, notes, and checklists.
-- **Global session timer.** A stopwatch with target logging to trace time spent on specific items.
-- **Statistics and heatmap.** Interactive heatmap dashboard to monitor your progress over time.
-- **Local-first and sync.** Every client keeps a local mirror and queues changes for a server-side PostgreSQL backend. MAUI stores the mirror in SQLite, and the web app stores it in IndexedDB.
+- **Board planner.** Track habits, dailies, and to-dos. Organize them with tags, notes, checklists, archive, and streaks.
+- **Upcoming view.** See overdue, due today, and due tomorrow todos in one digest.
+- **Focus timer.** Run stopwatch or Pomodoro sessions with per-item targets. Log sessions to activity.
+- **Statistics.** Browse the activity heatmap. Open any day for details.
+- **Command palette.** Press Ctrl+K or Cmd+K to jump anywhere. Board shortcuts cover the rest.
+- **AI assistant.** Chat with the board from the drawer. Pick provider and model. Set custom instructions.
+- **External AI access.** Connect Claude, Cursor, VS Code, or OpenCode over MCP with OAuth or personal tokens.
+- **Reminders.** Set a daily reminder, focus timer alerts, sync alerts, sound, and quiet hours.
+- **Local-first sync.** Each device keeps a mirror and an outbox queue. Pause sync and inspect pending work. Conflicts resolve without data loss.
 
 ---
 
@@ -136,33 +139,9 @@ dotnet build -t:Run -f net11.0-android
 
 ---
 
-## Getting started
-
-### Prerequisites
-Make sure you have Docker installed and running for the local PostgreSQL container.
-
-### Run and debug via Aspire
-To start PostgreSQL, the web backend, and the native client host environment, run:
-```powershell
-dotnet run --project src/AppHost/AppHost.csproj
-```
-
-### Seeded demo user
-The application seeds a guest account on startup:
-- **Email.** `guest@habitinator.local`
-- **Password.** `Guest123!`
-
-### Regenerate screenshots
-To regenerate the mobile screenshots in the [Preview](#preview) section, first start the web app via AppHost, then run:
-```powershell
-pwsh ./tools/Habitinator.Screenshots/run.ps1 -BaseUrl "http://127.0.0.1:5050"
-```
-
----
-
 ## Solution graph
 
-Here are the project dependencies, auto-updated via documentation scripts:
+Here are the project dependencies. `scripts/Refresh-AutomationAssets.ps1` syncs the diagram below from `docs/automation/solution-graph.mmd`:
 
 <!-- HABITINATOR_MERMAID_BEGIN:solution-graph -->
 ```mermaid

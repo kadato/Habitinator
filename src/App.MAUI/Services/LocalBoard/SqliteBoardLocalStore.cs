@@ -1,3 +1,4 @@
+#pragma warning disable S4158 // existingById fills from a chunked database query. The analyzer cannot track adds through Chunk plus awaited ToDictionaryAsync. The else branch handles new items.
 using App.MAUI.Data;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services.Board.Local;

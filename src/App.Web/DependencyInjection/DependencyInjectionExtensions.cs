@@ -123,6 +123,8 @@ public static class DependencyInjectionExtensions
         services.AddSingleton<IBoardSyncStatus, NoOpBoardSyncStatus>();
         services.AddSingleton<IBoardLocalStoreLifecycle, NoOpBoardLocalStoreLifecycle>();
         services.AddSingleton<IBoardSyncRequestor, NoOpBoardSyncRequestor>();
+        services.AddScoped<BoardSyncStatus>();
+        services.AddScoped<BoardSyncPausePreference>();
         services.AddScoped<BoardRemoteNotifyBridge>();
         services.AddSingleton(sp => new MemoryCacheStore<BoardSnapshot>(
             sp.GetRequiredService<IMemoryCache>(),
@@ -175,6 +177,7 @@ public static class DependencyInjectionExtensions
         services.AddScoped<IBoardColumnStateStore, JsBoardColumnStateStore>();
         services.AddScoped<IUpcomingViewStateStore, UpcomingViewStateStore>();
         services.AddScoped<BoardUiSessionState>();
+        services.AddScoped<MobileBackHandler>();
         services.AddScoped<ICommandPaletteService, CommandPaletteService>();
         services.AddScoped<AiAssistantService>();
         services.AddScoped<IAiAssistantService, WebAiAssistantService>();

@@ -16,6 +16,44 @@ public class MainActivity : MauiAppCompatActivity
     {
         base.OnCreate(savedInstanceState);
         EnableEdgeToEdge(Window, Resources);
+
+        // Route the system back gesture to the Blazor overlay stack first.
+        // The handler closes dialogs, drawers, and the palette before the app
+        // exits. On the board root, a double press confirms exit.
+        OnBackPressedDispatcher.AddCallback(this, new BackPressCallback(this));
+    }
+
+    private async Task HandleBackPressedAsync()
+    {
+        try
+        {
+            var services = IPlatformApplication.Current?.Services;
+            var handler = services?.GetService(typeof(global::App.Shared.RCL.Services.MobileBackHandler))
+                as global::App.Shared.RCL.Services.MobileBackHandler;
+            if (handler is not null && await handler.RequestBackAsync())
+            {
+                return;
+            }
+        }
+        catch
+        {
+            // Fall through to the platform default.
+        }
+
+        try
+        {
+            RunOnUiThread(Finish);
+        }
+        catch
+        {
+            // Ignore the error. The OS still finishes the activity on a second press.
+        }
+    }
+
+    private sealed class BackPressCallback(MainActivity activity)
+        : AndroidX.Activity.OnBackPressedCallback(true)
+    {
+        public override void HandleOnBackPressed() => _ = activity.HandleBackPressedAsync();
     }
 
     private static void EnableEdgeToEdge(Android.Views.Window? window, Resources? resources)

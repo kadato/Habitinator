@@ -10,7 +10,6 @@
 @inject IActivityStatisticsReader StatsReader
 @inject IBoardDataService BoardData
 @inject IBoardLocalStoreLifecycle LocalBoardLifecycle
-@inject BoardUiSessionState UiSessionState
 @inject ICommandPaletteService PaletteService
 
 <PageTitle>@SeoDefaults.DefaultTitle</PageTitle>
@@ -145,6 +144,8 @@
 @code {
     private bool IsWelcomePage =>
         string.IsNullOrEmpty(Nav.ToBaseRelativePath(Nav.Uri).Trim('/'));
+
+    protected override bool UseHistoryBack => true;
 
     private async Task TriggerLogout()
     {

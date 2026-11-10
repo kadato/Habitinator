@@ -8,8 +8,8 @@
 @inject ISnackbar Snackbar
 @inject IActivityStatisticsReader StatsReader
 @inject IBoardDataService BoardData
-@inject BoardUiSessionState UiSessionState
 @inject ICommandPaletteService PaletteService
+@inject MobileBackHandler MobileBack
 
 <PageTitle>@PageTitles.Brand</PageTitle>
 
@@ -92,6 +92,7 @@
     protected override void OnInitialized()
     {
         base.OnInitialized();
+        MobileBack.SetHandler(HandleNativeBackAsync);
         Session.Changed += OnSessionChanged;
         IsDarkMode = GetSystemDarkMode();
         // Start session load off the render path so the shell paints immediately.
@@ -212,6 +213,46 @@
         }
     }
 
+    /// <summary>
+    /// Handles the Android system back press. The handler closes overlays first.
+    /// It returns to the board root next. A confirmed double press exits the app.
+    /// </summary>
+    /// <returns>True when the handler consumed the press.</returns>
+    private async Task<bool> HandleNativeBackAsync()
+    {
+        if (await CloseTopOverlayAsync())
+        {
+            MobileBack.ResetExitState();
+            return true;
+        }
+
+        var path = new Uri(Nav.Uri).LocalPath.TrimEnd('/');
+        if (!IsHomePath(path))
+        {
+            MobileBack.ResetExitState();
+            Nav.NavigateTo("/");
+            return true;
+        }
+
+        if (MobileBack.RegisterBackAttempt(DateTimeOffset.UtcNow))
+        {
+            MobileBack.ResetExitState();
+            try
+            {
+                Microsoft.Maui.Controls.Application.Current?.Quit();
+            }
+            catch
+            {
+                // Best effort. The activity finishes through the platform default.
+            }
+
+            return true;
+        }
+
+        Snackbar.Add("Press back again to exit", Severity.Normal);
+        return true;
+    }
+
     protected override async Task SyncNativeThemeAsync(bool isDarkMode)
     {
         // Keep the native status bar icon appearance in sync with the Blazor theme.
@@ -298,6 +339,7 @@
     {
         if (disposing)
         {
+            MobileBack.SetHandler(null);
             Session.Changed -= OnSessionChanged;
         }
 

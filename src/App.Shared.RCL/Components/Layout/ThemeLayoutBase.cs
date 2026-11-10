@@ -23,6 +23,7 @@ public abstract class ThemeLayoutBase : LayoutComponentBase, IDisposable
     [Inject] protected IJSRuntime JS { get; set; } = default!;
     [Inject] protected NavigationManager Nav { get; set; } = default!;
     [Inject] protected ICommandPaletteService CommandPalette { get; set; } = default!;
+    [Inject] protected BoardUiSessionState UiSessionState { get; set; } = default!;
     [Inject] protected GlobalTimerService TimerService { get; set; } = default!;
     [Inject] protected IUndoService UndoService { get; set; } = default!;
 
@@ -30,6 +31,13 @@ public abstract class ThemeLayoutBase : LayoutComponentBase, IDisposable
     protected bool IsDarkMode { get; set; } = true;
     protected MudThemeProvider? MudThemeProviderRef { get; set; }
     protected DotNetObjectReference<ThemeLayoutBase>? LayoutSelfRef { get; set; }
+
+    /// <summary>
+    /// On web, the layout pushes one history entry for each overlay. The OS back
+    /// gesture then closes the top overlay instead of leaving the page. MAUI
+    /// forwards the native press to .NET and keeps no history entries.
+    /// </summary>
+    protected virtual bool UseHistoryBack => false;
 
     protected override void OnInitialized()
     {
@@ -77,7 +85,9 @@ public abstract class ThemeLayoutBase : LayoutComponentBase, IDisposable
             await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/boardVisibility.js");
             await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/dialogLabel.js");
             await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/commandPalette.js");
+            await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/mobileBack.js");
             LayoutSelfRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("HabitinatorMobileBack.init", LayoutSelfRef, UseHistoryBack);
             await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.startGlobal", LayoutSelfRef);
             await SyncKeyboardShortcutsEnabledAsync();
         }
@@ -91,6 +101,43 @@ public abstract class ThemeLayoutBase : LayoutComponentBase, IDisposable
     public void OnCmdKPressed()
     {
         CommandPalette.Toggle();
+    }
+
+    /// <summary>
+    /// Closes the top overlay. The handler checks the command palette first,
+    /// then the AI drawer, then the top Mud dialog or menu popover. The web
+    /// history code calls this on popstate. The MAUI back handler calls this too.
+    /// </summary>
+    /// <returns>True when an overlay was open and a close started.</returns>
+    [JSInvokable]
+    public async Task OnHistoryBackAsync()
+    {
+        await CloseTopOverlayAsync();
+    }
+
+    protected async Task<bool> CloseTopOverlayAsync()
+    {
+        if (CommandPalette.IsOpen)
+        {
+            CommandPalette.Close();
+            return true;
+        }
+
+        if (UiSessionState.IsAiDrawerOpen)
+        {
+            UiSessionState.SetAiDrawer(false);
+            return true;
+        }
+
+        try
+        {
+            return await JS.InvokeAsync<bool>("HabitinatorMobileBack.tryCloseTopOverlay");
+        }
+        catch
+        {
+            // JS is unavailable during prerendering or in unit tests.
+            return false;
+        }
     }
 
     [JSInvokable]
@@ -160,7 +207,22 @@ public abstract class ThemeLayoutBase : LayoutComponentBase, IDisposable
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
+        // Navigation closes overlays that the history code tracks. Sync the
+        // counter here. Do not touch history, or stale entries break back navigation.
+        _ = SafeSyncBackStateAsync();
         _ = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SafeSyncBackStateAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("HabitinatorMobileBack.syncAfterNavigation");
+        }
+        catch
+        {
+            // Best effort. Missing JS only affects the back-gesture counter.
+        }
     }
 
     private void OnPreferencesChanged(object? sender, EventArgs e)

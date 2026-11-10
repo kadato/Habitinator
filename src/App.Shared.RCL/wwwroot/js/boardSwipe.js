@@ -14,6 +14,14 @@ globalThis.HabitinatorBoardSwipe = {
                 tracking = false;
                 return;
             }
+            // Edge swipes belong to the OS back gesture. Never steal them.
+            try {
+                var x = e.changedTouches[0].clientX;
+                if (globalThis.HabitinatorMobileBack?.isEdgeSwipe(x)) {
+                    tracking = false;
+                    return;
+                }
+            } catch (ignored) { /* fall through without the guard */ }
             var t = e.target;
             // Calendar surfaces opt in to tracking from interactive elements. Taps still click through because listeners are passive.
             // Only a real horizontal swipe moves the calendar. Everywhere else a swipe that starts on a control is ignored.

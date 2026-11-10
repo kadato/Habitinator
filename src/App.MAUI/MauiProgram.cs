@@ -155,6 +155,7 @@ public static class MauiProgram
         builder.Services.AddScoped<IBoardColumnStateStore, JsBoardColumnStateStore>();
         builder.Services.AddScoped<IUpcomingViewStateStore, UpcomingViewStateStore>();
         builder.Services.AddScoped<BoardUiSessionState>();
+        builder.Services.AddSingleton<MobileBackHandler>();
         builder.Services.AddScoped<ICommandPaletteService, CommandPaletteService>();
 
 #if DEBUG

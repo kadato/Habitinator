@@ -20,6 +20,14 @@ globalThis.HabitinatorModalSwipe = {
                 tracking = false;
                 return;
             }
+            // Edge swipes belong to the OS back gesture. Never steal them.
+            try {
+                var x = e.changedTouches[0].clientX;
+                if (globalThis.HabitinatorMobileBack?.isEdgeSwipe(x)) {
+                    tracking = false;
+                    return;
+                }
+            } catch (ignored) { /* fall through without the guard */ }
             var t = e.target;
             if (t?.closest?.(ignoreSelector)) {
                 tracking = false;

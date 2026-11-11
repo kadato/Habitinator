@@ -152,10 +152,10 @@
                               ValueChanged="v => _model.Ai.CustomInstructions = v"
                               OnBlur="SavePreferencesAsync" />
 
-                <div class="d-flex align-center gap-2 mt-2">
+                <div class="d-flex align-center justify-end gap-2 mt-2">
                     <MudButton Variant="Variant.Filled"
                                Color="Color.Primary"
-                               Size="Size.Small"
+                               Size="Size.Medium"
                                Disabled="_testing"
                                StartIcon="@(_testing ? null : Icons.Material.Filled.Bolt)"
                                OnClick="TestConnectionAsync">
@@ -171,8 +171,8 @@
                     </MudButton>
 
                     <MudButton Variant="Variant.Outlined"
-                               Color="Color.Default"
-                               Size="Size.Small"
+                               Color="Color.Primary"
+                               Size="Size.Medium"
                                Disabled="_saving"
                                StartIcon="@Icons.Material.Filled.Save"
                                OnClick="SavePreferencesAsync">
@@ -280,7 +280,7 @@
                                Color="Color.Primary"
                                Size="Size.Medium"
                                Style="align-self: stretch;"
-                               Class="flex-shrink-0"
+                               Class="flex-shrink-0 ms-auto"
                                Disabled="_generatingMcpToken"
                                StartIcon="@(_generatingMcpToken ? null : Icons.Material.Filled.Key)"
                                OnClick="GenerateMcpTokenAsync">
@@ -304,8 +304,8 @@
                                 Valid until @_mcpTokenResponse.ExpiresAtUtc.ToString("u") (@_mcpTokenResponse.Days days)
                             </MudText>
                             <MudButton Variant="Variant.Outlined"
-                                       Size="Size.Small"
-                                       Color="Color.Default"
+                                       Size="Size.Medium"
+                                       Color="Color.Primary"
                                        Disabled="_testingMcp"
                                        StartIcon="@Icons.Material.Filled.Bolt"
                                        OnClick="TestMcpConnectionAsync">
@@ -325,7 +325,7 @@
                             <div class="d-flex align-center gap-1 min-w-0 overflow-hidden">
                                 <code class="d-block pa-1 rounded text-truncate font-monospace flex-grow-1 min-w-0 mcp-token-panel__code">@_mcpTokenResponse.Endpoint</code>
                                 <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
-                                               Size="Size.Small"
+                                               Size="Size.Medium"
                                                aria-label="Copy MCP endpoint"
                                                OnClick='() => CopyTextAsync(_mcpTokenResponse.Endpoint, "Endpoint URL copied.")' />
                             </div>
@@ -335,7 +335,7 @@
                             <div class="d-flex align-center gap-1 min-w-0 overflow-hidden">
                                 <code class="d-block pa-1 rounded text-truncate font-monospace flex-grow-1 min-w-0 mcp-token-panel__code">@_mcpTokenResponse.Token</code>
                                 <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
-                                               Size="Size.Small"
+                                               Size="Size.Medium"
                                                aria-label="Copy MCP token"
                                                OnClick='() => CopyTextAsync(_mcpTokenResponse.Token, "Bearer token copied.")' />
                             </div>
@@ -363,14 +363,14 @@
                             {
                                 <MudStack Row="true" Spacing="1">
                                     <MudButton Variant="Variant.Filled"
-                                               Size="Size.Small"
+                                               Size="Size.Medium"
                                                Color="Color.Error"
                                                Disabled="_revokingAll"
                                                OnClick="RevokeAllMcpTokensAsync">
                                         @(_revokingAll ? "Revoking..." : "Confirm revoke all")
                                     </MudButton>
                                     <MudButton Variant="Variant.Text"
-                                               Size="Size.Small"
+                                               Size="Size.Medium"
                                                OnClick="() => _confirmRevokeAll = false">
                                         Cancel
                                     </MudButton>
@@ -379,7 +379,7 @@
                             else
                             {
                                 <MudButton Variant="Variant.Text"
-                                           Size="Size.Small"
+                                           Size="Size.Medium"
                                            Color="Color.Error"
                                            OnClick="() => _confirmRevokeAll = true">
                                     Revoke all
@@ -440,25 +440,25 @@
                                 Claude Desktop, Cursor, or VS Code:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpClaudeOAuthSnippet()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeOAuthSnippet(), "OAuth configuration copied.")'>Copy config</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Primary" Class="mcp-copy-btn" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeOAuthSnippet(), "OAuth configuration copied.")'>Copy config</MudButton>
 
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
                                 OpenCode:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpOpenCodeOAuthSnippet()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpOpenCodeOAuthSnippet(), "OpenCode OAuth config copied.")'>Copy config</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Primary" Class="mcp-copy-btn" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpOpenCodeOAuthSnippet(), "OpenCode OAuth config copied.")'>Copy config</MudButton>
 
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
                                 Claude Code CLI:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpClaudeCodeCliOAuth()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeCodeCliOAuth(), "Claude Code CLI command copied.")'>Copy command</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Primary" Class="mcp-copy-btn" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeCodeCliOAuth(), "Claude Code CLI command copied.")'>Copy command</MudButton>
 
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
                                 OpenCode CLI:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpOpenCodeCliOAuth()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpOpenCodeCliOAuth(), "OpenCode CLI command copied.")'>Copy command</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Primary" Class="mcp-copy-btn" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpOpenCodeCliOAuth(), "OpenCode CLI command copied.")'>Copy command</MudButton>
                         </div>
                     </MudTabPanel>
                     <MudTabPanel Text="Claude">
@@ -467,13 +467,13 @@
                                 Paste into Claude Desktop config, then restart Claude.
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpClaudeSnippet()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeSnippet(), "Claude configuration copied.")'>Copy Desktop config</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Primary" Class="mcp-copy-btn" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeSnippet(), "Claude configuration copied.")'>Copy Desktop config</MudButton>
 
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
                                 Or add to Claude Code CLI:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpClaudeCodeCli()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeCodeCli(), "Claude Code command copied.")'>Copy CLI command</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Primary" Class="mcp-copy-btn" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeCodeCli(), "Claude Code command copied.")'>Copy CLI command</MudButton>
 
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2 d-block">
                                 Desktop config locations: macOS at <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>, Windows at <code>%APPDATA%\Claude\claude_desktop_config.json</code>, Linux at <code>~/.config/Claude/claude_desktop_config.json</code>.
@@ -486,19 +486,19 @@
                                 Save the token as an environment variable:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpExportEnv()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpExportEnv(), "Export command copied.")'>Copy export command</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Primary" Class="mcp-copy-btn" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpExportEnv(), "Export command copied.")'>Copy export command</MudButton>
 
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
                                 Add to OpenCode with the CLI:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpOpenCodeCli()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpOpenCodeCli(), "OpenCode command copied.")'>Copy CLI command</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Primary" Class="mcp-copy-btn" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpOpenCodeCli(), "OpenCode command copied.")'>Copy CLI command</MudButton>
 
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
                                 Or paste into <code>opencode.jsonc</code> directly:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpOpenCodeSnippet()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpOpenCodeSnippet(), "OpenCode configuration copied.")'>Copy config</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Primary" Class="mcp-copy-btn" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpOpenCodeSnippet(), "OpenCode configuration copied.")'>Copy config</MudButton>
                         </div>
                     </MudTabPanel>
                     <MudTabPanel Text="Hermes">
@@ -507,26 +507,26 @@
                                 Save the token as an environment variable:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpExportEnv()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpExportEnv(), "Export command copied.")'>Copy export command</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Primary" Class="mcp-copy-btn" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpExportEnv(), "Export command copied.")'>Copy export command</MudButton>
 
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
                                 Append to <code>~/.hermes/config.yaml</code>:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpHermesAppend()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpHermesAppend(), "Hermes append command copied.")'>Copy append command</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Primary" Class="mcp-copy-btn" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpHermesAppend(), "Hermes append command copied.")'>Copy append command</MudButton>
 
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
                                 Or paste this block under <code>mcp_servers</code> in <code>config.yaml</code>:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpHermesSnippet()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpHermesSnippet(), "Hermes configuration copied.")'>Copy Hermes config</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Primary" Class="mcp-copy-btn" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpHermesSnippet(), "Hermes configuration copied.")'>Copy Hermes config</MudButton>
                         </div>
                     </MudTabPanel>
                     <MudTabPanel Text="Cursor or VS Code">
                         <div class="pa-2">
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 d-block">Paste into <code>.vscode/mcp.json</code> or Cursor MCP settings.</MudText>
                             <pre class="mcp-snippet-pre">@GetMcpClaudeSnippet()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeSnippet(), "Cursor/VS Code configuration copied.")'>Copy config</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Primary" Class="mcp-copy-btn" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpClaudeSnippet(), "Cursor or VS Code config copied.")'>Copy config</MudButton>
                         </div>
                     </MudTabPanel>
                     <MudTabPanel Text="Terminal or curl">
@@ -535,13 +535,13 @@
                                 Health check:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpHealthCheckCurl()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpHealthCheckCurl(), "Health check command copied.")'>Copy health check</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Primary" Class="mcp-copy-btn" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpHealthCheckCurl(), "Health check command copied.")'>Copy health check</MudButton>
 
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-1 d-block">
                                 List tools:
                             </MudText>
                             <pre class="mcp-snippet-pre">@GetMcpCurlSnippet()</pre>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpCurlSnippet(), "curl command copied.")'>Copy curl</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Primary" Class="mcp-copy-btn" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick='() => CopyTextAsync(GetMcpCurlSnippet(), "curl command copied.")'>Copy curl</MudButton>
                         </div>
                     </MudTabPanel>
                 </MudTabs>
@@ -568,10 +568,10 @@
                                     "@recipe.Prompt"
                                 </MudText>
                             </div>
-                            <MudButton Variant="Variant.Outlined"
-                                       Size="Size.Small"
-                                       Color="Color.Default"
-                                       Class="flex-shrink-0"
+                            <MudButton Variant="Variant.Filled"
+                                       Size="Size.Medium"
+                                       Color="Color.Primary"
+                                       Class="flex-shrink-0 prompt-recipe-card__copy"
                                        StartIcon="@Icons.Material.Filled.ContentCopy"
                                        OnClick='() => CopyTextAsync(recipe.Prompt, "Prompt copied to clipboard.")'>
                                 Copy prompt

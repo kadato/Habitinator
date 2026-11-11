@@ -176,8 +176,30 @@
     border-color: var(--mud-palette-primary);
 }
 
+/* Snippet copy buttons sit at the right edge on desktop. */
+.pa-2 ::deep .mcp-copy-btn {
+    display: flex;
+    width: fit-content;
+    margin-left: auto;
+}
+
 @media (max-width: 600px) {
     .prompt-recipe-card {
         flex-wrap: wrap;
+    }
+
+    /* Copy actions use full-width rows on phones. Each row stays at least 44px tall so a right thumb hits it without a stretch to a corner. */
+    ::deep .prompt-recipe-card__copy {
+        width: 100%;
+        min-height: 44px;
+        font-size: 0.9rem;
+        justify-content: center;
+    }
+
+    ::deep .mcp-copy-btn {
+        width: 100%;
+        min-height: 44px;
+        margin-top: 0.15rem;
+        justify-content: center;
     }
 }

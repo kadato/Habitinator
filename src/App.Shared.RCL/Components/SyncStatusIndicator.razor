@@ -29,7 +29,7 @@ else
         <span class="sync-row__label">@label</span>
         @if (CanRetry(state))
         {
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="sync-row__retry" OnClick="RetryNow">@GetRetryLabel(state)</MudButton>
+            <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Primary" Class="sync-row__retry ms-auto" OnClick="RetryNow">@GetRetryLabel(state)</MudButton>
         }
     </div>
     <MudDivider Class="my-1"/>

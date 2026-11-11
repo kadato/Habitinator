@@ -193,7 +193,7 @@ button.board-card__tag-badge--more:focus-visible {
 }
 
 .board-subtask-pill {
-    align-self: flex-start;
+    align-self: flex-end;
     display: inline-flex;
     flex-direction: row;
     align-items: center;

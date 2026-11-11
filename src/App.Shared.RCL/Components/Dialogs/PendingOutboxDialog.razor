@@ -42,14 +42,14 @@
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">Waiting</MudText>
                                 }
                                 <MudStack Row="true" Spacing="1" Class="mt-1">
-                                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => DiscardAsync(op.OperationId))">Discard</MudButton>
-                                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="RetryNow">Retry</MudButton>
+                                    <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Error" OnClick="@(() => DiscardAsync(op.OperationId))">Discard</MudButton>
+                                    <MudButton Variant="Variant.Outlined" Size="Size.Medium" OnClick="RetryNow">Retry</MudButton>
                                 </MudStack>
                             </li>
                         }
                     </ul>
                     <div class="mt-3 d-flex justify-end">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="RetryNow">Sync all now</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Medium" OnClick="RetryNow">Sync all now</MudButton>
                     </div>
                 }
                 @if (Conflicts.Count > 0)

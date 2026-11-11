@@ -14,7 +14,7 @@
             <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Large" Class="cal-fallback__icon" aria-hidden="true" />
             <MudText Typo="Typo.subtitle2" Class="cal-fallback__title">Couldn't load</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary">Check connection and try again.</MudText>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="ReloadAsync">Retry</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Medium" Class="mt-2" OnClick="ReloadAsync">Retry</MudButton>
         </div>
     }
     else if (_loading)
@@ -36,7 +36,7 @@
             <div class="cal-top__row">
                 <div class="cal-nav" role="group" aria-label="Move in calendar">
                     <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Size="Size.Medium" Class="cal-navbtn" aria-label="@PrevLabel" OnClick="Prev" />
-                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" Class="cal-todaybtn" aria-label="@($"Back to today, {StepperLabel}")" title="Back to today" OnClick="GoToday">@StepperLabel</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Medium" Class="cal-todaybtn" aria-label="@($"Back to today, {StepperLabel}")" title="Back to today" OnClick="GoToday">@StepperLabel</MudButton>
                     <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Medium" Class="cal-navbtn" aria-label="@NextLabel" OnClick="Next" />
                 </div>
                 <div class="cal-titles">
@@ -91,13 +91,13 @@
                             <div class="cal-card__titles">
                                 <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="cal-card__title">Overdue</MudText>
                             </div>
-                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Class="text-transform-none" OnClick="MoveOverdueToTodayAsync" Disabled="_bulkMoving">@(_bulkMoving ? "Moving…" : $"Move all {_overdue.Count} to today")</MudButton>
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Medium" Class="text-transform-none" OnClick="MoveOverdueToTodayAsync" Disabled="_bulkMoving">@(_bulkMoving ? "Moving…" : $"Move all {_overdue.Count} to today")</MudButton>
                         </div>
                         <ul class="cal-list">
                             @foreach (var todo in GetVisibleOverdue())
                             {
                                 <li class="cal-row" @key="todo.Id">
-                                    <span class="cal-row__icon cal-row__icon--todo" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Small" /></span>
+                                    <span class="cal-row__icon cal-row__icon--todo" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Medium" /></span>
                                     <div class="cal-row__text">
                                         <button type="button" class="cal-row__titlebtn" @onclick="() => OpenTodoEditorAsync(todo)">@todo.Title</button>
                                         <div class="cal-row__meta">@TodoDueRelativeText.Format(todo.TodoDueDate!.Value, _today)</div>

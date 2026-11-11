@@ -108,7 +108,7 @@
                          PopoverFixed="true">
                     <div class="px-3 py-2 border-bottom d-flex align-center justify-space-between ai-threads-header" style="min-width: 240px;">
                         <MudText Typo="Typo.caption" Class="font-weight-bold">Chat Threads (@_threads.Count)</MudText>
-                        <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Text" OnClick="NewThreadAsync">New</MudButton>
+                        <MudButton Size="Size.Medium" StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Text" OnClick="NewThreadAsync">New</MudButton>
                     </div>
                     <div class="ai-threads-list" role="presentation">
                     @foreach (var t in _threads)
@@ -127,7 +127,7 @@
                                 {
                                     <span @onclick:stopPropagation="true">
                                         <MudIconButton Icon="@Icons.Material.Filled.Close"
-                                                       Size="Size.Small"
+                                                       Size="Size.Medium"
                                                        Color="Color.Default"
                                                        Class="pa-1 ai-thread-delete"
                                                        title="Delete thread"
@@ -141,19 +141,19 @@
                     </div>
                 </MudMenu>
                 <MudIconButton Icon="@Icons.Material.Filled.Add"
-                               Size="Size.Small"
+                               Size="Size.Medium"
                                Color="Color.Inherit"
                                Class="ai-header-btn ai-header-btn--collapse"
                                aria-label="New chat thread"
                                OnClick="NewThreadAsync" />
                 <MudIconButton Icon="@Icons.Material.Filled.DeleteSweep"
-                               Size="Size.Small"
+                               Size="Size.Medium"
                                Color="Color.Inherit"
                                Class="ai-header-btn ai-header-btn--collapse"
                                aria-label="Clear chat history"
                                OnClick="ClearChat" />
                 <MudIconButton Icon="@Icons.Material.Filled.Settings"
-                               Size="Size.Small"
+                               Size="Size.Medium"
                                Color="Color.Inherit"
                                Class="ai-header-btn ai-header-btn--collapse"
                                aria-label="AI settings"
@@ -173,7 +173,7 @@
                     <MudMenuItem Icon="@Icons.Material.Filled.Settings" OnClick="NavigateToSettings">AI settings</MudMenuItem>
                 </MudMenu>
                 <MudIconButton Icon="@Icons.Material.Filled.Close"
-                               Size="Size.Small"
+                               Size="Size.Medium"
                                Color="Color.Inherit"
                                Class="ai-header-btn ai-header-btn--close"
                                aria-label="Close assistant"
@@ -217,7 +217,7 @@
                         </div>
                         <MudButton Variant="Variant.Filled"
                                    Color="Color.Primary"
-                                   Size="Size.Small"
+                                   Size="Size.Medium"
                                    StartIcon="@Icons.Material.Filled.Settings"
                                    OnClick="NavigateToSettings">
                             Settings
@@ -299,7 +299,7 @@
                                                 </MudText>
                                             </div>
                                             <MudButton Variant="Variant.Text"
-                                                       Size="Size.Small"
+                                                       Size="Size.Medium"
                                                        Color="Color.Default"
                                                        Class="ai-details-toggle-btn"
                                                        OnClick="() => ToggleToolDetails(entry)">
@@ -349,14 +349,14 @@
                                 @if (!isUser)
                                 {
                                     <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
-                                                   Size="Size.Small"
+                                                   Size="Size.Medium"
                                                    Color="Color.Default"
                                                    aria-label="Copy response"
                                                    OnClick="() => CopyToClipboardAsync(entry.Message.Content)" />
                                     @if (isLast && !_isSending)
                                     {
                                         <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                                       Size="Size.Small"
+                                                       Size="Size.Medium"
                                                        Color="Color.Default"
                                                        aria-label="Regenerate response"
                                                        OnClick="RegenerateAsync" />
@@ -364,7 +364,7 @@
                                     @if (isError)
                                     {
                                         <MudIconButton Icon="@Icons.Material.Filled.Replay"
-                                                       Size="Size.Small"
+                                                       Size="Size.Medium"
                                                        Color="Color.Warning"
                                                        aria-label="Retry request"
                                                        OnClick="RetryLastAsync" />
@@ -373,12 +373,12 @@
                                 else
                                 {
                                     <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
-                                                   Size="Size.Small"
+                                                   Size="Size.Medium"
                                                    Color="Color.Default"
                                                    aria-label="Copy message"
                                                    OnClick="() => CopyToClipboardAsync(entry.Message.Content)" />
                                     <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                                   Size="Size.Small"
+                                                   Size="Size.Medium"
                                                    Color="Color.Default"
                                                    aria-label="Edit and resend"
                                                    Disabled="_isSending"
@@ -447,7 +447,7 @@
                            OnClick="HandleSendOrStopAsync">
                     @if (_isStreaming)
                     {
-                        <MudIcon Icon="@Icons.Material.Filled.Stop" Size="Size.Small" />
+                        <MudIcon Icon="@Icons.Material.Filled.Stop" Size="Size.Medium" />
                     }
                     else if (_isSending)
                     {

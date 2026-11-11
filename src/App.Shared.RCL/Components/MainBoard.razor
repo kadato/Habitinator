@@ -36,7 +36,7 @@
                 <span>
                     @BoardSync.SyncProblemMessage
                 </span>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@BoardSync.IsSyncing" OnClick="() => BoardSyncRequestor.RequestSync()">Retry now</MudButton>
+                <MudButton Variant="Variant.Outlined" Size="Size.Medium" Disabled="@BoardSync.IsSyncing" OnClick="() => BoardSyncRequestor.RequestSync()">Retry now</MudButton>
             </div>
         </MudAlert>
     }
@@ -61,7 +61,7 @@
                        Color="Color.Primary"
                        Disabled="@_isLoading"
                        OnClick="RetryLoadAsync"
-                       Size="Size.Small"
+                       Size="Size.Medium"
                        Class="mt-2">
                 Retry
             </MudButton>
@@ -78,7 +78,7 @@
                        Color="Color.Primary"
                        Disabled="@_isLoading"
                        OnClick="RetryLoadAsync"
-                       Size="Size.Small"
+                       Size="Size.Medium"
                        Class="mt-2">
                 Retry
             </MudButton>
@@ -160,7 +160,7 @@
                                     <MudStack Row="true" Spacing="1" Justify="Justify.SpaceBetween" Class="mt-2 pt-2 board-tags-menu-footer" Style="border-top: 1px solid var(--mud-palette-divider);">
                                         <MudButton Variant="Variant.Text"
                                                    Color="Color.Error"
-                                                   Size="Size.Small"
+                                                   Size="Size.Medium"
                                                    OnClick="ClearBoardFilters"
                                                    Disabled="@(string.IsNullOrWhiteSpace(_searchText) && SelectedFilterTagCount == 0)">
                                             Clear all filters

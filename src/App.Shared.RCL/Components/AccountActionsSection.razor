@@ -44,7 +44,7 @@
                           Value="_newPassword" ValueChanged="v => _newPassword = v" />
             <MudTextField T="string" Label="Confirm new password" InputType="InputType.Password" Variant="Variant.Outlined" dense="true"
                           Value="_confirmPassword" ValueChanged="v => _confirmPassword = v" />
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_savingPassword" OnClick="ChangePasswordAsync">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="align-self-end" Disabled="_savingPassword" OnClick="ChangePasswordAsync">
                 Change password
             </MudButton>
         </MudStack>
@@ -56,7 +56,7 @@
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
                 Download your data as JSON. Max 50,000 rows.
             </MudText>
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="_exporting" OnClick="ExportDataAsync">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="align-self-end" Disabled="_exporting" OnClick="ExportDataAsync">
                 Export data
             </MudButton>
         </MudStack>
@@ -68,7 +68,7 @@
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
                 Restore replaces everything.
             </MudText>
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OpenImportDialogAsync">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="align-self-end" OnClick="OpenImportDialogAsync">
                 Import data
             </MudButton>
         </MudStack>
@@ -80,7 +80,7 @@
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
                 Delete account and all data. Cannot be undone.
             </MudText>
-            <MudButton Variant="Variant.Outlined" Color="Color.Error" Disabled="_deleting" OnClick="DeleteAccountAsync">
+            <MudButton Variant="Variant.Outlined" Color="Color.Error" Class="align-self-end" Disabled="_deleting" OnClick="DeleteAccountAsync">
                 Delete account
             </MudButton>
         </MudStack>

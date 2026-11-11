@@ -33,7 +33,7 @@
                     Signed in as <strong>@Session.Email</strong>
                 </MudText>
                 <SyncStatusIndicator IconOnly="false" Flush />
-                <MudButton Variant="Variant.Outlined" Color="Color.Error" Class="mt-2" OnClick="LogoutAsync">
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" Class="mt-2 align-self-end" OnClick="LogoutAsync">
                     Log out
                 </MudButton>
             </MudStack>
@@ -58,7 +58,7 @@
                     {
                         <MudButton Variant="Variant.Filled"
                                    Color="Color.Primary"
-                                   Size="Size.Small"
+                                   Size="Size.Medium"
                                    OnClick="CheckForUpdatesAsync"
                                    Disabled="@_isChecking"
                                    StartIcon="@Icons.Material.Filled.SystemUpdate">

@@ -121,11 +121,11 @@
              && _todoFilter == TodoListFilter.Done
              && VisibleItems().Count > 0)
         {
-            <MudButton Size="Size.Small"
+            <MudButton Size="Size.Medium"
                        Variant="Variant.Text"
                        Color="Color.Error"
                        StartIcon="@Icons.Material.Filled.DeleteSweep"
-                       Class="align-self-start mb-2"
+                       Class="align-self-end mb-2"
                        OnClick="DeleteAllDoneTodosAsync">
                 Delete all done
             </MudButton>
@@ -153,15 +153,15 @@
             {
                 <div class="board-duplicate-warning mt-1">
                     <MudText Typo="Typo.caption">Already exists: '@_duplicateExistingTitle'.</MudText>
-                    <div class="d-flex gap-2 mt-1">
-                        <MudButton Size="Size.Small"
+                    <div class="d-flex justify-end gap-2 mt-1">
+                        <MudButton Size="Size.Medium"
                                    Variant="Variant.Filled"
                                    Color="Color.Primary"
                                    Class="text-transform-none"
                                    OnClick="CreateDuplicateAnywayAsync">
                             Add anyway
                         </MudButton>
-                        <MudButton Size="Size.Small"
+                        <MudButton Size="Size.Medium"
                                    Variant="Variant.Text"
                                    Class="text-transform-none"
                                    OnClick="CancelDuplicate">
@@ -195,7 +195,7 @@
                         </div>
                         <MudText Typo="Typo.subtitle2" Class="empty-state-title">No matches for this filter</MudText>
                         <MudText Typo="Typo.caption" Class="empty-state-desc">"@GetColumnFilterName()" hides @EffectiveCount.</MudText>
-                        <MudButton Size="Size.Small"
+                        <MudButton Size="Size.Medium"
                                    Variant="Variant.Text"
                                    Color="Color.Primary"
                                    Class="mt-2 text-transform-none"

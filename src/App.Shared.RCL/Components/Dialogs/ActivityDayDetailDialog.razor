@@ -57,7 +57,7 @@
                 <MudIcon Icon="@Icons.Material.Filled.EventBusy" Size="Size.Large" Class="dialog-inline-fallback__icon"  aria-hidden="true" />
                 <MudText Typo="Typo.subtitle2" Class="dialog-inline-fallback__title">Couldn't load</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">Check connection and try again.</MudText>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="ReloadAsync">Retry</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Medium" Class="mt-2" OnClick="ReloadAsync">Retry</MudButton>
             </div>
         }
         else if (_detail is { Events.Count: 0 })
@@ -67,7 +67,7 @@
                 <div class="d-flex align-center gap-1 flex-wrap mb-3">
                     @foreach (var t in TagFilter.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                     {
-                        <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small" Class="ma-0">@t</MudChip>
+                        <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Medium" Class="ma-0">@t</MudChip>
                     }
                 </div>
             }
@@ -112,7 +112,7 @@
                     {
                         <MudButton Variant="Variant.Outlined"
                                    Color="Color.Default"
-                                   Size="Size.Small"
+                                   Size="Size.Medium"
                                    Disabled="@_completing"
                                    StartIcon="@Icons.Material.Filled.Close"
                                    OnClick="ToggleTodayAsync">
@@ -123,7 +123,7 @@
                     {
                         <MudButton Variant="Variant.Filled"
                                    Color="Color.Primary"
-                                   Size="Size.Small"
+                                   Size="Size.Medium"
                                    Disabled="@(_completing || !_canToggleToday)"
                                    StartIcon="@Icons.Material.Filled.Check"
                                    OnClick="ToggleTodayAsync">
@@ -135,7 +135,7 @@
                 {
                     <MudButton Variant="Variant.Outlined"
                                Color="Color.Default"
-                               Size="Size.Small"
+                               Size="Size.Medium"
                                Disabled="@_completing"
                                StartIcon="@Icons.Material.Filled.NextPlan"
                                OnClick="SkipShownDateAsync">
@@ -143,7 +143,7 @@
                     </MudButton>
                     <MudButton Variant="Variant.Filled"
                                Color="Color.Primary"
-                               Size="Size.Small"
+                               Size="Size.Medium"
                                Disabled="@(_completing || !_canCompleteShownDate)"
                                StartIcon="@Icons.Material.Filled.Check"
                                OnClick="CompleteShownDateAsync">

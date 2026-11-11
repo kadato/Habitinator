@@ -46,7 +46,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
 
         // Assert - one offline toast, then silence until the next transition
         await cut.WaitForAssertionAsync(async () => await _notifier.Received(1).NotifyAsync(
-            "Offline. Changes save here and sync later.",
+            "You're offline",
             Severity.Warning));
     }
 
@@ -78,9 +78,9 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         _boardSync.SyncProblemMessage = "Stuck outbox item.";
         await cut.InvokeAsync(_boardSync.RaiseChanged);
 
-        // Assert - one error toast naming the problem
+        // Assert - one short error toast, never the raw problem text
         await cut.WaitForAssertionAsync(async () => await _notifier.Received(1).NotifyAsync(
-            "Sync issue: Stuck outbox item.",
+            "Couldn't sync",
             Severity.Error));
     }
 
@@ -114,12 +114,12 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
         _boardSync.SyncProblemMessage = "Offline - board changes stay on this device until you reconnect.";
         await cut.InvokeAsync(_boardSync.RaiseChanged);
 
-        // Assert - the offline toast fires, the sync-issue toast stays suppressed
+        // Assert - the offline toast fires, and the error toast stays suppressed
         await cut.WaitForAssertionAsync(async () => await _notifier.Received(1).NotifyAsync(
-            "Offline. Changes save here and sync later.",
+            "You're offline",
             Severity.Warning));
         await _notifier.DidNotReceive().NotifyAsync(
-            Arg.Is<string>(m => m.StartsWith("Sync issue:", StringComparison.Ordinal)),
+            "Couldn't sync",
             Arg.Any<Severity>());
     }
 
@@ -134,7 +134,7 @@ public sealed class GlobalSyncAlertHostTests : IAsyncDisposable
 
         // Act - transition to paused with the paused problem message
         _boardSync.IsPaused = true;
-        _boardSync.SyncProblemMessage = "Sync paused to save server usage. Changes stay on this device until you choose Sync now.";
+        _boardSync.SyncProblemMessage = "Auto-sync is off.";
         await cut.InvokeAsync(_boardSync.RaiseChanged);
 
         // Assert - no error toast for the intentional pause

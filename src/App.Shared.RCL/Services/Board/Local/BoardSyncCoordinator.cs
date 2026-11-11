@@ -13,7 +13,7 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
 {
     private const int StuckAfterAttempts = 8;
 
-    public const string PausedProblemMessage = "Sync paused to save server usage. Changes stay on this device until you choose Sync now.";
+    public const string PausedProblemMessage = "Auto-sync is off.";
 
     private bool _pausePreferenceLoaded;
 
@@ -99,7 +99,7 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
             _status.RefreshConnectivity(_isOfflineProbe);
             if (_status.IsOffline)
             {
-                _status.SetProblem("Offline - board changes stay on this device until you reconnect.");
+                _status.SetProblem("You're offline.");
                 await RefreshPendingCountAsync(cancellationToken);
                 return;
             }
@@ -163,7 +163,7 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Board sync tick failed.");
-            _status.SetProblem("Offline. Will sync when online.");
+            _status.SetProblem("Couldn't sync.");
         }
         finally
         {

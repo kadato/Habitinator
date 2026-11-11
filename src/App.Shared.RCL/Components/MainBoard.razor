@@ -26,7 +26,18 @@
     @if (BoardSync.IsOffline)
     {
         <MudAlert Severity="Severity.Info" Dense="true" Class="my-1" role="status">
-            Offline. Changes save here and sync later.
+            You're offline.
+        </MudAlert>
+    }
+    else if (BoardSync.IsPaused)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="my-1" role="status">
+            <div class="d-flex align-center flex-wrap gap-2">
+                <span>
+                    Auto-sync is off.
+                </span>
+                <MudButton Variant="Variant.Outlined" Size="Size.Medium" Disabled="@BoardSync.IsSyncing" OnClick="() => BoardSyncRequestor.RequestSync()">Sync now</MudButton>
+            </div>
         </MudAlert>
     }
     else if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage))
@@ -34,9 +45,9 @@
         <MudAlert Severity="Severity.Warning" Dense="true" Class="my-1" role="status">
             <div class="d-flex align-center flex-wrap gap-2">
                 <span>
-                    @BoardSync.SyncProblemMessage
+                    Couldn't sync.
                 </span>
-                <MudButton Variant="Variant.Outlined" Size="Size.Medium" Disabled="@BoardSync.IsSyncing" OnClick="() => BoardSyncRequestor.RequestSync()">Retry now</MudButton>
+                <MudButton Variant="Variant.Outlined" Size="Size.Medium" Disabled="@BoardSync.IsSyncing" OnClick="() => BoardSyncRequestor.RequestSync()">Retry</MudButton>
             </div>
         </MudAlert>
     }

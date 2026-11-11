@@ -49,7 +49,7 @@ public sealed class BoardRemoteNotifyBridge(IRemoteBoardRefreshService refresh, 
                 status.UpdateOffline(true);
                 if (string.IsNullOrEmpty(status.SyncProblemMessage))
                 {
-                    status.SetProblem("Offline. Board changes stay on this device until you reconnect.");
+                    status.SetProblem("You're offline.");
                 }
             }
         }

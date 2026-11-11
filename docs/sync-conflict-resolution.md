@@ -32,7 +32,7 @@ The conversion is accurate to one network round trip. Two edits within that wind
 
 * **Local edit is newer, `LocalTime >= ServerTime`.** The client keeps the local device version. It rewrites the outbox entry with the server concurrency version and retries it. The server accepts the retry.
 * **Server edit is newer, `LocalTime < ServerTime`.** The client keeps the server version. It deletes the conflicting local outbox operation and writes the server properties into the local mirror.
-* **The client never drops additive operations.** `HabitIncrement`, `HabitDecrement`, and `CompleteDailyForDate` retry on top of the server version. Both sides count. The UI shows `counter (merged)` as a toast. The **sync icon** opens the merge log.
+* **The client never drops additive operations.** `HabitIncrement`, `HabitDecrement`, and `CompleteDailyForDate` retry on top of the server version. Both sides count. Merges stay silent. The **sync icon** opens the merge log.
 
 ## Offline queue health
 

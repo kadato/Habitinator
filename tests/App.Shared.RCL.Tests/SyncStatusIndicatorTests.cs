@@ -49,10 +49,10 @@ public sealed class SyncStatusIndicatorTests : IAsyncDisposable
 
         var cut = _ctx.Render<SyncStatusIndicator>(p => p.Add(x => x.IconOnly, false));
 
-        cut.Markup.Should().Contain("Sync issue");
+        cut.Markup.Should().Contain("Couldn't sync");
         cut.Markup.Should().NotContain("pending");
         var retry = cut.Find(".sync-row__retry");
-        retry.TextContent.Should().Contain("Retry now");
+        retry.TextContent.Should().Contain("Retry");
 
         retry.Click();
 

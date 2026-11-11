@@ -2,7 +2,6 @@
 @using App.Shared.RCL.Components.Dialogs
 @inject IBoardSyncStatus BoardSync
 @inject IBoardSyncRequestor SyncRequestor
-@inject IUserNotifier Notifier
 @inject IDialogService DialogService
 @inject IServiceProvider Services
 @implements IDisposable
@@ -103,26 +102,11 @@ else
             }
             catch
             {
-                // Fall through to the toast. The indicator still shows the state.
+                // Fall through. The indicator still shows the state. No toast here.
             }
         }
 
-        var severity = GetState() switch
-        {
-            SyncState.Error => MudBlazor.Severity.Error,
-            SyncState.Offline => MudBlazor.Severity.Warning,
-            SyncState.Paused => MudBlazor.Severity.Warning,
-            SyncState.Syncing => MudBlazor.Severity.Info,
-            _ => MudBlazor.Severity.Normal
-        };
-        try
-        {
-            await Notifier.NotifyAsync(GetSyncStatusTooltip(), severity);
-        }
-        catch
-        {
-            // Shows a best-effort toast. The indicator still shows the state.
-        }
+        // No dialog to show. Stay silent. The indicator dot already shows the state.
     }
 
     private SyncState GetState()
@@ -158,11 +142,11 @@ else
     private string GetSyncStatusTooltip()
     {
         if (BoardSync.IsPaused)
-            return "Auto-sync off. Changes stay here until Sync now.";
+            return "Auto-sync is off.";
         if (BoardSync.IsOffline)
-            return "Offline. Changes save here and sync later.";
+            return "You're offline.";
         if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage))
-            return $"Sync issue: {BoardSync.SyncProblemMessage}.";
+            return "Couldn't sync. Try again.";
         if (BoardSync.IsSyncing)
             return "Syncing...";
         return "Up to date.";
@@ -175,7 +159,7 @@ else
         if (BoardSync.IsOffline)
             return "Offline";
         if (!string.IsNullOrEmpty(BoardSync.SyncProblemMessage))
-            return "Sync issue";
+            return "Couldn't sync";
         if (BoardSync.IsSyncing)
             return "Syncing";
         return "Up to date";
@@ -185,7 +169,7 @@ else
         !BoardSync.IsSyncing && state is SyncState.Offline or SyncState.Paused or SyncState.Error;
 
     private static string GetRetryLabel(SyncState state) =>
-        state is SyncState.Paused ? "Sync now" : "Retry now";
+        state is SyncState.Paused ? "Sync now" : "Retry";
 
     private async Task RetryNow()
     {

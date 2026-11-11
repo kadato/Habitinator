@@ -1228,8 +1228,8 @@ input[type="number"].mud-input-slot {
 }
 
 @media (max-width: 767.98px) {
-    /* Toasts dock below the app bar below the tablet breakpoint so they never cover the add field
-       or the fixed bottom navigation. */
+    /* Under the tablet breakpoint, toasts dock below the app bar so they never cover the add field
+       or the fixed bottom navigation. Short messages stay a centered pill, never a full-width bar. */
     #mud-snackbar-container.mud-snackbar-location-bottom-left,
     #mud-snackbar-container,
     .mud-snackbar-provider.mud-snackbar-provider-bottom-left {
@@ -1237,15 +1237,25 @@ input[type="number"].mud-input-slot {
         bottom: auto !important;
         left: 0.5rem !important;
         right: 0.5rem !important;
+        align-items: center !important;
     }
     .habitinator-toast {
         min-width: 0 !important;
-        width: 100% !important;
-        max-width: 100% !important;
+        width: fit-content !important;
+        max-width: min(22rem, calc(100vw - 1rem)) !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
     }
     .toast-content {
-        padding: 0.35rem 0.5rem;
+        padding: 0.4rem 0.75rem 0.4rem 0.5rem;
         gap: var(--space-2);
+    }
+    .toast-content-message {
+        font-size: 0.81rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
     }
     .undo-toast-body {
         padding: 0.35rem 0.5rem;

@@ -503,9 +503,7 @@ public sealed partial class LocalFirstBoardDataService
                 return null;
             }
 
-            return string.IsNullOrWhiteSpace(row.LastError)
-                ? "Some changes could not sync. Try again when online."
-                : $"Sync issue: {row.LastError}";
+            return "Couldn't sync.";
         }
         finally
         {

@@ -834,6 +834,12 @@ input[type="number"].mud-input-slot {
     box-sizing: border-box;
 }
 
+/* The floating label sits on background-color. The outline never strikes through the text, even if the notch fails to open. */
+.settings-section-paper .mud-input.mud-shrink ~ label.mud-input-label-outlined,
+.settings-section-paper .mud-input:focus-within ~ label.mud-input-label-outlined {
+    background-color: color-mix(in srgb, var(--mud-palette-surface) 90%, var(--mud-palette-primary) 4%);
+}
+
 .settings-load-fallback {
     display: flex;
     flex-direction: column;
@@ -848,6 +854,130 @@ input[type="number"].mud-input-slot {
 }
 .settings-load-fallback__icon { color: var(--mud-palette-text-disabled) !important; opacity: 0.5; margin-bottom: 0.2rem; }
 .settings-load-fallback__title { font-weight: 700; letter-spacing: -0.015em; }
+
+/* The stepper buttons use solid backgrounds. The glyphs stay white in both themes. The input keeps Mud height so the text stays centered. */
+.settings-stepper-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem;
+}
+@media (max-width: 599.98px) {
+    .settings-stepper-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.settings-stepper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-width: 0;
+}
+.settings-stepper__label {
+    font-size: 0.78rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    color: var(--mud-palette-text-primary);
+    line-height: 1.35;
+}
+.settings-stepper__unit {
+    font-weight: 500;
+    color: var(--mud-palette-text-secondary);
+}
+.settings-stepper__row {
+    display: flex;
+    align-items: stretch;
+    gap: 0.4rem;
+}
+.settings-stepper__btn {
+    flex-shrink: 0;
+    width: 2.5rem;
+    height: auto;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+    transition: filter 120ms ease, transform 120ms ease;
+}
+.settings-stepper__btn svg {
+    width: 1.05rem;
+    height: 1.05rem;
+    stroke-width: 3.2;
+}
+.settings-stepper__btn--minus {
+    background: color-mix(in srgb, var(--mud-palette-text-primary) 62%, transparent);
+    color: var(--mud-palette-surface);
+}
+.settings-stepper__btn--plus {
+    background: var(--mud-palette-primary);
+    color: #fff;
+}
+.settings-stepper__btn:hover {
+    filter: brightness(1.07);
+}
+.settings-stepper__btn:focus-visible {
+    outline: 2px solid var(--mud-palette-primary) !important;
+    outline-offset: 2px !important;
+}
+.settings-stepper__btn:active {
+    transform: translateY(1px) scale(0.98);
+}
+.settings-stepper__field {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    align-self: center;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+.settings-stepper__field .mud-input-control {
+    min-width: 0 !important;
+}
+.settings-stepper__field input.mud-input-slot {
+    text-align: center !important;
+    font-family: var(--hab-font-mono) !important;
+    font-variant-numeric: tabular-nums !important;
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+}
+.settings-stepper__field .mud-input-root {
+    font-family: var(--hab-font-mono) !important;
+}
+@media (max-width: 599.98px) {
+    .settings-stepper__btn {
+        width: 2.75rem;
+        height: auto;
+        min-width: 2.75rem;
+        min-height: 2.75rem;
+    }
+    .settings-stepper__field input.mud-input-slot {
+        padding-top: 12.5px !important;
+        padding-bottom: 12.5px !important;
+    }
+    /* Picker and select adornments keep a 44px target on phones. */
+    .settings-page-wrapper .settings-section-paper .mud-icon-button:not(.mud-switch-base) {
+        width: 44px !important;
+        height: 44px !important;
+    }
+}
+
+/* Toggles use var(--radius-md) on the track and var(--radius-sm) on the thumb. The thumb sits inside the track with an even gap. Mud keeps size and motion. */
+.mud-switch-span-medium.mud-switch-span {
+    padding: 7px !important;
+}
+.mud-switch-span .mud-switch-track {
+    border-radius: var(--radius-md) !important;
+}
+.mud-switch-button .mud-switch-thumb-small,
+.mud-switch-button .mud-switch-thumb-medium,
+.mud-switch-button .mud-switch-thumb-large {
+    border-radius: var(--radius-sm) !important;
+}
 
 #blazor-error-ui {
     color-scheme: light only;
@@ -1452,6 +1582,13 @@ input[type="number"].mud-input-slot {
     .quiet-time-picker {
         flex: 1 1 150px !important;
         min-width: 150px !important;
+    }
+}
+
+/* Text buttons keep a 44px minimum on touch. The rule covers every screen and dialog. Icon buttons keep their own sizing so input adornments and dense toolbars keep their size. */
+@media (pointer: coarse) {
+    .mud-button-root:not(.mud-icon-button) {
+        min-height: 44px;
     }
 }
 

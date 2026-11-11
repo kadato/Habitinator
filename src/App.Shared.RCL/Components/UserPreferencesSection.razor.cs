@@ -405,6 +405,26 @@ public partial class UserPreferencesSection
         set(Math.Clamp(value, min, max));
     }
 
+    private Task StepPomodoroAsync(Func<UserPreferences, int> get, Action<UserPreferences, int> set, int min, int max, int delta)
+    {
+        var model = _model;
+        if (model is null)
+        {
+            return Task.CompletedTask;
+        }
+        set(model, Math.Clamp(get(model) + delta, min, max));
+        return AutoSaveAsync();
+    }
+
+    private Task IncrementWorkDurationAsync() => StepPomodoroAsync(m => m.PomodoroWorkDurationMinutes, (m, v) => m.PomodoroWorkDurationMinutes = v, 1, 180, 1);
+    private Task DecrementWorkDurationAsync() => StepPomodoroAsync(m => m.PomodoroWorkDurationMinutes, (m, v) => m.PomodoroWorkDurationMinutes = v, 1, 180, -1);
+    private Task IncrementShortBreakAsync() => StepPomodoroAsync(m => m.PomodoroShortBreakMinutes, (m, v) => m.PomodoroShortBreakMinutes = v, 1, 60, 1);
+    private Task DecrementShortBreakAsync() => StepPomodoroAsync(m => m.PomodoroShortBreakMinutes, (m, v) => m.PomodoroShortBreakMinutes = v, 1, 60, -1);
+    private Task IncrementLongBreakAsync() => StepPomodoroAsync(m => m.PomodoroLongBreakMinutes, (m, v) => m.PomodoroLongBreakMinutes = v, 1, 120, 1);
+    private Task DecrementLongBreakAsync() => StepPomodoroAsync(m => m.PomodoroLongBreakMinutes, (m, v) => m.PomodoroLongBreakMinutes = v, 1, 120, -1);
+    private Task IncrementCyclesAsync() => StepPomodoroAsync(m => m.PomodoroCyclesBeforeLongBreak, (m, v) => m.PomodoroCyclesBeforeLongBreak = v, 1, 12, 1);
+    private Task DecrementCyclesAsync() => StepPomodoroAsync(m => m.PomodoroCyclesBeforeLongBreak, (m, v) => m.PomodoroCyclesBeforeLongBreak = v, 1, 12, -1);
+
     private bool ValidateInputs()
     {
         _displayNameError = null;

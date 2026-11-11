@@ -16,7 +16,7 @@
             <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Large" Class="settings-load-fallback__icon"  aria-hidden="true" />
             <MudText Typo="Typo.subtitle2" Class="settings-load-fallback__title">Preferences unavailable</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary">Couldn't load preferences. Try again.</MudText>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="RetryLoadAsync">Retry</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Medium" Class="mt-2" OnClick="RetryLoadAsync">Retry</MudButton>
         </div>
     }
     else if (_loading)
@@ -70,44 +70,72 @@
         <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
                 <MudText Typo="Typo.subtitle1" Class="mb-1">Pomodoro Timer</MudText>
-                <MudGrid>
-                    <MudItem xs="12" sm="6">
-                        <MudNumericField T="int" Label="Work duration (minutes)"
-                                         Variant="Variant.Outlined" dense="true"
-                                         Min="1" Max="180"
-                                         Value="_model.PomodoroWorkDurationMinutes"
-                                         ValueChanged="OnWorkDurationChanged"
-                                         Immediate="true"
-                                         OnBlur="AutoSaveAsync" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudNumericField T="int" Label="Short break (minutes)"
-                                         Variant="Variant.Outlined" dense="true"
-                                         Min="1" Max="60"
-                                         Value="_model.PomodoroShortBreakMinutes"
-                                         ValueChanged="OnShortBreakChanged"
-                                         Immediate="true"
-                                         OnBlur="AutoSaveAsync" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudNumericField T="int" Label="Long break (minutes)"
-                                         Variant="Variant.Outlined" dense="true"
-                                         Min="1" Max="120"
-                                         Value="_model.PomodoroLongBreakMinutes"
-                                         ValueChanged="OnLongBreakChanged"
-                                         Immediate="true"
-                                         OnBlur="AutoSaveAsync" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudNumericField T="int" Label="Sessions before long break"
-                                         Variant="Variant.Outlined" dense="true"
-                                         Min="1" Max="12"
-                                         Value="_model.PomodoroCyclesBeforeLongBreak"
-                                         ValueChanged="OnCyclesChanged"
-                                         Immediate="true"
-                                         OnBlur="AutoSaveAsync" />
-                    </MudItem>
-                </MudGrid>
+                <div class="settings-stepper-grid">
+                    <div class="settings-stepper">
+                        <span class="settings-stepper__label">Work duration <span class="settings-stepper__unit">minutes</span></span>
+                        <div class="settings-stepper__row">
+                            <button type="button" class="settings-stepper__btn settings-stepper__btn--minus" aria-label="Decrease work duration" @onclick="DecrementWorkDurationAsync"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                            <MudNumericField T="int" aria-label="Work duration in minutes"
+                                             Variant="Variant.Outlined" Margin="Margin.Dense"
+                                             HideSpinButtons="true"
+                                             Min="1" Max="180"
+                                             Class="settings-stepper__field"
+                                             Value="_model.PomodoroWorkDurationMinutes"
+                                             ValueChanged="OnWorkDurationChanged"
+                                             Immediate="true"
+                                             OnBlur="AutoSaveAsync" />
+                            <button type="button" class="settings-stepper__btn settings-stepper__btn--plus" aria-label="Increase work duration" @onclick="IncrementWorkDurationAsync"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                        </div>
+                    </div>
+                    <div class="settings-stepper">
+                        <span class="settings-stepper__label">Short break <span class="settings-stepper__unit">minutes</span></span>
+                        <div class="settings-stepper__row">
+                            <button type="button" class="settings-stepper__btn settings-stepper__btn--minus" aria-label="Decrease short break" @onclick="DecrementShortBreakAsync"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                            <MudNumericField T="int" aria-label="Short break in minutes"
+                                             Variant="Variant.Outlined" Margin="Margin.Dense"
+                                             HideSpinButtons="true"
+                                             Min="1" Max="60"
+                                             Class="settings-stepper__field"
+                                             Value="_model.PomodoroShortBreakMinutes"
+                                             ValueChanged="OnShortBreakChanged"
+                                             Immediate="true"
+                                             OnBlur="AutoSaveAsync" />
+                            <button type="button" class="settings-stepper__btn settings-stepper__btn--plus" aria-label="Increase short break" @onclick="IncrementShortBreakAsync"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                        </div>
+                    </div>
+                    <div class="settings-stepper">
+                        <span class="settings-stepper__label">Long break <span class="settings-stepper__unit">minutes</span></span>
+                        <div class="settings-stepper__row">
+                            <button type="button" class="settings-stepper__btn settings-stepper__btn--minus" aria-label="Decrease long break" @onclick="DecrementLongBreakAsync"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                            <MudNumericField T="int" aria-label="Long break in minutes"
+                                             Variant="Variant.Outlined" Margin="Margin.Dense"
+                                             HideSpinButtons="true"
+                                             Min="1" Max="120"
+                                             Class="settings-stepper__field"
+                                             Value="_model.PomodoroLongBreakMinutes"
+                                             ValueChanged="OnLongBreakChanged"
+                                             Immediate="true"
+                                             OnBlur="AutoSaveAsync" />
+                            <button type="button" class="settings-stepper__btn settings-stepper__btn--plus" aria-label="Increase long break" @onclick="IncrementLongBreakAsync"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                        </div>
+                    </div>
+                    <div class="settings-stepper">
+                        <span class="settings-stepper__label">Sessions before long break</span>
+                        <div class="settings-stepper__row">
+                            <button type="button" class="settings-stepper__btn settings-stepper__btn--minus" aria-label="Decrease sessions before long break" @onclick="DecrementCyclesAsync"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                            <MudNumericField T="int" aria-label="Sessions before long break"
+                                             Variant="Variant.Outlined" Margin="Margin.Dense"
+                                             HideSpinButtons="true"
+                                             Min="1" Max="12"
+                                             Class="settings-stepper__field"
+                                             Value="_model.PomodoroCyclesBeforeLongBreak"
+                                             ValueChanged="OnCyclesChanged"
+                                             Immediate="true"
+                                             OnBlur="AutoSaveAsync" />
+                            <button type="button" class="settings-stepper__btn settings-stepper__btn--plus" aria-label="Increase sessions before long break" @onclick="IncrementCyclesAsync"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                        </div>
+                    </div>
+                </div>
             </MudStack>
         </MudPaper>
 
@@ -170,7 +198,7 @@
                                Label="Sync with system" />
                     <MudButton Variant="@(_pinnedThemeBtnVariant)"
                                Color="Color.Primary"
-                               Size="Size.Small"
+                               Size="Size.Medium"
                                Class="text-transform-none"
                                Disabled="@_useSystemTheme"
                                OnClick="TogglePinnedTheme">

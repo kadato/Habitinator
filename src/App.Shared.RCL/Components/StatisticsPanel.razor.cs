@@ -1146,22 +1146,10 @@ public partial class StatisticsPanel : IDisposable
 
     private KpiDescriptor[] Kpis(ActivityDashboardDto data) =>
     [
-        CreateEventsKpi(data),
         CreateFocusKpi(data),
         CreatePeakKpi(data),
         CreateStreakKpi()
     ];
-
-    private static KpiDescriptor CreateEventsKpi(ActivityDashboardDto data)
-    {
-        var count = data.TotalEvents.ToString(CultureInfo.InvariantCulture);
-        return new KpiDescriptor(
-            "stats-kpi-card--events",
-            Icons.Material.Filled.ViewTimeline,
-            "Total events",
-            () => count,
-            () => "Logged in this period");
-    }
 
     private static KpiDescriptor CreateFocusKpi(ActivityDashboardDto data)
     {

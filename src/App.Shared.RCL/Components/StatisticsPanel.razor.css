@@ -354,10 +354,6 @@
     overflow: hidden;
 }
 
-::deep .stats-kpi-card--events {
-    --kpi-accent: var(--mud-palette-primary);
-}
-
 ::deep .stats-kpi-card--focus {
     --kpi-accent: color-mix(in srgb, var(--mud-palette-info) 85%, var(--mud-palette-primary) 15%);
 }
@@ -855,5 +851,69 @@
 
     .stats-sidebar-range__label {
         display: none;
+    }
+}
+
+/* Mobile KPIs use one compact row. This block comes after the base flex-column rule so the grid applies. Total events appears only in the heatmap subtitle, so the remaining three KPIs share one row. */
+@media (max-width: 959.98px) {
+    .stats-kpi-cards--desktop {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.5rem;
+    }
+
+    ::deep .stats-kpi-card--sidebar {
+        padding: 0.6rem 0.65rem;
+        min-width: 0;
+    }
+
+    ::deep .stats-kpi-card--sidebar .stats-kpi-card__head {
+        margin-bottom: 0.15rem;
+    }
+
+    ::deep .stats-kpi-card--sidebar .stats-kpi-card__label {
+        font-size: 0.62rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    ::deep .stats-kpi-card--sidebar .stats-kpi-card__icon {
+        display: none;
+    }
+
+    ::deep .stats-kpi-card--sidebar .stats-kpi-card__value {
+        font-size: 1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .stats-filter-trigger {
+        min-height: 48px;
+        padding: 0.4rem 0.65rem 0.4rem 0.4rem;
+    }
+
+    .stats-filter-trigger__iconbox {
+        width: 2rem;
+        height: 2rem;
+    }
+
+    .stats-filter-trigger__value {
+        font-size: 0.88rem;
+    }
+}
+
+@media (max-width: 399.98px) {
+    .stats-kpi-cards--desktop {
+        gap: 0.4rem;
+    }
+
+    ::deep .stats-kpi-card--sidebar {
+        padding: 0.5rem 0.55rem;
+    }
+
+    ::deep .stats-kpi-card--sidebar .stats-kpi-card__value {
+        font-size: 0.9rem;
     }
 }

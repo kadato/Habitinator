@@ -26,7 +26,7 @@
             <MudIcon Icon="@Icons.Material.Filled.BarChart" Size="Size.Large" Class="stats-load-fallback__icon"  aria-hidden="true" />
             <MudText Typo="Typo.subtitle2" Class="stats-load-fallback__title">Couldn't load stats</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary">Check connection and try again.</MudText>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="@(() => RefreshAsync(() => LoadStatisticsAsync(_selectedPeriodKey)))">Retry</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Medium" Class="mt-2" OnClick="@(() => RefreshAsync(() => LoadStatisticsAsync(_selectedPeriodKey)))">Retry</MudButton>
         </div>
     }
     else if (_loading && _data is null)
@@ -49,7 +49,7 @@
         </div>
         <div class="stats-kpi-strip stats-kpi-strip--mobile mt-2">
             <div class="stats-kpi-strip__grid">
-                @for (int i = 0; i < 4; i++) {
+                @for (int i = 0; i < 3; i++) {
                     <div class="stats-kpi-strip__item"><MudSkeleton Width="72px" Height="18px" /></div>
                 }
             </div>
@@ -259,8 +259,8 @@
                             </MudGrid>
                             @if (hiddenCount > 0)
                             {
-                                <div class="d-flex justify-center mt-3">
-                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="ShowAllConsistency">Show all @totalVisible graphs</MudButton>
+                                <div class="d-flex justify-end mt-3">
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Medium" OnClick="ShowAllConsistency">Show all @totalVisible graphs</MudButton>
                                 </div>
                             }
                         }
@@ -359,7 +359,7 @@
                                     }
                                     @if (_selectedTags.Count > 1)
                                     {
-                                        <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small" OnClick="OnClearTagFiltersAsync" Class="pa-0 min-w-0 font-size-xs ms-1">Clear all</MudButton>
+                                        <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Medium" OnClick="OnClearTagFiltersAsync" Class="ms-1">Clear all</MudButton>
                                     }
                                 </div>
                             }

@@ -3,10 +3,18 @@
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
-<div class="hab-modal__header" @ref="_headerRef">
+<div class="hab-modal__header hab-modal__header--edit" @ref="_headerRef">
     <div class="hab-modal__grabber" aria-hidden="true"></div>
-    <div class="hab-modal__topbar hab-modal__topbar--minimal">
-        <span class="hab-modal__actions" style="margin-left:auto;">
+    <div class="hab-modal__edit-top">
+        @if (!string.IsNullOrWhiteSpace(TitleText))
+        {
+            <MudText Typo="Typo.subtitle1" Class="font-weight-bold hab-modal__edit-title" Style="letter-spacing:-0.02em;">@TitleText</MudText>
+        }
+        else
+        {
+            <span class="hab-modal__edit-title-spacer" aria-hidden="true"></span>
+        }
+        <span class="hab-modal__actions">
             @if (!string.IsNullOrEmpty(SaveStatus))
             {
                 <span class="hab-modal__save @SaveStatusClass" aria-live="polite">
@@ -18,10 +26,6 @@
     </div>
 
     <div class="hab-modal__title-field">
-        @if (!string.IsNullOrWhiteSpace(TitleText))
-        {
-            <MudText Typo="Typo.subtitle1" Class="font-weight-bold mb-2" Style="letter-spacing:-0.02em;">@TitleText</MudText>
-        }
         <MudTextField @ref="_titleInput"
                       Value="@_title"
                       ValueChanged="@((string value) => OnTitleValueChanged(value))"

@@ -216,10 +216,11 @@
     white-space: nowrap;
 }
 
-/* Chat Message Bubbles */
+/* Chat Message Bubbles. Both hug content. Neither stretches full width. */
 .ai-message--user {
     align-self: flex-end;
     max-width: 82%;
+    width: fit-content;
 }
 
 .ai-message--user .ai-message-bubble {
@@ -234,7 +235,23 @@
 .ai-message--assistant {
     align-self: flex-start;
     max-width: 94%;
-    width: 100%;
+    width: fit-content;
+}
+
+/* Bubbles hug their own text. The wrapper can be wider than a short
+   bubble when the copy and edit row below it is the widest child.
+   Each bubble opts out of the column stretch and sizes to its content.
+   The actions keep their layout and behavior. */
+.ai-message--user .ai-message-bubble {
+    align-self: flex-end;
+    width: fit-content;
+    max-width: 100%;
+}
+
+.ai-message--assistant .ai-message-bubble {
+    align-self: flex-start;
+    width: fit-content;
+    max-width: 100%;
 }
 
 .ai-message--assistant .ai-message-bubble {

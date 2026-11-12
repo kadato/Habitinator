@@ -113,7 +113,7 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task Checking_Item_And_Clicking_Backdrop_Completes_Daily_For_Yesterday()
+    public async Task Checking_Item_And_Clicking_Backdrop_Discards_Without_Saving()
     {
         // Arrange
         var daily1Id = Guid.NewGuid();
@@ -147,15 +147,15 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
         var reference = dialogRef ?? throw new InvalidOperationException("DialogRef was null");
         var result = await reference.Result;
 
-        // Assert
+        // Assert: backdrop dismisses without saving. Only Save commits.
         result.Should().NotBeNull();
-        result.Canceled.Should().BeFalse();
-        await _boardDataService.Received(1).CompleteDailyForDateAsync(daily1Id, yesterday);
+        result.Canceled.Should().BeTrue();
+        await _boardDataService.DidNotReceive().CompleteDailyForDateAsync(daily1Id, yesterday);
     }
 
 
     [Fact]
-    public async Task Checking_Item_And_Dismissing_Via_Close_Button_Completes_Daily_For_Yesterday()
+    public async Task Checking_Item_And_Dismissing_Via_Close_Button_Discards_Without_Saving()
     {
         // Arrange
         var daily1Id = Guid.NewGuid();
@@ -189,10 +189,10 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
         var reference = dialogRef ?? throw new InvalidOperationException("DialogRef was null");
         var result = await reference.Result;
 
-        // Assert
+        // Assert: the close button dismisses without saving. Only Save commits.
         result.Should().NotBeNull();
-        result.Canceled.Should().BeFalse();
-        await _boardDataService.Received(1).CompleteDailyForDateAsync(daily1Id, yesterday);
+        result.Canceled.Should().BeTrue();
+        await _boardDataService.DidNotReceive().CompleteDailyForDateAsync(daily1Id, yesterday);
     }
 
     [Fact]
@@ -233,7 +233,7 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
         // Assert
         result.Should().NotBeNull();
         result.Canceled.Should().BeFalse();
-        await _syncRequestor.Received(1).SyncNowAsync(Arg.Any<CancellationToken>());
+        _syncRequestor.Received(1).RequestSync(Arg.Any<bool>());
     }
 
     [Fact]
@@ -269,7 +269,7 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
         // Assert
         result.Should().NotBeNull();
         result.Canceled.Should().BeTrue();
-        await _syncRequestor.DidNotReceive().SyncNowAsync(Arg.Any<CancellationToken>());
+        _syncRequestor.DidNotReceive().RequestSync(Arg.Any<bool>());
     }
 
     [Fact]
@@ -313,7 +313,7 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
             // Assert
             result.Should().NotBeNull();
             result.Canceled.Should().BeFalse();
-            await _syncRequestor.DidNotReceive().SyncNowAsync(Arg.Any<CancellationToken>());
+            _syncRequestor.DidNotReceive().RequestSync(Arg.Any<bool>());
             await _boardDataService.Received(1).CompleteDailyForDateAsync(daily1Id, yesterday);
         }
         finally

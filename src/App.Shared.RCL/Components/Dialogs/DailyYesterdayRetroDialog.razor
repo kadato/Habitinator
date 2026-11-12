@@ -10,13 +10,13 @@
 
 <MudDialog Class="hab-modal-dialog"
            ContentClass="hab-modal-content"
-           OnBackdropClick="CloseAsync">
+           OnBackdropClick="DismissAsync">
     <DialogContent>
         <div class="hab-modal hab-modal--daily" data-dialog-label="Yesterday" aria-label="Yesterday" role="group" @onclick:stopPropagation="true">
             <div class="hab-modal__grabber" aria-hidden="true"></div>
             <div class="hab-modal__header" @ref="_headerRef">
                 <div class="hab-modal__topbar hab-modal__topbar--minimal">
-                    <DialogCloseButton OnClose="CloseAsync" />
+                    <DialogCloseButton OnClose="DismissAsync" />
                 </div>
                 <div class="d-flex align-center gap-2">
                     <MudIcon Icon="@Icons.Material.Filled.History" Color="Color.Primary" Size="Size.Medium"  aria-hidden="true" />
@@ -35,18 +35,16 @@
                         var rowClass = isCompleted ? "daily-yesterday-row--completed" : "";
                         var checkClass = isCompleted ? "daily-yesterday-check daily-yesterday-check--ok" : "daily-yesterday-check daily-yesterday-check--daily";
                         
-                        <div class="daily-yesterday-row @rowClass" 
-                             @key="item.Id"
-                             @onclick="@(() => ToggleItem(item))"
-                             @onkeydown="@(e => HandleKeyDown(e, item))"
-                             role="checkbox"
-                             tabindex="0"
-                             aria-label="@item.Title"
-                             @attributes="GetRowAria(isCompleted)"
-                             aria-disabled="false">
-                            <div class="daily-yesterday-row__check-col">
-                                <div class="@checkClass"
-                                     aria-hidden="true">
+                        <button type="button"
+                                class="daily-yesterday-row @rowClass"
+                                @key="item.Id"
+                                @onclick="@(() => ToggleItem(item))"
+                                role="checkbox"
+                                aria-checked="@(isCompleted ? "true" : "false")"
+                                aria-label="@item.Title">
+                            <span class="daily-yesterday-row__check-col">
+                                <span class="@checkClass"
+                                      aria-hidden="true">
                                     @if (isCompleted)
                                     {
                                         <svg class="daily-yesterday-check-glyph"
@@ -63,16 +61,16 @@
                                                   stroke-linejoin="round"/>
                                         </svg>
                                     }
-                                </div>
-                            </div>
-                            <div class="daily-yesterday-row__title">
+                                </span>
+                            </span>
+                            <span class="daily-yesterday-row__title">
                                 <span class="daily-yesterday-row__title-text">@item.Title</span>
                                 @if (!string.IsNullOrWhiteSpace(item.Notes))
                                 {
                                     <span class="daily-yesterday-row__notes">@item.Notes</span>
                                 }
-                            </div>
-                        </div>
+                            </span>
+                        </button>
                     }
                 </div>
             </div>
@@ -152,14 +150,6 @@
         StateHasChanged();
     }
 
-    private void HandleKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e, BoardItem item)
-    {
-        if (e.Key is " " or "Enter")
-        {
-            ToggleItem(item);
-        }
-    }
-
     private async Task CommitCompletionsAsync()
     {
         if (_isCommitting)
@@ -199,9 +189,11 @@
         }
     }
 
-    private async Task DrainBoardSyncAsync()
+    private void RequestBoardSync()
     {
-        // Data saver: the change is already queued locally. Sync now or unpause to send it.
+        // CompleteDailyForDateAsync already queues the change locally.
+        // Request a background sync. The dialog closes without waiting.
+        // If offline or paused, the periodic sync delivers the change.
         if (BoardSync.IsPaused)
         {
             return;
@@ -209,18 +201,11 @@
 
         try
         {
-            var sync = ServiceProvider.GetService<App.Shared.RCL.Services.Board.Local.IBoardSyncRequestor>();
-            if (sync is null)
-            {
-                return;
-            }
-
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            await sync.SyncNowAsync(cts.Token);
+            ServiceProvider.GetService<App.Shared.RCL.Services.Board.Local.IBoardSyncRequestor>()?.RequestSync();
         }
         catch
         {
-            // If offline or slow, the periodic sync delivers the change.
+            // This sync is best effort. Periodic sync retries.
         }
     }
 
@@ -235,13 +220,25 @@
         await CommitCompletionsAsync();
         if (_committedIds.Count > 0)
         {
-            await DrainBoardSyncAsync();
             MudDialog.Close(DialogResult.Ok(_committedIds.ToList()));
+            RequestBoardSync();
         }
         else
         {
             MudDialog.Close(DialogResult.Cancel());
         }
+    }
+
+    /// <summary>Backdrop, close button, and Escape dismiss without saving. Only Save commits.</summary>
+    private void DismissAsync()
+    {
+        if (_sessionEnded)
+        {
+            return;
+        }
+
+        _sessionEnded = true;
+        MudDialog.Cancel();
     }
 
     public async ValueTask DisposeAsync()
@@ -258,28 +255,9 @@
         _swipeRef?.Dispose();
         _swipeRef = null;
 
-        if (_sessionEnded)
-        {
-            return;
-        }
-
-        _sessionEnded = true;
-        try
-        {
-            await CommitCompletionsAsync();
-            if (_committedIds.Count > 0)
-            {
-                await DrainBoardSyncAsync();
-            }
-        }
-        catch
-        {
-            // Best effort during disposal.
-        }
+        // Dismiss paths set _sessionEnded without committing. Disposal never
+        // saves. Only the Save button commits completions.
     }
 
-    private static Dictionary<string, object> GetRowAria(bool isCompleted) => new()
-    {
-        { "aria-checked", isCompleted ? "true" : "false" }
-    };
+
 }

@@ -997,6 +997,18 @@ public partial class MainBoard : IAsyncDisposable
             if (result is { Canceled: false, Data: List<Guid> committed } && committed.Count > 0)
             {
                 _lastLocalMutationTime = DateTimeOffset.UtcNow;
+
+                // Paint the local mirror first. The retro dialog already wrote
+                // the completions locally. GetStreakMapAsync keeps pending
+                // outbox rows on the local Counter. Board and streaks show
+                // the check-in instantly even when the network sync runs slow.
+                await LoadBoardAsync();
+                await RefreshStreaksAsync();
+                await InvokeAsync(StateHasChanged);
+
+                var label = committed.Count == 1 ? "1 daily" : $"{committed.Count} dailies";
+                await Notifier.NotifyAsync($"You logged {label} for yesterday.", Severity.Success);
+
                 if (!BoardSync.IsPaused)
                 {
                     try
@@ -1006,16 +1018,18 @@ public partial class MainBoard : IAsyncDisposable
                     }
                     catch
                     {
-                        // If offline then rely on periodic sync.
+                        // If offline, rely on periodic sync.
                     }
+
+                    await LoadBoardAsync();
+                    await RefreshStreaksAsync();
                 }
-
-                var label = committed.Count == 1 ? "1 daily" : $"{committed.Count} dailies";
-                await Notifier.NotifyAsync($"You logged {label} for yesterday.", Severity.Success);
             }
-
-            await LoadBoardAsync();
-            await RefreshStreaksAsync();
+            else
+            {
+                await LoadBoardAsync();
+                await RefreshStreaksAsync();
+            }
         }
         catch (Exception)
         {

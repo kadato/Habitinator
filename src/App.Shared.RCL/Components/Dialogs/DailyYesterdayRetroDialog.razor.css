@@ -14,6 +14,14 @@
     outline: none;
 }
 .daily-yesterday-row:not(.daily-yesterday-row--completed) { cursor: pointer; }
+button.daily-yesterday-row {
+    width: 100%;
+    font: inherit;
+    text-align: start;
+    color: inherit;
+    appearance: none;
+    -webkit-appearance: none;
+}
 .daily-yesterday-row:focus-visible {
     border-color: var(--mud-palette-primary);
     outline: 2px solid var(--mud-palette-primary);

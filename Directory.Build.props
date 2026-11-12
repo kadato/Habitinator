@@ -3,7 +3,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);CA2007</WarningsNotAsErrors>
+    <!-- NU1902/NU1903: NuGet audit flags known vulns in .NET 11 RC packages.
+      RC vulns are fixed before GA. Keep them as warnings so CI restores. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CA2007;NU1902;NU1903</WarningsNotAsErrors>
     <Deterministic>true</Deterministic>
     <LangVersion>preview</LangVersion>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>

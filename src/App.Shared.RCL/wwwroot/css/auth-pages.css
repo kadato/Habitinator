@@ -153,6 +153,17 @@
 .auth-page__footer a {
     font-weight: 600;
     text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+}
+
+/* Content links inside cards meet WCAG 2.5.8 minimum target size. */
+.auth-card p a,
+.auth-card li a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
 }
 
 /* Links after the first get a dash separator that travels with the link on wrap. */
@@ -292,8 +303,10 @@
 }
 
 .form-check-input {
-    width: 1.15em;
-    height: 1.15em;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
     vertical-align: top;
     background-color: var(--mud-palette-surface);
     background-repeat: no-repeat;
@@ -414,7 +427,9 @@
     }
 
     .form-check-input {
-        width: 1.4em;
-        height: 1.4em;
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+        min-height: 24px;
     }
 }

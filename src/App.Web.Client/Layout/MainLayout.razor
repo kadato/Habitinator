@@ -39,7 +39,7 @@
                     <div class="app-top-bar__row d-flex">
                         <div class="app-top-bar__left d-flex align-center">
                             <div class="app-branding app-branding--header d-flex flex-column justify-center">
-                                <MudText Typo="Typo.h6" Class="app-top-bar__title mb-0">Habitinator</MudText>
+                                <MudText Typo="Typo.h6" HtmlTag="span" Class="app-top-bar__title mb-0">Habitinator</MudText>
                             </div>
                             <div class="app-show-desktop-only align-center">
                                 <NavMenu/>
@@ -105,7 +105,7 @@
         </Authorized>
         <NotAuthorized>
             <MudAppBar Elevation="0" Dense="true" Class="app-top-bar app-top-bar--guest" ToolBarClass="app-top-bar-toolbar" role="banner">
-                <a href="/" data-enhance-nav="false" class="text-decoration-none app-branding app-branding--header"><MudText Typo="Typo.h6" Class="app-top-bar__title mb-0">Habitinator</MudText></a>
+                <a href="/" data-enhance-nav="false" class="text-decoration-none app-branding app-branding--header"><MudText Typo="Typo.h6" HtmlTag="span" Class="app-top-bar__title mb-0">Habitinator</MudText></a>
                 <MudSpacer />
                 <GitHubRepoLink />
                 @if (!IsWelcomePage)

@@ -34,7 +34,7 @@
             </div>
         </form>
 
-        <div class="auth-form-divider" role="presentation">or</div>
+        <div class="auth-form-divider" role="separator" aria-orientation="horizontal">or</div>
 
         <form method="post" action="/api/auth/guest-login" class="d-flex flex-column guest-login-form" onsubmit="return habitinatorGuestSubmit(this)">
             @if (!string.IsNullOrWhiteSpace(ReturnUrl))

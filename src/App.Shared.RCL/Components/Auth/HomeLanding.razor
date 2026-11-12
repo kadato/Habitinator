@@ -8,7 +8,7 @@
         {
             <div class="alert alert-info" role="alert">Your account has been deleted. Thanks for using Habitinator.</div>
         }
-        <p class="auth-card__section-title">Get started</p>
+        <h2 class="auth-card__section-title">Get started</h2>
         <div class="auth-landing__actions">
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
@@ -31,7 +31,7 @@
         </div>
 
         <div class="auth-landing__guest-block">
-            <div class="auth-form-divider" role="presentation">or</div>
+            <div class="auth-form-divider" role="separator" aria-orientation="horizontal">or</div>
             <div class="auth-landing__guest-paper guest-login-paper">
                 @if (UseCookieGuestLogin)
                 {

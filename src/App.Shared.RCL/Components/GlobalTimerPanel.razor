@@ -246,6 +246,14 @@
 
     private void CloseFocusHelp() => _showFocusHelp = false;
 
+    private void OnFocusHelpKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            CloseFocusHelp();
+        }
+    }
+
     private string GetPomodoroCycleHint() =>
         $"{GlobalTimerService.FormatTimeSpan(TimerService.WorkDuration)} work, " +
         $"{GlobalTimerService.FormatTimeSpan(TimerService.ShortBreakDuration)} short, " +
@@ -342,6 +350,7 @@
                                   Class="timer-focus-help-popover pa-3"
                                   Elevation="4">
                           <MudStack Spacing="1">
+                          <div role="dialog" aria-label="Alert timing help" @onkeydown="OnFocusHelpKeyDown">
                               <div class="d-flex justify-space-between align-center">
                                   <MudText Typo="Typo.subtitle2" Class="font-weight-bold" Color="Color.Primary">Alert timing</MudText>
                                   <MudIconButton Icon="@Icons.Material.Filled.Close"
@@ -352,6 +361,7 @@
                               <MudText Typo="Typo.body2" Class="timer-focus-help-text">
                                   @FocusDurationInput.HelpTooltip
                               </MudText>
+                          </div>
                           </MudStack>
                       </MudPopover>
                   </div>

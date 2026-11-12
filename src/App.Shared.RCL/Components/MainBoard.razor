@@ -139,7 +139,7 @@
                             <ActivatorContent Context="tagMenu">
                                 <button type="button"
                                         class="@GetTagsTriggerClass()"
-                                        aria-haspopup="true"
+                                        aria-haspopup="menu"
                                         title="@GetTagsTriggerTitle()"
                                         @onclick="@(e => tagMenu.ToggleAsync(e))">
                                     <MudIcon Icon="@Icons.Material.Filled.Tune" Class="board-trigger-icon" aria-hidden="true" />
@@ -221,7 +221,8 @@
     else if (_isLoading && !_initialLoadComplete)
     {
         <MudPaper Class="px-3 py-2 board-stat-strip" Outlined="false" Elevation="0">
-            <div class="board-stat-strip-row">
+            <span class="hab-visually-hidden" role="status">Loading board…</span>
+            <div class="board-stat-strip-row" aria-hidden="true">
 
                 <div class="board-stat-filters d-flex gap-2 w-100">
                     <MudSkeleton Height="36px" SkeletonType="SkeletonType.Rectangle" Class="board-skel-search" />
@@ -292,6 +293,7 @@
                             <BoardColumn @key="col.Section" Section="col.Section"
                                          Items="col.Items"
                                          IsBoardFilterExcludingAll="col.IsExcluded"
+                                         OnClearBoardFilter="ClearBoardFilters"
                                          OnChanged="OnBoardChanged"/>
                         }
                     }
@@ -308,6 +310,7 @@
                                 <BoardColumn Section="col.Section"
                                              Items="col.Items"
                                              IsBoardFilterExcludingAll="col.IsExcluded"
+                                         OnClearBoardFilter="ClearBoardFilters"
                                              OnChanged="OnBoardChanged"/>
                             </MudItem>
                         }
@@ -318,7 +321,8 @@
     }
     else if (_isLoading && !_initialLoadComplete)
     {
-        <div class="board-columns-stage">
+        <span class="hab-visually-hidden" role="status">Loading board…</span>
+        <div class="board-columns-stage" aria-hidden="true">
             @if (_isMobileViewport.GetValueOrDefault())
             {
                 <div class="board-columns-mobile">

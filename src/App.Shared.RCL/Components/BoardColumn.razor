@@ -151,7 +151,7 @@
                           autocapitalize="sentences"/>
             @if (_duplicateExistingTitle is not null)
             {
-                <div class="board-duplicate-warning mt-1">
+                <div class="board-duplicate-warning mt-1" role="status">
                     <MudText Typo="Typo.caption">Already exists: '@_duplicateExistingTitle'.</MudText>
                     <div class="d-flex justify-end gap-2 mt-1">
                         <MudButton Size="Size.Medium"
@@ -187,6 +187,13 @@
                         </div>
                         <MudText Typo="Typo.subtitle2" Class="empty-state-title">No matches found</MudText>
                         <MudText Typo="Typo.caption" Class="empty-state-desc">Try a different search or clear tags.</MudText>
+                        <MudButton Size="Size.Medium"
+                                   Variant="Variant.Text"
+                                   Color="Color.Primary"
+                                   Class="mt-2 text-transform-none"
+                                   OnClick="OnClearBoardFilter">
+                            Clear search and tags
+                        </MudButton>
                     }
                     else if (IsColumnFilterHidingAll)
                     {

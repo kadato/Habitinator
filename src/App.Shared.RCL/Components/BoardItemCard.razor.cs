@@ -193,12 +193,7 @@ public partial class BoardItemCard
 
     private async Task OnTitleKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key is "Enter" or " ")
-        {
-            await OnOpenEditor.InvokeAsync();
-            return;
-        }
-
+        // Native <button> already activates on Enter or Space. Only handle habit shortcuts here.
         if (Section != BoardSection.Habit || IsBusy)
         {
             return;
@@ -233,27 +228,6 @@ public partial class BoardItemCard
         }
 
         return $"Open details for {Item.Title}";
-    }
-
-    private string GetTitleHint()
-    {
-        if (Section == BoardSection.Habit)
-        {
-            if (Item.TrackPlus && Item.TrackMinus)
-            {
-                return "Open details. Shortcuts: + logs positive and - logs negative.";
-            }
-            if (Item.TrackPlus)
-            {
-                return "Open details. Shortcut: + logs positive.";
-            }
-            if (Item.TrackMinus)
-            {
-                return "Open details. Shortcut: - logs negative.";
-            }
-        }
-
-        return "Open details";
     }
 
     private string? GetTitleKeyShortcuts()

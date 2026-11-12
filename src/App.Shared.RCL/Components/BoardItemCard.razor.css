@@ -552,7 +552,7 @@ a.board-todo-due:hover {
 
 /* Gamified streak and habit badges */
 .board-streak--active {
-    color: var(--hab-accent-streak) !important; /* amber/orange active flame */
+    color: light-dark(#c2410c, #fb923c) !important; /* amber active flame */
     background: color-mix(in srgb, var(--hab-accent-streak) 14%, transparent);
     border: 1px solid color-mix(in srgb, var(--hab-accent-streak) 32%, transparent);
     border-radius: var(--radius-sm);
@@ -562,7 +562,7 @@ a.board-todo-due:hover {
 }
 
 .board-streak--active ::deep .streak-flame-icon {
-    color: var(--hab-accent-streak) !important;
+    color: light-dark(#c2410c, #fb923c) !important;
 }
 
 .board-habit-counters {
@@ -587,12 +587,12 @@ a.board-todo-due:hover {
 
 .board-habit-badge--plus {
     background-color: color-mix(in srgb, var(--hab-type-habit) 12%, transparent);
-    color: var(--hab-type-habit);
+    color: light-dark(#0f766e, #2dd4bf);
 }
 
 .board-habit-badge--minus {
     background-color: color-mix(in srgb, var(--hab-type-habit-bad-dark) 12%, transparent);
-    color: var(--hab-type-habit-bad-dark);
+    color: light-dark(#b91c1c, #f87171);
 }
 
 .board-habit-badge--period {

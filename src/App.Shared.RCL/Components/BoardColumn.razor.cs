@@ -28,6 +28,8 @@ public partial class BoardColumn : IAsyncDisposable
 
     [Parameter] public bool IsBoardFilterExcludingAll { get; set; }
 
+    [Parameter] public EventCallback OnClearBoardFilter { get; set; }
+
     private string _draft = string.Empty;
     private bool _draftError;
     private bool _isAdding;

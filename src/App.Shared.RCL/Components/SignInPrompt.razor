@@ -1,4 +1,8 @@
 <MudText Typo="Typo.h4" HtmlTag="h2">@Title</MudText>
+@if (!string.IsNullOrWhiteSpace(Message))
+{
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">@Message</MudText>
+}
 <MudButton Href="/auth/login" Target="_self" Variant="Variant.Filled" Color="Color.Primary">Sign in</MudButton>
 
 @code {

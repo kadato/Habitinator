@@ -30,7 +30,7 @@
                     <MudText Typo="Typo.subtitle1" Class="font-weight-bold" Style="letter-spacing:-0.02em;">@DisplayTitle</MudText>
                     @if (_graph is not null)
                     {
-                        <span class="stats-habit-ratio" title="@RatioTooltip">@RatioLabel</span>
+                        <span class="stats-habit-ratio">@RatioLabel<span class="hab-visually-hidden">. @RatioTooltip</span></span>
                     }
                 </div>
                 @if (_periodOptions.Count > 1)

@@ -27,7 +27,7 @@
                           Variant="Variant.Outlined"
                           Lines="12"
                           Placeholder="Paste backup JSON here"
-                          aria-label="Export file contents as JSON"
+                          aria-label="Backup JSON to import"
                           Class="export-textarea mb-3"/>
             @if (_error is not null)
             {
@@ -39,6 +39,12 @@
             }
             </div>
             <div class="hab-modal__footer">
+            <MudButton Variant="Variant.Text"
+                       Color="Color.Default"
+                       Size="Size.Medium"
+                       OnClick="() => MudDialog.Cancel()">
+                Cancel
+            </MudButton>
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Default"
                        Size="Size.Medium"

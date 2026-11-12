@@ -35,15 +35,15 @@
                                 <MudText Typo="Typo.body2" Class="font-weight-bold">@FormatOperation(op)</MudText>
                                 @if (op.AttemptCount >= 8)
                                 {
-                                    <MudText Typo="Typo.caption" Color="Color.Warning">Paused</MudText>
+                                    <MudText Typo="Typo.caption" Style="color: var(--hab-type-todo-ink);">Paused</MudText>
                                 }
                                 else
                                 {
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">Waiting</MudText>
                                 }
                                 <MudStack Row="true" Spacing="1" Class="mt-1">
-                                    <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Error" OnClick="@(() => DiscardAsync(op.OperationId))">Discard</MudButton>
                                     <MudButton Variant="Variant.Outlined" Size="Size.Medium" OnClick="RetryNow">Retry</MudButton>
+                                    <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Error" OnClick="@(() => DiscardAsync(op.OperationId))">Discard</MudButton>
                                 </MudStack>
                             </li>
                         }

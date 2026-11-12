@@ -16,13 +16,13 @@
                           Variant="Variant.Text"
                           Class="edit-daily-checklist__input flex-grow-1"
                           Placeholder="Checklist item"
-                          aria-label="Checklist item"
+                          aria-label="@($"Checklist item {idx + 1} of {Value.Count}{(string.IsNullOrWhiteSpace(row.Text) ? ", empty" : $": {row.Text.Trim()}")}")"
                           Margin="Margin.Dense"
                           Immediate="true"/>
             <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline"
                            Size="Size.Small"
                            title="Remove checklist item"
-                           aria-label="Remove checklist item"
+                           aria-label="@($"Remove checklist item {idx + 1}")"
                            Class="ma-0 edit-daily-checklist__remove"
                            OnClick="@(() => RemoveChecklistLine(idx))"/>
         </div>

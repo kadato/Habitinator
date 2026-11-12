@@ -127,9 +127,10 @@
         }
         catch (Exception ex)
         {
+            _isDownloading = false;
             _errorMessage = $"Failed to install update: {ex.Message}";
             _statusText = "Update failed.";
-            try { await Notifier.NotifyAsync(_errorMessage, MudBlazor.Severity.Error); } catch (Exception) { /* Best-effort toast. Inline fallback already shows the error. */ }
+            try { await Notifier.NotifyAsync(_errorMessage, MudBlazor.Severity.Error); } catch (Exception) { /* Showing the toast is best effort. Inline fallback already shows the error. */ }
             StateHasChanged();
         }
     }

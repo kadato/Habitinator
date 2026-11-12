@@ -35,7 +35,7 @@
                       Immediate="true"
                       AutoFocus="false"
                       Margin="Margin.Dense"
-                      aria-label="Title"/>
+                      aria-label="@(string.IsNullOrWhiteSpace(TitlePlaceholder) ? "Title" : TitlePlaceholder)"/>
     </div>
 </div>
 

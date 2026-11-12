@@ -9,6 +9,7 @@
          @onkeydown="OnControlKeydown"
          aria-haspopup="listbox"
          aria-label="Tags"
+         aria-controls="@ListboxId"
          @attributes="TagTriggerAria"
          id="@TriggerId">
         <div class="habit-tag-picker__chips">
@@ -38,7 +39,7 @@
         </div>
         <span class="habit-tag-picker__chevron" aria-hidden="true">▾</span>
     </div>
-    <div class="@DropdownClass"
+    <div class="@DropdownClass" id="@ListboxId"
          role="listbox"
          aria-labelledby="@(TriggerAriaLabelledBy ?? TriggerId)"
          @attributes="DropdownAria">
@@ -70,6 +71,7 @@
                 <button type="button" @key="option"
                         class="habit-tag-picker__option"
                         role="option"
+                        aria-selected="false"
                         @onclick="() => AddTag(option)">
                     @option
                 </button>
@@ -101,6 +103,7 @@
     private string _tagSearch = string.Empty;
     private ElementReference _tagSearchField;
     private string _appliedTags = string.Empty;
+    private string ListboxId => string.IsNullOrWhiteSpace(TriggerId) ? "tag-picker-listbox" : $"{TriggerId}-listbox";
 
     protected override void OnParametersSet()
     {

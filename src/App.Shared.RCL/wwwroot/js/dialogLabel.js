@@ -11,6 +11,21 @@
         var input = dialog.querySelector('.hab-modal__title-input input');
         if (input && !dialog.dataset.titleAutoSelected) {
             dialog.dataset.titleAutoSelected = 'true';
+            // EditDialogHeader handles focus with a touch and MAUI guard so the
+            // on-screen keyboard stays down on phones. Only act here when that
+            // guarded path is unavailable. The HabitinatorDialogFocus API is missing.
+            var guard = window.HabitinatorDialogFocus;
+            if (guard && typeof guard.shouldAutoFocus === 'function') {
+                try {
+                    var r = guard.shouldAutoFocus();
+                    if (r && typeof r.then === 'function') {
+                        r.then(function (ok) { if (ok) { input.focus(); input.select(); } });
+                    } else if (r) {
+                        setTimeout(function () { input.focus(); input.select(); }, 60);
+                    }
+                    return;
+                } catch (e) { /* Fall through to direct focus. */ }
+            }
             setTimeout(function () {
                 input.focus();
                 input.select();

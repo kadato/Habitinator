@@ -30,10 +30,13 @@
         @if (_loading)
         {
             <div class="dialog-body" aria-busy="true">
+                <span class="hab-visually-hidden" role="status">Loading archive…</span>
+                <div aria-hidden="true">
                 @for (var i = 0; i < 5; i++)
                 {
                     <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="2.5rem" Class="mb-2 rounded" />
                 }
+                </div>
             </div>
         }
         else
@@ -42,7 +45,7 @@
                 @if (TotalCount > 0)
                 {
                     <div class="search-container">
-                        <MudTextField @bind-Value="_searchQuery"
+                        <MudTextField @ref="_searchField" @bind-Value="_searchQuery"
                                       Placeholder="Search archive..."
                                       aria-label="Search archive"
                                       AdornmentAriaLabel="Search archive"
@@ -168,11 +171,29 @@
     private bool _isClosing;
     private ElementReference _headerRef;
     private ElementReference _listRef;
+    private MudTextField<string>? _searchField;
+    private bool _searchFocused;
     private DotNetObjectReference<ArchivedItemsDialog>? _swipeRef;
     private bool _swipeStarted;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!_loading && !_searchFocused && _searchField is not null && TotalCount > 0)
+        {
+            _searchFocused = true;
+            if (await ShouldAutoFocusAsync())
+            {
+                try
+                {
+                    await _searchField.FocusAsync();
+                }
+                catch
+                {
+                    // Search focus is best effort.
+                }
+            }
+        }
+
         if (firstRender && !_swipeStarted)
         {
             _swipeStarted = true;
@@ -189,6 +210,19 @@
             {
                 // Swipe gestures are a touch enhancement. Tabs and buttons always work.
             }
+        }
+    }
+
+    /// <summary>Desktop autofocuses the archive search. Touch devices and MAUI open dialogs unfocused, so the keyboard stays down.</summary>
+    private async Task<bool> ShouldAutoFocusAsync()
+    {
+        try
+        {
+            return await DialogFocusJs.ShouldAutoFocusAsync(JS);
+        }
+        catch
+        {
+            return true;
         }
     }
 

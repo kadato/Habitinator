@@ -47,18 +47,16 @@
                 }
             </div>
             <div class="hab-modal__footer d-flex justify-space-between align-center">
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Default"
+                           OnClick="() => MudDialog.Cancel()">
+                    Cancel
+                </MudButton>
                 <MudButton Variant="Variant.Filled"
                            Color="Color.Primary"
-                           Class="order-2"
                            StartIcon="@(StartSession ? Icons.Material.Filled.PlayArrow : Icons.Material.Filled.Check)"
                            OnClick="Submit">
                     @(StartSession ? "Start session" : "Apply duration")
-                </MudButton>
-                <MudButton Variant="Variant.Text"
-                           Color="Color.Default"
-                           Class="order-1"
-                           OnClick="() => MudDialog.Cancel()">
-                    Cancel
                 </MudButton>
             </div>
         </div>

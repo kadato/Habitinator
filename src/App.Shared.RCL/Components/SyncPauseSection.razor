@@ -81,8 +81,16 @@
 
     public void Dispose()
     {
-        BoardSync.Changed -= OnBoardSyncChanged;
-        PausePreference.PausedChanged -= OnPreferenceChanged;
+        Dispose(true);
         GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            BoardSync.Changed -= OnBoardSyncChanged;
+            PausePreference.PausedChanged -= OnPreferenceChanged;
+        }
     }
 }

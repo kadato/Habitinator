@@ -1448,6 +1448,17 @@
 
     public void Dispose()
     {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing)
+        {
+            return;
+        }
+
         UiSessionState.OnAiDrawerChanged -= HandleDrawerChanged;
         _streamCts?.Cancel();
         _streamCts?.Dispose();

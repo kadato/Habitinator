@@ -1,0 +1,212 @@
+{
+  "total": 14,
+  "by_rule": {
+    "tap-target-size": 14
+  },
+  "details": {
+    "tap-target-size": [
+      {
+        "route": "/auth/login",
+        "message": "<input> 18x18 < 24px",
+        "snippet": "<input class=\"form-check-input\" id=\"remember\" name=\"RememberMe\" type=\"checkbox\" value=\"true\">"
+      },
+      {
+        "route": "/auth/login",
+        "message": "<a> 107x21 < 24px",
+        "snippet": "<a href=\"/auth/register\" data-enhance-nav=\"false\">Create account</a>"
+      },
+      {
+        "route": "/auth/login",
+        "message": "<a> 131x21 < 24px",
+        "snippet": "<a href=\"/auth/forgot-password\" data-enhance-nav=\"false\">Forgot password</a>"
+      },
+      {
+        "route": "/auth/login",
+        "message": "<a> 63x21 < 24px",
+        "snippet": "<a href=\"/privacy\" data-enhance-nav=\"false\">Privacy</a>"
+      },
+      {
+        "route": "/auth/register",
+        "message": "<a> 50x21 < 24px",
+        "snippet": "<a href=\"/auth/login\" data-enhance-nav=\"false\">Sign in</a>"
+      },
+      {
+        "route": "/auth/register",
+        "message": "<a> 63x21 < 24px",
+        "snippet": "<a href=\"/privacy\" data-enhance-nav=\"false\">Privacy</a>"
+      },
+      {
+        "route": "/auth/forgot-password",
+        "message": "<a> 106x21 < 24px",
+        "snippet": "<a href=\"/auth/login\" data-enhance-nav=\"false\">Back to sign in</a>"
+      },
+      {
+        "route": "/auth/reset-password",
+        "message": "<a> 106x21 < 24px",
+        "snippet": "<a href=\"/auth/login\" data-enhance-nav=\"false\">Back to sign in</a>"
+      },
+      {
+        "route": "/privacy",
+        "message": "<a> 83x19 < 24px",
+        "snippet": "<a href=\"/.well-known/security.txt\" target=\"_self\">security.txt</a>"
+      },
+      {
+        "route": "/privacy",
+        "message": "<a> 41x21 < 24px",
+        "snippet": "<a href=\"/\" data-enhance-nav=\"false\">Home</a>"
+      },
+      {
+        "route": "/privacy",
+        "message": "<a> 63x21 < 24px",
+        "snippet": "<a href=\"/auth/login\" data-enhance-nav=\"false\">Sign in</a>"
+      },
+      {
+        "route": "/not-found",
+        "message": "<a> 44x19 < 24px",
+        "snippet": "<a href=\"/\">Home</a>"
+      },
+      {
+        "route": "/not-found",
+        "message": "<a> 54x19 < 24px",
+        "snippet": "<a href=\"/auth/login\" target=\"_self\">Sign in</a>"
+      },
+      {
+        "route": "/not-found",
+        "message": "<a> 113x19 < 24px",
+        "snippet": "<a href=\"/auth/register\" target=\"_self\">Create account</a>"
+      }
+    ]
+  },
+  "routes": {
+    "/": {
+      "status": 200,
+      "violations": []
+    },
+    "/auth/login": {
+      "status": 200,
+      "violations": [
+        {
+          "rule": "tap-target-size",
+          "id": "tap-target-size",
+          "message": "<input> 18x18 < 24px",
+          "snippet": "<input class=\"form-check-input\" id=\"remember\" name=\"RememberMe\" type=\"checkbox\" value=\"true\">"
+        },
+        {
+          "rule": "tap-target-size",
+          "id": "tap-target-size",
+          "message": "<a> 107x21 < 24px",
+          "snippet": "<a href=\"/auth/register\" data-enhance-nav=\"false\">Create account</a>"
+        },
+        {
+          "rule": "tap-target-size",
+          "id": "tap-target-size",
+          "message": "<a> 131x21 < 24px",
+          "snippet": "<a href=\"/auth/forgot-password\" data-enhance-nav=\"false\">Forgot password</a>"
+        },
+        {
+          "rule": "tap-target-size",
+          "id": "tap-target-size",
+          "message": "<a> 63x21 < 24px",
+          "snippet": "<a href=\"/privacy\" data-enhance-nav=\"false\">Privacy</a>"
+        }
+      ]
+    },
+    "/auth/register": {
+      "status": 200,
+      "violations": [
+        {
+          "rule": "tap-target-size",
+          "id": "tap-target-size",
+          "message": "<a> 50x21 < 24px",
+          "snippet": "<a href=\"/auth/login\" data-enhance-nav=\"false\">Sign in</a>"
+        },
+        {
+          "rule": "tap-target-size",
+          "id": "tap-target-size",
+          "message": "<a> 63x21 < 24px",
+          "snippet": "<a href=\"/privacy\" data-enhance-nav=\"false\">Privacy</a>"
+        }
+      ]
+    },
+    "/auth/forgot-password": {
+      "status": 200,
+      "violations": [
+        {
+          "rule": "tap-target-size",
+          "id": "tap-target-size",
+          "message": "<a> 106x21 < 24px",
+          "snippet": "<a href=\"/auth/login\" data-enhance-nav=\"false\">Back to sign in</a>"
+        }
+      ]
+    },
+    "/auth/reset-password": {
+      "status": 200,
+      "violations": [
+        {
+          "rule": "tap-target-size",
+          "id": "tap-target-size",
+          "message": "<a> 106x21 < 24px",
+          "snippet": "<a href=\"/auth/login\" data-enhance-nav=\"false\">Back to sign in</a>"
+        }
+      ]
+    },
+    "/privacy": {
+      "status": 200,
+      "violations": [
+        {
+          "rule": "tap-target-size",
+          "id": "tap-target-size",
+          "message": "<a> 83x19 < 24px",
+          "snippet": "<a href=\"/.well-known/security.txt\" target=\"_self\">security.txt</a>"
+        },
+        {
+          "rule": "tap-target-size",
+          "id": "tap-target-size",
+          "message": "<a> 41x21 < 24px",
+          "snippet": "<a href=\"/\" data-enhance-nav=\"false\">Home</a>"
+        },
+        {
+          "rule": "tap-target-size",
+          "id": "tap-target-size",
+          "message": "<a> 63x21 < 24px",
+          "snippet": "<a href=\"/auth/login\" data-enhance-nav=\"false\">Sign in</a>"
+        }
+      ]
+    },
+    "/upcoming": {
+      "status": 200,
+      "violations": []
+    },
+    "/stats": {
+      "status": 200,
+      "violations": []
+    },
+    "/settings": {
+      "status": 200,
+      "violations": []
+    },
+    "/not-found": {
+      "status": 200,
+      "violations": [
+        {
+          "rule": "tap-target-size",
+          "id": "tap-target-size",
+          "message": "<a> 44x19 < 24px",
+          "snippet": "<a href=\"/\">Home</a>"
+        },
+        {
+          "rule": "tap-target-size",
+          "id": "tap-target-size",
+          "message": "<a> 54x19 < 24px",
+          "snippet": "<a href=\"/auth/login\" target=\"_self\">Sign in</a>"
+        },
+        {
+          "rule": "tap-target-size",
+          "id": "tap-target-size",
+          "message": "<a> 113x19 < 24px",
+          "snippet": "<a href=\"/auth/register\" target=\"_self\">Create account</a>"
+        }
+      ]
+    }
+  }
+}

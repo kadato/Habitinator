@@ -1,0 +1,107 @@
+{
+  "total": 0,
+  "by_rule": {},
+  "details": {},
+  "routes": {
+    "light /": {
+      "status": 200,
+      "theme": "light",
+      "violations": []
+    },
+    "light /auth/login": {
+      "status": 200,
+      "theme": "light",
+      "violations": []
+    },
+    "light /auth/register": {
+      "status": 200,
+      "theme": "light",
+      "violations": []
+    },
+    "light /auth/forgot-password": {
+      "status": 200,
+      "theme": "light",
+      "violations": []
+    },
+    "light /auth/reset-password": {
+      "status": 200,
+      "theme": "light",
+      "violations": []
+    },
+    "light /privacy": {
+      "status": 200,
+      "theme": "light",
+      "violations": []
+    },
+    "light /upcoming": {
+      "status": 200,
+      "theme": "light",
+      "violations": []
+    },
+    "light /stats": {
+      "status": 200,
+      "theme": "light",
+      "violations": []
+    },
+    "light /settings": {
+      "status": 200,
+      "theme": "light",
+      "violations": []
+    },
+    "light /not-found": {
+      "status": 200,
+      "theme": "light",
+      "violations": []
+    },
+    "dark /": {
+      "status": 200,
+      "theme": "dark",
+      "violations": []
+    },
+    "dark /auth/login": {
+      "status": 200,
+      "theme": "dark",
+      "violations": []
+    },
+    "dark /auth/register": {
+      "status": 200,
+      "theme": "dark",
+      "violations": []
+    },
+    "dark /auth/forgot-password": {
+      "status": 200,
+      "theme": "dark",
+      "violations": []
+    },
+    "dark /auth/reset-password": {
+      "status": 200,
+      "theme": "dark",
+      "violations": []
+    },
+    "dark /privacy": {
+      "status": 200,
+      "theme": "dark",
+      "violations": []
+    },
+    "dark /upcoming": {
+      "status": 200,
+      "theme": "dark",
+      "violations": []
+    },
+    "dark /stats": {
+      "status": 200,
+      "theme": "dark",
+      "violations": []
+    },
+    "dark /settings": {
+      "status": 200,
+      "theme": "dark",
+      "violations": []
+    },
+    "dark /not-found": {
+      "status": 200,
+      "theme": "dark",
+      "violations": []
+    }
+  }
+}

@@ -7,7 +7,7 @@
 <MudStack Spacing="3">
     @if (ShowTitle)
     {
-        <MudText Typo="Typo.h5">Notifications</MudText>
+        <MudText Typo="Typo.h5" HtmlTag="h2">Notifications</MudText>
     }
 
     @if (_loadError is not null)
@@ -86,7 +86,7 @@
     else if (_model is not null)
     {
         <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
-            <MudText Typo="Typo.subtitle1" Class="mb-1">In-app messages</MudText>
+            <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="mb-1">In-app messages</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
                 Short on-screen messages.
             </MudText>
@@ -138,7 +138,7 @@
         </MudPaper>
 
         <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
-            <MudText Typo="Typo.subtitle1" Class="mb-1">Scheduled and device alerts</MudText>
+            <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="mb-1">Scheduled and device alerts</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
                 Reminders and system alerts.
             </MudText>

@@ -23,6 +23,7 @@
             <MudSkeleton Width="220px" Height="28px" Class="mb-2" />
             <MudSkeleton Width="60%" Height="18px" />
         </div>
+        <span class="hab-visually-hidden" role="status">Loading upcoming…</span>
         <div class="cal-skel-grid" aria-hidden="true">
             @for (var i = 0; i < 14; i++)
             {
@@ -40,7 +41,7 @@
                     <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Medium" Class="cal-navbtn" aria-label="@NextLabel" OnClick="Next" />
                 </div>
                 <div class="cal-titles">
-                    <div class="cal-sub">@HeadlineText</div>
+                    <div class="cal-sub" aria-live="polite" aria-atomic="true">@HeadlineText</div>
                 </div>
             </div>
             <div class="cal-controls">
@@ -91,7 +92,7 @@
                             <div class="cal-card__titles">
                                 <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="cal-card__title">Overdue</MudText>
                             </div>
-                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Medium" Class="text-transform-none" OnClick="MoveOverdueToTodayAsync" Disabled="_bulkMoving">@(_bulkMoving ? "Moving…" : $"Move all {_overdue.Count} to today")</MudButton>
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Medium" Class="text-transform-none" OnClick="MoveOverdueToTodayAsync" Disabled="_bulkMoving" aria-busy="@(_bulkMoving ? "true" : "false")">@(_bulkMoving ? "Moving…" : $"Move all {_overdue.Count} to today")</MudButton>
                         </div>
                         <ul class="cal-list">
                             @foreach (var todo in GetVisibleOverdue())
@@ -128,13 +129,13 @@
                     </MudPaper>
                 }
 
-                <MudPaper Class="@($"cal-card cal-card--agenda cal-card--agenda-{_view.ToString().ToLowerInvariant()}")" Elevation="0" Outlined="true" id="@SelectedAnchorId" aria-live="polite" aria-atomic="false">
+                <MudPaper Class="@($"cal-card cal-card--agenda cal-card--agenda-{_view.ToString().ToLowerInvariant()}")" Elevation="0" Outlined="true" id="@SelectedAnchorId">
                     <div class="cal-card__head">
                         <span class="cal-card__icon cal-card__icon--agenda" aria-hidden="true">
                             <MudIcon Icon="@Icons.Material.Filled.Event" Size="Size.Small" />
                         </span>
                         <div class="cal-card__titles">
-                            <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="cal-card__title">@FormatDate(_selected)</MudText>
+                            <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="cal-card__title"><span aria-live="polite" aria-atomic="true">@FormatDate(_selected)</span></MudText>
                         </div>
                         <div class="cal-agenda__side">
                             @if (SelectedVisibleCount > 0)
@@ -200,7 +201,8 @@
                                             <div class="cal-row__actions">
                                                 @if (daily.Counter > 0)
                                                 {
-                                                    <span class="cal-streak" title="Daily streak: @daily.Counter days" aria-label="@daily.Counter day streak for @daily.Title">
+                                                    <span class="cal-streak">
+                                                     <span class="hab-visually-hidden">Daily streak @daily.Counter days for @daily.Title: </span>
                                                         <MudIcon Icon="@Icons.Material.Filled.Whatshot" Size="Size.Small" aria-hidden="true" />
                                                         @daily.Counter
                                                     </span>

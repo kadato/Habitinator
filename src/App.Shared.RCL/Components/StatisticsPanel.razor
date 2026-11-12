@@ -31,7 +31,8 @@
     }
     else if (_loading && _data is null)
     {
-        <div class="stats-hero-skeleton">
+        <span class="hab-visually-hidden" role="status">Loading statistics…</span>
+        <div class="stats-hero-skeleton" aria-hidden="true">
             <MudPaper Class="pa-4 stats-dashboard-card stats-hero-card" Elevation="0" Outlined="true">
                 <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-3">
                     <div>
@@ -59,7 +60,7 @@
     {
         <MudPaper Class="pa-6 stats-dashboard-card text-center" Elevation="0" Outlined="true">
             <MudIcon Icon="@Icons.Material.Filled.BarChart" Size="Size.Large" Class="mb-2" Color="Color.Secondary"  aria-hidden="true" />
-            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Nothing yet</MudText>
+            <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="font-weight-bold">Nothing yet</MudText>
             <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">Do a habit, daily, or focus session to begin.</MudText>
         </MudPaper>
     }
@@ -94,7 +95,7 @@
                 <MudPaper Class="pa-4 stats-dashboard-card" Elevation="0" Outlined="true">
                     <div class="stats-section-head">
                         <div>
-                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Activity by week</MudText>
+                            <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="font-weight-bold">Activity by week</MudText>
                         </div>
                     </div>
                     <div class="stats-week-bars" style="--stats-week-bar-max: @(_weekBarMax == 0 ? 1 : _weekBarMax);">
@@ -117,7 +118,7 @@
                 <MudPaper Class="pa-4 stats-dashboard-card mt-4" Elevation="0" Outlined="true">
                     <div class="stats-section-head">
                         <div>
-                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Consistency by item</MudText>
+                            <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="font-weight-bold">Consistency by item</MudText>
                         </div>
                         <div class="stats-segment" role="group" aria-label="Filter consistency graphs">
                             <button type="button" @attributes='GetConsistencyTabAttrs("all")' class="stats-segment__btn @(_consistencyTab == "all" ? "stats-segment__btn--active" : string.Empty)" @onclick='() => _consistencyTab = "all"'>All</button>
@@ -136,7 +137,8 @@
 
                     @if ((_loadingDailies && _dailyView is null) || (_loadingHabits && _habitView is null))
                     {
-                        <MudGrid Spacing="3" Class="mt-3">
+                        <span class="hab-visually-hidden" role="status">Loading graphs…</span>
+                        <MudGrid Spacing="3" Class="mt-3" aria-hidden="true">
                             @for (int i = 0; i < 2; i++)
                             {
                                 <MudItem xs="12" md="6">
@@ -172,8 +174,9 @@
                         {
                             <div class="stats-empty">
                                 <MudIcon Icon="@Icons.Material.Filled.Inbox" Size="Size.Large" Class="stats-empty__icon"  aria-hidden="true" />
-                                <MudText Typo="Typo.subtitle2" Class="font-weight-bold">No graphs for this filter</MudText>
+                                <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="font-weight-bold">No graphs for this filter</MudText>
                                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">Try All or add one.</MudText>
+                                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Medium" Class="mt-2" OnClick="ResetConsistencyFiltersAsync">Show all</MudButton>
                             </div>
                         }
                         else
@@ -190,7 +193,7 @@
                                                     <button type="button" class="stats-daily-title stats-daily-title--btn" title="View streaks and heatmap for @daily.Title" aria-label="View streaks and heatmap for @daily.Title" @onclick="() => OpenDailyHeatmapAsync(daily)">@daily.Title</button>
                                                     <span class="stats-habit-ratio stats-habit-ratio--daily" title="@GetDailyRatioTooltip(daily)">@GetDailyRatioLabel(daily)</span>
                                                 </div>
-                                                <div class="stats-daily-streak-stats" title="@GetDailyStreakTooltip(daily)" aria-label="@GetDailyStreakTooltip(daily)">
+                                                <div class="stats-daily-streak-stats">
                                                     <div class="stats-daily-streak-stat">
                                                         <span class="stats-daily-streak-stat__value">@daily.CurrentStreak</span>
                                                         <span class="stats-daily-streak-stat__label">Current</span>
@@ -273,7 +276,7 @@
                     <MudPaper Class="pa-4 stats-dashboard-card stats-filter-card" Elevation="0" Outlined="true">
                         <MudStack Spacing="2">
                             <div class="stats-filter-card__header">
-                                <MudText Typo="Typo.subtitle2" Class="font-weight-bold">Filters</MudText>
+                                <MudText Typo="Typo.subtitle2" HtmlTag="h2" Class="font-weight-bold">Filters</MudText>
                             </div>
                             <div class="stats-filter-row">
                                 <MudMenu AnchorOrigin="Origin.BottomCenter"
@@ -285,7 +288,7 @@
                                     <ActivatorContent Context="tagsMenu">
                                         <button type="button"
                                                 class="stats-filter-trigger"
-                                                aria-haspopup="true"
+                                                aria-haspopup="menu"
                                                 title="Filter by tags"
                                                 disabled="@(!HasAvailableTags)"
                                                 @onclick="@(e => tagsMenu.ToggleAsync(e))">
@@ -325,7 +328,7 @@
                                     <ActivatorContent Context="periodMenu">
                                         <button type="button"
                                                 class="stats-filter-trigger"
-                                                aria-haspopup="true"
+                                                aria-haspopup="menu"
                                                 title="Change period"
                                                 @onclick="@(e => periodMenu.ToggleAsync(e))">
                                             <span class="stats-filter-trigger__iconbox" aria-hidden="true">
@@ -396,4 +399,10 @@
 
 @code {
     private string _consistencyTab = "all";
+
+    private async Task ResetConsistencyFiltersAsync()
+    {
+        _consistencyTab = "all";
+        await OnClearTagFiltersAsync();
+    }
 }

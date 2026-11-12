@@ -140,3 +140,10 @@ button.stats-cell:focus-visible, button.stats-cell:focus {
     .stats-heatmap-container { --stats-cell: 14px; }
     .stats-heatmap-container--large { --stats-cell: 16px; }
 }
+
+/* On touch, heatmap day cells meet the 24px minimum target. The wrap
+   scrolls horizontally, so the grid stays reachable on small screens. */
+@media (pointer: coarse) {
+    .stats-heatmap-container { --stats-cell: 24px; --stats-grid-gap: 4px; }
+    .stats-heatmap-container--large { --stats-cell: 24px; }
+}

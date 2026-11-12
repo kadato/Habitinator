@@ -2654,3 +2654,57 @@ input[type="number"].mud-input-slot {
     display: none !important;
   }
 }
+
+/* Text links and branding meet the WCAG 2.5.8 24px minimum target size
+   so the accessibility crawler passes on every route. */
+.app-branding,
+a.app-branding {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+}
+
+.notfound-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+}
+
+/* Every interactive control meets the WCAG 2.5.8 24px minimum target size.
+   Coarse pointers get 44px per WCAG 2.5.5. Icon-only buttons keep their visual
+   size. The hit area grows with inline-flex and min sizes. */
+button.board-card__title,
+button.board-subtask-pill,
+button.stats-daily-title--btn,
+button.stats-week-bar-wrap,
+button.cal-row__titlebtn {
+    min-height: 24px;
+    min-width: 24px;
+}
+
+.mud-icon-button {
+    min-width: 24px;
+    min-height: 24px;
+}
+
+.board-card__tag-badge--more,
+.board-filter-btn,
+.stats-segment__btn,
+.day-stepper__btn,
+.filter-tab {
+    min-height: 24px;
+}
+
+@media (pointer: coarse) {
+    button.board-card__title {
+        min-height: 44px;
+    }
+    button.board-subtask-pill,
+    button.stats-daily-title--btn {
+        min-height: 44px;
+    }
+    .mud-icon-button {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}

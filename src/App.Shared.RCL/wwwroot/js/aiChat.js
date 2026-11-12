@@ -108,7 +108,58 @@ globalThis.HabitinatorAiChat = {
             if (active && active.closest && active.closest(".ai-drawer-container")) {
                 active.blur();
             }
-        } catch (ignored) { /* clearing is best effort */ }
+        } catch (ignored) { /* Clearing is best effort. */ }
+    },
+    drawerPreviousActive: null,
+    drawerKeyHandler: null,
+    drawerEnter: function () {
+        try {
+            var container = document.querySelector('.ai-drawer-container');
+            if (!container) return false;
+            if (!this.drawerPreviousActive || !document.contains(this.drawerPreviousActive)) {
+                this.drawerPreviousActive = document.activeElement;
+            }
+            var self = this;
+            if (!this.drawerKeyHandler) {
+                this.drawerKeyHandler = function (e) {
+                    if (e.key !== 'Tab') return;
+                    var box = document.querySelector('.ai-drawer-container');
+                    if (!box) return;
+                    var items = box.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+                    var focusable = [];
+                    for (var i = 0; i < items.length; i++) {
+                        if (items[i].getClientRects().length > 0) focusable.push(items[i]);
+                    }
+                    if (focusable.length === 0) { e.preventDefault(); return; }
+                    var first = focusable[0];
+                    var last = focusable[focusable.length - 1];
+                    var active = document.activeElement;
+                    if (e.shiftKey) {
+                        if (!box.contains(active) || active === first) { e.preventDefault(); last.focus(); }
+                    } else if (!box.contains(active) || active === last) { e.preventDefault(); first.focus(); }
+                };
+            }
+            document.addEventListener('keydown', this.drawerKeyHandler, true);
+            var coarse = false;
+            try {
+                coarse = globalThis.habitinatorIsMaui === true ||
+                    (typeof globalThis.matchMedia === 'function' && globalThis.matchMedia('(pointer: coarse)').matches);
+            } catch (ignored) { /* Assume a fine pointer. */ }
+            if (!coarse) {
+                var target = container.querySelector('.ai-text-field input:not([disabled])') ||
+                    container.querySelector('button:not([disabled])');
+                if (target) target.focus();
+            }
+            return true;
+        } catch (ignored) { return false; }
+    },
+    drawerLeave: function () {
+        try {
+            if (this.drawerKeyHandler) document.removeEventListener('keydown', this.drawerKeyHandler, true);
+            var prev = this.drawerPreviousActive;
+            this.drawerPreviousActive = null;
+            if (prev && typeof prev.focus === 'function' && document.contains(prev)) prev.focus();
+        } catch (ignored) { /* Focus restore is best effort. */ }
     },
     initGlobalDismiss: function () {
         try {

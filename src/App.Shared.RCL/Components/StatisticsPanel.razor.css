@@ -917,3 +917,9 @@
         font-size: 0.9rem;
     }
 }
+
+/* On touch, week bars meet the 24px minimum target. The bars row
+   scrolls horizontally, so the chart stays reachable on small screens. */
+@media (pointer: coarse) {
+    .stats-week-bar-wrap { min-width: 24px; }
+}

@@ -17,13 +17,13 @@
             <div class="cmd-palette-header">
                 @if (_breadcrumbs.Count > 0)
                 {
-                    <div class="cmd-palette-breadcrumbs" aria-label="Current path">
+                    <nav class="cmd-palette-breadcrumbs" aria-label="Current path"><ol class="cmd-palette-breadcrumbs__list">
                         @foreach (var crumb in _breadcrumbs)
                         {
-                            <span class="cmd-palette-crumb">@crumb</span>
-                            <span class="cmd-palette-crumb-sep" aria-hidden="true">/</span>
+                            <li class="cmd-palette-crumb">@crumb</li>
+                            
                         }
-                    </div>
+                    </ol></nav>
                 }
                 <MudIcon Icon="@Icons.Material.Filled.Search" Class="cmd-palette-search-icon" aria-hidden="true" />
                 <input class="cmd-palette-input"
@@ -35,11 +35,12 @@
                        autocorrect="off"
                        spellcheck="false"
                        placeholder="@GetSearchPlaceholder()"
+                       aria-label="Search commands and board items"
                        value="@_query"
                        @oninput="OnQueryInput"
                        @onkeydown="HandleKeyDown"
                        role="combobox"
-                       aria-expanded="true"
+                       aria-expanded="@(_flatVisibleItems.Count > 0 ? "true" : "false")"
                        aria-autocomplete="list"
                        aria-controls="cmd-palette-results"
                        aria-activedescendant="@GetActiveDescendantId()" />
@@ -111,6 +112,8 @@
                     }
                 }
             </div>
+
+            <p class="hab-visually-hidden">Command palette. Press Up and Down to move. Press Enter to select. Press Right to open sub-actions. Press Escape to clear the search, go back, or close.</p>
 
             <!-- Bottom helper bar -->
             <div class="cmd-palette-footer app-show-desktop-only" aria-hidden="true">

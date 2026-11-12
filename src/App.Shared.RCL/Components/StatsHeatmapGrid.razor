@@ -12,7 +12,7 @@
         <span></span>
         <span>Sun</span>
     </div>
-    <div class="stats-heatmap-wrap" tabindex="0" role="region" aria-label="@RegionLabel">
+    <div class="stats-heatmap-wrap" role="region" aria-label="@RegionLabel">
         <span class="hab-visually-hidden">Rows are Monday to Sunday, columns are weeks. Press Tab to reach days, then use arrow keys to move between days.</span>
         @if (ShowMonthLabels)
         {
@@ -164,6 +164,8 @@
             "ArrowRight" => StepTo(_focusRow, _focusCol, 0, 1),
             "ArrowUp" => StepTo(_focusRow, _focusCol, -1, 0),
             "ArrowDown" => StepTo(_focusRow, _focusCol, 1, 0),
+            "Home" => RowEdge(_focusRow, -1),
+            "End" => RowEdge(_focusRow, 1),
             _ => (-1, -1)
         };
 
@@ -182,6 +184,25 @@
         {
             // Ignored. Roving state still updates, so Tab order stays correct.
         }
+    }
+
+    private (int Row, int Col) RowEdge(int row, int direction)
+    {
+        if (row < 0 || row >= 7)
+        {
+            return (-1, -1);
+        }
+
+        var start = direction < 0 ? 0 : Columns - 1;
+        for (var c = start; c >= 0 && c < Columns; c -= direction)
+        {
+            if (IsInRange(row, c))
+            {
+                return (row, c);
+            }
+        }
+
+        return (-1, -1);
     }
 
     private (int Row, int Col) StepTo(int row, int col, int dRow, int dCol)

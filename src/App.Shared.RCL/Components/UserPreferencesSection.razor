@@ -7,7 +7,7 @@
 <MudStack Spacing="3">
     @if (ShowTitle)
     {
-        <MudText Typo="Typo.h5">Profile and preferences</MudText>
+        <MudText Typo="Typo.h5" HtmlTag="h2">Profile and preferences</MudText>
     }
 
     @if (_loadError is not null)
@@ -53,7 +53,7 @@
     {
         <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
-                <MudText Typo="Typo.subtitle1" Class="mb-1">Account</MudText>
+                <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="mb-1">Account</MudText>
                 <MudTextField T="string" Label="Display name"
                               Variant="Variant.Outlined"
                               dense="true"
@@ -69,7 +69,7 @@
 
         <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
-                <MudText Typo="Typo.subtitle1" Class="mb-1">Pomodoro Timer</MudText>
+                <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="mb-1">Pomodoro Timer</MudText>
                 <div class="settings-stepper-grid">
                     <div class="settings-stepper">
                         <span class="settings-stepper__label">Work duration <span class="settings-stepper__unit">minutes</span></span>
@@ -141,7 +141,7 @@
 
         <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
-                <MudText Typo="Typo.subtitle1" Class="mb-1">Date and time</MudText>
+                <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="mb-1">Date and time</MudText>
                 <MudTextField T="string"
                               Label="Date format"
                               Variant="Variant.Outlined"
@@ -189,7 +189,7 @@
 
         <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
-                <MudText Typo="Typo.subtitle1" Class="mb-1">Theme</MudText>
+                <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="mb-1">Theme</MudText>
                 <div class="d-flex flex-row align-center flex-wrap gap-2">
                     <MudSwitch T="bool"
                                Value="_useSystemTheme"
@@ -213,7 +213,7 @@
 
         <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
-                <MudText Typo="Typo.subtitle1" Class="mb-1">Keyboard Shortcuts</MudText>
+                <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="mb-1">Keyboard Shortcuts</MudText>
                 <MudSwitch T="bool" Label="Enable keyboard shortcuts" Color="Color.Primary"
                            Value="_model.EnableKeyboardShortcuts" ValueChanged="OnEnableKeyboardShortcutsChanged" />
             </MudStack>

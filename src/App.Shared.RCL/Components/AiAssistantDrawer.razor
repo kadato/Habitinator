@@ -21,7 +21,7 @@
            Width="min(480px, 100%)"
            Class="ai-assistant-drawer"
            ClipMode="DrawerClipMode.Never">
-    <div class="ai-drawer-container d-flex flex-column h-100">
+    <div class="ai-drawer-container d-flex flex-column h-100" role="dialog" aria-modal="true" aria-label="AI assistant" tabindex="-1" @onkeydown="OnDrawerKeyDown">
         <div class="ai-drawer-grabber" aria-hidden="true"></div>
         <div class="ai-drawer-header px-3 py-2 d-flex align-center justify-space-between gap-1" @ref="_sheetHeaderRef">
             <div class="d-flex align-center gap-2 min-w-0 flex-shrink-1 flex-grow-1 ai-header-main">
@@ -208,7 +208,7 @@
                 <div class="ai-unconfigured-card mb-4 pa-3 rounded-lg">
                     <div class="d-flex align-center justify-space-between">
                         <div>
-                            <MudText Typo="Typo.subtitle2" Class="font-weight-bold mb-1">
+                            <MudText Typo="Typo.subtitle2" HtmlTag="h2" Class="font-weight-bold mb-1">
                                 AI is off
                             </MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">
@@ -229,7 +229,7 @@
             @if (ActiveEntries.Count <= 1)
             {
                 <div class="ai-empty-state mb-4">
-                    <MudText Typo="Typo.h6" Class="font-weight-bold mb-1">
+                    <MudText Typo="Typo.h6" HtmlTag="h2" Class="font-weight-bold mb-1">
                         Ask about your board
                     </MudText>
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
@@ -432,6 +432,7 @@
                               Sizing="InputSizing.Auto"
                               MaxLines="4"
                               Immediate="true"
+                              aria-label="Message AI assistant"
                               OnKeyDown="HandleKeyDown"
                               Disabled="BoardSync.IsOffline || _isSending || _isStreaming"
                               Class="ai-text-field flex-grow-1"
@@ -643,6 +644,14 @@
         return Task.CompletedTask;
     }
 
+    private void OnDrawerKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            UiSessionState.SetAiDrawer(false);
+        }
+    }
+
     private void HandleDrawerChanged()
     {
         if (UiSessionState.IsAiDrawerOpen)
@@ -663,6 +672,15 @@
                 {
                     StateHasChanged();
                 }
+
+                try
+                {
+                    await JS.InvokeVoidAsync("HabitinatorAiChat.drawerEnter");
+                }
+                catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or InvalidOperationException)
+                {
+                    // Focus trap is best effort. The close button and the overlay still work.
+                }
             });
         }
         else
@@ -676,6 +694,14 @@
                 catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or InvalidOperationException)
                 {
                     // Ignore the error. JS is unavailable, so there is nothing to clear.
+                }
+                try
+                {
+                    await JS.InvokeVoidAsync("HabitinatorAiChat.drawerLeave");
+                }
+                catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or InvalidOperationException)
+                {
+                    // Focus restore is best effort.
                 }
                 StateHasChanged();
             });

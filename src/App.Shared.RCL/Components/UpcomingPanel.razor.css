@@ -154,10 +154,12 @@
 
 /* Inline variant used inside hint sentences. */
 .cal-link--inline {
-    min-height: 0;
-    padding: 0 0.15rem;
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    min-width: 24px;
+    padding: 0 0.3rem;
     margin-left: 0;
-    display: inline;
 }
 
 .cal-progress {
@@ -732,7 +734,7 @@
 
 .cal-dot--daily {
     background: color-mix(in srgb, var(--mud-palette-primary) 15%, transparent);
-    color: var(--mud-palette-primary);
+    color: light-dark(#1e40af, #60a5fa);
 }
 
 .cal-dot--todo {
@@ -1170,9 +1172,9 @@
     .cal-nav ::deep .cal-daystep,
     .cal-nav ::deep .cal-navbtn {
         flex: 0 0 auto;
-        width: 2.5rem !important;
-        height: 2.5rem !important;
-        min-height: 0 !important;
+        width: 2.75rem !important;
+        height: 2.75rem !important;
+        min-height: 2.75rem !important;
     }
 
     .cal-nav ::deep .cal-todaybtn {
@@ -1204,7 +1206,7 @@
 
     .cal-controls .cal-seg__btn {
         flex: 1 1 0;
-        min-height: 2.25rem;
+        min-height: 2.75rem;
         padding: 0.4rem 0.5rem;
         font-size: 0.78rem;
     }
@@ -1287,8 +1289,8 @@
     }
 
     ::deep .cal-daystep {
-        width: 2.25rem !important;
-        height: 2.25rem !important;
+        width: 2.75rem !important;
+        height: 2.75rem !important;
     }
 
     .cal-group {
@@ -1327,7 +1329,7 @@
     }
 
     .cal-row__titlebtn {
-        min-height: 0;
+        min-height: 2.75rem;
         padding: 0.2rem 0;
         font-size: 0.88rem;
     }
@@ -1342,8 +1344,8 @@
     }
 
     ::deep .cal-iconbtn {
-        width: 2.25rem !important;
-        height: 2.25rem !important;
+        width: 2.75rem !important;
+        height: 2.75rem !important;
     }
 }
 
@@ -1544,27 +1546,27 @@
    restore 44px targets and undo the compact layout. */
 @media (max-width: 767.98px) and (pointer: coarse) {
     .cal-seg__btn {
-        min-height: 2.25rem;
+        min-height: 2.75rem;
         padding: 0.4rem 0.5rem;
     }
 
     ::deep .cal-iconbtn {
-        width: 2.25rem !important;
-        height: 2.25rem !important;
+        width: 2.75rem !important;
+        height: 2.75rem !important;
     }
 
     .cal-addbtn {
-        min-height: 2.5rem;
+        min-height: 2.75rem;
     }
 
     ::deep .cal-navbtn {
-        width: 2.5rem !important;
-        height: 2.5rem !important;
+        width: 2.75rem !important;
+        height: 2.75rem !important;
     }
 
     ::deep .cal-daystep {
-        width: 2.25rem !important;
-        height: 2.25rem !important;
+        width: 2.75rem !important;
+        height: 2.75rem !important;
     }
 
     .cal-cell--strip {
@@ -1585,5 +1587,15 @@
     .cal-addbtn,
     .cal-seg__btn {
         transition: none;
+    }
+}
+
+@media (pointer: coarse) {
+    ::deep .upcoming-check--box {
+        min-width: 44px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
 }

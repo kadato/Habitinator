@@ -46,6 +46,8 @@
 .ai-header-btn {
     width: 30px !important;
     height: 30px !important;
+    min-width: 24px !important;
+    min-height: 24px !important;
     padding: 4px !important;
     color: var(--mud-palette-text-primary) !important;
     transition: background-color 0.15s ease;

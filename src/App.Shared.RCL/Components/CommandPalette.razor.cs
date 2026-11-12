@@ -615,11 +615,14 @@ public partial class CommandPalette : IDisposable
         return SelectedItem is not null ? ExecuteItemAsync(SelectedItem) : Task.CompletedTask;
     }
 
+    private string? _escapeNotice;
+
     private async Task HandleEscapeAsync()
     {
         if (_pendingChord)
         {
             _pendingChord = false;
+            _escapeNotice = null;
             StateHasChanged();
             return;
         }
@@ -628,14 +631,17 @@ public partial class CommandPalette : IDisposable
         {
             _query = string.Empty;
             _selectedIndex = 0;
+            _escapeNotice = "Search cleared.";
             await RecomputeVisibleItemsAsync();
         }
         else if (_breadcrumbStack.Count > 0)
         {
             await PopBreadcrumbAsync();
+            _escapeNotice = _breadcrumbs.Count > 0 ? $"Back to {_breadcrumbs[^1]}." : "Back to all commands.";
         }
         else
         {
+            _escapeNotice = null;
             PaletteService.Close();
         }
     }
@@ -757,12 +763,12 @@ public partial class CommandPalette : IDisposable
 
     public string GetSearchResultsStatus()
     {
-        if (_flatVisibleItems.Count == 0)
-        {
-            return "No matches";
-        }
-
-        return $"{_flatVisibleItems.Count} commands and items found";
+        var results = _flatVisibleItems.Count == 0
+            ? "No matches"
+            : $"{_flatVisibleItems.Count} commands and items found";
+        var notice = _escapeNotice;
+        _escapeNotice = null;
+        return notice is null ? results : $"{notice} {results}";
     }
 
     private string? GetActiveDescendantId()

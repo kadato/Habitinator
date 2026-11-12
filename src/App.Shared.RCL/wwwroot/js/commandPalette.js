@@ -84,6 +84,13 @@ globalThis.HabitinatorCommandPalette = (function () {
     onOpen: function () {
       previousActiveElement = document.activeElement;
       document.addEventListener('keydown', onKeydown, true);
+      try {
+        var root = document.documentElement;
+        if (!root.dataset.habitinatorPaletteScrollLock) {
+          root.dataset.habitinatorPaletteScrollLock = root.style.overflow || '';
+        }
+        root.style.overflow = 'hidden';
+      } catch (e) { /* Scroll lock is best effort. */ }
       requestAnimationFrame(function () {
         const input = document.querySelector('.cmd-palette-input');
         if (input) {
@@ -95,6 +102,13 @@ globalThis.HabitinatorCommandPalette = (function () {
 
     onClose: function () {
       document.removeEventListener('keydown', onKeydown, true);
+      try {
+        var root = document.documentElement;
+        if ('habitinatorPaletteScrollLock' in root.dataset) {
+          root.style.overflow = root.dataset.habitinatorPaletteScrollLock;
+          delete root.dataset.habitinatorPaletteScrollLock;
+        }
+      } catch (e) { /* Scroll lock is best effort. */ }
       if (previousActiveElement && typeof previousActiveElement.focus === 'function' && document.body.contains(previousActiveElement)) {
         try {
           previousActiveElement.focus();

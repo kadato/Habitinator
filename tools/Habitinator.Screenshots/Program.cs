@@ -106,6 +106,16 @@ async Task LoginAsGuestAsync(IPage page, string baseUrl)
     await page.GetByText("Welcome to Habitinator").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
     await Task.Delay(500);
 
+    // Before the board first loads, mark the yesterday-retro prompt resolved
+    // so the catch-up dialog never covers the board screenshots.
+    await page.EvaluateAsync("""
+        () => {
+            const d = new Date();
+            const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            try { localStorage.setItem('habitinator.dailyRetro.ymd_guest@habitinator.local', ymd); } catch {}
+        }
+        """);
+
     await page.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("demo guest", RegexOptions.IgnoreCase, TimeSpan.FromSeconds(10)) }).ClickAsync(new() { Timeout = 30_000 });
     await page.WaitForURLAsync(u => u.StartsWith(baseUrl, StringComparison.OrdinalIgnoreCase) &&
                                     !u.Contains("/auth/login", StringComparison.OrdinalIgnoreCase),
@@ -123,6 +133,7 @@ async Task CaptureBoardScreensAsync(IPage page, string baseUrl, string theme)
     await page.Locator(".board-shell").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 60_000 });
     await DismissCatchUpDialogIfPresentAsync(page);
     await page.Locator(".board-section-switcher").WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 60_000 });
+    await page.Locator("[data-dialog-label=\"Yesterday\"]").WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 15_000 });
     await Task.Delay(500);
     await CaptureAsync(page, "board", theme);
 
@@ -291,7 +302,21 @@ async Task<ILocator> OpenEditDialogAsync(IPage page, string section)
 {
     var cardTitle = page.Locator($".board-column--{section} .board-card__title").First;
     await cardTitle.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
-    await cardTitle.ClickAsync();
+    // The yesterday retro dialog can pop up late and cover the board.
+    // Dismiss the dialog before clicking. If the dialog intercepts the click, retry.
+    await DismissCatchUpDialogIfPresentAsync(page);
+    for (var attempt = 0; attempt < 3; attempt++)
+    {
+        try
+        {
+            await cardTitle.ClickAsync(new() { Timeout = 10_000 });
+            break;
+        }
+        catch (PlaywrightException) when (attempt < 2)
+        {
+            await DismissCatchUpDialogIfPresentAsync(page);
+        }
+    }
     var dialog = page.Locator(".edit-daily-dialog");
     await dialog.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 });
     await Task.Delay(500);
@@ -309,7 +334,7 @@ static async Task GotoAsync(IPage page, string baseUrl, string relativeUrl)
 {
     WriteLine($"Navigating to: {relativeUrl}");
     // The board holds a SignalR socket open, so NetworkIdle never settles.
-    // The Load event fires first, and the selector waits after every navigation prove the page loaded.
+    // The Load event fires first. The selector waits after every navigation and proves the page loaded.
     await page.GotoAsync($"{baseUrl}{relativeUrl}", new PageGotoOptions { WaitUntil = WaitUntilState.Load });
 }
 
@@ -317,7 +342,7 @@ async Task CaptureAsync(IPage page, string name, string theme)
 {
     var filepath = Path.Combine(screenshotDir, $"{name}-{theme}.png");
 
-    // Hide scrollbars so the still looks clean
+    // Hide scrollbars so the still looks clean.
     await page.EvaluateAsync("""
         () => {
             const style = document.createElement('style');
@@ -343,7 +368,9 @@ async Task CaptureAsync(IPage page, string name, string theme)
 
 static async Task DismissCatchUpDialogIfPresentAsync(IPage page)
 {
-    var dialog = page.Locator(".daily-yesterday-dialog");
+    // Retro dialog has data-dialog-label="Yesterday". The old
+    // .daily-yesterday-dialog class no longer exists on MudDialog.
+    var dialog = page.Locator("[data-dialog-label=\"Yesterday\"]");
     try
     {
         await dialog.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 6000 });
@@ -353,8 +380,23 @@ static async Task DismissCatchUpDialogIfPresentAsync(IPage page)
         return;
     }
 
-    await dialog.Locator(".hab-modal__close, .daily-yesterday-header__close-btn").First.ClickAsync(new() { Timeout = 10_000 });
-    await dialog.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 15_000 });
+    try
+    {
+        await dialog.Locator(".hab-modal__close").First.ClickAsync(new() { Timeout = 10_000 });
+    }
+    catch (PlaywrightException)
+    {
+        await page.Keyboard.PressAsync("Escape");
+    }
+    try
+    {
+        await dialog.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 15_000 });
+    }
+    catch (TimeoutException)
+    {
+        await page.Keyboard.PressAsync("Escape");
+        await dialog.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 15_000 });
+    }
 }
 
 static async Task ClickDiverseHeatmapDayAsync(IPage page)

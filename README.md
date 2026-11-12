@@ -79,8 +79,6 @@ A cross-platform productivity app built with .NET MAUI and Blazor. Manage habits
 
 </div>
 
-To regenerate these shots, run `pwsh ./tools/Habitinator.Screenshots/run.ps1` from the repo root. The script drives Playwright with a mobile viewport in light and dark themes.
-
 ---
 
 ## Download and install

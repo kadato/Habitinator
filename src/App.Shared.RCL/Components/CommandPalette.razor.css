@@ -354,7 +354,7 @@
         min-height: 52px;
     }
 
-    .cmd-palette-close-btn { min-width:24px; min-height:24px;
+    .cmd-palette-close-btn {
         min-width: 44px;
         min-height: 44px;
         display: inline-flex;
@@ -370,7 +370,7 @@
         min-height: 48px;
     }
 
-    .cmd-palette-drilldown-btn { min-width:24px; min-height:24px;
+    .cmd-palette-drilldown-btn {
         min-width: 44px;
         min-height: 44px;
         align-items: center;

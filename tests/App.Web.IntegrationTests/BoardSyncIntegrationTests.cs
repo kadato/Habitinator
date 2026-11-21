@@ -172,6 +172,36 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
     }
 
     [Fact]
+    public async Task Consecutive_daily_updates_accept_the_version_returned_by_the_previous_update()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (token, _) = await RegisterAndLoginAsync(client);
+        var current = await CreateDailyAsync(client, token, "Water 0");
+
+        for (var i = 1; i <= 5; i++)
+        {
+            using var update = new HttpRequestMessage(HttpMethod.Put, $"/api/board/dailies/{current.Id}");
+            update.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            update.Headers.TryAddWithoutValidation(
+                "X-Board-Expected-Updated-At-Utc",
+                current.ServerUpdatedAtUtc!.Value.ToString("O"));
+            update.Content = JsonContent.Create(
+                new DailyUpdateRequest($"Water {i}", null, null, null, DailyRepeatType.Daily, 1, null, 0),
+                options: s_json);
+            using var response = await client.SendAsync(update);
+            var body = await response.Content.ReadAsStringAsync();
+            response.StatusCode.Should().Be(HttpStatusCode.OK, $"update {i} sent the version from update {i - 1}: {body}");
+
+            current = (await response.Content.ReadFromJsonAsync<BoardItem>(s_json))!;
+            current.Title.Should().Be($"Water {i}");
+
+            // PostgreSQL stores microseconds. A timestamp with finer ticks is a value
+            // the next request can never match, so the server must return a storable one.
+            (current.ServerUpdatedAtUtc!.Value.UtcTicks % 10).Should().Be(0);
+        }
+    }
+
+    [Fact]
     public async Task Reorder_proximity_triggers_rebalancing()
     {
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });

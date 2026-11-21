@@ -21,7 +21,7 @@ internal static class BoardSeedHelpers
     {
         var seq = order++;
         row.SortOrder = seq + 1.0;
-        var t = utcNow.AddSeconds(seq);
+        var t = BoardTimestamps.TruncateToMicroseconds(utcNow).AddSeconds(seq);
         row.CreatedAtUtc = t;
         row.UpdatedAtUtc = t;
         db.BoardItems.Add(row);

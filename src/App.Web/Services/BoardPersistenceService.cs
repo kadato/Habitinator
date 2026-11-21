@@ -63,7 +63,11 @@ public sealed class BoardPersistenceService(
             return BoardMutationStatus.Ok;
         }
 
-        return entity.UpdatedAtUtc.Equals(expectedUpdatedAtUtc.Value)
+        // Compare at the precision the database stores. A client can still hold a
+        // timestamp produced before the microsecond truncation. That value is the
+        // same row version, not a concurrent edit.
+        return BoardTimestamps.TruncateToMicroseconds(entity.UpdatedAtUtc)
+            .Equals(BoardTimestamps.TruncateToMicroseconds(expectedUpdatedAtUtc.Value))
             ? BoardMutationStatus.Ok
             : BoardMutationStatus.Conflict;
     }
@@ -105,7 +109,7 @@ public sealed class BoardPersistenceService(
             return conflict ?? new BoardMutationResult(BoardMutationStatus.NotFound, null);
         }
 
-        entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        entity.UpdatedAtUtc = BoardTimestamps.UtcNow();
         if (!await mutate(entity))
         {
             AppTelemetry.RecordMutation(section.ToString(), "not_found");
@@ -276,7 +280,7 @@ public sealed class BoardPersistenceService(
         Guid? itemId = null,
         CancellationToken cancellationToken = default)
     {
-        var utcNow = DateTimeOffset.UtcNow;
+        var utcNow = BoardTimestamps.UtcNow();
         if (itemId is { } id)
         {
             // Idempotent create replay: the same client id may already exist. Restore it. A
@@ -292,7 +296,7 @@ public sealed class BoardPersistenceService(
 
                 existing.DeletedAtUtc = null;
                 existing.Title = ZalgoSanitizer.SanitizeAndTrim(title);
-                existing.UpdatedAtUtc = DateTimeOffset.UtcNow;
+                existing.UpdatedAtUtc = BoardTimestamps.UtcNow();
                 try
                 {
                     await dbContext.SaveChangesAsync(cancellationToken);
@@ -446,7 +450,7 @@ public sealed class BoardPersistenceService(
         foreach (var entity in entities)
         {
             entity.IsArchived = true;
-            entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            entity.UpdatedAtUtc = BoardTimestamps.UtcNow();
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -480,7 +484,7 @@ public sealed class BoardPersistenceService(
         foreach (var entity in entities)
         {
             entity.IsArchived = false;
-            entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            entity.UpdatedAtUtc = BoardTimestamps.UtcNow();
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -578,7 +582,7 @@ public sealed class BoardPersistenceService(
             entity.DailyLastCompletedOn = completedOn.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
             entity.IsCompleted = false;
         }
-        entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        entity.UpdatedAtUtc = BoardTimestamps.UtcNow();
         AddActivityEvent(userId, ActivityEventType.DailyComplete, itemId, null, entity.Title,
             DailyStreakCalculator.BackdatedDailyEventOccurredAt(completedOn));
         var streakMap = await ComputeDailyStreakMapAsync(userId, entity, cancellationToken);
@@ -617,7 +621,7 @@ public sealed class BoardPersistenceService(
         }
 
         entity.IsCompleted = false;
-        entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        entity.UpdatedAtUtc = BoardTimestamps.UtcNow();
         AddActivityEvent(userId, ActivityEventType.DailySkip, itemId, null, entity.Title,
             DailyStreakCalculator.BackdatedDailyEventOccurredAt(skippedOn));
         var streakMap = await ComputeDailyStreakMapAsync(userId, entity, cancellationToken);
@@ -693,7 +697,7 @@ public sealed class BoardPersistenceService(
         if (map.TryGetValue(dailyEntity.Id, out var streak))
         {
             dailyEntity.Counter = streak;
-            dailyEntity.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            dailyEntity.UpdatedAtUtc = BoardTimestamps.UtcNow();
         }
 
         return map;
@@ -1206,7 +1210,7 @@ public sealed class BoardPersistenceService(
             .ToListAsync(cancellationToken);
 
         var seq = 1.0;
-        var utcNow = DateTimeOffset.UtcNow;
+        var utcNow = BoardTimestamps.UtcNow();
         foreach (var item in items)
         {
             // Only dirty rows that actually move. Touching every row bumps
@@ -1420,7 +1424,7 @@ public sealed class BoardPersistenceService(
             .ToListAsync(cancellationToken);
 
         var updatedCount = 0;
-        var now = DateTimeOffset.UtcNow;
+        var now = BoardTimestamps.UtcNow();
         foreach (var item in items)
         {
             var parsed = BoardTagUtil.ParseTags(item.Tags).ToList();
@@ -1468,7 +1472,7 @@ public sealed class BoardPersistenceService(
             .ToListAsync(cancellationToken);
 
         var updatedCount = 0;
-        var now = DateTimeOffset.UtcNow;
+        var now = BoardTimestamps.UtcNow();
         foreach (var item in items)
         {
             var parsed = BoardTagUtil.ParseTags(item.Tags).ToList();
@@ -1586,7 +1590,7 @@ public sealed class BoardPersistenceService(
                     existing.NegativeCounter = negativeCounter.Value;
                 }
                 existing.DailyStartDate = section == BoardSection.Habit ? existing.DailyStartDate : dateUtc;
-                existing.UpdatedAtUtc = DateTimeOffset.UtcNow;
+                existing.UpdatedAtUtc = BoardTimestamps.UtcNow();
                 await dbContext.SaveChangesAsync(cancellationToken);
                 var restored = await ToModelWithDailyStreaksAsync(userId, existing, cancellationToken);
                 await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
@@ -1594,7 +1598,7 @@ public sealed class BoardPersistenceService(
             }
         }
 
-        var utcNow = DateTimeOffset.UtcNow;
+        var utcNow = BoardTimestamps.UtcNow();
         var entity = new BoardItemEntity
         {
             Id = itemId ?? Guid.NewGuid(),
@@ -1666,7 +1670,7 @@ public sealed class BoardPersistenceService(
             (null, not null) => next.Value - 1.0,
             _ => insertAt,
         };
-        var now = DateTimeOffset.UtcNow;
+        var now = BoardTimestamps.UtcNow();
         await dbContext.BoardItems
             .Where(x => x.UserId == userId && x.Id == itemId)
             .ExecuteUpdateAsync(x => x.SetProperty(e => e.SortOrder, newSortOrder).SetProperty(e => e.UpdatedAtUtc, now), cancellationToken);

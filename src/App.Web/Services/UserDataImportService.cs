@@ -32,7 +32,7 @@ public sealed class UserDataImportService(
             throw new UserDataImportValidationException(problem);
         }
 
-        var now = DateTimeOffset.UtcNow;
+        var now = BoardTimestamps.UtcNow();
         var importIds = data.Items.Select(e => e.Item.Id).ToHashSet();
 
         await dbContext.BoardItems

@@ -5,12 +5,17 @@ using App.Shared.RCL.Models;
 using App.Shared.RCL.Services.Board.Local;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Validation;
 
 namespace App.Shared.RCL.Services.Remote;
 
 public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDisposable
 {
     private const string PendingKey = "habitinator_activity_pending_v1";
+
+    /// <summary>Number of pending events one flush sends at the same time. Each event carries its own id, so the server deduplicates a replay.</summary>
+    private const int FlushConcurrency = 6;
+
     private static readonly JsonSerializerOptions Serializer = JsonDefaults.Api;
 
     private readonly IHttpClientFactory _http;
@@ -20,6 +25,7 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
     private readonly IClock? _clock;
     private readonly ILogger<RemoteUserActivityLogService>? _logger;
     private readonly SemaphoreSlim _queueGate = new(1, 1);
+    private readonly SemaphoreSlim _flushGate = new(1, 1);
 
     public RemoteUserActivityLogService(
         IHttpClientFactory http,
@@ -66,8 +72,7 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
         }
 
         await PostBestEffortAsync(
-            new ActivityLogRequest(eventType, boardItemId, durationSeconds, itemTitleSnapshot, Guid.NewGuid()),
-            cancellationToken);
+            new ActivityLogRequest(eventType, boardItemId, durationSeconds, itemTitleSnapshot, Guid.NewGuid()));
     }
 
     public async Task LogTimerSessionAsync(
@@ -102,34 +107,51 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
         }
 
         await PostBestEffortAsync(
-            new ActivityLogRequest(ActivityEventType.TimerSession, boardItemId, sec, customLabel, Guid.NewGuid()),
-            cancellationToken);
+            new ActivityLogRequest(ActivityEventType.TimerSession, boardItemId, sec, customLabel, Guid.NewGuid()));
     }
 
-    private async Task PostBestEffortAsync(ActivityLogRequest req, CancellationToken cancellationToken)
+    private async Task PostBestEffortAsync(ActivityLogRequest req)
     {
-        if (BoardSyncPausePreference.IsPausedIn(_localStore))
+        if (_localStore is null)
         {
-            // Data saver is on. The service queues the request locally. Sync now flushes the queued request through TryFlushPendingAsync.
-            await EnqueuePendingAsync(req, cancellationToken);
+            // No durable queue on this platform. Send in the background so the
+            // caller is not held up by the network.
+            _ = PostDirectInBackgroundAsync(req);
             return;
         }
 
-        // First try to flush any pending queue when online
-        await TryFlushPendingAsync(cancellationToken);
+        // Queue first so the event survives a crash, then drain in the
+        // background. The caller returns without waiting for the network.
+        await EnqueuePendingAsync(req, CancellationToken.None);
+        if (!BoardSyncPausePreference.IsPausedIn(_localStore))
+        {
+            _ = FlushInBackgroundAsync();
+        }
+    }
 
+    private async Task FlushInBackgroundAsync()
+    {
         try
         {
-            using var res = await Client.PostAsJsonAsync("api/activity/log", req, cancellationToken);
+            await TryFlushPendingAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Activity flush in the background failed. Keeping the queue.");
+        }
+    }
+
+    private async Task PostDirectInBackgroundAsync(ActivityLogRequest req)
+    {
+        try
+        {
+            using var res = await Client.PostAsJsonAsync("api/activity/log", req, CancellationToken.None);
             res.EnsureSuccessStatusCode();
             _statsReader?.InvalidateCache();
         }
         catch (Exception ex)
         {
-            // Queue for later sync via outbox pattern. The request keeps its event id, so a replay
-            // that already reached the server is deduplicated there.
-            _logger?.LogDebug(ex, "Activity log post failed; queued for later sync.");
-            await EnqueuePendingAsync(req, CancellationToken.None);
+            _logger?.LogDebug(ex, "Activity log post failed and no local queue is available.");
         }
     }
 
@@ -199,6 +221,26 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
 
     public async Task TryFlushPendingAsync(CancellationToken cancellationToken = default)
     {
+        await _flushGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await FlushPendingCoreAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            try
+            {
+                _flushGate.Release();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Shutdown disposed the gate while a flush was running.
+            }
+        }
+    }
+
+    private async Task FlushPendingCoreAsync(CancellationToken cancellationToken)
+    {
         if (_localStore == null)
         {
             return;
@@ -237,28 +279,47 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
             _queueGate.Release();
         }
 
-        var firstFailedIndex = -1;
-        for (var i = 0; i < batch.Count; i++)
+        // Send the backlog together. Sending one request per event would make a
+        // long offline queue wait minutes on the first sync.
+        var results = new bool[batch.Count];
+        var nextIndex = -1;
+        var stop = 0;
+
+        async Task SendOneAsync()
         {
-            try
+            while (Volatile.Read(ref stop) == 0)
             {
-                using var res = await Client.PostAsJsonAsync("api/activity/log", batch[i], cancellationToken);
-                res.EnsureSuccessStatusCode();
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogDebug(ex, "Activity flush failed; keeping this and following entries pending.");
-                firstFailedIndex = i;
-                break;
+                var i = Interlocked.Increment(ref nextIndex);
+                if (i >= batch.Count)
+                {
+                    return;
+                }
+
+                try
+                {
+                    using var res = await Client.PostAsJsonAsync("api/activity/log", batch[i], cancellationToken);
+                    res.EnsureSuccessStatusCode();
+                    results[i] = true;
+                }
+                catch (Exception ex)
+                {
+                    results[i] = false;
+                    Interlocked.Exchange(ref stop, 1);
+                    _logger?.LogDebug(ex, "Activity flush failed. Keeping this entry and the unsent entries pending.");
+                    return;
+                }
             }
         }
 
-        if (firstFailedIndex != 0)
+        var workers = Math.Min(FlushConcurrency, batch.Count);
+        await Task.WhenAll(Enumerable.Range(0, workers).Select(_ => SendOneAsync()));
+
+        if (results.Any(success => success))
         {
             _statsReader?.InvalidateCache();
         }
 
-        if (firstFailedIndex < 0)
+        if (results.All(success => success))
         {
             return;
         }
@@ -270,7 +331,15 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
             var newer = string.IsNullOrEmpty(raw)
                 ? []
                 : JsonSerializer.Deserialize<List<ActivityLogRequest>>(raw, Serializer) ?? [];
-            var failed = batch.Skip(firstFailedIndex).ToList();
+            var failed = new List<ActivityLogRequest>();
+            for (var i = 0; i < batch.Count; i++)
+            {
+                if (!results[i])
+                {
+                    failed.Add(batch[i]);
+                }
+            }
+
             failed.AddRange(newer);
             _localStore.Write(PendingKey, JsonSerializer.Serialize(failed, Serializer));
         }
@@ -284,9 +353,14 @@ public sealed class RemoteUserActivityLogService : IUserActivityLogService, IDis
         }
     }
 
-    public void Dispose() => _queueGate.Dispose();
+    public void Dispose()
+    {
+        _queueGate.Dispose();
+        _flushGate.Dispose();
+    }
 }
 
+[ValidatableType]
 public sealed record ActivityLogRequest(
     ActivityEventType EventType,
     Guid? BoardItemId,

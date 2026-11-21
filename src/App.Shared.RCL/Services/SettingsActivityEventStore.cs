@@ -12,6 +12,7 @@ public sealed class SettingsActivityEventStore : IActivityEventStore, IDisposabl
     private readonly ILogger<SettingsActivityEventStore>? _logger;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private List<UserActivityEventRecord>? _memory;
+    private int _saveVersion;
     private bool _disposed;
 
     public SettingsActivityEventStore(
@@ -37,7 +38,9 @@ public sealed class SettingsActivityEventStore : IActivityEventStore, IDisposabl
                 list.RemoveRange(0, list.Count - 5000);
             }
 
-            await SaveAsync(list, cancellationToken);
+            // Coalesce rapid appends into one write. Serializing the whole log
+            // on every habit tap costs UI time once the log grows.
+            ScheduleSave();
         }
         finally
         {
@@ -79,6 +82,7 @@ public sealed class SettingsActivityEventStore : IActivityEventStore, IDisposabl
         await _gate.WaitAsync(cancellationToken);
         try
         {
+            Interlocked.Increment(ref _saveVersion);
             _memory = [];
             if (_store != null)
             {
@@ -155,24 +159,47 @@ public sealed class SettingsActivityEventStore : IActivityEventStore, IDisposabl
         }
     }
 
-    private Task SaveAsync(List<UserActivityEventRecord> list, CancellationToken cancellationToken)
+    private void ScheduleSave()
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        var version = Interlocked.Increment(ref _saveVersion);
+        _ = SaveAfterDelayAsync(version);
+    }
 
-        _memory = list;
-        if (_store != null)
+    private async Task SaveAfterDelayAsync(int version)
+    {
+        try
         {
+            await Task.Delay(TimeSpan.FromMilliseconds(250)).ConfigureAwait(false);
+            await _gate.WaitAsync().ConfigureAwait(false);
             try
             {
-                var json = JsonSerializer.Serialize(list, Serializer);
-                _store.Write(EventsKey, json);
+                if (_disposed || version != Volatile.Read(ref _saveVersion) || _memory is null || _store is null)
+                {
+                    return;
+                }
+
+                try
+                {
+                    var json = JsonSerializer.Serialize(_memory, Serializer);
+                    _store.Write(EventsKey, json);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogDebug(ex, "Persisting activity events failed. Keeping the in-memory copy.");
+                }
             }
-            catch (Exception ex)
+            finally
             {
-                _logger?.LogDebug(ex, "Persisting activity events failed; keeping the in-memory copy.");
+                _gate.Release();
             }
         }
-
-        return Task.CompletedTask;
+        catch (ObjectDisposedException)
+        {
+            // Shutdown disposed the gate before the delayed save ran.
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Delayed activity event save failed.");
+        }
     }
 }

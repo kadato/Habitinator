@@ -3,6 +3,7 @@ using App.Web.Hubs;
 using App.Web.Mcp;
 using App.Web.Middleware;
 
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -53,7 +54,9 @@ internal static class PipelineExtensions
         // Used by AppHost WithHttpHealthCheck and Azure health check. Anonymous, no auth required.
         // Liveness: process is up. Keep cloud probes here. Do not point them at
         // /health/ready since each DB check blocks Neon scale to zero.
-        app.MapGet("/health", () => Results.Text("OK", PlainTextContentType));
+        // ShortCircuit runs the probe inside routing and skips auth, CSRF, rate limiting,
+        // and status-code pages. The probe needs none of them.
+        app.MapGet("/health", [ShortCircuit] () => Results.Text("OK", PlainTextContentType));
         app.MapGet("/health/ready", async (IServiceProvider services, CancellationToken cancellationToken) =>
         {
             try

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Threading.RateLimiting;
 
 using App.Web;
@@ -72,12 +73,15 @@ builder.Services.AddResponseCompression(options =>
 
 builder.Services.Configure<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProviderOptions>(options =>
 {
-    options.Level = System.IO.Compression.CompressionLevel.Optimal;
+    // Compress dynamic responses only. MapStaticAssets precompresses static assets.
+    // Optimal Brotli costs more CPU on every request, and the App Service plan has
+    // one vCPU.
+    options.Level = System.IO.Compression.CompressionLevel.Fastest;
 });
 
 builder.Services.Configure<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProviderOptions>(options =>
 {
-    options.Level = System.IO.Compression.CompressionLevel.Optimal;
+    options.Level = System.IO.Compression.CompressionLevel.Fastest;
 });
 
 builder.Services.AddHsts(options =>
@@ -162,6 +166,13 @@ public partial class Program
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             options.OnRejected = async (context, token) =>
             {
+                if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+                {
+                    var seconds = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds));
+                    context.HttpContext.Response.Headers.RetryAfter =
+                        seconds.ToString(CultureInfo.InvariantCulture);
+                }
+
                 context.HttpContext.Response.ContentType = "application/json";
                 await context.HttpContext.Response.WriteAsJsonAsync(new { detail = "Too many requests. Please try again later." }, token);
             };

@@ -129,11 +129,11 @@ public static class DependencyInjectionExtensions
         services.AddSingleton(sp => new MemoryCacheStore<BoardSnapshot>(
             sp.GetRequiredService<IMemoryCache>(),
             "",
-            TimeSpan.FromSeconds(4)));
+            TimeSpan.FromSeconds(30)));
         services.AddSingleton(sp => new MemoryCacheStore<Dictionary<Guid, int>>(
             sp.GetRequiredService<IMemoryCache>(),
             "streak_map_",
-            TimeSpan.FromSeconds(30)));
+            TimeSpan.FromMinutes(5)));
         services.AddSingleton<ActivityStatisticsCache>();
         services.AddSingleton<IBoardChangeNotifier, BoardChangeNotifier>();
         services.AddScoped<DailyStreakCalculationService>();

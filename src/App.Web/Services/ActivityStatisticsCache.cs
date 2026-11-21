@@ -2,27 +2,50 @@ using System.Diagnostics.CodeAnalysis;
 
 using App.Shared.RCL.Services;
 
+using Microsoft.Extensions.Caching.Memory;
+
 namespace App.Web.Services;
 
-public sealed class ActivityStatisticsCache
+/// <summary>
+///     Per-user statistics caches. The cache holds at most 200 users and expires
+///     idle users, so memory stays bounded on a small plan.
+/// </summary>
+public sealed class ActivityStatisticsCache : IDisposable
 {
-    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, UserCache> _userCaches = new();
+    private const int MaxUsers = 200;
+    private static readonly TimeSpan IdleExpiration = TimeSpan.FromMinutes(30);
+
+    private readonly MemoryCache _userCaches = new(new MemoryCacheOptions
+    {
+        SizeLimit = MaxUsers,
+        CompactionPercentage = 0.25
+    });
 
     public UserCache GetOrCreate(Guid userId)
     {
-        return _userCaches.GetOrAdd(userId, _ => new UserCache());
+        return _userCaches.GetOrCreate(userId, static entry =>
+        {
+            entry.Size = 1;
+            entry.SlidingExpiration = IdleExpiration;
+            return new UserCache();
+        })!;
     }
 
     public void Invalidate(Guid userId)
     {
-        _userCaches.TryRemove(userId, out _);
+        _userCaches.Remove(userId);
+    }
+
+    public void Dispose()
+    {
+        _userCaches.Dispose();
     }
 
 #pragma warning disable CA1034 // Nested type visible - internal implementation detail exposed for internal use
     public sealed class UserCache
 #pragma warning restore CA1034
     {
-        private const int MaxEntriesPerUser = 64;
+        private const int MaxEntriesPerUser = 32;
 
         public BoundedCache<(string? Period, string? Tag, DateOnly Today), ActivityOverviewDto> Overview { get; } = new(MaxEntriesPerUser);
 

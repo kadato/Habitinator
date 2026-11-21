@@ -133,6 +133,82 @@ public sealed class AiAssistantDrawerLayoutTests : IAsyncDisposable
             TimeSpan.FromSeconds(5));
     }
 
+    [Fact]
+    public void Header_Delete_Is_Disabled_While_Only_One_Chat_Exists()
+    {
+        var cut = _ctx.Render<AiAssistantDrawer>();
+
+        var delete = cut.WaitForElement("button[aria-label='Delete current chat']");
+
+        delete.HasAttribute("disabled").Should().BeTrue(
+            "the last chat cannot be deleted, only cleared from the overflow menu");
+    }
+
+    [Fact]
+    public async Task Thread_Chip_Delete_Removes_That_Chat_Only()
+    {
+        var getItem = _ctx.JSInterop.Setup<string?>("localStorage.getItem", _ => true);
+        getItem.SetResult(StoredJson(
+            ("old-thread", "Old", new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), "old question"),
+            ("new-thread", "New", new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc), "newer question")));
+        var setItem = _ctx.JSInterop.SetupVoid("localStorage.setItem", _ => true);
+
+        var cut = _ctx.Render<AiAssistantDrawer>();
+        await cut.WaitForAssertionAsync(
+            () => cut.FindAll(".ai-thread-chip-group").Should().HaveCount(2),
+            TimeSpan.FromSeconds(5));
+
+        var newChip = cut.FindAll(".ai-thread-chip-group .mud-chip")
+            .Single(chip => chip.TextContent.Trim() == "New");
+        await newChip.ClickAsync();
+        await cut.WaitForAssertionAsync(
+            () => cut.Markup.Should().Contain("newer question"),
+            TimeSpan.FromSeconds(5));
+
+        var deleteOld = cut.FindAll(".ai-thread-chip-delete")
+            .Single(button => button.GetAttribute("aria-label") == "Delete chat Old");
+        await deleteOld.ClickAsync();
+
+        await cut.WaitForAssertionAsync(
+            () => cut.FindAll(".ai-thread-chip-group").Should().BeEmpty(),
+            TimeSpan.FromSeconds(5));
+        cut.Markup.Should().Contain("newer question", "only the non-active chat is deleted");
+
+        await cut.WaitForAssertionAsync(
+            () => string.Join("|", setItem.Invocations.Last().Arguments).Should().NotContain("old-thread"),
+            TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task Header_Delete_Removes_The_Active_Chat()
+    {
+        var getItem = _ctx.JSInterop.Setup<string?>("localStorage.getItem", _ => true);
+        getItem.SetResult(StoredJson(
+            ("old-thread", "Old", new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), "old question"),
+            ("new-thread", "New", new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc), "newer question")));
+
+        var cut = _ctx.Render<AiAssistantDrawer>();
+        await cut.WaitForAssertionAsync(
+            () => cut.FindAll(".ai-thread-chip-group").Should().HaveCount(2),
+            TimeSpan.FromSeconds(5));
+
+        var newChip = cut.FindAll(".ai-thread-chip-group .mud-chip")
+            .Single(chip => chip.TextContent.Trim() == "New");
+        await newChip.ClickAsync();
+        await cut.WaitForAssertionAsync(
+            () => cut.Markup.Should().Contain("newer question"),
+            TimeSpan.FromSeconds(5));
+
+        await cut.Find("button[aria-label='Delete current chat']").ClickAsync();
+
+        await cut.WaitForAssertionAsync(() =>
+        {
+            cut.FindAll(".ai-thread-chip-group").Should().BeEmpty();
+            cut.Markup.Should().Contain("old question", "the remaining chat becomes active");
+            cut.Markup.Should().NotContain("newer question");
+        }, TimeSpan.FromSeconds(5));
+    }
+
     private static string StoredJson(params (string Id, string Title, DateTime UpdatedAt, string Question)[] threads) =>
         JsonSerializer.Serialize(threads.Select(t => new
         {

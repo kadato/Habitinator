@@ -131,7 +131,7 @@
                                                        Color="Color.Default"
                                                        Class="pa-1 ai-thread-delete"
                                                        title="Delete thread"
-                                                       aria-label="Delete thread"
+                                                       aria-label="@($"Delete chat {t.Title}")"
                                                        OnClick="() => DeleteThreadAsync(t.Id)" />
                                     </span>
                                 }
@@ -139,6 +139,8 @@
                         </MudMenuItem>
                     }
                     </div>
+                    <MudDivider />
+                    <MudMenuItem Icon="@Icons.Material.Filled.DeleteSweep" OnClick="ClearChat">Clear chat history</MudMenuItem>
                 </MudMenu>
                 <MudIconButton Icon="@Icons.Material.Filled.Add"
                                Size="Size.Medium"
@@ -146,12 +148,14 @@
                                Class="ai-header-btn ai-header-btn--collapse"
                                aria-label="New chat thread"
                                OnClick="NewThreadAsync" />
-                <MudIconButton Icon="@Icons.Material.Filled.DeleteSweep"
+                <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                Size="Size.Medium"
                                Color="Color.Inherit"
                                Class="ai-header-btn ai-header-btn--collapse"
-                               aria-label="Clear chat history"
-                               OnClick="ClearChat" />
+                               title="Delete current chat"
+                               aria-label="Delete current chat"
+                               Disabled="@(_threads.Count <= 1)"
+                               OnClick="DeleteActiveThreadAsync" />
                 <MudIconButton Icon="@Icons.Material.Filled.Settings"
                                Size="Size.Medium"
                                Color="Color.Inherit"
@@ -169,6 +173,7 @@
                          PopoverClass="ai-model-menu-popover"
                          PopoverFixed="true">
                     <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="NewThreadAsync">New chat thread</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Delete" Disabled="@(_threads.Count <= 1)" OnClick="DeleteActiveThreadAsync">Delete current chat</MudMenuItem>
                     <MudMenuItem Icon="@Icons.Material.Filled.DeleteSweep" OnClick="ClearChat">Clear chat history</MudMenuItem>
                     <MudMenuItem Icon="@Icons.Material.Filled.Settings" OnClick="NavigateToSettings">AI settings</MudMenuItem>
                 </MudMenu>
@@ -187,13 +192,22 @@
 
         @if (_threads.Count > 1)
         {
-            <div class="px-3 py-1 d-flex align-center gap-1 flex-wrap border-bottom">
+            <div class="ai-thread-chips px-3 py-1 d-flex align-center gap-1 flex-wrap border-bottom">
                 @foreach (var t in _threads.Take(4))
                 {
                     var isActive = t.Id == _activeThreadId;
-                    <MudChip T="string" Size="Size.Small" Color="@(isActive ? Color.Primary : Color.Default)" OnClick="() => SwitchThreadAsync(t.Id)">
-                        @t.Title
-                    </MudChip>
+                    <div class="ai-thread-chip-group d-flex align-center">
+                        <MudChip T="string" Size="Size.Small" Color="@(isActive ? Color.Primary : Color.Default)" OnClick="() => SwitchThreadAsync(t.Id)">
+                            @t.Title
+                        </MudChip>
+                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                       Size="Size.Small"
+                                       Color="Color.Default"
+                                       Class="pa-1 ai-thread-delete ai-thread-chip-delete"
+                                       title="@($"Delete {t.Title}")"
+                                       aria-label="@($"Delete chat {t.Title}")"
+                                       OnClick="() => DeleteThreadAsync(t.Id)" />
+                    </div>
                 }
                 @if (_threads.Count > 4)
                 {
@@ -866,6 +880,11 @@
 
     private async Task SwitchThreadAsync(string id)
     {
+        if (_threads.All(t => t.Id != id))
+        {
+            return;
+        }
+
         _activeThreadId = id;
         await PersistThreadsAsync();
         StateHasChanged();
@@ -1143,7 +1162,7 @@
                     if (!refreshedBoard)
                     {
                         refreshedBoard = true;
-                        _ = RemoteRefresh.NotifyFromRemoteAsync(requestToken);
+                        _ = NotifyBoardRefreshInBackgroundAsync();
                     }
                     StateHasChanged();
                 }
@@ -1168,17 +1187,9 @@
                 }
             }
 
-            if (refreshedBoard)
-            {
-                try
-                {
-                    await RemoteRefresh.NotifyFromRemoteAsync(requestToken);
-                }
-                catch
-                {
-                    // Best effort: board refresh must not fail the chat response.
-                }
-            }
+            // The first tool result already started a background refresh.
+            // Waiting for a second full sync here would keep the send button
+            // disabled long after the answer finished streaming.
         }
         catch (OperationCanceledException)
         {
@@ -1280,6 +1291,19 @@
         return results;
     }
 
+    private async Task NotifyBoardRefreshInBackgroundAsync()
+    {
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            await RemoteRefresh.NotifyFromRemoteAsync(cts.Token);
+        }
+        catch
+        {
+            // The periodic sync covers errors.
+        }
+    }
+
     private async Task QuickAddFromAiAsync(BoardSection section, string title)
     {
         try
@@ -1287,7 +1311,10 @@
             var item = await BoardData.CreateItemAsync(section, title);
             if (item is not null)
             {
-                await RemoteRefresh.NotifyFromRemoteAsync();
+                // The create is local-first and already queued a sync. Refresh
+                // other subscribers in the background so the toast does not wait
+                // on the refresh.
+                _ = NotifyBoardRefreshInBackgroundAsync();
                 Snackbar.Add($"Added {section} '{title}' to your board!", Severity.Success);
             }
         }
@@ -1296,6 +1323,8 @@
             Snackbar.Add($"Could not add item: {ex.Message}", Severity.Error);
         }
     }
+
+    private Task DeleteActiveThreadAsync() => DeleteThreadAsync(_activeThreadId);
 
     private async Task DeleteThreadAsync(string threadId)
     {
@@ -1307,6 +1336,18 @@
         if (thread is null)
         {
             return;
+        }
+
+        if (threadId == _activeThreadId && _streamCts is not null)
+        {
+            try
+            {
+                await _streamCts.CancelAsync();
+            }
+            catch (ObjectDisposedException)
+            {
+                // The stream finished between the click and the cancel.
+            }
         }
 
         _threads.Remove(thread);

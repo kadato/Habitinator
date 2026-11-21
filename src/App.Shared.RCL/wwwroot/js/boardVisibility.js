@@ -152,25 +152,36 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
 
   function getScrollableContainer(container) {
     if (!container) return globalThis;
+
+    // Follow the focused element first so keys scroll the region the user is in.
+    // The day details dialog focuses its timeline, and the timeline scrolls, not
+    // the body.
+    const active = document.activeElement;
+    if (active && container.contains(active)) {
+      for (let element = active; element && element !== container; element = element.parentElement) {
+        if (isScrollable(element)) return element;
+      }
+    }
+
     const known = container.querySelector('.edit-daily-body, .edit-habit-body, .archived-list, .daily-yesterday-body');
-    if (known) return known;
+    if (known && isScrollable(known)) return known;
 
     const dialogContent = container.querySelector('.mud-dialog-content');
-    if (dialogContent) {
-      const style = globalThis.getComputedStyle(dialogContent);
-      if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
-        return dialogContent;
-      }
+    if (dialogContent && isScrollable(dialogContent)) {
+      return dialogContent;
     }
 
     const all = container.querySelectorAll('*');
     for (const element of all) {
-      const style = globalThis.getComputedStyle(element);
-      if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
-        return element;
-      }
+      if (isScrollable(element)) return element;
     }
     return container;
+  }
+
+  function isScrollable(element) {
+    const style = globalThis.getComputedStyle(element);
+    if (style.overflowY !== 'auto' && style.overflowY !== 'scroll') return false;
+    return element.scrollHeight > element.clientHeight + 1;
   }
 
   function scrollTargetElement(target, amount) {

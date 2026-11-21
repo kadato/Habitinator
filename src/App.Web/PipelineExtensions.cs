@@ -41,6 +41,7 @@ internal static class PipelineExtensions
         app.UseMiddleware<SameOriginCsrfMiddleware>();
 
         app.UseAuthentication();
+        app.UseMiddleware<ExistingUserMiddleware>();
         app.UseAuthorization();
         app.UseAntiforgery();
 

@@ -25,7 +25,6 @@
     </PackageReference>
     <PackageReference Include="MudBlazor" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
-    <PackageReference Include="Npgsql.DependencyInjection" />
     <PackageReference Include="Polly" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
@@ -51,6 +50,9 @@
   <PropertyGroup Condition="'$(PUBLISH_SELF_CONTAINED)' == 'true'">
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+    <!-- App Service scales the plan to zero and Neon suspends when idle. ReadyToRun
+         cuts JIT work from the first request after a cold start. -->
+    <PublishReadyToRun>true</PublishReadyToRun>
   </PropertyGroup>
 
   <ItemGroup>

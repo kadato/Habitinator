@@ -1,3 +1,5 @@
+using Aspire.Hosting.Lifecycle;
+
 if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
 {
     Environment.SetEnvironmentVariable("ASPNETCORE_URLS", "http://localhost:15000");
@@ -16,6 +18,18 @@ if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPIRE_ALLOW_UNSECU
 }
 
 var builder = DistributedApplication.CreateBuilder(args);
+
+// Aspire 17 adds -mt to the coordinated .NET build on .NET 11 SDKs. The WebAssembly
+// SDK's ReadWasmProps task uses a custom task factory, which cannot run in the
+// out-of-process task host that -mt uses. Remove the subscriber until Aspire stops
+// adding -mt or the WebAssembly SDK supports it.
+var multiThreadedBuildSubscriber = builder.Services.FirstOrDefault(descriptor =>
+    descriptor.ServiceType == typeof(IDistributedApplicationEventingSubscriber) &&
+    descriptor.ImplementationType?.Name == "DotnetBuildCommandEventingSubscriber");
+if (multiThreadedBuildSubscriber is not null)
+{
+    builder.Services.Remove(multiThreadedBuildSubscriber);
+}
 
 var postgresUser = builder.AddParameter("postgres-user", "postgres");
 var postgresPassword = builder.AddParameter("postgres-password", "postgres", secret: true);
@@ -42,7 +56,7 @@ if (int.TryParse(Environment.GetEnvironmentVariable("HABITINATOR_HTTP_PORT"), ou
 // Aspire assigns a free port, so local runs never fight over fixed ports.
 // Aspire defaults to a DCP reverse proxy in front of project endpoints. That breaks Blazor and SignalR WebSockets for many setups.
 // Turn off the proxy so the browser and MAUI talk to Kestrel directly. See /health for orchestration.
-var appWeb = builder.AddProject<Projects.App_Web>("app-web")
+var appWeb = builder.AddDotnetProject("app-web", "../App.Web/App.Web.csproj")
     .WithReference(habitinatorDb)
     .WaitFor(habitinatorDb)
     .WithHttpHealthCheck("/health")

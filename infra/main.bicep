@@ -70,8 +70,8 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
     httpsOnly: true
     clientCertEnabled: false
     siteConfig: {
-      // Stay on 10.0 until Azure adds DOTNETCORE|11.0 after .NET 11 GA, expected Nov 2026.
-      // The app ships self-contained, so the platform version is metadata only.
+      // The app ships self-contained, so the platform runtime is metadata only.
+      // Keep a version Azure supports to avoid blocking provisioning.
       linuxFxVersion: 'DOTNETCORE|10.0'
       appCommandLine: 'chmod +x App.Web && ./App.Web'
       minTlsVersion: '1.2'

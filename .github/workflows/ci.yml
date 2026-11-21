@@ -40,7 +40,7 @@ jobs:
       - name: Set up .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          # SDK version comes from global.json so CI uses the same RC as local builds.
+          # SDK version comes from global.json so CI uses the same version as local builds.
           global-json-file: global.json
 
       - name: Install workloads
@@ -154,7 +154,7 @@ jobs:
       - name: Set up .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          # SDK version comes from global.json so CI uses the same RC as local builds.
+          # SDK version comes from global.json so CI uses the same version as local builds.
           global-json-file: global.json
 
       - name: Install workloads

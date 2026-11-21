@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <DotNetVersion>11.0.0-rc.1.26425.128</DotNetVersion>
+    <DotNetVersion>11.0.0</DotNetVersion>
     <WebAssemblyVersion>$(DotNetVersion)</WebAssemblyVersion>
     <MauiVersion>11.0.10</MauiVersion>
   </PropertyGroup>
@@ -18,7 +18,7 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="$(DotNetVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(DotNetVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="$(DotNetVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="11.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="$(DotNetVersion)" />
     <PackageVersion Include="MudBlazor" Version="9.13.0" />
     <PackageVersion Include="Plugin.LocalNotification" Version="14.1.2" />
@@ -27,12 +27,11 @@
     <!-- Shared UI and Webassembly Client dependencies -->
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="$(DotNetVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="$(WebAssemblyVersion)" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="$(WebAssemblyVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="$(DotNetVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Validation" Version="$(DotNetVersion)" />
 
     <!-- Web/Server dependencies -->
-    <!-- CVE-2026-102870 (Blazor WASM debug proxy) is fixed in rc.3; keep this pin until DotNetVersion moves past it. -->
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="11.0.0-rc.3.26522.148" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="$(DotNetVersion)" />
     <PackageVersion Include="Bogus" Version="35.6.5" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="$(DotNetVersion)" />
     <PackageVersion Include="NSwag.AspNetCore" Version="14.8.0" />
@@ -41,9 +40,8 @@
     <PackageVersion Include="Microsoft.Extensions.Identity.Stores" Version="$(DotNetVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(DotNetVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="$(DotNetVersion)" />
-    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="11.0.0-rc.3" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="11.0.0" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />
-    <PackageVersion Include="Npgsql.DependencyInjection" Version="10.0.3" />
     <PackageVersion Include="Polly" Version="8.9.1" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.21.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.21.0" />
@@ -54,7 +52,9 @@
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.6.0" />
 
     <!-- Aspire AppHost dependencies -->
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Dotnet" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="17.0.0" />
     <PackageVersion Include="MessagePack" Version="3.1.12" />
 
     <!-- Testing dependencies -->

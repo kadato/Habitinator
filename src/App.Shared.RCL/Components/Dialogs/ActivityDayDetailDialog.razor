@@ -87,7 +87,7 @@
                     }
                 </div>
             }
-            <div class="stats-day-timeline">
+            <div class="stats-day-timeline" tabindex="0" role="group" aria-label="@($"Events for {_shownDateLabel}")">
                 @foreach (var ev in _detail.Events)
                 {
                     <div class="stats-day-event">
@@ -106,50 +106,52 @@
         {
             <div class="hab-modal__footer hab-modal__footer--end hab-modal__footer--daily">
                 <span class="hab-modal__footer-note">@DueNoteFor(_dailyItem)</span>
-                @if (_canToggleToday || _shownDate == DailySchedule.LocalToday(TimeZoneService))
-                {
-                    @if (_isDoneToday)
+                <div class="hab-modal__footer-actions">
+                    @if (_canToggleToday || _shownDate == DailySchedule.LocalToday(TimeZoneService))
+                    {
+                        @if (_isDoneToday)
+                        {
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Default"
+                                       Size="Size.Medium"
+                                       Disabled="@_completing"
+                                       StartIcon="@Icons.Material.Filled.Close"
+                                       OnClick="ToggleTodayAsync">
+                                Not done
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       Size="Size.Medium"
+                                       Disabled="@(_completing || !_canToggleToday)"
+                                       StartIcon="@Icons.Material.Filled.Check"
+                                       OnClick="ToggleTodayAsync">
+                                Done today
+                            </MudButton>
+                        }
+                    }
+                    else
                     {
                         <MudButton Variant="Variant.Outlined"
                                    Color="Color.Default"
                                    Size="Size.Medium"
                                    Disabled="@_completing"
-                                   StartIcon="@Icons.Material.Filled.Close"
-                                   OnClick="ToggleTodayAsync">
-                            Not done
+                                   StartIcon="@Icons.Material.Filled.NextPlan"
+                                   OnClick="SkipShownDateAsync">
+                            Skip
                         </MudButton>
-                    }
-                    else
-                    {
                         <MudButton Variant="Variant.Filled"
                                    Color="Color.Primary"
                                    Size="Size.Medium"
-                                   Disabled="@(_completing || !_canToggleToday)"
+                                   Disabled="@(_completing || !_canCompleteShownDate)"
                                    StartIcon="@Icons.Material.Filled.Check"
-                                   OnClick="ToggleTodayAsync">
-                            Done today
+                                   OnClick="CompleteShownDateAsync">
+                            Done
                         </MudButton>
                     }
-                }
-                else
-                {
-                    <MudButton Variant="Variant.Outlined"
-                               Color="Color.Default"
-                               Size="Size.Medium"
-                               Disabled="@_completing"
-                               StartIcon="@Icons.Material.Filled.NextPlan"
-                               OnClick="SkipShownDateAsync">
-                        Skip
-                    </MudButton>
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               Size="Size.Medium"
-                               Disabled="@(_completing || !_canCompleteShownDate)"
-                               StartIcon="@Icons.Material.Filled.Check"
-                               OnClick="CompleteShownDateAsync">
-                        Done
-                    </MudButton>
-                }
+                </div>
             </div>
         }
         </div>
@@ -184,6 +186,8 @@
     private bool _showDailyFooter;
     private bool _completing;
     private bool _mutated;
+    private int _reloadVersion;
+    private int _loadVersion;
 
     protected override async Task OnInitializedAsync()
     {
@@ -322,22 +326,38 @@
 
     private async Task LoadAsync()
     {
+        var version = ++_loadVersion;
         _loading = true;
         _error = null;
         try
         {
             var tag = string.IsNullOrWhiteSpace(TagFilter) ? null : TagFilter;
-            _detail = await Stats.GetActivityDayDetailAsync(_shownDate, tag);
+            var detail = await Stats.GetActivityDayDetailAsync(_shownDate, tag);
+            if (version == _loadVersion)
+            {
+                _detail = detail;
+            }
         }
         catch (Exception ex)
         {
+            if (version != _loadVersion)
+            {
+                return;
+            }
+
             var offline = ServiceProvider.GetService<OfflineActivityStatisticsProvider>();
             if (offline != null)
             {
                 try
                 {
                     var tag2 = string.IsNullOrWhiteSpace(TagFilter) ? null : TagFilter;
-                    _detail = await offline.BuildDayDetailAsync(_shownDate, tag2);
+                    var detail = await offline.BuildDayDetailAsync(_shownDate, tag2);
+                    if (version != _loadVersion)
+                    {
+                        return;
+                    }
+
+                    _detail = detail;
                     try
                     {
                         await Notifier.NotifyAsync("Offline: showing locally computed details.", MudBlazor.Severity.Warning);
@@ -355,6 +375,11 @@
                 }
             }
 
+            if (version != _loadVersion)
+            {
+                return;
+            }
+
             _error = ex.Message;
             try
             {
@@ -367,8 +392,11 @@
         }
         finally
         {
-            _loading = false;
-            await RefreshCompletionStateAsync();
+            if (version == _loadVersion)
+            {
+                _loading = false;
+                await RefreshCompletionStateAsync();
+            }
         }
     }
 
@@ -522,27 +550,58 @@
         StateHasChanged();
     }
 
-    /// <summary>Drains synced operations and clears cached stats first, so the reloaded details include the latest change instead of a stale cached day.</summary>
+    /// <summary>
+    ///     Shows the check-in from the local activity log at once, then syncs and
+    ///     reloads the server view in the background. The dialog never waits on
+    ///     the network for a change it already applied locally.
+    /// </summary>
     private async Task ReloadAfterMutationAsync()
     {
-        await DrainBoardSyncAsync();
+        var version = ++_reloadVersion;
+        var loadVersion = ++_loadVersion;
+        if (!await TryPaintLocalDetailAsync(loadVersion))
+        {
+            await LoadAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+
+        _ = SyncThenReloadAsync(version);
+    }
+
+    private async Task<bool> TryPaintLocalDetailAsync(int loadVersion)
+    {
+        var offline = ServiceProvider.GetService<OfflineActivityStatisticsProvider>();
+        if (offline is null)
+        {
+            return false;
+        }
+
         try
         {
-            Stats.InvalidateCache();
+            var tag = string.IsNullOrWhiteSpace(TagFilter) ? null : TagFilter;
+            var detail = await offline.BuildDayDetailAsync(_shownDate, tag);
+            if (loadVersion != _loadVersion)
+            {
+                // A newer load or day step already took over.
+                return true;
+            }
+
+            _detail = detail;
+            _error = null;
+            _loading = false;
+            await RefreshCompletionStateAsync();
+            await InvokeAsync(StateHasChanged);
+            return true;
         }
         catch
         {
-            // Best-effort cleanup. A stale cache entry makes the next load retry.
+            // Fall through to the server read below.
+            return false;
         }
-
-        await LoadAsync();
-        await InvokeAsync(StateHasChanged);
     }
 
-    /// <summary>Tries an immediate sync. Stats read from the server right after.</summary>
-    private async Task DrainBoardSyncAsync()
+    private async Task SyncThenReloadAsync(int version)
     {
-        // Data saver: the change is already queued locally. Sync now or unpause to send it.
         if (BoardSync.IsPaused)
         {
             return;
@@ -561,7 +620,39 @@
         }
         catch
         {
-            // If offline or slow, the periodic sync delivers the change. Reads use last known data.
+            // Offline or slow. The periodic sync retries.
+        }
+
+        if (version != _reloadVersion)
+        {
+            return;
+        }
+
+        try
+        {
+            Stats.InvalidateCache();
+        }
+        catch
+        {
+            // Best-effort cleanup. A stale cache entry makes the next load retry.
+        }
+
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                if (version != _reloadVersion)
+                {
+                    return;
+                }
+
+                await LoadAsync();
+                StateHasChanged();
+            });
+        }
+        catch
+        {
+            // The dialog was closed while the sync ran.
         }
     }
 

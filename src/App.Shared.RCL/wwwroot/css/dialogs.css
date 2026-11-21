@@ -1112,7 +1112,9 @@
 
 /* hab-modal--day-details keeps a fixed frame so short and busy days do not move the dialog. */
 .hab-modal--day-details {
+    height: min(34rem, calc(100vh - 1.5rem));
     height: min(34rem, calc(100dvh - 1.5rem));
+    max-height: min(85vh, calc(100vh - 1.5rem));
     max-height: min(85dvh, calc(100dvh - 1.5rem));
 }
 .hab-modal--day-details .hab-modal__body {
@@ -1120,17 +1122,26 @@
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    scrollbar-gutter: stable;
 }
 .hab-modal--day-details .hab-modal__footer {
     flex-shrink: 0;
 }
+/* The timeline is the day-details scroller. It keeps its natural height on a
+   short day, shrinks to the body height on a busy one, and scrolls its own rows.
+   The body scrolls only the loading, error, and empty states, so the dialog
+   never shows two scrollbars. */
 .hab-modal--day-details .stats-day-timeline {
-    /* The modal body is the single scroller. No inner cap here. The timeline
-       would scroll inside the body scroll and show two scrollbars. */
+    flex: 0 1 auto;
     min-height: 0;
+    max-height: 100%;
+    overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-gutter: stable;
+    -webkit-overflow-scrolling: touch;
+}
+.hab-modal--day-details .stats-day-timeline:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
 }
 .mud-dialog:has(.hab-modal--day-details) .mud-dialog-content {
     min-height: 0;
@@ -1141,13 +1152,28 @@
 .hab-modal__footer--end {
     justify-content: flex-end;
 }
+/* Day details footer: the due note and the actions share one row. The note
+   shrinks before the actions wrap as a group, so the two buttons never stack
+   on a phone. */
 .hab-modal__footer--daily {
     flex-wrap: wrap;
+}
+.hab-modal__footer--daily .hab-modal__footer-note {
+    flex: 1 1 6rem;
+    min-width: 0;
+}
+.hab-modal__footer-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex: 0 0 auto;
+    margin-left: auto;
 }
 .hab-modal__footer-note {
     flex: 1 1 12rem;
     margin-right: auto;
     font-size: 0.76rem;
+    line-height: 1.4;
     color: var(--mud-palette-text-secondary);
     font-variant-numeric: tabular-nums;
 }

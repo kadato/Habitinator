@@ -915,9 +915,9 @@ public partial class StatisticsPanel : IDisposable
         await OnSelectedTagsChanged(Array.Empty<string>());
     }
 
-    private async Task RefreshAsync(Func<Task> load)
+    private async Task RefreshAsync(Func<Task> load, bool force = false)
     {
-        if (_loading)
+        if (_loading && !force)
         {
             return;
         }
@@ -1012,7 +1012,7 @@ public partial class StatisticsPanel : IDisposable
     /// </summary>
     private async Task RefreshAfterDialogAsync()
     {
-        await DrainBoardSyncAsync();
+        _shouldScrollToEnd = false;
         try
         {
             Stats.InvalidateCache();
@@ -1022,8 +1022,27 @@ public partial class StatisticsPanel : IDisposable
             // Best-effort cleanup. A stale cache entry makes the next load retry.
         }
 
+        // Start the sync and the first revalidation together. Cached stats
+        // show at once while the network read runs in the background.
+        var syncTask = DrainBoardSyncAsync();
         await RefreshAsync(() => LoadStatisticsAsync(_selectedPeriodKey));
-        _shouldScrollToEnd = false;
+        if (!await syncTask)
+        {
+            return;
+        }
+
+        // The sync delivered the check-in. Replace the first read with one that
+        // includes it, even when the first read is still running.
+        try
+        {
+            Stats.InvalidateCache();
+        }
+        catch
+        {
+            // Best-effort cleanup. The forced reload already reads fresh data.
+        }
+
+        await RefreshAsync(() => LoadStatisticsAsync(_selectedPeriodKey), force: true);
     }
 
     /// <summary>Marks already-started reads as observed so a fault never escapes unobserved when their results are discarded on a stale load or a failed sibling.</summary>
@@ -1039,13 +1058,13 @@ public partial class StatisticsPanel : IDisposable
         }
     }
 
-    /// <summary>Tries an immediate sync. Stats read from the server right after.</summary>
-    private async Task DrainBoardSyncAsync()
+    /// <summary>Tries an immediate sync and reports whether it completed.</summary>
+    private async Task<bool> DrainBoardSyncAsync()
     {
         // Data saver is on. The app queued the change locally. Choose Sync now or resume automatic sync to send the change.
         if (ServiceProvider.GetService<IBoardSyncStatus>()?.IsPaused == true)
         {
-            return;
+            return false;
         }
 
         try
@@ -1053,15 +1072,17 @@ public partial class StatisticsPanel : IDisposable
             var sync = ServiceProvider.GetService<App.Shared.RCL.Services.Board.Local.IBoardSyncRequestor>();
             if (sync is null)
             {
-                return;
+                return false;
             }
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
             await sync.SyncNowAsync(cts.Token);
+            return true;
         }
         catch
         {
             // If offline or slow, the periodic sync delivers the change. Reads use last known data.
+            return false;
         }
     }
 

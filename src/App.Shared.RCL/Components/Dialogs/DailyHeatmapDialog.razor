@@ -111,6 +111,8 @@
     private DateOnly _heatmapToday;
     private bool _mutatedBelow;
     private BoardItem? _scheduleItem;
+    private int _reloadVersion;
+    private int _loadVersion;
 
     private string DisplayTitle => string.IsNullOrWhiteSpace(Title) ? "Daily" : Title;
 
@@ -207,16 +209,35 @@
 
     private async Task LoadDataAsync()
     {
+        var version = ++_loadVersion;
         _loading = true;
         _error = null;
+
+        // Paint the last known heatmap at once. The network read below
+        // revalidates it without leaving the dialog on skeletons.
+        if (Stats.TryGetCachedDailyContributions(_selectedPeriodKey, null, out var cached) && cached is not null)
+        {
+            ApplyContributionData(cached);
+            _loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+
         try
         {
             var data = await Stats.GetDailyContributionsAsync(_selectedPeriodKey);
-            ApplyContributionData(data);
+            if (version == _loadVersion)
+            {
+                ApplyContributionData(data);
+            }
         }
         catch (Exception ex)
         {
-            if (await TryLoadOfflineFallbackAsync())
+            if (version != _loadVersion)
+            {
+                return;
+            }
+
+            if (await TryLoadOfflineFallbackAsync(version))
             {
                 return;
             }
@@ -226,7 +247,10 @@
         }
         finally
         {
-            _loading = false;
+            if (version == _loadVersion)
+            {
+                _loading = false;
+            }
         }
     }
 
@@ -256,7 +280,7 @@
         }
     }
 
-    private async Task<bool> TryLoadOfflineFallbackAsync()
+    private async Task<bool> TryLoadOfflineFallbackAsync(int version)
     {
         var offline = ServiceProvider.GetService<OfflineActivityStatisticsProvider>();
         if (offline is null)
@@ -267,6 +291,11 @@
         try
         {
             var data = await offline.BuildDailyContributionsAsync(_selectedPeriodKey, null);
+            if (version != _loadVersion)
+            {
+                return true;
+            }
+
             ApplyContributionData(data);
             _error = null;
             await NotifySafeAsync("Offline: showing locally computed heatmap.", MudBlazor.Severity.Warning);
@@ -374,26 +403,54 @@
         }
     }
 
-    /// <summary>Drains synced operations first, so the reloaded heatmap includes the latest change.</summary>
+    /// <summary>
+    ///     Paints the heatmap from the local activity log at once, then syncs
+    ///     and reloads the server view in the background.
+    /// </summary>
     private async Task ReloadAfterMutationAsync()
     {
-        await DrainBoardSyncAsync();
+        var version = ++_reloadVersion;
+        var loadVersion = ++_loadVersion;
+        if (!await TryPaintLocalAsync(loadVersion))
+        {
+            await LoadDataAsync();
+        }
+
+        _ = SyncThenReloadAsync(version);
+    }
+
+    private async Task<bool> TryPaintLocalAsync(int loadVersion)
+    {
+        var offline = ServiceProvider.GetService<OfflineActivityStatisticsProvider>();
+        if (offline is null)
+        {
+            return false;
+        }
+
         try
         {
-            Stats.InvalidateCache();
+            var data = await offline.BuildDailyContributionsAsync(_selectedPeriodKey, null);
+            if (loadVersion != _loadVersion)
+            {
+                // A newer load or period change already took over.
+                return true;
+            }
+
+            ApplyContributionData(data);
+            _error = null;
+            _loading = false;
+            await InvokeAsync(StateHasChanged);
+            return true;
         }
         catch
         {
-            // Best-effort cleanup. A stale cache entry makes the next load retry.
+            // Fall through to the server read below.
+            return false;
         }
-
-        await LoadDataAsync();
     }
 
-    /// <summary>Tries an immediate sync. Stats read from the server right after.</summary>
-    private async Task DrainBoardSyncAsync()
+    private async Task SyncThenReloadAsync(int version)
     {
-        // Data saver: the change is already queued locally. Sync now or unpause to send it.
         if (BoardSync.IsPaused)
         {
             return;
@@ -412,7 +469,39 @@
         }
         catch
         {
-            // If offline or slow, the periodic sync delivers the change. Reads use last known data.
+            // Offline or slow. The periodic sync retries.
+        }
+
+        if (version != _reloadVersion)
+        {
+            return;
+        }
+
+        try
+        {
+            Stats.InvalidateCache();
+        }
+        catch
+        {
+            // Best-effort cleanup. A stale cache entry makes the next load retry.
+        }
+
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                if (version != _reloadVersion)
+                {
+                    return;
+                }
+
+                await LoadDataAsync();
+                StateHasChanged();
+            });
+        }
+        catch
+        {
+            // The dialog was closed while the sync ran.
         }
     }
 

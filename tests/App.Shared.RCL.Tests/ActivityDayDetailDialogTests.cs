@@ -3,6 +3,7 @@
 using App.Shared.RCL.Components.Dialogs;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+using App.Shared.RCL.Services.Board.Local;
 
 using Bunit;
 
@@ -25,6 +26,7 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
     private readonly IUserDateFormatService _dateFormatService = Substitute.For<IUserDateFormatService>();
     private readonly IUserNotifier _notifier = Substitute.For<IUserNotifier>();
     private readonly IBoardDataService _boardData = Substitute.For<IBoardDataService>();
+    private readonly IBoardSyncRequestor _sync = Substitute.For<IBoardSyncRequestor>();
 
     public ActivityDayDetailDialogTests()
     {
@@ -36,6 +38,7 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         _ctx.Services.AddSingleton(_dateFormatService);
         _ctx.Services.AddSingleton<IUserNotifier>(_notifier);
         _ctx.Services.AddSingleton(_boardData);
+        _ctx.Services.AddSingleton(_sync);
 
         _timeZoneService.ConvertToLocal(Arg.Any<DateTimeOffset>())
             .Returns(x => ((DateTimeOffset)x[0]!).ToLocalTime());
@@ -79,6 +82,10 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         // Assert
         provider.Markup.Should().Contain("Day details");
         provider.Markup.Should().Contain("2026-08-12");
+        var timeline = provider.Find(".stats-day-timeline");
+        timeline.GetAttribute("tabindex").Should().Be("0");
+        timeline.GetAttribute("role").Should().Be("group");
+        timeline.GetAttribute("aria-label").Should().Be("Events for 2026-08-12");
         provider.Markup.Should().NotContain("3 activities");
         provider.Markup.Should().NotContain("25 min focus");
         provider.Markup.Should().NotContain("activity-day-detail-summary");
@@ -118,6 +125,48 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
 
         // Assert
         await _boardData.Received(1).CompleteDailyForDateAsync(itemId, new DateOnly(2026, 8, 11), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Retro_check_in_repaints_without_waiting_for_board_sync()
+    {
+        var itemId = Guid.NewGuid();
+        var daily = new BoardItem(
+            itemId,
+            "Meditate",
+            DailyStartDate: new DateOnly(2026, 8, 1),
+            DailyRepeat: DailyRepeatType.Daily,
+            DailyRepeatInterval: 1);
+        _boardData.GetItemAsync(itemId, Arg.Any<CancellationToken>()).Returns(Task.FromResult<BoardItem?>(daily));
+        _boardData.CompleteDailyForDateAsync(itemId, new DateOnly(2026, 8, 11), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<BoardItem?>(daily));
+        _stats.GetActivityDayDetailAsync(Arg.Any<DateOnly>(), Arg.Any<string?>())
+            .Returns(Task.FromResult(new ActivityDayDetailDto(new DateOnly(2026, 8, 11), [], 0)));
+
+        var syncGate = new TaskCompletionSource();
+        _sync.SyncNowAsync(Arg.Any<CancellationToken>()).Returns(syncGate.Task);
+
+        var provider = _ctx.Render<MudDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+        var parameters = new DialogParameters<ActivityDayDetailDialog>
+        {
+            { x => x.Date, new DateOnly(2026, 8, 11) },
+            { x => x.BoardItemId, itemId }
+        };
+
+        await provider.InvokeAsync(async () => await dialogService.ShowAsync<ActivityDayDetailDialog>(string.Empty, parameters));
+        await provider.WaitForStateAsync(() => provider.Markup.Contains("Done"), TimeSpan.FromSeconds(5));
+
+        var button = provider.FindAll("button").First(b => b.TextContent.Contains("Done"));
+        await provider.InvokeAsync(() => button.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
+
+        // The reload ran while SyncNowAsync is still pending. A blocking sync
+        // would leave the handler awaiting this gate forever.
+        _stats.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IActivityStatisticsReader.GetActivityDayDetailAsync))
+            .Should().BeGreaterThanOrEqualTo(2);
+
+        _ = _sync.Received(1).SyncNowAsync(Arg.Any<CancellationToken>());
+        syncGate.TrySetResult();
     }
 
     [Fact]

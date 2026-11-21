@@ -225,6 +225,14 @@
         {
             if (SessionProvider.IsLoggedIn)
             {
+                // Let the board sync run before the stats warmup. The warmup is
+                // only useful when the user opens Statistics.
+                await Task.Delay(TimeSpan.FromSeconds(2));
+                if (!SessionProvider.IsLoggedIn)
+                {
+                    return;
+                }
+
                 await Task.WhenAll(
                     StatsReader.GetOverviewAsync(DailyGraphPeriods.Rolling370Days, null),
                     BoardData.GetStreakMapAsync()

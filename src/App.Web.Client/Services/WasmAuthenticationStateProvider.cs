@@ -43,7 +43,11 @@ internal sealed class WasmAuthenticationStateProvider : AuthenticationStateProvi
         // 2. Fallback to API check if state was not persisted. Covers initial load without prerendering and re-auth.
         try
         {
-            status = await Client.GetFromJsonAsync<AuthStatusDto>("api/auth/status").ConfigureAwait(false);
+            // This call runs before the app can show the authorized tree when
+            // prerendered state is missing. The timeout keeps a stalled call
+            // from holding the app on the loading screen.
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            status = await Client.GetFromJsonAsync<AuthStatusDto>("api/auth/status", cts.Token).ConfigureAwait(false);
             if (status is not null)
             {
                 _cache = CreateAuthenticationState(status);

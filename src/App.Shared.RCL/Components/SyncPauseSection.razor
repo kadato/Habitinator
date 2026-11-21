@@ -70,7 +70,8 @@
     {
         try
         {
-            await SyncRequestor.SyncNowAsync();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            await SyncRequestor.SyncNowAsync(cts.Token);
             Snackbar.Add("Sync finished.", Severity.Success);
         }
         catch (Exception ex)

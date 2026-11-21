@@ -178,7 +178,8 @@ else
             if (BoardSync.IsPaused)
             {
                 // Paused mode ignores RequestSync. SyncNow runs once while paused.
-                await SyncRequestor.SyncNowAsync();
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                await SyncRequestor.SyncNowAsync(cts.Token);
                 return;
             }
 

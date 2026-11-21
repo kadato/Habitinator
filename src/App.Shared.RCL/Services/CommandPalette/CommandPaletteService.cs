@@ -66,18 +66,29 @@ public sealed class CommandPaletteService : ICommandPaletteService
         _uiSession = uiSession;
     }
 
-    private async Task NotifyBoardRefreshAsync()
+    private Task NotifyBoardRefreshAsync()
     {
         if (_refresh is not null)
         {
-            try
-            {
-                await _refresh.NotifyFromRemoteAsync();
-            }
-            catch
-            {
-                // Best effort board refresh.
-            }
+            // Palette mutations are local-first and already queued a sync.
+            // Refreshing the other subscribers must not delay the command
+            // result or the next command.
+            _ = RefreshInBackgroundAsync();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task RefreshInBackgroundAsync()
+    {
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            await _refresh!.NotifyFromRemoteAsync(cts.Token);
+        }
+        catch
+        {
+            // Best effort board refresh.
         }
     }
 

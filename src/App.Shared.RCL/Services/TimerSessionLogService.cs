@@ -30,7 +30,10 @@ public sealed class TimerSessionLogService(
                 if (boardProgressed)
                 {
                     timer.SetManualTarget(null);
-                    await remoteBoardRefresh.NotifyFromRemoteAsync(cancellationToken).ConfigureAwait(false);
+                    // The board write is local-first and already queued a sync.
+                    // Refresh other subscribers in the background so stopping
+                    // the timer never waits on the refresh.
+                    _ = NotifyRefreshInBackgroundAsync();
                 }
             }
             catch (Exception)
@@ -72,6 +75,19 @@ public sealed class TimerSessionLogService(
             false,
             boardProgressed,
             $"The timer saved {targetType ?? "Unassigned"} '{targetId}' with duration {duration:hh\\:mm\\:ss}.");
+    }
+
+    private async Task NotifyRefreshInBackgroundAsync()
+    {
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            await remoteBoardRefresh.NotifyFromRemoteAsync(cts.Token).ConfigureAwait(false);
+        }
+        catch
+        {
+            // The periodic sync and the error toast already cover failures.
+        }
     }
 
     private async Task<bool> UpdateBoardItemProgressAsync(Guid id, string targetType, CancellationToken cancellationToken)

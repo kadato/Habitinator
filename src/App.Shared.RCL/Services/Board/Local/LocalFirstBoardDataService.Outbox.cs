@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services.Remote;
 
@@ -10,6 +12,12 @@ public sealed partial class LocalFirstBoardDataService
 {
     /// <summary>The client deprioritizes operations that fail this many times, so one failed operation does not block newer ones.</summary>
     public const int QuarantineAfterAttempts = 8;
+
+    /// <summary>Upper bound on concurrent retro completion requests in one sync pass.</summary>
+    public const int RetroCompletionBatchMaxSize = 16;
+
+    /// <summary>Upper bound on concurrent requests in one same-kind batch.</summary>
+    public const int IndependentBatchMaxSize = 8;
 
     public async Task<bool> TryDrainOneOutboxOperationAsync(CancellationToken cancellationToken = default)
     {
@@ -54,6 +62,204 @@ public sealed partial class LocalFirstBoardDataService
             _gate.Release();
         }
 
+        try
+        {
+            await ExecuteOutboxRemoteByIdAsync(operationId, remote, cancellationToken);
+            await DropOutboxOperationAsync(operationId, cancellationToken);
+            return true;
+        }
+        catch (BoardRemoteConflictException ex)
+        {
+            return await HandleRemoteConflictAsync(operationId, ex, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Outbox operation {OperationId} failed.", operationId);
+            await RecordOutboxFailureAsync(operationId, ex.Message, cancellationToken);
+            return false;
+        }
+    }
+
+    /// <summary>
+    ///     Drains a run of retro completions for the same day in parallel.
+    ///     A retro save queues one completion per daily. Draining them one by
+    ///     one adds one round trip and one streak calculation on the server for
+    ///     each daily after the dialog closes. The rows are independent, so the
+    ///     entries can run in parallel without reordering other work.
+    /// </summary>
+    /// <returns>The number of operations that completed, or zero when no batch was eligible.</returns>
+    public async Task<int> TryDrainRetroCompletionBatchAsync(
+        int maxBatchSize,
+        CancellationToken cancellationToken = default)
+    {
+        if (maxBatchSize < 2)
+        {
+            return 0;
+        }
+
+        maxBatchSize = Math.Min(maxBatchSize, RetroCompletionBatchMaxSize);
+        await store.EnsureReadyAsync(cancellationToken);
+
+        List<Guid> batch;
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var userKey = await ResolveAuthedUserKeyAsync(cancellationToken);
+            if (userKey is null)
+            {
+                return 0;
+            }
+
+            await EnsureUserScopeAsync(userKey, cancellationToken);
+            var ordered = (await store.ListOutboxAsync(userKey, cancellationToken))
+                .OrderBy(o => o.CreatedAtUtc)
+                .ThenBy(o => o.OperationId)
+                .ToList();
+
+            batch = [];
+            DateOnly? completedOn = null;
+            var itemIds = new HashSet<Guid>();
+            foreach (var entry in ordered)
+            {
+                if (batch.Count >= maxBatchSize
+                    || entry.AttemptCount >= QuarantineAfterAttempts
+                    || !IsDue(entry)
+                    || entry.Kind != BoardOutboxOperationKind.CompleteDailyForDate)
+                {
+                    break;
+                }
+
+                CompleteDailyOutboxPayload? payload;
+                try
+                {
+                    payload = JsonSerializer.Deserialize<CompleteDailyOutboxPayload>(
+                        entry.PayloadJson, BoardOutboxJson.Options);
+                }
+                catch (JsonException)
+                {
+                    break;
+                }
+
+                if (payload is null)
+                {
+                    break;
+                }
+
+                if (completedOn is null)
+                {
+                    completedOn = payload.CompletedOn;
+                }
+                else if (completedOn != payload.CompletedOn)
+                {
+                    break;
+                }
+
+                if (!itemIds.Add(payload.ItemId))
+                {
+                    break;
+                }
+
+                batch.Add(entry.OperationId);
+            }
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        if (batch.Count < 2)
+        {
+            return 0;
+        }
+
+        var results = await Task.WhenAll(
+            batch.Select(operationId => DrainOneForBatchAsync(operationId, cancellationToken)));
+        return results.Count(success => success);
+    }
+
+    /// <summary>
+    ///     Drains a run of same-kind operations on distinct items in parallel.
+    ///     Bulk archive, delete, move, and toggle commands queue one row per
+    ///     item. Each operation changes a separate row, so sending the rows
+    ///     together avoids one round trip per item. Creates stay in the ordered path.
+    /// </summary>
+    /// <returns>The number of operations that completed, or zero when no batch was eligible.</returns>
+    public async Task<int> TryDrainIndependentBatchAsync(
+        int maxBatchSize,
+        CancellationToken cancellationToken = default)
+    {
+        if (maxBatchSize < 2)
+        {
+            return 0;
+        }
+
+        maxBatchSize = Math.Min(maxBatchSize, IndependentBatchMaxSize);
+        await store.EnsureReadyAsync(cancellationToken);
+
+        List<Guid> batch;
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var userKey = await ResolveAuthedUserKeyAsync(cancellationToken);
+            if (userKey is null)
+            {
+                return 0;
+            }
+
+            await EnsureUserScopeAsync(userKey, cancellationToken);
+            var ordered = (await store.ListOutboxAsync(userKey, cancellationToken))
+                .OrderBy(o => o.CreatedAtUtc)
+                .ThenBy(o => o.OperationId)
+                .ToList();
+
+            batch = [];
+            BoardOutboxOperationKind? batchKind = null;
+            var itemIds = new HashSet<Guid>();
+            foreach (var entry in ordered)
+            {
+                if (batch.Count >= maxBatchSize
+                    || entry.AttemptCount >= QuarantineAfterAttempts
+                    || !IsDue(entry)
+                    || entry.Kind == BoardOutboxOperationKind.Create)
+                {
+                    break;
+                }
+
+                if (batchKind is null)
+                {
+                    batchKind = entry.Kind;
+                }
+                else if (entry.Kind != batchKind)
+                {
+                    break;
+                }
+
+                var itemId = BoardOutboxReferencedIds.ExtractItemId(entry.Kind, entry.PayloadJson);
+                if (itemId is null || !itemIds.Add(itemId.Value))
+                {
+                    break;
+                }
+
+                batch.Add(entry.OperationId);
+            }
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        if (batch.Count < 2)
+        {
+            return 0;
+        }
+
+        var results = await Task.WhenAll(
+            batch.Select(operationId => DrainOneForBatchAsync(operationId, cancellationToken)));
+        return results.Count(success => success);
+    }
+
+    private async Task<bool> DrainOneForBatchAsync(Guid operationId, CancellationToken cancellationToken)
+    {
         try
         {
             await ExecuteOutboxRemoteByIdAsync(operationId, remote, cancellationToken);

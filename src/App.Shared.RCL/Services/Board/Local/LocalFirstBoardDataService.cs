@@ -20,6 +20,9 @@ public sealed partial class LocalFirstBoardDataService(
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
 
+    /// <summary>How long the streak refresh waits for the server before it falls back to local counters.</summary>
+    private static readonly TimeSpan RemoteStreakTimeout = TimeSpan.FromSeconds(3);
+
     /// <summary>Operations currently on the wire. Guarded by <see cref="_gate" />. Used to keep delete coalescing away from creates that may already have reached the server.</summary>
     private readonly HashSet<Guid> _inFlightOutboxOperations = [];
 
@@ -255,9 +258,19 @@ public sealed partial class LocalFirstBoardDataService(
 
     private async Task<Dictionary<Guid, int>?> TryGetRemoteStreakMapAsync(CancellationToken cancellationToken)
     {
+        // The HTTP client default timeout is far longer than a board repaint
+        // should wait. Fall back to local counters so a slow or cold server does
+        // not block the streak display.
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(RemoteStreakTimeout);
         try
         {
-            return await remote.GetStreakMapAsync(cancellationToken);
+            return await remote.GetStreakMapAsync(timeout.Token);
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogDebug(ex, "Remote streak map timed out. Falling back to local counters.");
+            return null;
         }
         catch (OperationCanceledException)
         {

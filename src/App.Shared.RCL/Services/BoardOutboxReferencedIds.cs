@@ -17,7 +17,8 @@ public static class BoardOutboxReferencedIds
     public static bool ReferencesItem(BoardOutboxOperationKind kind, string payloadJson, Guid itemId) =>
         ExtractItemId(kind, payloadJson) == itemId;
 
-    private static Guid? ExtractItemId(BoardOutboxOperationKind kind, string json)
+    /// <summary>Item id referenced by one outbox payload, or null when the kind carries no item id.</summary>
+    public static Guid? ExtractItemId(BoardOutboxOperationKind kind, string json)
     {
         return kind switch
         {

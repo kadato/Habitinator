@@ -39,6 +39,150 @@ public sealed class LocalFirstBoardSyncTests
     }
 
     [Fact]
+    public async Task DrainRetroBatchAsync_SendsSameDayCompletionsConcurrently()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var yesterday = today.AddDays(-1);
+        var created = DateTimeOffset.UtcNow.AddMinutes(-5);
+        var ids = Enumerable.Range(0, 4).Select(_ => Guid.NewGuid()).ToList();
+        foreach (var id in ids)
+        {
+            await harness.Store.UpsertItemAsync(
+                BoardLocalRow.FromModel(BoardSection.Daily, Harness.UserKey,
+                    new BoardItem(id, $"Daily {id:N}", DailyStartDate: today.AddDays(-10),
+                        ServerUpdatedAtUtc: created, CreatedAtUtc: created), false), ct);
+            await harness.Board.CompleteDailyForDateAsync(id, yesterday, ct);
+        }
+
+        var inFlight = 0;
+        var peakInFlight = 0;
+        var allArrived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        harness.Server.AsyncResponder = async request =>
+        {
+            var current = Interlocked.Increment(ref inFlight);
+            Interlocked.Exchange(ref peakInFlight, Math.Max(Volatile.Read(ref peakInFlight), current));
+
+            // Hold each request until all of them have started. A serial drain
+            // never releases the first request and times out below.
+            if (current == ids.Count)
+            {
+                allArrived.TrySetResult();
+            }
+
+            await allArrived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Interlocked.Decrement(ref inFlight);
+
+            var id = Guid.Parse(request.RequestUri!.Segments[^2].TrimEnd('/'));
+            return JsonResponse(HttpStatusCode.OK, new BoardItem(
+                id, "Done", DailyLastCompletedOn: yesterday,
+                ServerUpdatedAtUtc: created.AddMinutes(1), CreatedAtUtc: created));
+        };
+
+        var drained = await harness.Board.TryDrainRetroCompletionBatchAsync(
+            LocalFirstBoardDataService.RetroCompletionBatchMaxSize, ct);
+
+        drained.Should().Be(ids.Count);
+        peakInFlight.Should().Be(ids.Count);
+        (await harness.Store.ListOutboxAsync(Harness.UserKey)).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DrainRetroBatchAsync_StopsAtTheFirstNonCompletionOperation()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var yesterday = today.AddDays(-1);
+        var created = DateTimeOffset.UtcNow.AddMinutes(-5);
+        var dailyId = Guid.NewGuid();
+        await harness.Store.UpsertItemAsync(
+            BoardLocalRow.FromModel(BoardSection.Daily, Harness.UserKey,
+                new BoardItem(dailyId, "Water", DailyStartDate: today.AddDays(-10),
+                    ServerUpdatedAtUtc: created, CreatedAtUtc: created), false), ct);
+
+        await harness.Board.RenameItemAsync(BoardSection.Daily, dailyId, "Water plants", ct);
+        await harness.Board.CompleteDailyForDateAsync(dailyId, yesterday, ct);
+        await harness.Board.CompleteDailyForDateAsync(dailyId, yesterday.AddDays(-1), ct);
+
+        var drained = await harness.Board.TryDrainRetroCompletionBatchAsync(
+            LocalFirstBoardDataService.RetroCompletionBatchMaxSize, ct);
+
+        // The first queued operation is a rename, so the batch leaves all work
+        // to the ordered drain.
+        drained.Should().Be(0);
+        (await harness.Store.ListOutboxAsync(Harness.UserKey)).Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task DrainIndependentBatchAsync_SendsSameKindOpsOnDistinctItemsConcurrently()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var created = DateTimeOffset.UtcNow.AddMinutes(-5);
+        var ids = Enumerable.Range(0, 4).Select(_ => Guid.NewGuid()).ToList();
+        foreach (var id in ids)
+        {
+            await harness.Store.UpsertItemAsync(
+                BoardLocalRow.FromModel(BoardSection.Todo, Harness.UserKey,
+                    new BoardItem(id, $"Todo {id:N}", ServerUpdatedAtUtc: created, CreatedAtUtc: created), false), ct);
+            await harness.Board.ArchiveItemAsync(BoardSection.Todo, id, ct);
+        }
+
+        var inFlight = 0;
+        var peakInFlight = 0;
+        var allArrived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        harness.Server.AsyncResponder = async request =>
+        {
+            var current = Interlocked.Increment(ref inFlight);
+            Interlocked.Exchange(ref peakInFlight, Math.Max(Volatile.Read(ref peakInFlight), current));
+            if (current == ids.Count)
+            {
+                allArrived.TrySetResult();
+            }
+
+            await allArrived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Interlocked.Decrement(ref inFlight);
+
+            var id = Guid.Parse(request.RequestUri!.Segments[^2].TrimEnd('/'));
+            return JsonResponse(HttpStatusCode.OK, new BoardItem(
+                id, "Archived", IsArchived: true,
+                ServerUpdatedAtUtc: created.AddMinutes(1), CreatedAtUtc: created));
+        };
+
+        var drained = await harness.Board.TryDrainIndependentBatchAsync(
+            LocalFirstBoardDataService.IndependentBatchMaxSize, ct);
+
+        drained.Should().Be(ids.Count);
+        peakInFlight.Should().Be(ids.Count);
+        (await harness.Store.ListOutboxAsync(Harness.UserKey)).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DrainRetroBatchAsync_DoesNotMixDifferentDays()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var created = DateTimeOffset.UtcNow.AddMinutes(-5);
+        var dailyId = Guid.NewGuid();
+        await harness.Store.UpsertItemAsync(
+            BoardLocalRow.FromModel(BoardSection.Daily, Harness.UserKey,
+                new BoardItem(dailyId, "Water", DailyStartDate: today.AddDays(-10),
+                    ServerUpdatedAtUtc: created, CreatedAtUtc: created), false), ct);
+
+        await harness.Board.CompleteDailyForDateAsync(dailyId, today.AddDays(-1), ct);
+        await harness.Board.CompleteDailyForDateAsync(dailyId, today.AddDays(-2), ct);
+
+        var drained = await harness.Board.TryDrainRetroCompletionBatchAsync(
+            LocalFirstBoardDataService.RetroCompletionBatchMaxSize, ct);
+
+        drained.Should().Be(0);
+        (await harness.Store.ListOutboxAsync(Harness.UserKey)).Should().HaveCount(2);
+    }
+
+    [Fact]
     public async Task PullMirrorAsync_StaleFullMirror_PullsSnapshotAndDropsGhosts()
     {
         var harness = new Harness();

@@ -26,12 +26,13 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
     private readonly IServiceProvider _services;
     private readonly Func<bool> _isOfflineProbe;
     private readonly SemaphoreSlim _run = new(1, 1);
-    private readonly PeriodicTimer _timer = new(TimeSpan.FromSeconds(15));
+    private readonly PeriodicTimer _timer = new(TimeSpan.FromSeconds(60));
     private readonly CancellationTokenSource _appStopping = new();
     private readonly Channel<bool> _syncChannel = Channel.CreateBounded<bool>(new BoundedChannelOptions(1)
     {
         FullMode = BoundedChannelFullMode.DropOldest
     });
+    private volatile bool _isActive = true;
     private bool _disposed;
 
     public BoardSyncCoordinator(
@@ -60,6 +61,11 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
         _syncChannel.Writer.TryWrite(notifyOnProgress);
     }
 
+    public void SetActive(bool active)
+    {
+        _isActive = active;
+    }
+
     public Task SyncNowAsync(CancellationToken cancellationToken = default) =>
         RunPullAndDrainAsync(false, cancellationToken, bypassPause: true);
 
@@ -85,6 +91,14 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
 
     private async Task RunPullAndDrainCoreAsync(bool notifyOnProgress, CancellationToken cancellationToken, bool bypassPause = false)
     {
+        // Skip the fallback poll while the tab is hidden or the app is backgrounded.
+        // A hidden client stops polling so Neon can suspend. A client that becomes
+        // visible syncs immediately.
+        if (!_isActive && !bypassPause)
+        {
+            return;
+        }
+
         EnsurePausePreferenceLoaded();
         if (_status.IsPaused && !bypassPause)
         {
@@ -110,9 +124,36 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
             }
 
             var progressed = false;
-            while (await _board.TryDrainOneOutboxOperationAsync(cancellationToken))
+            while (true)
             {
-                progressed = true;
+                // A retro save queues several completion rows. They update
+                // separate dailies for the same day, so send them together.
+                if (await _board.TryDrainRetroCompletionBatchAsync(
+                        LocalFirstBoardDataService.RetroCompletionBatchMaxSize, cancellationToken) > 0)
+                {
+                    progressed = true;
+                    continue;
+                }
+
+                // Bulk archive, delete, move, and toggle commands queue one row
+                // per item. Each operation changes a separate row, so send the
+                // rows together.
+                if (await _board.TryDrainIndependentBatchAsync(
+                        LocalFirstBoardDataService.IndependentBatchMaxSize, cancellationToken) > 0)
+                {
+                    progressed = true;
+                    continue;
+                }
+
+                // Creates and mixed-kind runs stay in strict order. After one
+                // operation completes, the next pass can batch again.
+                if (await _board.TryDrainOneOutboxOperationAsync(cancellationToken))
+                {
+                    progressed = true;
+                    continue;
+                }
+
+                break;
             }
 
             if (await _board.TryPullRemoteMirrorAsync(cancellationToken))

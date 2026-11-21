@@ -16,8 +16,15 @@ public partial class App : Application
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        return new Window(new MainPage()) { Title = "Habitinator" };
+        var window = new Window(new MainPage()) { Title = "Habitinator" };
+        window.Stopped += OnWindowStopped;
+        window.Resumed += OnWindowResumed;
+        return window;
     }
+
+    private static void OnWindowStopped(object? sender, EventArgs e) => SetSyncActive(false);
+
+    private static void OnWindowResumed(object? sender, EventArgs e) => SetSyncActive(true);
 
     protected override void OnStart()
     {
@@ -43,6 +50,7 @@ public partial class App : Application
     protected override void OnResume()
     {
         base.OnResume();
+        SetSyncActive(true);
         // Re-subscribe after any sleep cycle. ConnectivityChanged is process-wide
         // and must stay wired for offline and online transitions.
         try
@@ -82,6 +90,19 @@ public partial class App : Application
         if (sp.GetService(typeof(BoardSyncCoordinator)) is BoardSyncCoordinator sync)
         {
             sync.RequestSync();
+        }
+    }
+
+    private static void SetSyncActive(bool active)
+    {
+        if (IPlatformApplication.Current?.Services is not IServiceProvider sp)
+        {
+            return;
+        }
+
+        if (sp.GetService(typeof(IBoardSyncRequestor)) is IBoardSyncRequestor sync)
+        {
+            sync.SetActive(active);
         }
     }
 

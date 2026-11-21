@@ -3,14 +3,18 @@ globalThis.HabitinatorBoardVisibility = (function () {
   let dotNetHelper = null;
 
   function onVisibilityChange() {
-    if (!dotNetHelper || document.visibilityState !== "visible") {
+    if (!dotNetHelper) {
       return;
     }
-    dotNetHelper.invokeMethodAsync("OnBecameVisible").catch(function () {});
+    if (document.visibilityState === "visible") {
+      dotNetHelper.invokeMethodAsync("OnBecameVisible").catch(function () {});
+    } else {
+      dotNetHelper.invokeMethodAsync("OnBecameHidden").catch(function () {});
+    }
   }
 
   function onOnline() {
-    if (!dotNetHelper) {
+    if (!dotNetHelper || document.visibilityState !== "visible") {
       return;
     }
     dotNetHelper.invokeMethodAsync("OnBecameVisible").catch(function () {});
@@ -21,6 +25,7 @@ globalThis.HabitinatorBoardVisibility = (function () {
       return;
     }
     dotNetHelper.invokeMethodAsync("OnWentOffline").catch(function () {});
+    dotNetHelper.invokeMethodAsync("OnBecameHidden").catch(function () {});
   }
 
   return {
@@ -29,6 +34,9 @@ globalThis.HabitinatorBoardVisibility = (function () {
       document.addEventListener("visibilitychange", onVisibilityChange);
       globalThis.addEventListener("online", onOnline);
       globalThis.addEventListener("offline", onOffline);
+      if (document.visibilityState !== "visible") {
+        dotNetRef.invokeMethodAsync("OnBecameHidden").catch(function () {});
+      }
     },
     stop: function () {
       document.removeEventListener("visibilitychange", onVisibilityChange);

@@ -11,12 +11,14 @@
 @code {
     private DotNetObjectReference<BoardRemoteNotifyBridge>? _dotNetRef;
     private bool _hubStarted;
+    private bool _visibilityStarted;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             PausePreference.PausedChanged += OnPauseChanged;
+            await StartVisibilityAsync();
             if (InitialBoardLoad.IsComplete)
             {
                 await StartHubAsync();
@@ -49,6 +51,40 @@
         });
     }
 
+    private async Task StartVisibilityAsync()
+    {
+        if (_visibilityStarted)
+        {
+            return;
+        }
+
+        _visibilityStarted = true;
+        _dotNetRef ??= DotNetObjectReference.Create(RefreshBridge);
+        try
+        {
+            await JS.InvokeVoidAsync(
+                "habitinatorLoadScript",
+                "_content/App.Shared.RCL/js/boardVisibility.js");
+            await JS.InvokeVoidAsync("HabitinatorBoardVisibility.start", _dotNetRef);
+        }
+        catch (JSDisconnectedException)
+        {
+            // Ignored during page navigation.
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignored during page navigation.
+        }
+        catch (InvalidOperationException)
+        {
+            // Ignored during page navigation.
+        }
+        catch (JSException)
+        {
+            // Ignored during page navigation.
+        }
+    }
+
     private async Task StartHubAsync()
     {
         if (_hubStarted || SyncStatus.IsPaused)
@@ -66,19 +102,19 @@
         }
         catch (JSDisconnectedException)
         {
-            // Ignored during page navigation
+            // Ignored during page navigation.
         }
         catch (TaskCanceledException)
         {
-            // Ignored during page navigation
+            // Ignored during page navigation.
         }
         catch (InvalidOperationException)
         {
-            // Ignored during page navigation
+            // Ignored during page navigation.
         }
         catch (JSException)
         {
-            // Ignored during page navigation
+            // Ignored during page navigation.
         }
     }
 
@@ -96,19 +132,19 @@
         }
         catch (JSDisconnectedException)
         {
-            // Ignored during page navigation
+            // Ignored during page navigation.
         }
         catch (JSException)
         {
-            // Ignored during page navigation
+            // Ignored during page navigation.
         }
         catch (TaskCanceledException)
         {
-            // Ignored during page navigation
+            // Ignored during page navigation.
         }
         catch (InvalidOperationException)
         {
-            // Ignored during page navigation
+            // Ignored during page navigation.
         }
     }
 
@@ -116,10 +152,41 @@
     {
         InitialBoardLoad.Completed -= OnInitialBoardLoadCompleted;
         PausePreference.PausedChanged -= OnPauseChanged;
+        await StopVisibilityAsync();
         await StopHubAsync();
 
         _dotNetRef?.Dispose();
         _dotNetRef = null;
+    }
+
+    private async Task StopVisibilityAsync()
+    {
+        if (!_visibilityStarted)
+        {
+            return;
+        }
+
+        _visibilityStarted = false;
+        try
+        {
+            await JS.InvokeVoidAsync("HabitinatorBoardVisibility.stop");
+        }
+        catch (JSDisconnectedException)
+        {
+            // Ignored during page navigation.
+        }
+        catch (JSException)
+        {
+            // Ignored during page navigation.
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignored during page navigation.
+        }
+        catch (InvalidOperationException)
+        {
+            // Ignored during page navigation.
+        }
     }
 
 }

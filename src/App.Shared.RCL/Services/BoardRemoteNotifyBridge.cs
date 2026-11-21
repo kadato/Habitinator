@@ -22,12 +22,15 @@ public sealed class BoardRemoteNotifyBridge(IRemoteBoardRefreshService refresh, 
     {
         try
         {
+            var requestor = services.GetService<IBoardSyncRequestor>();
+            requestor?.SetActive(true);
+
             var paused = services.GetService<IBoardSyncStatus>()?.IsPaused
                 ?? services.GetService<BoardSyncStatus>()?.IsPaused
                 ?? false;
             if (!paused)
             {
-                services.GetService<IBoardSyncRequestor>()?.RequestSync();
+                requestor?.RequestSync();
             }
         }
         catch
@@ -36,6 +39,19 @@ public sealed class BoardRemoteNotifyBridge(IRemoteBoardRefreshService refresh, 
         }
 
         await refresh.NotifyFromRemoteAsync();
+    }
+
+    [JSInvokable]
+    public void OnBecameHidden()
+    {
+        try
+        {
+            services.GetService<IBoardSyncRequestor>()?.SetActive(false);
+        }
+        catch
+        {
+            // Best effort. The next visibility event corrects the state.
+        }
     }
 
     [JSInvokable]

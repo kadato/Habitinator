@@ -13,6 +13,12 @@ public interface IBoardSyncRequestor
 
     /// <summary>Drains pending operations and pulls the mirror now, so reads after a mutation see the mirror.</summary>
     Task SyncNowAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Pauses background pull and drain while the app is hidden or backgrounded.
+    ///     The app calls SetActive(true) when it returns to the foreground.
+    /// </summary>
+    void SetActive(bool active);
 }
 
 public interface IBoardLocalStoreLifecycle
@@ -40,4 +46,8 @@ public sealed class NoOpBoardSyncRequestor : IBoardSyncRequestor
     }
 
     public Task SyncNowAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+    public void SetActive(bool active)
+    {
+    }
 }

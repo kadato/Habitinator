@@ -17,8 +17,7 @@ internal static class AiApiRoutes
         var aiApi = endpoints.MapGroup("/api/ai")
             .DisableAntiforgery()
             .RequireAuthorization("BoardOrJwt")
-            .RequireRateLimiting("api")
-            .WithDtoValidation();
+            .RequireRateLimiting("api");
 
         aiApi.MapPost("/test", TestConnectionAsync);
         aiApi.MapPost("/chat", ChatAsync);

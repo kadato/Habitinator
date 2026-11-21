@@ -1,6 +1,9 @@
+using Microsoft.Extensions.Validation;
+
 namespace App.Shared.RCL.Models;
 
 /// <summary>User preferences for in-app toasts and local device notifications where supported. JSON-serializable.</summary>
+[ValidatableType]
 public sealed class NotificationSettings
 {
     public bool InAppMessagesEnabled { get; set; } = true;

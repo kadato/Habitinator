@@ -27,15 +27,15 @@ internal static class AuthApiRoutes
 
     private static void MapRegisterEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/register", RegisterAsync).DisableAntiforgery().RequireRateLimiting("auth").WithDtoValidation();
+        endpoints.MapPost("/api/auth/register", RegisterAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapPost("/api/auth/register-form", RegisterFormAsync).DisableAntiforgery().RequireRateLimiting("auth");
-        endpoints.MapPost("/api/auth/forgot-password", ForgotPasswordAsync).DisableAntiforgery().RequireRateLimiting("auth").WithDtoValidation();
-        endpoints.MapPost("/api/auth/reset-password", ResetPasswordAsync).DisableAntiforgery().RequireRateLimiting("auth").WithDtoValidation();
+        endpoints.MapPost("/api/auth/forgot-password", ForgotPasswordAsync).DisableAntiforgery().RequireRateLimiting("auth");
+        endpoints.MapPost("/api/auth/reset-password", ResetPasswordAsync).DisableAntiforgery().RequireRateLimiting("auth");
     }
 
     private static void MapLoginEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/login", LoginAsync).DisableAntiforgery().RequireRateLimiting("auth").WithDtoValidation();
+        endpoints.MapPost("/api/auth/login", LoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapPost("/api/auth/guest-jwt", GuestJwtLoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapPost("/api/auth/guest-login", GuestLoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapPost("/api/auth/cookie-login", CookieLoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
@@ -45,7 +45,7 @@ internal static class AuthApiRoutes
 
     private static void MapAccountEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/account/change-password", ChangePasswordAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api").WithDtoValidation();
+        endpoints.MapPost("/api/account/change-password", ChangePasswordAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api");
         endpoints.MapPost("/api/account/delete", DeleteAccountAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api");
         endpoints.MapGet("/api/account/export", ExportDataAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api");
         endpoints.MapPost("/api/account/import", ImportDataAsync).RequireAuthorization(BoardOrJwtPolicy).DisableAntiforgery().RequireRateLimiting("api");

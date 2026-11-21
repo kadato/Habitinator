@@ -195,6 +195,7 @@ public static class DependencyInjectionExtensions
         services.AddSingleton<LoggingEmailSender>();
         services.AddSingleton<SmtpEmailSender>();
         services.AddHttpClient();
+        services.AddSharedValidation();
         services.AddValidation();
 
         return services;

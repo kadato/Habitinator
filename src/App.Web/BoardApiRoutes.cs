@@ -23,8 +23,7 @@ internal static class BoardApiRoutes
         var boardApi = app.MapGroup("/api/board")
             .DisableAntiforgery()
             .RequireAuthorization("BoardOrJwt")
-            .RequireRateLimiting("api")
-            .WithDtoValidation();
+            .RequireRateLimiting("api");
 
         MapReadRoutes(boardApi);
         MapGeneralMutationRoutes(boardApi);

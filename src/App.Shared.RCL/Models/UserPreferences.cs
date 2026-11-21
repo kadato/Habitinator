@@ -1,6 +1,9 @@
+using Microsoft.Extensions.Validation;
+
 namespace App.Shared.RCL.Models;
 
 /// <summary>User profile preferences that affect display and scheduling.</summary>
+[ValidatableType]
 public sealed class UserPreferences
 {
     public const string DefaultDateFormat = "yyyy/MM/dd";

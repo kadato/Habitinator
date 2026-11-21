@@ -1,7 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 
+using Microsoft.Extensions.Validation;
+
 namespace App.Shared.RCL.Models;
 
+[ValidatableType]
 public sealed record RegisterRequest(
     [Required, EmailAddress] string Email,
     [Required] string Password);
@@ -26,6 +29,7 @@ public sealed record RegistrationResult(bool Succeeded, IReadOnlyList<string>? E
     }
 }
 
+[ValidatableType]
 public sealed record LoginRequest(
     [Required, EmailAddress] string Email,
     [Required] string Password,
@@ -33,14 +37,17 @@ public sealed record LoginRequest(
 
 public sealed record LoginResponse(string AccessToken, string Email);
 
+[ValidatableType]
 public sealed record ForgotPasswordRequest(
     [Required, EmailAddress] string Email);
 
+[ValidatableType]
 public sealed record ResetPasswordRequest(
     [Required, EmailAddress] string Email,
     [Required] string Token,
     [Required, MinLength(8)] string NewPassword);
 
+[ValidatableType]
 public sealed record CreateMcpTokenRequest(int? Days = 90, string? Label = null, string? Scope = "full");
 
 public sealed record CreateMcpTokenResponse(

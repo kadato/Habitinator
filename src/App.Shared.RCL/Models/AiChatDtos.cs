@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Validation;
+
 namespace App.Shared.RCL.Models;
 
 public sealed class AiChatMessage
@@ -56,6 +58,7 @@ public sealed class AiToolExecution
     public bool IsSuccess { get; set; } = true;
 }
 
+[ValidatableType]
 public sealed class AiChatRequest
 {
     public List<AiChatMessage> Messages { get; set; } = [];
@@ -82,6 +85,7 @@ public sealed class AiChatResponse
     public List<AiToolExecution> ToolExecutions { get; set; } = [];
 }
 
+[ValidatableType]
 public sealed class AiTestConnectionRequest
 {
     public string Endpoint { get; set; } = string.Empty;

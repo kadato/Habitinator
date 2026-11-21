@@ -74,6 +74,14 @@ public sealed class BoardSyncDeltaService(
         }
         var (changed, truncated) = BuildChangedPage(newer, boundary, limit);
 
+        // When no rows changed, skip the user day-context read and streak query.
+        // Idle sync polls then cost one indexed query instead of three.
+        if (changed.Count == 0)
+        {
+            AppTelemetry.RecordSyncDelta(0, 0);
+            return new BoardSyncDelta([], [], cursorTs.ToString("O"));
+        }
+
         var (today, dayStart) = await TodayAndDayStartAsync(userId, cancellationToken);
         var dailyRows = changed.Where(x => x.DeletedAtUtc is null && x.Section == BoardSection.Daily).ToList();
         var dailyStreaks = await streakCalculator.BuildDailyStreakMapAsync(userId, dailyRows, today, dayStart, readDb, cancellationToken);
@@ -98,13 +106,13 @@ public sealed class BoardSyncDeltaService(
         CancellationToken cancellationToken)
     {
         // Watermark per row: deletion time for tombstones, update time otherwise.
-        // Same-watermark rows are resolved in memory by id so no Guid ordering
-        // comparison is pushed to the database provider.
+        // The ?? form translates to COALESCE, which matches the functional index
+        // added in migration AddBoardSyncEffectiveUpdatedAtIndex.
         return await readDb.BoardItems
             .AsNoTracking()
             .Where(x => x.UserId == userId
-                        && (x.DeletedAtUtc != null ? x.DeletedAtUtc.Value : x.UpdatedAtUtc) > cursorTs)
-            .OrderBy(x => x.DeletedAtUtc != null ? x.DeletedAtUtc.Value : x.UpdatedAtUtc)
+                        && (x.DeletedAtUtc ?? x.UpdatedAtUtc) > cursorTs)
+            .OrderBy(x => x.DeletedAtUtc ?? x.UpdatedAtUtc)
             .ThenBy(x => x.Id)
             .Take(limit + 1)
             .ToListAsync(cancellationToken);
@@ -129,7 +137,7 @@ public sealed class BoardSyncDeltaService(
         var sameWatermark = await readDb.BoardItems
             .AsNoTracking()
             .Where(x => x.UserId == userId
-                        && (x.DeletedAtUtc != null ? x.DeletedAtUtc.Value : x.UpdatedAtUtc) == cursorTs)
+                        && (x.DeletedAtUtc ?? x.UpdatedAtUtc) == cursorTs)
             .OrderBy(x => x.Id)
             .Take(take)
             .ToListAsync(cancellationToken);

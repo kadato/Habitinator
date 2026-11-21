@@ -7,6 +7,11 @@ namespace App.Web.Data;
 public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
     : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>(options)
 {
+    // A compiled model lives in Data/CompiledModels. EF discovers it through the
+    // [DbContextModel] assembly attribute. Regenerate the model after an entity or
+    // configuration change:
+    //   dotnet ef dbcontext optimize --project src/App.Web --startup-project src/App.Web \
+    //     --output-dir Data/CompiledModels --namespace App.Web.Data.CompiledModels
     public DbSet<BoardItemEntity> BoardItems => Set<BoardItemEntity>();
 
     public DbSet<BoardRequestIdempotencyEntity> BoardRequestIdempotencies => Set<BoardRequestIdempotencyEntity>();

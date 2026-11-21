@@ -31,6 +31,9 @@ public abstract class LocalFirstSettingsServiceBase<TSettings> : ISettingsSyncFl
     private readonly string _storageKey;
     private readonly string _apiEndpoint;
     private readonly JsonSerializerOptions _serializerOptions;
+    private readonly SemaphoreSlim _flushGate = new(1, 1);
+    private int _saveVersion;
+    private DateTime _lastRefreshStartedUtc = DateTime.MinValue;
 
     public event EventHandler? Changed;
 
@@ -75,13 +78,24 @@ public abstract class LocalFirstSettingsServiceBase<TSettings> : ISettingsSyncFl
 
         if (_sessionProvider.IsLoggedIn && !IsPaused())
         {
-            _ = TryFlushPendingAsync(cancellationToken);
-            _store.RefreshInBackground(
-                key,
-                localSettings,
-                FetchRemoteAsync,
-                () => Changed?.Invoke(this, EventArgs.Empty),
-                cancellationToken);
+            var pending = HasPending();
+            if (pending)
+            {
+                _ = FlushPendingInBackgroundAsync();
+            }
+            else if (DateTime.UtcNow - _lastRefreshStartedUtc >= TimeSpan.FromSeconds(2))
+            {
+                // Several startup consumers read the same settings, so one remote
+                // refresh serves them all. A pending local save is newer than
+                // anything the server can return, so the code skips the refresh.
+                _lastRefreshStartedUtc = DateTime.UtcNow;
+                _store.RefreshInBackground(
+                    key,
+                    localSettings,
+                    FetchRemoteAsync,
+                    () => Changed?.Invoke(this, EventArgs.Empty),
+                    cancellationToken);
+            }
         }
 
         return Task.FromResult(localSettings);
@@ -94,33 +108,18 @@ public abstract class LocalFirstSettingsServiceBase<TSettings> : ISettingsSyncFl
 
         if (_sessionProvider.IsLoggedIn)
         {
-            if (IsPaused())
-            {
-                // Sync now flushes queued settings through FlushPendingAsync.
-                PersistPending(settings);
-            }
-            else
-            {
-                var ok = await LocalFirstSaves.TryPutAsync(
-                    Client,
-                    _apiEndpoint,
-                    settings,
-                    _serializerOptions,
-                    _logger,
-                    cancellationToken).ConfigureAwait(false);
-                if (!ok)
-                {
-                    PersistPending(settings);
-                }
-                else
-                {
-                    ClearPending();
-                    _ = TryFlushPendingAsync(cancellationToken);
-                }
-            }
+            // Write the change to local storage before returning so a crash
+            // cannot lose it. The server write runs in the background.
+            Interlocked.Increment(ref _saveVersion);
+            PersistPending(settings);
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
+
+        if (_sessionProvider.IsLoggedIn && !IsPaused())
+        {
+            _ = FlushPendingInBackgroundAsync();
+        }
     }
 
     private void PersistPending(TSettings settings)
@@ -147,49 +146,72 @@ public abstract class LocalFirstSettingsServiceBase<TSettings> : ISettingsSyncFl
         }
     }
 
-    private async Task TryFlushPendingAsync(CancellationToken cancellationToken)
+    private async Task FlushPendingInBackgroundAsync()
     {
-        await FlushPendingAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await FlushPendingAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Background settings flush failed.");
+        }
     }
 
     public async Task FlushPendingAsync(CancellationToken cancellationToken = default)
     {
-        string? raw;
+        await _flushGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            raw = _localStore.Read(GetPendingKey());
-        }
-        catch
-        {
-            return;
-        }
+            var version = Volatile.Read(ref _saveVersion);
+            string? raw;
+            try
+            {
+                raw = _localStore.Read(GetPendingKey());
+            }
+            catch
+            {
+                return;
+            }
 
-        if (string.IsNullOrEmpty(raw))
-        {
-            return;
-        }
+            if (string.IsNullOrEmpty(raw))
+            {
+                return;
+            }
 
-        TSettings pending;
-        try
-        {
-            pending = _deserialize(raw);
-        }
-        catch
-        {
-            ClearPending();
-            return;
-        }
+            TSettings pending;
+            try
+            {
+                pending = _deserialize(raw);
+            }
+            catch
+            {
+                ClearPending();
+                return;
+            }
 
-        var ok = await LocalFirstSaves.TryPutAsync(
-            Client,
-            _apiEndpoint,
-            pending,
-            _serializerOptions,
-            _logger,
-            cancellationToken).ConfigureAwait(false);
-        if (ok)
+            var ok = await LocalFirstSaves.TryPutAsync(
+                Client,
+                _apiEndpoint,
+                pending,
+                _serializerOptions,
+                _logger,
+                cancellationToken).ConfigureAwait(false);
+            if (ok && version == Volatile.Read(ref _saveVersion))
+            {
+                ClearPending();
+            }
+        }
+        finally
         {
-            ClearPending();
+            try
+            {
+                _flushGate.Release();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Shutdown disposed the gate while a flush was running.
+            }
         }
     }
 
@@ -233,6 +255,7 @@ public abstract class LocalFirstSettingsServiceBase<TSettings> : ISettingsSyncFl
         {
             _sessionProvider.Changed -= OnSessionChanged;
             _store.Dispose();
+            _flushGate.Dispose();
         }
     }
 

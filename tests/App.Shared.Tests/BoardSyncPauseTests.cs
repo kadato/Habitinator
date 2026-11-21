@@ -218,6 +218,82 @@ public sealed class BoardSyncPauseTests
     }
 
     [Fact]
+    public async Task SettingsSave_ReturnsBeforeTheServerWrite_AndAppliesTheChangeImmediately()
+    {
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handler = new AsyncSettingsHandler(async (_, ct) =>
+        {
+            await gate.Task.WaitAsync(ct);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var store = new StubSettingsStore([]);
+        var settings = new TestSettingsService(
+            new StubSettingsHttpFactory(handler),
+            new FakeSession(),
+            store,
+            NullLogger<TestSettingsService>.Instance);
+        var changed = 0;
+        settings.Changed += (_, _) => changed++;
+
+        var saveTask = settings.SaveAsync(new UserPreferences(), CancellationToken.None);
+        await handler.RequestStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        saveTask.IsCompleted.Should().BeTrue("the caller must not wait for the server write");
+        changed.Should().Be(1);
+        settings.HasPending().Should().BeTrue();
+
+        gate.SetResult();
+        for (var i = 0; i < 50 && settings.HasPending(); i++)
+        {
+            await Task.Delay(20);
+        }
+
+        settings.HasPending().Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SettingsRead_SkipsTheRemoteFetchWhileALocalSaveIsPending()
+    {
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var getCount = 0;
+        var handler = new AsyncSettingsHandler(async (request, ct) =>
+        {
+            if (request.Method == HttpMethod.Get)
+            {
+                Interlocked.Increment(ref getCount);
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        JsonSerializer.Serialize(new UserPreferences { DisplayName = "Stale remote" }, JsonDefaults.Api),
+                        Encoding.UTF8,
+                        "application/json")
+                };
+            }
+
+            await gate.Task.WaitAsync(ct);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var store = new StubSettingsStore([]);
+        var settings = new TestSettingsService(
+            new StubSettingsHttpFactory(handler),
+            new FakeSession(),
+            store,
+            NullLogger<TestSettingsService>.Instance);
+        var local = new UserPreferences { DisplayName = "Local" };
+
+        var saveTask = settings.SaveAsync(local, CancellationToken.None);
+        await handler.RequestStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        saveTask.IsCompleted.Should().BeTrue();
+
+        var read = await settings.GetAsync(CancellationToken.None);
+
+        read.DisplayName.Should().Be("Local");
+        Volatile.Read(ref getCount).Should().Be(0);
+
+        gate.SetResult();
+    }
+
+    [Fact]
     public async Task ActivityLog_WhenPaused_QueuesLocallyWithoutNetwork()
     {
         var handler = new CountingHandler();
@@ -522,9 +598,21 @@ public sealed class BoardSyncPauseTests
         }
     }
 
-    private sealed class StubSettingsHttpFactory(CountingHandler handler) : IHttpClientFactory
+    private sealed class StubSettingsHttpFactory(HttpMessageHandler handler) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) => new(handler) { BaseAddress = new Uri("https://test.local/") };
+    }
+
+    private sealed class AsyncSettingsHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> responder)
+        : HttpMessageHandler
+    {
+        public TaskCompletionSource RequestStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            RequestStarted.TrySetResult();
+            return responder(request, cancellationToken);
+        }
     }
 
     private sealed class FakeSession : IClientSessionProvider

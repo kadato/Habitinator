@@ -29,7 +29,6 @@ public partial class MainBoard : IAsyncDisposable
     private bool _dailyRetroClientReady;
     private bool _boardClientScriptsStarted;
     private bool _shortcutsEnabled = true;
-    private DotNetObjectReference<BoardRemoteNotifyBridge>? _visibilityRef;
     private DotNetObjectReference<MainBoard>? _selfRef;
     private ElementReference _swipeAreaRef;
     private bool? _isMobileViewport;
@@ -229,7 +228,7 @@ public partial class MainBoard : IAsyncDisposable
         try
         {
             await EnsureAuthReadyAsync();
-            await LoadAsync(LoadBoardAsync);
+            await LoadAsync(() => LoadBoardAsync());
             if (_loadError is not null)
             {
                 _initialLoadComplete = true;
@@ -402,7 +401,10 @@ public partial class MainBoard : IAsyncDisposable
         try
         {
             await LoadBoardAsync();
-            await RefreshStreaksAsync();
+            // The pulled mirror already has server counters. A streak read
+            // corrects streaks that decayed. Run it outside the callback so
+            // other refresh subscribers are not queued behind it.
+            _ = RefreshStreaksAsync();
         }
         catch
         {
@@ -442,12 +444,9 @@ public partial class MainBoard : IAsyncDisposable
                 _swipeInitialized = false;
             }
             await SafeInvokeVoidAsync("HabitinatorBoardViewport.unwatch");
-            await SafeInvokeVoidAsync("HabitinatorBoardVisibility.stop");
             await SafeInvokeVoidAsync("HabitinatorKeyboardShortcuts.stop");
         }
 
-        _visibilityRef?.Dispose();
-        _visibilityRef = null;
         _selfRef?.Dispose();
         _selfRef = null;
         _subscription.Dispose();
@@ -566,15 +565,16 @@ public partial class MainBoard : IAsyncDisposable
     private async Task StartBoardClientScriptsAsync()
     {
         _boardClientScriptsStarted = true;
+
+        // The retro prompt reads local state only, so it starts before the board
+        // scripts load. A script fetch or viewport setup delay then cannot hold
+        // up the prompt.
+        _dailyRetroClientReady = true;
+        _ = InvokeAsync(OpenRetroPromptAsync);
+        _ = RefreshStreaksAsync();
+
         try
         {
-            await JS.InvokeVoidAsync(
-                HabitinatorLoadScriptFunction,
-                "_content/App.Shared.RCL/js/boardVisibility.js");
-
-            _visibilityRef = DotNetObjectReference.Create(BoardNotifyBridge);
-            await JS.InvokeVoidAsync("HabitinatorBoardVisibility.start", _visibilityRef);
-
             _selfRef = DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("HabitinatorKeyboardShortcuts.start", _selfRef);
 
@@ -597,12 +597,6 @@ public partial class MainBoard : IAsyncDisposable
                 // The pre-interactive render used the desktop branch. Mount the mobile branch now.
                 await InvokeAsync(StateHasChanged);
             }
-
-            _dailyRetroClientReady = true;
-            _ = RefreshStreaksAsync();
-            // The retro dialog is post-paint work. Open it off the render path
-            // so swipe and viewport setup stay responsive.
-            _ = OpenRetroAfterScriptsAsync();
         }
         catch (JSDisconnectedException)
         {
@@ -622,7 +616,7 @@ public partial class MainBoard : IAsyncDisposable
         }
     }
 
-    private async Task OpenRetroAfterScriptsAsync()
+    private async Task OpenRetroPromptAsync()
     {
         try
         {
@@ -704,7 +698,7 @@ public partial class MainBoard : IAsyncDisposable
 
     private async Task RetryLoadAsync()
     {
-        await LoadAsync(LoadBoardAsync);
+        await LoadAsync(() => LoadBoardAsync());
         if (_loadError is null && _dailyRetroClientReady)
         {
             await TryOpenDailyYesterdayRetroIfNeededAsync();
@@ -732,9 +726,11 @@ public partial class MainBoard : IAsyncDisposable
         }
     }
 
-    private async Task LoadBoardAsync()
+    private async Task LoadBoardAsync(bool usePrerenderedState = true)
     {
-        if (ApplicationState.TryTakeFromJson<BoardSnapshot>("board_snapshot", out var restored) && restored is not null)
+        if (usePrerenderedState
+            && ApplicationState.TryTakeFromJson<BoardSnapshot>("board_snapshot", out var restored)
+            && restored is not null)
         {
             Habits = restored.Habits.ToList();
             Dailies = restored.Dailies.ToList();
@@ -929,6 +925,43 @@ public partial class MainBoard : IAsyncDisposable
         await LoadBoardAsync();
     }
 
+    /// <summary>
+    ///     Waits for the first board pull so the retro prompt reads a mirror that
+    ///     has already dropped the rows deleted on the server. A slow or offline
+    ///     sync gives up after a few seconds and the prompt uses the local mirror.
+    /// </summary>
+    private async Task WaitForInitialSyncAsync()
+    {
+        if (BoardSync.IsPaused || BoardSync.IsOffline || BoardSync.LastSyncedUtc is not null)
+        {
+            return;
+        }
+
+        var synced = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        void OnChanged(object? sender, EventArgs e)
+        {
+            if (BoardSync.LastSyncedUtc is not null || BoardSync.IsOffline)
+            {
+                synced.TrySetResult();
+            }
+        }
+
+        BoardSync.Changed += OnChanged;
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await synced.Task.WaitAsync(cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Slow or offline. The local mirror is the best data available.
+        }
+        finally
+        {
+            BoardSync.Changed -= OnChanged;
+        }
+    }
+
     private async Task TryOpenDailyYesterdayRetroIfNeededAsync()
     {
         if (_dailyRetroSessionOffered)
@@ -948,25 +981,13 @@ public partial class MainBoard : IAsyncDisposable
                 return;
             }
 
-            // The board renders from the local mirror first. A check-in done on
-            // another device, for example the web page, reaches this device only
-            // through sync. Pull before deciding so yesterday's work that is
-            // already done elsewhere does not prompt again here.
-            if (!BoardSync.IsPaused)
-            {
-                try
-                {
-                    using var syncCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                    await BoardSyncRequestor.SyncNowAsync(syncCts.Token);
-                    await LoadBoardAsync();
-                    prefs = await PreferencesService.GetAsync();
-                    today = DailySchedule.LocalToday(TimeZoneService, prefs.DayStartLocalTime);
-                }
-                catch
-                {
-                    // The device is offline or slow. Fall through with the local mirror.
-                }
-            }
+            // The coordinator pulls once right after the first board load, and that
+            // pull drops rows the server deleted. Wait for it, then reload the local
+            // mirror so a demo reseed or a delete from another device cannot offer a
+            // daily the server no longer has. The wait is capped so a slow network
+            // never holds the prompt for long.
+            await WaitForInitialSyncAsync();
+            await LoadBoardAsync(usePrerenderedState: false);
 
             var missed = DailySchedule.GetYesterdayUncompletedDailies(Dailies, today, TimeZoneService);
             if (missed.Count == 0)
@@ -998,32 +1019,16 @@ public partial class MainBoard : IAsyncDisposable
             {
                 _lastLocalMutationTime = DateTimeOffset.UtcNow;
 
-                // Paint the local mirror first. The retro dialog already wrote
-                // the completions locally. GetStreakMapAsync keeps pending
-                // outbox rows on the local Counter. Board and streaks show
-                // the check-in instantly even when the network sync runs slow.
+                // The dialog already wrote the completions to the local mirror
+                // and moved the local Counter with them. Paint that at once.
+                // The server-corrected streak arrives when the outbox sync
+                // returns, so the visible result never waits on the sync.
                 await LoadBoardAsync();
-                await RefreshStreaksAsync();
+                _ = SyncAfterRetroAsync();
                 await InvokeAsync(StateHasChanged);
 
                 var label = committed.Count == 1 ? "1 daily" : $"{committed.Count} dailies";
                 await Notifier.NotifyAsync($"You logged {label} for yesterday.", Severity.Success);
-
-                if (!BoardSync.IsPaused)
-                {
-                    try
-                    {
-                        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                        await BoardSyncRequestor.SyncNowAsync(cts.Token);
-                    }
-                    catch
-                    {
-                        // If offline, rely on periodic sync.
-                    }
-
-                    await LoadBoardAsync();
-                    await RefreshStreaksAsync();
-                }
             }
             else
             {
@@ -1034,6 +1039,45 @@ public partial class MainBoard : IAsyncDisposable
         catch (Exception)
         {
             _dailyRetroSessionOffered = false;
+        }
+    }
+
+    /// <summary>
+    ///     Drains the retro completions and repaints the counters the server
+    ///     calculated. Runs after the dialog closes so the Save button never
+    ///     waits for the network. Each drained operation patches its local row
+    ///     with the server streak, so one local read is enough and no extra
+    ///     streak call is needed.
+    /// </summary>
+    private async Task SyncAfterRetroAsync()
+    {
+        if (BoardSync.IsPaused)
+        {
+            return;
+        }
+
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            await BoardSyncRequestor.SyncNowAsync(cts.Token);
+        }
+        catch
+        {
+            // Offline or slow. The periodic sync retries. A partial drain
+            // patched the rows it delivered, so the repaint runs either way.
+        }
+
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                await LoadBoardAsync();
+                StateHasChanged();
+            });
+        }
+        catch
+        {
+            // The board was disposed while the sync ran.
         }
     }
 

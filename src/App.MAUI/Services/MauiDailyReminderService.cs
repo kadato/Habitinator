@@ -28,6 +28,8 @@ public sealed partial class MauiDailyReminderService : IDisposable
     private readonly IClock _clock;
     private readonly RemoteBoardRefreshService? _remoteRefresh;
     private readonly SemaphoreSlim _syncGate = new(1, 1);
+    private int _syncRequested;
+    private int _syncLoopRunning;
 
     public MauiDailyReminderService(
         INotificationSettingsService notificationSettings,
@@ -59,32 +61,50 @@ public sealed partial class MauiDailyReminderService : IDisposable
         return SynchronizeAsync();
     }
 
-    private void OnBoardMutated(object? sender, EventArgs e)
+    private void OnBoardMutated(object? sender, EventArgs e) => RequestSynchronize();
+
+    private void OnSettingsChanged(object? sender, EventArgs e) => RequestSynchronize();
+
+    /// <summary>
+    ///     Coalesces bursts of board mutations into one reschedule. A bulk
+    ///     move or delete used to queue one full reschedule per item.
+    /// </summary>
+    private void RequestSynchronize()
     {
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await SynchronizeAsync().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogTrace(ex, "Failed to reschedule daily reminder after board mutation.");
-            }
-        });
+        Interlocked.Exchange(ref _syncRequested, 1);
+        StartSyncLoopIfIdle();
     }
 
-    private void OnSettingsChanged(object? sender, EventArgs e)
+    private void StartSyncLoopIfIdle()
     {
+        if (Interlocked.CompareExchange(ref _syncLoopRunning, 1, 0) != 0)
+        {
+            return;
+        }
+
         _ = Task.Run(async () =>
         {
             try
             {
-                await SynchronizeAsync().ConfigureAwait(false);
+                do
+                {
+                    Interlocked.Exchange(ref _syncRequested, 0);
+                    await Task.Delay(200).ConfigureAwait(false);
+                    await SynchronizeAsync().ConfigureAwait(false);
+                }
+                while (Interlocked.CompareExchange(ref _syncRequested, 0, 0) == 1);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to reschedule daily reminder after settings change.");
+                _logger.LogTrace(ex, "Failed to reschedule daily reminder.");
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _syncLoopRunning, 0);
+                if (Volatile.Read(ref _syncRequested) == 1)
+                {
+                    StartSyncLoopIfIdle();
+                }
             }
         });
     }

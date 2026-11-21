@@ -1,5 +1,7 @@
 #pragma warning disable MUD0012
 
+using System.Text.RegularExpressions;
+
 using App.Shared.RCL.Components;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
@@ -17,7 +19,7 @@ using NSubstitute;
 
 namespace App.Shared.RCL.Tests;
 
-public sealed class UpcomingPanelTests : IAsyncDisposable
+public sealed partial class UpcomingPanelTests : IAsyncDisposable
 {
     private readonly BunitContext _ctx = new();
     private readonly IBoardDataService _boardData = Substitute.For<IBoardDataService>();
@@ -214,10 +216,13 @@ public sealed class UpcomingPanelTests : IAsyncDisposable
 
     private static DateOnly ExtractDate(string? ariaLabel)
     {
-        var match = System.Text.RegularExpressions.Regex.Match(ariaLabel ?? string.Empty, @"\d{4}-\d{2}-\d{2}");
+        var match = DatePattern().Match(ariaLabel ?? string.Empty);
         match.Success.Should().BeTrue("cell aria-label should contain the formatted date");
         return DateOnly.Parse(match.Value, System.Globalization.CultureInfo.InvariantCulture);
     }
+
+    [GeneratedRegex(@"\d{4}-\d{2}-\d{2}")]
+    private static partial Regex DatePattern();
 
     [Fact]
     public void Ignores_Invalid_Persisted_Values()

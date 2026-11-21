@@ -29,13 +29,13 @@ public sealed class StaticCacheHeadersMiddleware(RequestDelegate next)
 
                 if (ImmutablePrefixes.Any(prefix => path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
                 {
-                    context.Response.Headers["Cache-Control"] = "public, max-age=31536000, immutable";
+                    context.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
                     return Task.CompletedTask;
                 }
 
                 if (IsDiscoveryFile(path))
                 {
-                    context.Response.Headers["Cache-Control"] = "public, max-age=3600";
+                    context.Response.Headers.CacheControl = "public, max-age=3600";
                 }
 
                 return Task.CompletedTask;

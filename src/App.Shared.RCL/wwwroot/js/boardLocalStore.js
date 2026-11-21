@@ -107,8 +107,8 @@ globalThis.habBoardStore = (function () {
   }
 
   function toTs(val) {
-    var n = parseInt(val, 10);
-    return isNaN(n) ? 0 : n;
+    var n = Number.parseInt(val, 10);
+    return Number.isNaN(n) ? 0 : n;
   }
 
   function lsGetTs() {

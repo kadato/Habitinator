@@ -46,7 +46,7 @@ public sealed class StatsCacheInvalidationTests
         var item = SampleItem(BoardSection.Habit, Guid.NewGuid());
         var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(item, options: JsonDefaults.Api) };
         var factory = CreateFactory(response);
-        var service = new RemoteBoardDataService(factory, null, stats);
+        var service = new RemoteBoardDataService(factory, stats);
 
         await service.CreateItemAsync(BoardSection.Habit, "Test", item.Id, Guid.NewGuid());
 
@@ -60,7 +60,7 @@ public sealed class StatsCacheInvalidationTests
         var item = SampleItem(BoardSection.Daily, Guid.NewGuid());
         var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(item, options: JsonDefaults.Api) };
         var factory = CreateFactory(response);
-        var service = new RemoteBoardDataService(factory, null, stats);
+        var service = new RemoteBoardDataService(factory, stats);
 
         await service.ToggleItemAsync(BoardSection.Daily, item.Id, Guid.NewGuid(), DateTimeOffset.UtcNow);
 
@@ -74,7 +74,7 @@ public sealed class StatsCacheInvalidationTests
         var item = SampleItem(BoardSection.Todo, Guid.NewGuid());
         var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(item, options: JsonDefaults.Api) };
         var factory = CreateFactory(response);
-        var service = new RemoteBoardDataService(factory, null, stats);
+        var service = new RemoteBoardDataService(factory, stats);
 
         await service.ToggleItemAsync(BoardSection.Todo, item.Id, Guid.NewGuid(), DateTimeOffset.UtcNow);
 
@@ -88,7 +88,7 @@ public sealed class StatsCacheInvalidationTests
         var item = SampleItem(BoardSection.Daily, Guid.NewGuid());
         var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(item, options: JsonDefaults.Api) };
         var factory = CreateFactory(response);
-        var service = new RemoteBoardDataService(factory, null, stats);
+        var service = new RemoteBoardDataService(factory, stats);
 
         await service.CompleteDailyForDateAsync(item.Id, DateOnly.FromDateTime(DateTime.UtcNow), Guid.NewGuid(), DateTimeOffset.UtcNow);
 
@@ -102,7 +102,7 @@ public sealed class StatsCacheInvalidationTests
         var item = SampleItem(BoardSection.Habit, Guid.NewGuid());
         var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(item, options: JsonDefaults.Api) };
         var factory = CreateFactory(response);
-        var service = new RemoteBoardDataService(factory, null, stats);
+        var service = new RemoteBoardDataService(factory, stats);
 
         await service.IncrementHabitPlusAsync(item.Id, Guid.NewGuid(), DateTimeOffset.UtcNow);
 
@@ -116,7 +116,7 @@ public sealed class StatsCacheInvalidationTests
         var item = SampleItem(BoardSection.Habit, Guid.NewGuid());
         var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(item, options: JsonDefaults.Api) };
         var factory = CreateFactory(response);
-        var service = new RemoteBoardDataService(factory, null, stats);
+        var service = new RemoteBoardDataService(factory, stats);
 
         await service.IncrementHabitMinusAsync(item.Id, Guid.NewGuid(), DateTimeOffset.UtcNow);
 
@@ -130,7 +130,7 @@ public sealed class StatsCacheInvalidationTests
         var item = SampleItem(BoardSection.Habit, Guid.NewGuid());
         var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(item, options: JsonDefaults.Api) };
         var factory = CreateFactory(response);
-        var service = new RemoteBoardDataService(factory, null, stats);
+        var service = new RemoteBoardDataService(factory, stats);
 
         await service.UpdateHabitAsync(item.Id, new UpdateHabitArgs("New", null, null, true, true, HabitResetPeriod.Daily, 1, 0, null, null), Guid.NewGuid(), DateTimeOffset.UtcNow);
 
@@ -144,7 +144,7 @@ public sealed class StatsCacheInvalidationTests
         var item = SampleItem(BoardSection.Habit, Guid.NewGuid());
         var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(item, options: JsonDefaults.Api) };
         var factory = CreateFactory(response);
-        var service = new RemoteBoardDataService(factory, null, stats);
+        var service = new RemoteBoardDataService(factory, stats);
 
         await service.ArchiveItemAsync(BoardSection.Habit, item.Id, Guid.NewGuid(), DateTimeOffset.UtcNow);
 
@@ -157,7 +157,7 @@ public sealed class StatsCacheInvalidationTests
         var stats = Substitute.For<IActivityStatisticsReader>();
         var response = new HttpResponseMessage(HttpStatusCode.OK);
         var factory = CreateFactory(response);
-        var service = new RemoteBoardDataService(factory, null, stats);
+        var service = new RemoteBoardDataService(factory, stats);
 
         await service.DeleteItemAsync(BoardSection.Todo, Guid.NewGuid(), Guid.NewGuid(), DateTimeOffset.UtcNow);
 
@@ -171,7 +171,7 @@ public sealed class StatsCacheInvalidationTests
         var item = SampleItem(BoardSection.Daily, Guid.NewGuid());
         var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(item, options: JsonDefaults.Api) };
         var factory = CreateFactory(response);
-        var service = new RemoteBoardDataService(factory, null, stats);
+        var service = new RemoteBoardDataService(factory, stats);
 
         await service.UnarchiveItemAsync(BoardSection.Daily, item.Id, Guid.NewGuid(), DateTimeOffset.UtcNow);
 
@@ -185,7 +185,7 @@ public sealed class StatsCacheInvalidationTests
         var item = SampleItem(BoardSection.Daily, Guid.NewGuid());
         var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(item, options: JsonDefaults.Api) };
         var factory = CreateFactory(response);
-        var service = new RemoteBoardDataService(factory, null, stats);
+        var service = new RemoteBoardDataService(factory, stats);
 
         await service.UpdateDailyAsync(item.Id, new UpdateDailyArgs("New Daily", null, null, DateOnly.FromDateTime(DateTime.UtcNow), DailyRepeatType.Daily, 1, null, 0, null), Guid.NewGuid(), DateTimeOffset.UtcNow);
 
@@ -199,7 +199,7 @@ public sealed class StatsCacheInvalidationTests
         var item = SampleItem(BoardSection.Todo, Guid.NewGuid());
         var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(item, options: JsonDefaults.Api) };
         var factory = CreateFactory(response);
-        var service = new RemoteBoardDataService(factory, null, stats);
+        var service = new RemoteBoardDataService(factory, stats);
 
         await service.UpdateTodoAsync(item.Id, new UpdateTodoArgs("New Todo", null, null, null, null, null, null), Guid.NewGuid(), DateTimeOffset.UtcNow);
 
@@ -254,7 +254,7 @@ public sealed class StatsCacheInvalidationTests
     {
         var stats = Substitute.For<IActivityStatisticsReader>();
         var factory = CreateFactory(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(SampleItem(BoardSection.Habit, Guid.NewGuid()), options: JsonDefaults.Api) });
-        var board = new RemoteBoardDataService(factory, null, stats);
+        var board = new RemoteBoardDataService(factory, stats);
         var undo = new UndoService(Substitute.For<MudBlazor.ISnackbar>(), Substitute.For<INotificationSettingsService>(), Substitute.For<INotificationSettingsRules>(), NullLogger<UndoService>.Instance);
         // Register an undo that does a board increment which invalidates
         var itemId = Guid.NewGuid();

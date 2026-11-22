@@ -7,13 +7,10 @@ namespace App.Shared.RCL.Services.Remote;
 
 public sealed class RemoteBoardDataService : IBoardDataService
 {
-    private const string BoardCacheKey = "habitinator_board_cache_v1";
     private static readonly JsonSerializerOptions Serializer = JsonDefaults.Api;
 
     private readonly IHttpClientFactory _http;
-    private readonly ILocalSettingsStore? _localStore;
     private readonly IActivityStatisticsReader? _statsReader;
-    private BoardSnapshot? _cachedSnapshot;
     private Dictionary<Guid, int>? _cachedStreaks;
     private DateTime _streaksCachedAtUtc = DateTime.MinValue;
     private static readonly TimeSpan StreaksCacheTtl = TimeSpan.FromSeconds(60);
@@ -25,31 +22,10 @@ public sealed class RemoteBoardDataService : IBoardDataService
 
     public RemoteBoardDataService(
         IHttpClientFactory http,
-        ILocalSettingsStore? localStore = null,
         IActivityStatisticsReader? statsReader = null)
     {
         _http = http;
-        _localStore = localStore;
         _statsReader = statsReader;
-        if (_localStore != null)
-        {
-            var raw = _localStore.Read(BoardCacheKey);
-            if (!string.IsNullOrEmpty(raw))
-            {
-                try
-                {
-                    var cached = JsonSerializer.Deserialize<BoardSnapshot>(raw, Serializer);
-                    // Cache written before protocol versioning deserializes to 0; treat it as v1.
-                    _cachedSnapshot = cached is { ProtocolVersion: 0 }
-                        ? cached with { ProtocolVersion = BoardProtocolVersion.Current }
-                        : cached;
-                }
-                catch
-                {
-                    // Ignore deserialization errors
-                }
-            }
-        }
     }
 
     private HttpClient Client => _http.CreateClient("api");
@@ -117,12 +93,6 @@ public sealed class RemoteBoardDataService : IBoardDataService
         return delta;
     }
 
-    public bool TryGetCachedSnapshot(out BoardSnapshot? snapshot)
-    {
-        snapshot = _cachedSnapshot;
-        return snapshot is not null;
-    }
-
     public async Task<BoardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -136,10 +106,10 @@ public sealed class RemoteBoardDataService : IBoardDataService
                 throw new InvalidOperationException($"Board request failed ({(int)res.StatusCode}).{hint}");
             }
 
-            BoardSnapshot? s;
+            BoardSnapshot? snapshot;
             try
             {
-                s = await res.Content.ReadFromJsonAsync<BoardSnapshot>(Serializer, cancellationToken);
+                snapshot = await res.Content.ReadFromJsonAsync<BoardSnapshot>(Serializer, cancellationToken);
             }
             catch (JsonException)
             {
@@ -147,23 +117,14 @@ public sealed class RemoteBoardDataService : IBoardDataService
                     "Board response was not valid JSON. Check Api:BaseUrl / HABITINATOR_API_BASE_URL points at the Habitinator API host.");
             }
 
-            _cachedSnapshot = s ?? throw new InvalidOperationException("Empty board response.");
-            if (_cachedSnapshot.ProtocolVersion == 0)
+            if (snapshot is null)
             {
-                _cachedSnapshot = _cachedSnapshot with { ProtocolVersion = BoardProtocolVersion.Current };
+                throw new InvalidOperationException("Empty board response.");
             }
-            if (_localStore != null)
-            {
-                try
-                {
-                    _localStore.Write(BoardCacheKey, JsonSerializer.Serialize(_cachedSnapshot, Serializer));
-                }
-                catch
-                {
-                    // Ignore storage writing errors
-                }
-            }
-            return _cachedSnapshot;
+
+            return snapshot.ProtocolVersion == 0
+                ? snapshot with { ProtocolVersion = BoardProtocolVersion.Current }
+                : snapshot;
         }
         catch (HttpRequestException ex)
         {

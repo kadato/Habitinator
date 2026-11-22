@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace App.MAUI.Data;
+namespace App.LocalBoard.Sqlite.Data;
 
 public sealed partial class LocalBoardDbContext(DbContextOptions<LocalBoardDbContext> options) : DbContext(options)
 {

@@ -482,6 +482,7 @@ public sealed class BoardSyncPauseTests
                 Board,
                 new FakeUserKeys(),
                 Status,
+                new BoardSyncPausePreference(Status, new StubSettingsStore([])),
                 new BoardInitialLoadSignal(),
                 new RemoteBoardRefreshService(),
                 NullLogger<BoardSyncCoordinator>.Instance,

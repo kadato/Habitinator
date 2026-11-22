@@ -15,11 +15,10 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
 
     public const string PausedProblemMessage = "Auto-sync is off.";
 
-    private bool _pausePreferenceLoaded;
-
     private readonly LocalFirstBoardDataService _board;
     private readonly ICurrentUserKeyProvider _users;
     private readonly BoardSyncStatus _status;
+    private readonly BoardSyncPausePreference _pausePreference;
     private readonly BoardInitialLoadSignal _initialLoad;
     private readonly RemoteBoardRefreshService _refresh;
     private readonly ILogger<BoardSyncCoordinator> _logger;
@@ -39,6 +38,7 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
         LocalFirstBoardDataService board,
         ICurrentUserKeyProvider users,
         BoardSyncStatus status,
+        BoardSyncPausePreference pausePreference,
         BoardInitialLoadSignal initialLoad,
         RemoteBoardRefreshService refresh,
         ILogger<BoardSyncCoordinator> logger,
@@ -48,6 +48,7 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
         _board = board;
         _users = users;
         _status = status;
+        _pausePreference = pausePreference;
         _initialLoad = initialLoad;
         _refresh = refresh;
         _logger = logger;
@@ -99,8 +100,7 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
             return;
         }
 
-        EnsurePausePreferenceLoaded();
-        if (_status.IsPaused && !bypassPause)
+        if (_pausePreference.IsPaused && !bypassPause)
         {
             _status.SetProblem(PausedProblemMessage);
             await RefreshPendingCountAsync(cancellationToken);
@@ -228,27 +228,6 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
         if (scope.ServiceProvider.GetService<IUserPreferencesService>() is ISettingsSyncFlush prefsFlush)
         {
             await prefsFlush.FlushPendingAsync(cancellationToken);
-        }
-    }
-
-    private void EnsurePausePreferenceLoaded()
-    {
-        if (_pausePreferenceLoaded)
-        {
-            return;
-        }
-
-        try
-        {
-            using var scope = _services.CreateScope();
-            if (scope.ServiceProvider.GetService(typeof(BoardSyncPausePreference)) is not null)
-            {
-                _pausePreferenceLoaded = true;
-            }
-        }
-        catch
-        {
-            // Keep best effort. The next tick retries. Until loaded, sync runs normally.
         }
     }
 

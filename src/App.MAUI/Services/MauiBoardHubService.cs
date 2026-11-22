@@ -13,30 +13,15 @@ public sealed partial class MauiBoardHubService(
     IRemoteBoardRefreshService refresh,
     MauiApiEndpointOptions api,
     ILogger<MauiBoardHubService> logger,
-    BoardSyncStatus syncStatus,
-    IServiceProvider services)
+    BoardSyncPausePreference pausePreference)
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly CancellationTokenSource _lifetimeCts = new();
     private HubConnection? _connection;
 
-    private void EnsurePauseLoaded()
-    {
-        try
-        {
-            using var scope = services.CreateScope();
-            scope.ServiceProvider.GetService(typeof(BoardSyncPausePreference));
-        }
-        catch
-        {
-            // Keep best effort. Sync status already reflects the last known choice.
-        }
-    }
-
     public async Task EnsureConnectedAsync(CancellationToken cancellationToken = default)
     {
-        EnsurePauseLoaded();
-        if (syncStatus.IsPaused)
+        if (pausePreference.IsPaused)
         {
             return;
         }

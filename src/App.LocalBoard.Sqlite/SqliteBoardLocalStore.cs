@@ -1,19 +1,25 @@
 #pragma warning disable S4158 // existingById fills from a chunked database query. The analyzer cannot track adds through Chunk plus awaited ToDictionaryAsync. The else branch handles new items.
-using App.MAUI.Data;
+using App.LocalBoard.Sqlite.Data;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services.Board.Local;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace App.MAUI.Services.LocalBoard;
+namespace App.LocalBoard.Sqlite;
 
 public sealed class SqliteBoardLocalStore(
     IDbContextFactory<LocalBoardDbContext> dbFactory,
-    ILogger<SqliteBoardLocalStore> logger) : IBoardLocalStore
+    ILogger<SqliteBoardLocalStore> logger) : IBoardLocalStore, IDisposable
 {
-    private static volatile bool _schemaReady;
-    private static readonly SemaphoreSlim SchemaLock = new(1, 1);
+    private readonly SemaphoreSlim _schemaLock = new(1, 1);
+    private volatile bool _schemaReady;
+
+    public void Dispose()
+    {
+        _schemaLock.Dispose();
+        GC.SuppressFinalize(this);
+    }
 
     public async Task EnsureReadyAsync(CancellationToken cancellationToken = default)
     {
@@ -22,7 +28,7 @@ public sealed class SqliteBoardLocalStore(
             return;
         }
 
-        await SchemaLock.WaitAsync(cancellationToken);
+        await _schemaLock.WaitAsync(cancellationToken);
         try
         {
             if (_schemaReady)
@@ -44,17 +50,12 @@ public sealed class SqliteBoardLocalStore(
             }
 
             await EnsureSqliteBoardColumnsAsync(db, cancellationToken);
-            MarkSchemaReady();
+            _schemaReady = true;
         }
         finally
         {
-            SchemaLock.Release();
+            _schemaLock.Release();
         }
-    }
-
-    private static void MarkSchemaReady()
-    {
-        _schemaReady = true;
     }
 
     public async Task<BoardStoreMeta> GetMetaAsync(CancellationToken cancellationToken = default)
@@ -171,12 +172,16 @@ public sealed class SqliteBoardLocalStore(
             }
 
             var meta = await db.Meta.SingleOrDefaultAsync(m => m.Id == 1, cancellationToken);
-            if (meta is not null)
+            if (meta is null)
+            {
+                db.Meta.Add(new LocalBoardStoreMetaRow { Id = 1, LastSyncCursorUtc = cursor });
+            }
+            else
             {
                 meta.LastSyncCursorUtc = cursor;
-                await db.SaveChangesAsync(cancellationToken);
             }
 
+            await db.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
         catch
@@ -326,6 +331,7 @@ public sealed class SqliteBoardLocalStore(
         {
             meta.BoundUserKey = null;
             meta.LastSyncCursorUtc = null;
+            meta.LastFullMirrorUtc = null;
         }
 
         await db.SaveChangesAsync(cancellationToken);

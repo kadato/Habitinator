@@ -1,19 +1,14 @@
-using App.MAUI.Data;
+using App.LocalBoard.Sqlite;
+using App.LocalBoard.Sqlite.Data;
 using App.MAUI.Services;
-using App.MAUI.Services.LocalBoard;
 using App.Shared.RCL.Services;
 using App.Shared.RCL.Services.Board.Local;
-using App.Shared.RCL.Services.CommandPalette;
-using App.Shared.RCL.Services.Remote;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 #pragma warning disable IDE0005 // Required by Android TFM, not auto-imported there
 using Microsoft.Extensions.Logging;
 #pragma warning restore IDE0005
-
-using MudBlazor;
-using MudBlazor.Services;
 
 using Plugin.LocalNotification;
 using Plugin.LocalNotification.Core.Models.AndroidOption;
@@ -45,39 +40,23 @@ public static class MauiProgram
         });
 
         builder.Services.AddMauiBlazorWebView();
-        builder.Services.AddMudServices(config =>
-        {
-            config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomLeft;
-            config.SnackbarConfiguration.ShowTransitionDuration = 100;
-            config.SnackbarConfiguration.HideTransitionDuration = 100;
-            config.SnackbarConfiguration.NewestOnTop = true;
-        });
+        builder.Services.AddHabitinatorMudServices();
         var apiBase = MauiAppSettings.ResolveApiBaseUrl(builder.Configuration).TrimEnd('/') + "/";
         builder.Services.AddSingleton(_ => new MauiApiEndpointOptions(apiBase));
         builder.Services.AddSingleton<IAuthTokenStore, AuthTokenStore>();
         builder.Services.AddSingleton<ILocalSettingsStore, MauiLocalSettingsStore>();
-        builder.Services.AddSingleton<IActivityEventStore, SettingsActivityEventStore>();
-        builder.Services.AddSingleton<OfflineActivityStatisticsProvider>();
         builder.Services.AddSingleton<IClientSessionProvider>(sp => sp.GetRequiredService<IApiSession>());
         var localBoardDbPath = Path.Combine(FileSystem.AppDataDirectory, "habitinator-board-local.db");
         builder.Services.AddDbContextFactory<LocalBoardDbContext>(o =>
             o.UseSqlite($"Data Source={localBoardDbPath}"));
-        builder.Services.AddSingleton<RemoteBoardRefreshService>();
-        builder.Services.AddSingleton<BoardSyncStatus>();
-        builder.Services.AddSingleton<IBoardSyncStatus>(sp => sp.GetRequiredService<BoardSyncStatus>());
-        builder.Services.AddSingleton<BoardSyncPausePreference>();
-        builder.Services.AddSingleton<BoardInitialLoadSignal>();
         builder.Services.AddSingleton<ICurrentUserKeyProvider, MauiCurrentUserKeyProvider>();
         builder.Services.AddSingleton<IBoardLocalStore, SqliteBoardLocalStore>();
-        builder.Services.AddSingleton<BoardSyncCoordinator>(sp => new BoardSyncCoordinator(
-            sp.GetRequiredService<LocalFirstBoardDataService>(),
-            sp.GetRequiredService<ICurrentUserKeyProvider>(),
-            sp.GetRequiredService<BoardSyncStatus>(),
-            sp.GetRequiredService<BoardInitialLoadSignal>(),
-            sp.GetRequiredService<RemoteBoardRefreshService>(),
-            sp.GetRequiredService<ILogger<BoardSyncCoordinator>>(),
-            sp,
-            isOfflineProbe: () =>
+
+        // Shared client services. MAUI singletons are needed because platform services
+        // hold the board service for the app lifetime.
+        builder.Services.AddHabitinatorClientCore(
+            ServiceLifetime.Singleton,
+            isOfflineProbe: _ =>
             {
                 try
                 {
@@ -87,11 +66,11 @@ public static class MauiProgram
                 {
                     return false;
                 }
-            }));
-        builder.Services.AddSingleton<IBoardSyncRequestor>(sp => sp.GetRequiredService<BoardSyncCoordinator>());
-        builder.Services.AddSingleton<IRemoteBoardRefreshService, SyncBeforeNotifyRefreshService>();
-        builder.Services.AddSingleton<BoardRemoteNotifyBridge>();
+            });
+
+        // Platform-only services.
         builder.Services.AddSingleton<MauiBoardHubService>();
+        builder.Services.AddSingleton<MauiDailyReminderService>();
         builder.Services.AddTransient<AuthMessageHandler>();
         builder.Services.AddTransient<ClearSessionOnUnauthorizedHandler>();
         builder.Services.AddHttpClient("apiAuth", c => c.BaseAddress = new Uri(apiBase));
@@ -105,13 +84,8 @@ public static class MauiProgram
                 options.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(2);
             });
         builder.Services.AddSingleton<ApiAuthService>();
-        builder.Services.AddSingleton<RemoteBoardDataService>();
-        builder.Services.AddSingleton<LocalFirstBoardDataService>();
-        builder.Services.AddSingleton<IBoardLocalStoreLifecycle>(sp =>
-            sp.GetRequiredService<LocalFirstBoardDataService>());
         builder.Services.AddSingleton<IApiSession, ApiSession>();
-        builder.Services.AddSingleton<IClock, SystemClock>();
-        builder.Services.AddSingleton<GlobalTimerService>();
+
 #if WINDOWS
         builder.Services.AddSingleton<IAppWindowProgressService, global::App.MAUI.Platforms.Windows.WindowsAppWindowProgressService>();
 #else
@@ -120,43 +94,6 @@ public static class MauiProgram
         builder.Services.AddOptions<MauiAppUpdaterOptions>()
             .BindConfiguration(MauiAppUpdaterOptions.SectionName);
         builder.Services.AddSingleton<IAppUpdaterService, Services.MauiAppUpdaterService>();
-        builder.Services.AddScoped<ITimerSessionLogService, TimerSessionLogService>();
-        builder.Services.AddSingleton<IUserActivityLogService, RemoteUserActivityLogService>();
-        builder.Services.AddScoped<IUndoService, UndoService>();
-        builder.Services.AddScoped<IBoardDataService>(sp =>
-        {
-            // Board mutations are replayed to the server via the outbox, and the server records
-            // activity events itself. No logging decorator here. It would write a second event per
-            // action, skewing the activity feed and the daily streak on the same table.
-            var inner = sp.GetRequiredService<LocalFirstBoardDataService>();
-            var undoService = sp.GetRequiredService<IUndoService>();
-            return new UndoableBoardDataService(inner, undoService);
-        });
-        builder.Services.AddSingleton<IActivityStatisticsReader, PauseAwareActivityStatisticsReader>();
-        builder.Services.AddSingleton<RemoteActivityStatisticsReader>();
-        builder.Services.AddSingleton<INotificationSettingsService, RemoteNotificationSettingsService>();
-        builder.Services.AddSingleton<IUserPreferencesService, LocalFirstUserPreferencesService>();
-        builder.Services.AddSingleton<IAiAssistantService, RemoteAiAssistantService>();
-        builder.Services.AddSingleton<MauiDailyReminderService>();
-        // Scoped. UserNotifier feeds ISnackbar, which uses NavigationManager. NavigationManager is only valid inside the Blazor WebView scope, not root or singleton.
-        builder.Services.AddScoped<IUserNotifier, UserNotifier>();
-        builder.Services.AddScoped<IFocusTimerClientAlerts, FocusTimerClientAlerts>();
-        builder.Services.AddScoped<IDailyRetroPromptStore, JsDailyRetroPromptStore>();
-        builder.Services.AddScoped<IInitialBoardLoadGate>(sp =>
-            new InitialBoardLoadGate(sp.GetRequiredService<BoardInitialLoadSignal>()));
-        // Singleton so the singleton LocalFirstBoardDataService and the Blazor components share one
-        // instance. A scoped instance captured by the singleton would never be initialized or overridden.
-        builder.Services.AddSingleton<IUserTimeZoneService, UserTimeZoneService>();
-        builder.Services.AddScoped<INotificationSettingsRules, NotificationSettingsRules>();
-        builder.Services.AddSingleton<IUserDateFormatService, UserDateFormatService>();
-        builder.Services.AddSingleton<IAccountActionsService, RemoteAccountActionsService>();
-        builder.Services.AddSingleton<IUserDataExportService, RemoteUserDataExportService>();
-        builder.Services.AddSingleton<IUserDataImportService, RemoteUserDataImportService>();
-        builder.Services.AddScoped<IBoardColumnStateStore, JsBoardColumnStateStore>();
-        builder.Services.AddScoped<IUpcomingViewStateStore, UpcomingViewStateStore>();
-        builder.Services.AddScoped<BoardUiSessionState>();
-        builder.Services.AddSingleton<MobileBackHandler>();
-        builder.Services.AddScoped<ICommandPaletteService, CommandPaletteService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

@@ -101,6 +101,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\App.LocalBoard.Sqlite\App.LocalBoard.Sqlite.csproj" />
       <ProjectReference Include="..\App.Shared.RCL\App.Shared.RCL.csproj" />
     </ItemGroup>
 

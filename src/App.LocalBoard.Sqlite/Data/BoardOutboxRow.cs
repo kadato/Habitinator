@@ -2,7 +2,7 @@ using App.Shared.RCL.Models;
 
 using Microsoft.EntityFrameworkCore;
 
-namespace App.MAUI.Data;
+namespace App.LocalBoard.Sqlite.Data;
 
 [Index(nameof(UserKey), nameof(CreatedAtUtc))]
 public sealed class BoardOutboxRow

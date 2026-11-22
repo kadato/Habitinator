@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/App.LocalBoard.Sqlite/App.LocalBoard.Sqlite.csproj" />
     <Project Path="src/App.MAUI/App.MAUI.csproj" />
     <Project Path="src/App.Shared.RCL/App.Shared.RCL.csproj" />
     <Project Path="src/App.Web/App.Web.csproj" />
@@ -7,6 +8,7 @@
     <Project Path="src/AppHost/AppHost.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/App.LocalBoard.Tests/App.LocalBoard.Tests.csproj" />
     <Project Path="tests/App.MAUI.UITests/App.MAUI.UITests.csproj" />
     <Project Path="tests/App.Shared.RCL.Tests/App.Shared.RCL.Tests.csproj" />
     <Project Path="tests/App.Shared.Tests/App.Shared.Tests.csproj" />

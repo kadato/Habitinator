@@ -259,6 +259,7 @@
         <BoardItemCard Item="item"
                        Section="Section"
                        CanReorder="IsItemDraggable()"
+                       Today="@BoardToday()"
                        OverdueSince="@GetDailyOverdueSince(item)"
                        IsBusy="@IsItemBusy(item.Id)"
                        OnHabitUp="@(() => HabitUpAsync(item))"

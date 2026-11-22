@@ -4,6 +4,7 @@
 @inject IActivityStatisticsReader Stats
 @inject IBoardDataService BoardData
 @inject IUserTimeZoneService TimeZoneService
+@inject IUserDayService UserDay
 @inject IUserDateFormatService DateFormatService
 @inject IUserNotifier Notifier
 @using Microsoft.Extensions.Logging;
@@ -107,7 +108,7 @@
             <div class="hab-modal__footer hab-modal__footer--end hab-modal__footer--daily">
                 <span class="hab-modal__footer-note">@DueNoteFor(_dailyItem)</span>
                 <div class="hab-modal__footer-actions">
-                    @if (_canToggleToday || _shownDate == DailySchedule.LocalToday(TimeZoneService))
+                    @if (_canToggleToday || _shownDate == Today())
                     {
                         @if (_isDoneToday)
                         {
@@ -192,6 +193,7 @@
     protected override async Task OnInitializedAsync()
     {
         _shownDate = Date;
+        await UserDay.InitializeAsync();
         try
         {
             await DateFormatService.InitializeAsync();
@@ -322,7 +324,7 @@
     }
 
 
-    private bool IsNextDisabled => _shownDate >= DailySchedule.LocalToday(TimeZoneService);
+    private bool IsNextDisabled => _shownDate >= Today();
 
     private async Task LoadAsync()
     {
@@ -421,7 +423,7 @@
                 return;
             }
 
-            var today = DailySchedule.LocalToday(TimeZoneService);
+            var today = Today();
             _dailyItem = item;
             _showDailyFooter = _shownDate <= today;
             if (_shownDate == today)
@@ -446,11 +448,13 @@
     /// <summary>Describes the due state of the selected daily on the shown date with its repeat schedule.</summary>
     private string DueNoteFor(BoardItem item)
     {
-        var today = DailySchedule.LocalToday(TimeZoneService);
+        var today = Today();
         var due = DailySchedule.IsScheduledOn(item.DailyStartDate, item.DailyRepeat, item.DailyRepeatInterval, _shownDate, item.DailyWeekdays);
         var when = _shownDate == today ? "today" : "this day";
         return $"{(due ? "Due" : "Not due")} {when}, {UpcomingSchedule.DescribeDaily(item)}";
     }
+
+    private DateOnly Today() => UserDay.Today;
 
     private async Task CompleteShownDateAsync()
     {

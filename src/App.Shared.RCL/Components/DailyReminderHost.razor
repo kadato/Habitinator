@@ -1,6 +1,6 @@
 @using Microsoft.Extensions.Logging
 @inject INotificationSettingsService SettingsService
-@inject IUserPreferencesService PreferencesService
+@inject IUserDayService UserDay
 @inject IUserTimeZoneService TimeZoneService
 @inject IClock Clock
 @inject IUserNotifier UserNotifier
@@ -13,11 +13,12 @@
     private const string DismissKey = "daily_reminder_dismissed_on";
     private readonly CancellationTokenSource _cts = new();
     private NotificationSettings? _settings;
-    private TimeSpan _dayStart = TimeSpan.Zero;
 
     protected override async Task OnInitializedAsync()
     {
+        await UserDay.InitializeAsync();
         SettingsService.Changed += OnSettingsChanged;
+        UserDay.DayChanged += OnUserDayChanged;
         await LoadAsync();
         await MaybeShowAsync();
         _ = PollAsync(_cts.Token);
@@ -34,17 +35,6 @@
             Logger.LogDebug(ex, "Could not load notification settings for daily reminder.");
             _settings = null;
         }
-
-        try
-        {
-            var prefs = await PreferencesService.GetAsync();
-            _dayStart = prefs.DayStartLocalTime;
-        }
-        catch (Exception ex)
-        {
-            Logger.LogDebug(ex, "Could not load day-start for daily reminder.");
-            _dayStart = TimeSpan.Zero;
-        }
     }
 
     private void OnSettingsChanged(object? sender, EventArgs e)
@@ -52,6 +42,14 @@
         _ = InvokeAsync(async () =>
         {
             await LoadAsync();
+            await MaybeShowAsync();
+        });
+    }
+
+    private void OnUserDayChanged(object? sender, EventArgs e)
+    {
+        _ = InvokeAsync(async () =>
+        {
             await MaybeShowAsync();
         });
     }
@@ -97,14 +95,14 @@
             Logger.LogDebug(ex, "Could not read daily reminder dismissal.");
         }
 
-        if (!DailyReminderSchedule.ShouldShowWebReminder(_settings, _dayStart, TimeZoneService, Clock, lastDismissed))
+        if (!DailyReminderSchedule.ShouldShowWebReminder(_settings, UserDay.DayStartLocalTime, TimeZoneService, Clock, lastDismissed))
         {
             return;
         }
 
         try
         {
-            var today = DailyReminderSchedule.ResolveToday(Clock.UtcNow, TimeZoneService, _dayStart);
+            var today = UserDay.Today;
             var snapshot = await BoardData.GetSnapshotAsync();
             var (title, body) = DailyReminderText.Build(snapshot, today);
             await UserNotifier.NotifyAsync($"{title}: {body}", Severity.Info);
@@ -130,6 +128,7 @@
         }
 
         SettingsService.Changed -= OnSettingsChanged;
+        UserDay.DayChanged -= OnUserDayChanged;
         _cts.Cancel();
         _cts.Dispose();
     }

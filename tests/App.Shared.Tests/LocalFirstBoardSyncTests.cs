@@ -844,7 +844,7 @@ public sealed class LocalFirstBoardSyncTests
                 new FakeUserKeys(),
                 remote,
                 new FakeServices(),
-                new FakeTimeZone(),
+                new TestUserDayService(),
                 new BoardSyncStatus(),
                 NullLogger<LocalFirstBoardDataService>.Instance);
         }
@@ -903,28 +903,4 @@ public sealed class LocalFirstBoardSyncTests
         }
     }
 
-    private sealed class FakeTimeZone : IUserTimeZoneService
-    {
-        public string? TimeZoneId => null;
-
-        public bool IsDetected => false;
-
-        public DateOnly LocalToday => DateOnly.FromDateTime(DateTime.UtcNow);
-
-        public void SetOverride(string? timeZoneId)
-        {
-        }
-
-        public Task InitializeAsync() => Task.CompletedTask;
-
-        public DateTimeOffset ConvertToLocal(DateTimeOffset utcTime) => utcTime;
-
-        public DateTimeOffset ConvertToUtc(DateTimeOffset localTime) => localTime;
-
-        public TimeSpan ConvertLocalTimeToUtc(TimeSpan localTime) => localTime;
-
-        public TimeSpan ConvertUtcTimeToLocal(TimeSpan utcTime) => utcTime;
-
-        public string GetTimeZoneAbbreviation() => "UTC";
-    }
 }

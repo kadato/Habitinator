@@ -6,9 +6,7 @@ public sealed class TimerSessionLogService(
     GlobalTimerService timer,
     IBoardDataService boardData,
     IUserActivityLogService userActivityLog,
-    IUserTimeZoneService timeZoneService,
     IRemoteBoardRefreshService remoteBoardRefresh,
-    IClock clock,
     IActivityStatisticsReader? statsReader = null) : ITimerSessionLogService
 {
     public async Task<TimerSessionLogResult> LogStoppedSessionAsync(
@@ -103,8 +101,7 @@ public sealed class TimerSessionLogService(
         if (targetType == "Daily")
         {
             var daily = snapshot.Dailies.FirstOrDefault(d => d.Id == id);
-            var today = DailySchedule.LocalToday(clock, timeZoneService);
-            if (daily is not null && !DailySchedule.IsCompleteForDate(daily, today))
+            if (daily is { IsCompleted: false })
             {
                 var updated = await boardData.ToggleItemAsync(BoardSection.Daily, id, cancellationToken)
                     .ConfigureAwait(false);

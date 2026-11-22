@@ -18,7 +18,8 @@ internal sealed class NavigationPaletteCommands(
     Action close,
     Func<Task> notifyRefresh,
     BoardUiSessionState? uiSession = null,
-    IUserTimeZoneService? timeZoneService = null)
+    IUserTimeZoneService? timeZoneService = null,
+    IUserDayService? userDay = null)
 {
     private readonly NavigationManager _nav = nav;
     private readonly IBoardDataService _boardData = boardData;
@@ -29,6 +30,7 @@ internal sealed class NavigationPaletteCommands(
     private readonly Func<Task> _notifyRefresh = notifyRefresh;
     private readonly BoardUiSessionState? _uiSession = uiSession;
     private readonly IUserTimeZoneService? _timeZoneService = timeZoneService;
+    private readonly IUserDayService? _userDay = userDay;
 
     private const string NavigationCategory = "Navigation";
     private const string AppearanceCategory = "Appearance";
@@ -73,7 +75,7 @@ internal sealed class NavigationPaletteCommands(
             Subtitle: "Open Upcoming on today's agenda",
             Category: NavigationCategory,
             Icon: Icons.Material.Filled.Today,
-            Action: () => NavigateAsync($"/upcoming?date={DateOnly.FromDateTime(DateTime.UtcNow):yyyy-MM-dd}"),
+            Action: OpenUpcomingTodayAsync,
             Keywords: ["upcoming", "today", "agenda", "plan"]));
 
         list.Add(new(
@@ -277,25 +279,21 @@ internal sealed class NavigationPaletteCommands(
             // best-effort theme update
         }
     }
+    private async Task OpenUpcomingTodayAsync()
+    {
+        var today = _userDay?.Today ?? DailySchedule.LocalToday();
+        await NavigateAsync($"/upcoming?date={today:yyyy-MM-dd}");
+    }
+
     private async Task OpenYesterdayRetroAsync()
     {
         _close();
         try
         {
             var snapshot = await _boardData.GetSnapshotAsync();
-            UserPreferences prefs;
-            try
-            {
-                prefs = await _preferences.GetAsync();
-            }
-            catch
-            {
-                prefs = new UserPreferences();
-            }
-
             // Use the same calendar the board uses. The manual check-in then agrees with
             // the automatic prompt about which day is "yesterday".
-            var today = DailySchedule.LocalToday(_timeZoneService, prefs.DayStartLocalTime);
+            var today = _userDay?.Today ?? DailySchedule.LocalToday();
             var missed = DailySchedule.GetYesterdayUncompletedDailies(snapshot.Dailies, today, _timeZoneService);
 
             if (missed.Count == 0)

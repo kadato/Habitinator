@@ -1,7 +1,10 @@
+@implements IAsyncDisposable
+@inject IUserDayService UserDay
 @inject IUserTimeZoneService TimeZoneService
 @inject IUserPreferencesService PreferencesService
 
 @code {
+    private readonly CancellationTokenSource _watchCts = new();
     private bool _initialized;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -12,8 +15,9 @@
         }
 
         _initialized = true;
-        await TimeZoneService.InitializeAsync();
+        await UserDay.InitializeAsync();
         await SyncTimeZoneToPreferencesAsync();
+        _ = WatchDayChangesAsync(_watchCts.Token);
     }
 
     /// <summary>
@@ -43,5 +47,33 @@
         {
             // Best-effort sync. The server falls back to UTC until the timezone is known.
         }
+    }
+
+    /// <summary>
+    ///     Browsers throttle timers in hidden tabs, so this check runs on a timer instead of
+    ///     at the exact rollover. Any component that reads <see cref="IUserDayService.Today" />
+    ///     between ticks still sees the correct day.
+    /// </summary>
+    private async Task WatchDayChangesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                UserDay.CheckForDayChange();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Shutdown is expected.
+        }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _watchCts.Cancel();
+        _watchCts.Dispose();
+        return ValueTask.CompletedTask;
     }
 }

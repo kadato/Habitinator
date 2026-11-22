@@ -15,7 +15,8 @@ internal sealed class BoardPaletteCommands(
     Action<string, string, Guid?> startTimerOn,
     Action close,
     Func<Task> notifyRefresh,
-    BoardUiSessionState? uiSession = null)
+    BoardUiSessionState? uiSession = null,
+    IUserDayService? userDay = null)
 {
     private readonly IBoardDataService _boardData = boardData;
     private readonly IUndoService _undo = undo;
@@ -25,6 +26,7 @@ internal sealed class BoardPaletteCommands(
     private readonly Action _close = close;
     private readonly Func<Task> _notifyRefresh = notifyRefresh;
     private readonly BoardUiSessionState? _uiSession = uiSession;
+    private readonly IUserDayService? _userDay = userDay;
 
     private const string SuggestedCategory = "Suggested";
     private const string ActionsCategory = "Actions";
@@ -224,11 +226,9 @@ internal sealed class BoardPaletteCommands(
             .Where(d => Matches(d.Title, d.Notes, d.Tags, q))
             .Take(6);
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         foreach (var d in matchingDailies)
         {
-            var isDone = d.DailyLastCompletedOn.HasValue &&
-                         d.DailyLastCompletedOn.Value == today;
+            var isDone = d.IsCompleted;
             results.Add(new CommandItem(
                 Id: $"daily-{d.Id}",
                 Title: d.Title,
@@ -412,7 +412,7 @@ internal sealed class BoardPaletteCommands(
                 Action: async () =>
                 {
                     _close();
-                    var yesterday = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+                    var yesterday = GetLocalToday().AddDays(-1);
                     await _boardData.CompleteDailyForDateAsync(d.Id, yesterday);
                     await _notifyRefresh();
                     await _notifier.NotifyAsync($"Marked '{d.Title}' completed for yesterday.", Severity.Success);
@@ -521,7 +521,7 @@ internal sealed class BoardPaletteCommands(
                 Action: async () =>
                 {
                     _close();
-                    var today = DateOnly.FromDateTime(DateTime.UtcNow);
+                    var today = GetLocalToday();
                     await _boardData.UpdateTodoAsync(t.Id, UpdateTodoArgs.From(t) with { DueDate = today });
                     await _notifyRefresh();
                     await _notifier.NotifyAsync($"Due date for '{t.Title}' set to today.", Severity.Success);
@@ -536,7 +536,7 @@ internal sealed class BoardPaletteCommands(
                 Action: async () =>
                 {
                     _close();
-                    var tomorrow = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
+                    var tomorrow = GetLocalToday().AddDays(1);
                     await _boardData.UpdateTodoAsync(t.Id, UpdateTodoArgs.From(t) with { DueDate = tomorrow });
                     await _notifyRefresh();
                     await _notifier.NotifyAsync($"Due date for '{t.Title}' set to tomorrow.", Severity.Success);
@@ -714,7 +714,7 @@ internal sealed class BoardPaletteCommands(
         }
 
         // Extract inline tags like "#evening" and a simple "due tomorrow|today|yyyy-MM-dd" hint.
-        var (parsedTitle, tags, dueDate) = ParseInlineTitle(clean);
+        var (parsedTitle, tags, dueDate) = ParseInlineTitle(clean, GetLocalToday());
         _isCreatingItem = true;
         _close();
         try
@@ -757,13 +757,13 @@ internal sealed class BoardPaletteCommands(
         }
     }
 
-    internal static (string Title, string? Tags, DateOnly? DueDate) ParseInlineTitle(string input)
+    internal static (string Title, string? Tags, DateOnly? DueDate) ParseInlineTitle(string input, DateOnly? today = null)
     {
         var tags = new List<string>();
         DateOnly? dueDate = null;
         var words = input.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
         var kept = new List<string>();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var currentDay = today ?? DateOnly.FromDateTime(DateTime.UtcNow);
 
         foreach (var w in words)
         {
@@ -776,17 +776,17 @@ internal sealed class BoardPaletteCommands(
                 var val = w[4..].Trim();
                 if (val.Equals("today", StringComparison.OrdinalIgnoreCase))
                 {
-                    dueDate = today;
+                    dueDate = currentDay;
                 }
                 else if (val.Equals("tomorrow", StringComparison.OrdinalIgnoreCase))
                 {
-                    dueDate = today.AddDays(1);
+                    dueDate = currentDay.AddDays(1);
                 }
                 else if (DateOnly.TryParseExact(val, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsed))
                 {
                     dueDate = parsed;
                 }
-                else if (TryParseWeekday(val, today, out var weekdayDate))
+                else if (TryParseWeekday(val, currentDay, out var weekdayDate))
                 {
                     dueDate = weekdayDate;
                 }
@@ -797,11 +797,11 @@ internal sealed class BoardPaletteCommands(
             }
             else if (w.Equals("@today", StringComparison.OrdinalIgnoreCase))
             {
-                dueDate = today;
+                dueDate = currentDay;
             }
             else if (w.Equals("@tomorrow", StringComparison.OrdinalIgnoreCase))
             {
-                dueDate = today.AddDays(1);
+                dueDate = currentDay.AddDays(1);
             }
             else if (w.Equals("!urgent", StringComparison.OrdinalIgnoreCase) || w.Equals("!p1", StringComparison.OrdinalIgnoreCase) || w.Equals("!high", StringComparison.OrdinalIgnoreCase))
             {
@@ -1049,10 +1049,9 @@ internal sealed class BoardPaletteCommands(
                     ChildrenProvider: () => Task.FromResult(GetHabitSubActions(h))));
             }
 
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
             foreach (var d in snapshot.Dailies)
             {
-                var isDone = d.DailyLastCompletedOn.HasValue && d.DailyLastCompletedOn.Value == today;
+                var isDone = d.IsCompleted;
                 items.Add(new CommandItem(
                     Id: $"manage-daily-{d.Id}",
                     Title: d.Title,
@@ -1094,4 +1093,10 @@ internal sealed class BoardPaletteCommands(
 
         return items;
     }
+
+    /// <summary>
+    ///     Today's date on the same local calendar the board and retro prompt use, including the
+    ///     configured day-start rollback. Commands that add or backdate items must not use the UTC day.
+    /// </summary>
+    private DateOnly GetLocalToday() => _userDay?.Today ?? DailySchedule.LocalToday();
 }

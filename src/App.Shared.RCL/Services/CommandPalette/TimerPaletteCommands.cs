@@ -777,10 +777,9 @@ internal sealed class TimerPaletteCommands(
                     Keywords: [KwHabit, h.Title]));
             }
 
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
             foreach (var d in snapshot.Dailies)
             {
-                var isDone = d.DailyLastCompletedOn.HasValue && d.DailyLastCompletedOn.Value == today;
+                var isDone = d.IsCompleted;
                 var dailySub = isDone ? $"Daily, completed today, streak: {d.Counter}" : $"Daily, streak: {d.Counter}";
                 targets.Add(new CommandItem(
                     Id: $"timer-target-daily-{d.Id}",
@@ -1008,10 +1007,9 @@ internal sealed class TimerPaletteCommands(
                     Keywords: [KwHabit, h.Title]));
             }
 
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
             foreach (var d in snapshot.Dailies)
             {
-                var isDone = d.DailyLastCompletedOn.HasValue && d.DailyLastCompletedOn.Value == today;
+                var isDone = d.IsCompleted;
                 var dailySub = isDone ? $"Daily, completed today, streak: {d.Counter}" : $"Daily, streak: {d.Counter}";
                 items.Add(new CommandItem(
                     Id: $"target-config-daily-{d.Id}",

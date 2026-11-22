@@ -43,6 +43,8 @@ public sealed partial class UpcomingPanelTests : IAsyncDisposable
         _ctx.Services.AddSingleton(_prefs);
         _ctx.Services.AddSingleton(_dialogs);
         _ctx.Services.AddSingleton(_undo);
+        _ctx.Services.AddSingleton<TestUserDayService>();
+        _ctx.Services.AddSingleton<IUserDayService>(sp => sp.GetRequiredService<TestUserDayService>());
         _ctx.Render<MudPopoverProvider>();
         _viewState.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<UpcomingViewState?>(null));
         _prefs.GetAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(UserPreferences.CreateDefault()));

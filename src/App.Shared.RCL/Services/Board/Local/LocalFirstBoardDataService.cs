@@ -13,7 +13,7 @@ public sealed partial class LocalFirstBoardDataService(
     ICurrentUserKeyProvider users,
     RemoteBoardDataService remote,
     IServiceProvider services,
-    IUserTimeZoneService timeZone,
+    IUserDayService userDay,
     BoardSyncStatus syncStatus,
     ILogger<LocalFirstBoardDataService> logger)
     : IBoardDataService, IBoardLocalStoreLifecycle
@@ -27,17 +27,21 @@ public sealed partial class LocalFirstBoardDataService(
     private readonly HashSet<Guid> _inFlightOutboxOperations = [];
 
     /// <summary>Last snapshot read from the local store. Serves the synchronous fast path in the board component. Cleared on every mutation and user switch.</summary>
-    private volatile BoardSnapshot? _cachedSnapshot;
+    private volatile CachedBoardSnapshot? _cachedSnapshot;
+
+    /// <summary>
+    ///     Snapshot plus the local day it was built for. Daily completion is day-relative,
+    ///     so a snapshot from yesterday must never drive today's board.
+    /// </summary>
+    private sealed record CachedBoardSnapshot(BoardSnapshot Snapshot, DateOnly Today);
 
     /// <summary>Raised whenever a local board mutation is applied to the store.</summary>
     public event EventHandler? Mutated;
 
     private async Task<DateOnly> TodayAsync(CancellationToken cancellationToken)
     {
-        var prefs = await services
-            .GetRequiredService<IUserPreferencesService>()
-            .GetAsync(cancellationToken);
-        return DailySchedule.LocalToday(timeZone, prefs.DayStartLocalTime);
+        await userDay.InitializeAsync(cancellationToken);
+        return userDay.Today;
     }
 
     public Task EnsureStoreReadyAsync(CancellationToken cancellationToken = default) =>
@@ -62,8 +66,15 @@ public sealed partial class LocalFirstBoardDataService(
 
     public bool TryGetCachedSnapshot(out BoardSnapshot? snapshot)
     {
-        snapshot = _cachedSnapshot;
-        return snapshot is not null;
+        var cached = _cachedSnapshot;
+        if (cached is null || cached.Today != userDay.Today)
+        {
+            snapshot = null;
+            return false;
+        }
+
+        snapshot = cached.Snapshot;
+        return true;
     }
 
     public async Task<BoardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
@@ -87,7 +98,7 @@ public sealed partial class LocalFirstBoardDataService(
             }
 
             var snap = ReadSnapshot(await store.ListItemsAsync(userKey, includeArchived: false, cancellationToken), today);
-            _cachedSnapshot = snap;
+            _cachedSnapshot = new CachedBoardSnapshot(snap, today);
             return snap;
         }
         finally
@@ -129,13 +140,13 @@ public sealed partial class LocalFirstBoardDataService(
             var current = ReadSnapshot(await store.ListItemsAsync(userKey, includeArchived: false, cancellationToken), today);
             if (!IsEmpty(current))
             {
-                _cachedSnapshot = current;
+                _cachedSnapshot = new CachedBoardSnapshot(current, today);
                 return current;
             }
 
             await ReplaceMirrorAsync(userKey, fresh, cancellationToken);
             var replaced = ReadSnapshot(await store.ListItemsAsync(userKey, includeArchived: false, cancellationToken), today);
-            _cachedSnapshot = replaced;
+            _cachedSnapshot = new CachedBoardSnapshot(replaced, today);
             return replaced;
         }
         finally
@@ -165,7 +176,7 @@ public sealed partial class LocalFirstBoardDataService(
             return null;
         }
 
-        if (row.Section == BoardSection.Habit)
+        if (row.Section is BoardSection.Habit or BoardSection.Daily)
         {
             var today = await TodayAsync(cancellationToken);
             return ToEffectiveModel(row, today);
@@ -425,7 +436,7 @@ public sealed partial class LocalFirstBoardDataService(
             x => x.SortOrder ?? double.MaxValue,
             x => x.CreatedAtUtc ?? DateTimeOffset.MaxValue,
             x => x.Id)
-            .Select(x => x.ToModel())];
+            .Select(x => ToEffectiveModel(x, today))];
         List<BoardItem> todos = [.. BoardOrdering.SortTodos(
             items.Where(x => x.Section == BoardSection.Todo),
             x => x.IsCompleted,

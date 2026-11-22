@@ -39,6 +39,8 @@ public sealed class ActivityDayDetailDialogTests : IAsyncDisposable
         _ctx.Services.AddSingleton<IUserNotifier>(_notifier);
         _ctx.Services.AddSingleton(_boardData);
         _ctx.Services.AddSingleton(_sync);
+        _ctx.Services.AddSingleton<TestUserDayService>();
+        _ctx.Services.AddSingleton<IUserDayService>(sp => sp.GetRequiredService<TestUserDayService>());
 
         _timeZoneService.ConvertToLocal(Arg.Any<DateTimeOffset>())
             .Returns(x => ((DateTimeOffset)x[0]!).ToLocalTime());

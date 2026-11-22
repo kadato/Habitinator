@@ -17,14 +17,14 @@ namespace App.Shared.RCL.Tests;
 public sealed class BoardItemCardOverdueTests : IAsyncDisposable
 {
     private readonly BunitContext _ctx = new();
-    private readonly IUserTimeZoneService _timeZoneService = Substitute.For<IUserTimeZoneService>();
     private readonly IUserDateFormatService _dateFormatService = Substitute.For<IUserDateFormatService>();
 
     public BoardItemCardOverdueTests()
     {
         _ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         _ctx.Services.AddMudServices();
-        _ctx.Services.AddSingleton(_timeZoneService);
+        _ctx.Services.AddSingleton<TestUserDayService>();
+        _ctx.Services.AddSingleton<IUserDayService>(sp => sp.GetRequiredService<TestUserDayService>());
         _ctx.Services.AddSingleton(_dateFormatService);
         _dateFormatService.Format(Arg.Any<DateOnly>()).Returns("2026-08-11");
     }

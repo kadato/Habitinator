@@ -84,6 +84,7 @@ public partial class StatisticsPanel : IDisposable
     protected override async Task OnInitializedAsync()
     {
         _subscription = ApplicationState.RegisterOnPersisting(PersistStatisticsData);
+        await UserDay.InitializeAsync();
         try
         {
             BoardSync.Changed += OnBoardSyncChanged;
@@ -92,7 +93,8 @@ public partial class StatisticsPanel : IDisposable
         {
             // Best effort. Banner updates on next render.
         }
-        _heatmapToday = DailySchedule.LocalToday(TimeZoneService);
+        UserDay.DayChanged += OnUserDayChanged;
+        _heatmapToday = UserDay.Today;
         if (TryRestoreInitialOverview())
         {
             _loading = false;
@@ -231,12 +233,28 @@ public partial class StatisticsPanel : IDisposable
         {
             // Best effort during disposal.
         }
+        UserDay.DayChanged -= OnUserDayChanged;
         _subscription.Dispose();
     }
 
     private void OnBoardSyncChanged(object? sender, EventArgs e)
     {
         _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void OnUserDayChanged(object? sender, EventArgs e)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            var today = UserDay.Today;
+            if (_heatmapToday != default && today != _heatmapToday)
+            {
+                Stats.InvalidateCache();
+                await LoadStatisticsAsync(_selectedPeriodKey);
+            }
+
+            StateHasChanged();
+        });
     }
 
     private void ApplyOverview(ActivityOverviewDto overview)
@@ -349,7 +367,7 @@ public partial class StatisticsPanel : IDisposable
 
     private string? PrepareLoadState()
     {
-        _heatmapToday = DailySchedule.LocalToday(TimeZoneService);
+        _heatmapToday = UserDay.Today;
         _visibleConsistencyCount = InitialVisibleConsistencyCount;
         if (_dailyView is null)
         {

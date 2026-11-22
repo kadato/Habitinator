@@ -51,6 +51,7 @@ public partial class UpcomingPanel : IDisposable
     [Inject] private IDialogService Dialogs { get; set; } = default!;
     [Inject] private IUndoService UndoService { get; set; } = default!;
     [Inject] private IUserPreferencesService PreferencesService { get; set; } = default!;
+    [Inject] private IUserDayService UserDay { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
     private ElementReference _calBodyRef;
@@ -157,9 +158,10 @@ public partial class UpcomingPanel : IDisposable
 
     protected override async Task OnInitializedAsync()
     {
+        await UserDay.InitializeAsync();
         Nav.LocationChanged += OnLocationChanged;
-        await LoadPersistedViewStateAsync();
-        await LoadWeekStartAsync();
+        UserDay.DayChanged += OnUserDayChanged;
+        await LoadPreferencesAsync();
         ApplyQueryDate();
         await LoadAsync();
     }
@@ -263,7 +265,7 @@ public partial class UpcomingPanel : IDisposable
     private void ApplySnapshot(BoardSnapshot snapshot)
     {
         _snapshot = snapshot;
-        _today = DailySchedule.LocalToday(TimeZoneService);
+        _today = UserDay.Today;
         _overdue = UpcomingSchedule.GetOverdueTodos(snapshot, _today);
         _todayDailyScheduled = snapshot.Dailies.Count(d => DailySchedule.IsScheduledOn(d, _today));
         var todayDue = snapshot.Dailies.Count(d => DailySchedule.IsDueOnDate(d, _today));
@@ -383,8 +385,9 @@ public partial class UpcomingPanel : IDisposable
         }
     }
 
-    private async Task LoadWeekStartAsync()
+    private async Task LoadPreferencesAsync()
     {
+        await LoadPersistedViewStateAsync();
         try
         {
             var prefs = await PreferencesService.GetAsync();
@@ -580,7 +583,7 @@ public partial class UpcomingPanel : IDisposable
     private List<CalChip> CellChips(IReadOnlyList<BoardItem> dailies, IReadOnlyList<BoardItem> todos)
     {
         List<CalChip> chips = [];
-        chips.AddRange(dailies.Select(d => new CalChip(d.Title, DailyHint(d), false, d.DailyLastCompletedOn == _today, false)));
+        chips.AddRange(dailies.Select(d => new CalChip(d.Title, DailyHint(d), false, IsCheckedToday(d), false)));
         chips.AddRange(todos.Select(t => new CalChip(t.Title, t.TodoDueDate is { } due ? $"{t.Title} ({TodoDueRelativeText.Format(due, _today)})" : t.Title, true, false, false)));
         return chips;
     }
@@ -601,7 +604,7 @@ public partial class UpcomingPanel : IDisposable
             if (dailies.Count == 1)
             {
                 var d = dailies[0];
-                chips.Add(new CalChip(d.Title, DailyHint(d), false, d.DailyLastCompletedOn == _today, false));
+                chips.Add(new CalChip(d.Title, DailyHint(d), false, IsCheckedToday(d), false));
             }
             else
             {
@@ -918,6 +921,35 @@ public partial class UpcomingPanel : IDisposable
         }
     }
 
+    private void OnUserDayChanged(object? sender, EventArgs e)
+    {
+        _ = InvokeAsync(RefreshIfDayChangedAsync);
+    }
+
+    private async Task RefreshIfDayChangedAsync()
+    {
+        if (_snapshot is null)
+        {
+            return;
+        }
+
+        var today = UserDay.Today;
+        if (today == _today)
+        {
+            return;
+        }
+
+        try
+        {
+            await RefreshAsync();
+            StateHasChanged();
+        }
+        catch
+        {
+            // Keep the current view. The next day change retries.
+        }
+    }
+
     public void Dispose()
     {
         Dispose(true);
@@ -929,6 +961,7 @@ public partial class UpcomingPanel : IDisposable
         if (disposing)
         {
             Nav.LocationChanged -= OnLocationChanged;
+            UserDay.DayChanged -= OnUserDayChanged;
             _swipeRef?.Dispose();
             _swipeRef = null;
         }

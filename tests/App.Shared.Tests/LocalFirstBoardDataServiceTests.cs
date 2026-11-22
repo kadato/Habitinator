@@ -120,11 +120,87 @@ public sealed class LocalFirstBoardDataServiceTests
         found.Should().BeNull();
     }
 
+    [Fact]
+    public async Task SnapshotAsync_DailyCompletedYesterday_ShowsOpenToday()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var id = Guid.NewGuid();
+        await harness.Store.UpsertItemAsync(new BoardLocalRow
+        {
+            Id = id,
+            UserKey = Harness.UserKey,
+            Section = BoardSection.Daily,
+            Title = "Water",
+            IsCompleted = true,
+            DailyStartDate = today.AddDays(-10),
+            DailyLastCompletedOn = today.AddDays(-1)
+        }, ct);
+
+        var snapshot = await harness.Board.GetSnapshotAsync(ct);
+        var item = await harness.Board.GetItemAsync(id, ct);
+
+        snapshot.Dailies.Should().ContainSingle(x => x.Id == id && !x.IsCompleted);
+        Assert.NotNull(item);
+        item.IsCompleted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CompleteDailyForDateAsync_Yesterday_LeavesTodayOpen()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var yesterday = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1);
+        var daily = await harness.Board.CreateItemAsync(BoardSection.Daily, "Water", cancellationToken: ct);
+
+        var updated = await harness.Board.CompleteDailyForDateAsync(daily.Id, yesterday, ct);
+        var snapshot = await harness.Board.GetSnapshotAsync(ct);
+
+        Assert.NotNull(updated);
+        updated.DailyLastCompletedOn.Should().Be(yesterday);
+        updated.IsCompleted.Should().BeFalse();
+        snapshot.Dailies.Should().ContainSingle(x => x.Id == daily.Id
+            && x.DailyLastCompletedOn == yesterday
+            && !x.IsCompleted);
+    }
+
+    [Fact]
+    public async Task TryGetCachedSnapshot_DoesNotReuseYesterdaysSnapshot()
+    {
+        var userDay = new TestUserDayService { Today = DateOnly.FromDateTime(DateTime.UtcNow) };
+        var harness = new Harness(userDay: userDay);
+        var ct = CancellationToken.None;
+        var today = userDay.Today;
+        var id = Guid.NewGuid();
+        await harness.Store.UpsertItemAsync(new BoardLocalRow
+        {
+            Id = id,
+            UserKey = Harness.UserKey,
+            Section = BoardSection.Daily,
+            Title = "Water",
+            IsCompleted = true,
+            DailyStartDate = today.AddDays(-10),
+            DailyLastCompletedOn = today
+        }, ct);
+
+        var snapshot = await harness.Board.GetSnapshotAsync(ct);
+        harness.Board.TryGetCachedSnapshot(out var cached).Should().BeTrue();
+
+        snapshot.Dailies.Should().ContainSingle(x => x.Id == id && x.IsCompleted);
+        Assert.NotNull(cached);
+        cached.Dailies.Should().ContainSingle(x => x.Id == id && x.IsCompleted);
+
+        userDay.Today = today.AddDays(1);
+
+        harness.Board.TryGetCachedSnapshot(out _).Should().BeFalse();
+    }
+
     private sealed class Harness
     {
         public const string UserKey = "WEBTEST@LOCAL";
 
-        public Harness(HttpMessageHandler? handler = null)
+        public Harness(HttpMessageHandler? handler = null, IUserDayService? userDay = null)
         {
             Users = new FakeUserKeys();
             Store = new InMemoryBoardLocalStore();
@@ -135,7 +211,7 @@ public sealed class LocalFirstBoardDataServiceTests
                 Users,
                 remote,
                 services,
-                new FakeTimeZone(),
+                userDay ?? new TestUserDayService(),
                 new BoardSyncStatus(),
                 NullLogger<LocalFirstBoardDataService>.Instance);
         }
@@ -180,31 +256,6 @@ public sealed class LocalFirstBoardDataServiceTests
             Changed?.Invoke(this, EventArgs.Empty);
             return Task.CompletedTask;
         }
-    }
-
-    private sealed class FakeTimeZone : IUserTimeZoneService
-    {
-        public string? TimeZoneId => null;
-
-        public bool IsDetected => false;
-
-        public DateOnly LocalToday => DateOnly.FromDateTime(DateTime.UtcNow);
-
-        public void SetOverride(string? timeZoneId)
-        {
-        }
-
-        public Task InitializeAsync() => Task.CompletedTask;
-
-        public DateTimeOffset ConvertToLocal(DateTimeOffset utcTime) => utcTime;
-
-        public DateTimeOffset ConvertToUtc(DateTimeOffset localTime) => localTime;
-
-        public TimeSpan ConvertLocalTimeToUtc(TimeSpan localTime) => localTime;
-
-        public TimeSpan ConvertUtcTimeToLocal(TimeSpan utcTime) => utcTime;
-
-        public string GetTimeZoneAbbreviation() => "UTC";
     }
 
     private sealed class FixedHttpFactory(HttpMessageHandler handler) : IHttpClientFactory

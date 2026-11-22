@@ -8,7 +8,7 @@ namespace App.Shared.RCL.Components;
 
 public partial class BoardItemCard
 {
-    [Inject] public required IUserTimeZoneService TimeZoneService { get; set; }
+    [Inject] public required IUserDayService UserDay { get; set; }
     [Inject] public required IUserDateFormatService DateFormatService { get; set; }
 
     [Parameter][EditorRequired] public required BoardItem Item { get; set; }
@@ -31,6 +31,9 @@ public partial class BoardItemCard
 
     /// <summary>Oldest missed scheduled day. Set for dailies with past misses in the catch-up window.</summary>
     [Parameter] public DateOnly? OverdueSince { get; set; }
+
+    /// <summary>Current board day from the column, including the configured day-start rollback.</summary>
+    [Parameter] public DateOnly? Today { get; set; }
 
     private bool _subtasksExpanded = true;
     private bool _tagsExpanded;
@@ -66,6 +69,7 @@ public partial class BoardItemCard
     private bool? _lastRenderedSubtasksExpanded;
     private bool? _lastRenderedTagsExpanded;
     private DateOnly? _lastRenderedOverdueSince;
+    private DateOnly? _lastRenderedToday;
 
     protected override bool ShouldRender()
     {
@@ -75,6 +79,7 @@ public partial class BoardItemCard
                || _lastRenderedSubtasksExpanded != _subtasksExpanded
                || _lastRenderedTagsExpanded != _tagsExpanded
                || _lastRenderedOverdueSince != OverdueSince
+               || _lastRenderedToday != Today
                || _lastRenderedIsBusy != IsBusy;
     }
 
@@ -88,6 +93,7 @@ public partial class BoardItemCard
         _lastRenderedSubtasksExpanded = _subtasksExpanded;
         _lastRenderedTagsExpanded = _tagsExpanded;
         _lastRenderedOverdueSince = OverdueSince;
+        _lastRenderedToday = Today;
         _lastRenderedIsBusy = IsBusy;
     }
 
@@ -160,7 +166,7 @@ public partial class BoardItemCard
     private string TodoDueRelativeLabel(DateOnly due) =>
         TodoDueRelativeText.Format(due, BoardToday());
 
-    private DateOnly BoardToday() => DailySchedule.LocalToday(TimeZoneService);
+    private DateOnly BoardToday() => Today ?? UserDay.Today;
 
     private string ResetPeriodLabel => Item.ResetPeriod switch
     {

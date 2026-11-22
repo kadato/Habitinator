@@ -475,7 +475,7 @@ public sealed class BoardSyncPauseTests
                 new FakeUserKeys(),
                 remote,
                 new FakeServices(),
-                new FakeTimeZone(),
+                new TestUserDayService(),
                 Status,
                 NullLogger<LocalFirstBoardDataService>.Instance);
             Coordinator = new BoardSyncCoordinator(
@@ -548,31 +548,6 @@ public sealed class BoardSyncPauseTests
             Changed?.Invoke(this, EventArgs.Empty);
             return Task.CompletedTask;
         }
-    }
-
-    private sealed class FakeTimeZone : IUserTimeZoneService
-    {
-        public string? TimeZoneId => null;
-
-        public bool IsDetected => false;
-
-        public DateOnly LocalToday => DateOnly.FromDateTime(DateTime.UtcNow);
-
-        public void SetOverride(string? timeZoneId)
-        {
-        }
-
-        public Task InitializeAsync() => Task.CompletedTask;
-
-        public DateTimeOffset ConvertToLocal(DateTimeOffset utcTime) => utcTime;
-
-        public DateTimeOffset ConvertToUtc(DateTimeOffset localTime) => localTime;
-
-        public TimeSpan ConvertLocalTimeToUtc(TimeSpan localTime) => localTime;
-
-        public TimeSpan ConvertUtcTimeToLocal(TimeSpan utcTime) => utcTime;
-
-        public string GetTimeZoneAbbreviation() => "UTC";
     }
 
     private sealed class StubSettingsStore(Dictionary<string, string> values) : ILocalSettingsStore

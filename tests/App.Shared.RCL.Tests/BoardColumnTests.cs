@@ -39,6 +39,8 @@ public sealed class BoardColumnTests : IAsyncDisposable
         _ctx.Services.AddSingleton(_dateFormat);
         _ctx.Services.AddSingleton(_undoService);
         _ctx.Services.AddSingleton(_columnState);
+        _ctx.Services.AddSingleton<TestUserDayService>();
+        _ctx.Services.AddSingleton<IUserDayService>(sp => sp.GetRequiredService<TestUserDayService>());
 
         _columnState.GetAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<BoardColumnFilterState?>(null));

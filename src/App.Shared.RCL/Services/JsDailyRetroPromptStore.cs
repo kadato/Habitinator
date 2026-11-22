@@ -1,7 +1,5 @@
 using System.Globalization;
 
-using App.Shared.RCL.Models;
-
 namespace App.Shared.RCL.Services;
 
 public sealed class JsDailyRetroPromptStore : IDailyRetroPromptStore
@@ -9,19 +7,16 @@ public sealed class JsDailyRetroPromptStore : IDailyRetroPromptStore
     private const string BaseKey = "habitinator.dailyRetro.ymd";
     private readonly ILocalSettingsStore _localStore;
     private readonly IClientSessionProvider _sessionProvider;
-    private readonly IUserTimeZoneService _timeZoneService;
-    private readonly IClock _clock;
+    private readonly IUserDayService _userDay;
 
     public JsDailyRetroPromptStore(
         ILocalSettingsStore localStore,
-        IUserTimeZoneService timeZoneService,
         IClientSessionProvider sessionProvider,
-        IClock clock)
+        IUserDayService userDay)
     {
         _localStore = localStore;
-        _timeZoneService = timeZoneService;
         _sessionProvider = sessionProvider;
-        _clock = clock;
+        _userDay = userDay;
     }
 
     private string GetKey() => LocalFirstRemoteStore.KeyFor(_sessionProvider.Email, BaseKey);
@@ -37,10 +32,10 @@ public sealed class JsDailyRetroPromptStore : IDailyRetroPromptStore
         return Task.FromResult<DateOnly?>(d);
     }
 
-    public Task SetPromptResolvedForTodayAsync(CancellationToken cancellationToken = default)
+    public async Task SetPromptResolvedForTodayAsync(CancellationToken cancellationToken = default)
     {
-        var ymd = DailySchedule.LocalToday(_clock, _timeZoneService).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        await _userDay.InitializeAsync(cancellationToken);
+        var ymd = _userDay.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         _localStore.Write(GetKey(), ymd);
-        return Task.CompletedTask;
     }
 }

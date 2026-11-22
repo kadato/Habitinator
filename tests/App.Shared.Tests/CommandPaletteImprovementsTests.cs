@@ -164,6 +164,18 @@ public sealed class CommandPaletteQuickAddTests
     }
 
     [Fact]
+    public void ParseInlineTitle_uses_the_supplied_local_day()
+    {
+        var anchor = new DateOnly(2026, 1, 15);
+
+        var (_, _, due) = BoardPaletteCommands.ParseInlineTitle("due:today", anchor);
+        var (_, _, tomorrow) = BoardPaletteCommands.ParseInlineTitle("due:tomorrow", anchor);
+
+        Assert.Equal(anchor, due);
+        Assert.Equal(anchor.AddDays(1), tomorrow);
+    }
+
+    [Fact]
     public void BuildQuickAddCommands_enriches_subtitle_with_tags_and_due_date()
     {
         using var timer = new GlobalTimerService(new SystemClock());

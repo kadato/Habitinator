@@ -213,13 +213,12 @@ public sealed class StatsCacheInvalidationTests
         var boardData = Substitute.For<IBoardDataService>();
         boardData.GetSnapshotAsync(Arg.Any<CancellationToken>()).Returns(new BoardSnapshot([], [], []));
         var activityLog = Substitute.For<IUserActivityLogService>();
-        var timeZone = Substitute.For<IUserTimeZoneService>();
         var remoteRefresh = Substitute.For<IRemoteBoardRefreshService>();
         var clock = Substitute.For<IClock>();
         clock.UtcNow.Returns(DateTimeOffset.UtcNow);
         var timer = new GlobalTimerService(clock);
         timer.SelectTarget("Habit", "Test Habit", Guid.NewGuid());
-        var service = new TimerSessionLogService(timer, boardData, activityLog, timeZone, remoteRefresh, clock, stats);
+        var service = new TimerSessionLogService(timer, boardData, activityLog, remoteRefresh, stats);
 
         await service.LogStoppedSessionAsync(TimeSpan.FromMinutes(25));
 
@@ -235,13 +234,12 @@ public sealed class StatsCacheInvalidationTests
         var boardData = Substitute.For<IBoardDataService>();
         boardData.GetSnapshotAsync(Arg.Any<CancellationToken>()).Returns(new BoardSnapshot([], [], []));
         var activityLog = Substitute.For<IUserActivityLogService>();
-        var timeZone = Substitute.For<IUserTimeZoneService>();
         var remoteRefresh = Substitute.For<IRemoteBoardRefreshService>();
         var clock = Substitute.For<IClock>();
         clock.UtcNow.Returns(DateTimeOffset.UtcNow);
         var timer = new GlobalTimerService(clock);
         // No target, stopwatch mode
-        var service = new TimerSessionLogService(timer, boardData, activityLog, timeZone, remoteRefresh, clock, stats);
+        var service = new TimerSessionLogService(timer, boardData, activityLog, remoteRefresh, stats);
 
         await service.LogStoppedSessionAsync(TimeSpan.FromMinutes(5));
 

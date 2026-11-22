@@ -38,6 +38,8 @@ public sealed class DailyHeatmapDialogTests : IAsyncDisposable
         _ctx.Services.AddSingleton(_dateFormatService);
         _ctx.Services.AddSingleton<IUserNotifier>(_notifier);
         _ctx.Services.AddSingleton(_boardData);
+        _ctx.Services.AddSingleton<TestUserDayService>();
+        _ctx.Services.AddSingleton<IUserDayService>(sp => sp.GetRequiredService<TestUserDayService>());
 
         _timeZoneService.LocalToday.Returns(new DateOnly(2026, 8, 12));
         _dateFormatService.DateFormat.Returns("yyyy-MM-dd");

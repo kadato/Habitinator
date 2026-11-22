@@ -21,6 +21,8 @@ public sealed class TimeZoneInitializerTests : IAsyncDisposable
         _ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         _ctx.Services.AddSingleton<IUserPreferencesService>(_preferencesService);
         _ctx.Services.AddSingleton<IUserTimeZoneService>(_timeZoneService);
+        _ctx.Services.AddSingleton<TestUserDayService>();
+        _ctx.Services.AddSingleton<IUserDayService>(sp => sp.GetRequiredService<TestUserDayService>());
     }
 
     public async ValueTask DisposeAsync()
@@ -87,7 +89,7 @@ public sealed class TimeZoneInitializerTests : IAsyncDisposable
     {
         for (var i = 0; i < 50; i++)
         {
-            if (_timeZoneService.ReceivedCalls().Any(c => c.GetMethodInfo().Name == "InitializeAsync"))
+            if (_timeZoneService.ReceivedCalls().Any(c => c.GetMethodInfo().Name == "get_TimeZoneId"))
             {
                 await Task.Yield();
                 return;

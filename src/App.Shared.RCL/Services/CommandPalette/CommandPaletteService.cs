@@ -21,6 +21,7 @@ public sealed class CommandPaletteService : ICommandPaletteService
     private readonly ExportPaletteCommands _exportCommands;
     private readonly IRemoteBoardRefreshService? _refresh;
     private readonly BoardUiSessionState? _uiSession;
+    private readonly IUserDayService? _userDay;
     private readonly List<string> _recentIds = [];
 #pragma warning disable IDE0028 // Dictionary with comparer cannot use collection expression.
     private readonly Dictionary<string, CommandItem> _knownItems = new(StringComparer.Ordinal);
@@ -40,12 +41,13 @@ public sealed class CommandPaletteService : ICommandPaletteService
         IJSRuntime? js = null,
         ITimerSessionLogService? timerSessionLog = null,
         BoardUiSessionState? uiSession = null,
-        IUserTimeZoneService? timeZoneService = null)
+        IUserTimeZoneService? timeZoneService = null,
+        IUserDayService? userDay = null)
     {
         _boardData = boardData;
         Action close = Close;
         Func<Task> notifyRefresh = NotifyBoardRefreshAsync;
-        _navigation = new NavigationPaletteCommands(nav, boardData, dialogs, preferences, notifier, close, notifyRefresh, uiSession, timeZoneService);
+        _navigation = new NavigationPaletteCommands(nav, boardData, dialogs, preferences, notifier, close, notifyRefresh, uiSession, timeZoneService, userDay);
         _board = new BoardPaletteCommands(
             boardData,
             undo,
@@ -58,12 +60,14 @@ public sealed class CommandPaletteService : ICommandPaletteService
             },
             close,
             notifyRefresh,
-            uiSession);
+            uiSession,
+            userDay);
         _timers = new TimerPaletteCommands(
             timer, boardData, dialogs, notifier, timerSessionLog, _navigation.NavigateAsync, close, notifyRefresh);
         _exportCommands = new ExportPaletteCommands(export, boardData, js, dialogs, notifier, close);
         _refresh = refresh;
         _uiSession = uiSession;
+        _userDay = userDay;
     }
 
     private Task NotifyBoardRefreshAsync()
@@ -250,7 +254,9 @@ public sealed class CommandPaletteService : ICommandPaletteService
             return [];
         }
 
-        var (parsedTitle, tags, dueDate) = BoardPaletteCommands.ParseInlineTitle(title);
+        var (parsedTitle, tags, dueDate) = BoardPaletteCommands.ParseInlineTitle(
+            title,
+            _userDay?.Today ?? DailySchedule.LocalToday());
         var preview = parsedTitle;
         var parts = new List<string>();
         if (!string.IsNullOrWhiteSpace(tags))

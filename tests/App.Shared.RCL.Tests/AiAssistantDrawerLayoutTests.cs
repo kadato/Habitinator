@@ -33,6 +33,8 @@ public sealed class AiAssistantDrawerLayoutTests : IAsyncDisposable
         _ctx.Services.AddMudServices();
         _ctx.Services.AddSingleton(_sessionState);
         _ctx.Services.AddSingleton(_preferences);
+        _ctx.Services.AddSingleton<TestUserDayService>();
+        _ctx.Services.AddSingleton<IUserDayService>(sp => sp.GetRequiredService<TestUserDayService>());
         _ctx.Services.AddSingleton(_aiService);
         _ctx.Services.AddSingleton(_boardData);
         _ctx.Services.AddSingleton(_remoteRefresh);

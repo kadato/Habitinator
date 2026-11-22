@@ -5,6 +5,7 @@
 @implements IDisposable
 @inject BoardUiSessionState UiSessionState
 @inject IUserPreferencesService PreferencesService
+@inject IUserDayService UserDay
 @inject IAiAssistantService AiService
 @inject IBoardDataService BoardData
 @inject IRemoteBoardRefreshService RemoteRefresh
@@ -547,6 +548,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await UserDay.InitializeAsync();
         UiSessionState.OnAiDrawerChanged += HandleDrawerChanged;
         await LoadPreferencesAsync();
         await LoadThreadsAsync();
@@ -896,7 +898,7 @@
         try
         {
             _boardSnapshot = await BoardData.GetSnapshotAsync();
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var today = UserDay.Today;
             var overdue = _boardSnapshot.Todos.Count(t => !t.IsCompleted && t.TodoDueDate.HasValue && t.TodoDueDate.Value < today);
             var pendingDailies = _boardSnapshot.Dailies.Count(d => !d.IsCompleted);
             _quickPrompts.Clear();

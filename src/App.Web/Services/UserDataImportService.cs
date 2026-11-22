@@ -18,8 +18,8 @@ public sealed class UserDataImportValidationException(string message) : Exceptio
 /// </summary>
 public sealed class UserDataImportService(
     ApplicationDbContext dbContext,
-    MemoryCacheStore<BoardSnapshot> snapshotCache,
-    MemoryCacheStore<Dictionary<Guid, int>> streakCache,
+    MemoryCacheStore<CachedBoardSnapshot> snapshotCache,
+    MemoryCacheStore<CachedStreakMap> streakCache,
     IBoardChangeNotifier boardChangeNotifier)
 {
     public async Task<UserDataImportResult> ImportAsync(

@@ -19,8 +19,8 @@ public sealed record DailyBackfillArgs(
 public sealed class BoardPersistenceService(
     ApplicationDbContext dbContext,
     IDbContextFactory<ApplicationDbContext> dbContextFactory,
-    MemoryCacheStore<BoardSnapshot> snapshotCache,
-    MemoryCacheStore<Dictionary<Guid, int>> streakCache,
+    MemoryCacheStore<CachedBoardSnapshot> snapshotCache,
+    MemoryCacheStore<CachedStreakMap> streakCache,
     IBoardChangeNotifier boardChangeNotifier,
     IUserTimeZoneService timeZone,
     DailyStreakCalculationService streakCalculator)
@@ -226,10 +226,11 @@ public sealed class BoardPersistenceService(
     public async Task<BoardSnapshot> GetSnapshotAsync(Guid userId, int? limit, CancellationToken cancellationToken = default)
     {
         using var activity = AppTelemetry.Activity.StartActivity("board.snapshot");
-        if (limit is null && snapshotCache.TryGet(userId, out var cached))
+        var (today, dayStart) = await TodayAndDayStartAsync(userId, cancellationToken);
+        if (limit is null && snapshotCache.TryGet(userId, out var cached) && cached.Today == today)
         {
             AppTelemetry.RecordSnapshotCache(hit: true);
-            return cached;
+            return cached.Snapshot;
         }
 
         AppTelemetry.RecordSnapshotCache(hit: false);
@@ -243,15 +244,14 @@ public sealed class BoardPersistenceService(
             ? await query.Take(Math.Clamp(take, 1, SnapshotMaxLimit)).ToListAsync(cancellationToken)
             : await query.ToListAsync(cancellationToken);
 
-        var (today, dayStart) = await TodayAndDayStartAsync(userId, cancellationToken);
         var dailies = items.Where(x => x.Section == BoardSection.Daily).ToList();
         var dailyStreaks = await streakCalculator.BuildDailyStreakMapAsync(userId, dailies, today, dayStart, readDb, cancellationToken);
         var snapshot = BuildSnapshot(items, today, dailyStreaks);
         if (limit is null)
         {
-            snapshotCache.Set(userId, snapshot);
+            snapshotCache.Set(userId, new CachedBoardSnapshot(snapshot, today));
             var streakMap = new Dictionary<Guid, int>(dailyStreaks);
-            streakCache.Set(userId, streakMap);
+            streakCache.Set(userId, new CachedStreakMap(streakMap, today));
         }
 
         AppTelemetry.RecordSnapshot(snapshot.Habits.Count + snapshot.Dailies.Count + snapshot.Todos.Count);
@@ -260,19 +260,19 @@ public sealed class BoardPersistenceService(
 
     public async Task<Dictionary<Guid, int>> GetDailyStreakMapAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        if (streakCache.TryGet(userId, out var cached))
+        var (today, dayStart) = await TodayAndDayStartAsync(userId, cancellationToken);
+        if (streakCache.TryGet(userId, out var cached) && cached.Today == today)
         {
-            return cached;
+            return cached.Streaks;
         }
 
         await using var readDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var dailies = await LiveBoardItems(readDb, userId).AsNoTracking()
             .Where(x => x.Section == BoardSection.Daily)
             .ToListAsync(cancellationToken);
-        var (today, dayStart) = await TodayAndDayStartAsync(userId, cancellationToken);
         var map = await streakCalculator.BuildDailyStreakMapAsync(userId, dailies, today, dayStart, readDb, cancellationToken);
         var result = new Dictionary<Guid, int>(map);
-        streakCache.Set(userId, result);
+        streakCache.Set(userId, new CachedStreakMap(result, today));
         return result;
     }
 

@@ -12,9 +12,9 @@ public interface IBoardChangeNotifier
 }
 
 public sealed class BoardChangeNotifier(
-    MemoryCacheStore<BoardSnapshot> snapshotCache,
+    MemoryCacheStore<CachedBoardSnapshot> snapshotCache,
     ActivityStatisticsCache statsCache,
-    MemoryCacheStore<Dictionary<Guid, int>> streakCache,
+    MemoryCacheStore<CachedStreakMap> streakCache,
     IHubContext<BoardHub> hub,
     ILogger<BoardChangeNotifier> logger) : IBoardChangeNotifier
 {

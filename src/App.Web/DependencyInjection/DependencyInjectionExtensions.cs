@@ -114,6 +114,7 @@ public static class DependencyInjectionExtensions
         services.AddSingleton<JwtTokenService>();
         services.AddSingleton<IOAuthService, OAuthService>();
         services.AddSingleton<IClock, SystemClock>();
+        services.AddScoped<IUserDayService, UserDayService>();
         services.AddScoped<GlobalTimerService>();
         services.AddSingleton<IAppWindowProgressService, FallbackAppWindowProgressService>();
         services.AddSingleton<IAppUpdaterService, FallbackAppUpdaterService>();
@@ -126,11 +127,11 @@ public static class DependencyInjectionExtensions
         services.AddScoped<BoardSyncStatus>();
         services.AddScoped<BoardSyncPausePreference>();
         services.AddScoped<BoardRemoteNotifyBridge>();
-        services.AddSingleton(sp => new MemoryCacheStore<BoardSnapshot>(
+        services.AddSingleton(sp => new MemoryCacheStore<CachedBoardSnapshot>(
             sp.GetRequiredService<IMemoryCache>(),
             "",
             TimeSpan.FromSeconds(30)));
-        services.AddSingleton(sp => new MemoryCacheStore<Dictionary<Guid, int>>(
+        services.AddSingleton(sp => new MemoryCacheStore<CachedStreakMap>(
             sp.GetRequiredService<IMemoryCache>(),
             "streak_map_",
             TimeSpan.FromMinutes(5)));

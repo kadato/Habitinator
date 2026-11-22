@@ -90,4 +90,81 @@ public sealed class RemoteActivityStatisticsReaderTests
         result3.Should().NotBeNull();
         handler.CallCount.Should().Be(2);
     }
+
+    [Fact]
+    public async Task GetOverviewAsync_RefreshesPersistedOverviewWhenOnline()
+    {
+        var settings = new MemorySettingsStore();
+        var firstHandler = new MockHttpMessageHandler(_ => JsonResponse(OverviewJson(totalEvents: 10)));
+        var firstReader = new RemoteActivityStatisticsReader(Factory(firstHandler), settings);
+        var first = await firstReader.GetOverviewAsync(DailyGraphPeriods.Rolling370Days);
+        first.Dashboard.TotalEvents.Should().Be(10);
+        firstHandler.CallCount.Should().Be(1);
+
+        // A fresh app load hydrates the persisted overview for instant paint, but
+        // must still fetch a fresh copy while online.
+        var secondHandler = new MockHttpMessageHandler(_ => JsonResponse(OverviewJson(totalEvents: 99)));
+        var secondReader = new RemoteActivityStatisticsReader(Factory(secondHandler), settings);
+        var second = await secondReader.GetOverviewAsync(DailyGraphPeriods.Rolling370Days);
+
+        second.Dashboard.TotalEvents.Should().Be(99);
+        secondHandler.CallCount.Should().Be(1);
+    }
+
+    private static HttpResponseMessage JsonResponse(string json) =>
+        new(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+        };
+
+    private static string OverviewJson(int totalEvents)
+    {
+        var overview = new ActivityOverviewDto(
+            new ActivityDashboardDto(
+                DailyGraphPeriods.Rolling370Days,
+                [],
+                [],
+                53,
+                totalEvents,
+                30,
+                5,
+                new DateOnly(2026, 8, 1),
+                new DateOnly(2025, 8, 1),
+                new DateOnly(2026, 8, 17),
+                370,
+                new DateOnly(2025, 8, 1),
+                new DateOnly(2026, 8, 17),
+                []),
+            new DailyContributionsViewDto(
+                DailyGraphPeriods.Rolling370Days,
+                [],
+                [],
+                new DateOnly(2025, 8, 1),
+                new DateOnly(2026, 8, 17)),
+            new HabitContributionsViewDto(
+                DailyGraphPeriods.Rolling370Days,
+                [],
+                [],
+                new DateOnly(2025, 8, 1),
+                new DateOnly(2026, 8, 17)));
+        return JsonSerializer.Serialize(overview, JsonDefaults.Api);
+    }
+
+    private static IHttpClientFactory Factory(MockHttpMessageHandler handler)
+    {
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost") };
+        var factory = Substitute.For<IHttpClientFactory>();
+        factory.CreateClient("api").Returns(httpClient);
+        return factory;
+    }
+
+    private sealed class MemorySettingsStore : ILocalSettingsStore
+    {
+        private readonly Dictionary<string, string> _values = [];
+
+        public string? Read(string key, string? defaultValue = null) =>
+            _values.TryGetValue(key, out var value) ? value : defaultValue;
+
+        public void Write(string key, string value) => _values[key] = value;
+    }
 }

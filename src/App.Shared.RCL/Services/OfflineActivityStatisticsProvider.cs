@@ -15,6 +15,7 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
     private readonly ConcurrentDictionary<string, ActivityOverviewDto> _overviewCache = new();
     private readonly ConcurrentDictionary<string, int> _overviewEventCount = new();
     private readonly ConcurrentDictionary<string, int> _overviewBoardHash = new();
+    private readonly ConcurrentDictionary<string, DateOnly> _overviewDay = new();
 
     public OfflineActivityStatisticsProvider(
         IServiceProvider serviceProvider,
@@ -40,6 +41,7 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
         _overviewCache.Clear();
         _overviewEventCount.Clear();
         _overviewBoardHash.Clear();
+        _overviewDay.Clear();
     }
 
     public async Task<ActivityOverviewDto> BuildOverviewAsync(string? periodKey, string? tag, CancellationToken cancellationToken = default)
@@ -49,15 +51,16 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
         var allEvents = await _eventStore.GetAllAsync(cancellationToken);
         var boardHash = ComputeBoardHash(snapshot);
         var eventCount = allEvents.Count;
+        var (today, dayStart, timeZone) = await GetTodayAndDayStartAsync(cancellationToken);
 
         if (_overviewCache.TryGetValue(cacheKey, out var cached) &&
             _overviewEventCount.TryGetValue(cacheKey, out var cachedCount) && cachedCount == eventCount &&
-            _overviewBoardHash.TryGetValue(cacheKey, out var cachedHash) && cachedHash == boardHash)
+            _overviewBoardHash.TryGetValue(cacheKey, out var cachedHash) && cachedHash == boardHash &&
+            _overviewDay.TryGetValue(cacheKey, out var cachedDay) && cachedDay == today)
         {
             return cached;
         }
 
-        var (today, dayStart, timeZone) = await GetTodayAndDayStartAsync(cancellationToken);
         var overview = await Task.Run(() =>
         {
             var periodOptions = ActivityStatisticsCalculator.BuildPeriodOptions(today, allEvents, timeZone, dayStart);
@@ -71,13 +74,13 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
 
             var dashboard = ActivityStatisticsCalculator.BuildDashboard(filteredEvents, key, start, end, today, timeZone, dayStart) with { AvailableTags = availableTags };
 
-            var dailyItems = GetDailyItems(snapshot);
+            var dailyItems = GetDailyItems(snapshot, timeZone, today);
             var dailyResult = ActivityStatisticsCalculator.BuildDailyContributions(
                 filteredEvents,
                 dailyItems,
                 new ContributionsRangeContext(key, periodOptions, start, end, today, timeZone, dayStart));
 
-            var habitItems = GetHabitItems(snapshot);
+            var habitItems = GetHabitItems(snapshot, timeZone, today);
             var habitResult = ActivityStatisticsCalculator.BuildHabitContributions(
                 filteredEvents,
                 habitItems,
@@ -88,6 +91,7 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
         _overviewCache[cacheKey] = overview;
         _overviewEventCount[cacheKey] = eventCount;
         _overviewBoardHash[cacheKey] = boardHash;
+        _overviewDay[cacheKey] = today;
         return overview;
     }
 
@@ -165,6 +169,12 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
         {
             using var scope = _serviceProvider.CreateScope();
             var timeZone = scope.ServiceProvider.GetService<IUserTimeZoneService>();
+            if (scope.ServiceProvider.GetService<IUserDayService>() is { } userDay)
+            {
+                await userDay.InitializeAsync(cancellationToken);
+                return (userDay.Today, userDay.DayStartLocalTime, timeZone);
+            }
+
             var prefsService = scope.ServiceProvider.GetService<IUserPreferencesService>();
             if (timeZone != null && prefsService != null)
             {
@@ -222,23 +232,35 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
         return [.. set.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)];
     }
 
-    private static IReadOnlyList<DailyItemStatsDto> GetDailyItems(BoardSnapshot snapshot)
+    private static IReadOnlyList<DailyItemStatsDto> GetDailyItems(
+        BoardSnapshot snapshot,
+        IUserTimeZoneService? timeZone,
+        DateOnly today)
     {
         return [.. snapshot.Dailies.Select(b => new DailyItemStatsDto(
             b.Id,
             b.Title,
             b.DailyStartDate,
-            b.CreatedAtUtc is { } c ? DateOnly.FromDateTime(c.DateTime) : DateOnly.FromDateTime(DateTime.UtcNow),
+            b.CreatedAtUtc is { } c ? DateOnly.FromDateTime(ToLocal(timeZone, c).DateTime) : today,
             b.DailyRepeat,
             b.DailyRepeatInterval < 1 ? 1 : Math.Min(999, b.DailyRepeatInterval),
             DailyWeekdays.Normalize(b.DailyWeekdays),
             b.DailyLastCompletedOn))];
     }
 
-    private static IReadOnlyList<HabitItemStatsDto> GetHabitItems(BoardSnapshot snapshot)
+    private static IReadOnlyList<HabitItemStatsDto> GetHabitItems(
+        BoardSnapshot snapshot,
+        IUserTimeZoneService? timeZone,
+        DateOnly today)
     {
-        return [.. snapshot.Habits.Select(b => new HabitItemStatsDto(b.Id, b.Title, b.CreatedAtUtc is { } c ? DateOnly.FromDateTime(c.DateTime) : DateOnly.FromDateTime(DateTime.UtcNow)))];
+        return [.. snapshot.Habits.Select(b => new HabitItemStatsDto(
+            b.Id,
+            b.Title,
+            b.CreatedAtUtc is { } c ? DateOnly.FromDateTime(ToLocal(timeZone, c).DateTime) : today))];
     }
+
+    private static DateTimeOffset ToLocal(IUserTimeZoneService? timeZone, DateTimeOffset instant) =>
+        timeZone is { IsDetected: true } ? timeZone.ConvertToLocal(instant) : instant;
 
     private static int ComputeBoardHash(BoardSnapshot snapshot)
     {
@@ -257,6 +279,10 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
                 }
 
                 hash = hash * 31 + b.Title.GetHashCode(StringComparison.Ordinal);
+                hash = hash * 31 + b.IsCompleted.GetHashCode();
+                hash = hash * 31 + b.Counter;
+                hash = hash * 31 + b.NegativeCounter;
+                hash = hash * 31 + (b.DailyLastCompletedOn?.DayNumber ?? 0);
             }
 
             return hash;
@@ -270,6 +296,7 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
             _overviewCache.Clear();
             _overviewEventCount.Clear();
             _overviewBoardHash.Clear();
+            _overviewDay.Clear();
             return;
         }
 
@@ -283,6 +310,7 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
                 _overviewCache.TryRemove(key, out _);
                 _overviewEventCount.TryRemove(key, out _);
                 _overviewBoardHash.TryRemove(key, out _);
+                _overviewDay.TryRemove(key, out _);
             }
             else
             {
@@ -292,6 +320,7 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
                     _overviewCache.TryRemove(key, out _);
                     _overviewEventCount.TryRemove(key, out _);
                     _overviewBoardHash.TryRemove(key, out _);
+                    _overviewDay.TryRemove(key, out _);
                 }
             }
         }

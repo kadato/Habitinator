@@ -41,9 +41,11 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
                     var cached = JsonSerializer.Deserialize<ActivityOverviewDto>(raw, Serializer);
                     if (cached != null)
                     {
+                        // Serve the persisted copy for instant paint and offline fallback,
+                        // but mark it expired so an online load always refreshes it.
                         var defaultPath = OverviewEndpoint;
-                        _cache[defaultPath] = (cached, DateTime.UtcNow.AddMinutes(15));
-                        _cache[$"{defaultPath}?period={DailyGraphPeriods.Rolling370Days}"] = (cached, DateTime.UtcNow.AddMinutes(15));
+                        _cache[defaultPath] = (cached, DateTime.MinValue);
+                        _cache[$"{defaultPath}?period={DailyGraphPeriods.Rolling370Days}"] = (cached, DateTime.MinValue);
                     }
                 }
                 catch
@@ -51,46 +53,6 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
                     // Ignore corrupted local cache
                 }
             }
-
-            // Hydrate any v2 persisted entries into memory as stale fallback
-            TryHydratePersistentCache();
-        }
-    }
-
-    private void TryHydratePersistentCache()
-    {
-        if (_localStore == null)
-        {
-            return;
-        }
-
-        try
-        {
-            var indexRaw = _localStore.Read(StatsIndexKey);
-            if (string.IsNullOrEmpty(indexRaw))
-            {
-                return;
-            }
-
-            var keys = JsonSerializer.Deserialize<HashSet<string>>(indexRaw, Serializer);
-            if (keys == null)
-            {
-                return;
-            }
-
-            foreach (var key in keys)
-            {
-                var raw = _localStore.Read(key);
-                if (!string.IsNullOrEmpty(raw))
-                {
-                    // We do not know the type, so keep raw for on-demand deserialize. Keep placeholder?
-                    // For now hydrate only overview default already handled. Other types will be loaded on demand via TryReadPersistent.
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogDebug(ex, "Persistent stats cache hydration failed; continuing without it.");
         }
     }
 
@@ -349,13 +311,13 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         if (TryReadPersistent(path, out ActivityOverviewDto? persisted) && persisted != null)
         {
             overview = persisted;
-            _cache[path] = (persisted, DateTime.UtcNow.AddMinutes(15));
+            _cache[path] = (persisted, DateTime.MinValue);
             return true;
         }
 
         if (TryReadLegacyOverview(periodKey, tag, out overview) && overview != null)
         {
-            _cache[path] = (overview, DateTime.UtcNow.AddMinutes(15));
+            _cache[path] = (overview, DateTime.MinValue);
             return true;
         }
 
@@ -375,7 +337,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         if (TryReadPersistent(path, out ActivityDashboardDto? persisted) && persisted != null)
         {
             dashboard = persisted;
-            _cache[path] = (persisted, DateTime.UtcNow.AddMinutes(15));
+            _cache[path] = (persisted, DateTime.MinValue);
             return true;
         }
 
@@ -384,7 +346,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         if (TryGetCachedOverview(periodKey, tag, out var overview) && overview?.Dashboard is not null)
         {
             dashboard = overview.Dashboard;
-            _cache[path] = (dashboard, DateTime.UtcNow.AddMinutes(15));
+            _cache[path] = (dashboard, DateTime.MinValue);
             return true;
         }
 
@@ -404,14 +366,14 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         if (TryReadPersistent(path, out DailyContributionsViewDto? persisted) && persisted != null)
         {
             view = persisted;
-            _cache[path] = (persisted, DateTime.UtcNow.AddMinutes(15));
+            _cache[path] = (persisted, DateTime.MinValue);
             return true;
         }
 
         if (TryGetCachedOverview(periodKey, tag, out var overview) && overview?.DailyContributions is not null)
         {
             view = overview.DailyContributions;
-            _cache[path] = (view, DateTime.UtcNow.AddMinutes(15));
+            _cache[path] = (view, DateTime.MinValue);
             return true;
         }
 
@@ -431,14 +393,14 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         if (TryReadPersistent(path, out HabitContributionsViewDto? persisted) && persisted != null)
         {
             view = persisted;
-            _cache[path] = (persisted, DateTime.UtcNow.AddMinutes(15));
+            _cache[path] = (persisted, DateTime.MinValue);
             return true;
         }
 
         if (TryGetCachedOverview(periodKey, tag, out var overview) && overview?.HabitContributions is not null)
         {
             view = overview.HabitContributions;
-            _cache[path] = (view, DateTime.UtcNow.AddMinutes(15));
+            _cache[path] = (view, DateTime.MinValue);
             return true;
         }
 

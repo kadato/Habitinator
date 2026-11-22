@@ -33,7 +33,8 @@ public sealed class HabitPrompts(
         }
 
         var snapshot = await boards.GetSnapshotAsync(userId, 200, cancellationToken);
-        DateOnly day = date is not null ? McpInput.ParseDate(date) : await boards.TodayAsync(userId, cancellationToken);
+        var today = await boards.TodayAsync(userId, cancellationToken);
+        DateOnly day = date is not null ? McpInput.ParseDate(date, today: today) : today;
 
         var detail = await stats.GetActivityDayDetailAsync(userId, day, tag, cancellationToken);
 
@@ -121,8 +122,9 @@ public sealed class HabitPrompts(
         }
 
         var snapshot = await boards.GetSnapshotAsync(userId, 200, cancellationToken);
-        DateOnly today = date is not null ? McpInput.ParseDate(date) : await boards.TodayAsync(userId, cancellationToken);
-        var yesterday = today.AddDays(-1);
+        var today = await boards.TodayAsync(userId, cancellationToken);
+        var resolvedToday = date is not null ? McpInput.ParseDate(date, today: today) : today;
+        var yesterday = resolvedToday.AddDays(-1);
 
         var yesterdayDetail = await stats.GetActivityDayDetailAsync(userId, yesterday, tag, cancellationToken);
         var yesterdayCompleted = yesterdayDetail.Events.Count(e => e.EventType is ActivityEventType.DailyComplete or ActivityEventType.TodoComplete);
@@ -145,7 +147,7 @@ public sealed class HabitPrompts(
 
         return [
             new(ChatRole.User,
-                $"Daily standup for {today:yyyy-MM-dd}{(tag is null ? "" : $" [Tag: {tag}]")}.\n" +
+                $"Daily standup for {resolvedToday:yyyy-MM-dd}{(tag is null ? "" : $" [Tag: {tag}]")}.\n" +
                 $"Yesterday's summary: {yesterdayCompleted} completed items, {yesterdayDetail.Events.Count} total events.\n" +
                 $"Today's pending dailies:\n{string.Join("\n", pendingDailies)}\n" +
                 $"Pending todos:\n{string.Join("\n", activeTodos)}\n" +
@@ -160,7 +162,8 @@ public sealed class HabitPrompts(
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        DateOnly day = date is not null ? McpInput.ParseDate(date) : await boards.TodayAsync(userId, cancellationToken);
+        var today = await boards.TodayAsync(userId, cancellationToken);
+        DateOnly day = date is not null ? McpInput.ParseDate(date, today: today) : today;
         var detail = await stats.GetActivityDayDetailAsync(userId, day, null, cancellationToken);
         var snapshot = await boards.GetSnapshotAsync(userId, 200, cancellationToken);
 

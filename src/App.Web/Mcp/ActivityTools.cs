@@ -53,9 +53,11 @@ public sealed class ActivityTools(
         [Description("Tag filter, or null for all.")] string? tag = null,
         CancellationToken cancellationToken = default)
     {
-        var day = McpInput.ParseDate(date);
+        var userId = McpUser.RequireId(http);
+        var today = await boards.TodayAsync(userId, cancellationToken);
+        var day = McpInput.ParseDate(date, today: today);
 
-        return await stats.GetActivityDayDetailAsync(McpUser.RequireId(http), day, tag, cancellationToken);
+        return await stats.GetActivityDayDetailAsync(userId, day, tag, cancellationToken);
     }
 
     [McpServerTool(Name = "list_activity_events", Title = "List activity events", ReadOnly = true, OpenWorld = false)]
@@ -69,8 +71,9 @@ public sealed class ActivityTools(
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        var start = McpInput.ParseDate(startDate);
-        var end = McpInput.ParseDate(endDate);
+        var today = await boards.TodayAsync(userId, cancellationToken);
+        var start = McpInput.ParseDate(startDate, today: today);
+        var end = McpInput.ParseDate(endDate, today: today);
         if (start > end)
         {
             throw new McpFieldException(nameof(startDate),

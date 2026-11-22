@@ -321,9 +321,11 @@ public sealed class BoardTools(
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
+        var today = await boards.TodayAsync(userId, cancellationToken);
         var validated = ValidateCreateFields(
             section, title, notes, tags, date, checklistJson, repeat, repeatInterval,
-            weekdays, weekdayNames, resetPeriod, trackPlus, trackMinus, counter, negativeCounter);
+            weekdays, weekdayNames, resetPeriod, trackPlus, trackMinus, counter, negativeCounter,
+            today: today);
 
         if (dryRun)
         {
@@ -432,10 +434,12 @@ public sealed class BoardTools(
     {
         try
         {
+            var today = await boards.TodayAsync(userId, cancellationToken);
             var validated = ValidateCreateFields(
                 item.Section, item.Title, item.Notes, item.Tags, item.Date, item.ChecklistJson,
                 item.Repeat, item.RepeatInterval, null, item.WeekdayNames, item.ResetPeriod,
-                item.TrackPlus, item.TrackMinus, null, null, "checklistJson");
+                item.TrackPlus, item.TrackMinus, null, null, "checklistJson",
+                today);
 
             if (dryRun)
             {
@@ -513,7 +517,8 @@ public sealed class BoardTools(
         bool? trackMinus,
         int? counter,
         int? negativeCounter,
-        string checklistField = "checklistJson")
+        string checklistField = "checklistJson",
+        DateOnly? today = null)
     {
         var cleanTitle = McpInput.CleanTitle(title);
         McpInput.CheckNotes(notes);
@@ -529,7 +534,7 @@ public sealed class BoardTools(
                 throw new McpFieldException("date", "expected no date for Habit, got one. Omit the date for Habit.");
             }
 
-            parsedDate = McpInput.ParseDate(date, nameof(date));
+            parsedDate = McpInput.ParseDate(date, nameof(date), today);
         }
 
         return new ValidatedCreate(

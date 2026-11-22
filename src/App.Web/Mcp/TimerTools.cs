@@ -19,7 +19,8 @@ public sealed class TimerTools(
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
-        DateOnly day = date is not null ? McpInput.ParseDate(date) : await boards.TodayAsync(userId, cancellationToken);
+        var today = await boards.TodayAsync(userId, cancellationToken);
+        DateOnly day = date is not null ? McpInput.ParseDate(date, today: today) : today;
         return await stats.GetTimerSummaryAsync(userId, day, cancellationToken);
     }
 

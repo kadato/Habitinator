@@ -43,9 +43,11 @@ var postgres = builder
 
 var habitinatorDb = postgres.AddDatabase("habitinatordb");
 
-// To test on a physical device set HABITINATOR_HTTP_PORT to 5050. The setting keeps
-// the port stable across runs. The Android tooling forwards the port with adb reverse,
-// and the app uses a fixed localhost URL. If unset, Aspire picks a free port as before.
+// To test on a physical device, set HABITINATOR_HTTP_PORT to a stable port outside
+// the Windows excluded port ranges. 5150 works on WSL. 5050 is inside a common WSL
+// exclusion. The setting keeps the port stable across runs. The Android tooling
+// forwards the port with adb reverse, and the app uses a fixed localhost URL.
+// If the variable is unset, Aspire picks a free port as before.
 int? httpPort = null;
 if (int.TryParse(Environment.GetEnvironmentVariable("HABITINATOR_HTTP_PORT"), out var parsedPort)
     && parsedPort is > 0 and <= 65535)
@@ -56,12 +58,18 @@ if (int.TryParse(Environment.GetEnvironmentVariable("HABITINATOR_HTTP_PORT"), ou
 // Aspire assigns a free port, so local runs never fight over fixed ports.
 // Aspire defaults to a DCP reverse proxy in front of project endpoints. That breaks Blazor and SignalR WebSockets for many setups.
 // Turn off the proxy so the browser and MAUI talk to Kestrel directly. See /health for orchestration.
-var appWeb = builder.AddDotnetProject("app-web", "../App.Web/App.Web.csproj")
+// App.Web's launch profile pins ASPNETCORE_URLS to localhost:5050. That port is
+// inside a Windows excluded range on WSL, so the app fails to bind before Aspire
+// can apply the dynamic endpoint. Ignore the profile and let the endpoint decide.
+var appWeb = builder.AddDotnetProject(
+        "app-web",
+        "../App.Web/App.Web.csproj",
+        options => options.ExcludeLaunchProfile = true)
     .WithReference(habitinatorDb)
     .WaitFor(habitinatorDb)
+    .WithHttpEndpoint(port: httpPort, name: "http", isProxied: false)
     .WithHttpHealthCheck("/health")
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
-    .WithHttpEndpoint(port: httpPort, name: "http", isProxied: false);
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
 
 // Use dotnet run so the dashboard Start button actually builds and launches the MAUI app.
 var mauiDir = Path.Combine(builder.AppHostDirectory, "..", "App.MAUI");

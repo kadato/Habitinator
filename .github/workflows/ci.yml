@@ -86,6 +86,16 @@ jobs:
           --results-directory "$TestResultsDir"
           --logger "trx;LogFileName=App.Shared.RCL.Tests.trx"
 
+      - name: Test App.LocalBoard.Tests
+        id: test_local_board
+        continue-on-error: true
+        run: >
+          dotnet test tests/App.LocalBoard.Tests/App.LocalBoard.Tests.csproj
+          --configuration Release
+          --no-build
+          --results-directory "$TestResultsDir"
+          --logger "trx;LogFileName=App.LocalBoard.Tests.trx"
+
       - name: Test App.Web.IntegrationTests
         id: test_web_integration
         continue-on-error: true
@@ -101,6 +111,7 @@ jobs:
         run: |
           if [ "${{ steps.test_shared.outcome }}" != "success" ] || \
              [ "${{ steps.test_shared_rcl.outcome }}" != "success" ] || \
+             [ "${{ steps.test_local_board.outcome }}" != "success" ] || \
              [ "${{ steps.test_web_integration.outcome }}" != "success" ]; then
             echo "One or more test suites failed."
             exit 1

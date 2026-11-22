@@ -136,10 +136,12 @@ fi
 # Run unit tests if relevant projects are modified
 run_shared_tests=false
 run_rcl_tests=false
+run_local_board_tests=false
 
 if [ "$build_all_solution" = true ]; then
     run_shared_tests=true
     run_rcl_tests=true
+    run_local_board_tests=true
 else
     for proj in "${projects_to_build[@]}"; do
         if [[ "$proj" == *App.Shared.Tests* || "$proj" == *App.Shared.RCL* ]]; then
@@ -148,14 +150,26 @@ else
         if [[ "$proj" == *App.Shared.RCL.Tests* || "$proj" == *App.Shared.RCL* ]]; then
             run_rcl_tests=true
         fi
+        if [[ "$proj" == *App.LocalBoard* || "$proj" == *App.Shared.RCL* || "$proj" == *App.Web.Client* ]]; then
+            run_local_board_tests=true
+        fi
     done
 fi
 
-if [ "$run_shared_tests" = true ] || [ "$run_rcl_tests" = true ]; then
+if [ "$run_shared_tests" = true ] || [ "$run_rcl_tests" = true ] || [ "$run_local_board_tests" = true ]; then
     echo ""
     echo "=================================================="
     echo "Running affected unit tests..."
     echo "=================================================="
+fi
+
+if [ "$run_local_board_tests" = true ]; then
+    echo "Running App.LocalBoard.Tests..."
+    dotnet test tests/App.LocalBoard.Tests/App.LocalBoard.Tests.csproj --configuration Release --no-build
+    if [ $? -ne 0 ]; then
+        echo "ERROR: App.LocalBoard.Tests failed."
+        exit 1
+    fi
 fi
 
 if [ "$run_shared_tests" = true ]; then

@@ -43,6 +43,7 @@ Write-Host "Running tests with coverage collection..."
 $testProjects = @(
     "tests/App.Shared.Tests/App.Shared.Tests.csproj",
     "tests/App.Shared.RCL.Tests/App.Shared.RCL.Tests.csproj",
+    "tests/App.LocalBoard.Tests/App.LocalBoard.Tests.csproj",
     "tests/App.Web.IntegrationTests/App.Web.IntegrationTests.csproj"
 )
 foreach ($proj in $testProjects) {

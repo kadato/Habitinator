@@ -135,12 +135,12 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    padding-top: 0.2rem;
+    padding-top: 0.15rem;
 }
 
 .board-sortable-item {
-    padding-top: 0.2rem;
-    padding-bottom: 0.2rem;
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
     user-select: none;
     -webkit-user-select: none;
 }

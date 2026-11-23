@@ -10,11 +10,11 @@
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     column-gap: var(--space-4);
-    row-gap: 0.3rem;
+    row-gap: 0.2rem;
     align-items: start;
     min-height: auto;
-    margin-bottom: var(--space-3);
-    padding: 0.45rem var(--space-5);
+    margin-bottom: var(--space-2);
+    padding: 0.35rem var(--space-5);
     box-sizing: border-box;
     background: var(--mud-palette-surface);
     border: 1px solid var(--hab-border-card);
@@ -54,7 +54,7 @@
 .board-card__head {
     grid-row: 1;
     grid-column: 2;
-    align-self: center;
+    align-self: stretch;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -68,7 +68,7 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 0.15rem;
+    gap: 0.25rem;
     flex-shrink: 0;
 }
 
@@ -83,15 +83,15 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: var(--space-1);
+    gap: 0.15rem;
 }
 
 .board-card__tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.3rem;
-    margin-top: 0.1rem;
-    margin-bottom: 0.2rem;
+    gap: 0.25rem;
+    margin-top: 0.05rem;
+    margin-bottom: 0.1rem;
 }
 
 .board-card__tag-badge {
@@ -133,6 +133,7 @@ button.board-card__tag-badge--more:focus-visible {
 .board-card__title {
     display: inline-flex;
     align-items: center;
+    align-self: stretch;
     gap: 0.15rem;
     width: 100%;
     font: inherit;
@@ -182,24 +183,14 @@ button.board-card__tag-badge--more:focus-visible {
     align-self: center;
 }
 
-.board-card__notes {
-    font-size: 0.775rem;
-    line-height: 1.4;
-    white-space: pre-wrap;
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
 .board-subtask-pill {
-    align-self: flex-end;
+    align-self: flex-start;
     display: inline-flex;
     flex-direction: row;
     align-items: center;
     justify-content: center;
     gap: 0.25rem;
-    margin: 0.1rem 0 0.1rem 0;
+    margin: 0.05rem 0 0.05rem 0;
     padding: 0.1rem var(--space-3) 0.1rem 0.3rem;
     font-family: var(--hab-font-mono);
     font-size: 0.7rem;
@@ -236,7 +227,7 @@ button.board-card__tag-badge--more:focus-visible {
 }
 
 .board-subtask-list__row {
-    margin: 0.1rem 0;
+    margin: 0.05rem 0;
 }
 
 .board-subtask-list__row ::deep .mud-typography,
@@ -272,10 +263,17 @@ button.board-card__tag-badge--more:focus-visible {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    margin-top: 0.1rem;
-    padding-top: 0.2rem;
+    margin-top: 0;
+    padding-top: 0.15rem;
     border-top: 1px solid color-mix(in srgb, var(--mud-palette-text-primary) 7%, transparent);
     min-height: 0;
+}
+
+.board-card__foot-left {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    line-height: 1;
 }
 
 .board-todo-due {
@@ -393,7 +391,6 @@ a.board-todo-due:hover {
     opacity: 0.75;
 }
 
-.board-row--done .board-card__notes,
 .board-row--done .board-subtask-pill,
 .board-row--done .board-todo-due,
 .board-row--done .board-streak {
@@ -543,11 +540,6 @@ a.board-todo-due:hover {
         padding-top: 0.15rem;
         padding-bottom: 0.15rem;
     }
-
-    .board-card__notes {
-        font-size: 0.8125rem;
-        line-height: 1.45;
-    }
 }
 
 /* Gamified streak and habit badges */
@@ -627,11 +619,7 @@ a.board-todo-due:hover {
     grid-column: 1;
 }
 
-/* Custom styling for larger, premium, circular habit action buttons */
-.board-row--habit .board-card__habit-btns {
-    gap: var(--space-2);
-}
-
+/* Habit buttons keep the full 44px touch target by default. The fine pointer block below shrinks them. */
 .board-row--habit .board-sq {
     width: 2.75rem;
     height: 2.75rem;
@@ -682,24 +670,29 @@ a.board-todo-due:hover {
 /* Fine pointers get smaller targets. Touch keeps the full 44px targets below. */
 @media (pointer: fine) {
     .board-sq {
-        width: 2rem;
-        height: 2rem;
-        min-width: 2rem;
-        min-height: 2rem;
+        width: 1.75rem;
+        height: 1.75rem;
+        min-width: 1.75rem;
+        min-height: 1.75rem;
     }
 
     .board-row--habit .board-sq {
-        width: 2.25rem;
-        height: 2.25rem;
-        min-width: 2.25rem;
-        min-height: 2.25rem;
+        width: 1.75rem;
+        height: 1.75rem;
+        min-width: 1.75rem;
+        min-height: 1.75rem;
     }
 
     .board-check {
-        width: 2rem;
-        height: 2rem;
-        min-width: 2rem;
-        min-height: 2rem;
+        width: 1.75rem;
+        height: 1.75rem;
+        min-width: 1.75rem;
+        min-height: 1.75rem;
+    }
+
+    .board-subtask-list__row ::deep .mud-checkbox {
+        height: 1.5rem;
+        min-height: 1.5rem;
     }
 }
 
@@ -747,7 +740,7 @@ a.board-todo-due:hover {
 /* Container query: wide columns get more spacious cards */
 @container board-col (min-width: 380px) {
     .board-card {
-        padding: 0.45rem 0.65rem;
+        padding: 0.35rem 0.65rem;
         column-gap: 0.65rem;
     }
 }
@@ -755,7 +748,7 @@ a.board-todo-due:hover {
 /* Content-aware card styling with :has() */
 .board-card:has(.board-card__notes),
 .board-card:has(.board-subtask-list) {
-    padding-bottom: var(--space-4);
+    padding-bottom: 0.35rem;
 }
 
 .board-card:has(.board-card__tags .board-card__tag-badge) .board-card__head {

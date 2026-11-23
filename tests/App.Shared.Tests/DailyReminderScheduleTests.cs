@@ -82,44 +82,6 @@ public sealed class DailyReminderScheduleTests
         today.Should().Be(new DateOnly(2026, 4, 25));
     }
 
-    [Fact]
-    public void ShouldShowWebReminder_FiresAfterTime_OncePerDay()
-    {
-        var tz = new TestTimeZoneService();
-        var clock = new FixedClock(new DateTimeOffset(2026, 4, 26, 8, 0, 0, TimeSpan.Zero));
-        var settings = NotificationSettings.CreateDefault();
-        settings.DailyReminderTime = TimeSpan.FromHours(7);
-
-        DailyReminderSchedule.ShouldShowWebReminder(settings, TimeSpan.Zero, tz, clock, lastDismissedOn: null)
-            .Should().BeTrue();
-        DailyReminderSchedule.ShouldShowWebReminder(settings, TimeSpan.Zero, tz, clock, new DateOnly(2026, 4, 26))
-            .Should().BeFalse();
-    }
-
-    [Fact]
-    public void ShouldShowWebReminder_HidesBeforeTime_AndInsideQuietHours()
-    {
-        var tz = new TestTimeZoneService();
-
-        var early = new FixedClock(new DateTimeOffset(2026, 4, 26, 6, 0, 0, TimeSpan.Zero));
-        var settings = NotificationSettings.CreateDefault();
-        settings.DailyReminderTime = TimeSpan.FromHours(7);
-        DailyReminderSchedule.ShouldShowWebReminder(settings, TimeSpan.Zero, tz, early, null).Should().BeFalse();
-
-        var quietClock = new FixedClock(new DateTimeOffset(2026, 4, 26, 7, 30, 0, TimeSpan.Zero));
-        var quiet = NotificationSettings.CreateDefault();
-        quiet.DailyReminderTime = TimeSpan.FromHours(7);
-        quiet.QuietHoursEnabled = true;
-        quiet.QuietHoursStartUtc = TimeSpan.FromHours(6);
-        quiet.QuietHoursEndUtc = TimeSpan.FromHours(9);
-        DailyReminderSchedule.ShouldShowWebReminder(quiet, TimeSpan.Zero, tz, quietClock, null).Should().BeFalse();
-    }
-
-    private sealed class FixedClock(DateTimeOffset now) : IClock
-    {
-        public DateTimeOffset UtcNow => now;
-    }
-
     private sealed class OffsetTimeZone(TimeSpan offset) : IUserTimeZoneService
     {
         public string? TimeZoneId => "Test";

@@ -3,9 +3,10 @@ using App.Shared.RCL.Models;
 namespace App.Shared.RCL.Services;
 
 /// <summary>
-/// Pure scheduling math for the daily reminder, shared by MAUI local notifications
-/// and the web in-app reminder. It reads `IUserTimeZoneService` and `DayStartLocalTime`,
-/// so the reminder fires on the same calendar the board uses. It moves the reminder out of quiet hours.
+/// Stateless scheduling math for the daily reminder. `MauiDailyReminderService`
+/// uses it to fire local notifications. It uses `IUserTimeZoneService` and
+/// `DayStartLocalTime`, so the reminder fires on the same calendar the board uses.
+/// Quiet hours push the reminder to the end of the window.
 /// </summary>
 public static class DailyReminderSchedule
 {
@@ -98,56 +99,5 @@ public static class DailyReminderSchedule
         }
 
         return deferred;
-    }
-
-    /// <summary>
-    /// Whether the web in-app reminder shows now: enabled, reminder time has
-    /// passed on the board calendar, out of quiet hours, and not already dismissed today.
-    /// </summary>
-    public static bool ShouldShowWebReminder(
-        NotificationSettings settings,
-        TimeSpan? dayStartLocalTime,
-        IUserTimeZoneService? tz,
-        IClock clock,
-        DateOnly? lastDismissedOn,
-        DateTime? nowLocalOverride = null)
-    {
-        if (!settings.DailyReminderEnabled || !settings.DailyReminderTime.HasValue)
-        {
-            return false;
-        }
-
-        var utcNow = clock.UtcNow;
-        var today = DailySchedule.LocalDay(utcNow, tz, dayStartLocalTime);
-        if (lastDismissedOn == today)
-        {
-            return false;
-        }
-
-        var localNow = nowLocalOverride
-            ?? (tz is { IsDetected: true } ? tz.ConvertToLocal(utcNow).DateTime : utcNow.DateTime);
-
-        var reminderTime = NormalizeTime(settings.DailyReminderTime);
-        if (localNow.TimeOfDay < reminderTime)
-        {
-            return false;
-        }
-
-        // Suppress inside quiet hours; the MAUI path defers, the web path waits.
-        if (settings.QuietHoursEnabled
-            && settings.QuietHoursStartUtc.HasValue
-            && settings.QuietHoursEndUtc.HasValue)
-        {
-            var deferred = DeferOutOfQuietHours(
-                localNow.Date + localNow.TimeOfDay,
-                settings,
-                tz);
-            if (deferred > localNow)
-            {
-                return false;
-            }
-        }
-
-        return true;
     }
 }

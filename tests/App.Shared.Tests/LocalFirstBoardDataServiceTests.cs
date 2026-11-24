@@ -147,6 +147,33 @@ public sealed class LocalFirstBoardDataServiceTests
     }
 
     [Fact]
+    public async Task SnapshotAsync_DailySubtaskCheckedYesterday_ShowsOpenToday()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var rowId = Guid.NewGuid();
+        var checklist = DailyChecklistJson.Serialize(
+        [
+            new DailyChecklistItem(rowId, "Warm up", IsDone: true, DoneOn: today.AddDays(-1)),
+        ]);
+        await harness.Store.UpsertItemAsync(new BoardLocalRow
+        {
+            Id = Guid.NewGuid(),
+            UserKey = Harness.UserKey,
+            Section = BoardSection.Daily,
+            Title = "Run",
+            ChecklistJson = checklist,
+            DailyStartDate = today.AddDays(-10)
+        }, ct);
+
+        var snapshot = await harness.Board.GetSnapshotAsync(ct);
+
+        var item = snapshot.Dailies.Should().ContainSingle().Subject;
+        DailyChecklistJson.Parse(item.ChecklistJson).Should().ContainSingle().Which.IsDone.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task CompleteDailyForDateAsync_Yesterday_LeavesTodayOpen()
     {
         var harness = new Harness();

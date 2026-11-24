@@ -819,6 +819,44 @@ public sealed class UndoableBoardDataServiceTests
         lines.Single(x => x.Id == lineB).IsDone.Should().BeFalse();
     }
 
+    [Fact]
+    public async Task Undo_daily_subtask_check_restores_done_on()
+    {
+        var itemId = Guid.NewGuid();
+        var lineId = Guid.NewGuid();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var uncheckedJson = DailyChecklistJson.Serialize([new DailyChecklistItem(lineId, "A")]);
+        var checkedJson = DailyChecklistJson.Serialize([new DailyChecklistItem(lineId, "A", IsDone: true, DoneOn: today)]);
+
+        var currentJson = checkedJson;
+        _inner.GetItemAsync(itemId, Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromResult<BoardItem?>(new BoardItem(itemId, "Daily", ChecklistJson: currentJson)));
+        _inner.UpdateDailyAsync(itemId, Arg.Any<UpdateDailyArgs>(), Arg.Any<CancellationToken>())
+            .Returns(x =>
+            {
+                currentJson = ((UpdateDailyArgs)x[1]!).ChecklistJson;
+                return Task.FromResult<BoardItem?>(new BoardItem(itemId, "Daily", ChecklistJson: currentJson));
+            });
+
+        Func<Task>? undo = null;
+        _undoService.RegisterUndo(Arg.Any<string>(), Arg.Any<Func<Task>>(), Arg.Any<IReadOnlyCollection<string>>())
+            .Returns(x =>
+            {
+                undo = (Func<Task>)x[1]!;
+                return Guid.NewGuid();
+            });
+
+        await _undoableService.UpdateDailyAsync(itemId, new UpdateDailyArgs(
+            "Daily", null, null, null, DailyRepeatType.Daily, 1, uncheckedJson, 0));
+
+        undo.Should().NotBeNull();
+        await undo();
+
+        var row = DailyChecklistJson.Parse(currentJson).Should().ContainSingle().Subject;
+        row.IsDone.Should().BeTrue();
+        row.DoneOn.Should().Be(today);
+    }
+
     private sealed class RecordingUndoService(UndoService inner) : IUndoService
     {
         public List<Guid> RegisteredIds { get; } = [];

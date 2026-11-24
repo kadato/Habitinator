@@ -202,6 +202,28 @@ public sealed class BoardSyncIntegrationTests(PostgresWebAppFactory factory)
     }
 
     [Fact]
+    public async Task Undated_daily_checklist_checks_are_stamped_with_today()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (token, _) = await RegisterAndLoginAsync(client);
+        var daily = await CreateDailyAsync(client, token, "Morning routine");
+        const string checklist = "[{\"text\":\"Warm up\",\"isDone\":true}]";
+
+        using var update = new HttpRequestMessage(HttpMethod.Put, $"/api/board/dailies/{daily.Id}");
+        update.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        update.Content = JsonContent.Create(
+            new DailyUpdateRequest(daily.Title, null, null, null, DailyRepeatType.Daily, 1, checklist, 0),
+            options: s_json);
+        using var response = await client.SendAsync(update);
+        response.EnsureSuccessStatusCode();
+
+        var updated = (await response.Content.ReadFromJsonAsync<BoardItem>(s_json))!;
+        var row = DailyChecklistJson.Parse(updated.ChecklistJson).Should().ContainSingle().Subject;
+        row.IsDone.Should().BeTrue();
+        row.DoneOn.Should().Be(DateOnly.FromDateTime(DateTime.UtcNow));
+    }
+
+    [Fact]
     public async Task Reorder_proximity_triggers_rebalancing()
     {
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });

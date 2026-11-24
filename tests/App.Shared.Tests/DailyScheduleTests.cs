@@ -218,6 +218,80 @@ public class DailyScheduleTests
         CreatedAtUtc: createdUtc);
 
     [Fact]
+    public void CurrentCycleStart_DailyInterval3_ReturnsLastDueDay()
+    {
+        var daily = ScheduledDaily(new DateOnly(2024, 1, 1), DailyRepeatType.Daily, 3);
+
+        DailySchedule.CurrentCycleStart(daily, new DateOnly(2024, 1, 5)).Should().Be(new DateOnly(2024, 1, 4));
+    }
+
+    [Fact]
+    public void CurrentCycleStart_WeeklyWithoutMask_KeepsTheLastDueDayAllWeek()
+    {
+        var start = new DateOnly(2024, 1, 8);
+        var daily = ScheduledDaily(start, DailyRepeatType.Weekly);
+
+        DailySchedule.CurrentCycleStart(daily, new DateOnly(2024, 1, 10)).Should().Be(start);
+    }
+
+    [Fact]
+    public void CurrentCycleStart_WeeklyInterval2_KeepsThePreviousCycleAcrossTheOffWeek()
+    {
+        var start = new DateOnly(2024, 1, 1);
+        var daily = ScheduledDaily(start, DailyRepeatType.Weekly, 2);
+
+        DailySchedule.CurrentCycleStart(daily, new DateOnly(2024, 1, 10)).Should().Be(start);
+        DailySchedule.CurrentCycleStart(daily, new DateOnly(2024, 1, 16)).Should().Be(new DateOnly(2024, 1, 15));
+    }
+
+    [Fact]
+    public void CurrentCycleStart_WeeklyWithMask_ReturnsMostRecentSelectedDay()
+    {
+        var start = new DateOnly(2024, 1, 1);
+        var mask = DailyWeekdays.From(DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday);
+        var daily = ScheduledDaily(start, DailyRepeatType.Weekly, weekdays: mask);
+
+        DailySchedule.CurrentCycleStart(daily, new DateOnly(2024, 1, 4)).Should().Be(new DateOnly(2024, 1, 3));
+    }
+
+    [Fact]
+    public void CurrentCycleStart_Monthly_ReturnsCurrentMonthDueDay()
+    {
+        var daily = ScheduledDaily(new DateOnly(2024, 1, 15), DailyRepeatType.Monthly);
+
+        DailySchedule.CurrentCycleStart(daily, new DateOnly(2024, 3, 20)).Should().Be(new DateOnly(2024, 3, 15));
+    }
+
+    [Fact]
+    public void CurrentCycleStart_YearlyLeapDay_ClampsToFebruary28()
+    {
+        var daily = ScheduledDaily(new DateOnly(2024, 2, 29), DailyRepeatType.Yearly);
+
+        DailySchedule.CurrentCycleStart(daily, new DateOnly(2025, 3, 1)).Should().Be(new DateOnly(2025, 2, 28));
+    }
+
+    [Fact]
+    public void CurrentCycleStart_BeforeStart_IsNull()
+    {
+        var daily = ScheduledDaily(new DateOnly(2024, 2, 1), DailyRepeatType.Daily);
+
+        DailySchedule.CurrentCycleStart(daily, new DateOnly(2024, 1, 31)).Should().BeNull();
+    }
+
+    private static BoardItem ScheduledDaily(
+        DateOnly? start,
+        DailyRepeatType repeat,
+        int interval = 1,
+        int weekdays = 0) =>
+        new(
+            Guid.NewGuid(),
+            "Daily",
+            DailyStartDate: start,
+            DailyRepeat: repeat,
+            DailyRepeatInterval: interval,
+            DailyWeekdays: weekdays);
+
+    [Fact]
     public void Weekly_WithWeekdayMask_DueOnlyOnSelectedDays()
     {
         var start = new DateOnly(2024, 1, 1); // Monday

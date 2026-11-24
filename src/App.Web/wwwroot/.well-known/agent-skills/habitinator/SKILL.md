@@ -25,6 +25,7 @@ Use it when the user asks about their habits, dailies, todos, streaks, activity,
 - Dates accept `yyyy-MM-dd` and relative values `today`, `yesterday`, and `tomorrow`. Times use `HH:mm`. The server rejects bad values with `InvalidParams` that names the field and quotes what you sent. Fix the input and retry.
 - `tags` accepts a comma-separated string or an array of strings. `"work,urgent"` and `["work", "urgent"]` store the same canonical value `work,urgent`, up to 500 chars. UI, REST, and MCP share one parser and one format.
 - Checklist fields `checklistJson` and `json` on `set_checklist` accept a JSON string or a native array of `{text, isDone}` objects.
+- Daily subtasks reset when the daily starts a new repeat cycle. A checked subtask stores `doneOn`, the local day it was checked.
 - Habits move with `habit_plus` and `habit_minus`. Past dailies complete with `daily_complete_for_date`. Today's items toggle with `toggle_item` or `batch_toggle_items`.
 - `batch_create_items` returns one result per item. Valid items persist even when siblings fail, so only fix and retry the failed entries.
 - Reuse `eventId` on retry for `log_activity` and `log_timer_session` so the server logs the event once. For creates, pass `idempotencyKey` and reuse it on retry.

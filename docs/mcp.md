@@ -137,6 +137,8 @@ Mutations accept either an `itemId` GUID or a `title` query string. When `itemId
 
 Dates accept `yyyy-MM-dd` and relative keywords `today`, `yesterday`, and `tomorrow`. Times look like `HH:mm` and stay within one day. Weekdays can be passed as bitmasks or weekday name arrays, such as `["Mon", "Wed", "Fri"]` or `["Monday", "Wednesday", "Friday"]`. Tags accept a comma-separated string or a native array of strings. `"work,urgent"` and `["work", "urgent"]` store the same canonical value `work,urgent`, up to 500 chars. UI, REST, and MCP share one parser `BoardTagUtil` and one documented format. Checklist fields `checklistJson` and `json` on `set_checklist` accept a JSON string or a native array of `{text, isDone}` objects, up to 8000 chars. The server rejects bad values with `InvalidParams` that names the field, states the expected format, and quotes the received value. It never clamps them. Fix the input and retry. `log_activity` and `log_timer_session` accept an optional `eventId`. To prevent duplicate logs on retry, reuse the same `eventId`.
 
+Daily subtasks reset when the daily starts a new repeat cycle. A checked subtask stores `doneOn`, the local day it was checked.
+
 ## Tools
 
 The board tools are `get_snapshot`, `get_board_summary`, `get_item`, `get_archived`, `get_sync_delta`, `get_streaks`, `list_tags`, `search_items`, `reorder_item`, `create_item`, `batch_create_items`, `get_due_digest`, `rename_item`, `toggle_item`, `batch_toggle_items`, `archive_item`, `bulk_archive`, `unarchive_item`, `bulk_unarchive`, `rename_tag`, `delete_tag`, and `delete_item`.

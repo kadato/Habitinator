@@ -397,6 +397,7 @@ public sealed partial class LocalFirstBoardDataService
             return false;
         }
 
+        var today = await TodayAsync(cancellationToken);
         BoardItem? localItem = null;
         var section = BoardSection.Todo;
         var localTime = DateTimeOffset.MinValue;
@@ -408,7 +409,9 @@ public sealed partial class LocalFirstBoardDataService
             var row = await FindItemAnyUserAsync(serverItem.Id, cancellationToken);
             if (row is not null)
             {
-                localItem = row.ToModel();
+                // Map the local row to the current day before comparing it with the server row.
+                // The raw row can keep subtask checks from an earlier cycle until a pull rewrites it.
+                localItem = BoardItemMapper.WithLocalDay(row.ToModel(), row.Section, today);
                 section = row.Section;
             }
 

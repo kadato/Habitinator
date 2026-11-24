@@ -920,7 +920,7 @@ public sealed class BoardPersistenceService(
                 DateOnly? newStartD = startUtc is { } su ? DateOnly.FromDateTime(su) : null;
 
                 await ApplyCommonEditsAsync(entity, new CommonItemEditFields(args.Title, args.Notes, args.Tags, args.ChecklistJson, args.SortOrder),
-                    userId, BoardSection.Daily, cancellationToken);
+                    userId, BoardSection.Daily, cancellationToken, checklistDoneOn: today);
                 entity.DailyStartDate = startUtc;
                 entity.DailyRepeatType = (int)args.Repeat;
                 entity.DailyRepeatInterval = n;
@@ -1104,17 +1104,26 @@ public sealed class BoardPersistenceService(
         string? ChecklistJson,
         double? SortOrder);
 
+    /// <param name="checklistDoneOn">
+    ///     Local day for a daily checklist. Undated checks get this day so they stay current in
+    ///     the daily's cycle. Null for habits and to-dos, whose checks do not reset.
+    /// </param>
     private async Task ApplyCommonEditsAsync(
         BoardItemEntity entity,
         CommonItemEditFields fields,
         Guid userId,
         BoardSection section,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        DateOnly? checklistDoneOn = null)
     {
         entity.Title = ZalgoSanitizer.SanitizeAndTrim(fields.Title);
         entity.Notes = string.IsNullOrWhiteSpace(fields.Notes) ? null : ZalgoSanitizer.SanitizeAndTrim(fields.Notes);
         entity.Tags = CanonicalizeTags(fields.Tags);
         entity.ChecklistJson = DailyChecklistJson.Normalize(fields.ChecklistJson);
+        if (entity.ChecklistJson is not null && checklistDoneOn is { } doneOn)
+        {
+            entity.ChecklistJson = DailyChecklistJson.StampUndatedDone(entity.ChecklistJson, doneOn);
+        }
 
         await UpdateSortOrderIfNeededAsync(userId, section, entity, fields.SortOrder, cancellationToken);
     }
@@ -1534,6 +1543,12 @@ public sealed class BoardPersistenceService(
         var cleanNotes = string.IsNullOrWhiteSpace(notes) ? null : ZalgoSanitizer.SanitizeAndTrim(notes);
         var cleanTags = CanonicalizeTags(tags);
         var dateUtc = startOrDueDate?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var today = await TodayAsync(userId, cancellationToken);
+        var cleanChecklist = DailyChecklistJson.Normalize(checklistJson);
+        if (cleanChecklist is not null && section == BoardSection.Daily)
+        {
+            cleanChecklist = DailyChecklistJson.StampUndatedDone(cleanChecklist, today);
+        }
 
         if (itemId is { } id)
         {
@@ -1546,9 +1561,9 @@ public sealed class BoardPersistenceService(
                 existing.Title = cleanTitle;
                 existing.Notes = cleanNotes;
                 existing.Tags = cleanTags;
-                if (checklistJson is not null)
+                if (cleanChecklist is not null)
                 {
-                    existing.ChecklistJson = checklistJson;
+                    existing.ChecklistJson = cleanChecklist;
                 }
                 if (dailyRepeat.HasValue)
                 {
@@ -1611,7 +1626,7 @@ public sealed class BoardPersistenceService(
             TrackMinus = trackMinus ?? true,
             ResetPeriod = (int)(habitResetPeriod ?? HabitResetPeriod.Daily),
             HabitPeriodStart = section == BoardSection.Habit
-                ? ToUtcDate(HabitResetSchedule.PeriodStartFor(await TodayAsync(userId, cancellationToken), habitResetPeriod ?? HabitResetPeriod.Daily))
+                ? ToUtcDate(HabitResetSchedule.PeriodStartFor(today, habitResetPeriod ?? HabitResetPeriod.Daily))
                 : null,
             IsCompleted = false,
             Counter = counter ?? 0,
@@ -1620,7 +1635,7 @@ public sealed class BoardPersistenceService(
             DailyRepeatType = (int)(dailyRepeat ?? DailyRepeatType.Daily),
             DailyRepeatInterval = dailyRepeatInterval ?? 1,
             DailyWeekdays = dailyWeekdays ?? 0,
-            ChecklistJson = checklistJson,
+            ChecklistJson = cleanChecklist,
             DailyLastCompletedOn = null,
             CreatedAtUtc = utcNow,
             UpdatedAtUtc = utcNow,

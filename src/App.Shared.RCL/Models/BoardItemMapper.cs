@@ -2,11 +2,11 @@ namespace App.Shared.RCL.Models;
 
 /// <summary>
 /// The single place that applies the user's local day to a board item.
-/// Every host maps stored rows to models through here so daily completion
-/// and habit counter resets agree: server snapshots, sync deltas, data
-/// export, and the offline mirror. Callers copy stored fields verbatim
-/// first, including any computed daily streak as <see cref="BoardItem.Counter" />,
-/// then run the result through <see cref="WithLocalDay" />.
+/// Every host maps stored rows to models through this method, so daily completion,
+/// checklist resets, and habit counter resets agree across server snapshots, sync
+/// deltas, data export, and the offline mirror. Callers copy stored fields first,
+/// including any computed daily streak as <see cref="BoardItem.Counter" />, then pass
+/// the result to <see cref="WithLocalDay" />.
 /// </summary>
 public static class BoardItemMapper
 {
@@ -17,6 +17,7 @@ public static class BoardItemMapper
             return item with
             {
                 IsCompleted = DailySchedule.IsCompletedForToday(item.DailyLastCompletedOn, item.IsCompleted, today),
+                ChecklistJson = DailyChecklistJson.ResetDoneForCycle(item.ChecklistJson, item, today),
             };
         }
 

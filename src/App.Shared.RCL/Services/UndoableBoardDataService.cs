@@ -441,10 +441,16 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
             var afterLine = after.First(a => a.Id == beforeLine.Id);
             if (afterLine.IsDone != beforeLine.IsDone)
             {
-                diff[$"{ChecklistFieldPrefix}{beforeLine.Id:N}"] = beforeLine.IsDone;
+                diff[$"{ChecklistFieldPrefix}{beforeLine.Id:N}"] = new ChecklistLineState(beforeLine.IsDone, beforeLine.DoneOn);
             }
         }
     }
+
+    /// <summary>
+    ///     Restores the check and the <c>DoneOn</c> day it carried. If the undo drops the day,
+    ///     the cycle rollover in <see cref="BoardItemMapper" /> clears the restored check again.
+    /// </summary>
+    private readonly record struct ChecklistLineState(bool IsDone, DateOnly? DoneOn);
 
     private static string? ApplyChecklistDiff(string? currentJson, Dictionary<string, object?> diff)
     {
@@ -469,7 +475,9 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
                 return currentJson;
             }
 
-            rows[i] = rows[i] with { IsDone = DiffCast(diff[key], rows[i].IsDone) };
+            rows[i] = diff[key] is ChecklistLineState state
+                ? rows[i] with { IsDone = state.IsDone, DoneOn = state.DoneOn }
+                : rows[i] with { IsDone = DiffCast(diff[key], rows[i].IsDone) };
         }
 
         return DailyChecklistJson.Serialize(rows);

@@ -12,7 +12,7 @@ public static class EditDialogHelpers
     public static List<ChecklistRow> ParseChecklistRows(string? checklistJson)
     {
         return DailyChecklistJson.Parse(checklistJson)
-            .Select(x => new ChecklistRow { Id = x.Id, Text = x.Text, IsDone = x.IsDone })
+            .Select(x => new ChecklistRow { Id = x.Id, Text = x.Text, IsDone = x.IsDone, DoneOn = x.DoneOn })
             .ToList();
     }
 

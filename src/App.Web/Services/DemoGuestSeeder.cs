@@ -81,14 +81,14 @@ public static class DemoGuestSeeder
         ]);
         var deepCheck = DailyChecklistJson.Serialize(
         [
-            new DailyChecklistItem(Guid.NewGuid(), "Close email / chat", true),
+            new DailyChecklistItem(Guid.NewGuid(), "Close email / chat", true, today),
             new DailyChecklistItem(Guid.NewGuid(), "Single focus task (45+ min)", false),
             new DailyChecklistItem(Guid.NewGuid(), "Short review of what got done", false)
         ]);
         var plantsCheck = DailyChecklistJson.Serialize(
         [
             new DailyChecklistItem(Guid.NewGuid(), "Kitchen plants", false),
-            new DailyChecklistItem(Guid.NewGuid(), "Windowsill succulents", true),
+            new DailyChecklistItem(Guid.NewGuid(), "Windowsill succulents", true, today),
             new DailyChecklistItem(Guid.NewGuid(), "Patio (if in season)", false)
         ]);
         var groceriesSub = DailyChecklistJson.Serialize(

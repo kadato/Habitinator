@@ -395,6 +395,47 @@ public static class DailySchedule
     }
 
     /// <summary>
+    ///     The most recent scheduled day on or before <paramref name="today" />. It starts the
+    ///     current repeat cycle. A weekly daily runs from one due day to the next, so checks made
+    ///     between them stay current. Returns null when the daily has not started yet.
+    /// </summary>
+    public static DateOnly? CurrentCycleStart(BoardItem daily, DateOnly today)
+    {
+        ArgumentNullException.ThrowIfNull(daily);
+        if (daily.DailyStartDate is { } start && start > today)
+        {
+            return null;
+        }
+
+        var interval = Math.Max(1, Math.Min(999, daily.DailyRepeatInterval));
+        var lookback = daily.DailyRepeat switch
+        {
+            DailyRepeatType.Daily => interval,
+            DailyRepeatType.Weekly => 7 * interval,
+            DailyRepeatType.Monthly => (31 * interval) + 31,
+            DailyRepeatType.Yearly => (366 * interval) + 366,
+            _ => interval
+        };
+
+        var earliest = today.DayNumber >= lookback ? today.AddDays(-lookback) : DateOnly.MinValue;
+        var day = today;
+        while (true)
+        {
+            if (IsScheduledOn(daily, day))
+            {
+                return day;
+            }
+
+            if (day <= earliest)
+            {
+                return null;
+            }
+
+            day = day.AddDays(-1);
+        }
+    }
+
+    /// <summary>
     ///     Lists dailies due yesterday in the local timezone and not completed for that day.
     ///     Skips items already checked for <paramref name="today" /> to avoid clobbering a same-day check when backfilling.
     ///     Null-start dailies are "due from today" on the board, so a daily created on the local

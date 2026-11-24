@@ -28,6 +28,7 @@ public partial class BoardColumn
 
     private async Task SetChecklistItemDoneAsync(BoardItem item, Guid lineId, bool done)
     {
+        var today = BoardToday();
         var rows = DailyChecklistJson.Parse(item.ChecklistJson);
         List<DailyChecklistItem> list = [.. rows];
         var i = list.FindIndex(x => x.Id == lineId);
@@ -36,7 +37,15 @@ public partial class BoardColumn
             return;
         }
 
-        list[i] = list[i] with { IsDone = done };
+        // A checked daily subtask stores the local day in DoneOn. BoardItemMapper uses that
+        // day to decide whether the check belongs to the current cycle.
+        var doneOn = list[i].DoneOn;
+        if (Section == BoardSection.Daily)
+        {
+            doneOn = done ? today : null;
+        }
+
+        list[i] = list[i] with { IsDone = done, DoneOn = doneOn };
         var json = DailyChecklistJson.Serialize(list);
         if (json is null)
         {

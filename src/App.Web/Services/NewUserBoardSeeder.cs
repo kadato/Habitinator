@@ -39,7 +39,7 @@ public static class NewUserBoardSeeder
 
         var checklist = DailyChecklistJson.Serialize(
         [
-            new DailyChecklistItem(Guid.NewGuid(), "Subtasks live inside the card", true),
+            new DailyChecklistItem(Guid.NewGuid(), "Subtasks live inside the card", true, today),
             new DailyChecklistItem(Guid.NewGuid(), "Edit the card to add your own", false)
         ]);
 

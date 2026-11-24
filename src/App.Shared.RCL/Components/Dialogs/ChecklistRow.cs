@@ -8,12 +8,14 @@ public sealed class ChecklistRow
     public Guid Id { get; set; }
     public string Text { get; set; } = string.Empty;
     public bool IsDone { get; set; }
+    public DateOnly? DoneOn { get; set; }
 
     public static IReadOnlyList<DailyChecklistItem> ToChecklistModel(IReadOnlyList<ChecklistRow> rows) =>
         rows.Where(r => !string.IsNullOrWhiteSpace(r.Text))
             .Select(r => new DailyChecklistItem(
                 r.Id == Guid.Empty ? Guid.NewGuid() : r.Id,
                 r.Text.Trim(),
-                r.IsDone))
+                r.IsDone,
+                r.IsDone ? r.DoneOn : null))
             .ToList();
 }

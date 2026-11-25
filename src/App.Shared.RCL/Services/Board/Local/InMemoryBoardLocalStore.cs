@@ -279,6 +279,8 @@ public sealed class InMemoryBoardLocalStore : IBoardLocalStore
         DailyWeekdays = source.DailyWeekdays,
         ChecklistJson = source.ChecklistJson,
         DailyLastCompletedOn = source.DailyLastCompletedOn,
+        DailyPostponedUntil = source.DailyPostponedUntil,
+        DailyPostponedFrom = source.DailyPostponedFrom,
         TodoDueDate = source.TodoDueDate,
         IsArchived = source.IsArchived,
         AwaitingServerCreate = source.AwaitingServerCreate,

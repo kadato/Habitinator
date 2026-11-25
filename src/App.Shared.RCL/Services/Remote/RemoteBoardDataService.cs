@@ -328,6 +328,26 @@ public sealed class RemoteBoardDataService : IBoardDataService
         return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
 
+    public Task<BoardItem?> PostponeDailyAsync(Guid itemId, DateOnly until,
+        CancellationToken cancellationToken = default) =>
+        PostponeDailyAsync(itemId, until, Guid.Empty, null, cancellationToken);
+
+    public async Task<BoardItem?> PostponeDailyAsync(
+        Guid itemId,
+        DateOnly until,
+        Guid operationId,
+        DateTimeOffset? expectedServerUpdatedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        using HttpRequestMessage req = new(HttpMethod.Post, $"api/board/dailies/{itemId}/postpone")
+        {
+            Content = JsonContent.Create(new DailyPostponeRequest(until), options: Serializer)
+        };
+        AddMutationHeaders(req, operationId, expectedServerUpdatedAtUtc);
+        using var res = await Client.SendAsync(req, cancellationToken);
+        return await ReadBoardItemOrNullAsync(res, cancellationToken);
+    }
+
     public Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default) =>
         IncrementHabitPlusAsync(itemId, Guid.Empty, null, cancellationToken);
 

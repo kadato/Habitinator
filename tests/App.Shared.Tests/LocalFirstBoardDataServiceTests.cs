@@ -193,6 +193,62 @@ public sealed class LocalFirstBoardDataServiceTests
     }
 
     [Fact]
+    public async Task PostponeDailyAsync_MovesTodaysOccurrenceToTomorrow()
+    {
+        var userDay = new TestUserDayService { Today = new DateOnly(2026, 8, 12) };
+        var harness = new Harness(userDay: userDay);
+        var ct = CancellationToken.None;
+        var tomorrow = userDay.Today.AddDays(1);
+        var daily = await harness.Board.CreateItemAsync(BoardSection.Daily, "Water", cancellationToken: ct);
+
+        var updated = await harness.Board.PostponeDailyAsync(daily.Id, tomorrow, ct);
+
+        Assert.NotNull(updated);
+        updated.DailyPostponedUntil.Should().Be(tomorrow);
+        var snapshot = await harness.Board.GetSnapshotAsync(ct);
+        var item = snapshot.Dailies.Should().ContainSingle(x => x.Id == daily.Id).Subject;
+        item.DailyPostponedUntil.Should().Be(tomorrow);
+        DailySchedule.IsDueOnDate(item, userDay.Today).Should().BeFalse();
+        DailySchedule.IsDueOnDate(item, tomorrow).Should().BeTrue();
+        (await harness.Store.ListOutboxAsync(Harness.UserKey))
+            .Should().Contain(x => x.Kind == BoardOutboxOperationKind.PostponeDaily);
+    }
+
+    [Fact]
+    public async Task PostponeDailyAsync_Twice_KeepsFirstMovedFromDay()
+    {
+        var userDay = new TestUserDayService { Today = new DateOnly(2026, 8, 10) };
+        var harness = new Harness(userDay: userDay);
+        var ct = CancellationToken.None;
+        var monday = userDay.Today;
+        var daily = await harness.Board.CreateItemAsync(BoardSection.Daily, "Water", cancellationToken: ct);
+        await harness.Board.PostponeDailyAsync(daily.Id, monday.AddDays(1), ct);
+
+        userDay.Today = monday.AddDays(1);
+        var updated = await harness.Board.PostponeDailyAsync(daily.Id, monday.AddDays(2), ct);
+
+        Assert.NotNull(updated);
+        updated.DailyPostponedFrom.Should().Be(monday);
+        updated.DailyPostponedUntil.Should().Be(monday.AddDays(2));
+    }
+
+    [Fact]
+    public async Task PostponeDailyAsync_RejectsDatesOtherThanTomorrow()
+    {
+        var userDay = new TestUserDayService { Today = new DateOnly(2026, 8, 12) };
+        var harness = new Harness(userDay: userDay);
+        var ct = CancellationToken.None;
+        var daily = await harness.Board.CreateItemAsync(BoardSection.Daily, "Water", cancellationToken: ct);
+
+        var updated = await harness.Board.PostponeDailyAsync(daily.Id, userDay.Today.AddDays(2), ct);
+
+        updated.Should().BeNull();
+        var row = await harness.Store.FindItemAsync(Harness.UserKey, daily.Id, ct);
+        Assert.NotNull(row);
+        row.DailyPostponedUntil.Should().BeNull();
+    }
+
+    [Fact]
     public async Task TryGetCachedSnapshot_DoesNotReuseYesterdaysSnapshot()
     {
         var userDay = new TestUserDayService { Today = DateOnly.FromDateTime(DateTime.UtcNow) };

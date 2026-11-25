@@ -153,4 +153,45 @@ public sealed class BoardOutboxRemapTests
         parsed.Should().NotBeNull();
         parsed.ExpectedServerUpdatedAtUtc.Should().Be(newTime);
     }
+
+    [Fact]
+    public void Postpone_daily_payload_round_trips_until_through_id_remap()
+    {
+        var client = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var server = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var json = JsonSerializer.Serialize(
+            new PostponeDailyOutboxPayload(client, new DateOnly(2026, 9, 14)),
+            BoardOutboxJson.Options);
+
+        var remapped = BoardOutboxPayloadMapper.RemapClientToServerId(
+            BoardOutboxOperationKind.PostponeDaily,
+            json,
+            client,
+            server);
+
+        var parsed = JsonSerializer.Deserialize<PostponeDailyOutboxPayload>(remapped, BoardOutboxJson.Options);
+        parsed.Should().NotBeNull();
+        parsed.ItemId.Should().Be(server);
+        parsed.Until.Should().Be(new DateOnly(2026, 9, 14));
+    }
+
+    [Fact]
+    public void Postpone_daily_payload_round_trips_until_through_version_remap()
+    {
+        var originalTime = DateTimeOffset.UtcNow.AddMinutes(-5);
+        var newTime = DateTimeOffset.UtcNow;
+        var json = JsonSerializer.Serialize(
+            new PostponeDailyOutboxPayload(Guid.NewGuid(), new DateOnly(2026, 9, 14), originalTime),
+            BoardOutboxJson.Options);
+
+        var remapped = BoardOutboxPayloadMapper.RemapExpectedVersion(
+            BoardOutboxOperationKind.PostponeDaily,
+            json,
+            newTime);
+
+        var parsed = JsonSerializer.Deserialize<PostponeDailyOutboxPayload>(remapped, BoardOutboxJson.Options);
+        parsed.Should().NotBeNull();
+        parsed.ExpectedServerUpdatedAtUtc.Should().Be(newTime);
+        parsed.Until.Should().Be(new DateOnly(2026, 9, 14));
+    }
 }

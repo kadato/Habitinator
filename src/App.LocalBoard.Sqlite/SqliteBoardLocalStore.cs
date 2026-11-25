@@ -360,6 +360,8 @@ public sealed class SqliteBoardLocalStore(
         DailyWeekdays = row.DailyWeekdays,
         ChecklistJson = row.ChecklistJson,
         DailyLastCompletedOn = row.DailyLastCompletedOn,
+        DailyPostponedUntil = row.DailyPostponedUntil,
+        DailyPostponedFrom = row.DailyPostponedFrom,
         TodoDueDate = row.TodoDueDate,
         IsArchived = row.IsArchived,
         AwaitingServerCreate = row.AwaitingServerCreate,
@@ -401,6 +403,8 @@ public sealed class SqliteBoardLocalStore(
         DailyWeekdays = item.DailyWeekdays,
         ChecklistJson = item.ChecklistJson,
         DailyLastCompletedOn = item.DailyLastCompletedOn,
+        DailyPostponedUntil = item.DailyPostponedUntil,
+        DailyPostponedFrom = item.DailyPostponedFrom,
         TodoDueDate = item.TodoDueDate,
         IsArchived = item.IsArchived,
         AwaitingServerCreate = item.AwaitingServerCreate,
@@ -432,7 +436,9 @@ public sealed class SqliteBoardLocalStore(
             ("CreatedAtUtc", "ALTER TABLE BoardItems ADD COLUMN CreatedAtUtc TEXT NULL;"),
             ("IsArchived", "ALTER TABLE BoardItems ADD COLUMN IsArchived INTEGER NOT NULL DEFAULT 0;"),
             ("HabitPeriodStart", "ALTER TABLE BoardItems ADD COLUMN HabitPeriodStart TEXT NULL;"),
-            ("DailyWeekdays", "ALTER TABLE BoardItems ADD COLUMN DailyWeekdays INTEGER NOT NULL DEFAULT 0;")
+            ("DailyWeekdays", "ALTER TABLE BoardItems ADD COLUMN DailyWeekdays INTEGER NOT NULL DEFAULT 0;"),
+            ("DailyPostponedUntil", "ALTER TABLE BoardItems ADD COLUMN DailyPostponedUntil TEXT NULL;"),
+            ("DailyPostponedFrom", "ALTER TABLE BoardItems ADD COLUMN DailyPostponedFrom TEXT NULL;")
         ];
 
         foreach (var (column, ddl) in boardMigrations)

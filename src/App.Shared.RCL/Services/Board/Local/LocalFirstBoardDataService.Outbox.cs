@@ -359,6 +359,8 @@ public sealed partial class LocalFirstBoardDataService
                a.DailyRepeat == b.DailyRepeat &&
                a.DailyRepeatInterval == b.DailyRepeatInterval &&
                a.DailyWeekdays == b.DailyWeekdays &&
+               a.DailyPostponedUntil == b.DailyPostponedUntil &&
+               a.DailyPostponedFrom == b.DailyPostponedFrom &&
                string.Equals(a.ChecklistJson ?? string.Empty, b.ChecklistJson ?? string.Empty, StringComparison.Ordinal) &&
                a.DailyLastCompletedOn == b.DailyLastCompletedOn &&
                a.TodoDueDate == b.TodoDueDate &&
@@ -551,6 +553,8 @@ public sealed partial class LocalFirstBoardDataService
             || a.DailyRepeat != b.DailyRepeat
             || a.DailyRepeatInterval != b.DailyRepeatInterval
             || a.DailyWeekdays != b.DailyWeekdays
+            || a.DailyPostponedUntil != b.DailyPostponedUntil
+            || a.DailyPostponedFrom != b.DailyPostponedFrom
             || a.DailyLastCompletedOn != b.DailyLastCompletedOn)
         {
             fields.Add("daily schedule");
@@ -859,6 +863,19 @@ public sealed partial class LocalFirstBoardDataService
                     await Patch(p.ItemId, updated);
                     return;
                 }
+            case BoardOutboxOperationKind.PostponeDaily:
+                {
+                    var p = DeserializePayload<PostponeDailyOutboxPayload>(head, "Invalid postpone-daily payload.");
+                    var updated = await api.PostponeDailyAsync(
+                        p.ItemId,
+                        p.Until,
+                        head.OperationId,
+                        p.ExpectedServerUpdatedAtUtc,
+                        cancellationToken);
+                    updated ??= await api.GetItemAsync(p.ItemId, cancellationToken);
+                    await Patch(p.ItemId, updated);
+                    return;
+                }
             case BoardOutboxOperationKind.HabitIncrement:
                 {
                     var p = DeserializePayload<ItemIdOutboxPayload>(head, "Invalid habit+ payload.");
@@ -1130,6 +1147,8 @@ public sealed partial class LocalFirstBoardDataService
                 {
                     (row.DailyLastCompletedOn, row.IsCompleted) = DailySchedule.ToggleForToday(
                         row.DailyLastCompletedOn, row.IsCompleted, today);
+                    row.DailyPostponedUntil = null;
+                    row.DailyPostponedFrom = null;
                     break;
                 }
             case BoardSection.Todo:

@@ -294,6 +294,23 @@ public abstract class BoardLocalStoreContract : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UpsertItem_RoundTripsPostponedUntil()
+    {
+        var id = Guid.NewGuid();
+        var row = Row("alice", id);
+        row.Section = BoardSection.Daily;
+        row.DailyPostponedUntil = new DateOnly(2026, 8, 13);
+        row.DailyPostponedFrom = new DateOnly(2026, 8, 11);
+
+        await Store.UpsertItemAsync(row);
+
+        var loaded = await Store.FindItemAsync("alice", id);
+        loaded.Should().NotBeNull();
+        loaded.DailyPostponedUntil.Should().Be(new DateOnly(2026, 8, 13));
+        loaded.DailyPostponedFrom.Should().Be(new DateOnly(2026, 8, 11));
+    }
+
+    [Fact]
     public async Task Flush_AfterWrites_KeepsState()
     {
         var id = Guid.NewGuid();

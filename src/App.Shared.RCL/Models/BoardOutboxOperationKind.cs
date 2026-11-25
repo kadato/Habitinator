@@ -14,5 +14,6 @@ public enum BoardOutboxOperationKind
     UpdateDaily = 9,
     Archive = 10,
     Unarchive = 11,
-    SkipDailyForDate = 12
+    SkipDailyForDate = 12,
+    PostponeDaily = 13
 }

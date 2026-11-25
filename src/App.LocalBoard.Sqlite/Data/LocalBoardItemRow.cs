@@ -46,6 +46,10 @@ public sealed class LocalBoardItemRow
 
     public DateOnly? DailyLastCompletedOn { get; set; }
 
+    public DateOnly? DailyPostponedUntil { get; set; }
+
+    public DateOnly? DailyPostponedFrom { get; set; }
+
     public DateOnly? TodoDueDate { get; set; }
 
     public bool IsArchived { get; set; }
@@ -80,6 +84,8 @@ public sealed class LocalBoardItemRow
         DailyWeekdays = source.DailyWeekdays;
         ChecklistJson = source.ChecklistJson;
         DailyLastCompletedOn = source.DailyLastCompletedOn;
+        DailyPostponedUntil = source.DailyPostponedUntil;
+        DailyPostponedFrom = source.DailyPostponedFrom;
         TodoDueDate = source.TodoDueDate;
         ServerUpdatedAtUtc = source.ServerUpdatedAtUtc;
         CreatedAtUtc = source.CreatedAtUtc;

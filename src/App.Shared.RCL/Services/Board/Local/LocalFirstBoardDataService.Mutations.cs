@@ -239,6 +239,45 @@ public sealed partial class LocalFirstBoardDataService
     private static bool CanCompleteDailyForDate(BoardLocalRow row, DateOnly completedOn, DateOnly today) =>
         DailySchedule.CanCompleteForDate(row.DailyLastCompletedOn, completedOn, today);
 
+    public async Task<BoardItem?> PostponeDailyAsync(Guid itemId, DateOnly until,
+        CancellationToken cancellationToken = default)
+    {
+        var today = await TodayAsync(cancellationToken);
+        return await MutateWithSyncAsync(
+            async (local, userKey) =>
+            {
+                var result = await UpdateRowAsync(
+                    local,
+                    userKey,
+                    new RowUpdateOp(itemId, BoardSection.Daily, BoardOutboxOperationKind.PostponeDaily, (row, expected) => new PostponeDailyOutboxPayload(itemId, until, expected)),
+                    row =>
+                    {
+                        var from = row.DailyPostponedUntil == today
+                            ? row.DailyPostponedFrom ?? today.AddDays(-1)
+                            : today;
+                        row.DailyPostponedFrom = from;
+                        row.DailyPostponedUntil = until;
+                        row.IsCompleted = false;
+                        return Task.CompletedTask;
+                    },
+                    cancellationToken,
+                    row => CanPostponeDaily(row, today, until));
+
+                if (result != null)
+                {
+                    await AppendLocalActivityAsync(ActivityEventType.DailySkip, itemId, result.Title, cancellationToken);
+                }
+
+                return result;
+            },
+            cancellationToken);
+    }
+
+    private static bool CanPostponeDaily(BoardLocalRow row, DateOnly today, DateOnly until) =>
+        until == today.AddDays(1)
+        && !DailySchedule.IsCompletedForToday(row.DailyLastCompletedOn, row.IsCompleted, today)
+        && DailySchedule.IsDueOnDate(row.ToModel(), today);
+
     public Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default) =>
         MutateWithSyncAsync(
             async (local, userKey) =>

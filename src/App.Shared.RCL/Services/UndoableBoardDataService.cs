@@ -174,6 +174,11 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         return _inner.SkipDailyForDateAsync(itemId, skippedOn, cancellationToken);
     }
 
+    public Task<BoardItem?> PostponeDailyAsync(Guid itemId, DateOnly until, CancellationToken cancellationToken = default)
+    {
+        return _inner.PostponeDailyAsync(itemId, until, cancellationToken);
+    }
+
     public async Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
         var item = await FindItemAsync(itemId, cancellationToken);

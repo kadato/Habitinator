@@ -38,6 +38,11 @@ public sealed record SkipDailyOutboxPayload(
     DateOnly SkippedOn,
     DateTimeOffset? ExpectedServerUpdatedAtUtc = null) : IOutboxItemIdPayload;
 
+public sealed record PostponeDailyOutboxPayload(
+    Guid ItemId,
+    DateOnly Until,
+    DateTimeOffset? ExpectedServerUpdatedAtUtc = null) : IOutboxItemIdPayload;
+
 public sealed record ItemIdOutboxPayload(Guid ItemId, DateTimeOffset? ExpectedServerUpdatedAtUtc = null) : IOutboxItemIdPayload;
 
 public sealed record UpdateHabitOutboxPayload(
@@ -99,6 +104,7 @@ public static class BoardOutboxPayloadMapper
             BoardOutboxOperationKind.Delete or BoardOutboxOperationKind.Toggle or BoardOutboxOperationKind.Archive or BoardOutboxOperationKind.Unarchive => RemapItemId(payloadJson, clientId, serverId, (SectionItemOutboxPayload p, Guid id) => p with { ItemId = id }),
             BoardOutboxOperationKind.CompleteDailyForDate => RemapItemId(payloadJson, clientId, serverId, (CompleteDailyOutboxPayload p, Guid id) => p with { ItemId = id }),
             BoardOutboxOperationKind.SkipDailyForDate => RemapItemId(payloadJson, clientId, serverId, (SkipDailyOutboxPayload p, Guid id) => p with { ItemId = id }),
+            BoardOutboxOperationKind.PostponeDaily => RemapItemId(payloadJson, clientId, serverId, (PostponeDailyOutboxPayload p, Guid id) => p with { ItemId = id }),
             BoardOutboxOperationKind.HabitIncrement or BoardOutboxOperationKind.HabitDecrement => RemapItemId(payloadJson, clientId, serverId, (ItemIdOutboxPayload p, Guid id) => p with { ItemId = id }),
             BoardOutboxOperationKind.UpdateHabit => RemapItemId(payloadJson, clientId, serverId, (UpdateHabitOutboxPayload p, Guid id) => p with { ItemId = id }),
             BoardOutboxOperationKind.UpdateTodo => RemapItemId(payloadJson, clientId, serverId, (UpdateTodoOutboxPayload p, Guid id) => p with { ItemId = id }),
@@ -119,6 +125,7 @@ public static class BoardOutboxPayloadMapper
             BoardOutboxOperationKind.Delete or BoardOutboxOperationKind.Toggle or BoardOutboxOperationKind.Archive or BoardOutboxOperationKind.Unarchive => RemapExpectedVersion(payloadJson, newVersion, (SectionItemOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v }),
             BoardOutboxOperationKind.CompleteDailyForDate => RemapExpectedVersion(payloadJson, newVersion, (CompleteDailyOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v }),
             BoardOutboxOperationKind.SkipDailyForDate => RemapExpectedVersion(payloadJson, newVersion, (SkipDailyOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v }),
+            BoardOutboxOperationKind.PostponeDaily => RemapExpectedVersion(payloadJson, newVersion, (PostponeDailyOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v }),
             BoardOutboxOperationKind.HabitIncrement or BoardOutboxOperationKind.HabitDecrement => RemapExpectedVersion(payloadJson, newVersion, (ItemIdOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v }),
             BoardOutboxOperationKind.UpdateHabit => RemapExpectedVersion(payloadJson, newVersion, (UpdateHabitOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v }),
             BoardOutboxOperationKind.UpdateTodo => RemapExpectedVersion(payloadJson, newVersion, (UpdateTodoOutboxPayload p, DateTimeOffset? v) => p with { ExpectedServerUpdatedAtUtc = v }),

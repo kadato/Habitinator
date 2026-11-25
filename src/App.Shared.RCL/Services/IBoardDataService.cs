@@ -109,6 +109,10 @@ public interface IBoardDataService
     Task<BoardItem?> SkipDailyForDateAsync(Guid itemId, DateOnly skippedOn,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Moves today's daily occurrence to <paramref name="until" />. The repeat schedule is unchanged.</summary>
+    Task<BoardItem?> PostponeDailyAsync(Guid itemId, DateOnly until,
+        CancellationToken cancellationToken = default);
+
     Task<BoardItem?> IncrementHabitPlusAsync(Guid itemId, CancellationToken cancellationToken = default);
 
     Task<BoardItem?> IncrementHabitMinusAsync(Guid itemId, CancellationToken cancellationToken = default);

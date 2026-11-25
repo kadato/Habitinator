@@ -42,6 +42,10 @@ public sealed class BoardLocalRow
 
     public DateOnly? DailyLastCompletedOn { get; set; }
 
+    public DateOnly? DailyPostponedUntil { get; set; }
+
+    public DateOnly? DailyPostponedFrom { get; set; }
+
     public DateOnly? TodoDueDate { get; set; }
 
     public bool IsArchived { get; set; }
@@ -76,7 +80,9 @@ public sealed class BoardLocalRow
         SortOrder,
         IsArchived,
         HabitPeriodStart,
-        DailyWeekdays);
+        DailyWeekdays,
+        DailyPostponedUntil,
+        DailyPostponedFrom);
 
     public static BoardLocalRow FromModel(BoardSection section, string userKey, BoardItem item, bool awaitingCreate)
     {
@@ -101,6 +107,8 @@ public sealed class BoardLocalRow
             DailyWeekdays = item.DailyWeekdays,
             ChecklistJson = item.ChecklistJson,
             DailyLastCompletedOn = item.DailyLastCompletedOn,
+            DailyPostponedUntil = item.DailyPostponedUntil,
+            DailyPostponedFrom = item.DailyPostponedFrom,
             TodoDueDate = item.TodoDueDate,
             AwaitingServerCreate = awaitingCreate,
             ServerUpdatedAtUtc = item.ServerUpdatedAtUtc,
@@ -128,6 +136,8 @@ public sealed class BoardLocalRow
         DailyWeekdays = source.DailyWeekdays;
         ChecklistJson = source.ChecklistJson;
         DailyLastCompletedOn = source.DailyLastCompletedOn;
+        DailyPostponedUntil = source.DailyPostponedUntil;
+        DailyPostponedFrom = source.DailyPostponedFrom;
         TodoDueDate = source.TodoDueDate;
         ServerUpdatedAtUtc = source.ServerUpdatedAtUtc;
         CreatedAtUtc = source.CreatedAtUtc;

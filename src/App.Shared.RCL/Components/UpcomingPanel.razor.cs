@@ -267,7 +267,7 @@ public partial class UpcomingPanel : IDisposable
         _snapshot = snapshot;
         _today = UserDay.Today;
         _overdue = UpcomingSchedule.GetOverdueTodos(snapshot, _today);
-        _todayDailyScheduled = snapshot.Dailies.Count(d => DailySchedule.IsScheduledOn(d, _today));
+        _todayDailyScheduled = snapshot.Dailies.Count(d => DailySchedule.IsScheduledOrPostponedOn(d, _today));
         var todayDue = snapshot.Dailies.Count(d => DailySchedule.IsDueOnDate(d, _today));
         _todayDailyDone = Math.Max(0, _todayDailyScheduled - todayDue);
         var todayTodos = snapshot.Todos.Where(t => t.TodoDueDate == _today).ToList();
@@ -332,7 +332,7 @@ public partial class UpcomingPanel : IDisposable
         {
             foreach (var item in _snapshot.Dailies)
             {
-                foreach (var date in allDates.Where(date => DailySchedule.IsScheduledOn(item, date)))
+                foreach (var date in allDates.Where(date => DailySchedule.IsScheduledOrPostponedOn(item, date)))
                 {
                     byDate[date].Dailies.Add(item);
                 }
@@ -358,7 +358,7 @@ public partial class UpcomingPanel : IDisposable
             next[kv.Key] = (kv.Value.Dailies, kv.Value.Todos);
         }
         _cellCache = next;
-        var allDailiesForSelected = _snapshot.Dailies.Where(d => DailySchedule.IsScheduledOn(d, _selected)).OrderBy(d => d.Title, StringComparer.Ordinal).ToList();
+        var allDailiesForSelected = _snapshot.Dailies.Where(d => DailySchedule.IsScheduledOrPostponedOn(d, _selected)).OrderBy(d => d.Title, StringComparer.Ordinal).ToList();
         var allTodosForSelected = _snapshot.Todos.Where(t => !t.IsCompleted && t.TodoDueDate == _selected).OrderBy(t => t.Title, StringComparer.Ordinal).ToList();
         _selectedAllDailies = allDailiesForSelected.Count;
         _selectedAllTodos = allTodosForSelected.Count;
@@ -559,7 +559,7 @@ public partial class UpcomingPanel : IDisposable
             return bucket.Dailies;
         }
         return [.. _snapshot.Dailies
-            .Where(d => DailySchedule.IsScheduledOn(d, date))
+            .Where(d => DailySchedule.IsScheduledOrPostponedOn(d, date))
             .OrderBy(d => d.Title, StringComparer.Ordinal)];
     }
 

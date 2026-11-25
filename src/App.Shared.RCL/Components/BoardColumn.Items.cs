@@ -112,7 +112,9 @@ public partial class BoardColumn
                     && serverItem.DailyStartDate == overrideItem.DailyStartDate
                     && serverItem.DailyRepeat == overrideItem.DailyRepeat
                     && serverItem.DailyRepeatInterval == overrideItem.DailyRepeatInterval
-                    && serverItem.DailyWeekdays == overrideItem.DailyWeekdays;
+                    && serverItem.DailyWeekdays == overrideItem.DailyWeekdays
+                    && serverItem.DailyPostponedUntil == overrideItem.DailyPostponedUntil
+                    && serverItem.DailyPostponedFrom == overrideItem.DailyPostponedFrom;
                 // The server increments the streak on completion, so Counter is not compared
                 // here. Otherwise a server-corrected streak would keep the override around.
             }
@@ -196,8 +198,10 @@ public partial class BoardColumn
         var overdue = DailyRollover.GetOverdueSince([.. EffectiveItems], today, TimeZoneService);
         return _dailyFilter switch
         {
-            DailyListFilter.Due => [.. EffectiveItems.Where(d => DailySchedule.IsDueOnDate(d, today) || overdue.ContainsKey(d.Id))],
-            DailyListFilter.NotDue => [.. EffectiveItems.Where(d => !DailySchedule.IsDueOnDate(d, today) && !overdue.ContainsKey(d.Id))],
+            DailyListFilter.Due => [.. EffectiveItems.Where(d => !DailySchedule.IsPostponedAwayFrom(d, today)
+                && (DailySchedule.IsDueOnDate(d, today) || overdue.ContainsKey(d.Id)))],
+            DailyListFilter.NotDue => [.. EffectiveItems.Where(d => DailySchedule.IsPostponedAwayFrom(d, today)
+                || (!DailySchedule.IsDueOnDate(d, today) && !overdue.ContainsKey(d.Id)))],
             _ => [.. EffectiveItems]
         };
     }
@@ -256,7 +260,7 @@ public partial class BoardColumn
     ///     back if the mutation fails. Send every board mutation through this method so
     ///     optimistic state stays consistent.
     /// </summary>
-    private async Task ApplyMutationAsync(Action apply, Action rollback, Func<Task> mutation, string action)
+    private async Task<bool> ApplyMutationAsync(Action apply, Action rollback, Func<Task> mutation, string action)
     {
         apply();
         InvalidateVisibleCache();
@@ -271,9 +275,11 @@ public partial class BoardColumn
             _needRefresh = true;
             StateHasChanged();
         }
+
+        return ok;
     }
 
-    private Task ApplyOverrideAsync(Guid itemId, BoardItem optimistic, Func<Task> mutation) =>
+    private Task<bool> ApplyOverrideAsync(Guid itemId, BoardItem optimistic, Func<Task> mutation) =>
         ApplyMutationAsync(
             () => _optimisticOverrides[itemId] = optimistic,
             () => _optimisticOverrides.Remove(itemId),

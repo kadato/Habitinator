@@ -24,6 +24,8 @@ public partial class BoardItemCard
     [Parameter] public EventCallback OnMoveUp { get; set; }
     [Parameter] public EventCallback OnMoveDown { get; set; }
     [Parameter] public EventCallback OnDelete { get; set; }
+    [Parameter] public EventCallback OnPostpone { get; set; }
+    [Parameter] public EventCallback OnDelayTodo { get; set; }
     [Parameter] public EventCallback<(Guid ChecklistItemId, bool IsDone)> OnSetChecklistItemDone { get; set; }
 
     /// <summary>True while a habit log or toggle is saving. Shows the pending state. Blocks double-tap.</summary>
@@ -192,10 +194,43 @@ public partial class BoardItemCard
         {
             BoardSection.Todo => item.TodoDueDate is not null,
             BoardSection.Habit => item.TrackPlus || item.TrackMinus || item.ResetPeriod != HabitResetPeriod.Daily,
-            BoardSection.Daily => OverdueSince is not null,
+            BoardSection.Daily => OverdueSince is not null
+                || (item.DailyPostponedUntil is { } until && until > BoardToday()),
             _ => false
         };
     }
+
+    private bool CanPostponeDaily()
+    {
+        if (Section != BoardSection.Daily || Item.IsCompleted)
+        {
+            return false;
+        }
+
+        var today = BoardToday();
+        if (Item.DailyPostponedUntil is { } until && until > today)
+        {
+            return false;
+        }
+
+        return DailySchedule.IsDueOnDate(Item, today);
+    }
+
+    private bool CanDelayTodo()
+    {
+        if (Section != BoardSection.Todo || Item.IsCompleted)
+        {
+            return false;
+        }
+
+        var today = BoardToday();
+        return Item.TodoDueDate is null || Item.TodoDueDate <= today;
+    }
+
+    private string TodoDelayLabel => Item.TodoDueDate is null ? "Move to tomorrow" : "Delay to tomorrow";
+
+    private string DelayedDateLabel(DateOnly until) =>
+        until.DayNumber == BoardToday().DayNumber + 1 ? "tomorrow" : DateFormatService.Format(until);
 
     private async Task OnTitleKeyDown(KeyboardEventArgs e)
     {

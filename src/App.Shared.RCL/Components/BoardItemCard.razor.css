@@ -272,6 +272,7 @@ button.board-card__tag-badge--more:focus-visible {
 .board-card__foot-left {
     display: flex;
     align-items: center;
+    gap: 0.6rem;
     min-width: 0;
     line-height: 1;
 }
@@ -336,6 +337,32 @@ a.board-todo-due:hover {
 }
 
 .board-daily-overdue span {
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    transform: translateY(0.07em);
+}
+
+.board-daily-delayed {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--mud-palette-text-secondary);
+}
+
+.board-daily-delayed ::deep .mud-icon-root {
+    display: block;
+    flex-shrink: 0;
+    align-self: center;
+    margin: 0 !important;
+    line-height: 1;
+}
+
+.board-daily-delayed span {
     line-height: 1;
     display: inline-flex;
     align-items: center;

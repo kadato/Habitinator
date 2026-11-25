@@ -92,4 +92,28 @@ public sealed class BoardColumnTests : IAsyncDisposable
         cut.Markup.Should().NotContain("board-row--done");
         cut.Markup.Should().Contain("\"Active\" hides 1.");
     }
+
+    [Fact]
+    public void Delayed_Daily_With_An_Overdue_Miss_Leaves_The_Due_Filter()
+    {
+        var userDay = _ctx.Services.GetRequiredService<TestUserDayService>();
+        userDay.Today = new DateOnly(2026, 8, 12);
+        var daily = new BoardItem(
+            Guid.NewGuid(),
+            "Gym",
+            DailyStartDate: userDay.Today.AddDays(-10),
+            DailyLastCompletedOn: userDay.Today.AddDays(-2),
+            DailyPostponedUntil: userDay.Today.AddDays(1));
+
+        var cut = _ctx.Render<BoardColumn>(parameters => parameters
+            .Add(p => p.Section, BoardSection.Daily)
+            .Add(p => p.Items, [daily]));
+
+        cut.Markup.Should().NotContain("Gym");
+
+        var later = cut.FindAll("button").First(b => b.TextContent.Trim() == "Later");
+        later.Click();
+
+        cut.Markup.Should().Contain("Gym");
+    }
 }

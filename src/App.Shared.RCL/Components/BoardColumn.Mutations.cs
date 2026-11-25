@@ -163,8 +163,43 @@ public partial class BoardColumn
         var today = BoardToday();
         var (lastCompleted, isCompleted) = DailySchedule.ToggleForToday(
             item.DailyLastCompletedOn, item.IsCompleted, today);
-        var optimistic = item with { IsCompleted = isCompleted, DailyLastCompletedOn = lastCompleted };
+        var optimistic = item with
+        {
+            IsCompleted = isCompleted,
+            DailyLastCompletedOn = lastCompleted,
+            DailyPostponedUntil = null,
+            DailyPostponedFrom = null
+        };
         return ApplyOverrideAsync(item.Id, optimistic, () => BoardData.ToggleItemAsync(Section, item.Id));
+    }
+
+    private async Task PostponeDailyAsync(BoardItem item)
+    {
+        var today = BoardToday();
+        var tomorrow = today.AddDays(1);
+        var from = item.DailyPostponedUntil == today
+            ? item.DailyPostponedFrom ?? today.AddDays(-1)
+            : today;
+        var optimistic = item with
+        {
+            DailyPostponedUntil = tomorrow,
+            DailyPostponedFrom = from,
+            IsCompleted = false
+        };
+        if (await ApplyOverrideAsync(item.Id, optimistic, () => BoardData.PostponeDailyAsync(item.Id, tomorrow)))
+        {
+            await Notifier.NotifyAsync($"Delayed '{item.Title}' to tomorrow.", Severity.Success);
+        }
+    }
+
+    private Task DelayTodoAsync(BoardItem item)
+    {
+        var tomorrow = BoardToday().AddDays(1);
+        var optimistic = item with { TodoDueDate = tomorrow };
+        return ApplyOverrideAsync(
+            item.Id,
+            optimistic,
+            () => BoardData.UpdateTodoAsync(item.Id, UpdateTodoArgs.From(item) with { DueDate = tomorrow }));
     }
 
     private Task OpenItemEditorAsync(BoardItem item)

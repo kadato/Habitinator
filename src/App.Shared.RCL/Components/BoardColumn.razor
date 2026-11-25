@@ -68,8 +68,8 @@
                     All
                 </button>
                 <button type="button"
-                        title="Due today and overdue"
-                        aria-label="Show dailies due now and overdue"
+                        title="Due today or overdue, except delayed dailies"
+                        aria-label="Show dailies due today or overdue, except delayed dailies"
                         aria-pressed="@(_dailyFilter == DailyListFilter.Due)"
                         class="@GetFilterBtnClass(_dailyFilter == DailyListFilter.Due)"
                         @onclick="@(() => SetDailyFilter(DailyListFilter.Due))">
@@ -271,6 +271,8 @@
                        OnMoveToTop="@(() => MoveToTopAsync(item))"
                        OnMoveToBottom="@(() => MoveToBottomAsync(item))"
                        OnDelete="@(() => DeleteAsync(item.Id, item.Title))"
+                       OnPostpone="@(() => PostponeDailyAsync(item))"
+                       OnDelayTodo="@(() => DelayTodoAsync(item))"
                        OnSetChecklistItemDone="@(args => SetChecklistItemDoneAsync(item, args.ChecklistItemId, args.IsDone))"/>
     };
 }

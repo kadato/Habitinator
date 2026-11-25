@@ -487,6 +487,25 @@ internal sealed class BoardPaletteCommands(
                 Keywords: [KwDelete, KwRemove, KwTrash, KwDestroy])
         };
 
+        if (!d.IsCompleted && DailySchedule.IsDueOnDate(d, GetLocalToday()))
+        {
+            actions.Insert(1, new CommandItem(
+                Id: $"daily-{d.Id}-postpone",
+                Title: "Delay to tomorrow",
+                Subtitle: "Move today's occurrence to tomorrow",
+                Category: ActionsCategory,
+                Icon: Icons.Material.Filled.Schedule,
+                Action: async () =>
+                {
+                    _close();
+                    var tomorrow = GetLocalToday().AddDays(1);
+                    await _boardData.PostponeDailyAsync(d.Id, tomorrow);
+                    await _notifyRefresh();
+                    await _notifier.NotifyAsync($"Delayed '{d.Title}' to tomorrow.", Severity.Success);
+                },
+                Keywords: ["delay", "postpone", "tomorrow", "snooze", "skip"]));
+        }
+
         if (BuildAskAiForItem(BoardSection.Daily, d.Id, d.Title) is { } askDaily)
         {
             actions.Add(askDaily);

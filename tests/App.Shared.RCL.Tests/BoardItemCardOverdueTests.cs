@@ -59,4 +59,41 @@ public sealed class BoardItemCardOverdueTests : IAsyncDisposable
 
         cut.Markup.Should().NotContain("board-daily-overdue");
     }
+
+    [Fact]
+    public void Renders_Delayed_Pill_While_Postponed()
+    {
+        var today = new DateOnly(2026, 8, 11);
+        var item = new BoardItem(
+            Guid.NewGuid(),
+            "Gym",
+            DailyStartDate: today.AddDays(-1),
+            DailyPostponedUntil: today.AddDays(1));
+
+        var cut = _ctx.Render<BoardItemCard>(parameters => parameters
+            .Add(p => p.Item, item)
+            .Add(p => p.Section, BoardSection.Daily)
+            .Add(p => p.Today, today));
+
+        cut.Markup.Should().Contain("board-daily-delayed");
+        cut.Markup.Should().Contain("Delayed to tomorrow");
+    }
+
+    [Fact]
+    public void Omits_Delayed_Pill_On_Target_Day()
+    {
+        var today = new DateOnly(2026, 8, 12);
+        var item = new BoardItem(
+            Guid.NewGuid(),
+            "Gym",
+            DailyStartDate: today.AddDays(-2),
+            DailyPostponedUntil: today);
+
+        var cut = _ctx.Render<BoardItemCard>(parameters => parameters
+            .Add(p => p.Item, item)
+            .Add(p => p.Section, BoardSection.Daily)
+            .Add(p => p.Today, today));
+
+        cut.Markup.Should().NotContain("board-daily-delayed");
+    }
 }

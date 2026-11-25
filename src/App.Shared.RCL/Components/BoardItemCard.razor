@@ -86,6 +86,24 @@
                             <MudText Typo="Typo.body2">Edit</MudText>
                         </div>
                     </MudMenuItem>
+                    @if (CanPostponeDaily())
+                    {
+                        <MudMenuItem OnClick="OnPostpone">
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" aria-hidden="true" />
+                                <MudText Typo="Typo.body2">Delay to tomorrow</MudText>
+                            </div>
+                        </MudMenuItem>
+                    }
+                    @if (CanDelayTodo())
+                    {
+                        <MudMenuItem OnClick="OnDelayTodo">
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" aria-hidden="true" />
+                                <MudText Typo="Typo.body2">@TodoDelayLabel</MudText>
+                            </div>
+                        </MudMenuItem>
+                    }
                     @if (CanReorder)
                     {
                         <MudMenuItem OnClick="OnMoveUp">
@@ -211,6 +229,13 @@
                         <span class="board-todo-due__date">@DateFormatService.Format(due)</span>
                         <span class="board-todo-due__relative">@TodoDueRelativeLabel(due)</span>
                     </a>
+                }
+                @if (Section == BoardSection.Daily && Item.DailyPostponedUntil is { } postponedUntil && postponedUntil > BoardToday())
+                {
+                    <div class="board-daily-delayed">
+                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" aria-hidden="true" />
+                        <span>Delayed to @DelayedDateLabel(postponedUntil)</span>
+                    </div>
                 }
                 @if (Section == BoardSection.Daily && OverdueSince is { } overdueSince)
                 {

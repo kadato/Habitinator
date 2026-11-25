@@ -80,7 +80,18 @@ public sealed record BoardItem(
     /// behavior of repeating on the start date's weekday. Only honored when
     /// <see cref="DailyRepeat" /> is <see cref="DailyRepeatType.Weekly" />.
     /// </summary>
-    int DailyWeekdays = 0);
+    int DailyWeekdays = 0,
+    /// <summary>
+    /// The day a postponed daily occurrence now falls on. The occurrence is not due on the
+    /// days it was moved from, and it is due on this day even when the repeat schedule would
+    /// not place it here. The repeat schedule is unchanged.
+    /// </summary>
+    DateOnly? DailyPostponedUntil = null,
+    /// <summary>
+    /// The first day the postponed occurrence was moved from. Null means the only moved day
+    /// is the day before <see cref="DailyPostponedUntil" />.
+    /// </summary>
+    DateOnly? DailyPostponedFrom = null);
 
 public sealed record BoardSnapshot(
     IReadOnlyList<BoardItem> Habits,

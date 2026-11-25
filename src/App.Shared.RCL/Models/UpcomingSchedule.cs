@@ -32,7 +32,7 @@ public static class UpcomingSchedule
             var date = today.AddDays(offset);
             var isToday = offset == 0;
             List<BoardItem> dailies = [.. snapshot.Dailies
-                .Where(d => isToday ? DailySchedule.IsDueOnDate(d, date) : DailySchedule.IsScheduledOn(d, date))
+                .Where(d => isToday ? DailySchedule.IsDueOnDate(d, date) : DailySchedule.IsScheduledOrPostponedOn(d, date))
                 .OrderBy(d => d.Title, StringComparer.Ordinal)];
             List<BoardItem> todos = [.. snapshot.Todos
                 .Where(t => !t.IsCompleted && t.TodoDueDate == date)

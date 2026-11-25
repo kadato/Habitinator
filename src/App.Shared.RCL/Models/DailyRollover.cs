@@ -64,7 +64,12 @@ public static class DailyRollover
                 continue;
             }
 
-            if (!DailySchedule.IsScheduledOn(daily, day))
+            if (DailySchedule.IsPostponedAwayFrom(daily, day))
+            {
+                continue;
+            }
+
+            if (!DailySchedule.IsScheduledOrPostponedOn(daily, day))
             {
                 continue;
             }
@@ -77,7 +82,7 @@ public static class DailyRollover
             oldest = day;
         }
 
-        if (oldest == yesterday && DailySchedule.IsScheduledOn(daily, today))
+        if (oldest == yesterday && DailySchedule.IsScheduledOrPostponedOn(daily, today))
         {
             return null;
         }

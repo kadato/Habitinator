@@ -50,3 +50,6 @@ public sealed record DailyCompleteForDateRequest(DateOnly CompletedOn);
 [ValidatableType]
 public sealed record DailySkipForDateRequest(DateOnly SkippedOn);
 
+[ValidatableType]
+public sealed record DailyPostponeRequest(DateOnly Until);
+

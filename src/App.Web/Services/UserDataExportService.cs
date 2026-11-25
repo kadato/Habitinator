@@ -64,6 +64,8 @@ public sealed class UserDataExportService(
     {
         DateOnly? start = e.DailyStartDate is { } d ? DateOnly.FromDateTime(d) : null;
         DateOnly? lastCompleted = e.DailyLastCompletedOn is { } lc ? DateOnly.FromDateTime(lc) : null;
+        DateOnly? postponedUntil = e.DailyPostponedUntil is { } pu ? DateOnly.FromDateTime(pu) : null;
+        DateOnly? postponedFrom = e.DailyPostponedFrom is { } pf ? DateOnly.FromDateTime(pf) : null;
         var resetPeriod = Enum.IsDefined((HabitResetPeriod)e.ResetPeriod)
             ? (HabitResetPeriod)e.ResetPeriod
             : HabitResetPeriod.Daily;
@@ -91,7 +93,9 @@ public sealed class UserDataExportService(
             e.SortOrder,
             e.IsArchived,
             anchor,
-            DailyWeekdays.Normalize(e.DailyWeekdays));
+            DailyWeekdays.Normalize(e.DailyWeekdays),
+            postponedUntil,
+            postponedFrom);
         return BoardItemMapper.WithLocalDay(raw, e.Section, today);
     }
 }

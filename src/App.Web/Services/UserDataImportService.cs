@@ -126,6 +126,8 @@ public sealed class UserDataImportService(
         entity.DailyWeekdays = DailyWeekdays.Normalize(item.DailyWeekdays);
         entity.ChecklistJson = DailyChecklistJson.Normalize(item.ChecklistJson);
         entity.DailyLastCompletedOn = item.DailyLastCompletedOn?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        entity.DailyPostponedUntil = item.DailyPostponedUntil?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        entity.DailyPostponedFrom = item.DailyPostponedFrom?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         entity.SortOrder = item.SortOrder ?? 0;
         entity.DeletedAtUtc = null;
         entity.IsArchived = item.IsArchived;

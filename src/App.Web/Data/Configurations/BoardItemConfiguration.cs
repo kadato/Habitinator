@@ -14,6 +14,8 @@ public sealed class BoardItemConfiguration : IEntityTypeConfiguration<BoardItemE
         builder.Property(x => x.Tags).HasMaxLength(500);
         builder.Property(x => x.ChecklistJson).HasMaxLength(8000);
         builder.Property(x => x.DailyLastCompletedOn);
+        builder.Property(x => x.DailyPostponedUntil);
+        builder.Property(x => x.DailyPostponedFrom);
         builder.Property(x => x.TrackPlus).IsRequired();
         builder.Property(x => x.TrackMinus).IsRequired();
         builder.Property(x => x.ResetPeriod).IsRequired();

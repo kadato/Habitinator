@@ -86,6 +86,20 @@ public sealed class UpcomingScheduleTests
     }
 
     [Fact]
+    public void GetUpcomingDays_PostponedWeeklyDaily_ShowsOnNewDayNotMovedFromDay()
+    {
+        var monday = new DateOnly(2024, 1, 8);
+        var tuesday = monday.AddDays(1);
+        var daily = NewDaily("Gym", monday, DailyRepeatType.Weekly, 1) with { DailyPostponedUntil = tuesday };
+        var snapshot = new BoardSnapshot([], [daily], []);
+
+        var days = UpcomingSchedule.GetUpcomingDays(snapshot, monday, 2);
+
+        days[0].Dailies.Should().BeEmpty();
+        days[1].Dailies.Select(d => d.Title).Should().Equal("Gym");
+    }
+
+    [Fact]
     public void GetUpcomingDays_GroupsTodosByDueDate_AndListsOverdueSeparately()
     {
         var today = new DateOnly(2024, 1, 8);

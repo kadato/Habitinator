@@ -388,16 +388,58 @@ public static class DailySchedule
         completedOn < today
         && dailyLastCompletedOn != completedOn;
 
-    /// <summary>Due = scheduled for <paramref name="on" /> and not yet completed for that day.</summary>
+    /// <summary>
+    ///     True when the occurrence scheduled for <paramref name="on" /> was moved to a later
+    ///     day. Consecutive postponements cover every moved day up to the new day, so days
+    ///     before the postponement still count as missed.
+    /// </summary>
+    public static bool IsPostponedAwayFrom(BoardItem daily, DateOnly on)
+    {
+        ArgumentNullException.ThrowIfNull(daily);
+        if (daily.DailyPostponedUntil is not { } until)
+        {
+            return false;
+        }
+
+        var fromDayNumber = daily.DailyPostponedFrom?.DayNumber ?? until.DayNumber - 1;
+        return on.DayNumber >= fromDayNumber && on.DayNumber < until.DayNumber;
+    }
+
+    /// <summary>True when a postponed occurrence now falls on <paramref name="on" />.</summary>
+    public static bool IsPostponedTo(BoardItem daily, DateOnly on)
+    {
+        ArgumentNullException.ThrowIfNull(daily);
+        return daily.DailyPostponedUntil == on;
+    }
+
+    /// <summary>
+    ///     True when the daily is scheduled on <paramref name="on" />, or a postponed occurrence
+    ///     now falls on it. Days the occurrence was moved from return false.
+    /// </summary>
+    public static bool IsScheduledOrPostponedOn(BoardItem daily, DateOnly on)
+    {
+        ArgumentNullException.ThrowIfNull(daily);
+        return IsPostponedTo(daily, on)
+               || (IsScheduledOn(daily, on) && !IsPostponedAwayFrom(daily, on));
+    }
+
+    /// <summary>
+    ///     Due means scheduled for <paramref name="on" /> or postponed to it, and not yet
+    ///     completed for that day. A postponed occurrence is not due on the days it was moved from.
+    /// </summary>
     public static bool IsDueOnDate(BoardItem daily, DateOnly on)
     {
-        return IsScheduledOn(daily, on) && !IsCompleteForDate(daily, on);
+        ArgumentNullException.ThrowIfNull(daily);
+        return !IsCompleteForDate(daily, on)
+               && !IsPostponedAwayFrom(daily, on)
+               && (IsScheduledOn(daily, on) || IsPostponedTo(daily, on));
     }
 
     /// <summary>
     ///     The most recent scheduled day on or before <paramref name="today" />. It starts the
     ///     current repeat cycle. A weekly daily runs from one due day to the next, so checks made
-    ///     between them stay current. Returns null when the daily has not started yet.
+    ///     between them stay current. A postponed occurrence keeps the first day it was moved
+    ///     from as the cycle start. Returns null when the daily has not started yet.
     /// </summary>
     public static DateOnly? CurrentCycleStart(BoardItem daily, DateOnly today)
     {
@@ -418,7 +460,19 @@ public static class DailySchedule
         };
 
         var earliest = today.DayNumber >= lookback ? today.AddDays(-lookback) : DateOnly.MinValue;
+        // A postponed occurrence keeps the cycle it started in. The walk starts at the first
+        // day it was moved from, so checklist checks made before the postponement stay current.
         var day = today;
+        if (daily.DailyPostponedUntil is { } until && today <= until)
+        {
+            var movedFrom = daily.DailyPostponedFrom
+                ?? (until.DayNumber > 0 ? until.AddDays(-1) : until);
+            if (movedFrom <= today && IsScheduledOn(daily, movedFrom))
+            {
+                day = movedFrom;
+            }
+        }
+
         while (true)
         {
             if (IsScheduledOn(daily, day))

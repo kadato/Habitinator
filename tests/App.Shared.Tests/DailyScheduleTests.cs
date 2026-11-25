@@ -93,6 +93,79 @@ public class DailyScheduleTests
     }
 
     [Fact]
+    public void PostponedOccurrence_IsNotDueOnMovedFromDay_AndIsDueOnNewDay()
+    {
+        var today = new DateOnly(2024, 1, 1);
+        var tomorrow = today.AddDays(1);
+        var daily = new BoardItem(
+            Guid.NewGuid(),
+            "T",
+            DailyStartDate: today,
+            DailyRepeat: DailyRepeatType.Daily,
+            DailyPostponedUntil: tomorrow);
+
+        DailySchedule.IsDueOnDate(daily, today).Should().BeFalse();
+        DailySchedule.IsDueOnDate(daily, tomorrow).Should().BeTrue();
+        DailySchedule.IsScheduledOrPostponedOn(daily, today).Should().BeFalse();
+        DailySchedule.IsScheduledOrPostponedOn(daily, tomorrow).Should().BeTrue();
+    }
+
+    [Fact]
+    public void PostponedWeeklyOccurrence_IsDueOnNewDayEvenWhenNotScheduled()
+    {
+        var monday = new DateOnly(2024, 1, 1);
+        var tuesday = monday.AddDays(1);
+        var daily = new BoardItem(
+            Guid.NewGuid(),
+            "T",
+            DailyStartDate: monday,
+            DailyRepeat: DailyRepeatType.Weekly,
+            DailyPostponedUntil: tuesday);
+
+        DailySchedule.IsDueOnDate(daily, monday).Should().BeFalse();
+        DailySchedule.IsDueOnDate(daily, tuesday).Should().BeTrue();
+        DailySchedule.IsScheduledOrPostponedOn(daily, tuesday).Should().BeTrue();
+    }
+
+    [Fact]
+    public void PostponedOccurrence_DoesNotHideEarlierMissedDays()
+    {
+        var yesterday = new DateOnly(2024, 1, 1);
+        var today = yesterday.AddDays(1);
+        var tomorrow = today.AddDays(1);
+        var daily = new BoardItem(
+            Guid.NewGuid(),
+            "T",
+            DailyStartDate: yesterday.AddDays(-5),
+            DailyRepeat: DailyRepeatType.Daily,
+            DailyPostponedUntil: tomorrow);
+
+        DailySchedule.IsPostponedAwayFrom(daily, yesterday).Should().BeFalse();
+        DailySchedule.IsPostponedAwayFrom(daily, today).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ConsecutivePostponement_CoversEveryMovedDay()
+    {
+        var monday = new DateOnly(2024, 1, 1);
+        var tuesday = monday.AddDays(1);
+        var wednesday = tuesday.AddDays(1);
+        var daily = new BoardItem(
+            Guid.NewGuid(),
+            "T",
+            DailyStartDate: monday.AddDays(-5),
+            DailyRepeat: DailyRepeatType.Daily,
+            DailyPostponedUntil: wednesday,
+            DailyPostponedFrom: monday);
+
+        DailySchedule.IsPostponedAwayFrom(daily, monday).Should().BeTrue();
+        DailySchedule.IsPostponedAwayFrom(daily, tuesday).Should().BeTrue();
+        DailySchedule.IsDueOnDate(daily, monday).Should().BeFalse();
+        DailySchedule.IsDueOnDate(daily, tuesday).Should().BeFalse();
+        DailySchedule.IsDueOnDate(daily, wednesday).Should().BeTrue();
+    }
+
+    [Fact]
     public void GetYesterdayUncompletedDailies_NewDailyCreatedToday_IsNotListed()
     {
         var today = new DateOnly(2026, 4, 27);
@@ -268,6 +341,32 @@ public class DailyScheduleTests
         var daily = ScheduledDaily(new DateOnly(2024, 2, 29), DailyRepeatType.Yearly);
 
         DailySchedule.CurrentCycleStart(daily, new DateOnly(2025, 3, 1)).Should().Be(new DateOnly(2025, 2, 28));
+    }
+
+    [Fact]
+    public void CurrentCycleStart_OnPostponedNewDay_UsesMovedFromDay()
+    {
+        var monday = new DateOnly(2024, 1, 1);
+        var tuesday = monday.AddDays(1);
+        var daily = ScheduledDaily(monday, DailyRepeatType.Daily) with { DailyPostponedUntil = tuesday };
+
+        DailySchedule.CurrentCycleStart(daily, tuesday).Should().Be(monday);
+    }
+
+    [Fact]
+    public void CurrentCycleStart_DuringConsecutivePostponement_UsesFirstMovedFromDay()
+    {
+        var monday = new DateOnly(2024, 1, 1);
+        var tuesday = monday.AddDays(1);
+        var wednesday = tuesday.AddDays(1);
+        var daily = ScheduledDaily(monday, DailyRepeatType.Daily) with
+        {
+            DailyPostponedFrom = monday,
+            DailyPostponedUntil = wednesday
+        };
+
+        DailySchedule.CurrentCycleStart(daily, tuesday).Should().Be(monday);
+        DailySchedule.CurrentCycleStart(daily, wednesday).Should().Be(monday);
     }
 
     [Fact]

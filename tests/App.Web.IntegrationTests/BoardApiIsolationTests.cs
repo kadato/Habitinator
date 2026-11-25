@@ -288,6 +288,52 @@ public sealed class BoardApiIsolationTests(PostgresWebAppFactory factory)
             && x.EventType == ActivityEventType.DailySkip))
             .Should().BeTrue();
     }
+
+    [Fact]
+    public async Task PostponeDaily_WithTomorrow_MovesOccurrenceAndLogsNeutralSkip()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var email = $"postpone-user-{suffix}@integration.test";
+        const string password = "TestUser1!Aa";
+
+        (await client.PostAsJsonAsync("/api/auth/register",
+            new RegisterRequest(email, password))).IsSuccessStatusCode.Should().BeTrue();
+
+        var login = await client.PostAsJsonAsync("/api/auth/login",
+            new LoginRequest(email, password, RememberMe: false));
+        login.EnsureSuccessStatusCode();
+        var token = (await login.Content.ReadFromJsonAsync<LoginResponse>(s_json))!.AccessToken;
+
+        using var requestCreate = new HttpRequestMessage(HttpMethod.Post, "/api/board/Daily");
+        requestCreate.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        requestCreate.Content = JsonContent.Create(new ItemTitleRequest("Postpone Test"));
+        var createRes = await client.SendAsync(requestCreate);
+        createRes.EnsureSuccessStatusCode();
+        var created = await createRes.Content.ReadFromJsonAsync<BoardItem>(s_json);
+        created.Should().NotBeNull();
+
+        var tomorrow = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1);
+        using var requestPostpone = new HttpRequestMessage(HttpMethod.Post, $"/api/board/dailies/{created.Id}/postpone");
+        requestPostpone.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        requestPostpone.Content = JsonContent.Create(new DailyPostponeRequest(tomorrow), options: JsonDefaults.Api);
+        var postponeRes = await client.SendAsync(requestPostpone);
+        var body = await postponeRes.Content.ReadAsStringAsync();
+        postponeRes.StatusCode.Should().Be(HttpStatusCode.OK, $"response body was: {body}");
+
+        var postponed = await postponeRes.Content.ReadFromJsonAsync<BoardItem>(s_json);
+        postponed.Should().NotBeNull();
+        postponed.DailyPostponedUntil.Should().Be(tomorrow);
+
+        var dbFactory = factory.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        await using var db = await dbFactory.CreateDbContextAsync();
+        var userId = await db.Users.Where(x => x.Email == email).Select(x => x.Id).SingleAsync();
+        (await db.UserActivityEvents.AnyAsync(x => x.UserId == userId
+            && x.BoardItemId == created.Id
+            && x.EventType == ActivityEventType.DailySkip))
+            .Should().BeTrue();
+    }
 }
 
 #pragma warning disable CA1711 // Allow 'Collection' suffix for xUnit collection definition

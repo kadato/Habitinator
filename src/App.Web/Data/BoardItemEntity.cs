@@ -47,6 +47,18 @@ public sealed class BoardItemEntity
 
     public DateTime? DailyLastCompletedOn { get; set; }
 
+    /// <summary>
+    /// UTC date a postponed daily occurrence now falls on. The occurrence is not due on the
+    /// days it was moved from.
+    /// </summary>
+    public DateTime? DailyPostponedUntil { get; set; }
+
+    /// <summary>
+    /// UTC date the postponed occurrence was originally scheduled for. Null means the day
+    /// before <see cref="DailyPostponedUntil" />.
+    /// </summary>
+    public DateTime? DailyPostponedFrom { get; set; }
+
     public DateTimeOffset CreatedAtUtc { get; set; }
 
     public DateTimeOffset UpdatedAtUtc { get; set; }

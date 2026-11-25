@@ -640,6 +640,63 @@ public sealed class BoardPersistenceService(
         return new BoardMutationResult(BoardMutationStatus.Ok, skipped);
     }
 
+    public async Task<BoardMutationResult> PostponeDailyAsync(
+        Guid userId,
+        Guid itemId,
+        DateOnly until,
+        DateTimeOffset? expectedUpdatedAtUtc = null,
+        CancellationToken cancellationToken = default)
+    {
+        var today = await TodayAsync(userId, cancellationToken);
+        if (until != today.AddDays(1))
+        {
+            return new BoardMutationResult(BoardMutationStatus.NotFound, null);
+        }
+
+        var (entity, conflict) = await LoadAndCheckAsync(userId, BoardSection.Daily, itemId, expectedUpdatedAtUtc, cancellationToken);
+        if (entity is null || conflict is not null)
+        {
+            return conflict ?? new BoardMutationResult(BoardMutationStatus.NotFound, null);
+        }
+
+        if (IsDailyEntityCompleteForToday(entity, today))
+        {
+            return new BoardMutationResult(BoardMutationStatus.NotFound, null);
+        }
+
+        var model = ToModelForDailyCheck(entity, today);
+        if (!DailySchedule.IsDueOnDate(model, today))
+        {
+            return new BoardMutationResult(BoardMutationStatus.NotFound, null);
+        }
+
+        var previousUntil = entity.DailyPostponedUntil is { } pu ? DateOnly.FromDateTime(pu) : (DateOnly?)null;
+        var previousFrom = entity.DailyPostponedFrom is { } pf ? DateOnly.FromDateTime(pf) : (DateOnly?)null;
+        var from = previousUntil == today ? previousFrom ?? today.AddDays(-1) : today;
+
+        entity.DailyPostponedFrom = ToUtcDate(from);
+        entity.DailyPostponedUntil = ToUtcDate(until);
+        entity.IsCompleted = false;
+        entity.UpdatedAtUtc = BoardTimestamps.UtcNow();
+        // The occurrence is not done, but today is neutral for the streak. Use the real
+        // timestamp. A completion later today then sorts after this event and counts.
+        AddActivityEvent(userId, ActivityEventType.DailySkip, itemId, null, entity.Title);
+        var streakMap = await ComputeDailyStreakMapAsync(userId, entity, cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            DiscardPendingMutationChanges();
+            return await BuildConflictFromDatabaseAsync(userId, BoardSection.Daily, itemId, cancellationToken);
+        }
+
+        var postponed = ToModelWithDailyStreaksAsync(entity, streakMap, today);
+        await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
+        return new BoardMutationResult(BoardMutationStatus.Ok, postponed);
+    }
+
     public async Task<BoardMutationResult> ToggleItemAsync(
         Guid userId,
         BoardSection section,
@@ -1052,6 +1109,12 @@ public sealed class BoardPersistenceService(
         DateOnly? lastCompleted = entity.DailyLastCompletedOn is { } lc
             ? DateOnly.FromDateTime(lc)
             : null;
+        DateOnly? postponedUntil = entity.DailyPostponedUntil is { } pu
+            ? DateOnly.FromDateTime(pu)
+            : null;
+        DateOnly? postponedFrom = entity.DailyPostponedFrom is { } pf
+            ? DateOnly.FromDateTime(pf)
+            : null;
 
         int displayCounter;
         if (entity.Section == BoardSection.Daily)
@@ -1087,7 +1150,9 @@ public sealed class BoardPersistenceService(
             entity.SortOrder,
             entity.IsArchived,
             HabitAnchor(entity),
-            weekdays);
+            weekdays,
+            postponedUntil,
+            postponedFrom);
         return BoardItemMapper.WithLocalDay(raw, entity.Section, today);
     }
 
@@ -1183,6 +1248,9 @@ public sealed class BoardPersistenceService(
             lastCompleted, entity.IsCompleted, today);
         entity.DailyLastCompletedOn = newLastCompleted?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         entity.IsCompleted = newIsCompleted;
+        // Completing or reopening today's occurrence clears the postponement.
+        entity.DailyPostponedUntil = null;
+        entity.DailyPostponedFrom = null;
 
         AddActivityEvent(userId,
             wasCompleteForToday ? ActivityEventType.DailyUncomplete : ActivityEventType.DailyComplete,

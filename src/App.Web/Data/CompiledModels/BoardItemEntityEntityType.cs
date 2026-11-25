@@ -21,7 +21,7 @@ public partial class BoardItemEntityEntityType
             "App.Web.Data.BoardItemEntity",
             typeof(BoardItemEntity),
             baseEntityType,
-            propertyCount: 24,
+            propertyCount: 26,
             navigationCount: 1,
             foreignKeyCount: 1,
             unnamedIndexCount: 5,
@@ -69,6 +69,22 @@ public partial class BoardItemEntityEntityType
             fieldInfo: typeof(BoardItemEntity).GetField("<DailyLastCompletedOn>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly),
             nullable: true);
         dailyLastCompletedOn.AddAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.None);
+
+        var dailyPostponedFrom = runtimeEntityType.AddProperty(
+            "DailyPostponedFrom",
+            typeof(DateTime?),
+            propertyInfo: typeof(BoardItemEntity).GetProperty("DailyPostponedFrom", BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly),
+            fieldInfo: typeof(BoardItemEntity).GetField("<DailyPostponedFrom>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly),
+            nullable: true);
+        dailyPostponedFrom.AddAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.None);
+
+        var dailyPostponedUntil = runtimeEntityType.AddProperty(
+            "DailyPostponedUntil",
+            typeof(DateTime?),
+            propertyInfo: typeof(BoardItemEntity).GetProperty("DailyPostponedUntil", BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly),
+            fieldInfo: typeof(BoardItemEntity).GetField("<DailyPostponedUntil>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly),
+            nullable: true);
+        dailyPostponedUntil.AddAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.None);
 
         var dailyRepeatInterval = runtimeEntityType.AddProperty(
             "DailyRepeatInterval",

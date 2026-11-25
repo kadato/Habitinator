@@ -38,7 +38,7 @@ public static class DailyReminderText
             .ThenBy(t => t.Title, StringComparer.Ordinal)];
 
         List<string> tomorrowDailies = [.. snapshot.Dailies
-            .Where(d => DailySchedule.IsScheduledOn(d, tomorrow))
+            .Where(d => DailySchedule.IsScheduledOrPostponedOn(d, tomorrow))
             .Select(d => d.Title)
             .OrderBy(t => t, StringComparer.Ordinal)];
         List<BoardItem> tomorrowTodos = [.. snapshot.Todos

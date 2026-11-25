@@ -105,6 +105,52 @@ public sealed class DailyRolloverTests
         DailyRollover.GetOverdueSince([item], s_today).Should().BeEmpty();
     }
 
+    [Fact]
+    public void GetOverdueSince_PostponedMovedFromDay_IsNotAMiss()
+    {
+        var targetDay = s_today.AddDays(1);
+        var item = NewDaily("Postponed", Utc(s_today.AddDays(-10))) with
+        {
+            DailyLastCompletedOn = s_today.AddDays(-1),
+            DailyPostponedUntil = targetDay
+        };
+
+        DailyRollover.GetOverdueSince([item], targetDay).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void GetOverdueSince_MissedPostponedNewDay_IsReported()
+    {
+        var monday = new DateOnly(2026, 8, 10);
+        var tuesday = monday.AddDays(1);
+        var wednesday = tuesday.AddDays(1);
+        var item = NewDaily("Gym", Utc(monday.AddDays(-14)), start: monday) with
+        {
+            DailyRepeat = DailyRepeatType.Weekly,
+            DailyLastCompletedOn = monday.AddDays(-7),
+            DailyPostponedUntil = tuesday
+        };
+
+        DailyRollover.GetOverdueSince([item], wednesday, maxDaysBack: 3)
+            .Should().ContainKey(item.Id).WhoseValue.Should().Be(tuesday);
+    }
+
+    [Fact]
+    public void GetOverdueSince_ConsecutivePostponement_DoesNotReportMovedDays()
+    {
+        var monday = new DateOnly(2026, 8, 10);
+        var tuesday = monday.AddDays(1);
+        var wednesday = tuesday.AddDays(1);
+        var item = NewDaily("Postponed twice", Utc(monday.AddDays(-10))) with
+        {
+            DailyLastCompletedOn = monday.AddDays(-1),
+            DailyPostponedFrom = monday,
+            DailyPostponedUntil = wednesday
+        };
+
+        DailyRollover.GetOverdueSince([item], wednesday, maxDaysBack: 3).Should().BeEmpty();
+    }
+
     private static DateTimeOffset Utc(DateOnly day) =>
         new(day.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
 

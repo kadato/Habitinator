@@ -564,14 +564,27 @@ internal static class AuthApiRoutes
     {
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var email = services.GetRequiredService<IOptions<DemoUserOptions>>().Value.Email;
-        var user = await userManager.FindByEmailAsync(email);
-        if (user is null)
+
+        try
         {
-            await TryRecoverDemoGuestAsync(services, logger, cancellationToken);
-            user = await userManager.FindByEmailAsync(email);
+            var user = await userManager.FindByEmailAsync(email);
+            if (user is not null)
+            {
+                // The startup seed may still be running. Wait for it and fill
+                // anything it missed before the login returns and the board loads.
+                await DemoDataSeeder.EnsureGuestReadyAsync(services, cancellationToken);
+                return user;
+            }
+        }
+        catch (Exception ex)
+        {
+            // The schema may not exist yet on a cold start. Fall through to the
+            // full seed, which runs migrations before creating or filling the guest.
+            logger.LogWarning(ex, "Demo guest preparation failed. Running the full demo seed.");
         }
 
-        return user;
+        await TryRecoverDemoGuestAsync(services, logger, cancellationToken);
+        return await userManager.FindByEmailAsync(email);
     }
 
     private static async Task TryRecoverDemoGuestAsync(IServiceProvider services, ILogger logger, CancellationToken cancellationToken = default)

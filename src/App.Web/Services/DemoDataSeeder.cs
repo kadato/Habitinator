@@ -9,7 +9,59 @@ namespace App.Web.Services;
 
 public static class DemoDataSeeder
 {
+    // Startup seeding and an on-demand demo login can overlap. One gate keeps
+    // the board from being inserted twice and makes the login wait for a seed
+    // that is already in flight instead of reading a half-built board.
+    private static readonly SemaphoreSlim SeedGate = new(1, 1);
+
     public static async Task SeedAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken = default)
+    {
+        await SeedGate.WaitAsync(cancellationToken);
+        try
+        {
+            await SeedCoreAsync(serviceProvider, cancellationToken);
+        }
+        finally
+        {
+            SeedGate.Release();
+        }
+    }
+
+    /// <summary>Ensures the demo guest board and activity exist before a guest login returns.</summary>
+    public static async Task EnsureGuestReadyAsync(
+        IServiceProvider serviceProvider,
+        CancellationToken cancellationToken = default)
+    {
+        await SeedGate.WaitAsync(cancellationToken);
+        try
+        {
+            using var scope = serviceProvider.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var options = scope.ServiceProvider.GetRequiredService<IOptions<DemoUserOptions>>();
+            var notifier = scope.ServiceProvider.GetRequiredService<IBoardChangeNotifier>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DemoDataSeeder");
+            var demo = options.Value;
+
+            var guest = await userManager.FindByEmailAsync(demo.Email);
+            if (guest is null)
+            {
+                guest = await CreateOrResetGuestAsync(userManager, dbContext, demo, notifier, logger, cancellationToken);
+                if (guest is null)
+                {
+                    return;
+                }
+            }
+
+            await DemoGuestSeeder.SeedIfMissingAsync(dbContext, notifier, guest.Id, cancellationToken);
+        }
+        finally
+        {
+            SeedGate.Release();
+        }
+    }
+
+    private static async Task SeedCoreAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         using var scope = serviceProvider.CreateScope();
         var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();

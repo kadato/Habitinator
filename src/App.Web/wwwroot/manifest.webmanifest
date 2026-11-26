@@ -6,7 +6,7 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "categories": ["productivity", "health", "lifestyle"],
   "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#030712",
@@ -36,6 +36,50 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New to-do",
+      "short_name": "New to-do",
+      "description": "Add a to-do without browsing the board",
+      "url": "/?compose=todo",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Upcoming",
+      "short_name": "Upcoming",
+      "url": "/upcoming",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Statistics",
+      "short_name": "Stats",
+      "url": "/stats",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/board.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Board with habits, dailies, and to-dos"
+    },
+    {
+      "src": "/screenshots/upcoming.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Upcoming calendar with overdue and today's agenda"
+    },
+    {
+      "src": "/screenshots/statistics.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Activity heatmap and consistency statistics"
     }
   ]
 }

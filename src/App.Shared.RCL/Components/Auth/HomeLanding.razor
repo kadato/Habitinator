@@ -8,9 +8,55 @@
         {
             <div class="alert alert-info" role="alert">Your account has been deleted. Thanks for using Habitinator.</div>
         }
-        <h2 class="auth-card__section-title">Get started</h2>
+        <div class="auth-landing__benefits" aria-label="What Habitinator does">
+            <div class="auth-landing__benefit">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" aria-hidden="true" />
+                <span>Habits, dailies, and to-dos on one board.</span>
+            </div>
+            <div class="auth-landing__benefit">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" aria-hidden="true" />
+                <span>Focus timer with Pomodoro and session targets.</span>
+            </div>
+            <div class="auth-landing__benefit">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" aria-hidden="true" />
+                <span>Streaks, stats, and local-first offline sync.</span>
+            </div>
+        </div>
+
+        <h2 class="auth-card__section-title">Try it now</h2>
+        <div class="auth-landing__guest-block">
+            <div class="auth-landing__guest-paper guest-login-paper">
+                @if (UseCookieGuestLogin)
+                {
+                    <form method="post" action="/api/auth/guest-login" class="d-flex flex-column guest-login-form" onsubmit="return habitinatorGuestSubmit(this)">
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   FullWidth="true"
+                                   Size="Size.Large">
+                            <span class="guest-login-label">Try the demo board</span>
+                        </MudButton>
+                        <p class="guest-login-status" role="status" hidden>Loading demo…</p>
+                    </form>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Size="Size.Large"
+                               Disabled="@_guestBusy"
+                               OnClick="ContinueAsGuestAsync">
+                        @(_guestBusy ? "Loading demo board…" : "Try the demo board")
+                    </MudButton>
+                }
+                <p class="auth-landing__guest-hint">No account needed. The demo board is temporary.</p>
+            </div>
+        </div>
+
+        <div class="auth-form-divider" role="separator" aria-orientation="horizontal">or</div>
         <div class="auth-landing__actions">
-            <MudButton Variant="Variant.Filled"
+            <MudButton Variant="Variant.Outlined"
                        Color="Color.Primary"
                        FullWidth="true"
                        Size="Size.Large"
@@ -19,45 +65,15 @@
                        data-enhance-nav="false">
                 Sign in
             </MudButton>
-            <MudButton Variant="Variant.Outlined"
+            <MudButton Variant="Variant.Text"
                        Color="Color.Primary"
                        FullWidth="true"
                        Size="Size.Large"
                        Href="/auth/register"
                        Target="_self"
                        data-enhance-nav="false">
-                Register
+                Create an account
             </MudButton>
-        </div>
-
-        <div class="auth-landing__guest-block">
-            <div class="auth-form-divider" role="separator" aria-orientation="horizontal">or</div>
-            <div class="auth-landing__guest-paper guest-login-paper">
-                @if (UseCookieGuestLogin)
-                {
-                    <form method="post" action="/api/auth/guest-login" class="d-flex flex-column guest-login-form" onsubmit="return habitinatorGuestSubmit(this)">
-                        <MudButton ButtonType="ButtonType.Submit"
-                                   Variant="Variant.Outlined"
-                                   Color="Color.Secondary"
-                                   FullWidth="true"
-                                   Size="Size.Large">
-                            <span class="guest-login-label">Continue as demo guest</span>
-                        </MudButton>
-                        <p class="guest-login-status" role="status" hidden>Loading demo…</p>
-                    </form>
-                }
-                else
-                {
-                    <MudButton Variant="Variant.Outlined"
-                               Color="Color.Secondary"
-                               FullWidth="true"
-                               Size="Size.Large"
-                               Disabled="@_guestBusy"
-                               OnClick="ContinueAsGuestAsync">
-                        @(_guestBusy ? "Loading demo board…" : "Continue as demo guest")
-                    </MudButton>
-                }
-            </div>
         </div>
     </ChildContent>
 </AuthPageShell>

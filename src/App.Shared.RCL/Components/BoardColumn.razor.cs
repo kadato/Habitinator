@@ -20,6 +20,7 @@ public partial class BoardColumn : IAsyncDisposable
     [Inject] public required IUndoService UndoService { get; set; }
     [Inject] public required IJSRuntime JS { get; set; }
     [Inject] public required IBoardColumnStateStore ColumnState { get; set; }
+    [Inject] public required GlobalTimerService TimerService { get; set; }
 
     [Parameter][EditorRequired] public BoardSection Section { get; set; }
 
@@ -28,6 +29,8 @@ public partial class BoardColumn : IAsyncDisposable
     [Parameter] public EventCallback OnChanged { get; set; }
 
     [Parameter] public bool IsBoardFilterExcludingAll { get; set; }
+
+    [Parameter] public string? SearchQuery { get; set; }
 
     [Parameter] public EventCallback OnClearBoardFilter { get; set; }
 
@@ -39,7 +42,17 @@ public partial class BoardColumn : IAsyncDisposable
     {
         await UserDay.InitializeAsync();
         UserDay.DayChanged += OnUserDayChanged;
+        TimerService.StateChanged += OnTimerStateChanged;
         await LoadPersistedStateAsync();
+    }
+
+    private void OnTimerStateChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            InvalidateVisibleCache();
+            StateHasChanged();
+        });
     }
 
     private void OnUserDayChanged(object? sender, EventArgs e)
@@ -300,6 +313,7 @@ public partial class BoardColumn : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         UserDay.DayChanged -= OnUserDayChanged;
+        TimerService.StateChanged -= OnTimerStateChanged;
         try
         {
             await JS.InvokeVoidAsync("HabitinatorSortable.destroy", _columnInstanceId);

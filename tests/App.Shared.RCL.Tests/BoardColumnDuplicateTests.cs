@@ -39,6 +39,7 @@ public sealed class BoardColumnDuplicateTests : IAsyncDisposable
         _ctx.Services.AddSingleton(_dateFormat);
         _ctx.Services.AddSingleton(_undoService);
         _ctx.Services.AddSingleton(_columnState);
+        _ctx.Services.AddSingleton(new GlobalTimerService(new SystemClock()));
         _ctx.Services.AddSingleton<TestUserDayService>();
         _ctx.Services.AddSingleton<IUserDayService>(sp => sp.GetRequiredService<TestUserDayService>());
 
@@ -95,6 +96,33 @@ public sealed class BoardColumnDuplicateTests : IAsyncDisposable
 
         cut.WaitForAssertion(() => _boardData.ReceivedWithAnyArgs(1).CreateItemAsync(
             Arg.Any<BoardSection>(), Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>()));
+    }
+
+    [Fact]
+    public void Inline_Quick_Add_Parses_Tags_And_Due_Date()
+    {
+        var userDay = _ctx.Services.GetRequiredService<TestUserDayService>();
+        userDay.Today = new DateOnly(2026, 8, 12);
+        var created = new BoardItem(Guid.NewGuid(), "Buy milk");
+        _boardData.CreateItemAsync(
+                Arg.Any<BoardSection>(), Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+            .Returns(created);
+
+        var cut = _ctx.Render<BoardColumn>(parameters => parameters
+            .Add(p => p.Section, BoardSection.Todo));
+
+        cut.Find("input").Input("Buy milk #errands due:tomorrow");
+        cut.Find("button[aria-label='Add todo']").Click();
+
+        cut.WaitForAssertion(() => _boardData.Received(1).CreateItemAsync(
+            BoardSection.Todo,
+            "Buy milk",
+            Arg.Any<Guid?>(),
+            Arg.Any<CancellationToken>()));
+        _boardData.Received(1).UpdateTodoAsync(
+            created.Id,
+            Arg.Is<UpdateTodoArgs>(a => a.Tags == "errands" && a.DueDate == new DateOnly(2026, 8, 13)),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]

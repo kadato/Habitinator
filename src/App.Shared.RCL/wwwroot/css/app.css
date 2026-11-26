@@ -1913,6 +1913,14 @@ input[type="number"].mud-input-slot {
    MudCard roots render without the component scope attribute. Scoped selectors never match the roots. Keep every rule that targets a Mud root
    in this section. Do not put these rules in a scoped file. */
 
+/* One content width for the whole board. The timer, today strip, search row,
+   and columns keep the same edges on wide screens. */
+.board-shell {
+    width: 100%;
+    max-width: var(--board-content-max, 72rem);
+    margin-inline: auto;
+}
+
 /* The stat strip holds search, tags, and archive. On desktop the strip has no border. The fields and
    buttons carry their own outline, so the strip adds none. The strip spans the full width. Search lines up with the first column. */
 .board-stat-strip {
@@ -1927,12 +1935,12 @@ input[type="number"].mud-input-slot {
     box-sizing: border-box;
 }
 
-/* On desktop the strip content lines up with the card edges, not the column
-   wrapper. Cards are inside 0.85rem of card padding. The strip uses the same inset plus its own base gap. */
-@media (min-width: 960px) {
+/* Above phone width the search row runs to the same outer edges as the timer,
+   today strip, and column panels. Its controls carry their own padding. */
+@media (min-width: 768px) {
     .board-stat-strip {
-        padding-left: calc(0.85rem + var(--space-1)) !important;
-        padding-right: calc(0.85rem + var(--space-1)) !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
     }
 }
 
@@ -2011,18 +2019,44 @@ input[type="number"].mud-input-slot {
     display: none !important;
 }
 
-/* Board columns are MudCard roots. They need global rules. The cards carry the
-   surface. Columns add no outline of their own. */
+/* The columns grid is a MudGrid root. Three equal columns with even gutters
+   and the same outer edges as the strips above. */
+.board-columns-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-5) !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+}
+
+.board-columns-grid > .mud-grid-item {
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+}
+
+/* Board columns are MudCard roots. Each column keeps its own panel so the
+   board spans the same edges as the timer and today strips. */
 .board-column {
     min-height: 18rem;
     height: 100%;
     width: 100%;
     max-width: 36rem;
     margin-inline: auto;
-    border: none !important;
-    border-radius: 0 !important;
+    border: 1px solid var(--hab-border-card) !important;
+    border-radius: var(--radius-xl) !important;
     overflow: hidden;
-    background: transparent;
+    background: color-mix(in srgb, var(--mud-palette-background-gray) 35%, var(--mud-palette-surface));
+    box-shadow: none !important;
+}
+
+.board-today-strip {
+    padding: 0.35rem 0.55rem !important;
+    border-radius: var(--radius-md) !important;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 14%, var(--hab-border-card)) !important;
+    background: color-mix(in srgb, var(--mud-palette-surface) 94%, var(--mud-palette-primary) 4%) !important;
     box-shadow: none !important;
 }
 
@@ -2091,6 +2125,14 @@ input[type="number"].mud-input-slot {
 
     .board-columns-mobile .mud-button-root:not(.mud-icon-button) {
         min-height: 44px;
+    }
+}
+
+@media (max-width: 959.98px) {
+    /* The card header repeats the section tabs, which name the column and show the count.
+       The header is a Mud root, so this rule lives here instead of the scoped BoardColumn CSS. */
+    .board-column .mud-card-header {
+        display: none !important;
     }
 }
 

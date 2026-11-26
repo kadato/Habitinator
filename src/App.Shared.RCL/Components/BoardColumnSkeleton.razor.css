@@ -7,9 +7,9 @@
 .board-column {
     min-height: 18rem;
     height: 100%;
-    border-radius: var(--space-6);
+    border-radius: var(--radius-xl);
     overflow: hidden;
-    background: var(--mud-palette-background-gray);
+    background: color-mix(in srgb, var(--mud-palette-background-gray) 35%, var(--mud-palette-surface));
     border: 1px solid var(--hab-border-card);
 }
 
@@ -33,10 +33,21 @@
 .board-filter-toolbar {
     width: 100% !important;
     display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
     align-items: center !important;
     gap: var(--space-2) !important;
+}
+
+.board-filter-segments {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: var(--board-segment-gap);
+    padding: var(--board-segment-pad);
+    background: var(--mud-palette-background-gray);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 65%, transparent);
+    border-radius: var(--board-segment-radius);
+    box-sizing: border-box;
 }
 
 .board-list {
@@ -178,12 +189,11 @@
 }
 
 .board-column .board-skel-filter-btn {
-    flex: 1 1 0 !important;
-    width: 0 !important;
+    width: 100% !important;
     min-width: 0 !important;
-    height: 32px !important;
-    min-height: 32px !important;
-    border-radius: var(--radius-md) !important;
+    height: var(--board-segment-height) !important;
+    min-height: var(--board-segment-height) !important;
+    border-radius: var(--board-segment-btn-radius) !important;
 }
 
 .board-column .board-skel-add {
@@ -202,13 +212,6 @@
 
 .board-column .board-skel-pill {
     border-radius: var(--radius-sm) !important;
-}
-
-@media (max-width: 959.98px) {
-    .board-column .board-skel-filter-btn {
-        height: 44px !important;
-        min-height: 44px !important;
-    }
 }
 
 @media (pointer: fine) {

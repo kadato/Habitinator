@@ -18,6 +18,8 @@ public partial class MainBoard
     private List<BoardItem> _filteredTodos = [];
     private string _searchText = string.Empty;
     private readonly HashSet<string> _selectedFilterTags = [];
+    private bool _requireAllFilterTags;
+    private BoardQuickFilter _quickFilter = BoardQuickFilter.All;
     private int _mobileSectionIndex;
     private ColumnSpec[] _cachedBoardColumns = [];
     private List<string> _cachedTagMenu = [];
@@ -85,17 +87,116 @@ public partial class MainBoard
     {
         _mobileSectionIndex = index;
         UiSessionState.MobileSectionIndex = index;
+        UiSessionState.MobileSectionChosen = true;
     }
+
+    /// <summary>
+    ///     On the first visit, put the phone on the section with work waiting. A manual
+    ///     section choice lasts for the rest of the session.
+    /// </summary>
+    private void ApplyDefaultMobileSection()
+    {
+        if (UiSessionState.MobileSectionChosen)
+        {
+            return;
+        }
+
+        var today = UserDay.Today;
+        var dueDailies = Dailies.Any(d =>
+            !d.IsCompleted
+            && (DailySchedule.IsDueOnDate(d, today) || DailyRollover.GetOldestMiss(d, today, TimeZoneService) is not null));
+        var dueTodos = Todos.Any(t => !t.IsCompleted && t.TodoDueDate is { } due && due <= today);
+        var index = 0;
+        if (dueDailies)
+        {
+            index = 1;
+        }
+        else if (dueTodos)
+        {
+            index = 2;
+        }
+
+        _mobileSectionIndex = index;
+        UiSessionState.MobileSectionIndex = index;
+    }
+
+    private void SetRequireAllFilterTags(bool value)
+    {
+        _requireAllFilterTags = value;
+        UiSessionState.RequireAllFilterTags = value;
+        RecomputeFilters();
+    }
+
+    private string GetTagMatchButtonClass(bool requireAll) =>
+        requireAll == _requireAllFilterTags
+            ? "board-tag-match__btn board-tag-match__btn--active"
+            : "board-tag-match__btn";
+
+    private void SetQuickFilter(BoardQuickFilter filter)
+    {
+        _quickFilter = filter;
+        UiSessionState.QuickFilter = filter;
+        RecomputeFilters();
+    }
+
+    private string GetQuickFilterClass(BoardQuickFilter filter) =>
+        filter == _quickFilter
+            ? "board-quick-filter board-quick-filter--active"
+            : "board-quick-filter";
+
+    private static string GetQuickFilterLabel(BoardQuickFilter filter) => filter switch
+    {
+        BoardQuickFilter.DueNow => "Due now",
+        BoardQuickFilter.Overdue => "Overdue",
+        BoardQuickFilter.ThisWeek => "This week",
+        _ => "All"
+    };
+
+    private static readonly BoardQuickFilter[] QuickFilterOptions =
+    [
+        BoardQuickFilter.All,
+        BoardQuickFilter.DueNow,
+        BoardQuickFilter.Overdue,
+        BoardQuickFilter.ThisWeek
+    ];
+
+    private int TodayDailyScheduled =>
+        Dailies.Count(d => DailySchedule.IsScheduledOrPostponedOn(d, UserDay.Today)
+                           && !DailySchedule.IsSkippedOn(d, UserDay.Today));
+
+    private int TodayDailyDone =>
+        Dailies.Count(d => DailySchedule.IsScheduledOrPostponedOn(d, UserDay.Today)
+                           && DailySchedule.IsCompleteForDate(d, UserDay.Today));
+
+    private int TodayTodoTotal => Todos.Count(t => t.TodoDueDate == UserDay.Today);
+
+    private int TodayTodoDone => Todos.Count(t => t.TodoDueDate == UserDay.Today && t.IsCompleted);
+
+    private int TodayOverdueCount =>
+        Dailies.Count(d => !d.IsCompleted && DailyRollover.GetOldestMiss(d, UserDay.Today, TimeZoneService) is not null)
+        + Todos.Count(t => !t.IsCompleted && t.TodoDueDate is { } due && due < UserDay.Today);
+
+    private int TodayDailyPct =>
+        TodayDailyScheduled == 0 ? 100 : (int)Math.Round(100.0 * TodayDailyDone / TodayDailyScheduled);
+
+    private int TodayTodoPct =>
+        TodayTodoTotal == 0 ? 100 : (int)Math.Round(100.0 * TodayTodoDone / TodayTodoTotal);
+
+    private bool HasTodayWork => TodayDailyScheduled > 0 || TodayTodoTotal > 0 || TodayOverdueCount > 0;
 
     private List<string> GetAllTagNamesForMenu() => _cachedTagMenu;
 
     private int SelectedFilterTagCount => _selectedFilterTags.Count;
 
+    private bool RequireAllFilterTags => _requireAllFilterTags;
+
+    private BoardQuickFilter QuickFilter => _quickFilter;
+
     private void RecomputeFilters()
     {
-        _filteredHabits = FilterItems(Habits);
-        _filteredDailies = FilterItems(Dailies);
-        _filteredTodos = FilterItems(Todos);
+        _filteredHabits = FilterItems(Habits, BoardSection.Habit);
+        _filteredDailies = FilterItems(Dailies, BoardSection.Daily);
+        _filteredTodos = FilterItems(Todos, BoardSection.Todo);
         var today = UserDay.Today;
         _cachedDailiesDueOpenCount = _filteredDailies.Count(d => DailySchedule.IsDueOnDate(d, today));
         _cachedOpenTodoCount = _filteredTodos.Count(t => !t.IsCompleted);
@@ -115,9 +216,13 @@ public partial class MainBoard
         ];
     }
 
-    private List<BoardItem> FilterItems(IReadOnlyList<BoardItem> source)
+    private List<BoardItem> FilterItems(IReadOnlyList<BoardItem> source, BoardSection section)
     {
-        return source.Where(MatchesGlobalFilters).ToList();
+        var today = UserDay.Today;
+        return source
+            .Where(item => BoardQuickFilterRules.Matches(section, item, _quickFilter, today, TimeZoneService))
+            .Where(MatchesGlobalFilters)
+            .ToList();
     }
 
     private bool MatchesGlobalFilters(BoardItem item)
@@ -132,7 +237,10 @@ public partial class MainBoard
             return true;
         }
 
-        return BoardTagUtil.ParseTags(item.Tags).Any(_selectedFilterTags.Contains);
+        var itemTags = BoardTagUtil.ParseTags(item.Tags).ToList();
+        return _requireAllFilterTags
+            ? _selectedFilterTags.All(tag => itemTags.Contains(tag, StringComparer.OrdinalIgnoreCase))
+            : itemTags.Any(_selectedFilterTags.Contains);
     }
 
     private bool MatchesSearchQuery(BoardItem item)
@@ -208,8 +316,10 @@ public partial class MainBoard
     {
         _searchText = string.Empty;
         _selectedFilterTags.Clear();
+        _quickFilter = BoardQuickFilter.All;
         UiSessionState.SearchText = string.Empty;
         UiSessionState.SelectedFilterTags.Clear();
+        UiSessionState.QuickFilter = BoardQuickFilter.All;
         RecomputeFilters();
     }
 

@@ -30,92 +30,91 @@
 
     <MudCardContent Class="pt-0">
         <div class="board-filter-toolbar mb-2" role="toolbar" aria-label="@($"{GetTitle()} filters")">
-            @if (Section == BoardSection.Habit)
-            {
-                <button type="button"
-                        title="Show all habits"
-                        aria-label="Show all habits"
-                        aria-pressed="@(_habitFilter == HabitListFilter.All)"
-                        class="@GetFilterBtnClass(_habitFilter == HabitListFilter.All)"
-                        @onclick="@(() => SetHabitFilter(HabitListFilter.All))">
-                    All
-                </button>
-                <button type="button"
-                        title="Habits with fewer than 3 logs"
-                        aria-label="Show new habits with fewer than 3 logs"
-                        aria-pressed="@(_habitFilter == HabitListFilter.Weak)"
-                        class="@GetFilterBtnClass(_habitFilter == HabitListFilter.Weak)"
-                        @onclick="@(() => SetHabitFilter(HabitListFilter.Weak))">
-                    New
-                </button>
-                <button type="button"
-                        title="Habits with 3 or more logs"
-                        aria-label="Show established habits with 3 or more logs"
-                        aria-pressed="@(_habitFilter == HabitListFilter.Strong)"
-                        class="@GetFilterBtnClass(_habitFilter == HabitListFilter.Strong)"
-                        @onclick="@(() => SetHabitFilter(HabitListFilter.Strong))">
-                    Established
-                </button>
-            }
-            else if (Section == BoardSection.Daily)
-            {
-                <button type="button"
-                        title="Show all dailies"
-                        aria-label="Show all dailies"
-                        aria-pressed="@(_dailyFilter == DailyListFilter.All)"
-                        class="@GetFilterBtnClass(_dailyFilter == DailyListFilter.All)"
-                        @onclick="@(() => SetDailyFilter(DailyListFilter.All))">
-                    All
-                </button>
-                <button type="button"
-                        title="Due today or overdue, except delayed dailies"
-                        aria-label="Show dailies due today or overdue, except delayed dailies"
-                        aria-pressed="@(_dailyFilter == DailyListFilter.Due)"
-                        class="@GetFilterBtnClass(_dailyFilter == DailyListFilter.Due)"
-                        @onclick="@(() => SetDailyFilter(DailyListFilter.Due))">
-                    Due now
-                </button>
-                <button type="button"
-                        title="Neither due nor overdue"
-                        aria-label="Show dailies for later that are neither due nor overdue"
-                        aria-pressed="@(_dailyFilter == DailyListFilter.NotDue)"
-                        class="@GetFilterBtnClass(_dailyFilter == DailyListFilter.NotDue)"
-                        @onclick="@(() => SetDailyFilter(DailyListFilter.NotDue))">
-                    Later
-                </button>
-            }
-            else
-            {
-                <button type="button"
-                        title="Open to-dos"
-                        aria-label="Show open to-dos"
-                        aria-pressed="@(_todoFilter == TodoListFilter.Active)"
-                        class="@GetFilterBtnClass(_todoFilter == TodoListFilter.Active)"
-                        @onclick="@(() => SetTodoFilter(TodoListFilter.Active))">
-                    Active
-                </button>
-                <button type="button"
-                        title="Open to-dos with a due date"
-                        aria-label="Show scheduled to-dos with a due date"
-                        aria-pressed="@(_todoFilter == TodoListFilter.Scheduled)"
-                        class="@GetFilterBtnClass(_todoFilter == TodoListFilter.Scheduled)"
-                        @onclick="@(() => SetTodoFilter(TodoListFilter.Scheduled))">
-                    Scheduled
-                </button>
-                <button type="button"
-                        title="Completed to-dos"
-                        aria-label="Show completed to-dos"
-                        aria-pressed="@(_todoFilter == TodoListFilter.Done)"
-                        class="@GetFilterBtnClass(_todoFilter == TodoListFilter.Done)"
-                        @onclick="@(() => SetTodoFilter(TodoListFilter.Done))">
-                    Done
-                </button>
-            }
+            <div class="board-filter-segments">
+                @if (Section == BoardSection.Habit)
+                {
+                    <button type="button"
+                            title="Show all habits"
+                            aria-label="Show all habits"
+                            aria-pressed="@(_habitFilter == HabitListFilter.All)"
+                            class="@GetFilterBtnClass(_habitFilter == HabitListFilter.All)"
+                            @onclick="@(() => SetHabitFilter(HabitListFilter.All))">
+                        All
+                    </button>
+                    <button type="button"
+                            title="Habits with fewer than 3 logs"
+                            aria-label="Show new habits with fewer than 3 logs"
+                            aria-pressed="@(_habitFilter == HabitListFilter.Weak)"
+                            class="@GetFilterBtnClass(_habitFilter == HabitListFilter.Weak)"
+                            @onclick="@(() => SetHabitFilter(HabitListFilter.Weak))">
+                        New
+                    </button>
+                    <button type="button"
+                            title="Habits with 3 or more logs"
+                            aria-label="Show established habits with 3 or more logs"
+                            aria-pressed="@(_habitFilter == HabitListFilter.Strong)"
+                            class="@GetFilterBtnClass(_habitFilter == HabitListFilter.Strong)"
+                            @onclick="@(() => SetHabitFilter(HabitListFilter.Strong))">
+                        Established
+                    </button>
+                }
+                else if (Section == BoardSection.Daily)
+                {
+                    <button type="button"
+                            title="Show all dailies"
+                            aria-label="Show all dailies"
+                            aria-pressed="@(_dailyFilter == DailyListFilter.All)"
+                            class="@GetFilterBtnClass(_dailyFilter == DailyListFilter.All)"
+                            @onclick="@(() => SetDailyFilter(DailyListFilter.All))">
+                        All
+                    </button>
+                    <button type="button"
+                            title="Due today or overdue, except delayed dailies"
+                            aria-label="Show dailies due today or overdue, except delayed dailies"
+                            aria-pressed="@(_dailyFilter == DailyListFilter.Due)"
+                            class="@GetFilterBtnClass(_dailyFilter == DailyListFilter.Due)"
+                            @onclick="@(() => SetDailyFilter(DailyListFilter.Due))">
+                        Due now
+                    </button>
+                    <button type="button"
+                            title="Neither due nor overdue"
+                            aria-label="Show dailies for later that are neither due nor overdue"
+                            aria-pressed="@(_dailyFilter == DailyListFilter.NotDue)"
+                            class="@GetFilterBtnClass(_dailyFilter == DailyListFilter.NotDue)"
+                            @onclick="@(() => SetDailyFilter(DailyListFilter.NotDue))">
+                        Later
+                    </button>
+                }
+                else
+                {
+                    <button type="button"
+                            title="Open to-dos"
+                            aria-label="Show open to-dos"
+                            aria-pressed="@(_todoFilter == TodoListFilter.Active)"
+                            class="@GetFilterBtnClass(_todoFilter == TodoListFilter.Active)"
+                            @onclick="@(() => SetTodoFilter(TodoListFilter.Active))">
+                        Active
+                    </button>
+                    <button type="button"
+                            title="Open to-dos with a due date"
+                            aria-label="Show scheduled to-dos with a due date"
+                            aria-pressed="@(_todoFilter == TodoListFilter.Scheduled)"
+                            class="@GetFilterBtnClass(_todoFilter == TodoListFilter.Scheduled)"
+                            @onclick="@(() => SetTodoFilter(TodoListFilter.Scheduled))">
+                        Scheduled
+                    </button>
+                    <button type="button"
+                            title="Completed to-dos"
+                            aria-label="Show completed to-dos"
+                            aria-pressed="@(_todoFilter == TodoListFilter.Done)"
+                            class="@GetFilterBtnClass(_todoFilter == TodoListFilter.Done)"
+                            @onclick="@(() => SetTodoFilter(TodoListFilter.Done))">
+                        Done
+                    </button>
+                }
+            </div>
         </div>
-        @if (GetFilterHint() is { } filterHint)
-        {
-            <div class="board-filter-hint" role="status">@filterHint</div>
-        }
+        <div class="board-filter-hint" role="status">@GetFilterHint()</div>
 
         @if (Section == BoardSection.Todo
              && _todoFilter == TodoListFilter.Done
@@ -149,6 +148,7 @@
                           enterkeyhint="done"
                           autocomplete="off"
                           autocapitalize="sentences"/>
+            <span class="board-add-hint">@GetAddHint()</span>
             @if (_duplicateExistingTitle is not null)
             {
                 <div class="board-duplicate-warning mt-1" role="status">
@@ -186,13 +186,13 @@
                             <MudIcon Icon="@Icons.Material.Outlined.SearchOff" Class="empty-state-icon" aria-hidden="true" />
                         </div>
                         <MudText Typo="Typo.subtitle2" Class="empty-state-title">No matches found</MudText>
-                        <MudText Typo="Typo.caption" Class="empty-state-desc">Try a different search or clear tags.</MudText>
+                        <MudText Typo="Typo.caption" Class="empty-state-desc">Try a different search, tag, or quick filter.</MudText>
                         <MudButton Size="Size.Medium"
                                    Variant="Variant.Text"
                                    Color="Color.Primary"
                                    Class="mt-2 text-transform-none"
                                    OnClick="OnClearBoardFilter">
-                            Clear search and tags
+                            Clear filters
                         </MudButton>
                     }
                     else if (IsColumnFilterHidingAll)
@@ -258,6 +258,7 @@
     {
         <BoardItemCard Item="item"
                        Section="Section"
+                       SearchQuery="SearchQuery"
                        CanReorder="IsItemDraggable()"
                        Today="@BoardToday()"
                        OverdueSince="@GetDailyOverdueSince(item)"
@@ -273,6 +274,9 @@
                        OnDelete="@(() => DeleteAsync(item.Id, item.Title))"
                        OnPostpone="@(() => PostponeDailyAsync(item))"
                        OnDelayTodo="@(() => DelayTodoAsync(item))"
+                       OnSkipToday="@(() => SkipTodayAsync(item))"
+                       OnStartFocus="@(() => StartFocusAsync(item))"
+                       IsFocusTarget="@(TimerService.IsRunning && TimerService.BoardItemId == item.Id)"
                        OnSetChecklistItemDone="@(args => SetChecklistItemDoneAsync(item, args.ChecklistItemId, args.IsDone))"/>
     };
 }

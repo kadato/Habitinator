@@ -267,9 +267,10 @@ public partial class UpcomingPanel : IDisposable
         _snapshot = snapshot;
         _today = UserDay.Today;
         _overdue = UpcomingSchedule.GetOverdueTodos(snapshot, _today);
-        _todayDailyScheduled = snapshot.Dailies.Count(d => DailySchedule.IsScheduledOrPostponedOn(d, _today));
-        var todayDue = snapshot.Dailies.Count(d => DailySchedule.IsDueOnDate(d, _today));
-        _todayDailyDone = Math.Max(0, _todayDailyScheduled - todayDue);
+        _todayDailyScheduled = snapshot.Dailies.Count(d =>
+            DailySchedule.IsScheduledOrPostponedOn(d, _today) && !DailySchedule.IsSkippedOn(d, _today));
+        _todayDailyDone = snapshot.Dailies.Count(d =>
+            DailySchedule.IsScheduledOrPostponedOn(d, _today) && DailySchedule.IsCompleteForDate(d, _today));
         var todayTodos = snapshot.Todos.Where(t => t.TodoDueDate == _today).ToList();
         _todayTodoTotal = todayTodos.Count;
         _todayTodoDone = todayTodos.Count(t => t.IsCompleted);
@@ -358,7 +359,11 @@ public partial class UpcomingPanel : IDisposable
             next[kv.Key] = (kv.Value.Dailies, kv.Value.Todos);
         }
         _cellCache = next;
-        var allDailiesForSelected = _snapshot.Dailies.Where(d => DailySchedule.IsScheduledOrPostponedOn(d, _selected)).OrderBy(d => d.Title, StringComparer.Ordinal).ToList();
+        var allDailiesForSelected = _snapshot.Dailies
+            .Where(d => DailySchedule.IsScheduledOrPostponedOn(d, _selected)
+                        && (_selected != _today || !DailySchedule.IsSkippedOn(d, _today)))
+            .OrderBy(d => d.Title, StringComparer.Ordinal)
+            .ToList();
         var allTodosForSelected = _snapshot.Todos.Where(t => !t.IsCompleted && t.TodoDueDate == _selected).OrderBy(t => t.Title, StringComparer.Ordinal).ToList();
         _selectedAllDailies = allDailiesForSelected.Count;
         _selectedAllTodos = allTodosForSelected.Count;
@@ -559,7 +564,8 @@ public partial class UpcomingPanel : IDisposable
             return bucket.Dailies;
         }
         return [.. _snapshot.Dailies
-            .Where(d => DailySchedule.IsScheduledOrPostponedOn(d, date))
+            .Where(d => DailySchedule.IsScheduledOrPostponedOn(d, date)
+                        && (date != _today || !DailySchedule.IsSkippedOn(d, _today)))
             .OrderBy(d => d.Title, StringComparer.Ordinal)];
     }
 
@@ -873,11 +879,12 @@ public partial class UpcomingPanel : IDisposable
         {
             return;
         }
-        var title = _newTodoTitle.Trim();
-        if (string.IsNullOrWhiteSpace(title))
+        var rawTitle = _newTodoTitle.Trim();
+        if (string.IsNullOrWhiteSpace(rawTitle))
         {
             return;
         }
+        var (title, tags, parsedDue) = BoardQuickAddParser.ParseInlineTitle(rawTitle, _selected);
         _addingTodo = true;
         try
         {
@@ -890,7 +897,11 @@ public partial class UpcomingPanel : IDisposable
                 var item = await BoardData.CreateItemAsync(BoardSection.Todo, title);
                 if (item is not null)
                 {
-                    await BoardData.UpdateTodoAsync(item.Id, UpdateTodoArgs.From(item) with { DueDate = _selected });
+                    await BoardData.UpdateTodoAsync(item.Id, UpdateTodoArgs.From(item) with
+                    {
+                        Tags = tags ?? item.Tags,
+                        DueDate = parsedDue ?? _selected
+                    });
                 }
             }
             _newTodoTitle = string.Empty;

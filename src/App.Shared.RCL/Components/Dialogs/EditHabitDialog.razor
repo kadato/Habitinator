@@ -17,26 +17,70 @@
         <EditDialogNotes @bind-Notes="_notes"
                          @bind-Notes:after="() => ScheduleSave()"/>
 
-        <div class="hab-modal__section hab-modal__section--plain">
-            <span class="hab-modal__section-label">Counters</span>
-            <div class="counter-adjust">
-                <button type="button" class="counter-adjust__btn counter-adjust__btn--bad" aria-label="Decrease + count" @onclick="DecrementPlusLocal" disabled="@(_counter < 1)">
-                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                </button>
-                <MudNumericField @bind-Value="_counter" @bind-Value:after="() => ScheduleSave(400)" Variant="Variant.Outlined" Class="counter-adjust__field" Min="0" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Plus count"/>
-                <button type="button" class="counter-adjust__btn counter-adjust__btn--good" aria-label="Increase + count" @onclick="IncrementPlusLocal">
-                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                </button>
+        <div class="hab-modal__section habit-metrics">
+            <span class="hab-modal__section-label">Counters and goal</span>
+
+            <div class="habit-metric-row">
+                <span class="habit-metric-row__label">Positive logs</span>
+                <div class="counter-adjust habit-metric-control">
+                    <button type="button" class="counter-adjust__btn counter-adjust__btn--bad" aria-label="Decrease positive logs" @onclick="DecrementPlusLocal" disabled="@(_counter < 1)">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                    <MudNumericField @bind-Value="_counter" @bind-Value:after="() => ScheduleSave(400)" Variant="Variant.Outlined" Class="counter-adjust__field habit-metric-field" Min="0" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Positive log count"/>
+                    <button type="button" class="counter-adjust__btn counter-adjust__btn--good" aria-label="Increase positive logs" @onclick="IncrementPlusLocal">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                </div>
             </div>
-            <div class="counter-adjust">
-                <button type="button" class="counter-adjust__btn counter-adjust__btn--bad" aria-label="Decrease − count" @onclick="DecrementMinusLocal" disabled="@(_negativeCounter < 1)">
-                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                </button>
-                <MudNumericField @bind-Value="_negativeCounter" @bind-Value:after="() => ScheduleSave(400)" Variant="Variant.Outlined" Class="counter-adjust__field" Min="0" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Minus count"/>
-                <button type="button" class="counter-adjust__btn counter-adjust__btn--good" aria-label="Increase − count" @onclick="IncrementMinusLocal">
-                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                </button>
+
+            <div class="habit-metric-row">
+                <span class="habit-metric-row__label">Negative logs</span>
+                <div class="counter-adjust habit-metric-control">
+                    <button type="button" class="counter-adjust__btn counter-adjust__btn--bad" aria-label="Decrease negative logs" @onclick="DecrementMinusLocal" disabled="@(_negativeCounter < 1)">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                    <MudNumericField @bind-Value="_negativeCounter" @bind-Value:after="() => ScheduleSave(400)" Variant="Variant.Outlined" Class="counter-adjust__field habit-metric-field" Min="0" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Negative log count"/>
+                    <button type="button" class="counter-adjust__btn counter-adjust__btn--good" aria-label="Increase negative logs" @onclick="IncrementMinusLocal">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                </div>
             </div>
+
+            <div class="habit-metric-row">
+                <span class="habit-metric-row__label">
+                    Goal
+                    <span class="habit-metric-row__unit">@GoalUnitLabel</span>
+                </span>
+                <div class="counter-adjust habit-metric-control">
+                    <button type="button" class="counter-adjust__btn counter-adjust__btn--bad" aria-label="Decrease goal" @onclick="DecrementTargetLocal" disabled="@(_targetCount < 1)">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                    <MudNumericField @bind-Value="_targetCount" @bind-Value:after="() => ScheduleSave(400)" Variant="Variant.Outlined" Class="counter-adjust__field habit-metric-field" Min="0" Max="1000000" HideSpinButtons="true" Margin="Margin.Dense" aria-label="Goal target count"/>
+                    <button type="button" class="counter-adjust__btn counter-adjust__btn--good" aria-label="Increase goal" @onclick="IncrementTargetLocal">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="habit-metric-row habit-metric-row--select">
+                <span class="habit-metric-row__label">Resets</span>
+                <MudSelect T="HabitResetPeriod"
+                           @bind-Value="_resetPeriod"
+                           @bind-Value:after="() => { _ = SaveNowAsync(); }"
+                           Variant="Variant.Outlined"
+                           Class="habit-metric-select"
+                           Margin="Margin.Dense"
+                           aria-label="Reset period"
+                           AnchorOrigin="Origin.BottomLeft"
+                           TransformOrigin="Origin.TopLeft"
+                           Dense="true">
+                    <MudSelectItem T="HabitResetPeriod" Value="HabitResetPeriod.Daily">Daily</MudSelectItem>
+                    <MudSelectItem T="HabitResetPeriod" Value="HabitResetPeriod.Weekly">Weekly</MudSelectItem>
+                    <MudSelectItem T="HabitResetPeriod" Value="HabitResetPeriod.Monthly">Monthly</MudSelectItem>
+                </MudSelect>
+            </div>
+
+            <p class="habit-metric-hint">@GoalHint</p>
         </div>
 
         <div class="hab-advanced @(_checklistOpen ? "hab-advanced--open" : string.Empty)">
@@ -78,7 +122,7 @@
 
         <div class="hab-advanced @(_advancedOpen ? "hab-advanced--open" : string.Empty)">
             <button type="button" class="hab-advanced__trigger" @onclick="() => _advancedOpen = !_advancedOpen" aria-expanded="@(_advancedOpen ? "true" : "false")">
-                <span>Tracking</span>
+                <span>Log buttons</span>
                 <span class="hab-advanced__chevron" aria-hidden="true">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                 </span>
@@ -89,7 +133,7 @@
                     <div class="hab-modal__section">
                         <span class="hab-modal__section-label">
                             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path><path d="M12 8v8"></path></svg>
-                            Counters
+                            Show on card
                         </span>
                         <div class="habit-track">
                             <button type="button"
@@ -117,23 +161,6 @@
                             </button>
                         </div>
                     </div>
-
-                    <div class="hab-modal__section hab-modal__section--plain">
-                        <MudSelect T="HabitResetPeriod"
-                                   @bind-Value="_resetPeriod"
-                                   @bind-Value:after="() => { _ = SaveNowAsync(); }"
-                                   Variant="Variant.Outlined"
-                                   Class="hab-modal__field edit-habit-select"
-                                   Margin="Margin.Dense"
-                                   aria-label="Reset"
-                                   AnchorOrigin="Origin.BottomLeft"
-                                   TransformOrigin="Origin.TopLeft"
-                                   Dense="true">
-                            <MudSelectItem T="HabitResetPeriod" Value="HabitResetPeriod.Daily">Daily</MudSelectItem>
-                            <MudSelectItem T="HabitResetPeriod" Value="HabitResetPeriod.Weekly">Weekly</MudSelectItem>
-                            <MudSelectItem T="HabitResetPeriod" Value="HabitResetPeriod.Monthly">Monthly</MudSelectItem>
-                        </MudSelect>
-                    </div>
                 </div>
             }
         </div>
@@ -156,6 +183,7 @@
     private HabitResetPeriod _resetPeriod = HabitResetPeriod.Daily;
     private int _counter;
     private int _negativeCounter;
+    private int _targetCount;
 
     private List<ChecklistRow> _checklistRows = [];
     private bool _checklistOpen;
@@ -175,6 +203,7 @@
         _resetPeriod = Item.ResetPeriod;
         _counter = Item.Counter;
         _negativeCounter = Item.NegativeCounter;
+        _targetCount = Item.TargetCount ?? 0;
         _checklistRows = EditDialogHelpers.ParseChecklistRows(Item.ChecklistJson);
         _checklistOpen = true;
         _tagsOpen = !string.IsNullOrWhiteSpace(_tags);
@@ -195,17 +224,23 @@
         _ = SaveNowAsync();
     }
 
+    private string GoalUnitLabel => $"per {HabitGoal.PeriodUnit(_resetPeriod)}";
+
+    private string GoalHint => _targetCount > 0
+        ? $"The card shows progress toward {_targetCount} logs {HabitGoal.PeriodWord(_resetPeriod)}."
+        : "Set 0 for no goal.";
+
     protected override async Task SaveValuesAsync(CancellationToken cancellationToken = default)
     {
         var title = string.IsNullOrWhiteSpace(_title) ? Item.Title : _title.Trim();
         var tagsPayload = EditDialogHelpers.CleanStringPayload(_tags);
         var checklistPayload = EditDialogHelpers.SerializeChecklistRows(_checklistRows);
-        await BoardData.UpdateHabitAsync(Item.Id, new UpdateHabitArgs(title, EditDialogHelpers.CleanStringPayload(_notes), tagsPayload, _trackPlus, _trackMinus, _resetPeriod, _counter, _negativeCounter, checklistPayload), cancellationToken);
+        await BoardData.UpdateHabitAsync(Item.Id, new UpdateHabitArgs(title, EditDialogHelpers.CleanStringPayload(_notes), tagsPayload, _trackPlus, _trackMinus, _resetPeriod, _counter, _negativeCounter, checklistPayload, TargetCount: HabitGoal.Normalize(_targetCount)), cancellationToken);
     }
 
     protected override EditHabitDialogResult BuildResult(EditDialogAction action)
     {
-        return new EditHabitDialogResult(action, _title.Trim(), EditDialogHelpers.CleanStringPayload(_notes), EditDialogHelpers.CleanStringPayload(_tags), _trackPlus, _trackMinus, _resetPeriod, _counter, _negativeCounter, EditDialogHelpers.SerializeChecklistRows(_checklistRows));
+        return new EditHabitDialogResult(action, _title.Trim(), EditDialogHelpers.CleanStringPayload(_notes), EditDialogHelpers.CleanStringPayload(_tags), _trackPlus, _trackMinus, _resetPeriod, _counter, _negativeCounter, EditDialogHelpers.SerializeChecklistRows(_checklistRows), HabitGoal.Normalize(_targetCount));
     }
 
     private void IncrementPlusLocal()
@@ -222,6 +257,24 @@
         }
 
         _ = SaveNowAsync();
+    }
+
+    private void IncrementTargetLocal()
+    {
+        if (_targetCount < HabitGoal.MaxTargetCount)
+        {
+            _targetCount++;
+            ScheduleSave(400);
+        }
+    }
+
+    private void DecrementTargetLocal()
+    {
+        if (_targetCount > 0)
+        {
+            _targetCount--;
+            ScheduleSave(400);
+        }
     }
 
     private void IncrementMinusLocal()

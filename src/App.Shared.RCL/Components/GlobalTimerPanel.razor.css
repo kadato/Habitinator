@@ -535,7 +535,7 @@
     .timer-inputs-pair {
         flex: 1 1 320px;
         min-width: min(100%, 280px);
-        grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         align-items: start;
     }
 

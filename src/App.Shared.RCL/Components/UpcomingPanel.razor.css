@@ -249,6 +249,24 @@
     min-width: 0;
 }
 
+.cal-quickadd__field {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    gap: 0.15rem;
+}
+
+.cal-quickadd__hint {
+    font-family: var(--hab-font-mono);
+    font-size: 0.6rem;
+    line-height: 1.25;
+    color: var(--mud-palette-text-secondary);
+    opacity: 0.8;
+    padding-left: 0.2rem;
+    user-select: none;
+}
+
 .cal-quickadd__input {
     flex: 1 1 auto;
     min-width: 0;

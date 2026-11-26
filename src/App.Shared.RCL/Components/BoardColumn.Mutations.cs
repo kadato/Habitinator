@@ -26,6 +26,10 @@ public partial class BoardColumn
         _duplicateConfirmed = false;
     }
 
+    private string GetAddHint() => Section == BoardSection.Todo
+        ? "Use #health for a tag and due:tomorrow for a date."
+        : "Use #health for a tag.";
+
     private async Task SetChecklistItemDoneAsync(BoardItem item, Guid lineId, bool done)
     {
         var today = BoardToday();
@@ -103,7 +107,8 @@ public partial class BoardColumn
         try
         {
             _draftError = false;
-            var title = _draft.Trim();
+            var rawTitle = _draft.Trim();
+            var (title, tags, dueDate) = BoardQuickAddParser.ParseInlineTitle(rawTitle, BoardToday());
             if (!_duplicateConfirmed)
             {
                 var existing = Items.FirstOrDefault(i => BoardTitleSimilarity.IsSimilar(i.Title, title));
@@ -117,15 +122,50 @@ public partial class BoardColumn
             _duplicateExistingTitle = null;
             _duplicateConfirmed = false;
             var newId = Guid.NewGuid();
+            var todoDueDate = Section == BoardSection.Todo ? dueDate : null;
             BoardItem tempItem = new(
                 Id: newId,
                 Title: title,
+                Tags: tags,
+                TodoDueDate: todoDueDate,
                 CreatedAtUtc: DateTimeOffset.UtcNow,
                 SortOrder: GetInitialSortOrderForOptimisticCreation()
             );
             _draft = string.Empty;
 
-            await ApplyCreationAsync(newId, tempItem, () => BoardData.CreateItemAsync(Section, title, newId));
+            using var undoBatch = UndoService.BeginBatch($"Added \"{title}\"");
+            await ApplyCreationAsync(newId, tempItem, async () =>
+            {
+                var created = await BoardData.CreateItemAsync(Section, title, newId);
+                if (tags is null && todoDueDate is null)
+                {
+                    return;
+                }
+
+                try
+                {
+                    if (Section == BoardSection.Habit)
+                    {
+                        await BoardData.UpdateHabitAsync(created.Id, UpdateHabitArgs.From(created) with { Tags = tags ?? created.Tags });
+                    }
+                    else if (Section == BoardSection.Daily)
+                    {
+                        await BoardData.UpdateDailyAsync(created.Id, UpdateDailyArgs.From(created) with { Tags = tags ?? created.Tags });
+                    }
+                    else
+                    {
+                        await BoardData.UpdateTodoAsync(created.Id, UpdateTodoArgs.From(created) with
+                        {
+                            Tags = tags ?? created.Tags,
+                            DueDate = todoDueDate ?? created.TodoDueDate
+                        });
+                    }
+                }
+                catch
+                {
+                    // The item exists. Tag and due-date enrichment is best effort.
+                }
+            });
         }
         finally
         {
@@ -144,6 +184,39 @@ public partial class BoardColumn
     {
         _duplicateExistingTitle = null;
         _duplicateConfirmed = false;
+    }
+
+    private async Task StartFocusAsync(BoardItem item)
+    {
+        if (TimerService.IsRunning)
+        {
+            await Notifier.NotifyAsync("A focus session is already running.", Severity.Info);
+            return;
+        }
+
+        TimerService.SelectTarget(Section.ToString(), item.Title, item.Id);
+        TimerService.Start();
+        await Notifier.NotifyAsync($"Focusing on '{item.Title}'.", Severity.Success);
+    }
+
+    private async Task SkipTodayAsync(BoardItem item)
+    {
+        try
+        {
+            var updated = await BoardData.SkipDailyForDateAsync(item.Id, BoardToday());
+            if (updated is null)
+            {
+                await Notifier.NotifyAsync("This daily can't be skipped.", Severity.Error);
+                return;
+            }
+
+            await Notifier.NotifyAsync($"Skipped '{item.Title}'. The streak is safe.", Severity.Success);
+            await OnChanged.InvokeAsync();
+        }
+        catch
+        {
+            await Notifier.NotifyAsync("Couldn't skip this daily. Try again.", Severity.Error);
+        }
     }
 
     private Task HabitUpAsync(BoardItem item)
@@ -168,7 +241,8 @@ public partial class BoardColumn
             IsCompleted = isCompleted,
             DailyLastCompletedOn = lastCompleted,
             DailyPostponedUntil = null,
-            DailyPostponedFrom = null
+            DailyPostponedFrom = null,
+            DailySkippedOn = null
         };
         return ApplyOverrideAsync(item.Id, optimistic, () => BoardData.ToggleItemAsync(Section, item.Id));
     }

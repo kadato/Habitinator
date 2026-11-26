@@ -408,8 +408,11 @@
     // Single quick-add form shared by the agenda actions bar and the empty
     // state so the two never drift.
     private RenderFragment QuickAddForm => @<form class="cal-quickadd" @onsubmit="AddTodoQuickAsync" @onsubmit:preventDefault="true">
-        <input type="text" class="cal-quickadd__input" placeholder="Add to-do" aria-label="Add to-do"
-               @bind="_newTodoTitle" @bind:event="oninput" maxlength="200" autocomplete="off" />
+        <div class="cal-quickadd__field">
+            <input type="text" class="cal-quickadd__input" placeholder="Add to-do" aria-label="Add to-do"
+                   @bind="_newTodoTitle" @bind:event="oninput" maxlength="200" autocomplete="off" />
+            <span class="cal-quickadd__hint">#tag  due:tomorrow  !urgent</span>
+        </div>
         <button type="submit" class="cal-addbtn" disabled="@(_addingTodo || string.IsNullOrWhiteSpace(_newTodoTitle))" aria-busy="@_addingTodo">
             <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" aria-hidden="true" />
             <span>@(_addingTodo ? "Adding…" : "Add")</span>

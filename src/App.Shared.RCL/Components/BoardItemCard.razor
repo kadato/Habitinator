@@ -54,7 +54,7 @@
     }
     <div class="board-card__head">
         <button type="button" class="board-card__title" @onclick="OnOpenEditor" @onkeydown="OnTitleKeyDown" aria-label="@GetTitleAriaLabel()" aria-keyshortcuts="@GetTitleKeyShortcuts()">
-            <span class="board-card__title-text">@Item.Title</span>
+            <span class="board-card__title-text">@Highlight(Item.Title)</span>
             <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="board-card__title-chevron" aria-hidden="true" />
         </button>
         <div class="board-card__head-actions">
@@ -64,6 +64,13 @@
                     <MudIcon Icon="@Icons.Material.Filled.Whatshot" Size="Size.Small" Class="streak-flame-icon" aria-hidden="true" />
                     <span class="hab-visually-hidden">Daily streak @Item.Counter days: </span><span class="board-streak__text" aria-hidden="true">@Item.Counter</span>
                 </div>
+            }
+            @if (IsFocusTarget)
+            {
+                <span class="board-focus-chip" title="Focus timer is running on this item">
+                    <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Small" aria-hidden="true" />
+                    <span>Focus</span>
+                </span>
             }
             <MudMenu AnchorOrigin="Origin.BottomRight"
                      TransformOrigin="Origin.TopRight"
@@ -86,6 +93,15 @@
                             <MudText Typo="Typo.body2">Edit</MudText>
                         </div>
                     </MudMenuItem>
+                    @if (!IsFocusTarget)
+                    {
+                        <MudMenuItem OnClick="OnStartFocus">
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Small" aria-hidden="true" />
+                                <MudText Typo="Typo.body2">Start focus</MudText>
+                            </div>
+                        </MudMenuItem>
+                    }
                     @if (CanPostponeDaily())
                     {
                         <MudMenuItem OnClick="OnPostpone">
@@ -101,6 +117,15 @@
                             <div class="d-flex align-center gap-2">
                                 <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" aria-hidden="true" />
                                 <MudText Typo="Typo.body2">@TodoDelayLabel</MudText>
+                            </div>
+                        </MudMenuItem>
+                    }
+                    @if (CanSkipToday())
+                    {
+                        <MudMenuItem OnClick="OnSkipToday">
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.SkipNext" Size="Size.Small" aria-hidden="true" />
+                                <MudText Typo="Typo.body2">Skip today</MudText>
                             </div>
                         </MudMenuItem>
                     }
@@ -152,7 +177,7 @@
                         @foreach (var tag in TagsList)
                         {
                             <span @key="tag" class="board-card__tag-badge" style="@TagBadgeStyle(tag)">
-                                <span class="board-card__tag-badge__text">@tag</span>
+                                <span class="board-card__tag-badge__text">@Highlight(tag)</span>
                             </span>
                         }
                         @if (_tagsExpanded && TagsList.Count > 3)
@@ -170,7 +195,7 @@
                         @foreach (var tag in TagsList.Take(2))
                         {
                             <span @key="tag" class="board-card__tag-badge" style="@TagBadgeStyle(tag)">
-                                <span class="board-card__tag-badge__text">@tag</span>
+                                <span class="board-card__tag-badge__text">@Highlight(tag)</span>
                             </span>
                         }
                         <button type="button"
@@ -184,7 +209,7 @@
             }
             @if (!string.IsNullOrWhiteSpace(Item.Notes))
             {
-                <MudText Typo="Typo.caption" Class="board-card__notes" Color="Color.Secondary">@Item.Notes</MudText>
+                <MudText Typo="Typo.caption" Class="board-card__notes" Color="Color.Secondary">@Highlight(Item.Notes)</MudText>
             }
             @if (SubTotal > 0)
             {
@@ -237,7 +262,14 @@
                         <span>Delayed to @DelayedDateLabel(postponedUntil)</span>
                     </div>
                 }
-                @if (Section == BoardSection.Daily && OverdueSince is { } overdueSince)
+                @if (Section == BoardSection.Daily && Item.DailySkippedOn == BoardToday())
+                {
+                    <div class="board-daily-skipped">
+                        <MudIcon Icon="@Icons.Material.Filled.SkipNext" Size="Size.Small" aria-hidden="true" />
+                        <span>Skipped today</span>
+                    </div>
+                }
+                else if (Section == BoardSection.Daily && OverdueSince is { } overdueSince)
                 {
                     <div class="board-daily-overdue">
                         <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" aria-hidden="true" />
@@ -248,7 +280,20 @@
                 {
                     <div class="board-habit-counters">
                         <span class="hab-visually-hidden">@HabitCounterTitle()</span>
-                        @if (Item.TrackPlus)
+                        @if (HasHabitGoal)
+                        {
+                            <span class="board-habit-goal @(HabitGoal.IsMet(Item) ? "board-habit-goal--met" : string.Empty)" title="@HabitGoalTitle" aria-label="@HabitGoalTitle">
+                                <span class="board-habit-goal__value">@Item.Counter / @Item.TargetCount</span>
+                                <span class="board-habit-goal__track" aria-hidden="true">
+                                    <span class="board-habit-goal__fill" style="width: @(HabitGoal.ProgressPercent(Item))%"></span>
+                                </span>
+                                @if (HabitGoal.IsMet(Item))
+                                {
+                                    <span class="board-habit-goal__check" aria-hidden="true">✓</span>
+                                }
+                            </span>
+                        }
+                        else if (Item.TrackPlus)
                         {
                             <span class="board-habit-badge board-habit-badge--plus">
                                 <svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="me-1"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>

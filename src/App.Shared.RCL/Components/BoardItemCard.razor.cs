@@ -15,6 +15,9 @@ public partial class BoardItemCard
     [Parameter][EditorRequired] public BoardSection Section { get; set; }
     [Parameter] public bool CanReorder { get; set; }
 
+    /// <summary>Current board search text. Matches are highlighted in the title, notes, and tags.</summary>
+    [Parameter] public string? SearchQuery { get; set; }
+
     [Parameter] public EventCallback OnHabitUp { get; set; }
     [Parameter] public EventCallback OnHabitDown { get; set; }
     [Parameter] public EventCallback OnToggle { get; set; }
@@ -26,7 +29,12 @@ public partial class BoardItemCard
     [Parameter] public EventCallback OnDelete { get; set; }
     [Parameter] public EventCallback OnPostpone { get; set; }
     [Parameter] public EventCallback OnDelayTodo { get; set; }
+    [Parameter] public EventCallback OnSkipToday { get; set; }
+    [Parameter] public EventCallback OnStartFocus { get; set; }
     [Parameter] public EventCallback<(Guid ChecklistItemId, bool IsDone)> OnSetChecklistItemDone { get; set; }
+
+    /// <summary>True when the focus timer is running on this item.</summary>
+    [Parameter] public bool IsFocusTarget { get; set; }
 
     /// <summary>True while a habit log or toggle is saving. Shows the pending state. Blocks double-tap.</summary>
     [Parameter] public bool IsBusy { get; set; }
@@ -61,7 +69,7 @@ public partial class BoardItemCard
     private List<string> TagsList => _tagsList;
     private bool HasBodyExtra => !string.IsNullOrWhiteSpace(Item.Notes) || SubTotal > 0 || TagsList.Count > 0;
 
-    private string CardClass => $"board-card {RowClass}";
+    private string CardClass => $"board-card {RowClass}{(IsFocusTarget ? " board-card--focus-target" : string.Empty)}";
     private string RowClass => GetRowClass(Section, Item);
     private string CheckClass => GetCheckClass(Section, Item);
     private static string AriaBool(bool condition) => condition ? "true" : "false";
@@ -72,6 +80,8 @@ public partial class BoardItemCard
     private bool? _lastRenderedTagsExpanded;
     private DateOnly? _lastRenderedOverdueSince;
     private DateOnly? _lastRenderedToday;
+    private string? _lastRenderedSearchQuery;
+    private bool? _lastRenderedIsFocusTarget;
 
     protected override bool ShouldRender()
     {
@@ -82,6 +92,8 @@ public partial class BoardItemCard
                || _lastRenderedTagsExpanded != _tagsExpanded
                || _lastRenderedOverdueSince != OverdueSince
                || _lastRenderedToday != Today
+               || !string.Equals(_lastRenderedSearchQuery, SearchQuery, StringComparison.Ordinal)
+               || _lastRenderedIsFocusTarget != IsFocusTarget
                || _lastRenderedIsBusy != IsBusy;
     }
 
@@ -96,8 +108,12 @@ public partial class BoardItemCard
         _lastRenderedTagsExpanded = _tagsExpanded;
         _lastRenderedOverdueSince = OverdueSince;
         _lastRenderedToday = Today;
+        _lastRenderedSearchQuery = SearchQuery;
+        _lastRenderedIsFocusTarget = IsFocusTarget;
         _lastRenderedIsBusy = IsBusy;
     }
+
+    private MarkupString Highlight(string? text) => new(SearchHighlight.ToHtml(text, SearchQuery));
 
     private void ToggleSubtasksExpand()
     {
@@ -193,8 +209,9 @@ public partial class BoardItemCard
         return section switch
         {
             BoardSection.Todo => item.TodoDueDate is not null,
-            BoardSection.Habit => item.TrackPlus || item.TrackMinus || item.ResetPeriod != HabitResetPeriod.Daily,
+            BoardSection.Habit => item.TrackPlus || item.TrackMinus || item.ResetPeriod != HabitResetPeriod.Daily || HabitGoal.HasGoal(item),
             BoardSection.Daily => OverdueSince is not null
+                || item.DailySkippedOn == BoardToday()
                 || (item.DailyPostponedUntil is { } until && until > BoardToday()),
             _ => false
         };
@@ -215,6 +232,22 @@ public partial class BoardItemCard
 
         return DailySchedule.IsDueOnDate(Item, today);
     }
+
+    private bool CanSkipToday()
+    {
+        var today = BoardToday();
+        return Section == BoardSection.Daily
+               && !Item.IsCompleted
+               && !DailySchedule.IsSkippedOn(Item, today)
+               && DailySchedule.IsDueOnDate(Item, today);
+    }
+
+    private bool HasHabitGoal => Section == BoardSection.Habit && HabitGoal.HasGoal(Item);
+
+    private string HabitGoalTitle =>
+        Item.TargetCount is { } target
+            ? $"{Item.Counter} of {target} positive logs {HabitGoal.PeriodWord(Item.ResetPeriod)}"
+            : string.Empty;
 
     private bool CanDelayTodo()
     {

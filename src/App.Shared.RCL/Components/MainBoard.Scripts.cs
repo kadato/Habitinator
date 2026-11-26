@@ -22,6 +22,7 @@ public partial class MainBoard
     private bool _swipeInitialized;
     private bool _onboardingDismissed;
     private bool _onboardingChecked;
+    private string? _lastComposeQueryUri;
 
     private bool ShowOnboarding =>
         _initialLoadComplete && _loadError is null && !HasBoardItems() && _onboardingChecked && !_onboardingDismissed;
@@ -67,6 +68,11 @@ public partial class MainBoard
             // Preload SortableJS and the board reordering scripts during the initial data load.
             _ = PreloadSortableScriptsAsync();
             _ = LoadOnboardingDismissedAsync();
+        }
+
+        if (_initialLoadComplete && _loadError is null)
+        {
+            await TryHandleComposeQueryAsync();
         }
 
         if (_initialLoadComplete && _loadError is null && !_boardClientScriptsStarted)
@@ -118,6 +124,107 @@ public partial class MainBoard
         UiSessionState.PendingAiPrompt = "Help me turn my goal into habits, dailies, and todos. My goal is: ";
         UiSessionState.SetAiDrawer(true);
         return Task.CompletedTask;
+    }
+
+    private async Task OnboardingUseTemplateAsync(string templateKey)
+    {
+        var template = BoardStarterTemplates.Find(templateKey);
+        if (template is null)
+        {
+            return;
+        }
+
+        try
+        {
+            using var batch = UndoService.BeginBatch($"Added {template.Name} template");
+            foreach (var spec in template.Items)
+            {
+                var created = await BoardDataService.CreateItemAsync(spec.Section, spec.Title);
+                if (spec.Tags is null && spec.Section != BoardSection.Habit)
+                {
+                    continue;
+                }
+
+                if (spec.Section == BoardSection.Habit)
+                {
+                    await BoardDataService.UpdateHabitAsync(created.Id, UpdateHabitArgs.From(created) with
+                    {
+                        Tags = spec.Tags ?? created.Tags,
+                        ResetPeriod = spec.ResetPeriod ?? created.ResetPeriod,
+                        TargetCount = spec.TargetCount
+                    });
+                }
+                else if (spec.Section == BoardSection.Daily)
+                {
+                    await BoardDataService.UpdateDailyAsync(created.Id, UpdateDailyArgs.From(created) with { Tags = spec.Tags });
+                }
+                else
+                {
+                    await BoardDataService.UpdateTodoAsync(created.Id, UpdateTodoArgs.From(created) with { Tags = spec.Tags });
+                }
+            }
+
+            await OnBoardChanged();
+            await Notifier.NotifyAsync($"Added the {template.Name} starter board.", MudBlazor.Severity.Success);
+        }
+        catch
+        {
+            await Notifier.NotifyAsync("Couldn't add the starter board. Try again.", MudBlazor.Severity.Error);
+        }
+    }
+
+    /// <summary>
+    ///     Handles the PWA "New to-do" shortcut. The item opens straight in the editor so the
+    ///     shortcut lands on the task, not on a board the user still has to scan.
+    /// </summary>
+    private async Task TryHandleComposeQueryAsync()
+    {
+        var uri = Nav.Uri;
+        if (string.Equals(uri, _lastComposeQueryUri, StringComparison.Ordinal)
+            || !TryGetQueryValue(uri, "compose", out var value)
+            || !string.Equals(value, "todo", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _lastComposeQueryUri = uri;
+        try
+        {
+            await CreateItemPublicAsync(BoardSection.Todo);
+        }
+        finally
+        {
+            // Remove the shortcut query only after the editor closes. Navigating
+            // while the dialog is open can tear down its provider and leave the
+            // create task waiting on a result that never arrives.
+            Nav.NavigateTo(Nav.GetUriWithQueryParameter("compose", (string?)null), replace: true);
+        }
+    }
+
+    private static bool TryGetQueryValue(string uri, string key, out string? value)
+    {
+        value = null;
+        if (!Uri.TryCreate(uri, UriKind.Absolute, out var parsed))
+        {
+            return false;
+        }
+
+        foreach (var part in parsed.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separator = part.IndexOf('=');
+            var name = separator < 0 ? part : part[..separator];
+            if (!string.Equals(Uri.UnescapeDataString(name), key, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            value = separator < 0
+                ? string.Empty
+                : Uri.UnescapeDataString(part[(separator + 1)..].Replace("+", " ", StringComparison.Ordinal));
+            return true;
+        }
+
+        return false;
     }
 
     private async Task OnboardingLoadDemoAsync()

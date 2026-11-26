@@ -33,31 +33,41 @@
 /* Per-type badge colors are in global app.css. The badge is on the
    MudCard root. The root renders without the component scope attribute. */
 
-/* The column filter toolbar is inside MudCardContent. It spans 100% width. It matches the input box. */
+/* The column filter toolbar holds the segmented filters.
+   The group matches the section switcher on mobile and the quick filters on desktop. */
 .board-filter-toolbar {
     width: 100% !important;
     display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
     align-items: center !important;
     gap: var(--space-2) !important;
 }
 
+.board-filter-segments {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: var(--board-segment-gap);
+    padding: var(--board-segment-pad);
+    background: var(--mud-palette-background-gray);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 65%, transparent);
+    border-radius: var(--board-segment-radius);
+    box-sizing: border-box;
+}
+
 .board-filter-btn {
-    /* flex-basis 0 shares the row evenly. Basis auto sizes from the longest
-       label first, so All / New / Established came out uneven. */
-    flex: 1 1 0% !important;
-    width: auto !important;
+    /* The group is a three-column grid, so every filter shares one width. */
+    width: 100% !important;
     min-width: 0 !important;
-    height: 32px !important;
-    min-height: 32px !important;
-    padding: var(--space-1) var(--space-3) !important;
-    border-radius: var(--radius-md) !important;
+    height: var(--board-segment-height) !important;
+    min-height: var(--board-segment-height) !important;
+    padding: 0 var(--space-3) !important;
+    border-radius: var(--board-segment-btn-radius) !important;
     border: 1px solid transparent !important;
     background-color: transparent !important;
     color: var(--mud-palette-text-secondary) !important;
-    font-size: 0.8rem !important;
-    font-weight: 600 !important;
+    font-size: var(--board-segment-font-size) !important;
+    font-weight: 650 !important;
     text-transform: none !important;
     letter-spacing: 0;
     cursor: pointer !important;
@@ -80,8 +90,10 @@
     }
 }
 
-/* The filter hint explains the active filter. The hint shows only when a non-default filter is active. All, Due, and Active show no hint. */
+/* The filter hint explains the active filter. The line keeps its height when
+   empty, so the add fields in all three columns stay on one row. */
 .board-filter-hint {
+    min-height: 1.05rem;
     font-size: 0.75rem;
     line-height: 1.4;
     color: var(--mud-palette-text-secondary);
@@ -122,6 +134,19 @@
 /* The add field shows its action state. The adornment button uses the primary color when the field has focus or text. */
 .board-add-wrap:focus-within ::deep .mud-input-adornment-end .mud-icon-button {
     color: var(--mud-palette-primary) !important;
+}
+
+.board-add-hint {
+    display: none;
+    margin: 0.2rem 0 0 0.15rem;
+    font-size: 0.68rem;
+    line-height: 1.35;
+    color: var(--mud-palette-text-secondary);
+    user-select: none;
+}
+
+.board-add-wrap:focus-within .board-add-hint {
+    display: block;
 }
 
 .board-list {
@@ -177,19 +202,7 @@
     pointer-events: none !important;
 }
 
-@media (max-width: 959.98px) {
-    .board-filter-toolbar .board-filter-btn {
-        height: 44px !important;
-        min-height: 44px !important;
-    }
-}
-
 @media (pointer: coarse) {
-    .board-filter-btn {
-        height: 44px !important;
-        min-height: 44px !important;
-    }
-
     /* Info and add-field buttons keep a 44px hit target on touch at every viewport width. Mud roots are in global app.css. */
     .board-add-wrap ::deep .mud-input-adornment-end .mud-icon-button {
         width: 44px !important;
@@ -294,21 +307,9 @@
     }
 }
 
-/* Phones: reclaim vertical space. Badge, About button, and filter hint
-   are supplementary; the h2 title keeps column identity. */
+/* The tabbed board hides the filter hint to save a row.
+   The active filter button still shows which filter is on. */
 @media (max-width: 767.98px) {
-    .board-count-badge {
-        display: none !important;
-    }
-
-    ::deep .board-column-info-btn {
-        display: none !important;
-    }
-
-    .board-title {
-        font-size: 0.8rem !important;
-    }
-
     .board-filter-hint {
         display: none !important;
     }

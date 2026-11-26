@@ -45,9 +45,10 @@ public partial class MainBoard
     [JSInvokable]
     public Task OnSwipeSectionAsync(int direction)
     {
-        _mobileSectionIndex = direction > 0
+        var next = direction > 0
             ? (_mobileSectionIndex + 1) % 3
             : (_mobileSectionIndex + 2) % 3;
+        SetMobileSectionIndex(next);
         StateHasChanged();
         return Task.CompletedTask;
     }

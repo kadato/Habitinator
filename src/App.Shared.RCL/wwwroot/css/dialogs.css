@@ -710,6 +710,114 @@
 .counter-adjust__field { width: 4.8rem; flex-shrink: 0; align-self: center; margin-top: 0 !important; margin-bottom: 0 !important; }
 .counter-adjust__field .mud-input-root { font-family: var(--hab-font-mono) !important; }
 
+/* Counters and goal share one compact, aligned block. */
+.habit-metrics {
+    gap: 0.5rem;
+    padding: 0.75rem 0.8rem;
+    border-radius: var(--radius-md);
+}
+
+.habit-metric-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 2.25rem;
+}
+
+.habit-metric-row + .habit-metric-row {
+    border-top: 1px solid color-mix(in srgb, var(--mud-palette-divider) 55%, transparent);
+    padding-top: 0.5rem;
+}
+
+.habit-metric-row__label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--mud-palette-text-primary);
+    min-width: 0;
+}
+
+.habit-metric-row__unit {
+    display: block;
+    margin-top: 0.1rem;
+    font-size: 0.64rem;
+    font-weight: 500;
+    color: var(--mud-palette-text-secondary);
+}
+
+.habit-metric-control {
+    display: flex;
+    align-items: stretch;
+    gap: 0.35rem;
+    flex: 0 0 auto;
+}
+
+.habit-metric-control .counter-adjust__btn {
+    width: 2rem;
+    min-height: 2rem;
+}
+
+.habit-metric-control .counter-adjust__field,
+.habit-metric-field {
+    width: 3.8rem !important;
+    min-width: 3.8rem !important;
+    max-width: 3.8rem !important;
+    flex: 0 0 3.8rem !important;
+}
+
+.habit-metric-field .mud-input-control,
+.habit-metric-field .mud-input-control-input-container,
+.habit-metric-field .mud-input-root {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+.habit-metric-field input.mud-input-slot {
+    padding-left: 0.2rem !important;
+    padding-right: 0.2rem !important;
+    text-align: center !important;
+}
+
+.habit-metric-select {
+    width: 9.5rem;
+    max-width: 9.5rem;
+    flex: 0 0 9.5rem;
+}
+
+.habit-metric-select .mud-input-control {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+.habit-metric-hint {
+    margin: 0.1rem 0 0;
+    font-size: 0.68rem;
+    line-height: 1.4;
+    color: var(--mud-palette-text-secondary);
+}
+
+@media (max-width: 599.98px) {
+    .habit-metric-control .counter-adjust__btn {
+        width: 44px;
+        min-height: 44px;
+    }
+
+    .habit-metric-control .counter-adjust__field,
+    .habit-metric-field {
+        width: 4.2rem !important;
+        min-width: 4.2rem !important;
+        max-width: 4.2rem !important;
+        flex: 0 0 4.2rem !important;
+    }
+
+    .habit-metric-select {
+        width: 8.5rem;
+        max-width: 8.5rem;
+        flex: 0 0 8.5rem;
+    }
+}
+
 .edit-daily-streak-stats {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;
     margin-top: 0.45rem;

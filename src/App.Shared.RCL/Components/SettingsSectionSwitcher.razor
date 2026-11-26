@@ -4,28 +4,28 @@
             class="@GetSwitcherClass(0)"
             @onclick="() => OnTabSelected(0)">
         <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" aria-hidden="true" />
-        <span class="settings-section-switcher__label">Profile</span>
+        <span class="settings-section-switcher__label settings-section-switcher__label--full">General</span><span class="settings-section-switcher__label settings-section-switcher__label--short">General</span>
     </button>
     <button type="button"
             @attributes="GetTabAria(1)"
             class="@GetSwitcherClass(1)"
             @onclick="() => OnTabSelected(1)">
         <MudIcon Icon="@Icons.Material.Filled.Notifications" Size="Size.Small" aria-hidden="true" />
-        <span class="settings-section-switcher__label">Alerts</span>
+        <span class="settings-section-switcher__label settings-section-switcher__label--full">Notifications</span><span class="settings-section-switcher__label settings-section-switcher__label--short">Alerts</span>
     </button>
     <button type="button"
             @attributes="GetTabAria(2)"
             class="@GetSwitcherClass(2)"
             @onclick="() => OnTabSelected(2)">
         <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" aria-hidden="true" />
-        <span class="settings-section-switcher__label">Account</span>
+        <span class="settings-section-switcher__label settings-section-switcher__label--full">Account</span><span class="settings-section-switcher__label settings-section-switcher__label--short">Account</span>
     </button>
     <button type="button"
             @attributes="GetTabAria(3)"
             class="@GetSwitcherClass(3)"
             @onclick="() => OnTabSelected(3)">
         <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small" aria-hidden="true" />
-        <span class="settings-section-switcher__label settings-section-switcher__label--full">AI assistant</span><span class="settings-section-switcher__label settings-section-switcher__label--short" aria-hidden="true">AI</span>
+        <span class="settings-section-switcher__label settings-section-switcher__label--full">AI assistant</span><span class="settings-section-switcher__label settings-section-switcher__label--short">AI</span>
     </button>
 </div>
 

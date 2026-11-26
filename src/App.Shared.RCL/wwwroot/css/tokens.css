@@ -53,6 +53,16 @@
     --mobile-nav-height: 44px;
     --control-height: 40px;
 
+    /* Board content and segmented controls. Timer, today strip, search row,
+       and columns share one content width on wide screens. */
+    --board-content-max: 100rem;
+    --board-segment-height: 32px;
+    --board-segment-pad: 0.2rem;
+    --board-segment-gap: 0.2rem;
+    --board-segment-radius: var(--radius-lg);
+    --board-segment-btn-radius: var(--radius-md);
+    --board-segment-font-size: 0.78rem;
+
     /* Elevation layers, app-defined and above MudBlazor's own scale */
     --z-nav: 1200;
     --z-error: 1000;
@@ -92,4 +102,12 @@
 
     /* keyboardViewport.js sets the on-screen keyboard height at runtime. */
     --kb-height: 0px;
+}
+
+/* Touch screens and the tabbed board use thumb-sized segments everywhere. */
+@media (pointer: coarse), (max-width: 959.98px) {
+    :root {
+        --board-segment-height: 44px;
+        --board-segment-font-size: 0.85rem;
+    }
 }

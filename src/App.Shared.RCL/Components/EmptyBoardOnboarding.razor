@@ -1,8 +1,32 @@
 @namespace App.Shared.RCL.Components
+@using App.Shared.RCL.Models
 
 <MudPaper Class="pa-4 mb-3 empty-board-onboarding" Elevation="0" Outlined="true">
     <MudText Typo="Typo.h6" HtmlTag="h2" Class="mb-1">Start your board</MudText>
-    <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap" Class="mb-3">
+    <p class="empty-board-onboarding__lead">
+        Habits count, dailies repeat, to-dos end. Pick a starter or build your own.
+    </p>
+
+    <div class="empty-board-onboarding__templates" role="group" aria-label="Starter templates">
+        @foreach (var template in BoardStarterTemplates.All)
+        {
+            <button type="button"
+                    class="empty-board-template"
+                    disabled="@(_busyTemplate is not null)"
+                    aria-busy="@(_busyTemplate == template.Key ? "true" : "false")"
+                    @onclick="() => UseTemplateAsync(template.Key)">
+                <span class="empty-board-template__icon" aria-hidden="true">
+                    <MudIcon Icon="@GetTemplateIcon(template.Key)" Size="Size.Medium" />
+                </span>
+                <span class="empty-board-template__text">
+                    <span class="empty-board-template__name">@template.Name</span>
+                    <span class="empty-board-template__desc">@template.Description</span>
+                </span>
+            </button>
+        }
+    </div>
+
+    <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap" Class="mt-3 mb-3">
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OnStartFromGoalAsync">
             Start from a goal
         </MudButton>
@@ -29,10 +53,30 @@
     [Parameter] public EventCallback OnStartFromGoal { get; set; }
     [Parameter] public EventCallback OnLoadDemo { get; set; }
     [Parameter] public EventCallback OnDismiss { get; set; }
+    [Parameter] public EventCallback<string> OnUseTemplate { get; set; }
 
     private bool _isLoadingDemo;
+    private string? _busyTemplate;
 
     private Task OnStartFromGoalAsync() => OnStartFromGoal.InvokeAsync();
+
+    private async Task UseTemplateAsync(string key)
+    {
+        if (_busyTemplate is not null || !OnUseTemplate.HasDelegate)
+        {
+            return;
+        }
+
+        _busyTemplate = key;
+        try
+        {
+            await OnUseTemplate.InvokeAsync(key);
+        }
+        finally
+        {
+            _busyTemplate = null;
+        }
+    }
 
     private async Task OnLoadDemoAsync()
     {
@@ -53,4 +97,12 @@
     }
 
     private Task OnStartBlankAsync() => OnDismiss.InvokeAsync();
+
+    private static string GetTemplateIcon(string key) => key switch
+    {
+        "morning" => Icons.Material.Filled.WbSunny,
+        "fitness" => Icons.Material.Filled.FitnessCenter,
+        "focus" => Icons.Material.Filled.CenterFocusStrong,
+        _ => Icons.Material.Filled.AutoAwesome
+    };
 }

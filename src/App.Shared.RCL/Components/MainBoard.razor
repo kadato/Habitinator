@@ -18,6 +18,7 @@
 @inject BoardUiSessionState UiSessionState
 @inject ICommandPaletteService CommandPalette
 @inject IHttpClientFactory HttpFactory
+@inject NavigationManager Nav
 
 
 
@@ -105,6 +106,59 @@
 
     @if (_initialLoadComplete && _loadError is null)
     {
+        <MudPaper Class="board-today-strip" Elevation="0" Outlined="true">
+            <div class="board-today-strip__row">
+                @if (HasTodayWork)
+                {
+                    @if (TodayDailyScheduled > 0)
+                    {
+                        <div class="board-today-block">
+                            <span class="board-today-block__label">Dailies</span>
+                            <span class="board-today-block__value">@TodayDailyDone / @TodayDailyScheduled</span>
+                            <span class="board-today-track" role="progressbar" aria-label="@($"Dailies today: {TodayDailyDone} of {TodayDailyScheduled} done")" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@TodayDailyPct">
+                                <span class="board-today-track__fill" style="width: @(TodayDailyPct)%"></span>
+                            </span>
+                        </div>
+                    }
+                    @if (TodayTodoTotal > 0)
+                    {
+                        <div class="board-today-block">
+                            <span class="board-today-block__label">To-dos</span>
+                            <span class="board-today-block__value">@TodayTodoDone / @TodayTodoTotal</span>
+                            <span class="board-today-track board-today-track--todo" role="progressbar" aria-label="@($"To-dos due today: {TodayTodoDone} of {TodayTodoTotal} done")" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@TodayTodoPct">
+                                <span class="board-today-track__fill" style="width: @(TodayTodoPct)%"></span>
+                            </span>
+                        </div>
+                    }
+                    @if (TodayOverdueCount > 0)
+                    {
+                        <button type="button" class="board-today-overdue" @onclick="() => SetQuickFilter(BoardQuickFilter.Overdue)" aria-label="@($"Show {TodayOverdueCount} overdue {(TodayOverdueCount == 1 ? "item" : "items")}")">
+                            <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Size="Size.Small" aria-hidden="true" />
+                            <span>@TodayOverdueCount overdue</span>
+                        </button>
+                    }
+                }
+                else
+                {
+                    <span class="board-today-clear">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" aria-hidden="true" />
+                        <span>All clear for today</span>
+                    </span>
+                }
+                <div class="board-quick-filters" role="group" aria-label="Quick filters">
+                    @foreach (var filter in QuickFilterOptions)
+                    {
+                        <button type="button"
+                                class="@GetQuickFilterClass(filter)"
+                                aria-pressed="@((filter == QuickFilter).ToString().ToLowerInvariant())"
+                                @onclick="() => SetQuickFilter(filter)">
+                            @GetQuickFilterLabel(filter)
+                        </button>
+                    }
+                </div>
+            </div>
+        </MudPaper>
+
         <MudPaper Class="px-3 py-2 board-stat-strip" Outlined="false" Elevation="0">
             <div class="board-stat-strip-row">
 
@@ -150,6 +204,10 @@
                             <ChildContent>
                                 <MudPaper Class="board-tags-menu-panel pa-3" Elevation="0">
                                     <MudText Typo="Typo.subtitle1" Class="mb-1">Tags</MudText>
+                                    <div class="board-tag-match" role="group" aria-label="Tag matching">
+                                        <button type="button" class="@GetTagMatchButtonClass(false)" aria-pressed="@((!RequireAllFilterTags).ToString().ToLowerInvariant())" @onclick="() => SetRequireAllFilterTags(false)">Match any</button>
+                                        <button type="button" class="@GetTagMatchButtonClass(true)" aria-pressed="@(RequireAllFilterTags.ToString().ToLowerInvariant())" @onclick="() => SetRequireAllFilterTags(true)">Match all</button>
+                                    </div>
                                     @if (GetAllTagNamesForMenu().Count == 0)
                                     {
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">No tags yet.</MudText>
@@ -173,7 +231,7 @@
                                                    Color="Color.Error"
                                                    Size="Size.Medium"
                                                    OnClick="ClearBoardFilters"
-                                                   Disabled="@(string.IsNullOrWhiteSpace(_searchText) && SelectedFilterTagCount == 0)">
+                                                   Disabled="@(string.IsNullOrWhiteSpace(_searchText) && SelectedFilterTagCount == 0 && QuickFilter == BoardQuickFilter.All)">
                                             Clear all filters
                                         </MudButton>
                                     </MudStack>
@@ -240,6 +298,7 @@
         {
             <EmptyBoardOnboarding OnStartFromGoal="OnboardingStartFromGoalAsync"
                                   OnLoadDemo="OnboardingLoadDemoAsync"
+                                  OnUseTemplate="OnboardingUseTemplateAsync"
                                   OnDismiss="OnboardingDismissAsync" />
         }
         <div class="board-columns-stage">
@@ -292,6 +351,7 @@
                         {
                             <BoardColumn @key="col.Section" Section="col.Section"
                                          Items="col.Items"
+                                         SearchQuery="@_searchText"
                                          IsBoardFilterExcludingAll="col.IsExcluded"
                                          OnClearBoardFilter="ClearBoardFilters"
                                          OnChanged="OnBoardChanged"/>
@@ -309,6 +369,7 @@
                             <MudItem xs="12" md="4" @key="col.Section">
                                 <BoardColumn Section="col.Section"
                                              Items="col.Items"
+                                             SearchQuery="@_searchText"
                                              IsBoardFilterExcludingAll="col.IsExcluded"
                                          OnClearBoardFilter="ClearBoardFilters"
                                              OnChanged="OnBoardChanged"/>

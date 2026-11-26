@@ -15,9 +15,11 @@
 
     <MudCardContent Class="pt-0">
         <div class="board-filter-toolbar mb-2" aria-hidden="true">
-            <MudSkeleton Height="32px" SkeletonType="SkeletonType.Rectangle" Class="board-skel-filter-btn" />
-            <MudSkeleton Height="32px" SkeletonType="SkeletonType.Rectangle" Class="board-skel-filter-btn" />
-            <MudSkeleton Height="32px" SkeletonType="SkeletonType.Rectangle" Class="board-skel-filter-btn" />
+            <div class="board-filter-segments">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Class="board-skel-filter-btn" />
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Class="board-skel-filter-btn" />
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Class="board-skel-filter-btn" />
+            </div>
         </div>
 
         <div class="board-add-wrap mb-2" aria-hidden="true">

@@ -701,9 +701,11 @@
 
 ::deep .ai-rendered-markdown .ai-md-table,
 .ai-rendered-markdown .ai-md-table {
-    width: 100% !important;
+    width: max-content !important;
+    min-width: 100% !important;
     border-collapse: collapse !important;
     font-size: 0.82rem !important;
+    table-layout: auto !important;
 }
 
 ::deep .ai-rendered-markdown .ai-md-table th,
@@ -713,6 +715,12 @@
     padding: 6px 10px !important;
     border-bottom: 1px solid var(--mud-palette-lines-default) !important;
     text-align: left !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    min-width: 5.5rem;
+    max-width: 18rem;
+    vertical-align: top;
 }
 
 ::deep .ai-rendered-markdown .ai-md-table th,

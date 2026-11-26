@@ -25,6 +25,13 @@
     min-width: 0;
 }
 
+.board-card mark {
+    padding: 0 1px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--mud-palette-primary) 22%, transparent);
+    color: inherit;
+}
+
 .board-card__head-actions {
     display: flex;
     flex-direction: row;
@@ -343,6 +350,25 @@ a.board-todo-due:hover {
     transform: translateY(0.07em);
 }
 
+.board-daily-skipped {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--mud-daily-skipped-color, var(--mud-palette-text-secondary));
+}
+
+.board-daily-skipped .mud-icon-root {
+    display: block;
+    flex-shrink: 0;
+    align-self: center;
+    margin: 0 !important;
+    line-height: 1;
+}
+
 .board-daily-delayed {
     display: inline-flex;
     flex-direction: row;
@@ -619,6 +645,75 @@ a.board-todo-due:hover {
     color: var(--mud-palette-text-secondary);
     font-weight: 600;
     text-transform: capitalize;
+}
+
+.board-habit-goal {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-height: 1.35rem;
+    padding: 0.12rem 0.4rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid color-mix(in srgb, var(--hab-type-habit) 28%, transparent);
+    background: color-mix(in srgb, var(--hab-type-habit) 10%, transparent);
+    color: light-dark(#0f766e, #2dd4bf);
+    font-family: var(--hab-font-mono);
+    font-size: 0.68rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.board-habit-goal--met {
+    color: var(--mud-palette-success);
+    border-color: color-mix(in srgb, var(--mud-palette-success) 38%, transparent);
+    background: color-mix(in srgb, var(--mud-palette-success) 12%, transparent);
+}
+
+.board-habit-goal__track {
+    display: inline-block;
+    width: 2.2rem;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.board-habit-goal__fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: currentColor;
+}
+
+.board-habit-goal__check {
+    font-size: 0.75rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.board-focus-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.12rem 0.4rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 35%, transparent);
+    background: color-mix(in srgb, var(--mud-palette-primary) 11%, transparent);
+    color: var(--mud-palette-primary);
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.board-card.board-card--focus-target {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 55%, var(--hab-border-card));
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--mud-palette-primary) 22%, transparent),
+        var(--hab-shadow-sm);
 }
 
 /* Habit right-aligned layout and button improvements */

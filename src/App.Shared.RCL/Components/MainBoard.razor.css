@@ -15,6 +15,218 @@
     }
 }
 
+/* The .board-today-strip root is a MudPaper, so its rule lives in global app.css. */
+
+.board-today-strip__row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.9rem;
+}
+
+.board-today-block {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+}
+
+.board-today-block__label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+}
+
+.board-today-block__value {
+    font-family: var(--hab-font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--mud-palette-text-primary);
+    white-space: nowrap;
+}
+
+.board-today-track {
+    display: block;
+    width: 3.8rem;
+    min-width: 3.8rem;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--mud-palette-text-primary) 10%, transparent);
+}
+
+.board-today-track__fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--mud-palette-primary);
+    transition: width 180ms ease;
+}
+
+.board-today-track--todo .board-today-track__fill {
+    background: var(--hab-type-todo, var(--mud-palette-secondary));
+}
+
+.board-today-overdue {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 26px;
+    margin-left: auto;
+    padding: 0.1rem 0.5rem;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-error) 35%, transparent);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--mud-palette-error) 8%, transparent);
+    color: var(--mud-palette-error);
+    font: inherit;
+    font-size: 0.68rem;
+    font-weight: 650;
+    cursor: pointer;
+}
+.board-today-overdue:focus-visible {
+    outline: 2px solid var(--mud-palette-error);
+    outline-offset: 2px;
+}
+
+.board-today-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--mud-palette-success);
+}
+
+/* Quick filters, section tabs, and column filters share one segmented shape. */
+.board-quick-filters {
+    display: inline-grid;
+    grid-template-columns: repeat(4, minmax(4.6rem, 1fr));
+    align-items: center;
+    gap: var(--board-segment-gap);
+    padding: var(--board-segment-pad);
+    margin-left: auto;
+    background: var(--mud-palette-background-gray);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 65%, transparent);
+    border-radius: var(--board-segment-radius);
+}
+
+/* The overdue pill already pushes the row right.
+   Drop the filters' auto margin so they sit next to the pill. */
+.board-today-overdue + .board-quick-filters {
+    margin-left: 0;
+}
+
+.board-quick-filter {
+    appearance: none;
+    width: 100%;
+    height: var(--board-segment-height);
+    min-height: var(--board-segment-height);
+    padding: 0 var(--space-3);
+    border: 1px solid transparent;
+    border-radius: var(--board-segment-btn-radius);
+    background: transparent;
+    color: var(--mud-palette-text-secondary);
+    font: inherit;
+    font-size: var(--board-segment-font-size);
+    font-weight: 650;
+    cursor: pointer;
+    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.board-quick-filter:hover {
+    color: var(--mud-palette-text-primary);
+    background: color-mix(in srgb, var(--mud-palette-surface) 65%, transparent);
+}
+
+.board-quick-filter--active {
+    color: var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, transparent);
+    font-weight: 700;
+}
+
+.board-quick-filter:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 1px;
+}
+
+.board-tag-match {
+    display: inline-grid;
+    grid-template-columns: repeat(2, minmax(4.6rem, 1fr));
+    gap: var(--board-segment-gap);
+    padding: var(--board-segment-pad);
+    margin-bottom: 0.5rem;
+    background: var(--mud-palette-background-gray);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 65%, transparent);
+    border-radius: var(--board-segment-radius);
+}
+
+.board-tag-match__btn {
+    appearance: none;
+    width: 100%;
+    height: var(--board-segment-height);
+    min-height: var(--board-segment-height);
+    padding: 0 var(--space-3);
+    border: 1px solid transparent;
+    border-radius: var(--board-segment-btn-radius);
+    background: transparent;
+    color: var(--mud-palette-text-secondary);
+    font: inherit;
+    font-size: var(--board-segment-font-size);
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.board-tag-match__btn--active {
+    color: var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, transparent);
+    font-weight: 700;
+}
+
+.board-tag-match__btn:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 1px;
+}
+
+@media (pointer: coarse) {
+    .board-today-overdue {
+        min-height: 32px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .board-today-strip__row {
+        gap: 0.35rem;
+    }
+
+    .board-today-block {
+        flex: 0 0 auto;
+    }
+
+    .board-today-track {
+        width: 1.4rem;
+        min-width: 1.4rem;
+    }
+
+    .board-quick-filters {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .board-quick-filter {
+        padding-inline: var(--space-2);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
 .board-columns-stage {
     flex: 1 1 auto;
     display: flex;
@@ -47,11 +259,11 @@
 .board-section-switcher {
     display: none;
     width: 100%;
-    gap: var(--space-1);
-    padding: 0.2rem;
+    gap: var(--board-segment-gap);
+    padding: var(--board-segment-pad);
     background: var(--mud-palette-background-gray);
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: var(--radius-lg);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 65%, transparent);
+    border-radius: var(--board-segment-radius);
     box-sizing: border-box;
     justify-content: center;
 }
@@ -65,14 +277,15 @@
     justify-content: center;
     text-align: center;
     gap: var(--space-2);
-    min-height: 44px;
-    padding: var(--space-2) var(--space-3);
+    height: var(--board-segment-height);
+    min-height: var(--board-segment-height);
+    padding: 0 var(--space-3);
     border: 1px solid transparent;
-    border-radius: var(--radius-md);
+    border-radius: var(--board-segment-btn-radius);
     background: transparent;
     color: var(--mud-palette-text-secondary);
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: var(--board-segment-font-size);
+    font-weight: 650;
     text-transform: none;
     cursor: pointer;
     touch-action: manipulation;
@@ -83,6 +296,7 @@
     color: var(--mud-palette-primary);
     background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
     border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, transparent);
+    font-weight: 700;
 }
 
 .board-section-switcher__btn:focus-visible {
@@ -141,9 +355,9 @@
         box-shadow: var(--hab-shadow-sm);
     }
 
-    /* Compact panel content spacing on mobile */
+    /* Keep a clear gap between the section tabs and the column filters. */
     .board-section-tab-content {
-        padding-top: 0 !important;
+        padding-top: var(--space-5) !important;
     }
 }
 
@@ -155,12 +369,13 @@
     }
 }
 
-.board-columns-grid {
-    flex-shrink: 0;
-    margin-top: -12px !important;
-    max-width: 72rem;
-    margin-inline: auto;
-    width: 100%;
+/* The grid is a MudGrid root. Its layout rules live in global app.css,
+   where the un-scoped selector can reach it. */
+@media (min-width: 960px) {
+    .board-columns-stage {
+        padding-left: 0;
+        padding-right: 0;
+    }
 }
 
 /* .board-stat-strip is a MudPaper root. It renders without the component scope attribute. All of its rules are in global app.css. */
@@ -221,11 +436,18 @@
     max-height: 36px !important;
 }
 
-/* Desktop: centered cluster of search-tags-archive at natural widths with small gaps */
+/* Desktop: search takes the spare width so the row fills the board. Tags,
+   archive, and the shortcut stay together on the right. */
 @media (min-width: 960px) {
     .board-search-wrapper {
-        flex: 0 1 auto !important;
-        width: clamp(12rem, 28vw, 22rem) !important;
+        flex: 1 1 20rem !important;
+        width: auto !important;
+        max-width: none !important;
+    }
+
+    .board-trigger-btn {
+        min-width: 7rem;
+        justify-content: center;
     }
 }
 
@@ -466,7 +688,7 @@
         width: 100% !important;
         padding-left: 0 !important;
         padding-right: 0 !important;
-        padding-top: 0 !important;
+        padding-top: var(--space-5) !important;
         margin-left: 0 !important;
         margin-right: 0 !important;
         margin-top: 0 !important;
@@ -476,14 +698,15 @@
     .board-columns-mobile .board-column,
     .board-columns-mobile ::deep .board-column {
         width: 100% !important;
+        max-width: none !important;
         margin-left: 0 !important;
         margin-right: 0 !important;
         box-sizing: border-box !important;
     }
 
-    /* On mobile the tabbed view uses a slim column header. The card has no background, border, or shadow.
+    /* The tabbed view strips the column panel: no background, border, or shadow.
        Filter toolbar, add field, cards, and footer span the same full width as the section switcher.
-       The h2 title, count, and About button stay visible. They keep column identity and help text. */
+       The card header repeats the section tabs, so it is hidden in global app.css. */
     .board-columns-mobile ::deep .board-column {
         background: transparent !important;
         border: none !important;
@@ -492,7 +715,6 @@
     }
 
     .board-columns-mobile ::deep .mud-card-header {
-        display: block !important;
         padding: 0.6rem 0 0.2rem !important;
     }
 
@@ -526,7 +748,8 @@
    The stage keeps bottom padding so the last card scrolls clear of the bar. */
 @media (max-width: 767.98px) {
     .board-columns-stage {
-        padding-bottom: 4.5rem !important;
+        /* Clear the fixed thumb bar and the bottom navigation. */
+        padding-bottom: calc(var(--app-bottom-nav-offset, 4.5rem) + 4.5rem) !important;
     }
 
     /* The column header is slimmer now that the top stack is shorter. */

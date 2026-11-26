@@ -1,0 +1,76 @@
+.empty-board-onboarding__lead {
+    max-width: 40rem;
+    margin: var(--space-2) 0 0;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--mud-palette-text-secondary);
+}
+
+.empty-board-onboarding__templates {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 0.5rem;
+    margin-top: var(--space-4);
+}
+
+.empty-board-template {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.7rem 0.75rem;
+    text-align: left;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 18%, var(--hab-border-card));
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--mud-palette-surface) 90%, var(--mud-palette-primary) 6%);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
+}
+
+.empty-board-template:hover {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 42%, transparent);
+    background: color-mix(in srgb, var(--mud-palette-surface) 82%, var(--mud-palette-primary) 10%);
+    transform: translateY(-1px);
+}
+
+.empty-board-template:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.empty-board-template:disabled {
+    opacity: 0.6;
+    cursor: wait;
+    transform: none;
+}
+
+.empty-board-template__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
+    color: var(--mud-palette-primary);
+}
+
+.empty-board-template__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.empty-board-template__name {
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.empty-board-template__desc {
+    font-size: 0.75rem;
+    line-height: 1.35;
+    color: var(--mud-palette-text-secondary);
+}

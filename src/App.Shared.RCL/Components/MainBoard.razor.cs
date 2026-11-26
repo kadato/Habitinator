@@ -31,6 +31,8 @@ public partial class MainBoard : IAsyncDisposable
         {
             _selectedFilterTags.Add(tag);
         }
+        _requireAllFilterTags = UiSessionState.RequireAllFilterTags;
+        _quickFilter = UiSessionState.QuickFilter;
         _mobileSectionIndex = UiSessionState.MobileSectionIndex;
 
         if (ApplicationState.TryTakeFromJson<BoardSnapshot>("board_snapshot", out var restored)
@@ -143,6 +145,7 @@ public partial class MainBoard : IAsyncDisposable
         Habits = [.. Habits.Select(h => BoardItemMapper.WithLocalDay(h, BoardSection.Habit, today))];
         Dailies = [.. Dailies.Select(d => BoardItemMapper.WithLocalDay(d, BoardSection.Daily, today))];
         RecomputeFilters();
+        ApplyDefaultMobileSection();
     }
 
     private bool HasBoardItems() =>
@@ -180,7 +183,10 @@ public partial class MainBoard : IAsyncDisposable
             {
                 if (!BoardSync.IsPaused)
                 {
-                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+                    // A cold demo seed can take a few seconds. Keep the
+                    // skeletons up long enough to get the first rows rather
+                    // than painting an empty board.
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
                     await BoardSyncRequestor.SyncNowAsync(cts.Token);
                 }
 
@@ -359,5 +365,6 @@ public partial class MainBoard : IAsyncDisposable
         }
         PruneStaleFilterTags();
         RecomputeFilters();
+        ApplyDefaultMobileSection();
     }
 }

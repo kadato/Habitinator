@@ -43,7 +43,7 @@ public sealed class HabitTools(BoardPersistenceService boards, IHttpContextAcces
     }
 
     [McpServerTool(Name = "update_habit", Title = "Update habit", Idempotent = true, OpenWorld = true)]
-    [Description("Updates habit fields: title, notes, tags, tracking flags, reset period, counters, checklist, sort order. Omit a field to keep its value. Pass an empty string to clear notes, tags, or the checklist.")]
+    [Description("Updates habit fields: title, notes, tags, tracking flags, reset period, counters, goal, checklist, sort order. Omit a field to keep its value. Pass an empty string to clear notes, tags, or the checklist. Pass 0 as targetCount to clear the goal.")]
     public async Task<BoardItem> UpdateHabit(
         [Description("Habit item id.")] Guid itemId,
         [Description("Title, 1 to 200 chars.")] string? title = null,
@@ -54,6 +54,7 @@ public sealed class HabitTools(BoardPersistenceService boards, IHttpContextAcces
         [Description("Reset period: Daily, Weekly, or Monthly.")] HabitResetPeriod? resetPeriod = null,
         [Description("Plus counter, zero or more, or null to keep.")] int? counter = null,
         [Description("Minus counter, zero or more, or null to keep.")] int? negativeCounter = null,
+        [Description("Habit goal for the current reset period, or null to keep. Pass 0 to clear the goal.")] int? targetCount = null,
         [Description("Checklist as JSON string or native array of {text, isDone}, or null to keep. Empty string clears.")] string? checklistJson = null,
         [Description("Sort order position value, or null to keep. Prefer reorder_item to move items.")] double? sortOrder = null,
         CancellationToken cancellationToken = default)
@@ -76,6 +77,7 @@ public sealed class HabitTools(BoardPersistenceService boards, IHttpContextAcces
             ResetPeriod = resetPeriod ?? current.ResetPeriod,
             Counter = McpInput.ResolveHabitCounter(counter, current.Counter, "Counter"),
             NegativeCounter = McpInput.ResolveHabitCounter(negativeCounter, current.NegativeCounter, "Negative counter"),
+            TargetCount = targetCount is null ? current.TargetCount : HabitGoal.Normalize(targetCount),
             ChecklistJson = checklistJson is null ? current.ChecklistJson : McpInput.NormalizedChecklist(EmptyToNull(checklistJson)),
             SortOrder = sortOrder ?? current.SortOrder,
         };

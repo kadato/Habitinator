@@ -913,7 +913,8 @@ public sealed partial class LocalFirstBoardDataService
                             p.Counter,
                             p.NegativeCounter,
                             p.ChecklistJson,
-                            p.SortOrder),
+                            p.SortOrder,
+                            TargetCount: p.TargetCount),
                         head.OperationId,
                         p.ExpectedServerUpdatedAtUtc,
                         cancellationToken);
@@ -1149,6 +1150,7 @@ public sealed partial class LocalFirstBoardDataService
                         row.DailyLastCompletedOn, row.IsCompleted, today);
                     row.DailyPostponedUntil = null;
                     row.DailyPostponedFrom = null;
+                    row.DailySkippedOn = null;
                     break;
                 }
             case BoardSection.Todo:

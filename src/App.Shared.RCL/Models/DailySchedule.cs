@@ -431,8 +431,16 @@ public static class DailySchedule
     {
         ArgumentNullException.ThrowIfNull(daily);
         return !IsCompleteForDate(daily, on)
+               && !IsSkippedOn(daily, on)
                && !IsPostponedAwayFrom(daily, on)
                && (IsScheduledOn(daily, on) || IsPostponedTo(daily, on));
+    }
+
+    /// <summary>True when the daily occurrence for <paramref name="on" /> was explicitly skipped.</summary>
+    public static bool IsSkippedOn(BoardItem daily, DateOnly on)
+    {
+        ArgumentNullException.ThrowIfNull(daily);
+        return daily.DailySkippedOn == on;
     }
 
     /// <summary>

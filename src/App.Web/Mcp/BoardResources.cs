@@ -101,6 +101,10 @@ public sealed class BoardResources(
         sb.AppendLine(CultureInfo.InvariantCulture, $"- **ID:** `{item.Id:D}`");
         sb.AppendLine(CultureInfo.InvariantCulture, $"- **Completed:** {item.IsCompleted}");
         sb.AppendLine(CultureInfo.InvariantCulture, $"- **Counter:** +{item.Counter} / -{item.NegativeCounter}");
+        if (item.TargetCount is > 0)
+        {
+            sb.AppendLine(CultureInfo.InvariantCulture, $"- **Goal:** {item.TargetCount} per {HabitGoal.PeriodUnit(item.ResetPeriod)}");
+        }
         if (item.DailyStartDate.HasValue)
         {
             sb.AppendLine(CultureInfo.InvariantCulture, $"- **Start Date:** {item.DailyStartDate.Value:yyyy-MM-dd}");
@@ -331,7 +335,7 @@ public sealed class BoardResources(
         sb.AppendLine(CultureInfo.InvariantCulture, $"**Habits:** {snapshot.Habits.Count} tracked");
         foreach (var h in snapshot.Habits.Take(5))
         {
-            sb.AppendLine(CultureInfo.InvariantCulture, $"- {h.Title}: +{h.Counter} / -{h.NegativeCounter}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"- {h.Title}: +{h.Counter} / -{h.NegativeCounter}{(h.TargetCount is > 0 ? $" (goal {h.TargetCount}/{HabitGoal.PeriodUnit(h.ResetPeriod)})" : string.Empty)}");
         }
 
         return new TextResourceContents

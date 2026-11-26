@@ -67,6 +67,17 @@ public class DailyScheduleTests
     }
 
     [Fact]
+    public void SkippedDay_IsNotDue_ButTheNextDayIs()
+    {
+        var today = new DateOnly(2026, 8, 12);
+        var daily = new BoardItem(Guid.NewGuid(), "Gym", DailyStartDate: today, DailySkippedOn: today);
+
+        DailySchedule.IsSkippedOn(daily, today).Should().BeTrue();
+        DailySchedule.IsDueOnDate(daily, today).Should().BeFalse();
+        DailySchedule.IsDueOnDate(daily, today.AddDays(1)).Should().BeTrue();
+    }
+
+    [Fact]
     public void DueRequiresCompletionCheck()
     {
         var d = new BoardItem(

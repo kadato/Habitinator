@@ -91,7 +91,17 @@ public sealed record BoardItem(
     /// The first day the postponed occurrence was moved from. Null means the only moved day
     /// is the day before <see cref="DailyPostponedUntil" />.
     /// </summary>
-    DateOnly? DailyPostponedFrom = null);
+    DateOnly? DailyPostponedFrom = null,
+    /// <summary>
+    /// Optional habit goal for the current reset period. Null or zero means the habit has no goal.
+    /// The plus counter is measured against this target.
+    /// </summary>
+    int? TargetCount = null,
+    /// <summary>
+    /// The local day this daily occurrence was skipped. A matching day is not due, but the
+    /// day still bridges the streak without adding to it.
+    /// </summary>
+    DateOnly? DailySkippedOn = null);
 
 public sealed record BoardSnapshot(
     IReadOnlyList<BoardItem> Habits,

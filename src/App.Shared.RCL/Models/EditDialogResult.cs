@@ -30,7 +30,8 @@ public record EditHabitDialogResult(
     HabitResetPeriod ResetPeriod,
     int Counter,
     int NegativeCounter,
-    string? ChecklistJson
+    string? ChecklistJson,
+    int? TargetCount = null
 );
 
 public record EditTodoDialogResult(

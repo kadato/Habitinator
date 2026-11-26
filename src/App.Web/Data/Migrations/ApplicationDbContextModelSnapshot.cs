@@ -17,7 +17,7 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261125135831_AddDailyPostponedDates";
+    public override string LastMigrationId => "20261126075845_AddDailySkippedOn";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -133,6 +133,9 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.Property<int>("DailyRepeatType")
                     .HasColumnType("integer");
 
+                b.Property<DateTime?>("DailySkippedOn")
+                    .HasColumnType("timestamp with time zone");
+
                 b.Property<DateTime?>("DailyStartDate")
                     .HasColumnType("timestamp with time zone");
 
@@ -172,6 +175,9 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.Property<string>("Tags")
                     .HasMaxLength(500)
                     .HasColumnType("character varying(500)");
+
+                b.Property<int?>("TargetCount")
+                    .HasColumnType("integer");
 
                 b.Property<string>("Title")
                     .IsRequired()

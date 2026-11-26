@@ -219,7 +219,7 @@ public abstract class BoardLocalStoreContract : IAsyncLifetime
         });
         await Store.UpsertItemAsync(Row("alice", deletedId));
 
-        var updated = new BoardItem(existingId, "new", Counter: 7, SortOrder: 3);
+        var updated = new BoardItem(existingId, "new", Counter: 7, SortOrder: 3, TargetCount: 8);
         var created = new BoardItem(createdId, "created", SortOrder: 4);
         await Store.ApplyDeltaAsync(
             "alice",
@@ -232,6 +232,7 @@ public abstract class BoardLocalStoreContract : IAsyncLifetime
         var existing = rows.Should().ContainSingle(r => r.Id == existingId).Subject;
         existing.Title.Should().Be("new");
         existing.Counter.Should().Be(7);
+        existing.TargetCount.Should().Be(8);
         existing.AwaitingServerCreate.Should().BeTrue();
 
         var added = rows.Should().ContainSingle(r => r.Id == createdId).Subject;

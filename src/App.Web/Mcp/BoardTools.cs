@@ -101,7 +101,7 @@ public sealed class BoardTools(
         sb.AppendLine(CultureInfo.InvariantCulture, $"**Habits:** {habits.Count} tracked");
         foreach (var h in habits.Take(5))
         {
-            sb.AppendLine(CultureInfo.InvariantCulture, $"- {h.Title}: +{h.Counter} / -{h.NegativeCounter}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"- {h.Title}: +{h.Counter} / -{h.NegativeCounter}{(h.TargetCount is > 0 ? $" (goal {h.TargetCount}/{HabitGoal.PeriodUnit(h.ResetPeriod)})" : string.Empty)}");
         }
 
         return sb.ToString();
@@ -133,7 +133,7 @@ public sealed class BoardTools(
             sb.AppendLine("### Habits");
             foreach (var h in snapshot.Habits)
             {
-                sb.AppendLine(CultureInfo.InvariantCulture, $"- `{h.Id:D}` **{h.Title}** (+{h.Counter}/-{h.NegativeCounter}){(string.IsNullOrWhiteSpace(h.Tags) ? "" : $" [Tags: {h.Tags}]")}");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- `{h.Id:D}` **{h.Title}** (+{h.Counter}/-{h.NegativeCounter}){(h.TargetCount is > 0 ? $" goal {h.TargetCount}/{HabitGoal.PeriodUnit(h.ResetPeriod)}" : string.Empty)}{(string.IsNullOrWhiteSpace(h.Tags) ? "" : $" [Tags: {h.Tags}]")}");
             }
             sb.AppendLine();
             sb.AppendLine("### Dailies");
@@ -310,6 +310,7 @@ public sealed class BoardTools(
         [Description("Track minus ticks for Habit, or null.")] bool? trackMinus = null,
         [Description("Initial streak counter or habit plus tally, or null.")] int? counter = null,
         [Description("Initial habit minus tally, or null.")] int? negativeCounter = null,
+        [Description("Habit goal for the current reset period, or null. Ignored for non-habit sections.")] int? targetCount = null,
         [Description("Optional idempotency key (max 128 chars). Reusing a key with identical fields returns the original item instead of creating a duplicate.")]
         string? idempotencyKey = null,
         [Description("When true, validates all fields and returns the would-be item with a fresh id without persisting anything.")]
@@ -324,7 +325,7 @@ public sealed class BoardTools(
         var today = await boards.TodayAsync(userId, cancellationToken);
         var validated = ValidateCreateFields(
             section, title, notes, tags, date, checklistJson, repeat, repeatInterval,
-            weekdays, weekdayNames, resetPeriod, trackPlus, trackMinus, counter, negativeCounter,
+            weekdays, weekdayNames, resetPeriod, trackPlus, trackMinus, counter, negativeCounter, targetCount,
             today: today);
 
         if (dryRun)
@@ -363,6 +364,7 @@ public sealed class BoardTools(
         [Description("Habit reset period: Daily, Weekly, or Monthly, or null.")] HabitResetPeriod? ResetPeriod = null,
         [Description("Track plus ticks for Habit, or null.")] bool? TrackPlus = null,
         [Description("Track minus ticks for Habit, or null.")] bool? TrackMinus = null,
+        [Description("Habit goal for the current reset period, or null. Ignored for non-habit sections.")] int? TargetCount = null,
         [Description("Optional per-item idempotency key (max 128 chars). Falls back to the batch key with the item index.")]
         string? IdempotencyKey = null,
         [Description("Set true to create this item even when a similarly titled active item exists.")]
@@ -438,7 +440,7 @@ public sealed class BoardTools(
             var validated = ValidateCreateFields(
                 item.Section, item.Title, item.Notes, item.Tags, item.Date, item.ChecklistJson,
                 item.Repeat, item.RepeatInterval, null, item.WeekdayNames, item.ResetPeriod,
-                item.TrackPlus, item.TrackMinus, null, null, "checklistJson",
+                item.TrackPlus, item.TrackMinus, null, null, item.TargetCount, "checklistJson",
                 today);
 
             if (dryRun)
@@ -499,7 +501,8 @@ public sealed class BoardTools(
         bool? TrackPlus,
         bool? TrackMinus,
         int? Counter,
-        int? NegativeCounter);
+        int? NegativeCounter,
+        int? TargetCount);
 
     private static ValidatedCreate ValidateCreateFields(
         BoardSection section,
@@ -517,6 +520,7 @@ public sealed class BoardTools(
         bool? trackMinus,
         int? counter,
         int? negativeCounter,
+        int? targetCount = null,
         string checklistField = "checklistJson",
         DateOnly? today = null)
     {
@@ -553,7 +557,8 @@ public sealed class BoardTools(
             trackPlus,
             trackMinus,
             counter.HasValue ? McpInput.ResolveDailyCounter(counter, 0) : null,
-            negativeCounter.HasValue ? McpInput.ResolveHabitCounter(negativeCounter, 0, "Negative counter") : null);
+            negativeCounter.HasValue ? McpInput.ResolveHabitCounter(negativeCounter, 0, "Negative counter") : null,
+            section == BoardSection.Habit ? HabitGoal.Normalize(targetCount) : null);
     }
 
     private static object FingerprintOf(ValidatedCreate validated) => new
@@ -572,6 +577,7 @@ public sealed class BoardTools(
         validated.TrackMinus,
         validated.Counter,
         validated.NegativeCounter,
+        validated.TargetCount,
     };
 
     private async Task ThrowOnDuplicateAsync(
@@ -616,7 +622,8 @@ public sealed class BoardTools(
             null,
             false,
             null,
-            validated.Weekdays ?? 0);
+            validated.Weekdays ?? 0,
+            TargetCount: validated.TargetCount);
 
     private async Task<BoardItem> PersistValidatedAsync(
         McpServer server,
@@ -641,6 +648,7 @@ public sealed class BoardTools(
             validated.TrackMinus,
             validated.Counter,
             validated.NegativeCounter,
+            validated.TargetCount,
             cancellationToken);
         await McpNotifications.BoardChangedAsync(server, created.Id, cancellationToken);
         return created;

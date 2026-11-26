@@ -36,7 +36,7 @@ public sealed class DailyTools(BoardPersistenceService boards, IHttpContextAcces
     }
 
     [McpServerTool(Name = "daily_skip_for_date", Title = "Skip daily for date", OpenWorld = true)]
-    [Description("Marks a past scheduled day as skipped using yyyy-MM-dd or 'yesterday'. Resolves by itemId or title. The skipped day bridges the streak. Returns the updated daily.")]
+    [Description("Marks a scheduled day, including today, as skipped using yyyy-MM-dd or 'yesterday'. Resolves by itemId or title. The skipped day bridges the streak and is not due. Returns the updated daily.")]
     public async Task<BoardItem> SkipForDate(
         [Description("Date as yyyy-MM-dd or 'yesterday'.")] string date,
         [Description("Daily item id. Optional if title is provided.")] Guid? itemId = null,

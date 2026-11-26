@@ -120,6 +120,7 @@ public sealed class UserDataImportService(
         entity.IsCompleted = item.IsCompleted;
         entity.Counter = Math.Max(0, item.Counter);
         entity.NegativeCounter = Math.Max(0, item.NegativeCounter);
+        entity.TargetCount = entry.Section == BoardSection.Habit ? HabitGoal.Normalize(item.TargetCount) : null;
         entity.DailyStartDate = start?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         entity.DailyRepeatType = (int)(Enum.IsDefined(item.DailyRepeat) ? item.DailyRepeat : DailyRepeatType.Daily);
         entity.DailyRepeatInterval = Math.Max(1, Math.Min(999, item.DailyRepeatInterval));
@@ -128,6 +129,9 @@ public sealed class UserDataImportService(
         entity.DailyLastCompletedOn = item.DailyLastCompletedOn?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         entity.DailyPostponedUntil = item.DailyPostponedUntil?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         entity.DailyPostponedFrom = item.DailyPostponedFrom?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        entity.DailySkippedOn = entry.Section == BoardSection.Daily
+            ? item.DailySkippedOn?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)
+            : null;
         entity.SortOrder = item.SortOrder ?? 0;
         entity.DeletedAtUtc = null;
         entity.IsArchived = item.IsArchived;

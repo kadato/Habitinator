@@ -13,7 +13,8 @@ public sealed record UpdateHabitArgs(
     int NegativeCounter,
     string? ChecklistJson = null,
     double? SortOrder = null,
-    DateTimeOffset? ExpectedUpdatedAtUtc = null)
+    DateTimeOffset? ExpectedUpdatedAtUtc = null,
+    int? TargetCount = null)
 {
     public static UpdateHabitArgs From(BoardItem item) => new(
         item.Title,
@@ -25,7 +26,8 @@ public sealed record UpdateHabitArgs(
         item.Counter,
         item.NegativeCounter,
         item.ChecklistJson,
-        item.SortOrder);
+        item.SortOrder,
+        TargetCount: item.TargetCount);
 }
 
 public sealed record UpdateTodoArgs(

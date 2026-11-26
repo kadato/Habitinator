@@ -16,10 +16,12 @@ public sealed class BoardItemConfiguration : IEntityTypeConfiguration<BoardItemE
         builder.Property(x => x.DailyLastCompletedOn);
         builder.Property(x => x.DailyPostponedUntil);
         builder.Property(x => x.DailyPostponedFrom);
+        builder.Property(x => x.DailySkippedOn);
         builder.Property(x => x.TrackPlus).IsRequired();
         builder.Property(x => x.TrackMinus).IsRequired();
         builder.Property(x => x.ResetPeriod).IsRequired();
         builder.Property(x => x.NegativeCounter).IsRequired();
+        builder.Property(x => x.TargetCount);
         builder.Property(x => x.Section).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.CreatedAtUtc).IsRequired();
         builder.Property(x => x.SortOrder).IsRequired();

@@ -33,6 +33,9 @@ public sealed class BoardItemEntity
 
     public int NegativeCounter { get; set; }
 
+    /// <summary>Optional habit goal for the current reset period. Null or zero means no goal.</summary>
+    public int? TargetCount { get; set; }
+
     /// <summary>UTC date, the time is ignored, for daily scheduling.</summary>
     public DateTime? DailyStartDate { get; set; }
 
@@ -58,6 +61,9 @@ public sealed class BoardItemEntity
     /// before <see cref="DailyPostponedUntil" />.
     /// </summary>
     public DateTime? DailyPostponedFrom { get; set; }
+
+    /// <summary>UTC date a daily occurrence was skipped. The day is not due but bridges the streak.</summary>
+    public DateTime? DailySkippedOn { get; set; }
 
     public DateTimeOffset CreatedAtUtc { get; set; }
 

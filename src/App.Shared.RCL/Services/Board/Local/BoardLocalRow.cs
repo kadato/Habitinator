@@ -27,6 +27,8 @@ public sealed class BoardLocalRow
 
     public int NegativeCounter { get; set; }
 
+    public int? TargetCount { get; set; }
+
     public HabitResetPeriod ResetPeriod { get; set; } = HabitResetPeriod.Daily;
 
     public DateOnly? HabitPeriodStart { get; set; }
@@ -45,6 +47,8 @@ public sealed class BoardLocalRow
     public DateOnly? DailyPostponedUntil { get; set; }
 
     public DateOnly? DailyPostponedFrom { get; set; }
+
+    public DateOnly? DailySkippedOn { get; set; }
 
     public DateOnly? TodoDueDate { get; set; }
 
@@ -82,7 +86,9 @@ public sealed class BoardLocalRow
         HabitPeriodStart,
         DailyWeekdays,
         DailyPostponedUntil,
-        DailyPostponedFrom);
+        DailyPostponedFrom,
+        TargetCount,
+        DailySkippedOn);
 
     public static BoardLocalRow FromModel(BoardSection section, string userKey, BoardItem item, bool awaitingCreate)
     {
@@ -99,6 +105,7 @@ public sealed class BoardLocalRow
             TrackPlus = item.TrackPlus,
             TrackMinus = item.TrackMinus,
             NegativeCounter = item.NegativeCounter,
+            TargetCount = item.TargetCount,
             ResetPeriod = item.ResetPeriod,
             HabitPeriodStart = item.HabitPeriodStart,
             DailyStartDate = item.DailyStartDate,
@@ -109,6 +116,7 @@ public sealed class BoardLocalRow
             DailyLastCompletedOn = item.DailyLastCompletedOn,
             DailyPostponedUntil = item.DailyPostponedUntil,
             DailyPostponedFrom = item.DailyPostponedFrom,
+            DailySkippedOn = item.DailySkippedOn,
             TodoDueDate = item.TodoDueDate,
             AwaitingServerCreate = awaitingCreate,
             ServerUpdatedAtUtc = item.ServerUpdatedAtUtc,
@@ -128,6 +136,7 @@ public sealed class BoardLocalRow
         TrackPlus = source.TrackPlus;
         TrackMinus = source.TrackMinus;
         NegativeCounter = source.NegativeCounter;
+        TargetCount = source.TargetCount;
         ResetPeriod = source.ResetPeriod;
         HabitPeriodStart = source.HabitPeriodStart;
         DailyStartDate = source.DailyStartDate;
@@ -138,6 +147,7 @@ public sealed class BoardLocalRow
         DailyLastCompletedOn = source.DailyLastCompletedOn;
         DailyPostponedUntil = source.DailyPostponedUntil;
         DailyPostponedFrom = source.DailyPostponedFrom;
+        DailySkippedOn = source.DailySkippedOn;
         TodoDueDate = source.TodoDueDate;
         ServerUpdatedAtUtc = source.ServerUpdatedAtUtc;
         CreatedAtUtc = source.CreatedAtUtc;

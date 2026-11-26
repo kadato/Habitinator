@@ -352,6 +352,7 @@ public sealed class SqliteBoardLocalStore(
         TrackPlus = row.TrackPlus,
         TrackMinus = row.TrackMinus,
         NegativeCounter = row.NegativeCounter,
+        TargetCount = row.TargetCount,
         ResetPeriod = row.ResetPeriod,
         HabitPeriodStart = row.HabitPeriodStart,
         DailyStartDate = row.DailyStartDate,
@@ -362,6 +363,7 @@ public sealed class SqliteBoardLocalStore(
         DailyLastCompletedOn = row.DailyLastCompletedOn,
         DailyPostponedUntil = row.DailyPostponedUntil,
         DailyPostponedFrom = row.DailyPostponedFrom,
+        DailySkippedOn = row.DailySkippedOn,
         TodoDueDate = row.TodoDueDate,
         IsArchived = row.IsArchived,
         AwaitingServerCreate = row.AwaitingServerCreate,
@@ -395,6 +397,7 @@ public sealed class SqliteBoardLocalStore(
         TrackPlus = item.TrackPlus,
         TrackMinus = item.TrackMinus,
         NegativeCounter = item.NegativeCounter,
+        TargetCount = item.TargetCount,
         ResetPeriod = item.ResetPeriod,
         HabitPeriodStart = item.HabitPeriodStart,
         DailyStartDate = item.DailyStartDate,
@@ -405,6 +408,7 @@ public sealed class SqliteBoardLocalStore(
         DailyLastCompletedOn = item.DailyLastCompletedOn,
         DailyPostponedUntil = item.DailyPostponedUntil,
         DailyPostponedFrom = item.DailyPostponedFrom,
+        DailySkippedOn = item.DailySkippedOn,
         TodoDueDate = item.TodoDueDate,
         IsArchived = item.IsArchived,
         AwaitingServerCreate = item.AwaitingServerCreate,
@@ -438,7 +442,9 @@ public sealed class SqliteBoardLocalStore(
             ("HabitPeriodStart", "ALTER TABLE BoardItems ADD COLUMN HabitPeriodStart TEXT NULL;"),
             ("DailyWeekdays", "ALTER TABLE BoardItems ADD COLUMN DailyWeekdays INTEGER NOT NULL DEFAULT 0;"),
             ("DailyPostponedUntil", "ALTER TABLE BoardItems ADD COLUMN DailyPostponedUntil TEXT NULL;"),
-            ("DailyPostponedFrom", "ALTER TABLE BoardItems ADD COLUMN DailyPostponedFrom TEXT NULL;")
+            ("DailyPostponedFrom", "ALTER TABLE BoardItems ADD COLUMN DailyPostponedFrom TEXT NULL;"),
+            ("TargetCount", "ALTER TABLE BoardItems ADD COLUMN TargetCount INTEGER NULL;"),
+            ("DailySkippedOn", "ALTER TABLE BoardItems ADD COLUMN DailySkippedOn TEXT NULL;")
         ];
 
         foreach (var (column, ddl) in boardMigrations)

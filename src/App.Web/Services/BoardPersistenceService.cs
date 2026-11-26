@@ -609,7 +609,7 @@ public sealed class BoardPersistenceService(
         CancellationToken cancellationToken = default)
     {
         var today = await TodayAsync(userId, cancellationToken);
-        if (skippedOn >= today)
+        if (skippedOn > today)
         {
             return new BoardMutationResult(BoardMutationStatus.NotFound, null);
         }
@@ -621,9 +621,13 @@ public sealed class BoardPersistenceService(
         }
 
         entity.IsCompleted = false;
+        if (skippedOn == today)
+        {
+            entity.DailySkippedOn = ToUtcDate(today);
+        }
         entity.UpdatedAtUtc = BoardTimestamps.UtcNow();
         AddActivityEvent(userId, ActivityEventType.DailySkip, itemId, null, entity.Title,
-            DailyStreakCalculator.BackdatedDailyEventOccurredAt(skippedOn));
+            skippedOn == today ? null : DailyStreakCalculator.BackdatedDailyEventOccurredAt(skippedOn));
         var streakMap = await ComputeDailyStreakMapAsync(userId, entity, cancellationToken);
         try
         {
@@ -872,6 +876,7 @@ public sealed class BoardPersistenceService(
                     entity.ResetPeriod = (int)args.ResetPeriod;
                     entity.Counter = newCounter;
                     entity.NegativeCounter = newNegativeCounter;
+                    entity.TargetCount = HabitGoal.Normalize(args.TargetCount);
                     entity.HabitPeriodStart = ToUtcDate(HabitResetSchedule.PeriodStartFor(today, args.ResetPeriod));
                     return true;
                 },
@@ -1115,6 +1120,9 @@ public sealed class BoardPersistenceService(
         DateOnly? postponedFrom = entity.DailyPostponedFrom is { } pf
             ? DateOnly.FromDateTime(pf)
             : null;
+        DateOnly? skippedOn = entity.DailySkippedOn is { } sk
+            ? DateOnly.FromDateTime(sk)
+            : null;
 
         int displayCounter;
         if (entity.Section == BoardSection.Daily)
@@ -1152,7 +1160,9 @@ public sealed class BoardPersistenceService(
             HabitAnchor(entity),
             weekdays,
             postponedUntil,
-            postponedFrom);
+            postponedFrom,
+            entity.TargetCount,
+            skippedOn);
         return BoardItemMapper.WithLocalDay(raw, entity.Section, today);
     }
 
@@ -1248,9 +1258,10 @@ public sealed class BoardPersistenceService(
             lastCompleted, entity.IsCompleted, today);
         entity.DailyLastCompletedOn = newLastCompleted?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         entity.IsCompleted = newIsCompleted;
-        // Completing or reopening today's occurrence clears the postponement.
+        // Completing or reopening today's occurrence clears the postponement and skip.
         entity.DailyPostponedUntil = null;
         entity.DailyPostponedFrom = null;
+        entity.DailySkippedOn = null;
 
         AddActivityEvent(userId,
             wasCompleteForToday ? ActivityEventType.DailyUncomplete : ActivityEventType.DailyComplete,
@@ -1605,6 +1616,7 @@ public sealed class BoardPersistenceService(
         bool? trackMinus = null,
         int? counter = null,
         int? negativeCounter = null,
+        int? habitTargetCount = null,
         CancellationToken cancellationToken = default)
     {
         var cleanTitle = ZalgoSanitizer.SanitizeAndTrim(title);
@@ -1672,6 +1684,12 @@ public sealed class BoardPersistenceService(
                 {
                     existing.NegativeCounter = negativeCounter.Value;
                 }
+
+                if (habitTargetCount.HasValue)
+                {
+                    existing.TargetCount = HabitGoal.Normalize(habitTargetCount);
+                }
+
                 existing.DailyStartDate = section == BoardSection.Habit ? existing.DailyStartDate : dateUtc;
                 existing.UpdatedAtUtc = BoardTimestamps.UtcNow();
                 await dbContext.SaveChangesAsync(cancellationToken);
@@ -1699,6 +1717,7 @@ public sealed class BoardPersistenceService(
             IsCompleted = false,
             Counter = counter ?? 0,
             NegativeCounter = negativeCounter ?? 0,
+            TargetCount = section == BoardSection.Habit ? HabitGoal.Normalize(habitTargetCount) : null,
             DailyStartDate = section == BoardSection.Habit ? null : dateUtc,
             DailyRepeatType = (int)(dailyRepeat ?? DailyRepeatType.Daily),
             DailyRepeatInterval = dailyRepeatInterval ?? 1,

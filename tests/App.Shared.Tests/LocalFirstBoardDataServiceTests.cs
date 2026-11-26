@@ -193,6 +193,62 @@ public sealed class LocalFirstBoardDataServiceTests
     }
 
     [Fact]
+    public async Task SkipDailyForDateAsync_AllowsToday()
+    {
+        var userDay = new TestUserDayService { Today = new DateOnly(2026, 8, 12) };
+        var harness = new Harness(userDay: userDay);
+        var ct = CancellationToken.None;
+        var daily = await harness.Board.CreateItemAsync(BoardSection.Daily, "Water", cancellationToken: ct);
+
+        var updated = await harness.Board.SkipDailyForDateAsync(daily.Id, userDay.Today, ct);
+
+        Assert.NotNull(updated);
+        updated.IsCompleted.Should().BeFalse();
+        updated.DailySkippedOn.Should().Be(userDay.Today);
+        DailySchedule.IsDueOnDate(updated, userDay.Today).Should().BeFalse();
+        var snapshot = await harness.Board.GetSnapshotAsync(ct);
+        snapshot.Dailies.Should().ContainSingle(x => x.Id == daily.Id && !x.IsCompleted);
+        (await harness.Store.ListOutboxAsync(Harness.UserKey))
+            .Should().Contain(x => x.Kind == BoardOutboxOperationKind.SkipDailyForDate);
+    }
+
+    [Fact]
+    public async Task SkipDailyForDateAsync_RejectsFutureDays()
+    {
+        var userDay = new TestUserDayService { Today = new DateOnly(2026, 8, 12) };
+        var harness = new Harness(userDay: userDay);
+        var ct = CancellationToken.None;
+        var daily = await harness.Board.CreateItemAsync(BoardSection.Daily, "Water", cancellationToken: ct);
+
+        var updated = await harness.Board.SkipDailyForDateAsync(daily.Id, userDay.Today.AddDays(1), ct);
+
+        updated.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdateHabitAsync_PersistsTargetCount()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var habit = await harness.Board.CreateItemAsync(BoardSection.Habit, "Water", cancellationToken: ct);
+
+        var updated = await harness.Board.UpdateHabitAsync(
+            habit.Id,
+            UpdateHabitArgs.From(habit) with { TargetCount = 8 },
+            ct);
+
+        Assert.NotNull(updated);
+        updated.TargetCount.Should().Be(8);
+        var snapshot = await harness.Board.GetSnapshotAsync(ct);
+        snapshot.Habits.Should().ContainSingle(x => x.Id == habit.Id && x.TargetCount == 8);
+        var outbox = await harness.Store.ListOutboxAsync(Harness.UserKey);
+        var payload = System.Text.Json.JsonSerializer.Deserialize<UpdateHabitOutboxPayload>(
+            outbox.Should().ContainSingle(x => x.Kind == BoardOutboxOperationKind.UpdateHabit).Subject.PayloadJson,
+            JsonDefaults.Api);
+        payload!.TargetCount.Should().Be(8);
+    }
+
+    [Fact]
     public async Task PostponeDailyAsync_MovesTodaysOccurrenceToTomorrow()
     {
         var userDay = new TestUserDayService { Today = new DateOnly(2026, 8, 12) };

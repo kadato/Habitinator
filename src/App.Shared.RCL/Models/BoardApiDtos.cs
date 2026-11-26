@@ -20,7 +20,8 @@ public sealed record HabitUpdateRequest(
     int Counter,
     int NegativeCounter,
     [StringLength(8000)] string? ChecklistJson = null,
-    double? SortOrder = null);
+    double? SortOrder = null,
+    [Range(0, 1_000_000)] int? TargetCount = null);
 
 [ValidatableType]
 public sealed record DailyUpdateRequest(

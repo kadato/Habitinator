@@ -21,7 +21,7 @@ public partial class BoardItemEntityEntityType
             "App.Web.Data.BoardItemEntity",
             typeof(BoardItemEntity),
             baseEntityType,
-            propertyCount: 26,
+            propertyCount: 28,
             navigationCount: 1,
             foreignKeyCount: 1,
             unnamedIndexCount: 5,
@@ -101,6 +101,14 @@ public partial class BoardItemEntityEntityType
             fieldInfo: typeof(BoardItemEntity).GetField("<DailyRepeatType>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly),
             sentinel: 0);
         dailyRepeatType.AddAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.None);
+
+        var dailySkippedOn = runtimeEntityType.AddProperty(
+            "DailySkippedOn",
+            typeof(DateTime?),
+            propertyInfo: typeof(BoardItemEntity).GetProperty("DailySkippedOn", BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly),
+            fieldInfo: typeof(BoardItemEntity).GetField("<DailySkippedOn>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly),
+            nullable: true);
+        dailySkippedOn.AddAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.None);
 
         var dailyStartDate = runtimeEntityType.AddProperty(
             "DailyStartDate",
@@ -201,6 +209,14 @@ public partial class BoardItemEntityEntityType
             nullable: true,
             maxLength: 500);
         tags.AddAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.None);
+
+        var targetCount = runtimeEntityType.AddProperty(
+            "TargetCount",
+            typeof(int?),
+            propertyInfo: typeof(BoardItemEntity).GetProperty("TargetCount", BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly),
+            fieldInfo: typeof(BoardItemEntity).GetField("<TargetCount>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly),
+            nullable: true);
+        targetCount.AddAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.None);
 
         var title = runtimeEntityType.AddProperty(
             "Title",

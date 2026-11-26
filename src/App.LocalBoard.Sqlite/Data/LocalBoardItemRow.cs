@@ -30,6 +30,8 @@ public sealed class LocalBoardItemRow
 
     public int NegativeCounter { get; set; }
 
+    public int? TargetCount { get; set; }
+
     public HabitResetPeriod ResetPeriod { get; set; } = HabitResetPeriod.Daily;
 
     public DateOnly? HabitPeriodStart { get; set; }
@@ -49,6 +51,8 @@ public sealed class LocalBoardItemRow
     public DateOnly? DailyPostponedUntil { get; set; }
 
     public DateOnly? DailyPostponedFrom { get; set; }
+
+    public DateOnly? DailySkippedOn { get; set; }
 
     public DateOnly? TodoDueDate { get; set; }
 
@@ -76,6 +80,7 @@ public sealed class LocalBoardItemRow
         TrackPlus = source.TrackPlus;
         TrackMinus = source.TrackMinus;
         NegativeCounter = source.NegativeCounter;
+        TargetCount = source.TargetCount;
         ResetPeriod = source.ResetPeriod;
         HabitPeriodStart = source.HabitPeriodStart;
         DailyStartDate = source.DailyStartDate;
@@ -86,6 +91,7 @@ public sealed class LocalBoardItemRow
         DailyLastCompletedOn = source.DailyLastCompletedOn;
         DailyPostponedUntil = source.DailyPostponedUntil;
         DailyPostponedFrom = source.DailyPostponedFrom;
+        DailySkippedOn = source.DailySkippedOn;
         TodoDueDate = source.TodoDueDate;
         ServerUpdatedAtUtc = source.ServerUpdatedAtUtc;
         CreatedAtUtc = source.CreatedAtUtc;

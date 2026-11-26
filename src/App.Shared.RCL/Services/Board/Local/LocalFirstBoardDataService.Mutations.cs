@@ -220,15 +220,20 @@ public sealed partial class LocalFirstBoardDataService
                     row =>
                     {
                         row.IsCompleted = false;
+                        if (skippedOn == today)
+                        {
+                            row.DailySkippedOn = today;
+                        }
+
                         return Task.CompletedTask;
                     },
                     cancellationToken,
-                    row => CanCompleteDailyForDate(row, skippedOn, today));
+                    row => CanSkipForDate(row, skippedOn, today));
 
                 if (result != null)
                 {
                     await AppendLocalActivityAsync(ActivityEventType.DailySkip, itemId, result.Title, cancellationToken,
-                        DailyStreakCalculator.BackdatedDailyEventOccurredAt(skippedOn));
+                        skippedOn == today ? null : DailyStreakCalculator.BackdatedDailyEventOccurredAt(skippedOn));
                 }
 
                 return result;
@@ -238,6 +243,10 @@ public sealed partial class LocalFirstBoardDataService
 
     private static bool CanCompleteDailyForDate(BoardLocalRow row, DateOnly completedOn, DateOnly today) =>
         DailySchedule.CanCompleteForDate(row.DailyLastCompletedOn, completedOn, today);
+
+    private static bool CanSkipForDate(BoardLocalRow row, DateOnly skippedOn, DateOnly today) =>
+        skippedOn <= today
+        && !DailySchedule.IsCompletedForToday(row.DailyLastCompletedOn, row.IsCompleted, today);
 
     public async Task<BoardItem?> PostponeDailyAsync(Guid itemId, DateOnly until,
         CancellationToken cancellationToken = default)
@@ -428,7 +437,8 @@ public sealed partial class LocalFirstBoardDataService
                         row.NegativeCounter,
                         row.ChecklistJson,
                         expected,
-                        row.SortOrder)),
+                        row.SortOrder,
+                        row.TargetCount)),
                     async row =>
                     {
                         row.Title = ZalgoSanitizer.SanitizeAndTrim(args.Title);
@@ -439,6 +449,7 @@ public sealed partial class LocalFirstBoardDataService
                         row.ResetPeriod = args.ResetPeriod;
                         row.Counter = args.Counter;
                         row.NegativeCounter = args.NegativeCounter;
+                        row.TargetCount = HabitGoal.Normalize(args.TargetCount);
                         row.HabitPeriodStart = HabitResetSchedule.PeriodStartFor(today, args.ResetPeriod);
                         row.ChecklistJson = DailyChecklistJson.Normalize(args.ChecklistJson);
                         await HandleSortOrderUpdateAsync(local, userKey, BoardSection.Habit, itemId, args.SortOrder, row, cancellationToken);

@@ -57,7 +57,8 @@ public sealed record UpdateHabitOutboxPayload(
     int NegativeCounter,
     string? ChecklistJson,
     DateTimeOffset? ExpectedServerUpdatedAtUtc = null,
-    double? SortOrder = null) : IOutboxItemIdPayload;
+    double? SortOrder = null,
+    int? TargetCount = null) : IOutboxItemIdPayload;
 
 public sealed record UpdateTodoOutboxPayload(
     Guid ItemId,

@@ -121,7 +121,8 @@ public static class DemoGuestSeeder
             Notes = "Log each glass with + so statistics show up on the board.",
             Tags = "health, hydration",
             Counter = 4,
-            NegativeCounter = 1
+            NegativeCounter = 1,
+            TargetCount = 8
         });
         AddBoardRow(new BoardItemEntity
         {

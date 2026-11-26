@@ -749,6 +749,19 @@ public partial class StatisticsPanel : IDisposable
         return $"{activeDays} of {periodDays} days, {percent}%";
     }
 
+    private static string? ItemFocusLabel(int focusMinutes) =>
+        focusMinutes > 0 ? $"{FormatFocus(focusMinutes)} focus" : null;
+
+    private static string? HabitGoalLabel(HabitContributionGraphDto habit) =>
+        habit.TargetCount is > 0
+            ? $"Goal {habit.TargetCount}/{HabitGoal.PeriodUnit(habit.ResetPeriod)}"
+            : null;
+
+    private static string HabitGoalTitle(HabitContributionGraphDto habit) =>
+        habit.TargetCount is > 0
+            ? $"{habit.TargetCount} positive logs per {HabitGoal.PeriodUnit(habit.ResetPeriod)}"
+            : string.Empty;
+
     private (string Label, string Tooltip) GetDailyRatio(DailyContributionGraphDto daily)
     {
         if (_dailyRatioCache.TryGetValue(daily.BoardItemId, out var cached))

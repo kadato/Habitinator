@@ -34,7 +34,8 @@ public sealed record DailyContributionGraphDto(
     IReadOnlyList<string> AvailablePeriodKeys,
     int CurrentStreak = 0,
     int LongestStreak = 0,
-    int PreviousStreak = 0);
+    int PreviousStreak = 0,
+    int FocusMinutes = 0);
 
 public sealed record DailyGraphPeriodOption(string Key, string Label);
 
@@ -48,7 +49,12 @@ public sealed record DailyItemStatsDto(
     int DailyWeekdays = 0,
     DateOnly? DailyLastCompletedOn = null);
 
-public sealed record HabitItemStatsDto(Guid Id, string Title, DateOnly CreatedAt);
+public sealed record HabitItemStatsDto(
+    Guid Id,
+    string Title,
+    DateOnly CreatedAt,
+    int? TargetCount = null,
+    HabitResetPeriod ResetPeriod = HabitResetPeriod.Daily);
 
 public sealed record DailyContributionsViewDto(
     string PeriodKey,
@@ -65,7 +71,10 @@ public sealed record HabitContributionGraphDto(
     int GridWeekColumns,
     int ActiveDayCount,
     int PeriodDayCount,
-    int MaxDayCountInRange);
+    int MaxDayCountInRange,
+    int? TargetCount = null,
+    HabitResetPeriod ResetPeriod = HabitResetPeriod.Daily,
+    int FocusMinutes = 0);
 
 public sealed record HabitContributionsViewDto(
     string PeriodKey,

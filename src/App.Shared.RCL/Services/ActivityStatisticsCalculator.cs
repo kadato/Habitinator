@@ -85,15 +85,20 @@ public static class ActivityStatisticsCalculator
         TimeSpan? dayStartLocalTime = null)
     {
         var perDay = PopulatePerDayCounts(rows, timeZone, dayStartLocalTime);
-        var (maxDayCount, busiestDay) = FindBusiestDay(perDay);
+        var actualEnd = ClampEndToCutoff(end, todayCutoff);
+        var inRangePerDay = perDay
+            .Where(kv => kv.Key >= start && kv.Key <= actualEnd)
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
+        var (maxDayCount, busiestDay) = FindBusiestDay(inRangePerDay);
 
-        var totalEvents = rows.Count;
+        // Activity means positive progress. Negative habit ticks and skipped dailies are
+        // interactions, but they are not achievements. The day log still shows them.
+        var totalEvents = inRangePerDay.Values.Sum(x => x.count);
         var totalFocusSec = rows
             .Where(x => x.EventType == ActivityEventType.TimerSession)
+            .Where(x => IsInRange(DailySchedule.LocalDay(x.OccurredAtUtc, timeZone, dayStartLocalTime), start, actualEnd))
             .Sum(x => x.DurationSeconds.GetValueOrDefault());
         var totalFocusMinutes = FocusMinutes(totalFocusSec);
-
-        var actualEnd = ClampEndToCutoff(end, todayCutoff);
         var startWeek = StartOfIsoWeek(start);
         var endWeek = StartOfIsoWeek(actualEnd);
         var weekSpan = (endWeek.DayNumber - startWeek.DayNumber) / 7;
@@ -155,6 +160,14 @@ public static class ActivityStatisticsCalculator
             if (r.BoardItemId is { }
                 && r.EventType is ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete
                     or ActivityEventType.TodoComplete or ActivityEventType.TodoUncomplete)
+            {
+                continue;
+            }
+
+            // Negative habit ticks and daily skips are real interactions, but they must
+            // not make an activity heatmap look like a good day. Daily and to-do toggles
+            // are handled net through ApplyNetToggleCountsToPerDay above.
+            if (r.EventType is ActivityEventType.HabitMinus or ActivityEventType.DailySkip)
             {
                 continue;
             }
@@ -273,7 +286,8 @@ public static class ActivityStatisticsCalculator
         var byItem = BuildItemCompletionMap(eventRowsInRange, dailyIds, range.TimeZone, range.DayStartLocalTime);
         var (commonStart, commonEnd) = FindCommonDates(dailyItemRows, byItem, range.RangeStart, range.RangeEnd, range.TodayCutoff);
         var streaksByItem = BuildDailyStreakDetailsMap(eventRowsInRange, dailyItemRows, range);
-        var graphs = BuildDailyContributionGraphs(dailyItemRows, byItem, commonStart, commonEnd, range.TodayCutoff, range.Options, streaksByItem);
+        var focusByItem = BuildFocusMinutesByItem(eventRowsInRange, dailyIds, commonStart, commonEnd, range.TimeZone, range.DayStartLocalTime);
+        var graphs = BuildDailyContributionGraphs(dailyItemRows, byItem, commonStart, commonEnd, range.TodayCutoff, range.Options, streaksByItem, focusByItem);
 
         return new DailyContributionsViewDto(
             range.PeriodKey,
@@ -324,6 +338,30 @@ public static class ActivityStatisticsCalculator
             map[d] = 1;
         }
         return byItem;
+    }
+
+    private static Dictionary<Guid, int> BuildFocusMinutesByItem(
+        IReadOnlyList<UserActivityEventRecord> eventRowsInRange,
+        HashSet<Guid> allowedIds,
+        DateOnly start,
+        DateOnly end,
+        IUserTimeZoneService? timeZone,
+        TimeSpan? dayStartLocalTime)
+    {
+        var secondsByItem = new Dictionary<Guid, int>();
+        foreach (var row in eventRowsInRange)
+        {
+            if (row is not { EventType: ActivityEventType.TimerSession, BoardItemId: { } itemId }
+                || !allowedIds.Contains(itemId)
+                || !IsInRange(DailySchedule.LocalDay(row.OccurredAtUtc, timeZone, dayStartLocalTime), start, end))
+            {
+                continue;
+            }
+
+            secondsByItem[itemId] = secondsByItem.GetValueOrDefault(itemId) + row.DurationSeconds.GetValueOrDefault();
+        }
+
+        return secondsByItem.ToDictionary(kv => kv.Key, kv => FocusMinutes(kv.Value));
     }
 
     private static Dictionary<Guid, DailyStreakDetails> BuildDailyStreakDetailsMap(
@@ -411,7 +449,8 @@ public static class ActivityStatisticsCalculator
         DateOnly commonEnd,
         DateOnly todayCutoff,
         IReadOnlyList<DailyGraphPeriodOption> options,
-        Dictionary<Guid, DailyStreakDetails>? streaksByItem = null)
+        Dictionary<Guid, DailyStreakDetails>? streaksByItem = null,
+        IReadOnlyDictionary<Guid, int>? focusByItem = null)
     {
         List<DailyContributionGraphDto> graphs = [with(capacity: dailyItemRows.Count)];
         foreach (var di in dailyItemRows)
@@ -466,7 +505,8 @@ public static class ActivityStatisticsCalculator
                 AvailablePeriodKeys(di, options, todayCutoff),
                 current,
                 longest,
-                previous));
+                previous,
+                focusByItem?.GetValueOrDefault(di.Id) ?? 0));
         }
         return graphs;
     }
@@ -503,8 +543,9 @@ public static class ActivityStatisticsCalculator
         var commonEnd = ClampEndToCutoff(range.RangeEnd, range.TodayCutoff);
         var earliestCreated = habitItemRows.Min(x => x.CreatedAt);
         var commonStart = ClampCommonStart(earliestCreated, range.RangeStart, commonEnd);
+        var focusByItem = BuildFocusMinutesByItem(eventRowsInRange, habitIds, commonStart, commonEnd, range.TimeZone, range.DayStartLocalTime);
 
-        var graphs = BuildHabitContributionGraphs(habitItemRows, byItem, commonStart, commonEnd);
+        var graphs = BuildHabitContributionGraphs(habitItemRows, byItem, commonStart, commonEnd, focusByItem);
 
         return new HabitContributionsViewDto(
             range.PeriodKey,
@@ -528,7 +569,7 @@ public static class ActivityStatisticsCalculator
                 continue;
             }
 
-            if (e.EventType is not (ActivityEventType.HabitPlus or ActivityEventType.HabitMinus))
+            if (e.EventType != ActivityEventType.HabitPlus)
             {
                 continue;
             }
@@ -550,7 +591,8 @@ public static class ActivityStatisticsCalculator
         IReadOnlyList<HabitItemStatsDto> habitItemRows,
         Dictionary<Guid, Dictionary<DateOnly, int>> byItem,
         DateOnly commonStart,
-        DateOnly commonEnd)
+        DateOnly commonEnd,
+        IReadOnlyDictionary<Guid, int>? focusByItem = null)
     {
         List<HabitContributionGraphDto> graphs = [with(capacity: habitItemRows.Count)];
         foreach (var hi in habitItemRows)
@@ -596,7 +638,10 @@ public static class ActivityStatisticsCalculator
                 columns,
                 activeDays,
                 periodDays,
-                maxInRange));
+                maxInRange,
+                hi.TargetCount,
+                hi.ResetPeriod,
+                focusByItem?.GetValueOrDefault(hi.Id) ?? 0));
         }
 
         return graphs;
@@ -858,6 +903,9 @@ public static class ActivityStatisticsCalculator
 
     private static DateOnly ClampEndToCutoff(DateOnly rangeEnd, DateOnly todayCutoff) =>
         rangeEnd > todayCutoff ? todayCutoff : rangeEnd;
+
+    private static bool IsInRange(DateOnly day, DateOnly start, DateOnly end) =>
+        day >= start && day <= end;
 
     private static DateOnly ClampCommonStart(DateOnly earliest, DateOnly rangeStart, DateOnly commonEnd)
     {

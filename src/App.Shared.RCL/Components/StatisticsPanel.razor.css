@@ -81,7 +81,7 @@
 }
 
 .stats-lvl-4 {
-    background: var(--hab-accent-streak);
+    background: var(--hab-accent-success);
 }
 
 .stats-block-bg {
@@ -610,6 +610,35 @@
     color: var(--mud-palette-text-secondary);
 }
 
+.stats-item-focus {
+    flex-shrink: 0;
+    font-family: var(--hab-font-mono);
+    font-size: 0.64rem;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+}
+
+.stats-habit-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.stats-habit-goal {
+    align-self: flex-start;
+    font-family: var(--hab-font-mono);
+    font-size: 0.64rem;
+    font-weight: 650;
+    color: var(--mud-palette-text-secondary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 18%, transparent);
+    border-radius: var(--radius-sm);
+    padding: 0.1rem 0.35rem;
+}
+
 .stats-habit-ratio {
     flex-shrink: 0;
     font-family: var(--hab-font-mono);
@@ -673,6 +702,29 @@
 .stats-hero-head__titles { min-width: 0; }
 .stats-hero-title { letter-spacing: -0.02em; line-height: 1.15; }
 .stats-hero-subtitle { margin-top: 0.15rem; line-height: 1.4; }
+.stats-heatmap-legend {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    margin-top: var(--space-3);
+    padding-right: 0.35rem;
+    font-family: var(--hab-font-mono);
+    font-size: 0.62rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.stats-heatmap-legend__label {
+    margin-inline: 0.15rem;
+}
+
+.stats-heatmap-legend__cell {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    box-sizing: border-box;
+}
+
 .stats-heatmap-legend-inline {
     display: inline-flex;
     align-items: center;
@@ -873,9 +925,10 @@
 
     ::deep .stats-kpi-card--sidebar .stats-kpi-card__label {
         font-size: 0.62rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        line-height: 1.2;
     }
 
     ::deep .stats-kpi-card--sidebar .stats-kpi-card__icon {

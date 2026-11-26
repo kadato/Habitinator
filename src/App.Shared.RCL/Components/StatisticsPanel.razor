@@ -85,7 +85,15 @@
                                CellTitleFunc="@(c => HeatmapDayTitle(c.Date, c.Count))"
                                OnCellClick="@((r, c) => OpenDayDetailAsync(_cellIndex[(r, c)].Date))"/>
 
-
+            <div class="stats-heatmap-legend" aria-hidden="true">
+                <span class="stats-heatmap-legend__label">Less</span>
+                @for (var level = 0; level <= 4; level++)
+                {
+                    <span class="stats-heatmap-legend__cell stats-lvl-@level"></span>
+                }
+                <span class="stats-heatmap-legend__label">More</span>
+            </div>
+            <span class="hab-visually-hidden">Activity scale: darker green means more positive activity that day.</span>
         </MudPaper>
 
         <div class="stats-dashboard-layout">
@@ -191,7 +199,13 @@
                                             <div class="stats-daily-block pa-3 border rounded stats-block-bg">
                                                 <div class="d-flex align-center justify-space-between gap-2 mb-1">
                                                     <button type="button" class="stats-daily-title stats-daily-title--btn" title="View streaks and heatmap for @daily.Title" aria-label="View streaks and heatmap for @daily.Title" @onclick="() => OpenDailyHeatmapAsync(daily)">@daily.Title</button>
-                                                    <span class="stats-habit-ratio stats-habit-ratio--daily" title="@GetDailyRatioTooltip(daily)">@GetDailyRatioLabel(daily)</span>
+                                                    <div class="d-flex align-center gap-2">
+                                                        @if (ItemFocusLabel(daily.FocusMinutes) is { } dailyFocus)
+                                                        {
+                                                            <span class="stats-item-focus">@dailyFocus</span>
+                                                        }
+                                                        <span class="stats-habit-ratio stats-habit-ratio--daily" title="@GetDailyRatioTooltip(daily)">@GetDailyRatioLabel(daily)</span>
+                                                    </div>
                                                 </div>
                                                 <div class="stats-daily-streak-stats">
                                                     <div class="stats-daily-streak-stat">
@@ -228,8 +242,20 @@
                                         <MudItem @key="habit.BoardItemId" xs="12" md="6">
                                             <div class="stats-habit-block pa-3 border rounded stats-block-bg">
                                                 <div class="d-flex align-center justify-space-between gap-2 mb-2">
-                                                    <span class="stats-habit-title">@habit.Title</span>
-                                                    <span class="stats-habit-ratio" title="@FormatHabitRatioTooltip(habit.ActiveDayCount, habit.PeriodDayCount)">@HabitActiveRatioLabel(habit.ActiveDayCount, habit.PeriodDayCount)</span>
+                                                    <div class="stats-habit-heading">
+                                                        <span class="stats-habit-title">@habit.Title</span>
+                                                        @if (HabitGoalLabel(habit) is { } goalLabel)
+                                                        {
+                                                            <span class="stats-habit-goal" title="@HabitGoalTitle(habit)">@goalLabel</span>
+                                                        }
+                                                    </div>
+                                                    <div class="d-flex align-center gap-2">
+                                                        @if (ItemFocusLabel(habit.FocusMinutes) is { } habitFocus)
+                                                        {
+                                                            <span class="stats-item-focus">@habitFocus</span>
+                                                        }
+                                                        <span class="stats-habit-ratio" title="@FormatHabitRatioTooltip(habit.ActiveDayCount, habit.PeriodDayCount)">@HabitActiveRatioLabel(habit.ActiveDayCount, habit.PeriodDayCount)</span>
+                                                    </div>
                                                 </div>
                                                 <StatsHeatmapGrid Columns="habit.GridWeekColumns"
                                                                    RegionLabel="@($"Activity heatmap for {habit.Title}")"

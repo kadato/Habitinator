@@ -132,7 +132,7 @@ public sealed class ActivityStatisticsService(
 
         var allItems = await itemQ
             .OrderBy(b => b.Title)
-            .Select(b => new { b.Id, b.Title, b.Section, b.DailyStartDate, b.CreatedAtUtc, b.DailyRepeatType, b.DailyRepeatInterval, b.DailyWeekdays, b.DailyLastCompletedOn })
+            .Select(b => new { b.Id, b.Title, b.Section, b.DailyStartDate, b.CreatedAtUtc, b.DailyRepeatType, b.DailyRepeatInterval, b.DailyWeekdays, b.DailyLastCompletedOn, b.TargetCount, b.ResetPeriod })
             .ToListAsync(cancellationToken);
 
         var builtDashboard = ActivityStatisticsCalculator.BuildDashboard(
@@ -168,7 +168,9 @@ public sealed class ActivityStatisticsService(
             .Select(b => new HabitItemStatsDto(
                 b.Id,
                 b.Title,
-                DateOnly.FromDateTime(timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime)))];
+                DateOnly.FromDateTime(timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime),
+                b.TargetCount,
+                Enum.IsDefined((HabitResetPeriod)b.ResetPeriod) ? (HabitResetPeriod)b.ResetPeriod : HabitResetPeriod.Daily))];
 
         var habitResult = ActivityStatisticsCalculator.BuildHabitContributions(
             eventRows,
@@ -327,7 +329,9 @@ public sealed class ActivityStatisticsService(
             [.. ctx.ItemRows.Select(b => new HabitItemStatsDto(
                 b.Id,
                 b.Title,
-                DateOnly.FromDateTime(timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime)))],
+                DateOnly.FromDateTime(timeZone.ConvertToLocal(b.CreatedAtUtc).DateTime),
+                b.TargetCount,
+                Enum.IsDefined((HabitResetPeriod)b.ResetPeriod) ? (HabitResetPeriod)b.ResetPeriod : HabitResetPeriod.Daily))],
             new ContributionsRangeContext(
                 ctx.Key,
                 ctx.Options,
@@ -383,7 +387,7 @@ public sealed class ActivityStatisticsService(
 
         var itemRows = await itemQ
             .OrderBy(b => b.Title)
-            .Select(b => new BoardItemRef(b.Id, b.Title, b.DailyStartDate, b.CreatedAtUtc, b.DailyRepeatType, b.DailyRepeatInterval, b.DailyWeekdays, b.DailyLastCompletedOn))
+            .Select(b => new BoardItemRef(b.Id, b.Title, b.DailyStartDate, b.CreatedAtUtc, b.DailyRepeatType, b.DailyRepeatInterval, b.DailyWeekdays, b.DailyLastCompletedOn, b.TargetCount, b.ResetPeriod))
             .ToListAsync(cancellationToken);
 
         var eventRows = await EventsInRange(db, userId, fromUtc, toUtc, allowedIds)
@@ -393,7 +397,17 @@ public sealed class ActivityStatisticsService(
         return new ContributionsQueryContext(periodOptions, key, rangeStart, rangeEnd, options.UtcToday, eventRows, itemRows);
     }
 
-    private sealed record BoardItemRef(Guid Id, string Title, DateTime? DailyStartDate, DateTimeOffset CreatedAtUtc, int DailyRepeatType, int DailyRepeatInterval, int DailyWeekdays, DateTime? DailyLastCompletedOn);
+    private sealed record BoardItemRef(
+        Guid Id,
+        string Title,
+        DateTime? DailyStartDate,
+        DateTimeOffset CreatedAtUtc,
+        int DailyRepeatType,
+        int DailyRepeatInterval,
+        int DailyWeekdays,
+        DateTime? DailyLastCompletedOn,
+        int? TargetCount,
+        int ResetPeriod);
 
     private sealed record ContributionsQueryOptions(
         BoardSection Section,

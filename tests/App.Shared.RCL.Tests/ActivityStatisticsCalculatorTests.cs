@@ -138,6 +138,51 @@ public sealed class ActivityStatisticsCalculatorTests
     }
 
     [Fact]
+    public void BuildDashboard_negative_habit_tick_and_daily_skip_do_not_count_as_activity()
+    {
+        var rows = new[]
+        {
+            Row(Day, 9, ActivityEventType.HabitMinus, HabitId),
+            Row(Day, 10, ActivityEventType.DailySkip, DailyId),
+            Row(Day, 11, ActivityEventType.HabitPlus, HabitId)
+        };
+
+        var dashboard = BuildDashboardForDay(rows);
+
+        DayCount(dashboard, Day).Should().Be(1);
+        dashboard.TotalEvents.Should().Be(1);
+    }
+
+    [Fact]
+    public void BuildHabitContributions_ignores_minus_ticks_and_carries_the_goal()
+    {
+        var habit = new HabitItemStatsDto(HabitId, "Meditate", Day, 3, HabitResetPeriod.Weekly);
+        var rows = new[]
+        {
+            Row(Day, 9, ActivityEventType.HabitPlus, HabitId),
+            Row(Day, 10, ActivityEventType.HabitMinus, HabitId),
+            Row(Day, 11, ActivityEventType.TimerSession, HabitId, durationSeconds: 600)
+        };
+
+        var view = ActivityStatisticsCalculator.BuildHabitContributions(
+            rows,
+            [habit],
+            new ContributionsRangeContext(
+                DailyGraphPeriods.Rolling370Days,
+                [],
+                Day,
+                Day,
+                Day));
+
+        var graph = view.Graphs.Should().ContainSingle().Subject;
+        graph.Heatmap.Single(c => c.Date == Day && c.InDataRange).Count.Should().Be(1);
+        graph.ActiveDayCount.Should().Be(1);
+        graph.TargetCount.Should().Be(3);
+        graph.ResetPeriod.Should().Be(HabitResetPeriod.Weekly);
+        graph.FocusMinutes.Should().Be(10);
+    }
+
+    [Fact]
     public void BuildDayDetail_uses_custom_label_when_board_title_missing()
     {
         var rows = new[] { Row(Day, 9, ActivityEventType.HabitPlus, HabitId, customLabel: "Meditate") };

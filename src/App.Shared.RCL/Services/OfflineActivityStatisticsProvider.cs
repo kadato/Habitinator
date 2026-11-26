@@ -256,7 +256,9 @@ public sealed class OfflineActivityStatisticsProvider : IDisposable
         return [.. snapshot.Habits.Select(b => new HabitItemStatsDto(
             b.Id,
             b.Title,
-            b.CreatedAtUtc is { } c ? DateOnly.FromDateTime(ToLocal(timeZone, c).DateTime) : today))];
+            b.CreatedAtUtc is { } c ? DateOnly.FromDateTime(ToLocal(timeZone, c).DateTime) : today,
+            b.TargetCount,
+            b.ResetPeriod))];
     }
 
     private static DateTimeOffset ToLocal(IUserTimeZoneService? timeZone, DateTimeOffset instant) =>

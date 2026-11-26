@@ -147,7 +147,7 @@ The board tools are `get_snapshot`, `get_board_summary`, `get_item`, `get_archiv
 
 `get_board_summary` returns an overview of active habits, today's completed and pending dailies, active and overdue todos, and streak totals. It accepts an optional `tag` filter and `format`, which defaults to `markdown` or can be set to `json`. Calling `get_board_summary` before the full snapshot saves context tokens.
 
-`create_item` takes `section` and `title`. It also takes optional `notes`, `tags`, `date`, `checklistJson`, `repeat`, `repeatInterval`, `weekdays`, `weekdayNames`, `resetPeriod`, `trackPlus`, `trackMinus`, `counter`, `negativeCounter`, `idempotencyKey`, `dryRun`, `allowDuplicate`, and `force`. For Daily items, the date sets the start date. For Todo items, the date sets the due date. For Habit items, omit the date.
+`create_item` takes `section` and `title`. It also takes optional `notes`, `tags`, `date`, `checklistJson`, `repeat`, `repeatInterval`, `weekdays`, `weekdayNames`, `resetPeriod`, `trackPlus`, `trackMinus`, `counter`, `negativeCounter`, `targetCount`, `idempotencyKey`, `dryRun`, `allowDuplicate`, and `force`. For Daily items, the date sets the start date. For Todo items, the date sets the due date. For Habit items, omit the date. `targetCount` sets an optional habit goal for the current reset period.
 
 `batch_create_items` creates multiple board items across sections in a single call. It accepts `items` plus an optional batch `idempotencyKey` and `dryRun`. It returns one per-item result per input: `{index, ok, id, item}` for created items and `{index, ok: false, field, error, message}` for failed ones. Valid items persist even when siblings fail, so a retry only needs to fix the failed entries. Reposting the same batch with the same key creates items exactly once. Keep item order stable across retries or pass explicit per-item keys.
 
@@ -232,7 +232,7 @@ The markers below are the machine-readable tool parameter schemas. `McpSchemaCon
 <!-- mcp-tool-schema: search_items required() optional(query:string,tag:string,section:string,limit:integer,includeArchived:boolean,format:string) -->
 <!-- mcp-tool-schema: list_tags required() optional() -->
 <!-- mcp-tool-schema: reorder_item required(itemId:string,position:integer) optional(section:string) -->
-<!-- mcp-tool-schema: create_item required(section:string,title:string) optional(notes:string,tags:string,date:string,checklistJson:string,repeat:string,repeatInterval:integer,weekdays:integer,weekdayNames:array,resetPeriod:string,trackPlus:boolean,trackMinus:boolean,counter:integer,negativeCounter:integer,idempotencyKey:string,dryRun:boolean,allowDuplicate:boolean,force:boolean) -->
+<!-- mcp-tool-schema: create_item required(section:string,title:string) optional(notes:string,tags:string,date:string,checklistJson:string,repeat:string,repeatInterval:integer,weekdays:integer,weekdayNames:array,resetPeriod:string,trackPlus:boolean,trackMinus:boolean,counter:integer,negativeCounter:integer,targetCount:integer,idempotencyKey:string,dryRun:boolean,allowDuplicate:boolean,force:boolean) -->
 <!-- mcp-tool-schema: batch_create_items required(items:array) optional(idempotencyKey:string,dryRun:boolean) -->
 <!-- mcp-tool-schema: get_due_digest required() optional(snoozedIds:array) -->
 <!-- mcp-tool-schema: rename_item required(itemId:string,title:string) optional(section:string) -->
@@ -255,7 +255,7 @@ The markers below are the machine-readable tool parameter schemas. `McpSchemaCon
 <!-- mcp-tool-schema: update_daily required(itemId:string) optional(title:string,notes:string,tags:string,startDate:string,repeat:string,repeatInterval:integer,counter:integer,weekdays:integer,weekdayNames:array,checklistJson:string,sortOrder:number) -->
 <!-- mcp-tool-schema: habit_plus required() optional(itemId:string,title:string) -->
 <!-- mcp-tool-schema: habit_minus required() optional(itemId:string,title:string) -->
-<!-- mcp-tool-schema: update_habit required(itemId:string) optional(title:string,notes:string,tags:string,trackPlus:boolean,trackMinus:boolean,resetPeriod:string,counter:integer,negativeCounter:integer,checklistJson:string,sortOrder:number) -->
+<!-- mcp-tool-schema: update_habit required(itemId:string) optional(title:string,notes:string,tags:string,trackPlus:boolean,trackMinus:boolean,resetPeriod:string,counter:integer,negativeCounter:integer,targetCount:integer,checklistJson:string,sortOrder:number) -->
 <!-- mcp-tool-schema: update_todo required(itemId:string) optional(title:string,notes:string,tags:string,dueDate:string,checklistJson:string,sortOrder:number) -->
 <!-- mcp-tool-schema: get_overview required() optional(period:string,tag:string) -->
 <!-- mcp-tool-schema: get_dashboard required() optional(period:string,tag:string) -->

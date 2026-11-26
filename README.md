@@ -129,7 +129,7 @@ dotnet build -t:Run -f net11.0-android
 
 ## Key features
 
-- **Board planner.** Track habits, dailies, and to-dos. Organize them with tags, notes, checklists, archive, and streaks.
+- **Board planner.** Track habits, dailies, and to-dos. Organize them with tags, notes, checklists, habit goals, archive, and streaks.
 - **Upcoming view.** See overdue, due today, and due tomorrow todos in one digest.
 - **Focus timer.** Run stopwatch or Pomodoro sessions with per-item targets. Log sessions to activity.
 - **Statistics.** Browse the activity heatmap. Open any day for details.

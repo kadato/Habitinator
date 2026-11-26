@@ -51,7 +51,7 @@ The markers below mirror docs/mcp.md. `McpSchemaConformanceTests` parses both fi
 <!-- mcp-tool-schema: search_items required() optional(query:string,tag:string,section:string,limit:integer,includeArchived:boolean,format:string) -->
 <!-- mcp-tool-schema: list_tags required() optional() -->
 <!-- mcp-tool-schema: reorder_item required(itemId:string,position:integer) optional(section:string) -->
-<!-- mcp-tool-schema: create_item required(section:string,title:string) optional(notes:string,tags:string,date:string,checklistJson:string,repeat:string,repeatInterval:integer,weekdays:integer,weekdayNames:array,resetPeriod:string,trackPlus:boolean,trackMinus:boolean,counter:integer,negativeCounter:integer,idempotencyKey:string,dryRun:boolean,allowDuplicate:boolean,force:boolean) -->
+<!-- mcp-tool-schema: create_item required(section:string,title:string) optional(notes:string,tags:string,date:string,checklistJson:string,repeat:string,repeatInterval:integer,weekdays:integer,weekdayNames:array,resetPeriod:string,trackPlus:boolean,trackMinus:boolean,counter:integer,negativeCounter:integer,targetCount:integer,idempotencyKey:string,dryRun:boolean,allowDuplicate:boolean,force:boolean) -->
 <!-- mcp-tool-schema: batch_create_items required(items:array) optional(idempotencyKey:string,dryRun:boolean) -->
 <!-- mcp-tool-schema: get_due_digest required() optional(snoozedIds:array) -->
 <!-- mcp-tool-schema: rename_item required(itemId:string,title:string) optional(section:string) -->
@@ -74,7 +74,7 @@ The markers below mirror docs/mcp.md. `McpSchemaConformanceTests` parses both fi
 <!-- mcp-tool-schema: update_daily required(itemId:string) optional(title:string,notes:string,tags:string,startDate:string,repeat:string,repeatInterval:integer,counter:integer,weekdays:integer,weekdayNames:array,checklistJson:string,sortOrder:number) -->
 <!-- mcp-tool-schema: habit_plus required() optional(itemId:string,title:string) -->
 <!-- mcp-tool-schema: habit_minus required() optional(itemId:string,title:string) -->
-<!-- mcp-tool-schema: update_habit required(itemId:string) optional(title:string,notes:string,tags:string,trackPlus:boolean,trackMinus:boolean,resetPeriod:string,counter:integer,negativeCounter:integer,checklistJson:string,sortOrder:number) -->
+<!-- mcp-tool-schema: update_habit required(itemId:string) optional(title:string,notes:string,tags:string,trackPlus:boolean,trackMinus:boolean,resetPeriod:string,counter:integer,negativeCounter:integer,targetCount:integer,checklistJson:string,sortOrder:number) -->
 <!-- mcp-tool-schema: update_todo required(itemId:string) optional(title:string,notes:string,tags:string,dueDate:string,checklistJson:string,sortOrder:number) -->
 <!-- mcp-tool-schema: get_overview required() optional(period:string,tag:string) -->
 <!-- mcp-tool-schema: get_dashboard required() optional(period:string,tag:string) -->

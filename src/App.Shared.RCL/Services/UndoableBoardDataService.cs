@@ -359,6 +359,10 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         {
             diff[FieldNegativeCounter] = item.NegativeCounter;
         }
+        if (item.TargetCount != args.TargetCount)
+        {
+            diff["targetcount"] = item.TargetCount;
+        }
         DiffChecklist(diff, item.ChecklistJson, args.ChecklistJson);
         return diff;
     }
@@ -412,6 +416,10 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
         if (item.DailyRepeatInterval != args.RepeatInterval)
         {
             diff["interval"] = item.DailyRepeatInterval;
+        }
+        if (item.DailyWeekdays != args.Weekdays)
+        {
+            diff["weekdays"] = item.DailyWeekdays;
         }
         if (item.Counter != args.Counter)
         {
@@ -506,6 +514,7 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
             ResetPeriod = diff.TryGetValue("resetperiod", out var resetPeriod) ? DiffCast(resetPeriod, current.ResetPeriod) : current.ResetPeriod,
             Counter = diff.TryGetValue(FieldCounter, out var counter) ? DiffCast(counter, current.Counter) : current.Counter,
             NegativeCounter = diff.TryGetValue(FieldNegativeCounter, out var negativeCounter) ? DiffCast(negativeCounter, current.NegativeCounter) : current.NegativeCounter,
+            TargetCount = diff.TryGetValue("targetcount", out var targetCount) ? (int?)targetCount : current.TargetCount,
             ChecklistJson = ApplyChecklistDiff(current.ChecklistJson, diff)
         }, CancellationToken.None);
     }
@@ -544,6 +553,7 @@ public sealed class UndoableBoardDataService(IBoardDataService inner, IUndoServi
             StartDate = diff.TryGetValue("startdate", out var startDate) ? (DateOnly?)startDate : current.DailyStartDate,
             Repeat = diff.TryGetValue("repeat", out var repeat) ? DiffCast(repeat, current.DailyRepeat) : current.DailyRepeat,
             RepeatInterval = diff.TryGetValue("interval", out var interval) ? DiffCast(interval, current.DailyRepeatInterval) : current.DailyRepeatInterval,
+            Weekdays = diff.TryGetValue("weekdays", out var weekdays) ? DiffCast(weekdays, current.DailyWeekdays) : current.DailyWeekdays,
             ChecklistJson = ApplyChecklistDiff(current.ChecklistJson, diff),
             Counter = diff.TryGetValue(FieldCounter, out var counter) ? DiffCast(counter, current.Counter) : current.Counter
         }, CancellationToken.None);

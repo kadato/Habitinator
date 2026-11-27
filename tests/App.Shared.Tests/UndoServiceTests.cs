@@ -536,6 +536,78 @@ public sealed class UndoableBoardDataServiceTests
     }
 
     [Fact]
+    public async Task UpdateHabitAsync_target_change_should_register_undo_and_restore_target()
+    {
+        var item = new BoardItem(Guid.NewGuid(), "Habit", TargetCount: 5);
+        var edited = item with { TargetCount = 8 };
+        _inner.GetItemAsync(item.Id, Arg.Any<CancellationToken>())
+            .Returns(
+                Task.FromResult<BoardItem?>(item),
+                Task.FromResult<BoardItem?>(edited));
+        _inner.UpdateHabitAsync(item.Id, Arg.Any<UpdateHabitArgs>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<BoardItem?>(edited));
+        _undoService.IsUndoing.Returns(false);
+
+        Func<Task>? undo = null;
+        _undoService.RegisterUndo(Arg.Any<string>(), Arg.Any<Func<Task>>(), Arg.Any<IReadOnlyCollection<string>>())
+            .Returns(call =>
+            {
+                undo = call.ArgAt<Func<Task>>(1);
+                return Guid.NewGuid();
+            });
+
+        await _undoableService.UpdateHabitAsync(item.Id, UpdateHabitArgs.From(item) with { TargetCount = 8 });
+
+        undo.Should().NotBeNull();
+        if (undo is null)
+        {
+            throw new InvalidOperationException("Target-count edit did not register undo.");
+        }
+
+        await undo();
+        await _inner.Received(1).UpdateHabitAsync(
+            item.Id,
+            Arg.Is<UpdateHabitArgs>(args => args.TargetCount == 5),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateDailyAsync_weekday_change_should_register_undo_and_restore_weekdays()
+    {
+        var item = new BoardItem(Guid.NewGuid(), "Daily", DailyWeekdays: 1);
+        var edited = item with { DailyWeekdays = 3 };
+        _inner.GetItemAsync(item.Id, Arg.Any<CancellationToken>())
+            .Returns(
+                Task.FromResult<BoardItem?>(item),
+                Task.FromResult<BoardItem?>(edited));
+        _inner.UpdateDailyAsync(item.Id, Arg.Any<UpdateDailyArgs>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<BoardItem?>(edited));
+        _undoService.IsUndoing.Returns(false);
+
+        Func<Task>? undo = null;
+        _undoService.RegisterUndo(Arg.Any<string>(), Arg.Any<Func<Task>>(), Arg.Any<IReadOnlyCollection<string>>())
+            .Returns(call =>
+            {
+                undo = call.ArgAt<Func<Task>>(1);
+                return Guid.NewGuid();
+            });
+
+        await _undoableService.UpdateDailyAsync(item.Id, UpdateDailyArgs.From(item) with { Weekdays = 3 });
+
+        undo.Should().NotBeNull();
+        if (undo is null)
+        {
+            throw new InvalidOperationException("Weekday edit did not register undo.");
+        }
+
+        await undo();
+        await _inner.Received(1).UpdateDailyAsync(
+            item.Id,
+            Arg.Is<UpdateDailyArgs>(args => args.Weekdays == 1),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Delete_then_Edit_Undo_sequence_should_preserve_original_guid()
     {
         // Arrange

@@ -17,10 +17,11 @@ public sealed class UserDataImportValidationException(string message) : Exceptio
 /// Re-importing the same file yields the same board.
 /// </summary>
 public sealed class UserDataImportService(
-    ApplicationDbContext dbContext,
+    IDbContextFactory<ApplicationDbContext> dbFactory,
     MemoryCacheStore<CachedBoardSnapshot> snapshotCache,
     MemoryCacheStore<CachedStreakMap> streakCache,
-    IBoardChangeNotifier boardChangeNotifier)
+    IBoardChangeNotifier boardChangeNotifier,
+    AiApiKeyProtector apiKeyProtector)
 {
     public async Task<UserDataImportResult> ImportAsync(
         Guid userId,
@@ -32,59 +33,94 @@ public sealed class UserDataImportService(
             throw new UserDataImportValidationException(problem);
         }
 
-        var now = BoardTimestamps.UtcNow();
-        var importIds = data.Items.Select(e => e.Item.Id).ToHashSet();
+        UserDataImportResult result = null!;
 
-        await dbContext.BoardItems
-            .Where(x => x.UserId == userId && x.DeletedAtUtc == null && !importIds.Contains(x.Id))
-            .ExecuteUpdateAsync(
-                x => x.SetProperty(e => e.DeletedAtUtc, now).SetProperty(e => e.UpdatedAtUtc, now),
-                cancellationToken);
-
-        var existingById = await dbContext.BoardItems
-            .Where(x => x.UserId == userId && importIds.Contains(x.Id))
-            .ToDictionaryAsync(x => x.Id, cancellationToken);
-
-        foreach (var entry in data.Items)
+        // ExecuteUpdate and ExecuteDelete run immediately, so the import has to
+        // own one transaction. A failure while saving the imported rows must not
+        // leave the board tombstoned and the activity history deleted.
+        await using var strategyDb = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var strategy = strategyDb.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
         {
-            var existing = existingById.TryGetValue(entry.Item.Id, out var found) ? found : null;
-            if (existing is null)
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+            try
             {
-                dbContext.BoardItems.Add(ToEntity(userId, entry, now));
+                var now = BoardTimestamps.UtcNow();
+                var importIds = data.Items.Select(e => e.Item.Id).ToHashSet();
+
+                await db.BoardItems
+                    .Where(x => x.UserId == userId && x.DeletedAtUtc == null && !importIds.Contains(x.Id))
+                    .ExecuteUpdateAsync(
+                        x => x.SetProperty(e => e.DeletedAtUtc, now).SetProperty(e => e.UpdatedAtUtc, now),
+                        cancellationToken);
+
+                var existingById = await db.BoardItems
+                    .Where(x => x.UserId == userId && importIds.Contains(x.Id))
+                    .ToDictionaryAsync(x => x.Id, cancellationToken);
+
+                foreach (var entry in data.Items)
+                {
+                    var existing = existingById.TryGetValue(entry.Item.Id, out var found) ? found : null;
+                    if (existing is null)
+                    {
+                        db.BoardItems.Add(ToEntity(userId, entry, now));
+                    }
+                    else
+                    {
+                        ApplyToEntity(existing, entry, now);
+                    }
+                }
+
+                await db.UserActivityEvents
+                    .Where(x => x.UserId == userId)
+                    .ExecuteDeleteAsync(cancellationToken);
+                db.UserActivityEvents.AddRange(data.Events.Select(record => ToEventEntity(userId, record, importIds)));
+
+                var prefsRestored = false;
+                var notifRestored = false;
+                var user = await db.Users.FirstOrDefaultAsync(x => x.Id == userId, cancellationToken)
+                    ?? throw new InvalidOperationException("Sign in required.");
+
+                if (data.Preferences is not null)
+                {
+                    user.UserPreferences = AiPreferencesPrivacy.ApplyWrite(
+                        data.Preferences,
+                        user.UserPreferences,
+                        apiKeyProtector);
+                    prefsRestored = true;
+                }
+
+                if (data.NotificationSettings is not null)
+                {
+                    user.NotificationSettings = data.NotificationSettings;
+                    notifRestored = true;
+                }
+
+                await db.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+
+                result = new UserDataImportResult(data.Items.Count, data.Events.Count, prefsRestored, notifRestored);
             }
-            else
+            catch
             {
-                ApplyToEntity(existing, entry, now);
+                try
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                }
+                catch
+                {
+                    // Keep the original import failure. Dispose still rolls back.
+                }
+
+                throw;
             }
-        }
+        });
 
-        await dbContext.UserActivityEvents
-            .Where(x => x.UserId == userId)
-            .ExecuteDeleteAsync(cancellationToken);
-        dbContext.UserActivityEvents.AddRange(data.Events.Select(record => ToEventEntity(userId, record, importIds)));
-
-        var prefsRestored = false;
-        var notifRestored = false;
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId, cancellationToken)
-            ?? throw new InvalidOperationException("Sign in required.");
-
-        if (data.Preferences is not null)
-        {
-            user.UserPreferences = data.Preferences.Normalize();
-            prefsRestored = true;
-        }
-
-        if (data.NotificationSettings is not null)
-        {
-            user.NotificationSettings = data.NotificationSettings;
-            notifRestored = true;
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
         snapshotCache.Invalidate(userId);
         streakCache.Invalidate(userId);
         await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
-        return new UserDataImportResult(data.Items.Count, data.Events.Count, prefsRestored, notifRestored);
+        return result;
     }
 
     private static BoardItemEntity ToEntity(Guid userId, BoardSyncItem entry, DateTimeOffset now)

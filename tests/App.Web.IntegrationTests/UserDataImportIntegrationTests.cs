@@ -119,6 +119,46 @@ public sealed class UserDataImportIntegrationTests(PostgresWebAppFactory factory
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    [Fact]
+    public async Task Import_Failure_After_Tombstone_And_Activity_Delete_Rolls_Back()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (token, _) = await RegisterAndLoginAsync(client);
+        var habitId = await CreateItemAsync(client, token, BoardSection.Habit, "Keep me");
+        await IncrementHabitAsync(client, token, habitId);
+        var export = await ExportAsync(client, token);
+        export.Events.Should().NotBeEmpty();
+
+        // The poisoned row holds a NUL character that PostgreSQL rejects when the
+        // batch is saved. Validation does not catch it, so the failure lands after
+        // the import has tombstoned the old item and deleted the activity log.
+        var poisoned = new BoardItem(Guid.NewGuid(), "Broken row") { Notes = "bad\u0000value" };
+        var payload = new UserDataExportDto(
+            DateTimeOffset.UtcNow,
+            [new BoardSyncItem(BoardSection.Todo, poisoned)],
+            [],
+            export.Preferences,
+            export.NotificationSettings,
+            export.ExportedForLocalDay);
+
+        try
+        {
+            var res = await ImportRawAsync(client, token, JsonSerializer.Serialize(payload, s_json));
+            res.IsSuccessStatusCode.Should().BeFalse("the import must fail after the poisoned save");
+        }
+        catch (Exception)
+        {
+            // The test host surfaces unhandled endpoint exceptions instead of a 500.
+        }
+
+        var snapshot = await GetSnapshotAsync(client, token);
+        snapshot.Habits.Should().ContainSingle(h => h.Id == habitId);
+        snapshot.Todos.Should().NotContain(t => t.Id == poisoned.Id);
+
+        var reexport = await ExportAsync(client, token);
+        reexport.Events.Should().HaveCount(export.Events.Count);
+    }
+
     private static async Task<Guid> CreateItemAsync(HttpClient client, string token, BoardSection section, string title)
     {
         using var req = new HttpRequestMessage(HttpMethod.Post, $"/api/board/{section}");

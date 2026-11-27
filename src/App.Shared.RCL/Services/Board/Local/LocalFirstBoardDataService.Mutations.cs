@@ -19,9 +19,12 @@ public sealed partial class LocalFirstBoardDataService
                     ? new(id, ZalgoSanitizer.SanitizeAndTrim(title), CreatedAtUtc: now, SortOrder: sortOrder,
                         HabitPeriodStart: HabitResetSchedule.PeriodStartFor(today, HabitResetPeriod.Daily))
                     : new(id, ZalgoSanitizer.SanitizeAndTrim(title), CreatedAtUtc: now, SortOrder: sortOrder);
-                await local.UpsertItemAsync(BoardLocalRow.FromModel(section, userKey, item, true), cancellationToken);
                 CreateOutboxPayload payload = new(section, item.Title, id);
-                await EnqueueStaticAsync(local, userKey, BoardOutboxOperationKind.Create, payload, cancellationToken);
+                await local.ApplyItemMutationAsync(
+                    BoardLocalRow.FromModel(section, userKey, item, true),
+                    deleteItem: false,
+                    BuildOutboxEntry(userKey, BoardOutboxOperationKind.Create, payload),
+                    cancellationToken);
                 return item;
             },
             cancellationToken);
@@ -375,16 +378,11 @@ public sealed partial class LocalFirstBoardDataService
 
         var expected = row.ServerUpdatedAtUtc;
         await mutate(row);
-        if (deleteAfterSave)
-        {
-            await local.DeleteItemAsync(userKey, row.Id, cancellationToken);
-        }
-        else
-        {
-            await local.UpsertItemAsync(row, cancellationToken);
-        }
-
-        await EnqueueStaticAsync(local, userKey, op.Kind, op.PayloadFactory(row, expected), cancellationToken);
+        await local.ApplyItemMutationAsync(
+            row,
+            deleteAfterSave,
+            BuildOutboxEntry(userKey, op.Kind, op.PayloadFactory(row, expected)),
+            cancellationToken);
         return row.ToModel();
     }
 

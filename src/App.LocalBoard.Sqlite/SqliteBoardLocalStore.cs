@@ -12,6 +12,12 @@ public sealed class SqliteBoardLocalStore(
     IDbContextFactory<LocalBoardDbContext> dbFactory,
     ILogger<SqliteBoardLocalStore> logger) : IBoardLocalStore, IDisposable
 {
+    /// <summary>Bump when <see cref="EnsureSqliteBoardColumnsAsync" /> gains a migration step.</summary>
+    internal const int CurrentSchemaVersion = 1;
+
+    // PRAGMA does not accept parameters. Keep this in sync with CurrentSchemaVersion.
+    private const string SetSchemaVersionSql = "PRAGMA user_version = 1;";
+
     private readonly SemaphoreSlim _schemaLock = new(1, 1);
     private volatile bool _schemaReady;
 
@@ -122,6 +128,15 @@ public sealed class SqliteBoardLocalStore(
     public async Task UpsertItemAsync(BoardLocalRow row, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        await UpsertItemCoreAsync(db, row, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static async Task UpsertItemCoreAsync(
+        LocalBoardDbContext db,
+        BoardLocalRow row,
+        CancellationToken cancellationToken)
+    {
         var existing = await db.BoardItems.FirstOrDefaultAsync(x => x.Id == row.Id && x.UserKey == row.UserKey, cancellationToken);
         if (existing is null)
         {
@@ -140,8 +155,6 @@ public sealed class SqliteBoardLocalStore(
             existing.CopyFrom(ToRow(row));
             existing.AwaitingServerCreate = row.AwaitingServerCreate;
         }
-
-        await db.SaveChangesAsync(cancellationToken);
     }
 
     public async Task DeleteItemAsync(string userKey, Guid id, CancellationToken cancellationToken = default)
@@ -270,6 +283,46 @@ public sealed class SqliteBoardLocalStore(
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         db.Outbox.Add(ToRow(entry));
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task ApplyItemMutationAsync(
+        BoardLocalRow row,
+        bool deleteItem,
+        BoardOutboxEntry entry,
+        CancellationToken cancellationToken = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            if (deleteItem)
+            {
+                await db.BoardItems
+                    .Where(x => x.UserKey == row.UserKey && x.Id == row.Id)
+                    .ExecuteDeleteAsync(cancellationToken);
+            }
+            else
+            {
+                await UpsertItemCoreAsync(db, row, cancellationToken);
+            }
+
+            db.Outbox.Add(ToRow(entry));
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            try
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+            catch
+            {
+                // Keep the original failure. Dispose still rolls back.
+            }
+
+            throw;
+        }
     }
 
     public async Task UpdateOutboxAsync(BoardOutboxEntry entry, CancellationToken cancellationToken = default)
@@ -431,60 +484,90 @@ public sealed class SqliteBoardLocalStore(
 
     private static async Task EnsureSqliteBoardColumnsAsync(LocalBoardDbContext db, CancellationToken cancellationToken)
     {
-        var boardColumns = await GetTableColumnsAsync(db, "BoardItems", cancellationToken);
-        var metaColumns = await GetTableColumnsAsync(db, "Meta", cancellationToken);
-
-        (string Column, string Ddl)[] boardMigrations =
-        [
-            ("ServerUpdatedAtUtc", "ALTER TABLE BoardItems ADD COLUMN ServerUpdatedAtUtc TEXT NULL;"),
-            ("CreatedAtUtc", "ALTER TABLE BoardItems ADD COLUMN CreatedAtUtc TEXT NULL;"),
-            ("IsArchived", "ALTER TABLE BoardItems ADD COLUMN IsArchived INTEGER NOT NULL DEFAULT 0;"),
-            ("HabitPeriodStart", "ALTER TABLE BoardItems ADD COLUMN HabitPeriodStart TEXT NULL;"),
-            ("DailyWeekdays", "ALTER TABLE BoardItems ADD COLUMN DailyWeekdays INTEGER NOT NULL DEFAULT 0;"),
-            ("DailyPostponedUntil", "ALTER TABLE BoardItems ADD COLUMN DailyPostponedUntil TEXT NULL;"),
-            ("DailyPostponedFrom", "ALTER TABLE BoardItems ADD COLUMN DailyPostponedFrom TEXT NULL;"),
-            ("TargetCount", "ALTER TABLE BoardItems ADD COLUMN TargetCount INTEGER NULL;"),
-            ("DailySkippedOn", "ALTER TABLE BoardItems ADD COLUMN DailySkippedOn TEXT NULL;")
-        ];
-
-        foreach (var (column, ddl) in boardMigrations)
+        var schemaVersion = await GetSchemaVersionAsync(db, cancellationToken);
+        if (schemaVersion < CurrentSchemaVersion)
         {
-            if (!boardColumns.Contains(column))
+            var boardColumns = await GetTableColumnsAsync(db, "BoardItems", cancellationToken);
+            var metaColumns = await GetTableColumnsAsync(db, "Meta", cancellationToken);
+
+            (string Column, string Ddl)[] boardMigrations =
+            [
+                ("ServerUpdatedAtUtc", "ALTER TABLE BoardItems ADD COLUMN ServerUpdatedAtUtc TEXT NULL;"),
+                ("CreatedAtUtc", "ALTER TABLE BoardItems ADD COLUMN CreatedAtUtc TEXT NULL;"),
+                ("IsArchived", "ALTER TABLE BoardItems ADD COLUMN IsArchived INTEGER NOT NULL DEFAULT 0;"),
+                ("HabitPeriodStart", "ALTER TABLE BoardItems ADD COLUMN HabitPeriodStart TEXT NULL;"),
+                ("DailyWeekdays", "ALTER TABLE BoardItems ADD COLUMN DailyWeekdays INTEGER NOT NULL DEFAULT 0;"),
+                ("DailyPostponedUntil", "ALTER TABLE BoardItems ADD COLUMN DailyPostponedUntil TEXT NULL;"),
+                ("DailyPostponedFrom", "ALTER TABLE BoardItems ADD COLUMN DailyPostponedFrom TEXT NULL;"),
+                ("TargetCount", "ALTER TABLE BoardItems ADD COLUMN TargetCount INTEGER NULL;"),
+                ("DailySkippedOn", "ALTER TABLE BoardItems ADD COLUMN DailySkippedOn TEXT NULL;")
+            ];
+
+            foreach (var (column, ddl) in boardMigrations)
             {
-                await db.Database.ExecuteSqlRawAsync(ddl, cancellationToken);
+                if (!boardColumns.Contains(column))
+                {
+                    await db.Database.ExecuteSqlRawAsync(ddl, cancellationToken);
+                }
+            }
+
+            if (!boardColumns.Contains("SortOrder"))
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE BoardItems ADD COLUMN SortOrder REAL NULL;",
+                    cancellationToken);
+                await db.Database.ExecuteSqlRawAsync(
+                    "UPDATE BoardItems SET SortOrder = rowid WHERE SortOrder IS NULL;",
+                    cancellationToken);
+            }
+
+            if (!metaColumns.Contains("LastSyncCursorUtc"))
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE Meta ADD COLUMN LastSyncCursorUtc TEXT NULL;",
+                    cancellationToken);
+            }
+
+            if (!metaColumns.Contains("LastFullMirrorUtc"))
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE Meta ADD COLUMN LastFullMirrorUtc TEXT NULL;",
+                    cancellationToken);
             }
         }
 
-        if (!boardColumns.Contains("SortOrder"))
-        {
-            await db.Database.ExecuteSqlRawAsync(
-                "ALTER TABLE BoardItems ADD COLUMN SortOrder REAL NULL;",
-                cancellationToken);
-            await db.Database.ExecuteSqlRawAsync(
-                "UPDATE BoardItems SET SortOrder = rowid WHERE SortOrder IS NULL;",
-                cancellationToken);
-        }
-
-        if (!metaColumns.Contains("LastSyncCursorUtc"))
-        {
-            await db.Database.ExecuteSqlRawAsync(
-                "ALTER TABLE Meta ADD COLUMN LastSyncCursorUtc TEXT NULL;",
-                cancellationToken);
-        }
-
-        if (!metaColumns.Contains("LastFullMirrorUtc"))
-        {
-            await db.Database.ExecuteSqlRawAsync(
-                "ALTER TABLE Meta ADD COLUMN LastFullMirrorUtc TEXT NULL;",
-                cancellationToken);
-        }
-
+        // Indexes are idempotent and cheap. Keep them outside the version gate so
+        // a database restored from an odd state still gets the expected indexes.
         await db.Database.ExecuteSqlRawAsync(
             "CREATE INDEX IF NOT EXISTS IX_BoardItems_UserKey_Section ON BoardItems (UserKey, Section);",
             cancellationToken);
+        // Older builds created a second index over the same columns under a
+        // different name. Drop it before ensuring the model index exists.
         await db.Database.ExecuteSqlRawAsync(
-            "CREATE INDEX IF NOT EXISTS IX_Outbox_UserKey_Created ON Outbox (UserKey, CreatedAtUtc);",
+            "DROP INDEX IF EXISTS IX_Outbox_UserKey_Created;",
             cancellationToken);
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS IX_Outbox_UserKey_CreatedAtUtc ON Outbox (UserKey, CreatedAtUtc);",
+            cancellationToken);
+
+        if (schemaVersion < CurrentSchemaVersion)
+        {
+            await db.Database.ExecuteSqlRawAsync(SetSchemaVersionSql, cancellationToken);
+        }
+    }
+
+    private static async Task<int> GetSchemaVersionAsync(LocalBoardDbContext db, CancellationToken cancellationToken)
+    {
+        var connection = db.Database.GetDbConnection();
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = "PRAGMA user_version;";
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        var value = await cmd.ExecuteScalarAsync(cancellationToken);
+        return value is null ? 0 : Convert.ToInt32(value, System.Globalization.CultureInfo.InvariantCulture);
     }
 
     private static IEnumerable<IReadOnlyList<T>> Chunk<T>(IReadOnlyList<T> source, int size)

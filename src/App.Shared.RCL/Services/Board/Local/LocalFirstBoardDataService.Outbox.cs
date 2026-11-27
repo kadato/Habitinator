@@ -1260,18 +1260,16 @@ public sealed partial class LocalFirstBoardDataService
         }
     }
 
-    private static async Task EnqueueStaticAsync<T>(IBoardLocalStore local, string userKey, BoardOutboxOperationKind kind, T payload, CancellationToken cancellationToken)
+    private static BoardOutboxEntry BuildOutboxEntry<T>(string userKey, BoardOutboxOperationKind kind, T payload)
     {
-        await local.EnqueueOutboxAsync(
-            new BoardOutboxEntry
-            {
-                OperationId = Guid.NewGuid(),
-                UserKey = userKey,
-                Kind = kind,
-                PayloadJson = System.Text.Json.JsonSerializer.Serialize(payload, BoardOutboxJson.Options),
-                CreatedAtUtc = DateTime.UtcNow
-            },
-            cancellationToken);
+        return new BoardOutboxEntry
+        {
+            OperationId = Guid.NewGuid(),
+            UserKey = userKey,
+            Kind = kind,
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(payload, BoardOutboxJson.Options),
+            CreatedAtUtc = DateTime.UtcNow
+        };
     }
 
     private async Task<bool> TryCoalesceDeletePendingCreateAsync(IBoardLocalStore local, string userKey, Guid itemId,

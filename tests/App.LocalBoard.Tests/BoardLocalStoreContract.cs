@@ -312,6 +312,31 @@ public abstract class BoardLocalStoreContract : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ApplyItemMutation_WritesItemAndOutbox()
+    {
+        var id = Guid.NewGuid();
+        var entry = Entry("alice");
+
+        await Store.ApplyItemMutationAsync(Row("alice", id), deleteItem: false, entry);
+
+        (await Store.FindItemAsync("alice", id)).Should().NotBeNull();
+        (await Store.FindOutboxAsync(entry.OperationId)).Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ApplyItemMutation_DeletesItemAndWritesOutbox()
+    {
+        var id = Guid.NewGuid();
+        await Store.UpsertItemAsync(Row("alice", id));
+        var entry = Entry("alice");
+
+        await Store.ApplyItemMutationAsync(Row("alice", id), deleteItem: true, entry);
+
+        (await Store.FindItemAsync("alice", id)).Should().BeNull();
+        (await Store.FindOutboxAsync(entry.OperationId)).Should().NotBeNull();
+    }
+
+    [Fact]
     public async Task Flush_AfterWrites_KeepsState()
     {
         var id = Guid.NewGuid();

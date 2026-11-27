@@ -15,4 +15,8 @@
     <ProjectReference Include="..\App.Shared.RCL\App.Shared.RCL.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="App.LocalBoard.Tests" />
+  </ItemGroup>
+
 </Project>

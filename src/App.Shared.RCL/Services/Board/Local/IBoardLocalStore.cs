@@ -52,6 +52,29 @@ public interface IBoardLocalStore
 
     Task EnqueueOutboxAsync(BoardOutboxEntry entry, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Applies a local item change and enqueues its outbox operation. A store that
+    ///     persists should override this to commit both writes in one transaction, so a
+    ///     crash cannot leave a changed row without the operation that syncs it.
+    /// </summary>
+    async Task ApplyItemMutationAsync(
+        BoardLocalRow row,
+        bool deleteItem,
+        BoardOutboxEntry entry,
+        CancellationToken cancellationToken = default)
+    {
+        if (deleteItem)
+        {
+            await DeleteItemAsync(row.UserKey, row.Id, cancellationToken);
+        }
+        else
+        {
+            await UpsertItemAsync(row, cancellationToken);
+        }
+
+        await EnqueueOutboxAsync(entry, cancellationToken);
+    }
+
     Task UpdateOutboxAsync(BoardOutboxEntry entry, CancellationToken cancellationToken = default);
 
     Task DeleteOutboxAsync(Guid operationId, CancellationToken cancellationToken = default);

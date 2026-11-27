@@ -30,7 +30,9 @@ internal static class AuthApiRoutes
         endpoints.MapPost("/api/auth/register", RegisterAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapPost("/api/auth/register-form", RegisterFormAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapPost("/api/auth/forgot-password", ForgotPasswordAsync).DisableAntiforgery().RequireRateLimiting("auth");
+        endpoints.MapPost("/api/auth/forgot-password-form", ForgotPasswordFormAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapPost("/api/auth/reset-password", ResetPasswordAsync).DisableAntiforgery().RequireRateLimiting("auth");
+        endpoints.MapPost("/api/auth/reset-password-form", ResetPasswordFormAsync).DisableAntiforgery().RequireRateLimiting("auth");
     }
 
     private static void MapLoginEndpoints(this IEndpointRouteBuilder endpoints)
@@ -107,37 +109,98 @@ internal static class AuthApiRoutes
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var user = await userManager.FindByEmailAsync(request.Email);
+        await SendPasswordResetAsync(request.Email, httpContext, userManager, emailSender, cancellationToken);
+        return Results.Ok(new { message = "If an account exists for this email, the server sent a reset link." });
+    }
+
+    private static async Task<IResult> ForgotPasswordFormAsync(
+        HttpContext httpContext,
+        UserManager<ApplicationUser> userManager,
+        IEmailSender emailSender,
+        CancellationToken cancellationToken)
+    {
+        var form = await httpContext.Request.ReadFormAsync(cancellationToken);
+        var email = form["Email"].ToString().Trim();
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return Results.LocalRedirect("/auth/forgot-password?error=1");
+        }
+
+        await SendPasswordResetAsync(email, httpContext, userManager, emailSender, cancellationToken);
+        return Results.LocalRedirect("/auth/forgot-password?sent=1");
+    }
+
+    private static async Task SendPasswordResetAsync(
+        string email,
+        HttpContext httpContext,
+        UserManager<ApplicationUser> userManager,
+        IEmailSender emailSender,
+        CancellationToken cancellationToken)
+    {
+        var user = await userManager.FindByEmailAsync(email);
         if (user is null || string.IsNullOrWhiteSpace(user.Email))
         {
             // Same work as the real branch so unknown emails cannot be enumerated by timing.
-            RunDummyPasswordCheck(request.Email);
-            return Results.Ok(new { message = "If an account exists for this email, the server sent a reset link." });
+            RunDummyPasswordCheck(email);
+            return;
         }
 
         var token = await userManager.GeneratePasswordResetTokenAsync(user);
         var resetLink = BuildResetLink(httpContext, user.Email, token);
         await emailSender.SendPasswordResetAsync(user.Email, resetLink, cancellationToken);
-        return Results.Ok(new { message = "If an account exists for this email, the server sent a reset link." });
     }
 
     private static async Task<IResult> ResetPasswordAsync(
         ResetPasswordRequest request,
         UserManager<ApplicationUser> userManager)
     {
-        var user = await userManager.FindByEmailAsync(request.Email);
-        if (user is null)
-        {
-            return Results.BadRequest(new { detail = "Invalid reset link. Request a new one." });
-        }
-
-        var result = await userManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
+        var result = await ResetPasswordCoreAsync(request.Email, request.Token, request.NewPassword, userManager);
         if (!result.Succeeded)
         {
             return Results.BadRequest(new { detail = "Invalid reset link. Request a new one." });
         }
 
         return Results.Ok(new { message = "Password has been reset. Sign in with your new password." });
+    }
+
+    private static async Task<IResult> ResetPasswordFormAsync(
+        HttpContext httpContext,
+        UserManager<ApplicationUser> userManager,
+        CancellationToken cancellationToken)
+    {
+        var form = await httpContext.Request.ReadFormAsync(cancellationToken);
+        var email = form["Email"].ToString().Trim();
+        var token = form["Token"].ToString();
+        var password = form["NewPassword"].ToString();
+
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(token) || password.Length < 8)
+        {
+            return Results.LocalRedirect("/auth/reset-password?error=1");
+        }
+
+        var result = await ResetPasswordCoreAsync(email, token, password, userManager);
+        if (!result.Succeeded)
+        {
+            return Results.LocalRedirect(
+                $"/auth/reset-password?error=1&email={Uri.EscapeDataString(email)}");
+        }
+
+        return Results.LocalRedirect("/auth/login?reset=1");
+    }
+
+    private static async Task<IdentityResult> ResetPasswordCoreAsync(
+        string email,
+        string token,
+        string newPassword,
+        UserManager<ApplicationUser> userManager)
+    {
+        var user = await userManager.FindByEmailAsync(email);
+        if (user is null)
+        {
+            return IdentityResult.Failed(new IdentityError { Description = "Invalid reset link." });
+        }
+
+        return await userManager.ResetPasswordAsync(user, token, newPassword);
     }
 
     private static string BuildResetLink(HttpContext httpContext, string email, string token)

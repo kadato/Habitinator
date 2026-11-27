@@ -7,6 +7,8 @@ public sealed class SameOriginCsrfMiddleware(RequestDelegate next, IWebHostEnvir
         "/api/auth/cookie-login",
         "/api/auth/guest-login",
         "/api/auth/register-form",
+        "/api/auth/forgot-password-form",
+        "/api/auth/reset-password-form",
         "/api/auth/cookie-logout",
         "/api/account/change-password",
         "/api/account/delete",

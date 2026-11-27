@@ -13,6 +13,7 @@
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 @inject IBoardSyncStatus BoardSync
+@inject IClientSessionProvider Session
 
 <MudDrawer @bind-Open="UiSessionState.IsAiDrawerOpen"
            Anchor="@DrawerAnchor"
@@ -23,6 +24,7 @@
            Class="ai-assistant-drawer"
            ClipMode="DrawerClipMode.Never">
     <div class="ai-drawer-container d-flex flex-column h-100" role="dialog" aria-modal="true" aria-label="AI assistant" tabindex="-1" @onkeydown="OnDrawerKeyDown">
+        <div class="hab-visually-hidden" role="status" aria-live="polite">@_announcement</div>
         <div class="ai-drawer-grabber" aria-hidden="true"></div>
         <div class="ai-drawer-header px-3 py-2 d-flex align-center justify-space-between gap-1" @ref="_sheetHeaderRef">
             <div class="d-flex align-center gap-2 min-w-0 flex-shrink-1 flex-grow-1 ai-header-main">
@@ -525,6 +527,7 @@
     private readonly List<MentionItem> _mentionItems = [];
     private BoardSnapshot? _boardSnapshot;
     private string _inputText = string.Empty;
+    private string _announcement = string.Empty;
     private string? _activeModel;
     private bool _isSending;
     private bool _isStreaming;
@@ -544,15 +547,41 @@
     /// <summary>True after the drawer reads stored threads from the interactive runtime. The drawer retries while storage stays unreachable.</summary>
     private bool _threadsRestored;
 
+    /// <summary>Per-user storage key. A shared browser must not show one account's chats to another.</summary>
+    private string _threadsStorageKey = AiChatStorage.StorageKey(null);
+
     private Anchor DrawerAnchor => _isPhoneSheet ? Anchor.Bottom : Anchor.Right;
 
     protected override async Task OnInitializedAsync()
     {
         await UserDay.InitializeAsync();
         UiSessionState.OnAiDrawerChanged += HandleDrawerChanged;
+        Session.Changed += OnSessionChanged;
+        _threadsStorageKey = AiChatStorage.StorageKey(Session.Email);
         await LoadPreferencesAsync();
         await LoadThreadsAsync();
         EnsureThread();
+    }
+
+    private void OnSessionChanged(object? sender, EventArgs e)
+    {
+        var key = AiChatStorage.StorageKey(Session.Email);
+        if (string.Equals(key, _threadsStorageKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _threadsStorageKey = key;
+        _threads.Clear();
+        _threadsRestored = false;
+        _bootGreetingId = null;
+        _activeThreadId = string.Empty;
+        _ = InvokeAsync(async () =>
+        {
+            EnsureThread();
+            await RestoreThreadsAfterBootAsync();
+            StateHasChanged();
+        });
     }
 
     private void EnsureThread()
@@ -769,7 +798,7 @@
     {
         try
         {
-            var json = await JS.InvokeAsync<string?>("localStorage.getItem", CancellationToken.None, new object?[] { "habitinator-ai-threads" });
+            var json = await JS.InvokeAsync<string?>("localStorage.getItem", CancellationToken.None, new object?[] { _threadsStorageKey });
             if (!string.IsNullOrWhiteSpace(json))
             {
                 var stored = await Task.Run(() => JsonSerializer.Deserialize<List<StoredThread>>(json, ThreadJsonOptions));
@@ -842,7 +871,7 @@
             var json = await Task.Run(() => JsonSerializer.Serialize(stored, ThreadJsonOptions));
             if (json.Length < 400000)
             {
-                await JS.InvokeVoidAsync("localStorage.setItem", CancellationToken.None, new object?[] { "habitinator-ai-threads", json });
+                await JS.InvokeVoidAsync("localStorage.setItem", CancellationToken.None, new object?[] { _threadsStorageKey, json });
             }
         }
         catch
@@ -1110,7 +1139,7 @@
         {
             _inputText = string.Empty;
             ActiveEntries.Add(new ChatEntry { Message = AiChatMessage.User(raw) });
-            ActiveEntries.Add(new ChatEntry { Message = AiChatMessage.Assistant("Try /plan, /review, /suggest, /retro, or /timer. Use @@ to mention a board item by title.", _activeModel) });
+            ActiveEntries.Add(new ChatEntry { Message = AiChatMessage.Assistant("Try /plan, /review, /suggest, /retro, or /timer. Use @ to mention a board item by title.", _activeModel) });
             await PersistThreadsAsync();
             StateHasChanged();
             await ScrollToBottomAsync();
@@ -1161,6 +1190,7 @@
                 if (evt.Type == "tool_end" && evt.ToolExecution is not null)
                 {
                     assistantEntry.Tools.Add(evt.ToolExecution);
+                    _announcement = $"Board action finished: {evt.ToolExecution.ToolName}.";
                     if (!refreshedBoard)
                     {
                         refreshedBoard = true;
@@ -1180,11 +1210,14 @@
                     {
                         assistantEntry.Message.Model = evt.Model;
                     }
+
+                    _announcement = "Assistant reply ready.";
                 }
                 else if (evt.Type == "error")
                 {
                     var errorMsg = evt.Error ?? "Failed to receive response from AI provider.";
                     assistantEntry.Message.Content = $"⚠️ {errorMsg}";
+                    _announcement = errorMsg;
                     Snackbar.Add(errorMsg, Severity.Error);
                 }
             }
@@ -1203,6 +1236,7 @@
         catch (Exception ex)
         {
             assistantEntry.Message.Content = $"⚠️ Request failed: {ex.Message}";
+            _announcement = "Assistant request failed.";
             Snackbar.Add(ex.Message, Severity.Error);
         }
         finally
@@ -1503,6 +1537,7 @@
         }
 
         UiSessionState.OnAiDrawerChanged -= HandleDrawerChanged;
+        Session.Changed -= OnSessionChanged;
         _streamCts?.Cancel();
         _streamCts?.Dispose();
         try

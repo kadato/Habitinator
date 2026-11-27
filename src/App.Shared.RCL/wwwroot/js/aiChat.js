@@ -189,3 +189,13 @@ globalThis.HabitinatorAiChat = {
         } catch (ignored) { /* dismiss is best effort */ }
     }
 };
+
+// Removes the per-user chat history key and the legacy global key on logout.
+globalThis.habitinatorClearAiChatStorage = function (key) {
+    try {
+        if (key) {
+            localStorage.removeItem(key);
+        }
+        localStorage.removeItem("habitinator-ai-threads");
+    } catch (ignored) { /* storage may be unavailable */ }
+};

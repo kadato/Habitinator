@@ -150,6 +150,7 @@
     private async Task TriggerLogout()
     {
         await ClearLocalBoardAsync();
+        await ClearAiChatAsync();
         await JS.InvokeVoidAsync("habitinatorSubmitForm", "globalLogoutForm");
     }
 
@@ -162,6 +163,21 @@
         catch
         {
             // Never block logout on a local wipe failure.
+        }
+    }
+
+    private async Task ClearAiChatAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/aiChat.js");
+            await JS.InvokeVoidAsync(
+                "habitinatorClearAiChatStorage",
+                AiChatStorage.StorageKey(SessionProvider.Email));
+        }
+        catch
+        {
+            // Never block logout on a chat history wipe failure.
         }
     }
 

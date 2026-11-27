@@ -6,6 +6,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
 @inject BoardUiSessionState UiSessionState
+@inject IJSRuntime JS
 
 <PageTitle>@PageTitles.Page("Settings")</PageTitle>
 
@@ -122,7 +123,23 @@
         // public path. Clearing the session here fires the guard while the current path is still
         // /settings, which would redirect to the sign-in page instead of the welcome page.
         Nav.NavigateTo("/");
+        await ClearAiChatAsync();
         await Session.ClearSessionAsync();
+    }
+
+    private async Task ClearAiChatAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/aiChat.js");
+            await JS.InvokeVoidAsync(
+                "habitinatorClearAiChatStorage",
+                AiChatStorage.StorageKey(Session.Email));
+        }
+        catch
+        {
+            // Never block logout on a chat history wipe failure.
+        }
     }
 
     private async Task CheckForUpdatesAsync()

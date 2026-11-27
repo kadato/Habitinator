@@ -25,6 +25,7 @@ public sealed class AiAssistantDrawerLayoutTests : IAsyncDisposable
     private readonly IBoardDataService _boardData = Substitute.For<IBoardDataService>();
     private readonly IRemoteBoardRefreshService _remoteRefresh = Substitute.For<IRemoteBoardRefreshService>();
     private readonly IBoardSyncStatus _boardSync = Substitute.For<IBoardSyncStatus>();
+    private readonly IClientSessionProvider _clientSession = Substitute.For<IClientSessionProvider>();
     private readonly BoardUiSessionState _sessionState = new();
 
     public AiAssistantDrawerLayoutTests()
@@ -39,6 +40,8 @@ public sealed class AiAssistantDrawerLayoutTests : IAsyncDisposable
         _ctx.Services.AddSingleton(_boardData);
         _ctx.Services.AddSingleton(_remoteRefresh);
         _ctx.Services.AddSingleton(_boardSync);
+        _ctx.Services.AddSingleton(_clientSession);
+        _clientSession.Email.Returns("drawer-tests@example.com");
 
         var prefs = UserPreferences.CreateDefault();
         prefs.Ai.Enabled = true;

@@ -44,10 +44,14 @@
         if (!target || !target.scrollIntoView) {
             return;
         }
+        var behavior = globalThis.matchMedia
+            && globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches
+            ? 'auto'
+            : 'smooth';
         // Let the browser move focus first, then nudge the field above the keyboard.
         setTimeout(function () {
             try {
-                target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                target.scrollIntoView({ block: 'nearest', behavior: behavior });
             } catch (e) {
                 try { target.scrollIntoView(false); } catch (ignored) { /* no-op */ }
             }

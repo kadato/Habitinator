@@ -48,7 +48,11 @@ globalThis.habitinatorScrollToBottom = function (elementId) {
         if (!el) {
             return false;
         }
-        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+        var behavior = globalThis.matchMedia
+            && globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches
+            ? 'auto'
+            : 'smooth';
+        el.scrollTo({ top: el.scrollHeight, behavior: behavior });
         return true;
     } catch {
         return false;

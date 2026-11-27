@@ -184,20 +184,26 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     return element.scrollHeight > element.clientHeight + 1;
   }
 
+  function scrollBehavior() {
+    return globalThis.matchMedia && globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ? 'auto'
+      : 'smooth';
+  }
+
   function scrollTargetElement(target, amount) {
     if (target === globalThis) {
-      globalThis.scrollBy({ top: amount, behavior: 'smooth' });
+      globalThis.scrollBy({ top: amount, behavior: scrollBehavior() });
     } else {
-      target.scrollBy({ top: amount, behavior: 'smooth' });
+      target.scrollBy({ top: amount, behavior: scrollBehavior() });
     }
   }
 
   function scrollToPosition(target, position) {
     if (target === globalThis) {
       const scrollingEl = document.scrollingElement || document.documentElement || document.body;
-      globalThis.scrollTo({ top: position === 'top' ? 0 : scrollingEl.scrollHeight, behavior: 'smooth' });
+      globalThis.scrollTo({ top: position === 'top' ? 0 : scrollingEl.scrollHeight, behavior: scrollBehavior() });
     } else {
-      target.scrollTo({ top: position === 'top' ? 0 : target.scrollHeight, behavior: 'smooth' });
+      target.scrollTo({ top: position === 'top' ? 0 : target.scrollHeight, behavior: scrollBehavior() });
     }
   }
 

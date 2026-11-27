@@ -128,3 +128,22 @@ function triggerSystemNotification(title, body, tag = "habitinator-focus") {
         });
     }
 }
+
+// Requests notification permission from a user gesture. Browsers reject
+// permission prompts raised from timer callbacks, so the settings page calls this.
+globalThis.habitinatorRequestNotificationPermission = function () {
+    if (typeof Notification === "undefined") {
+        return Promise.resolve(false);
+    }
+    if (Notification.permission === "granted") {
+        return Promise.resolve(true);
+    }
+    if (Notification.permission === "denied") {
+        return Promise.resolve(false);
+    }
+    return Notification.requestPermission().then(function (permission) {
+        return permission === "granted";
+    }).catch(function () {
+        return false;
+    });
+};

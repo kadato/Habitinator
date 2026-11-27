@@ -3,6 +3,7 @@ using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 
 using MudBlazor;
 
@@ -13,12 +14,37 @@ public partial class NotificationSettingsSection : IDisposable
     [Parameter]
     public bool ShowTitle { get; set; } = true;
 
+    /// <summary>
+    ///     True on hosts that can schedule a device notification. The web app cannot,
+    ///     so it hides the daily reminder instead of showing a control that does nothing.
+    /// </summary>
+    [Parameter]
+    public bool DeviceRemindersSupported { get; set; } = true;
+
     private NotificationSettings? _model;
     private TimeSpan? _dailyReminderTime;
     private TimeSpan? _quietStart;
     private TimeSpan? _quietEnd;
     private bool _loading = true;
     private string? _loadError;
+
+    private async Task RequestBrowserNotificationsAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/focusTimerAlert.js");
+            var granted = await JS.InvokeAsync<bool>("habitinatorRequestNotificationPermission");
+            await Notifier.NotifyAsync(
+                granted
+                    ? "Browser notifications are on."
+                    : "Browser notifications are blocked. Allow them in your browser site settings.",
+                granted ? Severity.Success : Severity.Warning);
+        }
+        catch (Exception)
+        {
+            await Notifier.NotifyAsync("Couldn't request browser notifications.", Severity.Warning);
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {

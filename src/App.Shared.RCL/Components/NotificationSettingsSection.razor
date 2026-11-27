@@ -2,6 +2,7 @@
 @inject IRemoteBoardRefreshService RemoteBoardRefresh
 @inject IUserNotifier Notifier
 @inject IUserTimeZoneService TimeZoneService
+@inject IJSRuntime JS
 @implements IDisposable
 
 <MudStack Spacing="3">
@@ -137,20 +138,39 @@
                 Reminders and system alerts.
             </MudText>
             <MudStack Spacing="2">
-                <MudSwitch T="bool"
-                           Color="Color.Primary"
-                           Value="_model.DailyReminderEnabled"
-                           ValueChanged="OnDailyReminderEnabledChanged"
-                           Label="Daily reminder"/>
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
-                    Daily due items.
-                </MudText>
-                <MudTimePicker Label="Daily reminder time"
-                               Time="_dailyReminderTime"
-                               TimeChanged="OnDailyReminderTimeChanged"
-                               Disabled="!_model.DailyReminderEnabled"
-                               TimeEditMode="TimeEditMode.Normal"
-                               Class="mb-1"/>
+                @if (DeviceRemindersSupported)
+                {
+                    <MudSwitch T="bool"
+                               Color="Color.Primary"
+                               Value="_model.DailyReminderEnabled"
+                               ValueChanged="OnDailyReminderEnabledChanged"
+                               Label="Daily reminder"/>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
+                        Nudge me at this time when dailies are still open.
+                    </MudText>
+                    <MudTimePicker Label="Daily reminder time"
+                                   Time="_dailyReminderTime"
+                                   TimeChanged="OnDailyReminderTimeChanged"
+                                   Disabled="!_model.DailyReminderEnabled"
+                                   TimeEditMode="TimeEditMode.Normal"
+                                   Class="mb-1"/>
+                }
+                else
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
+                        Daily reminders are sent by the Android and Windows apps. This browser cannot schedule them.
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">
+                        Browser notifications can still alert you when a focus timer ends.
+                    </MudText>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               Size="Size.Medium"
+                               Class="align-self-start text-transform-none"
+                               OnClick="RequestBrowserNotificationsAsync">
+                        Enable browser notifications
+                    </MudButton>
+                }
                 <MudDivider Class="my-2"/>
                 <MudSwitch T="bool"
                            Color="Color.Primary"

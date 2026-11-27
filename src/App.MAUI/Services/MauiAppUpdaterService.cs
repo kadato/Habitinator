@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text.Json.Serialization;
 
 using App.Shared.RCL.Services;
@@ -155,6 +156,10 @@ public sealed partial class MauiAppUpdaterService : IAppUpdaterService
         }
 #endif
 
+#if ANDROID || WINDOWS
+        await VerifyChecksumAsync(downloadUrl, localPath);
+#endif
+
         // 2. Launch Installer
 #if ANDROID
         var context = Platform.CurrentActivity ?? Android.App.Application.Context;
@@ -221,6 +226,67 @@ public sealed partial class MauiAppUpdaterService : IAppUpdaterService
 #else
         await Task.CompletedTask;
 #endif
+    }
+
+    /// <summary>
+    ///     Verifies the downloaded installer against the release's .sha256 asset.
+    ///     A missing or malformed checksum fails closed. Installing an unverified
+    ///     executable is worse than asking the user to download it manually.
+    /// </summary>
+    private async Task VerifyChecksumAsync(string downloadUrl, string localPath)
+    {
+        try
+        {
+            using var checksumResponse = await _httpClient.GetAsync(downloadUrl + ".sha256");
+            if (!checksumResponse.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException("The release has no checksum file. The update was discarded.");
+            }
+
+            var checksumText = await checksumResponse.Content.ReadAsStringAsync();
+            var token = checksumText
+                .Trim()
+                .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+                .FirstOrDefault();
+
+            if (token is null || token.Length != 64)
+            {
+                throw new InvalidOperationException("The update checksum file is malformed. The update was discarded.");
+            }
+
+            byte[] expected;
+            try
+            {
+                expected = Convert.FromHexString(token);
+            }
+            catch (FormatException)
+            {
+                throw new InvalidOperationException("The update checksum file is malformed. The update was discarded.");
+            }
+
+            await using var stream = File.OpenRead(localPath);
+            var actual = await SHA256.HashDataAsync(stream);
+            if (!CryptographicOperations.FixedTimeEquals(actual, expected))
+            {
+                throw new InvalidOperationException("The update checksum did not match. The download was discarded.");
+            }
+        }
+        catch
+        {
+            try
+            {
+                if (File.Exists(localPath))
+                {
+                    File.Delete(localPath);
+                }
+            }
+            catch
+            {
+                // Best effort cleanup.
+            }
+
+            throw;
+        }
     }
 
     private static (string DownloadUrl, string ExpectedAssetType) SelectPlatformAsset(GitHubRelease release)

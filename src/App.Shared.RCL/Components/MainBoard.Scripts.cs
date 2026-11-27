@@ -86,11 +86,19 @@ public partial class MainBoard
         }
     }
 
+    private string OnboardingStorageKey()
+    {
+        var email = ClientSession.Email?.Trim().ToLowerInvariant();
+        return string.IsNullOrWhiteSpace(email)
+            ? "habitinator-onboarding-dismissed:guest"
+            : $"habitinator-onboarding-dismissed:{email}";
+    }
+
     private async Task LoadOnboardingDismissedAsync()
     {
         try
         {
-            var value = await JS.InvokeAsync<string?>("localStorage.getItem", "habitinator-onboarding-dismissed");
+            var value = await JS.InvokeAsync<string?>("localStorage.getItem", OnboardingStorageKey());
             _onboardingDismissed = string.Equals(value, "1", StringComparison.Ordinal);
         }
         catch
@@ -109,7 +117,7 @@ public partial class MainBoard
         _onboardingDismissed = true;
         try
         {
-            await JS.InvokeVoidAsync("localStorage.setItem", "habitinator-onboarding-dismissed", "1");
+            await JS.InvokeVoidAsync("localStorage.setItem", OnboardingStorageKey(), "1");
         }
         catch
         {
@@ -290,13 +298,16 @@ public partial class MainBoard
             }
             catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or InvalidOperationException)
             {
-                _isMobileViewport = false;
-                _isPhoneViewport = false;
+                // Leave the viewport unknown. The board renders both branches and CSS
+                // picks one, so a failed probe cannot leave a phone with an empty board.
+                _isMobileViewport = null;
+                _isPhoneViewport = null;
             }
             await JS.InvokeVoidAsync("HabitinatorBoardViewport.watch", _selfRef);
-            if (_isMobileViewport is true)
+            if (_isMobileViewport is not null)
             {
-                // The pre-interactive render used the desktop branch. Mount the mobile branch now.
+                // The pre-interactive render used both branches. Collapse to the one
+                // that matches the viewport once the script answers.
                 await InvokeAsync(StateHasChanged);
             }
         }

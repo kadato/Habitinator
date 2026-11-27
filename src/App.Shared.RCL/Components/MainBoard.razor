@@ -302,7 +302,10 @@
                                   OnDismiss="OnboardingDismissAsync" />
         }
         <div class="board-columns-stage">
-            @if (_isMobileViewport.GetValueOrDefault())
+            @* Until the viewport script answers, render both branches. CSS hides the
+               wrong one, so phones never see an empty board during boot, and a failed
+               viewport script leaves a usable board instead of a blank page. *@
+            @if (_isMobileViewport is null || _isMobileViewport is true)
             {
                 <div class="board-columns-mobile" @ref="_swipeAreaRef">
                 <div class="board-section-switcher" role="tablist" aria-label="Board sections">
@@ -360,7 +363,7 @@
                 </div>
                 </div>
             }
-            else
+            @if (_isMobileViewport is null || _isMobileViewport is false)
             {
                 <div class="board-columns-desktop">
                     <MudGrid Spacing="2" Class="board-columns-grid w-100">
@@ -384,7 +387,7 @@
     {
         <span class="hab-visually-hidden" role="status">Loading board…</span>
         <div class="board-columns-stage" aria-hidden="true">
-            @if (_isMobileViewport.GetValueOrDefault())
+            @if (_isMobileViewport is null || _isMobileViewport is true)
             {
                 <div class="board-columns-mobile">
                     <div class="board-section-switcher" role="group" aria-label="Loading board sections" aria-busy="true">
@@ -404,7 +407,7 @@
                     <BoardColumnSkeleton Section="BoardSection.Habit" />
                 </div>
             }
-            else
+            @if (_isMobileViewport is null || _isMobileViewport is false)
             {
                 <div class="board-columns-desktop">
                     <MudGrid Spacing="2" Class="board-columns-grid w-100">

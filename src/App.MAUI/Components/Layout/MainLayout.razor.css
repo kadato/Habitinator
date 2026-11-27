@@ -70,13 +70,10 @@
     }
 }
 
-/* Phones use the fixed bottom tab bar. The MAUI top bar carries only
-   tabs, so it hides entirely (scoped rules win over global CSS). */
+/* Phones use the fixed bottom tab bar for navigation. Keep the compact
+   top bar visible because it carries the command palette, AI assistant,
+   and sync status. Without it those actions have no entry point on a phone. */
 @media (max-width: 767.98px) {
-    ::deep .app-top-bar.mud-appbar {
-        display: none !important;
-    }
-
     ::deep .app-mobile-nav {
         display: none !important;
     }

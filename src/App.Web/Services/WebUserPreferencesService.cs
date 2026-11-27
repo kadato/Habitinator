@@ -14,10 +14,12 @@ public sealed class WebUserPreferencesService(
     IBoardChangeNotifier boardChangeNotifier,
     IHttpContextAccessor httpContextAccessor,
     IUserTimeZoneService timeZone,
+    AiApiKeyProtector apiKeyProtector,
     ILogger<WebUserPreferencesService> logger) : IUserPreferencesService
 {
     private Guid? _cachedUserId;
     private UserPreferences? _cachedPreferences;
+    private bool _lastReadFailed;
 
     public event EventHandler? Changed;
 
@@ -31,6 +33,7 @@ public sealed class WebUserPreferencesService(
             {
                 _cachedUserId = null;
                 _cachedPreferences = null;
+                _lastReadFailed = false;
                 var guestPrefs = UserPreferences.CreateDefault();
                 ApplyThemeFromCookie(guestPrefs);
                 return guestPrefs;
@@ -38,7 +41,7 @@ public sealed class WebUserPreferencesService(
 
             if (_cachedUserId == userId && _cachedPreferences is not null)
             {
-                return _cachedPreferences;
+                return AiPreferencesPrivacy.MaskForClient(_cachedPreferences);
             }
 
             await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
@@ -53,7 +56,8 @@ public sealed class WebUserPreferencesService(
 
             _cachedUserId = userId;
             _cachedPreferences = prefs;
-            return prefs;
+            _lastReadFailed = false;
+            return AiPreferencesPrivacy.MaskForClient(prefs);
         }
         catch (OperationCanceledException)
         {
@@ -61,6 +65,9 @@ public sealed class WebUserPreferencesService(
         }
         catch (Exception ex)
         {
+            // The fallback keeps the UI usable, but a later save must not write
+            // these defaults over the user's real preferences.
+            _lastReadFailed = true;
             logger.LogWarning(ex, "Could not load user preferences; using defaults.");
             var fallbackPrefs = UserPreferences.CreateDefault();
             ApplyThemeFromCookie(fallbackPrefs);
@@ -91,6 +98,11 @@ public sealed class WebUserPreferencesService(
 
     public async Task SaveAsync(UserPreferences preferences, CancellationToken cancellationToken = default)
     {
+        if (_lastReadFailed)
+        {
+            throw new InvalidOperationException("Preferences couldn't be loaded. Reopen Settings and try again.");
+        }
+
         var state = await authenticationStateProvider.GetAuthenticationStateAsync();
         var userId = AuthenticatedUserId.TryGet(state.User);
         if (userId is null)
@@ -105,10 +117,11 @@ public sealed class WebUserPreferencesService(
             return;
         }
 
-        row.UserPreferences = preferences;
+        var saved = AiPreferencesPrivacy.ApplyWrite(preferences, row.UserPreferences, apiKeyProtector);
+        row.UserPreferences = saved;
         await db.SaveChangesAsync(cancellationToken);
         _cachedUserId = userId;
-        _cachedPreferences = preferences;
+        _cachedPreferences = saved;
         Changed?.Invoke(this, EventArgs.Empty);
         await boardChangeNotifier.NotifyBoardChangedAsync(userId.Value, cancellationToken);
     }

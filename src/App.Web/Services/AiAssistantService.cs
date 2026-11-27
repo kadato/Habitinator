@@ -1,11 +1,17 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
+using App.Web.Data;
+
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace App.Web.Services;
 
@@ -13,14 +19,30 @@ public sealed class AiAssistantService(
     BoardPersistenceService boards,
     ActivityStatisticsService stats,
     IHttpClientFactory httpFactory,
+    IWebHostEnvironment environment,
+    AiQuotaService quota,
+    IOptions<AiQuotaOptions> quotaOptions,
+    IOptions<DemoUserOptions> demoUserOptions,
+    IDbContextFactory<ApplicationDbContext> dbFactory,
     ILogger<AiAssistantService> logger)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     private const int MaxToolIterations = 5;
+    private const int MaxCreateItemsBatch = 50;
+    private const int MaxOutputTokens = 1024;
+
+    private static readonly HashSet<string> SharedKeyProviderHosts = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "opencode.ai",
+        "openrouter.ai",
+        "api.openai.com",
+        "api.groq.com"
+    };
 
     public async Task<AiTestConnectionResponse> TestConnectionAsync(
         AiTestConnectionRequest request,
+        Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Endpoint))
@@ -30,7 +52,31 @@ public sealed class AiAssistantService(
 
         var model = NormalizeModelName(request.Model);
         var endpoint = ResolveEndpoint(request.Endpoint, model);
-        var apiKey = ResolveApiKey(request.ApiKey, null);
+        var (apiKey, fromFallback) = ResolveApiKey(request.ApiKey, null);
+        if (!IsEndpointAllowed(endpoint, fromFallback, out var endpointError))
+        {
+            return new AiTestConnectionResponse { Success = false, Message = endpointError };
+        }
+
+        if (fromFallback && userId is { } sharedKeyUserId)
+        {
+            var isGuest = await IsDemoGuestAsync(sharedKeyUserId, cancellationToken);
+            if (isGuest && !quotaOptions.Value.AllowSharedKeyForGuests)
+            {
+                return new AiTestConnectionResponse
+                {
+                    Success = false,
+                    Message = "The shared AI key is not available in the demo. Add your own API key in Settings, under AI."
+                };
+            }
+
+            var quotaError = await quota.TryBeginRequestAsync(sharedKeyUserId, isGuest, cancellationToken);
+            if (quotaError is not null)
+            {
+                return new AiTestConnectionResponse { Success = false, Message = quotaError };
+            }
+        }
+
         var isResponses = IsResponsesProtocol(model, endpoint);
 
         JsonNode payload;
@@ -47,7 +93,8 @@ public sealed class AiAssistantService(
                         ["role"] = "user",
                         ["content"] = "Hello! Please reply with 'OK'."
                     }
-                }
+                },
+                ["max_output_tokens"] = 60
             };
         }
         else
@@ -130,14 +177,23 @@ public sealed class AiAssistantService(
         var endpoint = ResolveEndpoint(
             !string.IsNullOrWhiteSpace(request.EndpointOverride) ? request.EndpointOverride : preferences.Endpoint,
             model);
-        var apiKey = ResolveApiKey(request.ApiKeyOverride, preferences.ApiKey);
+        var (apiKey, fromFallback) = ResolveApiKey(request.ApiKeyOverride, preferences.ApiKey);
 
         if (string.IsNullOrWhiteSpace(endpoint))
         {
             return new AiChatResponse
             {
                 Success = false,
-                Error = "AI Assistant endpoint is not configured. Please open Settings -> AI Assistant."
+                Error = "AI Assistant endpoint is not configured. Open Settings and select AI Assistant."
+            };
+        }
+
+        if (!IsEndpointAllowed(endpoint, fromFallback, out var endpointError))
+        {
+            return new AiChatResponse
+            {
+                Success = false,
+                Error = endpointError
             };
         }
 
@@ -146,8 +202,31 @@ public sealed class AiAssistantService(
             return new AiChatResponse
             {
                 Success = false,
-                Error = "AI Assistant API key is not configured. Please open Settings -> AI Assistant to provide your API key or configure OPENCODE_API_KEY in the environment."
+                Error = "AI Assistant API key is not configured. Open Settings and select AI Assistant to provide your API key or configure OPENCODE_API_KEY in the environment."
             };
+        }
+
+        if (fromFallback)
+        {
+            var isGuest = await IsDemoGuestAsync(userId, cancellationToken);
+            if (isGuest && !quotaOptions.Value.AllowSharedKeyForGuests)
+            {
+                return new AiChatResponse
+                {
+                    Success = false,
+                    Error = "The shared AI key is not available in the demo. Add your own API key in Settings, under AI."
+                };
+            }
+
+            var quotaError = await quota.TryBeginRequestAsync(userId, isGuest, cancellationToken);
+            if (quotaError is not null)
+            {
+                return new AiChatResponse
+                {
+                    Success = false,
+                    Error = quotaError
+                };
+            }
         }
 
         var today = await boards.TodayAsync(userId, cancellationToken);
@@ -158,10 +237,10 @@ public sealed class AiAssistantService(
 
         if (IsResponsesProtocol(model, endpoint))
         {
-            return await ChatResponsesProtocolAsync(userId, model, endpoint, apiKey, systemInstructions, request, cancellationToken);
+            return await ChatResponsesProtocolAsync(userId, model, endpoint, apiKey, fromFallback, systemInstructions, request, cancellationToken);
         }
 
-        return await ChatCompletionsProtocolAsync(userId, model, endpoint, apiKey, systemInstructions, request, cancellationToken);
+        return await ChatCompletionsProtocolAsync(userId, model, endpoint, apiKey, fromFallback, systemInstructions, request, cancellationToken);
     }
 
     public async IAsyncEnumerable<AiChatStreamEvent> StreamChatAsync(
@@ -228,6 +307,7 @@ public sealed class AiAssistantService(
         string model,
         string endpoint,
         string apiKey,
+        bool sharedKey,
         string systemInstructions,
         AiChatRequest request,
         CancellationToken cancellationToken)
@@ -292,10 +372,11 @@ public sealed class AiAssistantService(
                 ["model"] = model,
                 ["instructions"] = systemInstructions,
                 ["input"] = inputArray.DeepClone(),
-                ["tools"] = toolsSchema.DeepClone()
+                ["tools"] = toolsSchema.DeepClone(),
+                ["max_output_tokens"] = MaxOutputTokens
             };
 
-            var (root, failure) = await PostProviderJsonAsync(client, endpoint, apiKey, requestBody, toolExecutions, cancellationToken);
+            var (root, failure) = await PostProviderJsonAsync(client, endpoint, apiKey, sharedKey, userId, requestBody, toolExecutions, cancellationToken);
             if (failure is not null)
             {
                 return failure;
@@ -424,6 +505,7 @@ public sealed class AiAssistantService(
         string model,
         string endpoint,
         string apiKey,
+        bool sharedKey,
         string systemInstructions,
         AiChatRequest request,
         CancellationToken cancellationToken)
@@ -485,10 +567,11 @@ public sealed class AiAssistantService(
                 ["model"] = model,
                 ["messages"] = messagesArray.DeepClone(),
                 ["tools"] = toolsSchema.DeepClone(),
-                ["temperature"] = 0.3
+                ["temperature"] = 0.3,
+                ["max_tokens"] = MaxOutputTokens
             };
 
-            var (root, failure) = await PostProviderJsonAsync(client, endpoint, apiKey, requestBody, toolExecutions, cancellationToken);
+            var (root, failure) = await PostProviderJsonAsync(client, endpoint, apiKey, sharedKey, userId, requestBody, toolExecutions, cancellationToken);
             if (failure is not null)
             {
                 return failure;
@@ -607,6 +690,8 @@ public sealed class AiAssistantService(
         HttpClient client,
         string endpoint,
         string apiKey,
+        bool sharedKey,
+        Guid userId,
         JsonObject requestBody,
         List<AiToolExecution> toolExecutions,
         CancellationToken cancellationToken)
@@ -645,7 +730,14 @@ public sealed class AiAssistantService(
 
         try
         {
-            return (JsonNode.Parse(responseJson), null);
+            var root = JsonNode.Parse(responseJson);
+            if (sharedKey)
+            {
+                var (inputTokens, outputTokens) = AiQuotaService.ReadUsage(root);
+                await quota.RecordUsageAsync(userId, inputTokens, outputTokens, cancellationToken);
+            }
+
+            return (root, null);
         }
         catch (Exception ex)
         {
@@ -760,7 +852,9 @@ public sealed class AiAssistantService(
 
                         if (!Enum.TryParse<BoardSection>(sectionStr, true, out var section))
                         {
-                            section = BoardSection.Todo;
+                            exec.Result = $"Error: unknown section '{sectionStr}'. Use Habit, Daily, or Todo.";
+                            exec.IsSuccess = false;
+                            break;
                         }
 
                         DateOnly? parsedDate = null;
@@ -954,9 +1048,29 @@ public sealed class AiAssistantService(
                             break;
                         }
 
+                        if (itemsArr.GetArrayLength() > MaxCreateItemsBatch)
+                        {
+                            exec.Result = $"Error: at most {MaxCreateItemsBatch} items can be created at once.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var requested = itemsArr.EnumerateArray().ToList();
+
+                        foreach (var el in requested)
+                        {
+                            var sStr = el.TryGetProperty("section", out var s) ? s.GetString() : "Todo";
+                            if (!Enum.TryParse<BoardSection>(sStr, true, out _))
+                            {
+                                exec.Result = $"Error: unknown section '{sStr}'. Use Habit, Daily, or Todo.";
+                                exec.IsSuccess = false;
+                                return exec;
+                            }
+                        }
+
                         var createdCount = 0;
                         var summaryList = new List<string>();
-                        foreach (var el in itemsArr.EnumerateArray())
+                        foreach (var el in requested)
                         {
                             var sStr = el.TryGetProperty("section", out var s) ? s.GetString() : "Todo";
                             var tStr = el.TryGetProperty("title", out var t) ? t.GetString() : string.Empty;
@@ -969,10 +1083,8 @@ public sealed class AiAssistantService(
                             var tgStr = el.TryGetProperty("tags", out var tg) ? tg.GetString() : null;
                             var dStr = el.TryGetProperty("dueDate", out var d) ? d.GetString() : null;
 
-                            if (!Enum.TryParse<BoardSection>(sStr, true, out var sec))
-                            {
-                                sec = BoardSection.Todo;
-                            }
+                            // Validated above. The fallback keeps the compiler satisfied.
+                            _ = Enum.TryParse<BoardSection>(sStr, true, out var sec);
 
                             DateOnly? dDate = null;
                             if (!string.IsNullOrWhiteSpace(dStr) && DateOnly.TryParseExact(dStr, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
@@ -1651,21 +1763,136 @@ public sealed class AiAssistantService(
         return trimmed;
     }
 
-    private static string ResolveApiKey(string? explicitKey, string? preferencesKey)
+    private (string Key, bool FromFallback) ResolveApiKey(string? explicitKey, string? preferencesKey)
     {
         if (!string.IsNullOrWhiteSpace(explicitKey))
         {
-            return explicitKey.Trim();
+            return (explicitKey.Trim(), false);
         }
         if (!string.IsNullOrWhiteSpace(preferencesKey))
         {
-            return preferencesKey.Trim();
+            return (preferencesKey.Trim(), false);
         }
-        return GetFallbackApiKey();
+
+        var fallback = GetFallbackApiKey();
+        return (fallback, !string.IsNullOrWhiteSpace(fallback));
     }
 
-    private static string GetFallbackApiKey()
+    /// <summary>
+    ///     Rejects endpoint overrides that turn the server into an SSRF proxy or that
+    ///     would send the shared operator key to an arbitrary host.
+    /// </summary>
+    private bool IsEndpointAllowed(string endpoint, bool fromFallback, out string error)
     {
+        error = string.Empty;
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
+        {
+            error = "The AI endpoint is not a valid absolute URL.";
+            return false;
+        }
+
+        var host = uri.DnsSafeHost;
+        var isLocalDevTarget = environment.IsDevelopment()
+            && (host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+                || host is "127.0.0.1" or "::1");
+
+        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+            && !isLocalDevTarget)
+        {
+            error = "The AI endpoint must use HTTPS.";
+            return false;
+        }
+
+        if (IPAddress.TryParse(host, out var address) && IsPrivateAddress(address) && !isLocalDevTarget)
+        {
+            error = "The AI endpoint cannot target a private or loopback address.";
+            return false;
+        }
+
+        if (!isLocalDevTarget
+            && (host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+                || host.EndsWith(".local", StringComparison.OrdinalIgnoreCase)))
+        {
+            error = "The AI endpoint cannot target a local address.";
+            return false;
+        }
+
+        if (fromFallback && !SharedKeyProviderHosts.Contains(host))
+        {
+            error = "The shared AI key can only be used with a supported provider endpoint. Add your own API key to use this endpoint.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool IsPrivateAddress(IPAddress address)
+    {
+        if (address.IsIPv4MappedToIPv6)
+        {
+            address = address.MapToIPv4();
+        }
+
+        if (IPAddress.IsLoopback(address)
+            || address.IsIPv6LinkLocal
+            || address.IsIPv6SiteLocal
+            || address.Equals(IPAddress.Any)
+            || address.Equals(IPAddress.IPv6Any))
+        {
+            return true;
+        }
+
+        if (address.AddressFamily == AddressFamily.InterNetworkV6)
+        {
+            return (address.GetAddressBytes()[0] & 0xFE) == 0xFC;
+        }
+
+        var bytes = address.GetAddressBytes();
+        return bytes[0] switch
+        {
+            10 => true,
+            127 => true,
+            169 when bytes[1] == 254 => true,
+            172 when bytes[1] is >= 16 and <= 31 => true,
+            192 when bytes[1] == 168 => true,
+            100 when bytes[1] is >= 64 and <= 127 => true,
+            _ => false
+        };
+    }
+
+    private async Task<bool> IsDemoGuestAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var demoEmail = demoUserOptions.Value.Email;
+        if (string.IsNullOrWhiteSpace(demoEmail))
+        {
+            return false;
+        }
+
+        try
+        {
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            var email = await db.Users.AsNoTracking()
+                .Where(u => u.Id == userId)
+                .Select(u => u.Email)
+                .FirstOrDefaultAsync(cancellationToken);
+            return string.Equals(email, demoEmail, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Fail toward the tighter guest quota when the account cannot be
+            // checked. The chat needs the same database moments later anyway.
+            logger.LogWarning(ex, "Could not check whether an AI user is the demo guest.");
+            return true;
+        }
+    }
+
+    private string GetFallbackApiKey()
+    {
+        if (!quotaOptions.Value.AllowSharedOperatorKey)
+        {
+            return string.Empty;
+        }
+
         var env = Environment.GetEnvironmentVariable("OPENCODE_API_KEY");
         if (!string.IsNullOrWhiteSpace(env))
         {
@@ -1676,6 +1903,12 @@ public sealed class AiAssistantService(
         if (!string.IsNullOrWhiteSpace(env))
         {
             return env.Trim();
+        }
+
+        if (!environment.IsDevelopment())
+        {
+            // A deployed server must not discover keys by walking the filesystem.
+            return string.Empty;
         }
 
         try

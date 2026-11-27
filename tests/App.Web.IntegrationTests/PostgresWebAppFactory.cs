@@ -88,6 +88,11 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
             ["Jwt:ExpirationMinutes"] = "60",
             ["DemoUser:Email"] = "guest@habitinator.local",
             ["DemoUser:Password"] = "Guest123!",
+            ["AiQuota:AllowSharedOperatorKey"] = "true",
+            ["AiQuota:SharedKeyDailyRequests"] = "1000",
+            ["AiQuota:SharedKeyDailyTokens"] = "10000000",
+            ["AiQuota:GuestSharedKeyDailyRequests"] = "10",
+            ["AiQuota:GuestSharedKeyDailyTokens"] = "20000",
         };
     }
 

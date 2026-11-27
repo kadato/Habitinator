@@ -50,7 +50,7 @@ public sealed class UserDataExportService(
             DateTimeOffset.UtcNow,
             [.. items.Select(e => new BoardSyncItem(e.Section, Map(e, today)))],
             events,
-            settings?.UserPreferences ?? UserPreferences.CreateDefault(),
+            AiPreferencesPrivacy.MaskForClient(settings?.UserPreferences),
             settings?.NotificationSettings ?? NotificationSettings.CreateDefault(),
             today);
     }

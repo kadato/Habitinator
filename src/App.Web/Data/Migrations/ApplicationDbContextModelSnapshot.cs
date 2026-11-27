@@ -17,7 +17,7 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261126075845_AddDailySkippedOn";
+    public override string LastMigrationId => "20261127115859_AddAiUsageDaily";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -28,6 +28,28 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
 
         NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "pg_trgm");
         NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+        modelBuilder.Entity("App.Web.Data.AiUsageDailyEntity", b =>
+            {
+                b.Property<Guid>("UserId")
+                    .HasColumnType("uuid");
+
+                b.Property<DateOnly>("Day")
+                    .HasColumnType("date");
+
+                b.Property<long>("InputTokens")
+                    .HasColumnType("bigint");
+
+                b.Property<long>("OutputTokens")
+                    .HasColumnType("bigint");
+
+                b.Property<int>("Requests")
+                    .HasColumnType("integer");
+
+                b.HasKey("UserId", "Day");
+
+                b.ToTable("AiUsageDaily");
+            });
 
         modelBuilder.Entity("App.Web.Data.ApplicationUser", b =>
             {
@@ -461,6 +483,17 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.HasKey("UserId", "LoginProvider", "Name");
 
                 b.ToTable("AspNetUserTokens");
+            });
+
+        modelBuilder.Entity("App.Web.Data.AiUsageDailyEntity", b =>
+            {
+                b.HasOne("App.Web.Data.ApplicationUser", "User")
+                    .WithMany()
+                    .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
+
+                b.Navigation("User");
             });
 
         modelBuilder.Entity("App.Web.Data.BoardItemEntity", b =>

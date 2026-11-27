@@ -67,13 +67,13 @@ internal static class SettingsApiRoutes
                     return TypedResults.NotFound();
                 }
 
-                return TypedResults.Ok(row.UserPreferences ?? UserPreferences.CreateDefault());
+                return TypedResults.Ok(AiPreferencesPrivacy.MaskForClient(row.UserPreferences));
             });
 
         settingsApi.MapPut("/preferences",
             async Task<Results<NoContent, NotFound>> (
                 CurrentUserId user, ApplicationDbContext db, IBoardChangeNotifier boardChangeNotifier,
-                UserPreferences body, CancellationToken cancellationToken) =>
+                AiApiKeyProtector apiKeyProtector, UserPreferences body, CancellationToken cancellationToken) =>
             {
                 var row = await db.Users.FirstOrDefaultAsync(u => u.Id == user.Value, cancellationToken);
                 if (row is null)
@@ -84,7 +84,7 @@ internal static class SettingsApiRoutes
                 body.DisplayName = string.IsNullOrWhiteSpace(body.DisplayName)
                     ? null
                     : ZalgoSanitizer.Sanitize(body.DisplayName.Trim());
-                row.UserPreferences = body;
+                row.UserPreferences = AiPreferencesPrivacy.ApplyWrite(body, row.UserPreferences, apiKeyProtector);
                 await db.SaveChangesAsync(cancellationToken);
                 await boardChangeNotifier.NotifyBoardChangedAsync(user.Value, cancellationToken);
                 return TypedResults.NoContent();

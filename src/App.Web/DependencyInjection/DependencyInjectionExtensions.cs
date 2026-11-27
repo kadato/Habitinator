@@ -77,6 +77,15 @@ public static class DependencyInjectionExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.AddOptions<AiQuotaOptions>()
+            .BindConfiguration(AiQuotaOptions.SectionName)
+            .Validate(options => options.SharedKeyDailyRequests > 0
+                                 && options.SharedKeyDailyTokens > 0
+                                 && options.GuestSharedKeyDailyRequests > 0
+                                 && options.GuestSharedKeyDailyTokens > 0,
+                "AI quota limits must be positive numbers.")
+            .ValidateOnStart();
+
         return services;
     }
 
@@ -149,6 +158,7 @@ public static class DependencyInjectionExtensions
         }
 
         services.AddHostedService<BoardMaintenanceHostedService>();
+        services.AddHostedService<AiApiKeyEncryptionHostedService>();
         services.AddScoped<IUndoService, UndoService>();
         services.AddScoped<WebBoardDataService>();
         services.AddScoped<IBoardDataService>(sp =>
@@ -182,6 +192,8 @@ public static class DependencyInjectionExtensions
         services.AddScoped<ICommandPaletteService, CommandPaletteService>();
         services.AddScoped<AiAssistantService>();
         services.AddScoped<IAiAssistantService, WebAiAssistantService>();
+        services.AddSingleton<AiApiKeyProtector>();
+        services.AddScoped<AiQuotaService>();
         services.AddOptions<SmtpOptions>().BindConfiguration(SmtpOptions.SectionName);
         services.AddSingleton<IEmailSender>(sp =>
         {

@@ -12,12 +12,13 @@ namespace App.Web.Data.CompiledModels;
 public partial class ApplicationDbContextModel
 {
     private ApplicationDbContextModel()
-        : base(skipDetectChanges: false, modelId: new Guid("78e8570a-b69e-4fc4-9353-aeeda8341030"), entityTypeCount: 11)
+        : base(skipDetectChanges: false, modelId: new Guid("1a64f777-619b-464a-9f2e-423495e2e303"), entityTypeCount: 12)
     {
     }
 
     partial void Initialize()
     {
+        var aiUsageDailyEntity = AiUsageDailyEntityEntityType.Create(this);
         var applicationUser = ApplicationUserEntityType.Create(this);
         var boardItemEntity = BoardItemEntityEntityType.Create(this);
         var boardRequestIdempotencyEntity = BoardRequestIdempotencyEntityEntityType.Create(this);
@@ -30,6 +31,7 @@ public partial class ApplicationDbContextModel
         var identityUserRole = IdentityUserRoleEntityType.Create(this);
         var identityUserToken = IdentityUserTokenEntityType.Create(this);
 
+        AiUsageDailyEntityEntityType.CreateForeignKey1(aiUsageDailyEntity, applicationUser);
         BoardItemEntityEntityType.CreateForeignKey1(boardItemEntity, applicationUser);
         BoardRequestIdempotencyEntityEntityType.CreateForeignKey1(boardRequestIdempotencyEntity, applicationUser);
         McpTokenEntityEntityType.CreateForeignKey1(mcpTokenEntity, applicationUser);
@@ -41,6 +43,7 @@ public partial class ApplicationDbContextModel
         IdentityUserRoleEntityType.CreateForeignKey2(identityUserRole, applicationUser);
         IdentityUserTokenEntityType.CreateForeignKey1(identityUserToken, applicationUser);
 
+        AiUsageDailyEntityEntityType.CreateAnnotations(aiUsageDailyEntity);
         ApplicationUserEntityType.CreateAnnotations(applicationUser);
         BoardItemEntityEntityType.CreateAnnotations(boardItemEntity);
         BoardRequestIdempotencyEntityEntityType.CreateAnnotations(boardRequestIdempotencyEntity);

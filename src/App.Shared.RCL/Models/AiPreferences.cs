@@ -19,7 +19,17 @@ public sealed class AiPreferences
 
     public string Endpoint { get; set; } = DefaultOpenCodeGoEndpoint;
 
+    /// <summary>
+    ///     Write-only on the server: reads return an empty value and set <see cref="ApiKeyConfigured" />.
+    ///     The stored value is encrypted at rest.
+    /// </summary>
     public string ApiKey { get; set; } = string.Empty;
+
+    /// <summary>True when a key is stored for this account. The key itself is never returned.</summary>
+    public bool ApiKeyConfigured { get; set; }
+
+    /// <summary>Set by the client to delete the stored key. Reset after the write.</summary>
+    public bool ClearApiKey { get; set; }
 
     public string Model { get; set; } = DefaultModel;
 
@@ -31,6 +41,11 @@ public sealed class AiPreferences
         Endpoint = string.IsNullOrWhiteSpace(Endpoint) ? DefaultOpenCodeGoEndpoint : Endpoint.Trim();
         Model = string.IsNullOrWhiteSpace(Model) ? DefaultModel : Model.Trim();
         ApiKey = ApiKey?.Trim() ?? string.Empty;
+        if (!string.IsNullOrEmpty(ApiKey))
+        {
+            ApiKeyConfigured = true;
+        }
+
         if (CustomInstructions is not null && CustomInstructions.Length > 2000)
         {
             CustomInstructions = CustomInstructions[..2000];

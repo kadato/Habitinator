@@ -20,6 +20,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 
     public DbSet<McpTokenEntity> McpTokens => Set<McpTokenEntity>();
 
+    public DbSet<AiUsageDailyEntity> AiUsageDaily => Set<AiUsageDailyEntity>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

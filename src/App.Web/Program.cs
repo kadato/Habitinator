@@ -10,6 +10,7 @@ using App.Web.Services;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 
 using MudBlazor;
 using MudBlazor.Services;
@@ -23,6 +24,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddMemoryCache();
+builder.Services.AddDataProtection().SetApplicationName("Habitinator");
 builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
 builder.Services.AddCascadingAuthenticationState();
@@ -179,6 +181,7 @@ public partial class Program
 
             options.AddPolicy("auth", context => CreateAuthPolicy(context, environment));
             options.AddPolicy("api", context => CreateApiPolicy(context, environment));
+            options.AddPolicy("ai", context => CreateAiPolicy(context, environment));
             options.AddPolicy("mcp", context => CreateMcpPolicy(context, environment));
         });
     }
@@ -211,6 +214,26 @@ public partial class Program
             Window = TimeSpan.FromMinutes(1),
             SegmentsPerWindow = 6,
             QueueLimit = queueLimit
+        });
+    }
+
+    private static RateLimitPartition<string> CreateAiPolicy(HttpContext context, IWebHostEnvironment environment)
+    {
+        var key = AuthenticatedUserId.TryGet(context.User)?.ToString()
+                  ?? context.Connection.RemoteIpAddress?.ToString()
+                  ?? "unknown";
+
+        // Chat and connection tests are expensive upstream calls. Keep a tighter
+        // per-user window than the general API budget so one account cannot burn
+        // provider quota in a burst.
+        var limit = IsDevOrTest(environment) ? 1000 : 20;
+
+        return RateLimitPartition.GetSlidingWindowLimiter($"ai:{key}", _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = limit,
+            Window = TimeSpan.FromMinutes(1),
+            SegmentsPerWindow = 4,
+            QueueLimit = 0
         });
     }
 

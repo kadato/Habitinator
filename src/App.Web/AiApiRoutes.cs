@@ -17,26 +17,18 @@ internal static class AiApiRoutes
         var aiApi = endpoints.MapGroup("/api/ai")
             .DisableAntiforgery()
             .RequireAuthorization("BoardOrJwt")
-            .RequireRateLimiting("api");
+            .RequireRateLimiting("ai");
 
         aiApi.MapPost("/test", TestConnectionAsync);
         aiApi.MapPost("/chat", ChatAsync);
         aiApi.MapPost("/chat/stream", StreamChatAsync);
     }
 
-    private static async Task<Ok<AiTestConnectionResponse>> TestConnectionAsync(
-        AiTestConnectionRequest request,
-        AiAssistantService aiService,
-        CancellationToken cancellationToken)
-    {
-        var result = await aiService.TestConnectionAsync(request, cancellationToken);
-        return TypedResults.Ok(result);
-    }
-
-    private static async Task<Results<Ok<AiChatResponse>, NotFound>> ChatAsync(
+    private static async Task<Results<Ok<AiTestConnectionResponse>, NotFound>> TestConnectionAsync(
         CurrentUserId user,
-        AiChatRequest request,
+        AiTestConnectionRequest request,
         ApplicationDbContext db,
+        AiApiKeyProtector apiKeyProtector,
         AiAssistantService aiService,
         CancellationToken cancellationToken)
     {
@@ -46,7 +38,30 @@ internal static class AiApiRoutes
             return TypedResults.NotFound();
         }
 
-        var preferences = row.UserPreferences?.Ai ?? new AiPreferences();
+        if (string.IsNullOrWhiteSpace(request.ApiKey))
+        {
+            request.ApiKey = apiKeyProtector.Unprotect(row.UserPreferences?.Ai?.ApiKey);
+        }
+
+        var result = await aiService.TestConnectionAsync(request, user.Value, cancellationToken);
+        return TypedResults.Ok(result);
+    }
+
+    private static async Task<Results<Ok<AiChatResponse>, NotFound>> ChatAsync(
+        CurrentUserId user,
+        AiChatRequest request,
+        ApplicationDbContext db,
+        AiApiKeyProtector apiKeyProtector,
+        AiAssistantService aiService,
+        CancellationToken cancellationToken)
+    {
+        var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == user.Value, cancellationToken);
+        if (row is null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var preferences = AiPreferencesPrivacy.UnprotectForProvider(row.UserPreferences?.Ai, apiKeyProtector);
         var result = await aiService.ChatAsync(user.Value, preferences, request, cancellationToken);
         return TypedResults.Ok(result);
     }
@@ -55,6 +70,7 @@ internal static class AiApiRoutes
         CurrentUserId user,
         AiChatRequest request,
         ApplicationDbContext db,
+        AiApiKeyProtector apiKeyProtector,
         AiAssistantService aiService,
         HttpContext httpContext,
         CancellationToken cancellationToken)
@@ -70,7 +86,7 @@ internal static class AiApiRoutes
         httpContext.Response.Headers.CacheControl = "no-cache";
         httpContext.Response.Headers.Connection = "keep-alive";
 
-        var preferences = row.UserPreferences?.Ai ?? new AiPreferences();
+        var preferences = AiPreferencesPrivacy.UnprotectForProvider(row.UserPreferences?.Ai, apiKeyProtector);
         await foreach (var evt in aiService.StreamChatAsync(user.Value, preferences, request, cancellationToken))
         {
             var json = System.Text.Json.JsonSerializer.Serialize(evt, Json);

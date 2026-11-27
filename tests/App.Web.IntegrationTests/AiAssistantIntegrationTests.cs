@@ -338,6 +338,100 @@ public sealed class AiAssistantIntegrationTests(PostgresWebAppFactory factory)
     }
 
     [Fact]
+    public async Task AiAssistantService_CreateItem_RejectsUnknownSection()
+    {
+        using var scope = factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var aiService = scope.ServiceProvider.GetRequiredService<AiAssistantService>();
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var user = new ApplicationUser { UserName = $"tool-bad-section-{suffix}@test.local", Email = $"tool-bad-section-{suffix}@test.local" };
+        await userManager.CreateAsync(user, "TestUser1!Aa");
+
+        var result = await aiService.ExecuteToolAsync(
+            user.Id,
+            "create_item",
+            """{"section":"Banana","title":"Wrong section"}""",
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Result.Should().Contain("unknown section");
+    }
+
+    [Fact]
+    public async Task AiAssistantService_CreateItems_RejectsOversizedBatch()
+    {
+        using var scope = factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var aiService = scope.ServiceProvider.GetRequiredService<AiAssistantService>();
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var user = new ApplicationUser { UserName = $"tool-batch-{suffix}@test.local", Email = $"tool-batch-{suffix}@test.local" };
+        await userManager.CreateAsync(user, "TestUser1!Aa");
+
+        var items = string.Join(",", Enumerable.Range(0, 51).Select(i => $$"""{"section":"Todo","title":"Item {{i}}"}"""));
+        var result = await aiService.ExecuteToolAsync(
+            user.Id,
+            "create_items",
+            $$"""{"items":[{{items}}]}""",
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Result.Should().Contain("at most 50");
+    }
+
+    [Fact]
+    public async Task AiAssistantService_RejectsPrivateEndpoint()
+    {
+        using var scope = factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var aiService = scope.ServiceProvider.GetRequiredService<AiAssistantService>();
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var user = new ApplicationUser { UserName = $"ai-ssrf-{suffix}@test.local", Email = $"ai-ssrf-{suffix}@test.local" };
+        await userManager.CreateAsync(user, "TestUser1!Aa");
+
+        var result = await aiService.ChatAsync(
+            user.Id,
+            new AiPreferences(),
+            new AiChatRequest
+            {
+                EndpointOverride = "http://127.0.0.1:11434/v1",
+                ApiKeyOverride = "test-key",
+                Messages = [AiChatMessage.User("Hello")]
+            },
+            CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.Error.Should().Contain("HTTPS");
+    }
+
+    [Fact]
+    public async Task AiAssistantService_RejectsSharedKeyForCustomHost()
+    {
+        using var scope = factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var aiService = scope.ServiceProvider.GetRequiredService<AiAssistantService>();
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var user = new ApplicationUser { UserName = $"ai-shared-{suffix}@test.local", Email = $"ai-shared-{suffix}@test.local" };
+        await userManager.CreateAsync(user, "TestUser1!Aa");
+
+        var result = await aiService.ChatAsync(
+            user.Id,
+            new AiPreferences(),
+            new AiChatRequest
+            {
+                EndpointOverride = "https://example.com/v1",
+                Messages = [AiChatMessage.User("Hello")]
+            },
+            CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.Error.Should().Contain("shared AI key");
+    }
+
+    [Fact]
     public async Task AiAssistantService_ExecuteToolCall_set_daily_weekdays()
     {
         using var scope = factory.Services.CreateScope();

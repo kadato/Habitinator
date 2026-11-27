@@ -253,6 +253,27 @@ public sealed class LocalFirstBoardSyncTests
     }
 
     [Fact]
+    public async Task PullMirrorAsync_TruncatedSnapshot_KeepsMirrorAndResetsCursor()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var local = new BoardItem(Guid.NewGuid(), "Local");
+        await harness.Store.UpsertItemAsync(
+            BoardLocalRow.FromModel(BoardSection.Habit, Harness.UserKey, local, false), ct);
+        harness.Server.Responder = _ => JsonResponse(
+            HttpStatusCode.OK,
+            new BoardSnapshot([], [], [], Truncated: true));
+
+        var ok = await harness.Board.TryPullRemoteMirrorAsync(ct);
+
+        ok.Should().BeFalse();
+        (await harness.Board.GetSnapshotAsync(ct)).Habits.Should().ContainSingle(x => x.Id == local.Id);
+        var meta = await harness.Store.GetMetaAsync(ct);
+        meta.LastSyncCursorUtc.Should().Be(DateTimeOffset.MinValue.ToString("O"));
+        meta.LastFullMirrorUtc.Should().NotBeNull();
+    }
+
+    [Fact]
     public async Task PullMirrorAsync_FreshFullMirror_UsesDelta()
     {
         var harness = new Harness();

@@ -240,13 +240,17 @@ public sealed class BoardPersistenceService(
             .OrderBy(x => x.SortOrder)
             .ThenBy(x => x.CreatedAtUtc)
             .ThenBy(x => x.Id);
-        var items = limit is { } take
-            ? await query.Take(Math.Clamp(take, 1, SnapshotMaxLimit)).ToListAsync(cancellationToken)
-            : await query.ToListAsync(cancellationToken);
+        var take = limit is { } requested ? Math.Clamp(requested, 1, SnapshotMaxLimit) : SnapshotMaxLimit;
+        var items = await query.Take(take + 1).ToListAsync(cancellationToken);
+        var truncated = items.Count > take;
+        if (truncated)
+        {
+            items.RemoveAt(items.Count - 1);
+        }
 
         var dailies = items.Where(x => x.Section == BoardSection.Daily).ToList();
         var dailyStreaks = await streakCalculator.BuildDailyStreakMapAsync(userId, dailies, today, dayStart, readDb, cancellationToken);
-        var snapshot = BuildSnapshot(items, today, dailyStreaks);
+        var snapshot = BuildSnapshot(items, today, dailyStreaks, truncated);
         if (limit is null)
         {
             snapshotCache.Set(userId, new CachedBoardSnapshot(snapshot, today));
@@ -295,6 +299,8 @@ public sealed class BoardPersistenceService(
                 }
 
                 existing.DeletedAtUtc = null;
+                existing.IsArchived = false;
+                existing.Section = section;
                 existing.Title = ZalgoSanitizer.SanitizeAndTrim(title);
                 existing.UpdatedAtUtc = BoardTimestamps.UtcNow();
                 try
@@ -513,18 +519,23 @@ public sealed class BoardPersistenceService(
             .OrderBy(x => x.SortOrder)
             .ThenBy(x => x.CreatedAtUtc)
             .ThenBy(x => x.Id);
-        var items = limit is { } take
-            ? await query.Take(Math.Clamp(take, 1, SnapshotMaxLimit)).ToListAsync(cancellationToken)
-            : await query.ToListAsync(cancellationToken);
+        var take = limit is { } requested ? Math.Clamp(requested, 1, SnapshotMaxLimit) : SnapshotMaxLimit;
+        var items = await query.Take(take + 1).ToListAsync(cancellationToken);
+        var truncated = items.Count > take;
+        if (truncated)
+        {
+            items.RemoveAt(items.Count - 1);
+        }
 
         var today = await TodayAsync(userId, cancellationToken);
-        return BuildSnapshot(items, today, EmptyDailyStreaks);
+        return BuildSnapshot(items, today, EmptyDailyStreaks, truncated);
     }
 
     private static BoardSnapshot BuildSnapshot(
         IEnumerable<BoardItemEntity> items,
         DateOnly today,
-        IReadOnlyDictionary<Guid, int> dailyStreaks)
+        IReadOnlyDictionary<Guid, int> dailyStreaks,
+        bool truncated = false)
     {
         var dailies = items.Where(x => x.Section == BoardSection.Daily).ToList();
         return new BoardSnapshot(
@@ -548,7 +559,8 @@ public sealed class BoardPersistenceService(
                 x => x.SortOrder,
                 x => x.CreatedAtUtc,
                 x => x.Id)
-                .Select(x => ToModelWithToday(x, today, dailyStreaks))]);
+                .Select(x => ToModelWithToday(x, today, dailyStreaks))],
+            Truncated: truncated);
     }
 
     public async Task<BoardMutationResult> CompleteDailyForDateAsync(
@@ -1415,8 +1427,19 @@ public sealed class BoardPersistenceService(
 
         if (!string.IsNullOrWhiteSpace(tag))
         {
-            var tagPattern = "%" + EscapeLikePattern(tag.Trim()) + "%";
-            filtered = filtered.Where(x => x.Tags != null && EF.Functions.ILike(x.Tags, tagPattern));
+            // Match the tag as a whole token, not a substring. Doing this before
+            // Take keeps an exact match from being pushed out by unrelated tags
+            // that merely contain the same letters.
+            var wanted = EscapeLikePattern(tag.Trim());
+            var exact = wanted;
+            var prefix = wanted + ",%";
+            var middle = "%," + wanted + ",%";
+            var suffix = "%," + wanted;
+            filtered = filtered.Where(x => x.Tags != null && (
+                EF.Functions.ILike(x.Tags, exact) ||
+                EF.Functions.ILike(x.Tags, prefix) ||
+                EF.Functions.ILike(x.Tags, middle) ||
+                EF.Functions.ILike(x.Tags, suffix)));
         }
 
         var entities = await filtered
@@ -1425,15 +1448,6 @@ public sealed class BoardPersistenceService(
             .ThenBy(x => x.Id)
             .Take(take)
             .ToListAsync(cancellationToken);
-
-        if (!string.IsNullOrWhiteSpace(tag))
-        {
-            var wanted = tag.Trim();
-            entities = entities
-                .Where(e => BoardTagUtil.ParseTags(e.Tags)
-                    .Any(t => string.Equals(t, wanted, StringComparison.OrdinalIgnoreCase)))
-                .ToList();
-        }
 
         var (today, dayStart) = await UserDayContext.LoadAsync(readDb, userId, timeZone, cancellationToken);
         var dailies = entities.Where(x => x.Section == BoardSection.Daily).ToList();
@@ -1637,6 +1651,7 @@ public sealed class BoardPersistenceService(
             if (existing is not null)
             {
                 existing.DeletedAtUtc = null;
+                existing.IsArchived = false;
                 existing.Section = section;
                 existing.Title = cleanTitle;
                 existing.Notes = cleanNotes;

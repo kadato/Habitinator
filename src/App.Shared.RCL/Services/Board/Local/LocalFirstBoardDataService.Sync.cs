@@ -152,6 +152,20 @@ public sealed partial class LocalFirstBoardDataService
         await _gate.WaitAsync(cancellationToken);
         try
         {
+            if (snap.Truncated)
+            {
+                // The server capped the snapshot. Replacing the mirror now would drop
+                // rows that did not fit. Reset the delta cursor so the next sync pages
+                // through every row instead, and mark the mirror fresh so the snapshot
+                // path is not retried on the next tick.
+                logger.LogWarning("Board snapshot was truncated. Keeping the local mirror and switching to the sync delta.");
+                var truncatedMeta = await store.GetMetaAsync(cancellationToken);
+                truncatedMeta.LastSyncCursorUtc = DateTimeOffset.MinValue.ToString("O");
+                truncatedMeta.LastFullMirrorUtc = DateTimeOffset.UtcNow;
+                await store.SetMetaAsync(truncatedMeta, cancellationToken);
+                return false;
+            }
+
             if (await store.HasOutboxAsync(userKey, cancellationToken))
             {
                 return false;
@@ -190,7 +204,10 @@ public sealed partial class LocalFirstBoardDataService
             }
         }
 
-        return (m ?? DateTimeOffset.UtcNow).ToString("O");
+        // An empty snapshot must not advance the delta cursor from the client
+        // clock. A client that runs ahead of the server would skip the first
+        // rows the server writes. MinValue makes the next delta a full catch-up.
+        return (m ?? DateTimeOffset.MinValue).ToString("O");
     }
 
     private async Task ApplySyncDeltaAsync(

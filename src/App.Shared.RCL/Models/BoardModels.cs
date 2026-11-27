@@ -103,11 +103,16 @@ public sealed record BoardItem(
     /// </summary>
     DateOnly? DailySkippedOn = null);
 
+/// <param name="Truncated">
+///     True when the server capped the snapshot at its maximum row count. Clients must keep
+///     their existing mirror and pull the rest through the sync delta instead of replacing it.
+/// </param>
 public sealed record BoardSnapshot(
     IReadOnlyList<BoardItem> Habits,
     IReadOnlyList<BoardItem> Dailies,
     IReadOnlyList<BoardItem> Todos,
-    int ProtocolVersion = BoardProtocolVersion.Current);
+    int ProtocolVersion = BoardProtocolVersion.Current,
+    bool Truncated = false);
 
 public static class BoardTagUtil
 {

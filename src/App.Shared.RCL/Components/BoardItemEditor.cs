@@ -9,7 +9,8 @@ namespace App.Shared.RCL.Components;
 internal sealed class BoardItemEditor(
     IDialogService dialogs,
     Func<BoardItem, Task> archive,
-    Func<BoardItem, Task> delete)
+    Func<BoardItem, Task> delete,
+    Func<Task> refresh)
 {
     public Task OpenAsync(BoardSection section, BoardItem item) =>
         section switch
@@ -28,7 +29,10 @@ internal sealed class BoardItemEditor(
         if (result is { Canceled: false, Data: EditHabitDialogResult r })
         {
             await HandleResultAsync(item, r.Action);
+            return;
         }
+
+        await refresh();
     }
 
     private async Task OpenEditDailyAsync(BoardItem item)
@@ -39,7 +43,10 @@ internal sealed class BoardItemEditor(
         if (result is { Canceled: false, Data: EditDailyDialogResult r })
         {
             await HandleResultAsync(item, r.Action);
+            return;
         }
+
+        await refresh();
     }
 
     private async Task OpenEditTodoAsync(BoardItem item)
@@ -50,7 +57,10 @@ internal sealed class BoardItemEditor(
         if (result is { Canceled: false, Data: EditTodoDialogResult r })
         {
             await HandleResultAsync(item, r.Action);
+            return;
         }
+
+        await refresh();
     }
 
     private Task HandleResultAsync(BoardItem item, EditDialogAction? action) =>
@@ -58,6 +68,6 @@ internal sealed class BoardItemEditor(
         {
             EditDialogAction.Archive => archive(item),
             EditDialogAction.Delete => delete(item),
-            _ => Task.CompletedTask
+            _ => refresh()
         };
 }

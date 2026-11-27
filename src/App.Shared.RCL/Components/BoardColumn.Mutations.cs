@@ -278,7 +278,7 @@ public partial class BoardColumn
 
     private Task OpenItemEditorAsync(BoardItem item)
     {
-        _editor ??= new BoardItemEditor(DialogService, ArchiveItemAsync, DeleteItemAsync);
+        _editor ??= new BoardItemEditor(DialogService, ArchiveItemAsync, DeleteItemAsync, () => OnChanged.InvokeAsync());
         return _editor.OpenAsync(Section, item);
     }
 
@@ -305,7 +305,7 @@ public partial class BoardColumn
 
         var confirmed = await DialogService.ShowMessageBoxAsync(
             "Delete all done to-dos?",
-            $"This will permanently remove {toDelete.Count} {(toDelete.Count == 1 ? "done to-do" : "done to-dos")}. This cannot be undone.",
+            $"This will remove {toDelete.Count} {(toDelete.Count == 1 ? "done to-do" : "done to-dos")}. You can undo this.",
             "Delete all",
             null,
             "Cancel");

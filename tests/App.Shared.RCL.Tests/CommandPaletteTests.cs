@@ -26,6 +26,7 @@ public sealed class CommandPaletteTests : IAsyncDisposable
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
     private readonly IUserPreferencesService _preferences = Substitute.For<IUserPreferencesService>();
     private readonly IUserNotifier _notifier = Substitute.For<IUserNotifier>();
+    private readonly BoardUiSessionState _uiSession = new();
     private readonly CommandPaletteService _paletteService;
 
     public CommandPaletteTests()
@@ -42,6 +43,7 @@ public sealed class CommandPaletteTests : IAsyncDisposable
         _ctx.Services.AddSingleton(_dialogs);
         _ctx.Services.AddSingleton(_preferences);
         _ctx.Services.AddSingleton(_notifier);
+        _ctx.Services.AddSingleton(_uiSession);
         _ctx.Services.AddScoped<CommandPaletteService>();
         _ctx.Services.AddScoped<ICommandPaletteService>(sp => sp.GetRequiredService<CommandPaletteService>());
 
@@ -204,6 +206,34 @@ public sealed class CommandPaletteTests : IAsyncDisposable
         rootCommands.Should().Contain(c => c.Id == "nav-settings-account");
         rootCommands.Should().Contain(c => c.Id == "nav-settings-notifications");
         rootCommands.Should().Contain(c => c.Id == "pref-toggle-shortcuts");
+    }
+
+    [Fact]
+    public async Task Settings_Commands_Open_The_Section_They_Name()
+    {
+        var root = await _paletteService.GetRootCommandsAsync();
+
+        var account = root.Single(c => c.Id == "nav-settings-account");
+        var accountAction = account.Action;
+        accountAction.Should().NotBeNull();
+        if (accountAction is null)
+        {
+            throw new InvalidOperationException("Account settings command has no action.");
+        }
+
+        await accountAction();
+        _uiSession.SettingsSectionIndex.Should().Be(2);
+
+        var notifications = root.Single(c => c.Id == "nav-settings-notifications");
+        var notificationsAction = notifications.Action;
+        notificationsAction.Should().NotBeNull();
+        if (notificationsAction is null)
+        {
+            throw new InvalidOperationException("Notification settings command has no action.");
+        }
+
+        await notificationsAction();
+        _uiSession.SettingsSectionIndex.Should().Be(1);
     }
 
     [Fact]

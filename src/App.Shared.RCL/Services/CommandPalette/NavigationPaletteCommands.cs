@@ -36,6 +36,9 @@ internal sealed class NavigationPaletteCommands(
     private const string AppearanceCategory = "Appearance";
     private const string SettingsPath = "/settings";
     private const string KwTheme = "theme";
+    private const int SettingsNotificationsSection = 1;
+    private const int SettingsAccountSection = 2;
+    private const int SettingsAiSection = 3;
 
     public void AddNavigationCommands(List<CommandItem> list)
     {
@@ -120,7 +123,7 @@ internal sealed class NavigationPaletteCommands(
             Subtitle: "Profile, export, password, and account management",
             Category: NavigationCategory,
             Icon: Icons.Material.Filled.ManageAccounts,
-            Action: () => NavigateAsync(SettingsPath),
+            Action: () => NavigateToSettingsAsync(SettingsAccountSection),
             Keywords: ["account", "password", "profile", "export", "backup"]));
 
         list.Add(new(
@@ -129,7 +132,7 @@ internal sealed class NavigationPaletteCommands(
             Subtitle: "Reminders, alerts, and quiet hours",
             Category: NavigationCategory,
             Icon: Icons.Material.Filled.Notifications,
-            Action: () => NavigateAsync(SettingsPath),
+            Action: () => NavigateToSettingsAsync(SettingsNotificationsSection),
             Keywords: ["notifications", "alerts", "reminders", "sound"]));
 
         list.Add(new(
@@ -250,11 +253,17 @@ internal sealed class NavigationPaletteCommands(
         return Task.CompletedTask;
     }
 
-    private Task NavigateToMcpSetupAsync()
+    private Task NavigateToSettingsAsync(int sectionIndex)
     {
-        _uiSession?.SettingsSectionIndex = 3;
+        if (_uiSession is not null)
+        {
+            _uiSession.SettingsSectionIndex = sectionIndex;
+        }
+
         return NavigateAsync(SettingsPath);
     }
+
+    private Task NavigateToMcpSetupAsync() => NavigateToSettingsAsync(SettingsAiSection);
 
     private async Task OpenArchiveAsync()
     {

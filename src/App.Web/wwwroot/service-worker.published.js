@@ -1,6 +1,7 @@
-const CACHE_NAME = 'habitinator-v6';
-const FRAMEWORK_CACHE = 'habitinator-framework-v6';
-const API_CACHE = 'habitinator-api-v6';
+const CACHE_NAME = 'habitinator-v7';
+const FRAMEWORK_CACHE = 'habitinator-framework-v7';
+// API responses are authenticated and are not safe to share between accounts in
+// one cache. The app's local mirror already covers offline reads.
 
 // Shell assets are always precached for offline rendering.
 const SHELL_ASSETS = [
@@ -59,7 +60,7 @@ globalThis.addEventListener('activate', event => {
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cacheName => {
-                    if (cacheName !== CACHE_NAME && cacheName !== FRAMEWORK_CACHE && cacheName !== API_CACHE) {
+                    if (cacheName !== CACHE_NAME && cacheName !== FRAMEWORK_CACHE) {
                         console.log('Habitinator SW: deleting old cache:', cacheName);
                         return caches.delete(cacheName);
                     }
@@ -81,30 +82,10 @@ globalThis.addEventListener('fetch', event => {
         return;
     }
 
-    // Read APIs use network first with cache fallback so reload offline still shows data.
-    // The worker never caches mutations. The method guard above only allows GET.
+    // API responses are authenticated. Never cache them: one cache keyed only by
+    // URL can serve the previous account's board, activity, or auth status to the
+    // next user of the same browser. The local mirror is the offline read path.
     if (url.pathname.startsWith('/api/')) {
-        if (url.pathname.startsWith('/api/auth/status')
-            || url.pathname.startsWith('/api/board')
-            || url.pathname.startsWith('/api/settings/')
-            || url.pathname.startsWith('/api/activity/')) {
-            event.respondWith((async () => {
-                const cache = await caches.open(API_CACHE);
-                try {
-                    const network = await fetch(event.request);
-                    if (network && network.status === 200) {
-                        event.waitUntil(cache.put(event.request, network.clone()));
-                    }
-                    return network;
-                } catch (err) {
-                    const cached = await cache.match(event.request);
-                    if (cached) {
-                        return cached;
-                    }
-                    throw err;
-                }
-            })());
-        }
         return;
     }
 

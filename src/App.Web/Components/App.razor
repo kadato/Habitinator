@@ -198,6 +198,9 @@
 
 @if (HttpContext?.User?.Identity?.IsAuthenticated == true)
 {
+@* Keep the loading bar outside the interactive Routes root. Blazor does not own this
+   node, so habitinatorRemoveLoadingBar can delete it without desyncing the render tree. *@
+<div id="habitinator-loading-bar"></div>
 <div id="habitinator-wasm-splash" class="wasm-splash--hidden" aria-label="Loading application" role="status" style="display: none;">
     <div class="wasm-splash__inner">
         <div class="wasm-splash__logo" aria-hidden="true">
@@ -227,7 +230,18 @@
         if (typeof window.habRemoveSplash === 'function') { window.habRemoveSplash(); }
         // Also remove the legacy top loading bar, backward compat
         var bar = document.getElementById('habitinator-loading-bar');
-        if (bar) { bar.style.opacity = '0'; bar.style.visibility = 'hidden'; setTimeout(function () { bar.remove(); }, 250); }
+        if (bar) {
+            // The CSS fade-in fills forwards, so start the fade-out from the
+            // current computed opacity instead of overriding it with inline CSS.
+            if (typeof bar.animate === 'function') {
+                bar.animate(
+                    [{ opacity: getComputedStyle(bar).opacity }, { opacity: 0 }],
+                    { duration: 200, easing: 'ease-out', fill: 'forwards' });
+            } else {
+                bar.style.opacity = '0';
+            }
+            setTimeout(function () { bar.remove(); }, 220);
+        }
     };
     window.habitinatorSubmitForm = function (formId) {
         var form = document.getElementById(formId);
@@ -329,7 +343,23 @@
             navigator.serviceWorker.addEventListener('controllerchange', function () {
                 if (refreshing) return;
                 refreshing = true;
-                window.location.reload();
+                // Never reload under the user. A refresh can drop a form, a timer
+                // prompt, or an open dialog. Show a small banner and let them choose.
+                if (document.getElementById('habitinator-update-banner')) {
+                    return;
+                }
+                var banner = document.createElement('div');
+                banner.id = 'habitinator-update-banner';
+                banner.setAttribute('role', 'status');
+                banner.style.cssText = 'position:fixed;left:50%;bottom:calc(1rem + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);z-index:30000;display:flex;align-items:center;gap:.75rem;padding:.65rem .9rem;border-radius:.75rem;background:var(--mud-palette-surface,#fff);color:var(--mud-palette-text-primary,#111);border:1px solid var(--mud-palette-lines-default,#ddd);box-shadow:0 8px 24px rgba(0,0,0,.18);font:600 .85rem/1.2 system-ui,sans-serif;max-width:calc(100vw - 2rem);';
+                banner.textContent = 'A new version is ready.';
+                var reload = document.createElement('button');
+                reload.type = 'button';
+                reload.textContent = 'Reload';
+                reload.style.cssText = 'border:0;border-radius:.5rem;padding:.4rem .75rem;background:var(--mud-palette-primary,#2563eb);color:#fff;font:inherit;cursor:pointer;';
+                reload.addEventListener('click', function () { window.location.reload(); });
+                banner.appendChild(reload);
+                document.body.appendChild(banner);
             });
         }
     }

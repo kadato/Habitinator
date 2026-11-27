@@ -87,7 +87,7 @@ html.light-theme #habitinator-wasm-splash {
     }
 }
 
-/* -- Top Loading Bar, shown immediately while navigating -- */
+/* -- Top Loading Bar, shown while the WebAssembly app boots -- */
 #habitinator-loading-bar {
     position: fixed;
     top: 0;
@@ -97,6 +97,42 @@ html.light-theme #habitinator-wasm-splash {
     background: var(--mud-palette-primary);
     opacity: 0;
     z-index: 20000;
+    pointer-events: none;
+    overflow: hidden;
+    animation: habLoadingBarIn var(--dur-slow) var(--ease-out) 0.4s forwards;
+    transition: opacity var(--dur-slow) ease;
+}
+
+#habitinator-loading-bar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+    transform: translateX(-100%);
+    animation: habLoadingBarSweep 1.4s var(--ease-standard) infinite;
+}
+
+@keyframes habLoadingBarIn {
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes habLoadingBarSweep {
+    to {
+        transform: translateX(100%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #habitinator-loading-bar {
+        animation: none;
+        opacity: 0.9;
+    }
+
+    #habitinator-loading-bar::after {
+        animation: none;
+    }
 }
 
 html {

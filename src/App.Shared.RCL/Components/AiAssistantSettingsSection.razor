@@ -66,7 +66,7 @@
                     <MudSelectItem Value="@("OpenRouter")">OpenRouter</MudSelectItem>
                     <MudSelectItem Value="@("OpenAI")">OpenAI</MudSelectItem>
                     <MudSelectItem Value="@("Groq")">Groq</MudSelectItem>
-                    <MudSelectItem Value="@("Ollama")">Ollama (local)</MudSelectItem>
+                    <MudSelectItem Value="@("Ollama")">Ollama on server localhost</MudSelectItem>
                     <MudSelectItem Value="@("Custom")">Custom (OpenAI compatible)</MudSelectItem>
                 </MudSelect>
 
@@ -74,7 +74,7 @@
                               Label="API Endpoint URL"
                               Variant="Variant.Outlined"
                               dense="true"
-                              Placeholder="https://api.opencode.ai/v1"
+                              Placeholder="@AiPreferences.DefaultOpenCodeGoEndpoint"
                               Value="_model.Ai.Endpoint"
                               ValueChanged="v => { _model.Ai.Endpoint = v; _testResult = null; }"
                               OnBlur="SavePreferencesAsync"
@@ -88,11 +88,43 @@
                               Adornment="Adornment.End"
                               AdornmentIcon="@(_showKey ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
                               OnAdornmentClick="() => _showKey = !_showKey"
-                              Placeholder="sk-..."
-                              Value="_model.Ai.ApiKey"
-                              ValueChanged="v => { _model.Ai.ApiKey = v; _testResult = null; }"
-                              OnBlur="SavePreferencesAsync"
-                              HelperText="Stored in your account." />
+                              Placeholder="@GetApiKeyPlaceholder()"
+                              Value="_apiKeyInput"
+                              ValueChanged="OnApiKeyInputChanged"
+                              OnBlur="SaveApiKeyOnBlurAsync"
+                              HelperText="Encrypted at rest. The key is never shown again." />
+
+                @if (_model.Ai.ApiKeyConfigured)
+                {
+                    <div class="d-flex align-center justify-end gap-2">
+                        @if (_confirmRemoveKey)
+                        {
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Error"
+                                       Size="Size.Small"
+                                       Disabled="_saving"
+                                       OnClick="RemoveApiKeyAsync">
+                                Confirm remove
+                            </MudButton>
+                            <MudButton Variant="Variant.Text"
+                                       Size="Size.Small"
+                                       OnClick="() => _confirmRemoveKey = false">
+                                Cancel
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Error"
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.DeleteOutline"
+                                       Disabled="_saving"
+                                       OnClick="() => _confirmRemoveKey = true">
+                                Remove saved key
+                            </MudButton>
+                        }
+                    </div>
+                }
 
                 <div>
                     <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="mb-1 font-weight-bold">
@@ -189,6 +221,13 @@
                         @_testResult.Message
                     </MudAlert>
                 }
+
+                @if (!string.IsNullOrWhiteSpace(PrivacyUrl))
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                        <a href="@PrivacyUrl" target="_blank" rel="noopener">How AI data is handled</a>
+                    </MudText>
+                }
             </MudStack>
         </MudPaper>
 
@@ -226,6 +265,41 @@
                         <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Small" Color="Color.Warning" />
                         <code class="ai-tool-cap-pill__code">get_timer_summary</code>
                         <span class="ai-tool-cap-pill__desc">Focus timer</span>
+                    </span>
+                    <span class="ai-tool-cap-pill">
+                        <MudIcon Icon="@Icons.Material.Filled.PlaylistAdd" Size="Size.Small" Color="Color.Success" />
+                        <code class="ai-tool-cap-pill__code">create_items</code>
+                        <span class="ai-tool-cap-pill__desc">Batch create</span>
+                    </span>
+                    <span class="ai-tool-cap-pill">
+                        <MudIcon Icon="@Icons.Material.Filled.DriveFileRenameOutline" Size="Size.Small" Color="Color.Primary" />
+                        <code class="ai-tool-cap-pill__code">rename_item</code>
+                        <span class="ai-tool-cap-pill__desc">Rename</span>
+                    </span>
+                    <span class="ai-tool-cap-pill">
+                        <MudIcon Icon="@Icons.Material.Filled.Event" Size="Size.Small" Color="Color.Info" />
+                        <code class="ai-tool-cap-pill__code">set_due_date</code>
+                        <span class="ai-tool-cap-pill__desc">Due date</span>
+                    </span>
+                    <span class="ai-tool-cap-pill">
+                        <MudIcon Icon="@Icons.Material.Filled.Archive" Size="Size.Small" Color="Color.Secondary" />
+                        <code class="ai-tool-cap-pill__code">archive_item</code>
+                        <span class="ai-tool-cap-pill__desc">Archive</span>
+                    </span>
+                    <span class="ai-tool-cap-pill">
+                        <MudIcon Icon="@Icons.Material.Filled.Sell" Size="Size.Small" Color="Color.Primary" />
+                        <code class="ai-tool-cap-pill__code">update_tags</code>
+                        <span class="ai-tool-cap-pill__desc">Tags</span>
+                    </span>
+                    <span class="ai-tool-cap-pill">
+                        <MudIcon Icon="@Icons.Material.Filled.Notes" Size="Size.Small" Color="Color.Secondary" />
+                        <code class="ai-tool-cap-pill__code">append_notes</code>
+                        <span class="ai-tool-cap-pill__desc">Notes</span>
+                    </span>
+                    <span class="ai-tool-cap-pill">
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" Color="Color.Info" />
+                        <code class="ai-tool-cap-pill__code">set_daily_weekdays</code>
+                        <span class="ai-tool-cap-pill__desc">Schedule</span>
                     </span>
                 </div>
             </MudStack>
@@ -587,12 +661,17 @@
 @code {
     [Parameter] public bool ShowTitle { get; set; } = true;
 
+    /// <summary>Web privacy page link. Hosts that cannot render it leave this null.</summary>
+    [Parameter] public string? PrivacyUrl { get; set; }
+
     private UserPreferences? _model;
     private bool _loading = true;
     private bool _saving;
     private bool _testing;
     private bool _generatingMcpToken;
     private bool _showKey;
+    private bool _confirmRemoveKey;
+    private string _apiKeyInput = string.Empty;
     private AiTestConnectionResponse? _testResult;
     private CreateMcpTokenResponse? _mcpTokenResponse;
     private bool _isCustomModel;
@@ -870,11 +949,70 @@
         _ => "muse-spark-1.3-contributor"
     };
 
-    private async Task SavePreferencesAsync()
+    private string GetApiKeyPlaceholder() =>
+        _model?.Ai.ApiKeyConfigured == true
+            ? "Key saved. Enter a new key to replace it."
+            : "sk-...";
+
+    private void OnApiKeyInputChanged(string value)
+    {
+        _apiKeyInput = value ?? string.Empty;
+        _testResult = null;
+    }
+
+    private string GetEffectiveApiKey() =>
+        !string.IsNullOrWhiteSpace(_apiKeyInput)
+            ? _apiKeyInput.Trim()
+            : _model?.Ai.ApiKey?.Trim() ?? string.Empty;
+
+    private async Task SaveApiKeyOnBlurAsync()
+    {
+        if (_model is null || string.IsNullOrWhiteSpace(_apiKeyInput))
+        {
+            return;
+        }
+
+        await SavePreferencesCoreAsync();
+    }
+
+    private async Task RemoveApiKeyAsync()
     {
         if (_model is null)
         {
             return;
+        }
+
+        _model.Ai.ClearApiKey = true;
+        _model.Ai.ApiKey = string.Empty;
+        _apiKeyInput = string.Empty;
+        var saved = await SavePreferencesCoreAsync();
+        _model.Ai.ClearApiKey = false;
+        _confirmRemoveKey = false;
+        if (saved)
+        {
+            _model.Ai.ApiKeyConfigured = false;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task SavePreferencesAsync()
+    {
+        await SavePreferencesCoreAsync();
+    }
+
+    private async Task<bool> SavePreferencesCoreAsync()
+    {
+        if (_model is null)
+        {
+            return false;
+        }
+
+        var typedKey = _apiKeyInput?.Trim() ?? string.Empty;
+        var replacingKey = typedKey.Length > 0;
+        if (replacingKey)
+        {
+            _model.Ai.ApiKey = typedKey;
         }
 
         _saving = true;
@@ -882,10 +1020,21 @@
         {
             await PreferencesService.SaveAsync(_model);
             Snackbar.Add("AI preferences saved.", Severity.Success, o => o.VisibleStateDuration = 1500);
+            if (replacingKey)
+            {
+                // The server owns the key from here. Keeping it in the component
+                // would leak it back into local storage when preferences are cached.
+                _model.Ai.ApiKey = string.Empty;
+                _model.Ai.ApiKeyConfigured = true;
+                _apiKeyInput = string.Empty;
+            }
+
+            return true;
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Failed to save preferences: {ex.Message}", Severity.Error);
+            return false;
         }
         finally
         {
@@ -910,7 +1059,7 @@
             var req = new AiTestConnectionRequest
             {
                 Endpoint = _model.Ai.Endpoint,
-                ApiKey = _model.Ai.ApiKey,
+                ApiKey = GetEffectiveApiKey(),
                 Model = _model.Ai.Model
             };
 

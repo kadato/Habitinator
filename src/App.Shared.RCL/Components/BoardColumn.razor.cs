@@ -144,8 +144,8 @@ public partial class BoardColumn : IAsyncDisposable
     {
         BoardSection.Habit => _habitFilter switch
         {
-            HabitListFilter.Weak => "New",
-            HabitListFilter.Strong => "Established",
+            HabitListFilter.Weak => "1-2 logs",
+            HabitListFilter.Strong => "3+ logs",
             _ => "All"
         },
         BoardSection.Daily => _dailyFilter switch
@@ -168,8 +168,8 @@ public partial class BoardColumn : IAsyncDisposable
     {
         BoardSection.Habit => _habitFilter switch
         {
-            HabitListFilter.Weak => "Fewer than 3 logs.",
-            HabitListFilter.Strong => "3 or more logs.",
+            HabitListFilter.Weak => "Fewer than 3 logs in this period.",
+            HabitListFilter.Strong => "3 or more logs in this period.",
             _ => null
         },
         BoardSection.Daily => _dailyFilter switch

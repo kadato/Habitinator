@@ -42,20 +42,20 @@
                         All
                     </button>
                     <button type="button"
-                            title="Habits with fewer than 3 logs"
-                            aria-label="Show new habits with fewer than 3 logs"
+                            title="Habits with fewer than 3 logs in this period"
+                            aria-label="Show habits with fewer than 3 logs in this period"
                             aria-pressed="@(_habitFilter == HabitListFilter.Weak)"
                             class="@GetFilterBtnClass(_habitFilter == HabitListFilter.Weak)"
                             @onclick="@(() => SetHabitFilter(HabitListFilter.Weak))">
-                        New
+                        1-2 logs
                     </button>
                     <button type="button"
-                            title="Habits with 3 or more logs"
-                            aria-label="Show established habits with 3 or more logs"
+                            title="Habits with 3 or more logs in this period"
+                            aria-label="Show habits with 3 or more logs in this period"
                             aria-pressed="@(_habitFilter == HabitListFilter.Strong)"
                             class="@GetFilterBtnClass(_habitFilter == HabitListFilter.Strong)"
                             @onclick="@(() => SetHabitFilter(HabitListFilter.Strong))">
-                        Established
+                        3+ logs
                     </button>
                 }
                 else if (Section == BoardSection.Daily)

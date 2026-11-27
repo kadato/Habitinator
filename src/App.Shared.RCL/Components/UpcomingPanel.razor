@@ -91,7 +91,7 @@
                             <div class="cal-card__titles">
                                 <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="cal-card__title">Overdue</MudText>
                             </div>
-                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Medium" Class="text-transform-none" OnClick="MoveOverdueToTodayAsync" Disabled="_bulkMoving" aria-busy="@(_bulkMoving ? "true" : "false")">@(_bulkMoving ? "Moving…" : $"Move all {_overdue.Count} to today")</MudButton>
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Medium" Class="text-transform-none" OnClick="MoveOverdueToTodayAsync" Disabled="_bulkMoving" aria-busy="@(_bulkMoving ? "true" : "false")">@MoveOverdueLabel()</MudButton>
                         </div>
                         <ul class="cal-list">
                             @foreach (var todo in GetVisibleOverdue())

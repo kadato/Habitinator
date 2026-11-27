@@ -1088,7 +1088,7 @@
     font-weight: 750;
     line-height: 1;
     font-variant-numeric: tabular-nums;
-    color: var(--hab-accent-streak);
+    color: light-dark(#c2410c, #fb923c);
     background: color-mix(in srgb, var(--hab-accent-streak) 12%, transparent);
     border-radius: var(--radius-sm);
     padding: 0.2rem 0.55rem;

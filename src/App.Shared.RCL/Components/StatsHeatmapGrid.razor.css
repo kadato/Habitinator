@@ -1,6 +1,8 @@
 /* Container holds rowlabels outside and the scrollable wrap inside, so labels stay visible when scrolled. */
 .stats-heatmap-container {
-    --stats-cell: 12px;
+    /* 24px keeps every clickable day cell at the WCAG 2.5.8 minimum. The
+       grid scrolls horizontally, so density does not have to shrink the target. */
+    --stats-cell: 24px;
     --stats-grid-gap: 3px;
     display: flex;
     align-items: flex-start;
@@ -10,7 +12,7 @@
 }
 
 .stats-heatmap-container--large {
-    --stats-cell: 15px;
+    --stats-cell: 24px;
     --stats-grid-gap: 3px;
 }
 
@@ -136,14 +138,8 @@ button.stats-cell:focus-visible, button.stats-cell:focus {
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary) 30%);
 }
 
-@media (max-width: 599.98px) {
-    .stats-heatmap-container { --stats-cell: 14px; }
-    .stats-heatmap-container--large { --stats-cell: 16px; }
-}
-
-/* On touch, heatmap day cells meet the 24px minimum target. The wrap
-   scrolls horizontally, so the grid stays reachable on small screens. */
+/* On touch, add a little more separation so adjacent day cells do not
+   merge into one target. The wrap scrolls horizontally on small screens. */
 @media (pointer: coarse) {
-    .stats-heatmap-container { --stats-cell: 24px; --stats-grid-gap: 4px; }
-    .stats-heatmap-container--large { --stats-cell: 24px; }
+    .stats-heatmap-container { --stats-grid-gap: 4px; }
 }

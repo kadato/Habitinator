@@ -5,7 +5,7 @@
      @onclick:stopPropagation="true"
      @ontouchstart="HandleTouchStart"
      @ontouchend="HandleTouchEnd"
-     role="status">
+     role="@(Severity == Severity.Error ? "alert" : "status")">
     <div class="toast-content__main">
         <span class="toast-content-icon" aria-hidden="true">
             <MudIcon Icon="@SeverityIcon" Size="Size.Small"/>

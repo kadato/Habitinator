@@ -716,8 +716,25 @@ public partial class UpcomingPanel : IDisposable
     private bool IsCheckedToday(BoardItem daily) =>
         DailySchedule.IsCompletedForToday(daily.DailyLastCompletedOn, daily.IsCompleted, _today);
 
+    private string MoveOverdueLabel()
+    {
+        if (_bulkMoving)
+        {
+            return "Moving…";
+        }
+
+        return _overdue.Count == 1
+            ? "Move 1 to today"
+            : $"Move all {_overdue.Count} to today";
+    }
+
     private async Task ToggleTodayAsync(BoardItem daily)
     {
+        if (!_busy.Add(daily.Id))
+        {
+            return;
+        }
+
         try
         {
             await BoardData.ToggleItemAsync(BoardSection.Daily, daily.Id);
@@ -726,6 +743,10 @@ public partial class UpcomingPanel : IDisposable
         catch (Exception)
         {
             await Notifier.NotifyAsync("Couldn't update daily. Try again.", Severity.Error);
+        }
+        finally
+        {
+            _busy.Remove(daily.Id);
         }
     }
 

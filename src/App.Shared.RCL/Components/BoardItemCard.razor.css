@@ -440,16 +440,6 @@ a.board-todo-due:hover {
     transform: translateY(0.07em);
 }
 
-.board-row--done .board-card__title {
-    opacity: 0.75;
-}
-
-.board-row--done .board-subtask-pill,
-.board-row--done .board-todo-due,
-.board-row--done .board-streak {
-    opacity: 0.7;
-}
-
 .board-sq {
     width: 2.75rem;
     height: 2.75rem;
@@ -882,8 +872,21 @@ a.board-todo-due:hover {
     margin-bottom: -0.1rem;
 }
 
-/* Completed cards with no notes look cleaner */
+/* Completed cards with no notes look quieter without reducing text contrast. */
 .board-card.board-row--done:not(:has(.board-card__notes)) {
-    opacity: 0.7;
+    background-color: color-mix(in srgb, var(--mud-palette-surface) 94%, var(--mud-palette-text-primary) 6%);
+}
+
+.board-card.board-row--done:not(:has(.board-card__notes)) .board-card__title-text {
+    color: var(--mud-palette-text-secondary);
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+}
+
+@media (forced-colors: active) {
+    .board-card.board-row--done:not(:has(.board-card__notes)) {
+        background-color: Canvas;
+        border-color: GrayText;
+    }
 }
 

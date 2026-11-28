@@ -75,6 +75,19 @@ public sealed class InMemoryBoardLocalStore : IBoardLocalStore
         return Task.CompletedTask;
     }
 
+    public Task UpsertItemsAsync(IReadOnlyList<BoardLocalRow> rows, CancellationToken cancellationToken = default)
+    {
+        lock (_lock)
+        {
+            foreach (var row in rows)
+            {
+                _items[row.Id] = CloneRow(row);
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
     public Task DeleteItemAsync(string userKey, Guid id, CancellationToken cancellationToken = default)
     {
         lock (_lock)
@@ -162,6 +175,19 @@ public sealed class InMemoryBoardLocalStore : IBoardLocalStore
         lock (_lock)
         {
             _outbox[entry.OperationId] = CloneOutbox(entry);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateOutboxBatchAsync(IReadOnlyList<BoardOutboxEntry> entries, CancellationToken cancellationToken = default)
+    {
+        lock (_lock)
+        {
+            foreach (var entry in entries)
+            {
+                _outbox[entry.OperationId] = CloneOutbox(entry);
+            }
         }
 
         return Task.CompletedTask;

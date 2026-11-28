@@ -366,11 +366,7 @@ public sealed partial class LocalFirstBoardDataService(
             await _gate.WaitAsync(CancellationToken.None);
             try
             {
-                foreach (var row in changedRows)
-                {
-                    await store.UpsertItemAsync(row, CancellationToken.None);
-                }
-
+                await store.UpsertItemsAsync(changedRows, CancellationToken.None);
                 _cachedSnapshot = null;
             }
             finally
@@ -399,6 +395,7 @@ public sealed partial class LocalFirstBoardDataService(
         }
 
         _cachedSnapshot = null;
+        _lastOutboxPruneUtc = DateTime.MinValue;
         await store.DeleteAllItemsAsync(meta.BoundUserKey, cancellationToken);
         await store.ClearOutboxForUserAsync(meta.BoundUserKey, cancellationToken);
         await store.SetMetaAsync(new BoardStoreMeta { BoundUserKey = userKey }, cancellationToken);

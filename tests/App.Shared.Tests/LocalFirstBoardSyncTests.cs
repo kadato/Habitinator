@@ -842,6 +842,87 @@ public sealed class LocalFirstBoardSyncTests
         after[0].LastError.Should().Contain("Unknown outbox kind");
     }
 
+    [Fact]
+    public async Task DrainStaleOutbox_ExpiresQuarantinedOperationOlderThanLifetime()
+    {
+        var harness = new Harness();
+        var ct = CancellationToken.None;
+        var expiredId = Guid.NewGuid();
+        var liveId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        await EnqueueStuckOperationAsync(
+            harness,
+            expiredId,
+            now.AddDays(-(LocalFirstBoardDataService.QuarantinedOutboxLifetime.TotalDays + 1)));
+        await EnqueueStuckOperationAsync(harness, liveId, now);
+
+        var drained = await harness.Board.TryDrainOneOutboxOperationAsync(ct);
+
+        drained.Should().BeFalse();
+        var pending = await harness.Store.ListOutboxAsync(Harness.UserKey);
+        pending.Should().ContainSingle().Which.OperationId.Should().Be(liveId);
+    }
+
+    [Fact]
+    public async Task DrainStaleOutbox_CapsQuarantinedOperationsAtTheOldest()
+    {
+        var harness = new Harness();
+        var now = DateTime.UtcNow;
+        var ids = Enumerable.Range(0, LocalFirstBoardDataService.MaxQuarantinedOutboxOperations + 1)
+            .Select(_ => Guid.NewGuid())
+            .ToList();
+
+        // Index 0 is the newest, so the last id is the oldest and is dropped first.
+        for (var i = 0; i < ids.Count; i++)
+        {
+            await EnqueueStuckOperationAsync(harness, ids[i], now.AddMinutes(-i));
+        }
+
+        var drained = await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None);
+
+        drained.Should().BeFalse();
+        var pending = await harness.Store.ListOutboxAsync(Harness.UserKey);
+        var oldestId = ids[^1];
+        pending.Should().HaveCount(LocalFirstBoardDataService.MaxQuarantinedOutboxOperations);
+        pending.Should().NotContain(x => x.OperationId == oldestId);
+    }
+
+    [Fact]
+    public async Task DrainStaleOutbox_KeepsActiveOperationsRegardlessOfAge()
+    {
+        var harness = new Harness();
+        var activeId = Guid.NewGuid();
+        await harness.Store.EnqueueOutboxAsync(new BoardOutboxEntry
+        {
+            OperationId = activeId,
+            UserKey = Harness.UserKey,
+            Kind = BoardOutboxOperationKind.Rename,
+            PayloadJson = "{}",
+            CreatedAtUtc = DateTime.UtcNow.AddDays(-90),
+            AttemptCount = 0
+        }, CancellationToken.None);
+        harness.Server.Responder = _ => new HttpResponseMessage(HttpStatusCode.InternalServerError);
+
+        await harness.Board.TryDrainOneOutboxOperationAsync(CancellationToken.None);
+
+        (await harness.Store.ListOutboxAsync(Harness.UserKey))
+            .Should().ContainSingle(x => x.OperationId == activeId);
+    }
+
+    private static Task EnqueueStuckOperationAsync(Harness harness, Guid id, DateTime lastAttemptUtc) =>
+        harness.Store.EnqueueOutboxAsync(new BoardOutboxEntry
+        {
+            OperationId = id,
+            UserKey = Harness.UserKey,
+            Kind = BoardOutboxOperationKind.Rename,
+            PayloadJson = "{}",
+            CreatedAtUtc = lastAttemptUtc.AddMinutes(-5),
+            AttemptCount = LocalFirstBoardDataService.QuarantineAfterAttempts,
+            LastAttemptUtc = lastAttemptUtc,
+            LastError = "500"
+        }, CancellationToken.None);
+
     private static HttpResponseMessage JsonResponse<T>(HttpStatusCode status, T value) =>
         new(status)
         {

@@ -158,6 +158,63 @@ public sealed class RemoteActivityStatisticsReaderTests
         return factory;
     }
 
+    [Fact]
+    public void Cache_stays_bounded_when_tag_filters_accumulate()
+    {
+        var overview = new ActivityOverviewDto(
+            new ActivityDashboardDto(
+                DailyGraphPeriods.Rolling370Days,
+                [],
+                [],
+                53,
+                0,
+                0,
+                0,
+                null,
+                new DateOnly(2025, 1, 1),
+                new DateOnly(2026, 1, 1),
+                370,
+                new DateOnly(2025, 1, 1),
+                new DateOnly(2026, 1, 1),
+                []),
+            new DailyContributionsViewDto(
+                DailyGraphPeriods.Rolling370Days,
+                [],
+                [],
+                new DateOnly(2025, 1, 1),
+                new DateOnly(2026, 1, 1)),
+            new HabitContributionsViewDto(
+                DailyGraphPeriods.Rolling370Days,
+                [],
+                [],
+                new DateOnly(2025, 1, 1),
+                new DateOnly(2026, 1, 1)));
+
+        var json = JsonSerializer.Serialize(overview, JsonDefaults.Api);
+        var reader = new RemoteActivityStatisticsReader(
+            Substitute.For<IHttpClientFactory>(),
+            new AnyKeySettingsStore(json));
+
+        for (var i = 0; i < 220; i++)
+        {
+            reader.TryGetCachedOverview(DailyGraphPeriods.Rolling370Days, $"tag-{i}", out var cached)
+                .Should().BeTrue();
+            cached.Should().NotBeNull();
+        }
+
+        reader.CacheEntryCount.Should().BeLessThanOrEqualTo(120);
+    }
+
+    private sealed class AnyKeySettingsStore(string value) : ILocalSettingsStore
+    {
+        private readonly Dictionary<string, string> _writes = [];
+
+        public string? Read(string key, string? defaultValue = null) =>
+            _writes.TryGetValue(key, out var written) ? written : value;
+
+        public void Write(string key, string value) => _writes[key] = value;
+    }
+
     private sealed class MemorySettingsStore : ILocalSettingsStore
     {
         private readonly Dictionary<string, string> _values = [];

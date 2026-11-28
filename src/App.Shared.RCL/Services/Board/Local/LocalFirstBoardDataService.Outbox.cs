@@ -13,6 +13,17 @@ public sealed partial class LocalFirstBoardDataService
     /// <summary>The client deprioritizes operations that fail this many times, so one failed operation does not block newer ones.</summary>
     public const int QuarantineAfterAttempts = 8;
 
+    /// <summary>Upper bound on stuck operations the prune keeps.</summary>
+    public const int MaxQuarantinedOutboxOperations = 100;
+
+    /// <summary>The prune removes stuck operations older than this so one failed write cannot grow the outbox forever.</summary>
+    public static readonly TimeSpan QuarantinedOutboxLifetime = TimeSpan.FromDays(14);
+
+    private static readonly TimeSpan OutboxPruneInterval = TimeSpan.FromMinutes(5);
+
+    /// <summary>Last time the stale-operation prune ran. Guarded by <see cref="_gate" />.</summary>
+    private DateTime _lastOutboxPruneUtc = DateTime.MinValue;
+
     /// <summary>Upper bound on concurrent retro completion requests in one sync pass.</summary>
     public const int RetroCompletionBatchMaxSize = 16;
 
@@ -35,6 +46,7 @@ public sealed partial class LocalFirstBoardDataService
             }
 
             await EnsureUserScopeAsync(userKey, cancellationToken);
+            await PruneStaleOutboxAsync(userKey, cancellationToken);
 
             var ordered = (await store.ListOutboxAsync(userKey, cancellationToken))
                 .OrderBy(o => o.CreatedAtUtc)
@@ -111,6 +123,7 @@ public sealed partial class LocalFirstBoardDataService
             }
 
             await EnsureUserScopeAsync(userKey, cancellationToken);
+            await PruneStaleOutboxAsync(userKey, cancellationToken);
             var ordered = (await store.ListOutboxAsync(userKey, cancellationToken))
                 .OrderBy(o => o.CreatedAtUtc)
                 .ThenBy(o => o.OperationId)
@@ -207,6 +220,7 @@ public sealed partial class LocalFirstBoardDataService
             }
 
             await EnsureUserScopeAsync(userKey, cancellationToken);
+            await PruneStaleOutboxAsync(userKey, cancellationToken);
             var ordered = (await store.ListOutboxAsync(userKey, cancellationToken))
                 .OrderBy(o => o.CreatedAtUtc)
                 .ThenBy(o => o.OperationId)
@@ -340,6 +354,58 @@ public sealed partial class LocalFirstBoardDataService
         finally
         {
             _gate.Release();
+        }
+    }
+
+    /// <summary>
+    ///     Drops stuck operations that expired or exceeded the cap. The prune only
+    ///     drops operations that already failed <see cref="QuarantineAfterAttempts" />
+    ///     times, so it never shortens an active queue. The sync details UI already
+    ///     offers a manual discard for these rows.
+    /// </summary>
+    private async Task PruneStaleOutboxAsync(string userKey, CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+        if (now - _lastOutboxPruneUtc < OutboxPruneInterval)
+        {
+            return;
+        }
+
+        _lastOutboxPruneUtc = now;
+
+        var pending = await store.ListOutboxAsync(userKey, cancellationToken);
+        var quarantined = pending
+            .Where(o => o.AttemptCount >= QuarantineAfterAttempts)
+            .OrderByDescending(o => o.LastAttemptUtc ?? o.CreatedAtUtc)
+            .ThenByDescending(o => o.CreatedAtUtc)
+            .ToList();
+        if (quarantined.Count == 0)
+        {
+            return;
+        }
+
+        var stale = new List<BoardOutboxEntry>();
+        for (var i = 0; i < quarantined.Count; i++)
+        {
+            var operation = quarantined[i];
+            var lastTouched = operation.LastAttemptUtc ?? operation.CreatedAtUtc;
+            if (i >= MaxQuarantinedOutboxOperations || now - lastTouched >= QuarantinedOutboxLifetime)
+            {
+                stale.Add(operation);
+            }
+        }
+
+        foreach (var operation in stale)
+        {
+            await store.DeleteOutboxAsync(operation.OperationId, cancellationToken);
+        }
+
+        if (stale.Count > 0)
+        {
+            logger.LogWarning(
+                "Removed {StaleCount} stuck outbox operations; the oldest was created at {OldestCreatedAtUtc:O}.",
+                stale.Count,
+                stale.Min(o => o.CreatedAtUtc));
         }
     }
 
@@ -675,6 +741,7 @@ public sealed partial class LocalFirstBoardDataService
         DateTimeOffset serverVersion,
         CancellationToken cancellationToken)
     {
+        List<BoardOutboxEntry> changed = [];
         foreach (var row in await store.ListOutboxAsync(userKey, cancellationToken))
         {
             if (!BoardOutboxReferencedIds.ReferencesItem(row.Kind, row.PayloadJson, itemId))
@@ -688,8 +755,13 @@ public sealed partial class LocalFirstBoardDataService
                 row.PayloadJson = remapped;
                 row.AttemptCount = 0;
                 row.LastError = null;
-                await store.UpdateOutboxAsync(row, cancellationToken);
+                changed.Add(row);
             }
+        }
+
+        if (changed.Count > 0)
+        {
+            await store.UpdateOutboxBatchAsync(changed, cancellationToken);
         }
     }
 
@@ -1045,14 +1117,20 @@ public sealed partial class LocalFirstBoardDataService
                 await store.UpsertItemAsync(BoardLocalRow.FromModel(section, userKey, serverItem, false), cancellationToken);
             }
 
+            List<BoardOutboxEntry> remappedRows = [];
             foreach (var row in await store.ListOutboxAsync(userKey, cancellationToken))
             {
                 var remapped = BoardOutboxPayloadMapper.RemapClientToServerId(row.Kind, row.PayloadJson, clientId, serverItem.Id);
                 if (!string.Equals(remapped, row.PayloadJson, StringComparison.Ordinal))
                 {
                     row.PayloadJson = remapped;
-                    await store.UpdateOutboxAsync(row, cancellationToken);
+                    remappedRows.Add(row);
                 }
+            }
+
+            if (remappedRows.Count > 0)
+            {
+                await store.UpdateOutboxBatchAsync(remappedRows, cancellationToken);
             }
         }
         finally

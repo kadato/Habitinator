@@ -312,6 +312,41 @@ public abstract class BoardLocalStoreContract : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UpsertItems_WritesNewAndExistingRows()
+    {
+        var existingId = Guid.NewGuid();
+        var addedId = Guid.NewGuid();
+        await Store.UpsertItemAsync(Row("alice", existingId));
+
+        var existing = Row("alice", existingId);
+        existing.Title = "updated";
+        existing.Counter = 9;
+        await Store.UpsertItemsAsync([existing, Row("bob", addedId)]);
+
+        var alice = await Store.ListItemsAsync("alice", includeArchived: true);
+        alice.Should().ContainSingle().Which.Title.Should().Be("updated");
+        alice[0].Counter.Should().Be(9);
+        (await Store.FindItemAsync("bob", addedId)).Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task UpdateOutboxBatch_UpdatesEveryEntry()
+    {
+        var first = Entry("alice");
+        var second = Entry("alice");
+        await Store.EnqueueOutboxAsync(first);
+        await Store.EnqueueOutboxAsync(second);
+
+        first.AttemptCount = 4;
+        first.LastError = "first";
+        second.PayloadJson = """{"title":"changed"}""";
+        await Store.UpdateOutboxBatchAsync([first, second]);
+
+        (await Store.FindOutboxAsync(first.OperationId)).Should().BeEquivalentTo(first);
+        (await Store.FindOutboxAsync(second.OperationId)).Should().BeEquivalentTo(second);
+    }
+
+    [Fact]
     public async Task ApplyItemMutation_WritesItemAndOutbox()
     {
         var id = Guid.NewGuid();

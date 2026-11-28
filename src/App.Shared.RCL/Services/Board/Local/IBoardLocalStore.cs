@@ -16,6 +16,15 @@ public interface IBoardLocalStore
 
     Task UpsertItemAsync(BoardLocalRow row, CancellationToken cancellationToken = default);
 
+    /// <summary>Upserts many rows. A store that can batch should override this to commit them together.</summary>
+    async Task UpsertItemsAsync(IReadOnlyList<BoardLocalRow> rows, CancellationToken cancellationToken = default)
+    {
+        foreach (var row in rows)
+        {
+            await UpsertItemAsync(row, cancellationToken);
+        }
+    }
+
     Task DeleteItemAsync(string userKey, Guid id, CancellationToken cancellationToken = default);
 
     Task DeleteAllItemsAsync(string userKey, CancellationToken cancellationToken = default);
@@ -76,6 +85,15 @@ public interface IBoardLocalStore
     }
 
     Task UpdateOutboxAsync(BoardOutboxEntry entry, CancellationToken cancellationToken = default);
+
+    /// <summary>Updates many outbox rows. A store that can batch should override this to commit them together.</summary>
+    async Task UpdateOutboxBatchAsync(IReadOnlyList<BoardOutboxEntry> entries, CancellationToken cancellationToken = default)
+    {
+        foreach (var entry in entries)
+        {
+            await UpdateOutboxAsync(entry, cancellationToken);
+        }
+    }
 
     Task DeleteOutboxAsync(Guid operationId, CancellationToken cancellationToken = default);
 

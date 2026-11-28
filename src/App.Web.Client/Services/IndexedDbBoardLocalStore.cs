@@ -134,6 +134,13 @@ public sealed class IndexedDbBoardLocalStore : IBoardLocalStore
         return task;
     }
 
+    public Task UpsertItemsAsync(IReadOnlyList<BoardLocalRow> rows, CancellationToken cancellationToken = default)
+    {
+        var task = _inner.UpsertItemsAsync(rows, cancellationToken);
+        SchedulePersist();
+        return task;
+    }
+
     public Task DeleteItemAsync(string userKey, Guid id, CancellationToken cancellationToken = default)
     {
         var task = _inner.DeleteItemAsync(userKey, id, cancellationToken);
@@ -171,6 +178,13 @@ public sealed class IndexedDbBoardLocalStore : IBoardLocalStore
     public Task UpdateOutboxAsync(BoardOutboxEntry entry, CancellationToken cancellationToken = default)
     {
         var task = _inner.UpdateOutboxAsync(entry, cancellationToken);
+        ScheduleImmediatePersist();
+        return task;
+    }
+
+    public Task UpdateOutboxBatchAsync(IReadOnlyList<BoardOutboxEntry> entries, CancellationToken cancellationToken = default)
+    {
+        var task = _inner.UpdateOutboxBatchAsync(entries, cancellationToken);
         ScheduleImmediatePersist();
         return task;
     }

@@ -12,6 +12,7 @@ namespace App.Shared.RCL.Services.Remote;
 public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
 {
     private const string StatsOverviewCacheKeyPrefix = "habitinator_stats_overview_cache_v2";
+    private const int MaxCacheEntries = 120;
     private const string StatsPersistentPrefix = "habitinator_stats_v3_";
     private const string StatsIndexKey = "habitinator_stats_index_v3";
     private const string OverviewEndpoint = "api/activity/overview";
@@ -44,8 +45,8 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
                         // Serve the persisted copy for instant paint and offline fallback,
                         // but mark it expired so an online load always refreshes it.
                         var defaultPath = OverviewEndpoint;
-                        _cache[defaultPath] = (cached, DateTime.MinValue);
-                        _cache[$"{defaultPath}?period={DailyGraphPeriods.Rolling370Days}"] = (cached, DateTime.MinValue);
+                        SetCache(defaultPath, cached, DateTime.MinValue);
+                        SetCache($"{defaultPath}?period={DailyGraphPeriods.Rolling370Days}", cached, DateTime.MinValue);
                     }
                 }
                 catch
@@ -290,6 +291,8 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         }
     }
 
+    internal int CacheEntryCount => _cache.Count;
+
     public bool TryGetCachedOverview(string? periodKey, string? tag, out ActivityOverviewDto? overview)
     {
         var path = OverviewEndpoint + BuildActivityQuery(periodKey, tag);
@@ -311,13 +314,13 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         if (TryReadPersistent(path, out ActivityOverviewDto? persisted) && persisted != null)
         {
             overview = persisted;
-            _cache[path] = (persisted, DateTime.MinValue);
+            SetCache(path, persisted, DateTime.MinValue);
             return true;
         }
 
         if (TryReadLegacyOverview(periodKey, tag, out overview) && overview != null)
         {
-            _cache[path] = (overview, DateTime.MinValue);
+            SetCache(path, overview, DateTime.MinValue);
             return true;
         }
 
@@ -337,7 +340,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         if (TryReadPersistent(path, out ActivityDashboardDto? persisted) && persisted != null)
         {
             dashboard = persisted;
-            _cache[path] = (persisted, DateTime.MinValue);
+            SetCache(path, persisted, DateTime.MinValue);
             return true;
         }
 
@@ -346,7 +349,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         if (TryGetCachedOverview(periodKey, tag, out var overview) && overview?.Dashboard is not null)
         {
             dashboard = overview.Dashboard;
-            _cache[path] = (dashboard, DateTime.MinValue);
+            SetCache(path, dashboard, DateTime.MinValue);
             return true;
         }
 
@@ -366,14 +369,14 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         if (TryReadPersistent(path, out DailyContributionsViewDto? persisted) && persisted != null)
         {
             view = persisted;
-            _cache[path] = (persisted, DateTime.MinValue);
+            SetCache(path, persisted, DateTime.MinValue);
             return true;
         }
 
         if (TryGetCachedOverview(periodKey, tag, out var overview) && overview?.DailyContributions is not null)
         {
             view = overview.DailyContributions;
-            _cache[path] = (view, DateTime.MinValue);
+            SetCache(path, view, DateTime.MinValue);
             return true;
         }
 
@@ -393,14 +396,14 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         if (TryReadPersistent(path, out HabitContributionsViewDto? persisted) && persisted != null)
         {
             view = persisted;
-            _cache[path] = (persisted, DateTime.MinValue);
+            SetCache(path, persisted, DateTime.MinValue);
             return true;
         }
 
         if (TryGetCachedOverview(periodKey, tag, out var overview) && overview?.HabitContributions is not null)
         {
             view = overview.HabitContributions;
-            _cache[path] = (view, DateTime.MinValue);
+            SetCache(path, view, DateTime.MinValue);
             return true;
         }
 
@@ -537,6 +540,38 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         return q.Count == 0 ? string.Empty : "?" + string.Join("&", q);
     }
 
+    private void SetCache(string key, object? value, DateTime expiresAtUtc)
+    {
+        _cache[key] = (value, expiresAtUtc);
+        if (_cache.Count <= MaxCacheEntries)
+        {
+            return;
+        }
+
+        // Tag filters and period combinations produce unbounded keys. Remove expired
+        // entries first. If the cache is still over the cap, remove arbitrary
+        // entries. Persistent stats storage still holds the dropped values.
+        var now = DateTime.UtcNow;
+        foreach (var expired in _cache
+                     .Where(entry => entry.Value.ExpiresAtUtc > DateTime.MinValue && entry.Value.ExpiresAtUtc <= now)
+                     .Select(entry => entry.Key)
+                     .ToList())
+        {
+            _cache.TryRemove(expired, out _);
+        }
+
+        var overflow = _cache.Count - MaxCacheEntries;
+        if (overflow <= 0)
+        {
+            return;
+        }
+
+        foreach (var keyToRemove in _cache.Keys.Take(overflow))
+        {
+            _cache.TryRemove(keyToRemove, out _);
+        }
+    }
+
     private async Task<T> GetJsonCachedOrThrowAsync<T>(string requestUri, TimeSpan ttl, CancellationToken cancellationToken) where T : class
     {
         var now = DateTime.UtcNow;
@@ -548,7 +583,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
         try
         {
             var result = await GetJsonOrThrowAsync<T>(requestUri, cancellationToken);
-            _cache[requestUri] = (result, now.Add(ttl));
+            SetCache(requestUri, result, now.Add(ttl));
             return result;
         }
         catch (Exception ex) when (IsOfflineException(ex))
@@ -566,7 +601,7 @@ public sealed class RemoteActivityStatisticsReader : IActivityStatisticsReader
 
             if (TryReadPersistent(requestUri, out T? persisted) && persisted != null)
             {
-                _cache[requestUri] = (persisted, now.Add(ttl));
+                SetCache(requestUri, persisted, now.Add(ttl));
                 return persisted;
             }
 

@@ -585,8 +585,9 @@ public sealed partial class LocalFirstBoardDataService
         {
             item.SortOrder = seq;
             seq += 1.0;
-            await local.UpsertItemAsync(item, cancellationToken);
         }
+
+        await local.UpsertItemsAsync(items, cancellationToken);
     }
 
     private async Task AppendLocalActivityAsync(ActivityEventType type, Guid? boardItemId, string? titleSnapshot, CancellationToken cancellationToken, DateTimeOffset? occurredAtUtc = null)

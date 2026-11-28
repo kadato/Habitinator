@@ -33,17 +33,27 @@
                         {
                             <li class="sync-conflict-row" @key="op.OperationId">
                                 <MudText Typo="Typo.body2" Class="font-weight-bold">@FormatOperation(op)</MudText>
-                                @if (op.AttemptCount >= 8)
+                                @if (op.AttemptCount >= LocalFirstBoardDataService.QuarantineAfterAttempts)
                                 {
-                                    <MudText Typo="Typo.caption" Style="color: var(--hab-type-todo-ink);">Paused</MudText>
+                                    <MudText Typo="Typo.caption" Style="color: var(--hab-type-todo-ink);">
+                                        Stuck after @op.AttemptCount tries. Retry or discard it.
+                                    </MudText>
                                 }
                                 else
                                 {
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Waiting</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Queued</MudText>
                                 }
                                 <MudStack Row="true" Spacing="1" Class="mt-1">
                                     <MudButton Variant="Variant.Outlined" Size="Size.Medium" OnClick="RetryNow">Retry</MudButton>
-                                    <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Error" OnClick="@(() => DiscardAsync(op.OperationId))">Discard</MudButton>
+                                    @if (_confirmDiscardId == op.OperationId)
+                                    {
+                                        <MudButton Variant="Variant.Filled" Size="Size.Medium" Color="Color.Error" OnClick="@(() => DiscardAsync(op.OperationId))">Confirm discard</MudButton>
+                                        <MudButton Variant="Variant.Outlined" Size="Size.Medium" OnClick="@(() => _confirmDiscardId = null)">Keep</MudButton>
+                                    }
+                                    else
+                                    {
+                                        <MudButton Variant="Variant.Outlined" Size="Size.Medium" Color="Color.Error" OnClick="@(() => _confirmDiscardId = op.OperationId)">Discard</MudButton>
+                                    }
                                 </MudStack>
                             </li>
                         }
@@ -54,7 +64,7 @@
                 }
                 @if (Conflicts.Count > 0)
                 {
-                    <MudText Typo="Typo.subtitle2" Class="mt-3 font-weight-bold">Merges</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="mt-3 font-weight-bold">Resolved conflicts</MudText>
                     <ul class="sync-conflict-list">
                         @foreach (var conflict in Conflicts)
                         {
@@ -77,6 +87,7 @@
     [Parameter] public IReadOnlyList<BoardSyncConflict> Conflicts { get; set; } = [];
 
     private readonly Dictionary<Guid, string> _itemTitles = [];
+    private Guid? _confirmDiscardId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -160,6 +171,7 @@
             if (Services.GetService(typeof(LocalFirstBoardDataService)) is LocalFirstBoardDataService board)
             {
                 await board.DiscardOutboxOperationAsync(operationId);
+                _confirmDiscardId = null;
                 var fresh = await board.GetPendingOutboxAsync();
                 Pending = fresh;
                 StateHasChanged();

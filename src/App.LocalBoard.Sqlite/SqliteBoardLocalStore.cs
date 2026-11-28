@@ -132,6 +132,40 @@ public sealed class SqliteBoardLocalStore(
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task UpsertItemsAsync(IReadOnlyList<BoardLocalRow> rows, CancellationToken cancellationToken = default)
+    {
+        if (rows.Count == 0)
+        {
+            return;
+        }
+
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            foreach (var row in rows)
+            {
+                await UpsertItemCoreAsync(db, row, cancellationToken);
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            try
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+            catch
+            {
+                // Keep the original failure. Dispose still rolls back.
+            }
+
+            throw;
+        }
+    }
+
     private static async Task UpsertItemCoreAsync(
         LocalBoardDbContext db,
         BoardLocalRow row,
@@ -335,16 +369,57 @@ public sealed class SqliteBoardLocalStore(
         }
         else
         {
-            existing.UserKey = entry.UserKey;
-            existing.Kind = entry.Kind;
-            existing.PayloadJson = entry.PayloadJson;
-            existing.CreatedAtUtc = entry.CreatedAtUtc;
-            existing.AttemptCount = entry.AttemptCount;
-            existing.LastAttemptUtc = entry.LastAttemptUtc;
-            existing.LastError = entry.LastError;
+            CopyTo(entry, existing);
         }
 
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdateOutboxBatchAsync(IReadOnlyList<BoardOutboxEntry> entries, CancellationToken cancellationToken = default)
+    {
+        if (entries.Count == 0)
+        {
+            return;
+        }
+
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var ids = entries.Select(e => e.OperationId).Distinct().ToList();
+        var existingById = new Dictionary<Guid, BoardOutboxRow>();
+        foreach (var idChunk in Chunk(ids, 500))
+        {
+            var rows = await db.Outbox
+                .Where(o => idChunk.Contains(o.OperationId))
+                .ToListAsync(cancellationToken);
+            foreach (var row in rows)
+            {
+                existingById[row.OperationId] = row;
+            }
+        }
+
+        foreach (var entry in entries)
+        {
+            if (existingById.TryGetValue(entry.OperationId, out var existing))
+            {
+                CopyTo(entry, existing);
+            }
+            else
+            {
+                db.Outbox.Add(ToRow(entry));
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static void CopyTo(BoardOutboxEntry entry, BoardOutboxRow row)
+    {
+        row.UserKey = entry.UserKey;
+        row.Kind = entry.Kind;
+        row.PayloadJson = entry.PayloadJson;
+        row.CreatedAtUtc = entry.CreatedAtUtc;
+        row.AttemptCount = entry.AttemptCount;
+        row.LastAttemptUtc = entry.LastAttemptUtc;
+        row.LastError = entry.LastError;
     }
 
     public async Task DeleteOutboxAsync(Guid operationId, CancellationToken cancellationToken = default)

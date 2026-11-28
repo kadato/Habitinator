@@ -136,10 +136,14 @@ public sealed class RemoteBoardDataService : IBoardDataService
 
     public async Task<BoardItem?> GetItemAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
-        var snap = await GetSnapshotAsync(cancellationToken);
-        return snap.Habits.FirstOrDefault(x => x.Id == itemId)
-            ?? snap.Dailies.FirstOrDefault(x => x.Id == itemId)
-            ?? snap.Todos.FirstOrDefault(x => x.Id == itemId);
+        using var res = await Client.GetAsync($"api/board/items/{itemId}", cancellationToken);
+        if (res.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        await EnsureSuccessWithBodyAsync(res, cancellationToken);
+        return await ReadBoardItemOrNullAsync(res, cancellationToken);
     }
 
     public async Task<Dictionary<Guid, int>> GetStreakMapAsync(CancellationToken cancellationToken = default)

@@ -111,6 +111,16 @@ internal static class BoardApiRoutes
                 return Results.Json(snapshot, Json);
             });
 
+        boardApi.MapGet("/items/{itemId:guid}",
+            async (Guid itemId, CurrentUserId user, BoardPersistenceService boardPersistenceService,
+                CancellationToken cancellationToken) =>
+            {
+                var item = await boardPersistenceService.GetItemAsync(user.Value, itemId, cancellationToken);
+                return item is null
+                    ? Results.NotFound()
+                    : Results.Json(item, Json);
+            });
+
         boardApi.MapGet("/streaks",
             async (HttpContext http, CurrentUserId user, BoardPersistenceService boardPersistenceService,
                 CancellationToken cancellationToken) =>

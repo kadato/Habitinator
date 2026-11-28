@@ -399,7 +399,7 @@ globalThis.HabitinatorKeyboardShortcuts = (function () {
     c: { h: "create-habit", d: "create-daily", t: "create-todo" }
   };
 
-  const singleKeyActions = { h: "create-habit", d: "create-daily", t: "create-todo", s: "toggle-timer" };
+  const singleKeyActions = { h: "create-habit", d: "create-daily", t: "create-todo", s: "toggle-timer", "?": "help" };
 
   function invokeShortcutAction(action) {
     const helper = layoutHelper || boardHelper;

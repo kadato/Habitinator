@@ -143,7 +143,7 @@ public partial class BoardItemCard
     private static string TagBadgeStyle(string tag)
     {
         var hue = StableHash(tag) % 360;
-        return $"--tag-color: light-dark(hsl({hue} 60% 38%), hsl({hue} 75% 72%))";
+        return $"--tag-color: light-dark(hsl({hue} 65% 24%), hsl({hue} 75% 72%))";
     }
 
     private static int StableHash(string value)

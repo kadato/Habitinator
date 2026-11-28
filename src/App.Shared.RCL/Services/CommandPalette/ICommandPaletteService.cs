@@ -44,6 +44,8 @@ public interface ICommandPaletteService
 
     Task UndoAsync();
 
+    Task ShowHelpAsync();
+
     Task StopTimerSessionAsync();
 
     Task TogglePomodoroModeAsync();

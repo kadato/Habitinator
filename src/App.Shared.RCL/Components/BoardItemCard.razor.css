@@ -304,11 +304,11 @@ a.board-todo-due:hover {
 }
 
 .board-todo-due--overdue {
-    color: var(--mud-palette-error);
+    color: light-dark(#b91c1c, #ffb4ab);
 }
 
 .board-todo-due--today {
-    color: var(--mud-palette-warning);
+    color: light-dark(#b45309, #ffd280);
 }
 
 .board-todo-due--upcoming {

@@ -157,6 +157,37 @@ internal sealed class NavigationPaletteCommands(
             Keywords: ["archive", "archived", "restore", "history"]));
     }
 
+    public void AddTagManagerCommand(List<CommandItem> list)
+    {
+        list.Add(new(
+            Id: "action-tags",
+            Title: "Manage tags",
+            Subtitle: "Rename, merge, or delete tags across the board",
+            Category: "Actions",
+            Icon: Icons.Material.Filled.Label,
+            Action: OpenTagManagerAsync,
+            Keywords: ["tags", "labels", "rename", "merge", "delete", "organize"]));
+    }
+
+    public void AddHelpCommand(List<CommandItem> list)
+    {
+        list.Add(new(
+            Id: "nav-help",
+            Title: "Keyboard shortcuts and quick add",
+            Subtitle: "See every shortcut and the inline add syntax",
+            Category: "Help",
+            Icon: Icons.Material.Filled.Keyboard,
+            ShortcutBadge: "?",
+            Action: ShowHelpAsync,
+            Keywords: ["help", "shortcuts", "keyboard", "keys", "cheat", "sheet", "quick", "add", "syntax", "tags", "due", "urgent"]));
+    }
+
+    public async Task ShowHelpAsync()
+    {
+        _close();
+        await _dialogs.ShowAsync<HelpDialog>(string.Empty, DialogDefaults.Wide);
+    }
+
     public void AddYesterdayRetroCommand(List<CommandItem> list)
     {
         list.Add(new(
@@ -270,6 +301,12 @@ internal sealed class NavigationPaletteCommands(
         _close();
         await _dialogs.ShowAsync<ArchivedItemsDialog>(string.Empty, DialogDefaults.Wide);
     }
+
+    private async Task OpenTagManagerAsync()
+    {
+        _close();
+        await _dialogs.ShowAsync<TagManagerDialog>(string.Empty, DialogDefaults.Wide);
+    }
     private async Task SetThemeAsync(AppTheme theme)
     {
         _close();
@@ -317,7 +354,7 @@ internal sealed class NavigationPaletteCommands(
                 { x => x.DueOn, yesterdayDate },
                 { x => x.Items, missed }
             };
-            var dialog = await _dialogs.ShowAsync<DailyYesterdayRetroDialog>(string.Empty, parameters, DialogDefaults.SmallEditor);
+            var dialog = await _dialogs.ShowAsync<DailyYesterdayRetroDialog>(string.Empty, parameters, DialogDefaults.SmallEditorNoEscape);
             await dialog.Result;
             await _notifyRefresh();
         }

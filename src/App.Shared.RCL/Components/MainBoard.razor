@@ -55,7 +55,7 @@
     @if (!ClientSession.IsLoggedIn && _initialLoadComplete && HasBoardItems())
     {
         <MudAlert Severity="Severity.Info" Dense="true" Class="my-1" role="status">
-            Offline. Showing saved copy. Connect to sign in.
+            Signed out. Showing saved board data. Reconnect to sign in.
         </MudAlert>
     }
     @if (_isLoading && _initialLoadComplete)
@@ -65,7 +65,7 @@
 
     @if (_loadError is not null)
     {
-        <div class="board-load-fallback">
+        <div class="board-load-fallback" role="alert">
             <MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Large" Class="board-load-fallback__icon"  aria-hidden="true" />
             <MudText Typo="Typo.subtitle2" Class="board-load-fallback__title">Couldn't load board</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="board-load-fallback__hint">Check connection and try again.</MudText>
@@ -82,7 +82,7 @@
 
     @if (_initialLoadComplete && _loadError is null && !HasBoardItems() && BoardSync.IsOffline)
     {
-        <div class="board-load-fallback">
+        <div class="board-load-fallback" role="status">
             <MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Large" Class="board-load-fallback__icon" aria-hidden="true" />
             <MudText Typo="Typo.subtitle2" Class="board-load-fallback__title">You're offline</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="board-load-fallback__hint">Connect once to load.</MudText>
@@ -228,6 +228,13 @@
                                     }
                                     <MudStack Row="true" Spacing="1" Justify="Justify.SpaceBetween" Class="mt-2 pt-2 board-tags-menu-footer" Style="border-top: 1px solid var(--mud-palette-divider);">
                                         <MudButton Variant="Variant.Text"
+                                                   Color="Color.Primary"
+                                                   Size="Size.Medium"
+                                                   StartIcon="@Icons.Material.Filled.Label"
+                                                   OnClick="OpenTagManagerAsync">
+                                            Manage tags
+                                        </MudButton>
+                                        <MudButton Variant="Variant.Text"
                                                    Color="Color.Error"
                                                    Size="Size.Medium"
                                                    OnClick="ClearBoardFilters"
@@ -267,9 +274,9 @@
                         <button type="button"
                                 class="board-shortcuts-hint mud-text-secondary app-show-desktop-only"
                                 title="Press Ctrl+K or Cmd+K to open command palette"
-                                aria-label="Open command palette (Ctrl+K)"
+                                aria-label="Ctrl+K to open command palette"
                                 @onclick="() => CommandPalette.Toggle()">
-                            <kbd class="board-kbd">Ctrl</kbd><span class="board-shortcuts-hint__plus" aria-hidden="true">+</span><kbd class="board-kbd">K</kbd>
+                            <kbd class="board-kbd">Ctrl</kbd><span class="board-shortcuts-hint__plus">+</span><kbd class="board-kbd">K</kbd>
                         </button>
                     }
                 </div>
@@ -310,6 +317,7 @@
                 <div class="board-columns-mobile" @ref="_swipeAreaRef">
                 <div class="board-section-switcher" role="tablist" aria-label="Board sections">
                     <button type="button"
+                            @ref="_sectionTab0Ref"
                             role="tab"
                             id="board-tab-0"
                             aria-controls="board-tab-panel-0"
@@ -317,11 +325,12 @@
                             tabindex="@(_mobileSectionIndex == 0 ? "0" : "-1")"
                             class="@GetSectionSwitcherClass(0)"
                             @onclick="() => SetMobileSectionIndex(0)"
-                            @onkeydown="OnMobileSectionKeyDown">
+                            @onkeydown="OnMobileSectionKeyDownAsync">
                         <span class="board-section-switcher__label">Habits</span>
                         <span class="board-section-switcher__count">@FilteredHabits.Count</span>
                     </button>
                     <button type="button"
+                            @ref="_sectionTab1Ref"
                             role="tab"
                             id="board-tab-1"
                             aria-controls="board-tab-panel-1"
@@ -329,11 +338,12 @@
                             tabindex="@(_mobileSectionIndex == 1 ? "0" : "-1")"
                             class="@GetSectionSwitcherClass(1)"
                             @onclick="() => SetMobileSectionIndex(1)"
-                            @onkeydown="OnMobileSectionKeyDown">
+                            @onkeydown="OnMobileSectionKeyDownAsync">
                         <span class="board-section-switcher__label">Dailies</span>
                         <span class="board-section-switcher__count">@DailiesDueOpenCount</span>
                     </button>
                     <button type="button"
+                            @ref="_sectionTab2Ref"
                             role="tab"
                             id="board-tab-2"
                             aria-controls="board-tab-panel-2"
@@ -341,7 +351,7 @@
                             tabindex="@(_mobileSectionIndex == 2 ? "0" : "-1")"
                             class="@GetSectionSwitcherClass(2)"
                             @onclick="() => SetMobileSectionIndex(2)"
-                            @onkeydown="OnMobileSectionKeyDown">
+                            @onkeydown="OnMobileSectionKeyDownAsync">
                         <span class="board-section-switcher__label">To-dos</span>
                         <span class="board-section-switcher__count">@OpenTodoCount</span>
                     </button>

@@ -565,7 +565,8 @@
     cursor: pointer;
     outline: none;
 }
-.habit-tag-picker__option:focus-visible {
+.habit-tag-picker__option:focus-visible,
+.habit-tag-picker__option--active {
     outline: 2px solid var(--mud-palette-primary) !important;
     outline-offset: -2px !important;
     background: color-mix(in srgb, var(--mud-palette-primary) 12%, var(--mud-palette-surface)) !important;

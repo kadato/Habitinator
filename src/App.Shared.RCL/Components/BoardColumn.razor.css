@@ -116,7 +116,7 @@
 .board-filter-btn--active,
 .board-filter-btn--active:focus {
     background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent) !important;
-    color: var(--mud-palette-primary) !important;
+    color: light-dark(#1d4ed8, #93c5fd) !important;
     border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, transparent) !important;
     font-weight: 700 !important;
 }

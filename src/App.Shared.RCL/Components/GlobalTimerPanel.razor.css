@@ -51,6 +51,7 @@
 }
 
 ::deep .timer-value {
+    display: block;
     font-family: var(--hab-font-mono) !important;
     font-size: 2.5rem !important;
     line-height: 1 !important;
@@ -230,7 +231,7 @@
 
 .custom-timer-toggle .toggle-btn.active {
     background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
-    color: var(--mud-palette-primary);
+    color: var(--mud-palette-text-primary);
     border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, transparent);
 }
 

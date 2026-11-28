@@ -74,8 +74,7 @@
             }
             <MudMenu AnchorOrigin="Origin.BottomRight"
                      TransformOrigin="Origin.TopRight"
-                     Dense="true"
-                     aria-label="@($"Options for {Item.Title}")">
+                     Dense="true">
                 <ActivatorContent Context="itemMenu">
                     <span @onclick:stopPropagation="true">
                         <MudIconButton Icon="@Icons.Material.Filled.MoreVert"
@@ -218,7 +217,7 @@
                         @onclick="ToggleSubtasksExpand"
                         @onclick:stopPropagation="true"
                         aria-expanded="@AriaBool(_subtasksExpanded)"
-                        aria-label="@($"Subtasks: {SubDone} completed out of {SubTotal}")">
+                        aria-label="@($"{SubDone} / {SubTotal} subtasks completed")">
                     <MudIcon Icon="@Icons.Material.Filled.List" Size="Size.Small" aria-hidden="true"/>
                     <span class="board-subtask-pill__count">@SubDone / @SubTotal</span>
                     <MudIcon Icon="@(_subtasksExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small" aria-hidden="true"/>
@@ -279,7 +278,7 @@
                 @if (Section == BoardSection.Habit)
                 {
                     <div class="board-habit-counters">
-                        <span class="hab-visually-hidden">@HabitCounterTitle()</span>
+                        <span class="hab-visually-hidden" role="status">@HabitCounterTitle()</span>
                         @if (HasHabitGoal)
                         {
                             <span class="board-habit-goal @(HabitGoal.IsMet(Item) ? "board-habit-goal--met" : string.Empty)" title="@HabitGoalTitle" aria-label="@HabitGoalTitle">

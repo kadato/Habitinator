@@ -1,0 +1,48 @@
+.global-timer-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 40px;
+    padding: 0.15rem 0.65rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 999px;
+    background: var(--mud-palette-surface);
+    color: var(--mud-palette-text-primary);
+    cursor: pointer;
+    font: inherit;
+}
+
+.global-timer-chip:hover {
+    background: var(--mud-palette-action-default-hover);
+}
+
+.global-timer-chip:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.global-timer-chip__time {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 0.85rem;
+    line-height: 1;
+}
+
+.global-timer-chip__target {
+    max-width: 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.8rem;
+}
+
+@media (max-width: 600px) {
+    .global-timer-chip {
+        padding: 0.15rem 0.5rem;
+    }
+
+    .global-timer-chip__target {
+        display: none;
+    }
+}

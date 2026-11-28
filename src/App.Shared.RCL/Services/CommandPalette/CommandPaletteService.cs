@@ -26,7 +26,9 @@ public sealed class CommandPaletteService : ICommandPaletteService
 #pragma warning disable IDE0028 // Dictionary with comparer cannot use collection expression.
     private readonly Dictionary<string, CommandItem> _knownItems = new(StringComparer.Ordinal);
 #pragma warning restore IDE0028
+    private readonly Queue<string> _knownItemOrder = new();
     private const int MaxRecent = 5;
+    private const int MaxKnownItems = 250;
 
     public CommandPaletteService(
         NavigationManager nav,
@@ -136,6 +138,8 @@ public sealed class CommandPaletteService : ICommandPaletteService
         _navigation.AddNavigationCommands(list);
         _board.AddBoardCleanupCommands(list);
         _navigation.AddArchiveCommand(list);
+        _navigation.AddTagManagerCommand(list);
+        _navigation.AddHelpCommand(list);
         _board.AddUndoCommand(list);
         _timers.AddTimerActionCommands(list);
         _navigation.AddYesterdayRetroCommand(list);
@@ -145,13 +149,15 @@ public sealed class CommandPaletteService : ICommandPaletteService
 
         foreach (var c in list)
         {
-            _knownItems[c.Id] = c;
+            RememberCommand(c);
         }
 
         return Task.FromResult(list);
     }
 
     public IReadOnlyList<string> RecentIds => _recentIds;
+
+    internal int KnownItemCount => _knownItems.Count;
 
     public void RecordRecent(string commandId)
     {
@@ -186,7 +192,7 @@ public sealed class CommandPaletteService : ICommandPaletteService
     {
         foreach (var c in rootCommands)
         {
-            _knownItems[c.Id] = c;
+            RememberCommand(c);
         }
 
         var recent = new List<CommandItem>();
@@ -204,6 +210,23 @@ public sealed class CommandPaletteService : ICommandPaletteService
         }
 
         return recent;
+    }
+
+    private void RememberCommand(CommandItem item)
+    {
+        if (!_knownItems.ContainsKey(item.Id))
+        {
+            _knownItemOrder.Enqueue(item.Id);
+        }
+
+        _knownItems[item.Id] = item;
+
+        // Search results add item-specific commands on every query. Keep the
+        // recent-command fallback bounded so a long session cannot grow it forever.
+        while (_knownItems.Count > MaxKnownItems && _knownItemOrder.TryDequeue(out var oldest))
+        {
+            _knownItems.Remove(oldest);
+        }
     }
 
     private static string Truncate(string value, int maxLength)
@@ -346,7 +369,7 @@ public sealed class CommandPaletteService : ICommandPaletteService
 
             foreach (var r in results)
             {
-                _knownItems[r.Id] = r;
+                RememberCommand(r);
             }
         }
         catch
@@ -377,6 +400,9 @@ public sealed class CommandPaletteService : ICommandPaletteService
 
     public Task UndoAsync() =>
         _board.UndoAsync();
+
+    public Task ShowHelpAsync() =>
+        _navigation.ShowHelpAsync();
 
     public Task StopTimerSessionAsync() =>
         _timers.StopTimerSessionAsync();

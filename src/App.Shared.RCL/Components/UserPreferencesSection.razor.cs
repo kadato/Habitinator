@@ -1,6 +1,7 @@
 #pragma warning disable S4487 // Flagged fields are read by the Razor markup part; Sonar sees this code-behind file in isolation.
 using System.Globalization;
 
+using App.Shared.RCL.Components.Dialogs;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 
@@ -354,6 +355,11 @@ public partial class UserPreferencesSection
         }
         _model.EnableKeyboardShortcuts = value;
         await AutoSaveAsync();
+    }
+
+    private async Task ShowHelpAsync()
+    {
+        await DialogService.ShowAsync<HelpDialog>(string.Empty, DialogDefaults.Wide);
     }
 
     private void OnWorkDurationChanged(int value)

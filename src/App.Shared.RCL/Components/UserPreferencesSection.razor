@@ -1,8 +1,10 @@
 @using System.Globalization
 @using App.Shared.RCL
+@using App.Shared.RCL.Components.Dialogs
 @inject IUserPreferencesService PreferencesService
 @inject IUserNotifier Notifier
 @inject IUserTimeZoneService TimeZoneService
+@inject IDialogService DialogService
 
 <MudStack Spacing="3">
     @if (ShowTitle)
@@ -12,7 +14,7 @@
 
     @if (_loadError is not null)
     {
-        <div class="settings-load-fallback">
+        <div class="settings-load-fallback" role="alert">
             <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Large" Class="settings-load-fallback__icon"  aria-hidden="true" />
             <MudText Typo="Typo.subtitle2" Class="settings-load-fallback__title">Preferences unavailable</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary">Couldn't load preferences. Try again.</MudText>
@@ -21,7 +23,8 @@
     }
     else if (_loading)
     {
-        <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true">
+        <span class="hab-visually-hidden" role="status">Loading preferences…</span>
+        <MudPaper Class="pa-4 settings-section-paper" Elevation="0" Outlined="true" aria-hidden="true">
             <MudStack Spacing="2">
                 <MudSkeleton Width="120px" Height="24px" Class="mb-1" />
                 <MudSkeleton Width="250px" Height="16px" Class="mb-3" />
@@ -216,6 +219,10 @@
                 <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="mb-1">Keyboard Shortcuts</MudText>
                 <MudSwitch T="bool" Label="Enable keyboard shortcuts" Color="Color.Primary"
                            Value="_model.EnableKeyboardShortcuts" ValueChanged="OnEnableKeyboardShortcutsChanged" />
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Medium"
+                           StartIcon="@Icons.Material.Filled.Keyboard" OnClick="ShowHelpAsync">
+                    View all shortcuts and quick-add syntax
+                </MudButton>
             </MudStack>
         </MudPaper>
 

@@ -1,0 +1,64 @@
+@using Microsoft.AspNetCore.Components.Routing
+@inject GlobalTimerService TimerService
+@inject NavigationManager Nav
+@implements IDisposable
+
+@if (IsVisible)
+{
+    <button type="button"
+            class="global-timer-chip"
+            title="@GetTooltip()"
+            aria-label="@GetAriaLabel()"
+            @onclick="OpenTimer">
+        <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Small" aria-hidden="true" />
+        <span class="global-timer-chip__time">@TimerService.GetDisplayTime()</span>
+        @if (TargetLabel is not null)
+        {
+            <span class="global-timer-chip__target" aria-hidden="true">@TargetLabel</span>
+        }
+    </button>
+}
+
+@code {
+    private string? TargetLabel =>
+        string.IsNullOrWhiteSpace(TimerService.TargetId) ? null : TimerService.TargetId;
+
+    /// <summary>The board renders the full timer panel, so the chip would duplicate it there.</summary>
+    private bool IsOnBoard => string.IsNullOrEmpty(Nav.ToBaseRelativePath(Nav.Uri).Trim('/'));
+
+    /// <summary>Paused sessions stay visible so the user can find the timer again.</summary>
+    private bool IsVisible => !IsOnBoard && (TimerService.IsRunning || TimerService.Elapsed > TimeSpan.Zero);
+
+    private string GetTooltip()
+    {
+        var target = TargetLabel is null ? string.Empty : $" - {TargetLabel}";
+        return $"{TimerService.StatusLabel}: {TimerService.GetDisplayTime()}{target}. Open the board timer.";
+    }
+
+    private string GetAriaLabel()
+    {
+        var target = TargetLabel is null ? string.Empty : $" Target: {TargetLabel}.";
+        return $"Focus timer {TimerService.GetDisplayTime()}. {TimerService.StatusLabel}.{target} Open the board timer.";
+    }
+
+    private void OpenTimer() => Nav.NavigateTo("/");
+
+    protected override void OnInitialized()
+    {
+        TimerService.StateChanged += HandleTimerChanged;
+        TimerService.Ticked += HandleTimerChanged;
+        Nav.LocationChanged += HandleLocationChanged;
+    }
+
+    private void HandleTimerChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e) =>
+        _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        TimerService.StateChanged -= HandleTimerChanged;
+        TimerService.Ticked -= HandleTimerChanged;
+        Nav.LocationChanged -= HandleLocationChanged;
+    }
+}

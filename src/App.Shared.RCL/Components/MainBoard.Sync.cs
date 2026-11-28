@@ -211,7 +211,7 @@ public partial class MainBoard
             };
 
             var dialog = await DialogService.ShowAsync<DailyYesterdayRetroDialog>(
-                string.Empty, parameters, DialogDefaults.SmallEditor);
+                string.Empty, parameters, DialogDefaults.SmallEditorNoEscape);
             var result = await dialog.Result;
 
             try

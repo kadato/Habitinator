@@ -47,13 +47,19 @@
                class="habit-tag-picker__search"
                @bind="_tagSearch"
                @bind:event="oninput"
+               @bind:after="ResetActiveOption"
                @onkeydown="OnTagSearchKeydown"
                @onkeydown:stopPropagation="true"
                @ref="_tagSearchField"
                aria-label="Search or add a tag"
+               aria-autocomplete="list"
+               aria-activedescendant="@(_activeOptionIndex >= 0 ? OptionId(_activeOptionIndex) : null)"
                placeholder="Tag"/>
         <div class="habit-tag-picker__list">
-            @if (FilteredTagSuggestions().Count == 0 && !CanAddNewTagFromSearch())
+            @{
+                var options = VisibleOptions();
+            }
+            @if (options.Count == 0)
             {
                 <div class="habit-tag-picker__empty">
                     @if (string.IsNullOrWhiteSpace(_tagSearch))
@@ -66,22 +72,24 @@
                     }
                 </div>
             }
-            @foreach (var option in FilteredTagSuggestions())
+            @for (var i = 0; i < options.Count; i++)
             {
-                <button type="button" @key="option"
-                        class="habit-tag-picker__option"
+                var index = i;
+                var option = options[i];
+                <button type="button" @key="option.Key"
+                        class="habit-tag-picker__option @(option.IsAdd ? "habit-tag-picker__option--add" : null) @(index == _activeOptionIndex ? "habit-tag-picker__option--active" : null)"
                         role="option"
-                        aria-selected="false"
-                        @onclick="() => AddTag(option)">
-                    @option
-                </button>
-            }
-            @if (CanAddNewTagFromSearch() && !string.IsNullOrWhiteSpace(_tagSearch))
-            {
-                <button type="button"
-                        class="habit-tag-picker__option habit-tag-picker__option--add"
-                        @onclick="AddTagFromSearch">
-                    Add "@(_tagSearch.Trim())"
+                        id="@OptionId(index)"
+                        aria-selected="@(index == _activeOptionIndex ? "true" : "false")"
+                        @onclick="() => ChooseOption(option)">
+                    @if (option.IsAdd)
+                    {
+                        <text>Add "@option.Label"</text>
+                    }
+                    else
+                    {
+                        @option.Label
+                    }
                 </button>
             }
         </div>
@@ -103,7 +111,13 @@
     private string _tagSearch = string.Empty;
     private ElementReference _tagSearchField;
     private string _appliedTags = string.Empty;
+    private int _activeOptionIndex = -1;
     private string ListboxId => string.IsNullOrWhiteSpace(TriggerId) ? "tag-picker-listbox" : $"{TriggerId}-listbox";
+
+    private sealed record TagPickerOption(string Label, bool IsAdd)
+    {
+        public string Key => IsAdd ? $"add:{Label}" : Label;
+    }
 
     protected override void OnParametersSet()
     {
@@ -125,6 +139,7 @@
 
         _tagPickerOpen = false;
         _tagSearch = string.Empty;
+        _activeOptionIndex = -1;
     }
 
     private async Task LoadTagSuggestionsAsync()
@@ -181,6 +196,19 @@
             .Where(t => q.Length == 0 || t.Contains(q, StringComparison.OrdinalIgnoreCase))
             .ToList();
     }
+
+    private IReadOnlyList<TagPickerOption> VisibleOptions()
+    {
+        List<TagPickerOption> options = [.. FilteredTagSuggestions().Select(t => new TagPickerOption(t, IsAdd: false))];
+        if (CanAddNewTagFromSearch() && !string.IsNullOrWhiteSpace(_tagSearch))
+        {
+            options.Add(new TagPickerOption(_tagSearch.Trim(), IsAdd: true));
+        }
+
+        return options;
+    }
+
+    private string OptionId(int index) => $"{ListboxId}-option-{index}";
 
     private bool CanAddNewTagFromSearch()
     {
@@ -249,6 +277,7 @@
         }
 
         _tagSearch = string.Empty;
+        _activeOptionIndex = -1;
         _ = TagsChanged.InvokeAsync(string.Join(",", _selectedTags));
     }
 
@@ -259,22 +288,67 @@
 
     private void OnTagSearchKeydown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter")
+        var options = VisibleOptions();
+        switch (e.Key)
         {
-            var list = FilteredTagSuggestions();
-            if (list.Count == 1)
-            {
-                AddTag(list[0]);
-            }
-            else if (CanAddNewTagFromSearch() && _tagSearch.Trim().Length > 0)
-            {
-                AddTagFromSearch();
-            }
+            case "ArrowDown":
+                MoveActiveOption(options.Count, 1);
+                break;
+            case "ArrowUp":
+                MoveActiveOption(options.Count, -1);
+                break;
+            case "Enter":
+                if (_activeOptionIndex >= 0 && _activeOptionIndex < options.Count)
+                {
+                    ChooseOption(options[_activeOptionIndex]);
+                    _activeOptionIndex = -1;
+                }
+                else if (options.Count == 1)
+                {
+                    ChooseOption(options[0]);
+                }
+                else if (CanAddNewTagFromSearch() && _tagSearch.Trim().Length > 0)
+                {
+                    AddTagFromSearch();
+                }
+
+                break;
+            case "Escape":
+                _tagPickerOpen = false;
+                _tagSearch = string.Empty;
+                _activeOptionIndex = -1;
+                break;
         }
-        else if (e.Key == "Escape")
+    }
+
+    private void MoveActiveOption(int optionCount, int direction)
+    {
+        if (optionCount <= 0)
         {
-            _tagPickerOpen = false;
-            _tagSearch = string.Empty;
+            _activeOptionIndex = -1;
+            return;
+        }
+
+        if (_activeOptionIndex < 0)
+        {
+            _activeOptionIndex = direction > 0 ? 0 : optionCount - 1;
+            return;
+        }
+
+        _activeOptionIndex = (_activeOptionIndex + direction + optionCount) % optionCount;
+    }
+
+    private void ResetActiveOption() => _activeOptionIndex = -1;
+
+    private void ChooseOption(TagPickerOption option)
+    {
+        if (option.IsAdd)
+        {
+            AddTagFromSearch();
+        }
+        else
+        {
+            AddTag(option.Label);
         }
     }
 
@@ -294,6 +368,15 @@
         if (e.Key is " " or "Enter")
         {
             await ToggleTagPicker();
+        }
+        else if (e.Key is "ArrowDown" or "ArrowUp")
+        {
+            if (!_tagPickerOpen)
+            {
+                await ToggleTagPicker();
+            }
+
+            MoveActiveOption(VisibleOptions().Count, e.Key == "ArrowDown" ? 1 : -1);
         }
     }
 

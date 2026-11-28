@@ -981,7 +981,7 @@
             var q = query.Trim();
             var matches = _boardSnapshot.Habits.Select(h => new MentionItem(h.Title, "Habit"))
                 .Concat(_boardSnapshot.Dailies.Select(d => new MentionItem(d.Title, "Daily")))
-                .Concat(_boardSnapshot.Todos.Select(t => new MentionItem(t.Title, "Todo")))
+                .Concat(_boardSnapshot.Todos.Select(t => new MentionItem(t.Title, "To-do")))
                 .Where(m => string.IsNullOrEmpty(q) || m.Title.Contains(q, StringComparison.OrdinalIgnoreCase))
                 .Take(6)
                 .ToList();

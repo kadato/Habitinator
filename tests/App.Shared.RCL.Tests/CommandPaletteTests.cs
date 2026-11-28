@@ -87,6 +87,7 @@ public sealed class CommandPaletteTests : IAsyncDisposable
         rootCommands.Should().Contain(c => c.Id == "nav-upcoming" && c.Category == "Navigation");
         rootCommands.Should().Contain(c => c.Id == "nav-stats" && c.Category == "Navigation");
         rootCommands.Should().Contain(c => c.Id == "nav-settings" && c.Category == "Navigation");
+        rootCommands.Should().Contain(c => c.Id == "nav-help" && c.Category == "Help");
         rootCommands.Should().Contain(c => c.Id == "theme-dark" && c.Category == "Appearance");
     }
 
@@ -739,5 +740,22 @@ public sealed class CommandPaletteTests : IAsyncDisposable
 
         _timer.IsRunning.Should().BeFalse();
         _timer.Elapsed.Should().Be(TimeSpan.Zero);
+    }
+
+    [Fact]
+    public void Known_item_cache_stays_bounded()
+    {
+        var commands = Enumerable.Range(0, 300)
+            .Select(i => new CommandItem(
+                Id: $"cmd-{i}",
+                Title: $"Command {i}",
+                Subtitle: null,
+                Category: "Test",
+                Icon: Icons.Material.Filled.Bolt))
+            .ToList();
+
+        _paletteService.BuildRecentGroup(commands);
+
+        _paletteService.KnownItemCount.Should().BeLessThanOrEqualTo(250);
     }
 }

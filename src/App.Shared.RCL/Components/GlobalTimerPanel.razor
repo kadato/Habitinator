@@ -66,6 +66,7 @@
                     <div class="timer-clock-block">
                         <div class="timer-clock-header">
                             <MudText Typo="Typo.h5"
+                                     HtmlTag="span"
                                      Color="Color.Default"
                                      GutterBottom="false"
                                      Class="timer-value"
@@ -308,6 +309,7 @@
                                   Clearable="true"
                                   Adornment="Adornment.Start"
                                   AdornmentIcon="@GetTimerTargetLeadIcon()"
+                                  AdornmentAriaLabel="Session target"
                                   ResetValueOnEmptyText="true">
                      <ItemTemplate Context="rowKey">
                          @{

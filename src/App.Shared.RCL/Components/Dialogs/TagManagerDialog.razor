@@ -1,0 +1,582 @@
+@using App.Shared.RCL.Models
+@using App.Shared.RCL.Services
+@using Microsoft.Extensions.Logging
+@inject IBoardDataService BoardData
+@inject IUndoService UndoService
+@inject ILogger<TagManagerDialog> Logger
+
+<MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content">
+    <DialogContent>
+        <div class="hab-modal hab-modal--neutral tag-manager" data-dialog-label="Manage tags" aria-label="Manage tags" role="group">
+            <div class="hab-modal__grabber" aria-hidden="true"></div>
+            <div class="hab-modal__header">
+                <div class="hab-modal__topbar hab-modal__topbar--minimal">
+                    <DialogCloseButton OnClose="Close" Disabled="_busy" />
+                </div>
+                <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Manage tags</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    Rename a tag to fix a typo or merge it into another. Deleting removes the tag from every item, including archived items. Undo restores the whole change.
+                </MudText>
+            </div>
+            <div class="hab-modal__body">
+                @if (_loading)
+                {
+                    <div class="tag-manager__loading" aria-busy="true">
+                        <span class="hab-visually-hidden" role="status">Loading tags…</span>
+                        @for (var i = 0; i < 4; i++)
+                        {
+                            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="2.5rem" Class="mb-2 rounded" />
+                        }
+                    </div>
+                }
+                else if (_loadError is not null)
+                {
+                    <div class="tag-manager__message" role="alert">
+                        <MudText Typo="Typo.body2">@_loadError</MudText>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="ReloadAsync">Retry</MudButton>
+                    </div>
+                }
+                else if (_tags.Count == 0)
+                {
+                    <div class="tag-manager__message">
+                        <MudIcon Icon="@Icons.Material.Filled.LabelOff" Size="Size.Large" aria-hidden="true" />
+                        <MudText Typo="Typo.body1">No tags yet.</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Add tags while editing a habit, daily, or to-do.</MudText>
+                    </div>
+                }
+                else
+                {
+                    <div class="tag-manager__search">
+                        <MudTextField @bind-Value="_search"
+                                      Placeholder="Search tags"
+                                      aria-label="Search tags"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Search"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Immediate="true"
+                                      Clearable="true" />
+                    </div>
+
+                    @if (_statusMessage is not null)
+                    {
+                        <div class="tag-manager__status" role="status">@_statusMessage</div>
+                    }
+
+                    @if (GetFilteredTags().Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">No tags match "@_search".</MudText>
+                    }
+                    else
+                    {
+                        <ul class="tag-manager__list">
+                            @foreach (var tag in GetFilteredTags())
+                            {
+                                <li class="tag-manager__item" @key="tag.Name">
+                                    <div class="tag-manager__row">
+                                        <span class="tag-manager__name">@tag.Name</span>
+                                        <span class="tag-manager__count">@ItemCountLabel(tag.Count)</span>
+                                        <span class="tag-manager__actions">
+                                            <button type="button"
+                                                    class="tag-manager__action"
+                                                    aria-label="@($"Rename tag {tag.Name}")"
+                                                    disabled="@_busy"
+                                                    @onclick="() => BeginRename(tag.Name)">Rename</button>
+                                            <button type="button"
+                                                    class="tag-manager__action tag-manager__action--danger"
+                                                    aria-label="@($"Delete tag {tag.Name}")"
+                                                    disabled="@_busy"
+                                                    @onclick="() => BeginDelete(tag.Name)">Delete</button>
+                                        </span>
+                                    </div>
+
+                                    @if (IsRenaming(tag.Name))
+                                    {
+                                        <div class="tag-manager__editor">
+                                            <label class="tag-manager__label" for="tag-manager-rename">New tag name</label>
+                                            <input id="tag-manager-rename"
+                                                   class="tag-manager__input"
+                                                   type="text"
+                                                   aria-label="@($"New name for tag {tag.Name}")"
+                                                   aria-invalid="@AriaBool(_renameError is not null)"
+                                                   aria-describedby="@(_renameError is null ? null : "tag-manager-rename-error")"
+                                                   @bind="_renameValue"
+                                                   @bind:event="oninput"
+                                                   @onkeydown="OnRenameKeydown"
+                                                   @ref="_renameInput"
+                                                   disabled="@_busy" />
+                                            @if (_renameError is not null)
+                                            {
+                                                <span id="tag-manager-rename-error" class="tag-manager__error" role="alert">@_renameError</span>
+                                            }
+                                            else if (MergeTarget is { } mergeTarget)
+                                            {
+                                                <span class="tag-manager__hint">Saves as a merge into "@mergeTarget".</span>
+                                            }
+                                            <span class="tag-manager__editor-actions">
+                                                <MudButton Variant="Variant.Filled"
+                                                           Color="Color.Primary"
+                                                           Size="Size.Small"
+                                                           Disabled="@_busy"
+                                                           OnClick="ApplyRenameAsync">Save</MudButton>
+                                                <MudButton Variant="Variant.Text"
+                                                           Color="Color.Default"
+                                                           Size="Size.Small"
+                                                           Disabled="@_busy"
+                                                           OnClick="CancelEdit">Cancel</MudButton>
+                                            </span>
+                                        </div>
+                                    }
+
+                                    @if (IsDeleting(tag.Name))
+                                    {
+                                        <div class="tag-manager__editor tag-manager__editor--danger">
+                                            <span class="tag-manager__hint">
+                                                Remove "@tag.Name" from @ItemCountLabel(tag.Count)? The change is one undo step.
+                                            </span>
+                                            <span class="tag-manager__editor-actions">
+                                                <MudButton Variant="Variant.Filled"
+                                                           Color="Color.Default"
+                                                           Size="Size.Small"
+                                                           Class="tag-manager__delete-confirm"
+                                                           Disabled="@_busy"
+                                                           OnClick="ApplyDeleteAsync">Delete tag</MudButton>
+                                                <MudButton Variant="Variant.Text"
+                                                           Color="Color.Default"
+                                                           Size="Size.Small"
+                                                           Disabled="@_busy"
+                                                           OnClick="CancelEdit">Cancel</MudButton>
+                                            </span>
+                                        </div>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                }
+            </div>
+            <div class="hab-modal__footer">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close" Disabled="_busy">Close</MudButton>
+            </div>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
+
+    private readonly List<ManagedItem> _items = [];
+    private readonly List<TagUsage> _tags = [];
+
+    private bool _loading = true;
+    private bool _busy;
+    private string? _loadError;
+    private string? _statusMessage;
+    private string _search = string.Empty;
+    private string? _renamingTag;
+    private string _renameValue = string.Empty;
+    private string? _renameError;
+    private string? _deletingTag;
+    private ElementReference _renameInput;
+    private bool _renameFocusPending;
+
+    private sealed record ManagedItem(BoardSection Section, BoardItem Item);
+
+    private sealed record TagUsage(string Name, int Count);
+
+    private IReadOnlyList<TagUsage> GetFilteredTags()
+    {
+        var query = _search.Trim();
+        return query.Length == 0
+            ? _tags
+            : _tags.Where(t => t.Name.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    private string? MergeTarget
+    {
+        get
+        {
+            var newTag = _renameValue.Trim();
+            if (newTag.Length == 0 || _renamingTag is null)
+            {
+                return null;
+            }
+
+            return _tags
+                .Select(t => t.Name)
+                .FirstOrDefault(t => !string.Equals(t, _renamingTag, StringComparison.OrdinalIgnoreCase)
+                                     && string.Equals(t, newTag, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    protected override Task OnInitializedAsync() => LoadAsync(showLoading: true);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_renameFocusPending)
+        {
+            return;
+        }
+
+        _renameFocusPending = false;
+        try
+        {
+            await _renameInput.FocusAsync();
+        }
+        catch
+        {
+            // Focus is a convenience. The field is reachable with Tab.
+        }
+    }
+
+    private async Task ReloadAsync()
+    {
+        _statusMessage = null;
+        await LoadAsync(showLoading: true);
+    }
+
+    private async Task LoadAsync(bool showLoading)
+    {
+        if (showLoading)
+        {
+            _loading = true;
+            _loadError = null;
+        }
+
+        try
+        {
+            var active = await BoardData.GetSnapshotAsync();
+            var archived = await TryGetArchivedAsync();
+            if (active.Truncated || archived.Truncated)
+            {
+                _loadError = "The board is still loading. Try again in a moment.";
+                return;
+            }
+
+            BuildItems(active, archived);
+            BuildTags();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not load tags for the tag manager.");
+            _loadError = "Couldn't load tags. Check your connection and try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task<BoardSnapshot> TryGetArchivedAsync()
+    {
+        try
+        {
+            return await BoardData.GetArchivedSnapshotAsync();
+        }
+        catch (Exception ex)
+        {
+            // Archived rows only add more items to relabel. A failure here must not hide live tags.
+            Logger.LogDebug(ex, "Could not load archived items for the tag manager.");
+            return new BoardSnapshot([], [], []);
+        }
+    }
+
+    private void BuildItems(BoardSnapshot active, BoardSnapshot archived)
+    {
+        _items.Clear();
+        var seen = new HashSet<Guid>();
+        AddItems(active.Habits, BoardSection.Habit);
+        AddItems(active.Dailies, BoardSection.Daily);
+        AddItems(active.Todos, BoardSection.Todo);
+        AddItems(archived.Habits, BoardSection.Habit);
+        AddItems(archived.Dailies, BoardSection.Daily);
+        AddItems(archived.Todos, BoardSection.Todo);
+
+        void AddItems(IReadOnlyList<BoardItem> items, BoardSection section)
+        {
+            foreach (var item in items.Where(item => seen.Add(item.Id)))
+            {
+                _items.Add(new ManagedItem(section, item));
+            }
+        }
+    }
+
+    private void BuildTags()
+    {
+        _tags.Clear();
+        var counts = new Dictionary<string, (string Name, int Count)>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in _items)
+        {
+            foreach (var tag in BoardTagUtil.ParseTags(entry.Item.Tags))
+            {
+                if (counts.TryGetValue(tag, out var existing))
+                {
+                    counts[tag] = (existing.Name, existing.Count + 1);
+                }
+                else
+                {
+                    counts[tag] = (tag, 1);
+                }
+            }
+        }
+
+        _tags.AddRange(counts.Values
+            .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(t => new TagUsage(t.Name, t.Count)));
+    }
+
+    private bool IsRenaming(string tag) =>
+        string.Equals(_renamingTag, tag, StringComparison.OrdinalIgnoreCase);
+
+    private bool IsDeleting(string tag) =>
+        string.Equals(_deletingTag, tag, StringComparison.OrdinalIgnoreCase);
+
+    private void BeginRename(string tag)
+    {
+        _renamingTag = tag;
+        _renameValue = tag;
+        _renameError = null;
+        _deletingTag = null;
+        _statusMessage = null;
+        _renameFocusPending = true;
+    }
+
+    private void BeginDelete(string tag)
+    {
+        _deletingTag = tag;
+        _renamingTag = null;
+        _renameError = null;
+        _statusMessage = null;
+    }
+
+    private void CancelEdit()
+    {
+        _renamingTag = null;
+        _deletingTag = null;
+        _renameError = null;
+    }
+
+    private Task OnRenameKeydown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            return ApplyRenameAsync();
+        }
+
+        if (args.Key == "Escape")
+        {
+            CancelEdit();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task ApplyRenameAsync()
+    {
+        if (_busy || _renamingTag is null)
+        {
+            return;
+        }
+
+        var oldTag = _renamingTag;
+        var newTag = _renameValue.Trim();
+        _renameError = ValidateNewTag(newTag);
+        if (_renameError is not null)
+        {
+            return;
+        }
+
+        if (string.Equals(oldTag, newTag, StringComparison.Ordinal))
+        {
+            CancelEdit();
+            return;
+        }
+
+        var affected = ItemsWithTag(oldTag);
+        if (affected.Count == 0)
+        {
+            _renameError = "No items use this tag anymore.";
+            await LoadAsync(showLoading: false);
+            return;
+        }
+
+        var merged = MergeTarget is not null;
+        _busy = true;
+        _renameError = null;
+        var (updated, failed) = await ApplyToItemsAsync(
+            affected,
+            item => ReplaceTag(item.Tags, oldTag, newTag),
+            $"Rename tag \"{oldTag}\"");
+        _busy = false;
+
+        await LoadAsync(showLoading: false);
+        if (updated == 0)
+        {
+            _renameError = "Couldn't rename the tag. Check your connection and try again.";
+            return;
+        }
+
+        _renamingTag = null;
+        if (failed > 0)
+        {
+            _statusMessage = $"Renamed \"{oldTag}\" on {updated} of {affected.Count} items. Retry the rest.";
+        }
+        else if (merged)
+        {
+            _statusMessage = $"Merged \"{oldTag}\" into \"{newTag}\" on {ItemCountLabel(updated)}.";
+        }
+        else
+        {
+            _statusMessage = $"Renamed \"{oldTag}\" to \"{newTag}\" on {ItemCountLabel(updated)}.";
+        }
+    }
+
+    private static string? ValidateNewTag(string newTag)
+    {
+        if (newTag.Length == 0)
+        {
+            return "Enter a tag name.";
+        }
+
+        if (newTag.Contains(','))
+        {
+            return "Tags cannot contain commas.";
+        }
+
+        if (newTag.Length > BoardTagUtil.MaxTagsLength)
+        {
+            return $"Tags are limited to {BoardTagUtil.MaxTagsLength} characters.";
+        }
+
+        return null;
+    }
+
+    private async Task ApplyDeleteAsync()
+    {
+        if (_busy || _deletingTag is null)
+        {
+            return;
+        }
+
+        var tag = _deletingTag;
+        var affected = ItemsWithTag(tag);
+        if (affected.Count == 0)
+        {
+            _deletingTag = null;
+            await LoadAsync(showLoading: false);
+            return;
+        }
+
+        _busy = true;
+        var (updated, failed) = await ApplyToItemsAsync(
+            affected,
+            item => RemoveTag(item.Tags, tag),
+            $"Delete tag \"{tag}\"");
+        _busy = false;
+
+        await LoadAsync(showLoading: false);
+        if (updated == 0)
+        {
+            _statusMessage = "Couldn't delete the tag. Check your connection and try again.";
+            return;
+        }
+
+        _deletingTag = null;
+        _statusMessage = failed == 0
+            ? $"Removed \"{tag}\" from {ItemCountLabel(updated)}."
+            : $"Removed \"{tag}\" from {updated} of {affected.Count} items. Retry the rest.";
+    }
+
+    private List<ManagedItem> ItemsWithTag(string tag) =>
+        _items
+            .Where(i => BoardTagUtil.ParseTags(i.Item.Tags).Any(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
+    private async Task<(int Updated, int Failed)> ApplyToItemsAsync(
+        IReadOnlyList<ManagedItem> affected,
+        Func<BoardItem, string?> buildTags,
+        string undoDescription)
+    {
+        var updated = 0;
+        var failed = 0;
+        using (UndoService.BeginBatch(undoDescription))
+        {
+            foreach (var entry in affected)
+            {
+                if (await TryApplyTagsAsync(entry, buildTags(entry.Item)))
+                {
+                    updated++;
+                }
+                else
+                {
+                    failed++;
+                }
+            }
+        }
+
+        return (updated, failed);
+    }
+
+    private async Task<bool> TryApplyTagsAsync(ManagedItem entry, string? tags)
+    {
+        var item = entry.Item;
+        if (string.Equals(item.Tags, tags, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        try
+        {
+            var result = entry.Section switch
+            {
+                BoardSection.Habit => await BoardData.UpdateHabitAsync(
+                    item.Id,
+                    UpdateHabitArgs.From(item) with { Tags = tags, ExpectedUpdatedAtUtc = item.ServerUpdatedAtUtc },
+                    CancellationToken.None),
+                BoardSection.Daily => await BoardData.UpdateDailyAsync(
+                    item.Id,
+                    UpdateDailyArgs.From(item) with { Tags = tags, ExpectedUpdatedAtUtc = item.ServerUpdatedAtUtc },
+                    CancellationToken.None),
+                _ => await BoardData.UpdateTodoAsync(
+                    item.Id,
+                    UpdateTodoArgs.From(item) with { Tags = tags, ExpectedUpdatedAtUtc = item.ServerUpdatedAtUtc },
+                    CancellationToken.None)
+            };
+
+            return result is not null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not update tags on board item {ItemId}.", item.Id);
+            return false;
+        }
+    }
+
+    private static string? ReplaceTag(string? rawTags, string oldTag, string newTag) =>
+        MapTags(rawTags, tag => string.Equals(tag, oldTag, StringComparison.OrdinalIgnoreCase) ? newTag : tag);
+
+    private static string? RemoveTag(string? rawTags, string removedTag) =>
+        MapTags(rawTags, tag => string.Equals(tag, removedTag, StringComparison.OrdinalIgnoreCase) ? null : tag);
+
+    private static string? MapTags(string? rawTags, Func<string, string?> map)
+    {
+        var result = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var tag in BoardTagUtil.ParseTags(rawTags))
+        {
+            var mapped = map(tag);
+            if (!string.IsNullOrWhiteSpace(mapped) && seen.Add(mapped))
+            {
+                result.Add(mapped);
+            }
+        }
+
+        return result.Count == 0 ? null : BoardTagUtil.Canonicalize(string.Join(",", result));
+    }
+
+    private static string ItemCountLabel(int count) => count == 1 ? "1 item" : $"{count} items";
+
+    private static string AriaBool(bool condition) => condition ? "true" : "false";
+
+    private void Close() => MudDialog.Cancel();
+}

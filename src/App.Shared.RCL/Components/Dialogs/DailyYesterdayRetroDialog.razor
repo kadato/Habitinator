@@ -1,5 +1,6 @@
 @using Microsoft.Extensions.DependencyInjection
 @using App.Shared.RCL.Services.Board.Local
+@using Microsoft.AspNetCore.Components.Web
 @inject IUserDateFormatService DateFormatService
 @inject IBoardDataService BoardDataService
 @inject IUserNotifier Notifier
@@ -10,7 +11,8 @@
 
 <MudDialog Class="hab-modal-dialog"
            ContentClass="hab-modal-content"
-           OnBackdropClick="DismissAsync">
+           OnBackdropClick="DismissAsync"
+           OnKeyDown="OnDialogKeyDown">
     <DialogContent>
         <div class="hab-modal hab-modal--daily" data-dialog-label="Yesterday" aria-label="Yesterday" role="group" @onclick:stopPropagation="true">
             <div class="hab-modal__grabber" aria-hidden="true"></div>
@@ -76,15 +78,37 @@
             </div>
 
             <div class="hab-modal__footer">
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           FullWidth="true"
-                           Size="Size.Medium"
-                           Class="hab-primary-btn"
-                           Disabled="_isCommitting"
-                           OnClick="CloseAsync">
-                    Save
-                </MudButton>
+                @if (_showDiscardConfirm)
+                {
+                    <div class="daily-yesterday-discard" role="alert">
+                        <MudText Typo="Typo.body2">Close without saving your checks?</MudText>
+                        <div class="daily-yesterday-discard__actions">
+                            <MudButton Variant="Variant.Outlined"
+                                       Size="Size.Medium"
+                                       OnClick="KeepEditing">
+                                Keep editing
+                            </MudButton>
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Error"
+                                       Size="Size.Medium"
+                                       OnClick="DiscardAsync">
+                                Discard
+                            </MudButton>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Size="Size.Medium"
+                               Class="hab-primary-btn"
+                               Disabled="_isCommitting"
+                               OnClick="CloseAsync">
+                        Save
+                    </MudButton>
+                }
             </div>
         </div>
     </DialogContent>
@@ -103,6 +127,7 @@
     private readonly HashSet<Guid> _committedIds = [];
     private bool _isCommitting;
     private bool _sessionEnded;
+    private bool _showDiscardConfirm;
     private ElementReference _headerRef;
     private DotNetObjectReference<DailyYesterdayRetroDialog>? _swipeRef;
     private bool _swipeStarted;
@@ -229,8 +254,48 @@
         }
     }
 
-    /// <summary>Backdrop, close button, and Escape dismiss without saving. Only Save commits.</summary>
-    private void DismissAsync()
+    /// <summary>
+    /// Backdrop, close button, and Escape ask first when the user has checks
+    /// that the Save button has not committed.
+    /// </summary>
+    private Task DismissAsync()
+    {
+        if (_sessionEnded)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (HasUncommittedChecks() && !_showDiscardConfirm)
+        {
+            _showDiscardConfirm = true;
+            StateHasChanged();
+            return Task.CompletedTask;
+        }
+
+        DiscardAsync();
+        return Task.CompletedTask;
+    }
+
+    private Task OnDialogKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key is "Escape" or "Esc")
+        {
+            return DismissAsync();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private bool HasUncommittedChecks() =>
+        _completedById.Any(kvp => kvp.Value && !_committedIds.Contains(kvp.Key));
+
+    private void KeepEditing()
+    {
+        _showDiscardConfirm = false;
+        StateHasChanged();
+    }
+
+    private void DiscardAsync()
     {
         if (_sessionEnded)
         {

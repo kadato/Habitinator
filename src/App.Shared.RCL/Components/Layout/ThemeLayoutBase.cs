@@ -191,6 +191,9 @@ public abstract class ThemeLayoutBase : LayoutComponentBase, IDisposable
                     await UndoService.UndoAsync();
                 }
                 break;
+            case "help":
+                await CommandPalette.ShowHelpAsync();
+                break;
         }
     }
 

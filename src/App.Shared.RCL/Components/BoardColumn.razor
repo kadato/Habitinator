@@ -14,7 +14,7 @@
                              TransformOrigin="Origin.TopLeft"
                              PopoverClass="board-column-info-popover pa-3"
                              Class="board-column-info-btn"
-                             aria-label="@($"About {GetTitle()}")"
+                             AriaLabel="@($"About {GetTitle()}")"
                              title="@($"About {GetTitle()}")">
                         <ChildContent>
                             <MudText Typo="Typo.subtitle2" Class="font-weight-bold mb-1" Color="Color.Primary">@GetTitle()</MudText>
@@ -35,7 +35,7 @@
                 {
                     <button type="button"
                             title="Show all habits"
-                            aria-label="Show all habits"
+                            aria-label="All habits"
                             aria-pressed="@(_habitFilter == HabitListFilter.All)"
                             class="@GetFilterBtnClass(_habitFilter == HabitListFilter.All)"
                             @onclick="@(() => SetHabitFilter(HabitListFilter.All))">
@@ -43,7 +43,7 @@
                     </button>
                     <button type="button"
                             title="Habits with fewer than 3 logs in this period"
-                            aria-label="Show habits with fewer than 3 logs in this period"
+                            aria-label="1-2 logs: habits with fewer than 3 logs in this period"
                             aria-pressed="@(_habitFilter == HabitListFilter.Weak)"
                             class="@GetFilterBtnClass(_habitFilter == HabitListFilter.Weak)"
                             @onclick="@(() => SetHabitFilter(HabitListFilter.Weak))">
@@ -51,7 +51,7 @@
                     </button>
                     <button type="button"
                             title="Habits with 3 or more logs in this period"
-                            aria-label="Show habits with 3 or more logs in this period"
+                            aria-label="3+ logs: habits with 3 or more logs in this period"
                             aria-pressed="@(_habitFilter == HabitListFilter.Strong)"
                             class="@GetFilterBtnClass(_habitFilter == HabitListFilter.Strong)"
                             @onclick="@(() => SetHabitFilter(HabitListFilter.Strong))">
@@ -62,7 +62,7 @@
                 {
                     <button type="button"
                             title="Show all dailies"
-                            aria-label="Show all dailies"
+                            aria-label="All dailies"
                             aria-pressed="@(_dailyFilter == DailyListFilter.All)"
                             class="@GetFilterBtnClass(_dailyFilter == DailyListFilter.All)"
                             @onclick="@(() => SetDailyFilter(DailyListFilter.All))">
@@ -70,7 +70,7 @@
                     </button>
                     <button type="button"
                             title="Due today or overdue, except delayed dailies"
-                            aria-label="Show dailies due today or overdue, except delayed dailies"
+                            aria-label="Due now: dailies due today or overdue, except delayed dailies"
                             aria-pressed="@(_dailyFilter == DailyListFilter.Due)"
                             class="@GetFilterBtnClass(_dailyFilter == DailyListFilter.Due)"
                             @onclick="@(() => SetDailyFilter(DailyListFilter.Due))">
@@ -78,7 +78,7 @@
                     </button>
                     <button type="button"
                             title="Neither due nor overdue"
-                            aria-label="Show dailies for later that are neither due nor overdue"
+                            aria-label="Later: dailies neither due nor overdue"
                             aria-pressed="@(_dailyFilter == DailyListFilter.NotDue)"
                             class="@GetFilterBtnClass(_dailyFilter == DailyListFilter.NotDue)"
                             @onclick="@(() => SetDailyFilter(DailyListFilter.NotDue))">
@@ -89,7 +89,7 @@
                 {
                     <button type="button"
                             title="Open to-dos"
-                            aria-label="Show open to-dos"
+                            aria-label="Active: open to-dos"
                             aria-pressed="@(_todoFilter == TodoListFilter.Active)"
                             class="@GetFilterBtnClass(_todoFilter == TodoListFilter.Active)"
                             @onclick="@(() => SetTodoFilter(TodoListFilter.Active))">
@@ -97,7 +97,7 @@
                     </button>
                     <button type="button"
                             title="Open to-dos with a due date"
-                            aria-label="Show scheduled to-dos with a due date"
+                            aria-label="Scheduled: open to-dos with a due date"
                             aria-pressed="@(_todoFilter == TodoListFilter.Scheduled)"
                             class="@GetFilterBtnClass(_todoFilter == TodoListFilter.Scheduled)"
                             @onclick="@(() => SetTodoFilter(TodoListFilter.Scheduled))">
@@ -105,7 +105,7 @@
                     </button>
                     <button type="button"
                             title="Completed to-dos"
-                            aria-label="Show completed to-dos"
+                            aria-label="Done: completed to-dos"
                             aria-pressed="@(_todoFilter == TodoListFilter.Done)"
                             class="@GetFilterBtnClass(_todoFilter == TodoListFilter.Done)"
                             @onclick="@(() => SetTodoFilter(TodoListFilter.Done))">

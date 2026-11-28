@@ -276,44 +276,56 @@
                             <span>@label</span>
                         }
                     </div>
-                    <div class="cal-grid">
-                        @foreach (var date in GridCells())
+                    <div class="cal-grid cal-grid--month" role="grid" aria-label="@($"{MonthTitle} days")">
+                        @{
+                            var focusDate = MonthFocusDate();
+                        }
+                        @foreach (var week in GridWeeks())
                         {
-                            var dailies = CellDailies(date);
-                            var todos = CellTodos(date);
-                            var chips = MonthChips(dailies, todos);
-                            var shown = chips.Take(3).ToList();
-                            var extra = MonthOverflowCount(dailies, todos, shown.Count);
-                            <button type="button"
-                                    class="@CellClass(date)"
-                                    aria-label="@CellAria(date, dailies, todos)"
-                                    aria-current="@(date == _selected ? "date" : null)"
-                                    @onclick="() => SelectDay(date)"
-                                    @key="date">
-                                <span class="cal-cell__top">
-                                    <span class="cal-cell__num">@date.Day</span>
-                                </span>
-                                <span class="cal-cell__chips">
-                                    @foreach (var chip in shown)
-                                    {
-                                        <span class="cal-chip @ChipClass(chip)" title="@chip.Hint"><span class="cal-chip__label">@ChipLabel(chip)</span></span>
-                                    }
-                                    @if (extra > 0)
-                                    {
-                                        <span class="cal-more">+@extra more</span>
-                                    }
-                                </span>
-                                <span class="cal-cell__dots" aria-hidden="true">
-                                    @if (ShowDailies && dailies.Count > 0)
-                                    {
-                                        <span class="cal-dot cal-dot--daily">@dailies.Count</span>
-                                    }
-                                    @if (ShowTodos && todos.Count > 0)
-                                    {
-                                        <span class="cal-dot cal-dot--todo">@todos.Count</span>
-                                    }
-                                </span>
-                            </button>
+                            <div class="cal-week-row" role="row">
+                                @foreach (var date in week)
+                                {
+                                    var dailies = CellDailies(date);
+                                    var todos = CellTodos(date);
+                                    var chips = MonthChips(dailies, todos);
+                                    var shown = chips.Take(3).ToList();
+                                    var extra = MonthOverflowCount(dailies, todos, shown.Count);
+                                    <button type="button"
+                                            role="gridcell"
+                                            class="@CellClass(date)"
+                                            aria-label="@CellAria(date, dailies, todos)"
+                                            aria-current="@(date == _selected ? "date" : null)"
+                                            tabindex="@(date == focusDate ? "0" : "-1")"
+                                            data-cal-date="@CalDateKey(date)"
+                                            @onclick="() => SelectDay(date)"
+                                            @onkeydown="e => OnMonthCellKeyDown(e, date)"
+                                            @key="date">
+                                        <span class="cal-cell__top">
+                                            <span class="cal-cell__num">@date.Day</span>
+                                        </span>
+                                        <span class="cal-cell__chips">
+                                            @foreach (var chip in shown)
+                                            {
+                                                <span class="cal-chip @ChipClass(chip)" title="@chip.Hint"><span class="cal-chip__label">@ChipLabel(chip)</span></span>
+                                            }
+                                            @if (extra > 0)
+                                            {
+                                                <span class="cal-more">+@extra more</span>
+                                            }
+                                        </span>
+                                        <span class="cal-cell__dots" aria-hidden="true">
+                                            @if (ShowDailies && dailies.Count > 0)
+                                            {
+                                                <span class="cal-dot cal-dot--daily">@dailies.Count</span>
+                                            }
+                                            @if (ShowTodos && todos.Count > 0)
+                                            {
+                                                <span class="cal-dot cal-dot--todo">@todos.Count</span>
+                                            }
+                                        </span>
+                                    </button>
+                                }
+                            </div>
                         }
                     </div>
                 </section>

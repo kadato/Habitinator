@@ -49,6 +49,20 @@ public sealed class BoardItemCardOverdueTests : IAsyncDisposable
     }
 
     [Fact]
+    public void Habit_Counter_Is_A_Live_Region()
+    {
+        var item = new BoardItem(Guid.NewGuid(), "Meditate", Counter: 3, NegativeCounter: 1);
+
+        var cut = _ctx.Render<BoardItemCard>(parameters => parameters
+            .Add(p => p.Item, item)
+            .Add(p => p.Section, BoardSection.Habit));
+
+        var status = cut.Find(".board-habit-counters [role='status']");
+        status.TextContent.Should().Contain("Positive logs 3")
+            .And.Contain("negative logs 1");
+    }
+
+    [Fact]
     public void Omits_Overdue_Pill_When_Not_Overdue()
     {
         var item = new BoardItem(Guid.NewGuid(), "Gym", DailyStartDate: new DateOnly(2026, 8, 3));

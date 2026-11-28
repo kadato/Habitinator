@@ -521,6 +521,18 @@
     gap: 8px;
 }
 
+.cal-grid--month {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cal-week-row {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 8px;
+}
+
 .cal-cell {
     border: 1px solid var(--mud-palette-divider);
     background: var(--mud-palette-surface);
@@ -1404,7 +1416,8 @@
     }
 
     .cal-grid,
-    .cal-week {
+    .cal-week,
+    .cal-week-row {
         gap: 4px;
     }
 

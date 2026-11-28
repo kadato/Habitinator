@@ -22,7 +22,7 @@
     }
     @if (_error is not null)
     {
-        <div class="stats-load-fallback">
+        <div class="stats-load-fallback" role="alert">
             <MudIcon Icon="@Icons.Material.Filled.BarChart" Size="Size.Large" Class="stats-load-fallback__icon"  aria-hidden="true" />
             <MudText Typo="Typo.subtitle2" Class="stats-load-fallback__title">Couldn't load stats</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary">Check connection and try again.</MudText>
@@ -61,7 +61,7 @@
         <MudPaper Class="pa-6 stats-dashboard-card text-center" Elevation="0" Outlined="true">
             <MudIcon Icon="@Icons.Material.Filled.BarChart" Size="Size.Large" Class="mb-2" Color="Color.Secondary"  aria-hidden="true" />
             <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="font-weight-bold">Nothing yet</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">Do a habit, daily, or focus session to begin.</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">Log a habit, check off a daily, or run a focus session to see stats.</MudText>
         </MudPaper>
     }
     else

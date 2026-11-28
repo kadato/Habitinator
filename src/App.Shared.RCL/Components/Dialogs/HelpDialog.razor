@@ -1,0 +1,166 @@
+@using MudBlazor
+
+<MudDialog Class="hab-modal-dialog" ContentClass="hab-modal-content">
+    <DialogContent>
+        <div class="hab-modal hab-modal--neutral hab-modal--wide help-dialog" data-dialog-label="Keyboard shortcuts and quick add" aria-label="Keyboard shortcuts and quick add" role="group">
+            <div class="hab-modal__grabber" aria-hidden="true"></div>
+            <div class="hab-modal__header">
+                <div class="hab-modal__topbar hab-modal__topbar--minimal">
+                    <DialogCloseButton OnClose="Close" />
+                </div>
+                <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Keyboard shortcuts and quick add</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    Shortcuts work when focus is not in a text field. Press <kbd class="help-kbd">?</kbd> to open this list again.
+                </MudText>
+            </div>
+            <div class="hab-modal__body" tabindex="0" role="region" aria-label="Shortcuts and quick add">
+                <section class="help-section" aria-labelledby="help-navigation">
+                    <h3 id="help-navigation" class="help-section__title">Navigation</h3>
+                    <dl class="help-list">
+                        @foreach (var shortcut in NavigationShortcuts)
+                        {
+                            @RenderShortcut(shortcut)
+                        }
+                    </dl>
+                </section>
+
+                <section class="help-section" aria-labelledby="help-creating">
+                    <h3 id="help-creating" class="help-section__title">Creating and editing</h3>
+                    <dl class="help-list">
+                        @foreach (var shortcut in EditingShortcuts)
+                        {
+                            @RenderShortcut(shortcut)
+                        }
+                    </dl>
+                </section>
+
+                <section class="help-section" aria-labelledby="help-board">
+                    <h3 id="help-board" class="help-section__title">Board and timer</h3>
+                    <dl class="help-list">
+                        @foreach (var shortcut in BoardShortcuts)
+                        {
+                            @RenderShortcut(shortcut)
+                        }
+                    </dl>
+                </section>
+
+                <section class="help-section" aria-labelledby="help-quick-add">
+                    <h3 id="help-quick-add" class="help-section__title">Quick add</h3>
+                    <p class="help-section__intro">
+                        Type these in the add field on a board column or in Upcoming. The hints are removed from the title.
+                    </p>
+                    <dl class="help-list">
+                        @foreach (var hint in QuickAddHints)
+                        {
+                            <div class="help-row">
+                                <dt><code class="help-code">@hint.Syntax</code></dt>
+                                <dd>@hint.Description</dd>
+                            </div>
+                        }
+                    </dl>
+                    <p class="help-section__example">
+                        Example: <code class="help-code">Call the dentist due:friday #health</code> creates "Call the dentist" with a due date and the health tag.
+                    </p>
+                </section>
+            </div>
+            <div class="hab-modal__footer">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Shortcuts can be turned off in Settings.</MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">Close</MudButton>
+            </div>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
+
+    private static readonly Shortcut[] NavigationShortcuts =
+    [
+        new(["G", "B"], "Board"),
+        new(["G", "U"], "Upcoming"),
+        new(["G", "S"], "Statistics"),
+        new(["G", "P"], "Settings"),
+        new(["Ctrl+K"], "Open the command palette"),
+        new(["?"], "Open this help")
+    ];
+
+    private static readonly Shortcut[] EditingShortcuts =
+    [
+        new(["N"], "Focus the first add field on the board"),
+        new(["C", "H"], "New habit"),
+        new(["C", "D"], "New daily"),
+        new(["C", "T"], "New to-do"),
+        new(["H"], "New habit"),
+        new(["D"], "New daily"),
+        new(["T"], "New to-do"),
+        new(["Alt+T"], "New to-do"),
+        new(["Ctrl+Z"], "Undo the last change")
+    ];
+
+    private static readonly Shortcut[] BoardShortcuts =
+    [
+        new(["/"], "Search the board"),
+        new(["1"], "Show habits on phones"),
+        new(["2"], "Show dailies on phones"),
+        new(["3"], "Show to-dos on phones"),
+        new(["S"], "Start or pause the focus timer"),
+        new(["J"], "Scroll down"),
+        new(["K"], "Scroll up"),
+        new(["Esc"], "Close a dialog, menu, or overlay")
+    ];
+
+    private static readonly (string Syntax, string Description)[] QuickAddHints =
+    [
+        ("#tag", "Add a tag, for example Read #health"),
+        ("due:today", "Due today"),
+        ("due:tomorrow", "Due tomorrow"),
+        ("due:friday", "Due the next Friday, or another weekday name"),
+        ("due:2026-12-01", "Due on a specific date"),
+        ("@today / @tomorrow", "Shorthand for a due date"),
+        ("!urgent / !p1 / !high", "Add the urgent tag")
+    ];
+
+    private static RenderFragment RenderShortcut(Shortcut shortcut) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "help-row");
+        builder.OpenElement(2, "dt");
+        for (var i = 0; i < shortcut.Sequence.Length; i++)
+        {
+            if (i > 0)
+            {
+                builder.OpenElement(3, "span");
+                builder.AddAttribute(4, "class", "help-row__then");
+                builder.AddContent(5, "then");
+                builder.CloseElement();
+            }
+
+            var combo = shortcut.Sequence[i].Split('+');
+            for (var part = 0; part < combo.Length; part++)
+            {
+                if (part > 0)
+                {
+                    builder.OpenElement(6, "span");
+                    builder.AddAttribute(7, "class", "help-row__plus");
+                    builder.AddContent(8, "+");
+                    builder.CloseElement();
+                }
+
+                builder.OpenElement(9, "kbd");
+                builder.AddAttribute(10, "class", "help-kbd");
+                builder.AddContent(11, combo[part]);
+                builder.CloseElement();
+            }
+        }
+
+        builder.CloseElement();
+        builder.OpenElement(12, "dd");
+        builder.AddContent(13, shortcut.Description);
+        builder.CloseElement();
+        builder.CloseElement();
+    };
+
+    private void Close() => MudDialog.Close();
+
+    private sealed record Shortcut(string[] Sequence, string Description);
+}

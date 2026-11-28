@@ -17,6 +17,9 @@ public partial class MainBoard
     private bool _shortcutsEnabled = true;
     private DotNetObjectReference<MainBoard>? _selfRef;
     private ElementReference _swipeAreaRef;
+    private ElementReference _sectionTab0Ref;
+    private ElementReference _sectionTab1Ref;
+    private ElementReference _sectionTab2Ref;
     private bool? _isMobileViewport;
     private bool? _isPhoneViewport;
     private bool _swipeInitialized;

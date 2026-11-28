@@ -7,6 +7,7 @@ using App.Shared.RCL.Services;
 
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 
 using MudBlazor;
@@ -57,6 +58,7 @@ public partial class UpcomingPanel : IDisposable
     private ElementReference _calBodyRef;
     private DotNetObjectReference<UpcomingPanel>? _swipeRef;
     private bool _swipeInit;
+    private DateOnly? _pendingFocusDate;
 
     private bool ShowDailies => _filter != UpcomingFilter.Todos;
     private bool ShowTodos => _filter != UpcomingFilter.Dailies;
@@ -182,6 +184,20 @@ public partial class UpcomingPanel : IDisposable
             {
                 // Ignored during page navigation or hot reload.
                 _swipeInit = false;
+            }
+        }
+
+        if (_pendingFocusDate is { } pending)
+        {
+            _pendingFocusDate = null;
+            try
+            {
+                await JS.InvokeVoidAsync("habitinatorLoadScript", "_content/App.Shared.RCL/js/upcomingCalendar.js");
+                await JS.InvokeVoidAsync("focusUpcomingDay", CalDateKey(pending));
+            }
+            catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or InvalidOperationException)
+            {
+                // Focus is best effort. The roving tabindex still moves with the selection.
             }
         }
     }
@@ -469,6 +485,41 @@ public partial class UpcomingPanel : IDisposable
         _visibleYear = date.Year;
         _visibleMonth = date.Month;
         RebuildCaches();
+        SyncDateToUrl(date);
+    }
+
+    private void SyncDateToUrl(DateOnly date)
+    {
+        try
+        {
+            Nav.NavigateTo($"upcoming?date={CalDateKey(date)}", replace: true);
+        }
+        catch (Exception)
+        {
+            // Navigation is best effort. The local selection already changed.
+        }
+    }
+
+    private void OnMonthCellKeyDown(KeyboardEventArgs e, DateOnly date)
+    {
+        var weekOffset = ((int)date.DayOfWeek - (int)_weekStartDay + 7) % 7;
+        DateOnly? next = e.Key switch
+        {
+            "ArrowLeft" => date.AddDays(-1),
+            "ArrowRight" => date.AddDays(1),
+            "ArrowUp" => date.AddDays(-7),
+            "ArrowDown" => date.AddDays(7),
+            "Home" => date.AddDays(-weekOffset),
+            "End" => date.AddDays(6 - weekOffset),
+            _ => null
+        };
+        if (next is null)
+        {
+            return;
+        }
+
+        SelectDay(next.Value);
+        _pendingFocusDate = next.Value;
     }
 
     private void PrevDay() => SelectDay(_selected.AddDays(-1));
@@ -526,13 +577,37 @@ public partial class UpcomingPanel : IDisposable
 
     private bool IsBusy(Guid id) => _busy.Contains(id);
 
-    private List<DateOnly> GridCells()
+    private DateOnly MonthGridStart()
     {
         var first = new DateOnly(_visibleYear, _visibleMonth, 1);
         var lead = ((int)first.DayOfWeek - (int)_weekStartDay + 7) % 7;
-        var start = first.AddDays(-lead);
+        return first.AddDays(-lead);
+    }
+
+    private List<DateOnly> GridCells()
+    {
+        var start = MonthGridStart();
         return Enumerable.Range(0, 42).Select(start.AddDays).ToList();
     }
+
+    private List<List<DateOnly>> GridWeeks()
+    {
+        var start = MonthGridStart();
+        return [.. Enumerable.Range(0, 6)
+            .Select(week => Enumerable.Range(0, 7)
+                .Select(day => start.AddDays((week * 7) + day))
+                .ToList())];
+    }
+
+    private DateOnly MonthFocusDate()
+    {
+        var start = MonthGridStart();
+        return _selected >= start && _selected < start.AddDays(42)
+            ? _selected
+            : new DateOnly(_visibleYear, _visibleMonth, 1);
+    }
+
+    private static string CalDateKey(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     private List<DateOnly> WeekCells() => Enumerable.Range(0, 7).Select(WeekStart.AddDays).ToList();
 

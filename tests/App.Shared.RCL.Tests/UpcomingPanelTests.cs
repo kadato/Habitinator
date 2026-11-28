@@ -181,6 +181,38 @@ public sealed partial class UpcomingPanelTests : IAsyncDisposable
     }
 
     [Fact]
+    public void Month_Grid_Uses_Roving_Focus_And_Arrow_Keys_Update_The_Url()
+    {
+        _boardData.GetSnapshotAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new BoardSnapshot([], [], [])));
+        _viewState.GetAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<UpcomingViewState?>(new UpcomingViewState("Month", "All")));
+        var userDay = _ctx.Services.GetRequiredService<TestUserDayService>();
+        userDay.Today = new DateOnly(2024, 1, 8);
+
+        var cut = _ctx.Render<UpcomingPanel>();
+        cut.WaitForState(() => cut.FindAll(".cal-grid--month button").Count == 42, TimeSpan.FromSeconds(5));
+
+        var tabStops = cut.FindAll(".cal-grid--month button")
+            .Where(b => b.GetAttribute("tabindex") == "0")
+            .ToList();
+        tabStops.Should().ContainSingle();
+        tabStops[0].GetAttribute("data-cal-date").Should().Be("2024-01-08");
+
+        tabStops[0].KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "ArrowRight" });
+
+        cut.WaitForAssertion(() =>
+        {
+            var selected = cut.Find(".cal-grid--month button[data-cal-date='2024-01-09']");
+            selected.GetAttribute("tabindex").Should().Be("0");
+            selected.GetAttribute("aria-current").Should().Be("date");
+        }, TimeSpan.FromSeconds(5));
+
+        _ctx.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>()
+            .Uri.Should().EndWith("upcoming?date=2024-01-09");
+    }
+
+    [Fact]
     public void Week_Top_Nav_Moves_Window()
     {
         _boardData.GetSnapshotAsync(Arg.Any<CancellationToken>())

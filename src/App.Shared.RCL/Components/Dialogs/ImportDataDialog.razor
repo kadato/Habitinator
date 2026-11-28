@@ -1,3 +1,4 @@
+@using Microsoft.AspNetCore.Components.Forms
 @inject IUserDataImportService Import
 @inject IUserNotifier Notifier
 @inject IDialogService DialogService
@@ -17,10 +18,23 @@
                 </div>
                 <MudText Typo="Typo.h6" Class="font-weight-bold mb-1">Import data</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
-                    Paste a backup. Restore replaces everything.
+                    Load or paste a backup. Restore replaces everything.
                 </MudText>
             </div>
             <div class="hab-modal__body">
+            <div class="import-file-row mb-3">
+                <label class="import-file-trigger">
+                    <InputFile OnChange="OnFileSelectedAsync"
+                               accept=".json,application/json"
+                               class="import-file-input"
+                               aria-label="Choose a backup JSON file" />
+                    <MudIcon Icon="@Icons.Material.Filled.UploadFile" Size="Size.Small" aria-hidden="true" />
+                    <span>Choose file</span>
+                </label>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-0">
+                    @(_fileName is null ? "JSON, up to 5 MB. Or paste below." : $"Loaded {_fileName}.")
+                </MudText>
+            </div>
             <MudTextField T="string"
                           @bind-Value="_json"
                           @bind-Value:after="ClearPreview"
@@ -71,9 +85,41 @@
     private string _json = string.Empty;
     private string? _error;
     private string? _preview;
+    private string? _fileName;
     private UserDataExportDto? _parsed;
     private bool _validating;
     private bool _importing;
+
+    private async Task OnFileSelectedAsync(InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+        _fileName = file.Name;
+        _error = null;
+        _parsed = null;
+        _preview = null;
+
+        if (file.Size > 5_000_000)
+        {
+            _error = "Backup file is larger than 5 MB.";
+            _json = string.Empty;
+            return;
+        }
+
+        try
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: 5_000_000);
+            using var reader = new StreamReader(stream);
+            _json = await reader.ReadToEndAsync();
+        }
+        catch (Exception)
+        {
+            _error = "Couldn't read that file.";
+            _json = string.Empty;
+            return;
+        }
+
+        await ValidateAsync();
+    }
 
     private void ClearPreview()
     {

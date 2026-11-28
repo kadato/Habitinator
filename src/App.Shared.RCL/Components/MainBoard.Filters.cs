@@ -65,7 +65,7 @@ public partial class MainBoard
 
     private Origin TagsMenuTransform => _isPhoneViewport == true ? Origin.BottomRight : Origin.TopRight;
 
-    private void OnMobileSectionKeyDown(KeyboardEventArgs e)
+    private async Task OnMobileSectionKeyDownAsync(KeyboardEventArgs e)
     {
         if (e.Key is not ("ArrowLeft" or "ArrowRight" or "Home" or "End"))
         {
@@ -80,7 +80,16 @@ public partial class MainBoard
             _ => 2
         };
         SetMobileSectionIndex(next);
-        StateHasChanged();
+
+        // The roving tabindex moves with the selection, so focus has to follow it.
+        // Without this the user stays on the old tab and the next Tab press skips the strip.
+        var target = next switch
+        {
+            0 => _sectionTab0Ref,
+            1 => _sectionTab1Ref,
+            _ => _sectionTab2Ref
+        };
+        await target.FocusAsync();
     }
 
     private void SetMobileSectionIndex(int index)

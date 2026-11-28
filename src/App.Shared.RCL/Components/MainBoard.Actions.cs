@@ -149,7 +149,29 @@ public partial class MainBoard
         return await dialog.Result;
     }
 
+    private async Task OpenTagManagerAsync()
+    {
+        await CloseTagsMenuAsync();
+
+        var dialog = await DialogService.ShowAsync<TagManagerDialog>(string.Empty, DialogDefaults.Wide);
+        await dialog.Result;
+
+        _lastLocalMutationTime = DateTimeOffset.UtcNow;
+        await LoadBoardAsync();
+    }
+
     private async Task OpenArchivedItemsDialogAsync()
+    {
+        await CloseTagsMenuAsync();
+
+        var dialog = await DialogService.ShowAsync<ArchivedItemsDialog>(string.Empty, DialogDefaults.Wide);
+        await dialog.Result;
+
+        _lastLocalMutationTime = DateTimeOffset.UtcNow;
+        await LoadBoardAsync();
+    }
+
+    private async Task CloseTagsMenuAsync()
     {
         try
         {
@@ -160,14 +182,8 @@ public partial class MainBoard
         }
         catch (Exception ex)
         {
-            // Ignore close failures. The tags menu may already be closed. The handler logs the error and opens the archive dialog.
+            // The menu may already be closed. The dialog still opens.
             System.Diagnostics.Debug.WriteLine(ex.Message);
         }
-
-        var dialog = await DialogService.ShowAsync<ArchivedItemsDialog>(string.Empty, DialogDefaults.Wide);
-        await dialog.Result;
-
-        _lastLocalMutationTime = DateTimeOffset.UtcNow;
-        await LoadBoardAsync();
     }
 }

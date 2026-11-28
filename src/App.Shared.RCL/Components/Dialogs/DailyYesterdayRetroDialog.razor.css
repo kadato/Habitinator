@@ -58,3 +58,29 @@ button.daily-yesterday-row {
     background: color-mix(in srgb, var(--hab-accent-success) 5%, var(--mud-palette-surface));
 }
 .daily-yesterday-row--completed .daily-yesterday-row__title-text { color: var(--mud-palette-text-secondary); }
+
+.daily-yesterday-discard {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.daily-yesterday-discard__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+@media (max-width: 480px) {
+    .daily-yesterday-discard,
+    .daily-yesterday-discard__actions {
+        width: 100%;
+    }
+
+    .daily-yesterday-discard__actions .mud-button-root {
+        flex: 1 1 auto;
+    }
+}

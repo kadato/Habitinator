@@ -1,5 +1,6 @@
 #pragma warning disable MUD0012
 
+using App.Shared.RCL.Components;
 using App.Shared.RCL.Components.Dialogs;
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
@@ -113,7 +114,7 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task Checking_Item_And_Clicking_Backdrop_Discards_Without_Saving()
+    public async Task Checking_Item_And_Clicking_Backdrop_Asks_Before_Discarding()
     {
         // Arrange
         var daily1Id = Guid.NewGuid();
@@ -135,7 +136,8 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
         IDialogReference? dialogRef = null;
         await provider.InvokeAsync(async () =>
         {
-            dialogRef = await dialogService.ShowAsync<DailyYesterdayRetroDialog>(string.Empty, parameters);
+            dialogRef = await dialogService.ShowAsync<DailyYesterdayRetroDialog>(
+                string.Empty, parameters, DialogDefaults.SmallEditorNoEscape);
         });
 
         var row = provider.Find(".daily-yesterday-row");
@@ -144,18 +146,22 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
         var dialog = provider.FindComponent<MudDialog>();
         await provider.InvokeAsync(() => dialog.Instance.OnBackdropClick.InvokeAsync(null));
 
+        provider.Markup.Should().Contain("Close without saving your checks?");
+
+        var discard = provider.FindAll(".daily-yesterday-discard button")[1];
+        await provider.InvokeAsync(() => discard.Click());
+
         var reference = dialogRef ?? throw new InvalidOperationException("DialogRef was null");
         var result = await reference.Result;
 
-        // Assert: backdrop dismisses without saving. Only Save commits.
+        // Assert: the confirmation discards without saving. Only Save commits.
         result.Should().NotBeNull();
         result.Canceled.Should().BeTrue();
         await _boardDataService.DidNotReceive().CompleteDailyForDateAsync(daily1Id, yesterday);
     }
 
-
     [Fact]
-    public async Task Checking_Item_And_Dismissing_Via_Close_Button_Discards_Without_Saving()
+    public async Task Checking_Item_And_Dismissing_Via_Close_Button_Asks_Before_Discarding()
     {
         // Arrange
         var daily1Id = Guid.NewGuid();
@@ -177,7 +183,8 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
         IDialogReference? dialogRef = null;
         await provider.InvokeAsync(async () =>
         {
-            dialogRef = await dialogService.ShowAsync<DailyYesterdayRetroDialog>(string.Empty, parameters);
+            dialogRef = await dialogService.ShowAsync<DailyYesterdayRetroDialog>(
+                string.Empty, parameters, DialogDefaults.SmallEditorNoEscape);
         });
 
         var row = provider.Find(".daily-yesterday-row");
@@ -186,13 +193,110 @@ public sealed class DailyYesterdayRetroDialogTests : IAsyncDisposable
         var closeBtn = provider.Find(".hab-modal__close");
         await provider.InvokeAsync(() => closeBtn.Click());
 
+        provider.Markup.Should().Contain("Close without saving your checks?");
+
+        var discard = provider.FindAll(".daily-yesterday-discard button")[1];
+        await provider.InvokeAsync(() => discard.Click());
+
         var reference = dialogRef ?? throw new InvalidOperationException("DialogRef was null");
         var result = await reference.Result;
 
-        // Assert: the close button dismisses without saving. Only Save commits.
+        // Assert: the close button asks, then discards without saving.
         result.Should().NotBeNull();
         result.Canceled.Should().BeTrue();
         await _boardDataService.DidNotReceive().CompleteDailyForDateAsync(daily1Id, yesterday);
+    }
+
+    [Fact]
+    public async Task Keep_Editing_Hides_The_Discard_Confirmation()
+    {
+        var daily1 = new BoardItem(Guid.NewGuid(), "Evening Walk", false, 0);
+        var yesterday = new DateOnly(2026, 8, 11);
+
+        var provider = _ctx.Render<MudDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+        var parameters = new DialogParameters<DailyYesterdayRetroDialog>
+        {
+            { x => x.DueOn, yesterday },
+            { x => x.Items, new List<BoardItem> { daily1 } }
+        };
+
+        await provider.InvokeAsync(async () =>
+            await dialogService.ShowAsync<DailyYesterdayRetroDialog>(
+                string.Empty, parameters, DialogDefaults.SmallEditorNoEscape));
+
+        var row = provider.Find(".daily-yesterday-row");
+        await provider.InvokeAsync(() => row.Click());
+
+        var closeBtn = provider.Find(".hab-modal__close");
+        await provider.InvokeAsync(() => closeBtn.Click());
+        provider.Markup.Should().Contain("Close without saving your checks?");
+
+        var keepEditing = provider.FindAll(".daily-yesterday-discard button")[0];
+        await provider.InvokeAsync(() => keepEditing.Click());
+
+        provider.Markup.Should().NotContain("Close without saving your checks?");
+        provider.Markup.Should().Contain("Save");
+    }
+
+    [Fact]
+    public async Task Escape_With_Changed_Checks_Asks_Before_Discarding()
+    {
+        var daily1 = new BoardItem(Guid.NewGuid(), "Evening Walk", false, 0);
+        var yesterday = new DateOnly(2026, 8, 11);
+
+        var provider = _ctx.Render<MudDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+        var parameters = new DialogParameters<DailyYesterdayRetroDialog>
+        {
+            { x => x.DueOn, yesterday },
+            { x => x.Items, new List<BoardItem> { daily1 } }
+        };
+
+        await provider.InvokeAsync(async () =>
+            await dialogService.ShowAsync<DailyYesterdayRetroDialog>(
+                string.Empty, parameters, DialogDefaults.SmallEditorNoEscape));
+
+        var row = provider.Find(".daily-yesterday-row");
+        await provider.InvokeAsync(() => row.Click());
+
+        var dialog = provider.FindComponent<MudDialog>();
+        await provider.InvokeAsync(() => dialog.Instance.OnKeyDown.InvokeAsync(
+            new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" }));
+
+        provider.Markup.Should().Contain("Close without saving your checks?");
+    }
+
+    [Fact]
+    public async Task Dismissing_Without_Changes_Closes_Without_Confirmation()
+    {
+        var daily1 = new BoardItem(Guid.NewGuid(), "Evening Walk", false, 0);
+        var yesterday = new DateOnly(2026, 8, 11);
+
+        var provider = _ctx.Render<MudDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+        var parameters = new DialogParameters<DailyYesterdayRetroDialog>
+        {
+            { x => x.DueOn, yesterday },
+            { x => x.Items, new List<BoardItem> { daily1 } }
+        };
+
+        IDialogReference? dialogRef = null;
+        await provider.InvokeAsync(async () =>
+        {
+            dialogRef = await dialogService.ShowAsync<DailyYesterdayRetroDialog>(
+                string.Empty, parameters, DialogDefaults.SmallEditorNoEscape);
+        });
+
+        var closeBtn = provider.Find(".hab-modal__close");
+        await provider.InvokeAsync(() => closeBtn.Click());
+
+        var reference = dialogRef ?? throw new InvalidOperationException("DialogRef was null");
+        var result = await reference.Result;
+
+        result.Should().NotBeNull();
+        result.Canceled.Should().BeTrue();
+        provider.Markup.Should().NotContain("Close without saving your checks?");
     }
 
     [Fact]

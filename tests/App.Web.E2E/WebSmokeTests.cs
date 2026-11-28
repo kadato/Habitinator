@@ -7,39 +7,9 @@ namespace App.Web.E2E;
 /// <summary>Browser smoke tests. Requires a running web app. See README and CI, set E2E_BASE_URL.</summary>
 public sealed class WebSmokeTests
 {
-    private static string BaseUrl =>
-        Environment.GetEnvironmentVariable("E2E_BASE_URL")?.TrimEnd('/')
-        ?? "http://127.0.0.1:5050";
+    private static string BaseUrl => WebE2E.BaseUrl;
 
-    private static bool? _isBaseUrlReachable;
-
-    private static async Task EnsureBaseUrlReachableAsync()
-    {
-        if (_isBaseUrlReachable.HasValue)
-        {
-            Skip.If(!_isBaseUrlReachable.Value, $"E2E_BASE_URL '{BaseUrl}' is not reachable (cached check).");
-            return;
-        }
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
-        try
-        {
-            using var res = await client.GetAsync($"{BaseUrl}/health", cts.Token);
-            if (res.IsSuccessStatusCode)
-            {
-                _isBaseUrlReachable = true;
-                return;
-            }
-        }
-        catch
-        {
-            // Ignore and fall through to skip.
-        }
-
-        _isBaseUrlReachable = false;
-        Skip.If(true, $"E2E_BASE_URL '{BaseUrl}' is not reachable. Start App.Web before running Playwright tests.");
-    }
+    private static Task EnsureBaseUrlReachableAsync() => WebE2E.EnsureBaseUrlReachableAsync();
 
     [SkippableFact]
     public async Task Home_loads_without_server_error()

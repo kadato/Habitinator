@@ -73,6 +73,7 @@
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.17.0" />
     <PackageVersion Include="SSH.NET" Version="2026.0.1" />
     <PackageVersion Include="Microsoft.Playwright" Version="1.65.1" />
+    <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.14.0" />
 
     <!-- BrandExporter script dependencies -->
     <PackageVersion Include="SkiaSharp" Version="4.153.1" />

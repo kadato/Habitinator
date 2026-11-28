@@ -523,7 +523,7 @@
     margin: 0 2px;
 }
 
-.ai-safe-tools-tag {
+.ai-capability-note {
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -532,7 +532,7 @@
     font-weight: 500;
 }
 
-.ai-safe-tools-icon {
+.ai-capability-icon {
     font-size: 0.8125rem !important;
     color: var(--mud-palette-success);
 }
@@ -936,8 +936,7 @@ html.kb-open .ai-assistant-drawer {
         border-radius: 50% !important;
     }
 
-    /* The Safe board tools badge explains nothing actionable on a phone.
-       Desktop keeps it. No clutter. */
+    /* The capability note is desktop-only. Phones need the composer space. */
     ::deep .ai-input-hint {
         display: none !important;
     }

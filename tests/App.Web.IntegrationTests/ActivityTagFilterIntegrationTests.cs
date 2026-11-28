@@ -43,6 +43,45 @@ public sealed class ActivityTagFilterIntegrationTests(PostgresWebAppFactory fact
         filteredBody.Dashboard.TotalEvents.Should().BeGreaterThanOrEqualTo(1);
     }
 
+    [Fact]
+    public async Task Overview_tag_filter_unions_tags_and_matches_whole_tags_only()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var token = await RegisterAndLoginAsync(client);
+
+        var health = await CreateDailyAsync(client, token, "Run");
+        var work = await CreateDailyAsync(client, token, "Review");
+        var homework = await CreateDailyAsync(client, token, "Practice");
+        await TagDailyAsync(client, token, health.Id, "health");
+        await TagDailyAsync(client, token, work.Id, "work");
+        await TagDailyAsync(client, token, homework.Id, "homework");
+
+        foreach (var daily in new[] { health, work, homework })
+        {
+            using var complete = new HttpRequestMessage(HttpMethod.Post, $"/api/board/Daily/{daily.Id}/toggle");
+            complete.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            (await client.SendAsync(complete)).EnsureSuccessStatusCode();
+        }
+
+        (await GetTotalEventsAsync(client, token, "/api/activity/overview")).Should().Be(3);
+        (await GetTotalEventsAsync(client, token, "/api/activity/overview?tag=health")).Should().Be(1);
+        // `work` must not pick up the `homework` item.
+        (await GetTotalEventsAsync(client, token, "/api/activity/overview?tag=work")).Should().Be(1);
+        (await GetTotalEventsAsync(client, token, "/api/activity/overview?tag=health,homework")).Should().Be(2);
+        // The union keeps case-insensitive matching for every tag.
+        (await GetTotalEventsAsync(client, token, "/api/activity/overview?tag=HEALTH,WORK")).Should().Be(2);
+    }
+
+    private static async Task<int> GetTotalEventsAsync(HttpClient client, string token, string path)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, path);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var res = await client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        var body = await res.Content.ReadFromJsonAsync<ActivityOverviewDto>(s_json) ?? throw new InvalidOperationException("Empty overview response.");
+        return body.Dashboard.TotalEvents;
+    }
+
     private static async Task<BoardItem> CreateDailyAsync(HttpClient client, string token, string title)
     {
         using var req = new HttpRequestMessage(HttpMethod.Post, "/api/board/Daily");

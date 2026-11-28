@@ -56,7 +56,7 @@
                                 </MudText>
                             </div>
                             <div class="ai-model-menu-list" role="presentation">
-                            @foreach (var opt in AiModelCatalog.GetModelsForProvider(_preferences.Ai.Provider))
+                            @foreach (var opt in DisplayModelOptions)
                             {
                                 var isCurrent = string.Equals(_activeModel, opt.Id, StringComparison.OrdinalIgnoreCase);
                                 <MudMenuItem OnClick="() => SwitchModelAsync(opt.Id)"
@@ -220,7 +220,7 @@
         }
 
         <div id="ai-messages-scroll-area" class="ai-drawer-body flex-grow-1 px-4 py-3 overflow-y-auto">
-            @if (_preferences?.Ai.Enabled != true)
+            @if (!AiEnabled)
             {
                 <div class="ai-unconfigured-card mb-4 pa-3 rounded-lg">
                     <div class="d-flex align-center justify-space-between">
@@ -233,6 +233,28 @@
                             </MudText>
                         </div>
                         <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Size="Size.Medium"
+                                   StartIcon="@Icons.Material.Filled.Settings"
+                                   OnClick="NavigateToSettings">
+                            Settings
+                        </MudButton>
+                    </div>
+                </div>
+            }
+            else if (_preferences is { Ai.ApiKeyConfigured: false })
+            {
+                <div class="ai-unconfigured-card mb-4 pa-3 rounded-lg">
+                    <div class="d-flex align-center justify-space-between">
+                        <div>
+                            <MudText Typo="Typo.subtitle2" HtmlTag="h2" Class="font-weight-bold mb-1">
+                                No API key saved
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Chat uses the server key when one is set. Add your own key in Settings to use another provider.
+                            </MudText>
+                        </div>
+                        <MudButton Variant="Variant.Outlined"
                                    Color="Color.Primary"
                                    Size="Size.Medium"
                                    StartIcon="@Icons.Material.Filled.Settings"
@@ -258,6 +280,7 @@
                         {
                             <button type="button"
                                     class="ai-prompt-pill"
+                                    disabled="@(!AiEnabled)"
                                     @onclick="() => SendQuickPromptAsync(qp.Prompt)">
                                 <MudIcon Icon="@qp.Icon" Size="Size.Small" Class="ai-prompt-pill__icon" />
                                 <span class="ai-prompt-pill__text">@qp.Label</span>
@@ -441,7 +464,7 @@
                 <MudTextField T="string"
                               Value="_inputText"
                               ValueChanged="OnInputChangedAsync"
-                              Placeholder="@(BoardSync.IsOffline ? "AI needs internet" : "Ask AI...")"
+                              Placeholder="@ComposerPlaceholder"
                               Variant="Variant.Outlined"
                               dense="true"
                               margin="Margin.None"
@@ -451,7 +474,7 @@
                               Immediate="true"
                               aria-label="Message AI assistant"
                               OnKeyDown="HandleKeyDown"
-                              Disabled="BoardSync.IsOffline || _isSending || _isStreaming"
+                              Disabled="@(!AiEnabled || BoardSync.IsOffline || _isSending || _isStreaming)"
                               Class="ai-text-field flex-grow-1"
                               InputMode="@InputMode.text"
                               enterkeyhint="send"
@@ -461,7 +484,7 @@
                            Color="@(_isStreaming ? Color.Error : Color.Primary)"
                            Class="ai-send-btn"
                            aria-label="@GetSendButtonAriaLabel()"
-                           Disabled="@(BoardSync.IsOffline || (!_isStreaming && (_isSending || string.IsNullOrWhiteSpace(_inputText))))"
+                           Disabled="@(!AiEnabled || BoardSync.IsOffline || (!_isStreaming && (_isSending || string.IsNullOrWhiteSpace(_inputText))))"
                            OnClick="HandleSendOrStopAsync">
                     @if (_isStreaming)
                     {
@@ -484,9 +507,9 @@
                     <span class="ai-hint-dot">,</span>
                     
                 </span>
-                <span class="ai-safe-tools-tag">
-                    <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" Class="ai-safe-tools-icon" />
-                    Safe tools
+                <span class="ai-capability-note" title="The assistant reads your board and changes items you mention. It has no delete tool.">
+                    <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" Class="ai-capability-icon" />
+                    Reads your board and edits only what you ask. Never deletes.
                 </span>
             </div>
         </div>
@@ -516,6 +539,21 @@
     private readonly List<AiThread> _threads = [];
     private string _activeThreadId = string.Empty;
     private List<ChatEntry> ActiveEntries => _threads.FirstOrDefault(t => t.Id == _activeThreadId)?.Entries ?? [];
+
+    private bool AiEnabled => _preferences?.Ai.Enabled == true;
+
+    private string ComposerPlaceholder
+    {
+        get
+        {
+            if (!AiEnabled)
+            {
+                return "Turn on AI in Settings";
+            }
+
+            return BoardSync.IsOffline ? "AI needs internet" : "Ask AI...";
+        }
+    }
     private readonly List<QuickPrompt> _quickPrompts =
     [
         new("Plan my day", "Plan my day based on today dailies and active todos", Icons.Material.Filled.WbSunny),
@@ -533,6 +571,7 @@
     private bool _isStreaming;
     private CancellationTokenSource? _streamCts;
     private UserPreferences? _preferences;
+    private IReadOnlyList<AiModelOption> _modelOptions = [];
 
     /// <summary>On phones, the drawer opens as a bottom sheet. On wider screens, the drawer docks on the side.</summary>
     private bool _isPhoneSheet;
@@ -765,6 +804,40 @@
         {
             _preferences = UserPreferences.CreateDefault();
             _activeModel = _preferences.Ai.Model;
+        }
+
+        await LoadModelOptionsAsync();
+    }
+
+    private IReadOnlyList<AiModelOption> DisplayModelOptions =>
+        _modelOptions.Count > 0
+            ? _modelOptions
+            : AiModelCatalog.GetModelsForProvider(_preferences?.Ai.Provider);
+
+    private async Task LoadModelOptionsAsync()
+    {
+        if (_preferences is null || !_preferences.Ai.Enabled)
+        {
+            _modelOptions = [];
+            return;
+        }
+
+        var provider = _preferences.Ai.Provider;
+        try
+        {
+            var response = await AiService.GetModelsAsync(new AiModelsRequest
+            {
+                Provider = provider,
+                Endpoint = _preferences.Ai.Endpoint
+            });
+            var available = response?.Models;
+            _modelOptions = available is { Count: > 0 }
+                ? available
+                : AiModelCatalog.GetModelsForProvider(provider);
+        }
+        catch
+        {
+            _modelOptions = [.. AiModelCatalog.GetModelsForProvider(provider)];
         }
     }
 
@@ -1017,7 +1090,9 @@
         _ when text.StartsWith("/suggest", StringComparison.OrdinalIgnoreCase) =>
             "Suggest 3 positive daily habits for better focus and health. " + text.Replace("/suggest", string.Empty, StringComparison.OrdinalIgnoreCase).Trim(),
         _ when text.StartsWith("/retro", StringComparison.OrdinalIgnoreCase) =>
-            "Review yesterday's dailies and help me backdate what I completed. " + text.Replace("/retro", string.Empty, StringComparison.OrdinalIgnoreCase).Trim(),
+            "Review yesterday's dailies. Use list_activity_events for yesterday, ask me which ones I completed, and log only what I confirm with log_past_activity. " + text.Replace("/retro", string.Empty, StringComparison.OrdinalIgnoreCase).Trim(),
+        _ when text.StartsWith("/week", StringComparison.OrdinalIgnoreCase) =>
+            "Use get_activity_overview and list_activity_events for the past 7 days. Summarize my focus time, consistency, and where I can improve. " + text.Replace("/week", string.Empty, StringComparison.OrdinalIgnoreCase).Trim(),
         _ when text.StartsWith("/timer", StringComparison.OrdinalIgnoreCase) =>
             "Show my timer summary and focus minutes. " + text.Replace("/timer", string.Empty, StringComparison.OrdinalIgnoreCase).Trim(),
         _ => text
@@ -1130,7 +1205,7 @@
     private async Task SendMessageAsync()
     {
         var raw = _inputText?.Trim();
-        if (string.IsNullOrWhiteSpace(raw) || _isSending)
+        if (string.IsNullOrWhiteSpace(raw) || _isSending || !AiEnabled)
         {
             return;
         }
@@ -1139,7 +1214,7 @@
         {
             _inputText = string.Empty;
             ActiveEntries.Add(new ChatEntry { Message = AiChatMessage.User(raw) });
-            ActiveEntries.Add(new ChatEntry { Message = AiChatMessage.Assistant("Try /plan, /review, /suggest, /retro, or /timer. Use @ to mention a board item by title.", _activeModel) });
+            ActiveEntries.Add(new ChatEntry { Message = AiChatMessage.Assistant("Try /plan, /review, /suggest, /retro, /week, or /timer. Use @ to mention a board item by title.", _activeModel) });
             await PersistThreadsAsync();
             StateHasChanged();
             await ScrollToBottomAsync();
@@ -1475,30 +1550,44 @@
     private static string GetFriendlyToolTitle(string toolName) => toolName switch
     {
         "create_item" => "Created item",
+        "create_items" => "Created items",
         "toggle_item" => "Toggled status",
         "habit_plus" => "Habit +1",
         "habit_minus" => "Habit -1",
         "rename_item" => "Renamed item",
         "set_due_date" => "Updated due date",
         "archive_item" => "Archived item",
+        "update_tags" => "Updated tags",
+        "append_notes" => "Updated notes",
+        "set_daily_weekdays" => "Updated schedule",
         "get_board_summary" => "Inspected board status",
         "get_snapshot" => "Read board snapshot",
         "get_timer_summary" => "Checked focus timer",
+        "get_activity_overview" => "Read activity history",
+        "list_activity_events" => "Read activity events",
+        "log_past_activity" => "Logged past activity",
         _ => toolName
     };
 
     private static string GetToolIcon(string toolName) => toolName switch
     {
         "create_item" => Icons.Material.Filled.AddCircle,
+        "create_items" => Icons.Material.Filled.PlaylistAdd,
         "toggle_item" => Icons.Material.Filled.CheckCircle,
         "habit_plus" => Icons.Material.Filled.Add,
         "habit_minus" => Icons.Material.Filled.Remove,
         "rename_item" => Icons.Material.Filled.Edit,
         "set_due_date" => Icons.Material.Filled.Event,
         "archive_item" => Icons.Material.Filled.Archive,
+        "update_tags" => Icons.Material.Filled.Sell,
+        "append_notes" => Icons.Material.Filled.Notes,
+        "set_daily_weekdays" => Icons.Material.Filled.CalendarMonth,
         "get_board_summary" => Icons.Material.Filled.Assessment,
         "get_snapshot" => Icons.Material.Filled.Visibility,
         "get_timer_summary" => Icons.Material.Filled.Timer,
+        "get_activity_overview" => Icons.Material.Filled.Assessment,
+        "list_activity_events" => Icons.Material.Filled.History,
+        "log_past_activity" => Icons.Material.Filled.EditCalendar,
         _ => Icons.Material.Filled.Build
     };
 

@@ -69,6 +69,40 @@ public static class AiModelCatalog
         return ProviderModels["OpenCode Go"];
     }
 
+    /// <summary>
+    ///     Combines a provider's live model list with the built-in catalog. Known ids keep
+    ///     their curated name, description, and badge. The provider decides which models
+    ///     to offer. Unknown ids keep their raw id so a custom model stays selectable.
+    /// </summary>
+    public static List<AiModelOption> MergeProviderModels(string? provider, IEnumerable<string> modelIds)
+    {
+        var providerCatalog = GetModelsForProvider(provider);
+        var known = new Dictionary<string, AiModelOption>(StringComparer.OrdinalIgnoreCase);
+        foreach (var option in providerCatalog)
+        {
+            known.TryAdd(option.Id, option);
+        }
+        foreach (var option in ProviderModels.Values.SelectMany(list => list))
+        {
+            known.TryAdd(option.Id, option);
+        }
+
+        var curatedOrder = providerCatalog
+            .Select((option, index) => (option.Id, index))
+            .ToDictionary(pair => pair.Id, pair => pair.index, StringComparer.OrdinalIgnoreCase);
+
+        return modelIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(id => curatedOrder.TryGetValue(id, out var index) ? index : int.MaxValue)
+            .ThenBy(id => id, StringComparer.OrdinalIgnoreCase)
+            .Select(id => known.TryGetValue(id, out var option)
+                ? option
+                : new AiModelOption(id, id, string.Empty))
+            .ToList();
+    }
+
     public static string GetModelDisplayName(string? modelId)
     {
         if (string.IsNullOrWhiteSpace(modelId))

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -453,5 +454,305 @@ public sealed class AiAssistantIntegrationTests(PostgresWebAppFactory factory)
         var updated = snapshot.Dailies.First(d => d.Id == created.Id);
         updated.DailyRepeat.Should().Be(DailyRepeatType.Weekly);
         updated.DailyWeekdays.Should().Be(DailyWeekdays.From(DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday));
+    }
+
+    [Fact]
+    public async Task AiAssistantService_ExecuteToolCall_log_past_activity_backfills_the_local_day()
+    {
+        using var scope = factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var aiService = scope.ServiceProvider.GetRequiredService<AiAssistantService>();
+        var boards = scope.ServiceProvider.GetRequiredService<BoardPersistenceService>();
+        var stats = scope.ServiceProvider.GetRequiredService<ActivityStatisticsService>();
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var user = new ApplicationUser { UserName = $"tool-backfill-{suffix}@test.local", Email = $"tool-backfill-{suffix}@test.local" };
+        await userManager.CreateAsync(user, "TestUser1!Aa");
+
+        var daily = await boards.CreateItemAsync(user.Id, BoardSection.Daily, "Morning walk", itemId: null, cancellationToken: CancellationToken.None);
+        var today = await boards.TodayAsync(user.Id, CancellationToken.None);
+        var yesterday = today.AddDays(-1);
+
+        var result = await aiService.ExecuteToolAsync(
+            user.Id,
+            "log_past_activity",
+            $$"""{"eventType":"DailyComplete","itemId":"{{daily.Id}}","date":"{{yesterday:yyyy-MM-dd}}","label":"Walked 30 minutes"}""",
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Result.Should().Contain("DailyComplete").And.Contain(yesterday.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+
+        var detail = await stats.GetActivityDayDetailAsync(user.Id, yesterday, null, CancellationToken.None);
+        detail.Events.Should().ContainSingle(e =>
+            e.EventType == ActivityEventType.DailyComplete &&
+            e.BoardItemTitle == "Morning walk" &&
+            e.CustomLabel == "Walked 30 minutes");
+
+        var todayDetail = await stats.GetActivityDayDetailAsync(user.Id, today, null, CancellationToken.None);
+        todayDetail.Events.Should().NotContain(e => e.EventType == ActivityEventType.DailyComplete);
+    }
+
+    [Fact]
+    public async Task AiAssistantService_ExecuteToolCall_list_activity_events_reads_the_requested_range()
+    {
+        using var scope = factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var aiService = scope.ServiceProvider.GetRequiredService<AiAssistantService>();
+        var boards = scope.ServiceProvider.GetRequiredService<BoardPersistenceService>();
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var user = new ApplicationUser { UserName = $"tool-events-{suffix}@test.local", Email = $"tool-events-{suffix}@test.local" };
+        await userManager.CreateAsync(user, "TestUser1!Aa");
+
+        var habit = await boards.CreateItemAsync(user.Id, BoardSection.Habit, "Read", itemId: null, cancellationToken: CancellationToken.None);
+        var today = await boards.TodayAsync(user.Id, CancellationToken.None);
+        var yesterday = today.AddDays(-1);
+        await boards.LogActivityOnDateAsync(
+            user.Id,
+            ActivityEventType.HabitPlus,
+            habit.Id,
+            yesterday,
+            "Finished a chapter",
+            eventId: null,
+            CancellationToken.None);
+
+        var result = await aiService.ExecuteToolAsync(
+            user.Id,
+            "list_activity_events",
+            $$"""{"startDate":"{{yesterday:yyyy-MM-dd}}","endDate":"{{yesterday:yyyy-MM-dd}}"}""",
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Result.Should().Contain("HabitPlus").And.Contain("Read").And.Contain("Finished a chapter");
+
+        var badRange = await aiService.ExecuteToolAsync(
+            user.Id,
+            "list_activity_events",
+            $$"""{"startDate":"{{today:yyyy-MM-dd}}","endDate":"{{yesterday:yyyy-MM-dd}}"}""",
+            CancellationToken.None);
+        badRange.IsSuccess.Should().BeFalse();
+        badRange.Result.Should().Contain("on or before");
+    }
+
+    [Fact]
+    public async Task ActivityEvents_PagingReturnsEachEventOnce()
+    {
+        using var scope = factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var boards = scope.ServiceProvider.GetRequiredService<BoardPersistenceService>();
+        var stats = scope.ServiceProvider.GetRequiredService<ActivityStatisticsService>();
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var user = new ApplicationUser { UserName = $"events-page-{suffix}@test.local", Email = $"events-page-{suffix}@test.local" };
+        await userManager.CreateAsync(user, "TestUser1!Aa");
+
+        var habit = await boards.CreateItemAsync(user.Id, BoardSection.Habit, "Read", itemId: null, cancellationToken: CancellationToken.None);
+        var today = await boards.TodayAsync(user.Id, CancellationToken.None);
+        var yesterday = today.AddDays(-1);
+        await boards.LogActivityOnDateAsync(
+            user.Id, ActivityEventType.HabitPlus, habit.Id, yesterday, "First", eventId: null, CancellationToken.None);
+        await boards.LogActivityOnDateAsync(
+            user.Id, ActivityEventType.HabitPlus, habit.Id, yesterday, "Second", eventId: null, CancellationToken.None);
+
+        var first = await stats.GetActivityEventsAsync(
+            user.Id, yesterday, yesterday, limit: 1, offset: 0, cancellationToken: CancellationToken.None);
+        var second = await stats.GetActivityEventsAsync(
+            user.Id, yesterday, yesterday, limit: 1, offset: 1, cancellationToken: CancellationToken.None);
+        var beyond = await stats.GetActivityEventsAsync(
+            user.Id, yesterday, yesterday, limit: 1, offset: 2, cancellationToken: CancellationToken.None);
+
+        first.Should().ContainSingle();
+        second.Should().ContainSingle();
+        first[0].CustomLabel.Should().NotBe(second[0].CustomLabel);
+        first[0].CustomLabel.Should().BeOneOf("First", "Second");
+        second[0].CustomLabel.Should().BeOneOf("First", "Second");
+        beyond.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task AiAssistantService_ExecuteToolCall_get_activity_overview_reports_past_work()
+    {
+        using var scope = factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var aiService = scope.ServiceProvider.GetRequiredService<AiAssistantService>();
+        var boards = scope.ServiceProvider.GetRequiredService<BoardPersistenceService>();
+        var stats = scope.ServiceProvider.GetRequiredService<ActivityStatisticsService>();
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var user = new ApplicationUser { UserName = $"tool-overview-{suffix}@test.local", Email = $"tool-overview-{suffix}@test.local" };
+        await userManager.CreateAsync(user, "TestUser1!Aa");
+
+        var habit = await boards.CreateItemAsync(user.Id, BoardSection.Habit, "Meditate", itemId: null, cancellationToken: CancellationToken.None);
+        var today = await boards.TodayAsync(user.Id, CancellationToken.None);
+
+        // Prime the statistics cache before the backfill. Logging must invalidate it.
+        var before = await stats.GetOverviewAsync(user.Id, "r370", null, CancellationToken.None);
+        before.Dashboard.TotalEvents.Should().Be(0);
+
+        await boards.LogActivityOnDateAsync(
+            user.Id,
+            ActivityEventType.HabitPlus,
+            habit.Id,
+            today.AddDays(-1),
+            customLabel: null,
+            eventId: null,
+            CancellationToken.None);
+
+        var result = await aiService.ExecuteToolAsync(
+            user.Id,
+            "get_activity_overview",
+            """{"period":"r370"}""",
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Result.Should().Contain("Total events: 1");
+        result.Result.Should().Contain("Meditate");
+        result.Result.Should().Contain(habit.Id.ToString());
+
+        var afterFocus = await stats.GetOverviewAsync(user.Id, "r370", null, CancellationToken.None);
+        afterFocus.Dashboard.TotalEvents.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task AiAssistantService_ExecuteToolCall_log_past_activity_rejects_today_and_wrong_sections()
+    {
+        using var scope = factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var aiService = scope.ServiceProvider.GetRequiredService<AiAssistantService>();
+        var boards = scope.ServiceProvider.GetRequiredService<BoardPersistenceService>();
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var user = new ApplicationUser { UserName = $"tool-backfill-guard-{suffix}@test.local", Email = $"tool-backfill-guard-{suffix}@test.local" };
+        await userManager.CreateAsync(user, "TestUser1!Aa");
+
+        var habit = await boards.CreateItemAsync(user.Id, BoardSection.Habit, "Stretch", itemId: null, cancellationToken: CancellationToken.None);
+        var today = await boards.TodayAsync(user.Id, CancellationToken.None);
+
+        var todayResult = await aiService.ExecuteToolAsync(
+            user.Id,
+            "log_past_activity",
+            $$"""{"eventType":"HabitPlus","itemId":"{{habit.Id}}","date":"{{today:yyyy-MM-dd}}"}""",
+            CancellationToken.None);
+        todayResult.IsSuccess.Should().BeFalse();
+        todayResult.Result.Should().Contain("past date");
+
+        var futureResult = await aiService.ExecuteToolAsync(
+            user.Id,
+            "log_past_activity",
+            $$"""{"eventType":"HabitPlus","itemId":"{{habit.Id}}","date":"{{today.AddDays(1):yyyy-MM-dd}}"}""",
+            CancellationToken.None);
+        futureResult.IsSuccess.Should().BeFalse();
+
+        var wrongSection = await aiService.ExecuteToolAsync(
+            user.Id,
+            "log_past_activity",
+            $$"""{"eventType":"DailyComplete","itemId":"{{habit.Id}}","date":"{{today.AddDays(-1):yyyy-MM-dd}}"}""",
+            CancellationToken.None);
+        wrongSection.IsSuccess.Should().BeFalse();
+        wrongSection.Result.Should().Contain("does not apply");
+
+        var missingItem = await aiService.ExecuteToolAsync(
+            user.Id,
+            "log_past_activity",
+            $$"""{"eventType":"HabitPlus","itemId":"{{Guid.NewGuid()}}","date":"{{today.AddDays(-1):yyyy-MM-dd}}"}""",
+            CancellationToken.None);
+        missingItem.IsSuccess.Should().BeFalse();
+        missingItem.Result.Should().Contain("not found");
+    }
+
+    [Fact]
+    public async Task Logging_a_timer_session_invalidates_the_statistics_cache()
+    {
+        using var scope = factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var boards = scope.ServiceProvider.GetRequiredService<BoardPersistenceService>();
+        var stats = scope.ServiceProvider.GetRequiredService<ActivityStatisticsService>();
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var user = new ApplicationUser { UserName = $"timer-stats-{suffix}@test.local", Email = $"timer-stats-{suffix}@test.local" };
+        await userManager.CreateAsync(user, "TestUser1!Aa");
+
+        var habit = await boards.CreateItemAsync(user.Id, BoardSection.Habit, "Deep work", itemId: null, cancellationToken: CancellationToken.None);
+        var before = await stats.GetOverviewAsync(user.Id, "r370", null, CancellationToken.None);
+        before.Dashboard.TotalFocusMinutes.Should().Be(0);
+
+        await boards.LogTimerSessionAsync(user.Id, TimeSpan.FromMinutes(25), habit.Id, "Focus block", eventId: null, CancellationToken.None);
+
+        var after = await stats.GetOverviewAsync(user.Id, "r370", null, CancellationToken.None);
+        after.Dashboard.TotalFocusMinutes.Should().Be(25);
+    }
+
+    [Fact]
+    public async Task AiModels_WithoutToken_ReturnsUnauthorized()
+    {
+        var client = factory.CreateClient();
+        var res = await client.PostAsJsonAsync("/api/ai/models", new AiModelsRequest());
+
+        res.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task AiModels_Returns_the_providers_list_with_curated_names()
+    {
+        var client = await CreateSignedInClientAsync();
+
+        var res = await client.PostAsJsonAsync("/api/ai/models", new AiModelsRequest
+        {
+            Provider = "OpenCode Go",
+            Endpoint = AiPreferences.DefaultOpenCodeGoEndpoint
+        });
+
+        res.EnsureSuccessStatusCode();
+        var result = await res.Content.ReadFromJsonAsync<AiModelsResponse>(s_json);
+        result.Should().NotBeNull();
+        ArgumentNullException.ThrowIfNull(result);
+
+        result.Success.Should().BeTrue();
+        result.Source.Should().Be("provider");
+        result.Models.Select(m => m.Id).Should().Equal("mimo-v2.5", "new-provider-model");
+        result.Models.Single(m => m.Id == "mimo-v2.5").DisplayName.Should().Be("mimo-v2.5");
+        result.Models.Single(m => m.Id == "new-provider-model").DisplayName.Should().Be("new-provider-model");
+    }
+
+    [Fact]
+    public async Task AiModels_falls_back_to_the_catalog_for_a_rejected_endpoint()
+    {
+        var client = await CreateSignedInClientAsync();
+
+        var res = await client.PostAsJsonAsync("/api/ai/models", new AiModelsRequest
+        {
+            Provider = "Ollama",
+            Endpoint = "http://127.0.0.1:11434/v1"
+        });
+
+        res.EnsureSuccessStatusCode();
+        var result = await res.Content.ReadFromJsonAsync<AiModelsResponse>(s_json);
+        result.Should().NotBeNull();
+        ArgumentNullException.ThrowIfNull(result);
+
+        result.Success.Should().BeFalse();
+        result.Source.Should().Be("catalog");
+        result.Error.Should().Contain("HTTPS");
+        result.Models.Should().NotBeEmpty();
+        result.Models.Select(m => m.Id).Should().Contain("llama3.2");
+    }
+
+    private async Task<HttpClient> CreateSignedInClientAsync()
+    {
+        var client = factory.CreateClient();
+        var email = $"ai-models-{Guid.NewGuid():N}@integration.test";
+        const string password = "TestUser1!Aa";
+
+        var register = await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, password));
+        register.EnsureSuccessStatusCode();
+
+        var login = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, password, RememberMe: false));
+        login.EnsureSuccessStatusCode();
+
+        var loginData = await login.Content.ReadFromJsonAsync<LoginResponse>(s_json);
+        loginData.Should().NotBeNull();
+        ArgumentNullException.ThrowIfNull(loginData);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginData.AccessToken);
+        return client;
     }
 }

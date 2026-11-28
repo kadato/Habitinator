@@ -14,6 +14,33 @@ internal sealed class WebAiAssistantService(
     IDbContextFactory<ApplicationDbContext> dbFactory,
     AiApiKeyProtector apiKeyProtector) : IAiAssistantService
 {
+    public async Task<AiModelsResponse> GetModelsAsync(
+        AiModelsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var state = await authenticationStateProvider.GetAuthenticationStateAsync();
+        var userId = AuthenticatedUserId.TryGet(state.User);
+        if (userId is null)
+        {
+            return new AiModelsResponse
+            {
+                Success = false,
+                Source = "catalog",
+                Models = [.. AiModelCatalog.GetModelsForProvider(request.Provider)],
+                Error = "You must be signed in to list AI models."
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ApiKey))
+        {
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId.Value, cancellationToken);
+            request.ApiKey = apiKeyProtector.Unprotect(row?.UserPreferences?.Ai?.ApiKey);
+        }
+
+        return await service.GetModelsAsync(request, userId, cancellationToken);
+    }
+
     public async Task<AiTestConnectionResponse> TestConnectionAsync(
         AiTestConnectionRequest request,
         CancellationToken cancellationToken = default)

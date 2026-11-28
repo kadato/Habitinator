@@ -61,13 +61,14 @@ public sealed class ActivityTools(
     }
 
     [McpServerTool(Name = "list_activity_events", Title = "List activity events", ReadOnly = true, OpenWorld = false)]
-    [Description("Queries activity events across a date range with optional filtering by event type and board item.")]
+    [Description("Queries activity events across a date range with optional filtering by event type and board item. Pass offset to read the next page.")]
     public async Task<IReadOnlyList<ActivityDayEventDto>> ListActivityEvents(
         [Description("Start date as yyyy-MM-dd.")] string startDate,
         [Description("End date as yyyy-MM-dd.")] string endDate,
         [Description("Event type filter, or null for all.")] ActivityEventType? eventType = null,
         [Description("Board item ID filter, or null for all.")] Guid? boardItemId = null,
         [Description("Maximum events to return, from 1 to 200. Default is 50.")] int? limit = 50,
+        [Description("Events to skip before the page, newest first. Default is 0.")] int? offset = null,
         CancellationToken cancellationToken = default)
     {
         var userId = McpUser.RequireId(http);
@@ -80,15 +81,24 @@ public sealed class ActivityTools(
                 $"expected a date on or before endDate {McpInput.PreviewReceived(endDate)}, got {McpInput.PreviewReceived(startDate)}.");
         }
 
-        return await stats.GetActivityEventsAsync(userId, start, end, eventType, boardItemId, limit ?? 50, cancellationToken);
+        return await stats.GetActivityEventsAsync(
+            userId,
+            start,
+            end,
+            eventType,
+            boardItemId,
+            limit ?? 50,
+            Math.Max(0, offset ?? 0),
+            cancellationToken);
     }
 
     [McpServerTool(Name = "log_activity", Title = "Log activity event", Idempotent = true, OpenWorld = true)]
-    [Description("Logs one activity event such as a habit tick or daily completion. Reuse eventId on retry so the server logs the event once. For focus timer sessions, use log_timer_session instead.")]
+    [Description("Logs one activity event such as a habit tick or daily completion. Set date to backfill a past local day. Reuse eventId on retry so the server logs the event once. For focus timer sessions, use log_timer_session instead.")]
     public async Task<string> LogActivity(
         [Description("Event type: HabitPlus, HabitMinus, DailyComplete, DailyUncomplete, TodoComplete, TodoUncomplete, DailySkip.")] ActivityEventType eventType,
         [Description("Related board item id, or null.")] Guid? boardItemId = null,
         [Description("Free text label such as Deep work, or null. Max 500 chars.")] string? customLabel = null,
+        [Description("Optional backfill date as yyyy-MM-dd or 'yesterday'. Null logs now.")] string? date = null,
         [Description("Idempotency key. Reuse it on retry. Null generates one.")] Guid? eventId = null,
         CancellationToken cancellationToken = default)
     {
@@ -104,6 +114,30 @@ public sealed class ActivityTools(
         {
             throw new McpFieldException(nameof(boardItemId),
                 $"no item found with id {boardItemId.Value:D}. Check it with get_snapshot or search_items.");
+        }
+
+        var today = await boards.TodayAsync(userId, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(date))
+        {
+            var occurredOn = McpInput.ParseDate(date, today: today);
+            if (occurredOn > today)
+            {
+                throw new McpFieldException(nameof(date),
+                    $"expected today or a past date, got {McpInput.PreviewReceived(date)}.");
+            }
+
+            if (occurredOn < today)
+            {
+                await boards.LogActivityOnDateAsync(
+                    userId,
+                    eventType,
+                    boardItemId,
+                    occurredOn,
+                    customLabel,
+                    eventId,
+                    cancellationToken);
+                return $"Logged for {occurredOn:yyyy-MM-dd}.";
+            }
         }
 
         await boards.LogActivityAsync(userId, eventType, boardItemId, null, customLabel, eventId, cancellationToken);

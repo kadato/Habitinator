@@ -28,7 +28,7 @@ Use it when the user asks about their habits, dailies, todos, streaks, activity,
 - Daily subtasks reset when the daily starts a new repeat cycle. A checked subtask stores `doneOn`, the local day it was checked.
 - Habits move with `habit_plus` and `habit_minus`. Past dailies complete with `daily_complete_for_date`. Today's items toggle with `toggle_item` or `batch_toggle_items`.
 - `batch_create_items` returns one result per item. Valid items persist even when siblings fail, so only fix and retry the failed entries.
-- Reuse `eventId` on retry for `log_activity` and `log_timer_session` so the server logs the event once. For creates, pass `idempotencyKey` and reuse it on retry.
+- `log_activity` accepts an optional `date`, either `yyyy-MM-dd` or `yesterday`, to backfill a past local day. Reuse `eventId` on retry for `log_activity` and `log_timer_session` so the server logs the event once. For creates, pass `idempotencyKey` and reuse it on retry.
 - A near-duplicate title fails with `Similar item exists: '<title>'`. The check compares items in the same section. It ignores case and accents. A contains match or a trigram score at or above 0.8 triggers the warning. Retry with `force: true` to create anyway. `allowDuplicate: true` still works.
 - Pass `dryRun: true` on `create_item` or `batch_create_items` to validate everything without persisting.
 - `delete_item`, `import_data`, and mass `bulk_archive` ask for elicitation confirmation. Without elicitation support, pass `confirmToken` set to the item ID or `CONFIRM`. The error message states the exact retry.
@@ -81,8 +81,8 @@ The markers below mirror docs/mcp.md. `McpSchemaConformanceTests` parses both fi
 <!-- mcp-tool-schema: get_daily_contributions required() optional(period:string,tag:string) -->
 <!-- mcp-tool-schema: get_habit_contributions required() optional(period:string,tag:string) -->
 <!-- mcp-tool-schema: get_day_detail required(date:string) optional(tag:string) -->
-<!-- mcp-tool-schema: list_activity_events required(startDate:string,endDate:string) optional(eventType:string,boardItemId:string,limit:integer) -->
-<!-- mcp-tool-schema: log_activity required(eventType:string) optional(boardItemId:string,customLabel:string,eventId:string) -->
+<!-- mcp-tool-schema: list_activity_events required(startDate:string,endDate:string) optional(eventType:string,boardItemId:string,limit:integer,offset:integer) -->
+<!-- mcp-tool-schema: log_activity required(eventType:string) optional(boardItemId:string,customLabel:string,date:string,eventId:string) -->
 <!-- mcp-tool-schema: get_timer_summary required() optional(date:string) -->
 <!-- mcp-tool-schema: log_timer_session required(durationSeconds:integer) optional(boardItemId:string,customLabel:string,eventId:string) -->
 <!-- mcp-tool-schema: export_data required() optional() -->

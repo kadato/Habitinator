@@ -20,8 +20,32 @@ internal static class AiApiRoutes
             .RequireRateLimiting("ai");
 
         aiApi.MapPost("/test", TestConnectionAsync);
+        aiApi.MapPost("/models", ModelsAsync);
         aiApi.MapPost("/chat", ChatAsync);
         aiApi.MapPost("/chat/stream", StreamChatAsync);
+    }
+
+    private static async Task<Results<Ok<AiModelsResponse>, NotFound>> ModelsAsync(
+        CurrentUserId user,
+        AiModelsRequest request,
+        ApplicationDbContext db,
+        AiApiKeyProtector apiKeyProtector,
+        AiAssistantService aiService,
+        CancellationToken cancellationToken)
+    {
+        var row = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == user.Value, cancellationToken);
+        if (row is null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ApiKey))
+        {
+            request.ApiKey = apiKeyProtector.Unprotect(row.UserPreferences?.Ai?.ApiKey);
+        }
+
+        var result = await aiService.GetModelsAsync(request, user.Value, cancellationToken);
+        return TypedResults.Ok(result);
     }
 
     private static async Task<Results<Ok<AiTestConnectionResponse>, NotFound>> TestConnectionAsync(

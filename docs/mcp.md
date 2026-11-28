@@ -135,7 +135,7 @@ Mutations accept either an `itemId` GUID or a `title` query string. When `itemId
 
 ## Formats
 
-Dates accept `yyyy-MM-dd` and relative keywords `today`, `yesterday`, and `tomorrow`. Times look like `HH:mm` and stay within one day. Weekdays can be passed as bitmasks or weekday name arrays, such as `["Mon", "Wed", "Fri"]` or `["Monday", "Wednesday", "Friday"]`. Tags accept a comma-separated string or a native array of strings. `"work,urgent"` and `["work", "urgent"]` store the same canonical value `work,urgent`, up to 500 chars. UI, REST, and MCP share one parser `BoardTagUtil` and one documented format. Checklist fields `checklistJson` and `json` on `set_checklist` accept a JSON string or a native array of `{text, isDone}` objects, up to 8000 chars. The server rejects bad values with `InvalidParams` that names the field, states the expected format, and quotes the received value. It never clamps them. Fix the input and retry. `log_activity` and `log_timer_session` accept an optional `eventId`. To prevent duplicate logs on retry, reuse the same `eventId`.
+Dates accept `yyyy-MM-dd` and relative keywords `today`, `yesterday`, and `tomorrow`. Times look like `HH:mm` and stay within one day. Weekdays can be passed as bitmasks or weekday name arrays, such as `["Mon", "Wed", "Fri"]` or `["Monday", "Wednesday", "Friday"]`. Tags accept a comma-separated string or a native array of strings. `"work,urgent"` and `["work", "urgent"]` store the same canonical value `work,urgent`, up to 500 chars. UI, REST, and MCP share one parser `BoardTagUtil` and one documented format. Checklist fields `checklistJson` and `json` on `set_checklist` accept a JSON string or a native array of `{text, isDone}` objects, up to 8000 chars. The server rejects bad values with `InvalidParams` that names the field, states the expected format, and quotes the received value. It never clamps them. Fix the input and retry. `log_activity` accepts an optional `date`, either `yyyy-MM-dd` or `yesterday`, to backfill a past local day. `log_activity` and `log_timer_session` accept an optional `eventId`. To prevent duplicate logs on retry, reuse the same `eventId`.
 
 Daily subtasks reset when the daily starts a new repeat cycle. A checked subtask stores `doneOn`, the local day it was checked.
 
@@ -262,8 +262,8 @@ The markers below are the machine-readable tool parameter schemas. `McpSchemaCon
 <!-- mcp-tool-schema: get_daily_contributions required() optional(period:string,tag:string) -->
 <!-- mcp-tool-schema: get_habit_contributions required() optional(period:string,tag:string) -->
 <!-- mcp-tool-schema: get_day_detail required(date:string) optional(tag:string) -->
-<!-- mcp-tool-schema: list_activity_events required(startDate:string,endDate:string) optional(eventType:string,boardItemId:string,limit:integer) -->
-<!-- mcp-tool-schema: log_activity required(eventType:string) optional(boardItemId:string,customLabel:string,eventId:string) -->
+<!-- mcp-tool-schema: list_activity_events required(startDate:string,endDate:string) optional(eventType:string,boardItemId:string,limit:integer,offset:integer) -->
+<!-- mcp-tool-schema: log_activity required(eventType:string) optional(boardItemId:string,customLabel:string,date:string,eventId:string) -->
 <!-- mcp-tool-schema: get_timer_summary required() optional(date:string) -->
 <!-- mcp-tool-schema: log_timer_session required(durationSeconds:integer) optional(boardItemId:string,customLabel:string,eventId:string) -->
 <!-- mcp-tool-schema: export_data required() optional() -->

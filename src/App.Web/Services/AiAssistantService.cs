@@ -11,6 +11,7 @@ using App.Shared.RCL.Services;
 using App.Web.Data;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
 namespace App.Web.Services;
@@ -24,6 +25,7 @@ public sealed class AiAssistantService(
     IOptions<AiQuotaOptions> quotaOptions,
     IOptions<DemoUserOptions> demoUserOptions,
     IDbContextFactory<ApplicationDbContext> dbFactory,
+    IMemoryCache cache,
     ILogger<AiAssistantService> logger)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -31,6 +33,7 @@ public sealed class AiAssistantService(
     private const int MaxToolIterations = 5;
     private const int MaxCreateItemsBatch = 50;
     private const int MaxOutputTokens = 1024;
+    private static readonly TimeSpan ModelListCacheLifetime = TimeSpan.FromHours(1);
 
     private static readonly HashSet<string> SharedKeyProviderHosts = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -166,6 +169,85 @@ public sealed class AiAssistantService(
             };
         }
     }
+
+    /// <summary>
+    ///     Asks the provider for the model ids it currently offers. If the provider
+    ///     rejects the request or lists nothing, this method returns the built-in
+    ///     catalog so the settings dropdown always has a usable list.
+    /// </summary>
+    public async Task<AiModelsResponse> GetModelsAsync(
+        AiModelsRequest request,
+        Guid? userId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var provider = string.IsNullOrWhiteSpace(request.Provider) ? AiPreferences.DefaultProvider : request.Provider.Trim();
+        var endpoint = string.IsNullOrWhiteSpace(request.Endpoint) ? AiPreferences.DefaultOpenCodeGoEndpoint : request.Endpoint.Trim();
+        var (apiKey, fromFallback) = ResolveApiKey(request.ApiKey, null);
+
+        if (!IsEndpointAllowed(endpoint, fromFallback, out var endpointError))
+        {
+            return CatalogModels(provider, endpointError);
+        }
+
+        if (fromFallback && userId is { } sharedKeyUserId)
+        {
+            var isGuest = await IsDemoGuestAsync(sharedKeyUserId, cancellationToken);
+            if (isGuest && !quotaOptions.Value.AllowSharedKeyForGuests)
+            {
+                return CatalogModels(provider, "Sign in with your own key to list the provider's models.");
+            }
+        }
+
+        var modelsUrl = AiProviderModelList.BuildModelsUrl(endpoint);
+        var cacheKey = $"ai-models:{provider.ToLowerInvariant()}:{modelsUrl.ToLowerInvariant()}";
+        if (cache.TryGetValue(cacheKey, out List<AiModelOption>? cached) && cached is { Count: > 0 })
+        {
+            return new AiModelsResponse { Success = true, Source = "provider", Models = cached };
+        }
+
+        try
+        {
+            var client = httpFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(15);
+
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Get, modelsUrl);
+            AddProviderHeaders(httpRequest, apiKey);
+
+            using var httpResponse = await client.SendAsync(httpRequest, cancellationToken);
+            if (!httpResponse.IsSuccessStatusCode)
+            {
+                return CatalogModels(provider, $"The provider returned HTTP {(int)httpResponse.StatusCode} for the model list.");
+            }
+
+            var body = await httpResponse.Content.ReadAsStringAsync(cancellationToken);
+            var ids = AiProviderModelList.Parse(body);
+            if (ids.Count == 0)
+            {
+                return CatalogModels(provider, "The provider did not list any models.");
+            }
+
+            var models = AiModelCatalog.MergeProviderModels(provider, ids);
+            cache.Set(cacheKey, models, ModelListCacheLifetime);
+            return new AiModelsResponse { Success = true, Source = "provider", Models = models };
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException)
+        {
+            logger.LogDebug(ex, "Could not list AI models from {ModelsUrl}", modelsUrl);
+            return CatalogModels(provider, "The provider did not answer the model-list request.");
+        }
+    }
+
+    private static AiModelsResponse CatalogModels(string provider, string? error) => new()
+    {
+        Success = false,
+        Source = "catalog",
+        Models = [.. AiModelCatalog.GetModelsForProvider(provider)],
+        Error = error
+    };
 
     public async Task<AiChatResponse> ChatAsync(
         Guid userId,
@@ -936,6 +1018,125 @@ public sealed class AiAssistantService(
                         break;
                     }
 
+                case "get_activity_overview":
+                    {
+                        var period = root.TryGetProperty("period", out var periodProp) ? periodProp.GetString() : null;
+                        var tag = root.TryGetProperty("tag", out var tagProp) ? tagProp.GetString() : null;
+                        var overview = await stats.GetOverviewAsync(userId, period, tag, cancellationToken);
+                        exec.Result = FormatActivityOverview(overview);
+                        exec.IsSuccess = true;
+                        break;
+                    }
+
+                case "list_activity_events":
+                    {
+                        var startText = root.TryGetProperty("startDate", out var startProp) ? startProp.GetString() : null;
+                        var endText = root.TryGetProperty("endDate", out var endProp) ? endProp.GetString() : null;
+                        if (!TryParseIsoDate(startText, out var startDate) || !TryParseIsoDate(endText, out var endDate))
+                        {
+                            exec.Result = "Error: startDate and endDate must use yyyy-MM-dd.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        if (startDate > endDate)
+                        {
+                            exec.Result = "Error: startDate must be on or before endDate.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        ActivityEventType? eventType = null;
+                        if (root.TryGetProperty("eventType", out var eventTypeProp)
+                            && !string.IsNullOrWhiteSpace(eventTypeProp.GetString()))
+                        {
+                            if (!Enum.TryParse<ActivityEventType>(eventTypeProp.GetString(), true, out var parsedType))
+                            {
+                                exec.Result = "Error: unknown eventType.";
+                                exec.IsSuccess = false;
+                                break;
+                            }
+                            eventType = parsedType;
+                        }
+
+                        var limit = root.TryGetProperty("limit", out var limitProp) && limitProp.TryGetInt32(out var requestedLimit)
+                            ? Math.Clamp(requestedLimit, 1, 200)
+                            : 50;
+                        var offset = root.TryGetProperty("offset", out var offsetProp) && offsetProp.TryGetInt32(out var requestedOffset)
+                            ? Math.Max(0, requestedOffset)
+                            : 0;
+                        var events = await stats.GetActivityEventsAsync(
+                            userId,
+                            startDate,
+                            endDate,
+                            eventType,
+                            boardItemId: null,
+                            limit,
+                            offset,
+                            cancellationToken);
+                        exec.Result = FormatActivityEvents(events, startDate, endDate);
+                        exec.IsSuccess = true;
+                        break;
+                    }
+
+                case "log_past_activity":
+                    {
+                        var eventTypeText = root.TryGetProperty("eventType", out var eventTypeProp) ? eventTypeProp.GetString() : null;
+                        if (!Enum.TryParse<ActivityEventType>(eventTypeText, true, out var eventType)
+                            || eventType == ActivityEventType.TimerSession)
+                        {
+                            exec.Result = "Error: eventType must be HabitPlus, HabitMinus, DailyComplete, DailyUncomplete, TodoComplete, TodoUncomplete, or DailySkip.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var idText = root.TryGetProperty("itemId", out var idProp) ? idProp.GetString() : null;
+                        if (!Guid.TryParse(idText, out var itemId))
+                        {
+                            exec.Result = "Error: valid itemId GUID is required.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var today = await boards.TodayAsync(userId, cancellationToken);
+                        var dateText = root.TryGetProperty("date", out var dateProp) ? dateProp.GetString() : null;
+                        if (!TryParsePastDate(dateText, today, out var occurredOn))
+                        {
+                            exec.Result = "Error: date must be a past date as yyyy-MM-dd or 'yesterday'.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var item = await boards.GetItemAsync(userId, itemId, cancellationToken);
+                        var section = await boards.GetItemSectionAsync(userId, itemId, cancellationToken);
+                        if (item is null || section is null)
+                        {
+                            exec.Result = $"Error: item {itemId} not found. Use get_snapshot to find IDs.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        if (!EventTypeMatchesSection(eventType, section.Value))
+                        {
+                            exec.Result = $"Error: {eventType} does not apply to a {section.Value} item.";
+                            exec.IsSuccess = false;
+                            break;
+                        }
+
+                        var label = root.TryGetProperty("label", out var labelProp) ? labelProp.GetString() : null;
+                        await boards.LogActivityOnDateAsync(
+                            userId,
+                            eventType,
+                            itemId,
+                            occurredOn,
+                            label,
+                            eventId: null,
+                            cancellationToken);
+                        exec.Result = $"Logged {eventType} for '{item.Title}' on {occurredOn:yyyy-MM-dd}.";
+                        exec.IsSuccess = true;
+                        break;
+                    }
+
                 case "rename_item":
                     {
                         var idStr = root.TryGetProperty("itemId", out var idProp) ? idProp.GetString() : string.Empty;
@@ -1267,6 +1468,112 @@ public sealed class AiAssistantService(
         return exec;
     }
 
+    private static bool TryParseIsoDate(string? raw, out DateOnly date) =>
+        DateOnly.TryParseExact(raw?.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
+
+    private static bool TryParsePastDate(string? raw, DateOnly today, out DateOnly date)
+    {
+        if (string.Equals(raw?.Trim(), "yesterday", StringComparison.OrdinalIgnoreCase))
+        {
+            date = today.AddDays(-1);
+            return true;
+        }
+
+        return TryParseIsoDate(raw, out date) && date < today;
+    }
+
+    private static bool EventTypeMatchesSection(ActivityEventType eventType, BoardSection section) =>
+        eventType switch
+        {
+            ActivityEventType.HabitPlus or ActivityEventType.HabitMinus => section == BoardSection.Habit,
+            ActivityEventType.DailyComplete or ActivityEventType.DailyUncomplete or ActivityEventType.DailySkip =>
+                section == BoardSection.Daily,
+            ActivityEventType.TodoComplete or ActivityEventType.TodoUncomplete => section == BoardSection.Todo,
+            _ => false
+        };
+
+    private static string FormatActivityOverview(ActivityOverviewDto overview)
+    {
+        var dashboard = overview.Dashboard;
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine(CultureInfo.InvariantCulture, $"# Activity overview ({dashboard.RangeStart:yyyy-MM-dd} to {dashboard.RangeEnd:yyyy-MM-dd})");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- Total events: {dashboard.TotalEvents}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- Focus time: {dashboard.TotalFocusMinutes} minutes");
+        if (dashboard.BusiestDay is { } busiest)
+        {
+            sb.AppendLine(CultureInfo.InvariantCulture, $"- Busiest day: {busiest:yyyy-MM-dd} with {dashboard.MaxDayCount} events");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("## Dailies");
+        if (overview.DailyContributions.Graphs.Count == 0)
+        {
+            sb.AppendLine("- No dailies tracked yet.");
+        }
+        else
+        {
+            foreach (var graph in overview.DailyContributions.Graphs.Take(20))
+            {
+                var checks = graph.Heatmap.Where(cell => cell.InDataRange).Sum(cell => cell.Count);
+                sb.AppendLine(CultureInfo.InvariantCulture,
+                    $"- {graph.Title}: {checks} checks, {graph.CurrentStreak} day current streak, {graph.LongestStreak} day best, {graph.FocusMinutes} focus min [ID: {graph.BoardItemId}]");
+            }
+            if (overview.DailyContributions.Graphs.Count > 20)
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- ...and {overview.DailyContributions.Graphs.Count - 20} more dailies.");
+            }
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("## Habits");
+        if (overview.HabitContributions.Graphs.Count == 0)
+        {
+            sb.AppendLine("- No habits tracked yet.");
+        }
+        else
+        {
+            foreach (var graph in overview.HabitContributions.Graphs.Take(20))
+            {
+                var target = graph.TargetCount is { } count ? $", target {count}" : string.Empty;
+                sb.AppendLine(CultureInfo.InvariantCulture,
+                    $"- {graph.Title}: active {graph.ActiveDayCount}/{graph.PeriodDayCount} days{target}, {graph.FocusMinutes} focus min [ID: {graph.BoardItemId}]");
+            }
+            if (overview.HabitContributions.Graphs.Count > 20)
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- ...and {overview.HabitContributions.Graphs.Count - 20} more habits.");
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    private static string FormatActivityEvents(
+        IReadOnlyList<ActivityDayEventDto> events,
+        DateOnly startDate,
+        DateOnly endDate)
+    {
+        if (events.Count == 0)
+        {
+            return $"No activity events between {startDate:yyyy-MM-dd} and {endDate:yyyy-MM-dd}.";
+        }
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine(CultureInfo.InvariantCulture, $"# Activity events ({startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd})");
+        sb.AppendLine("Newest first.");
+        foreach (var item in events)
+        {
+            var title = string.IsNullOrWhiteSpace(item.BoardItemTitle) ? string.Empty : $" · {item.BoardItemTitle}";
+            var label = string.IsNullOrWhiteSpace(item.CustomLabel) ? string.Empty : $" · {item.CustomLabel}";
+            var duration = item.DurationSeconds is { } seconds
+                ? string.Create(CultureInfo.InvariantCulture, $" · {seconds / 60} min")
+                : string.Empty;
+            sb.AppendLine(CultureInfo.InvariantCulture,
+                $"- {item.OccurredAtUtc.UtcDateTime:yyyy-MM-dd HH:mm} UTC · {item.EventType}{title}{label}{duration}");
+        }
+
+        return sb.ToString();
+    }
+
     private static string BuildSystemPrompt(DateOnly today, string? customInstructions, string? timeZoneLabel = null)
     {
         var custom = string.IsNullOrWhiteSpace(customInstructions) ? "" : $"\nUser Custom Instructions:\n{customInstructions.Trim()}\n";
@@ -1289,13 +1596,19 @@ public sealed class AiAssistantService(
             "- set_daily_weekdays: Sets weekly schedule for a Daily (weekdays, weekends, all).\n" +
             "- set_due_date: Sets or clears a Todo due date (yyyy-MM-dd or empty to clear).\n" +
             "- archive_item: Archives a Habit, Daily, or Todo by ID.\n" +
-            "- get_timer_summary: Inspects focus timer and Pomodoro minutes.\n\n" +
+            "- get_timer_summary: Inspects focus timer and Pomodoro minutes.\n" +
+            "- get_activity_overview: Reads totals, focus minutes, streaks, and consistency for the last 370 days or a calendar year.\n" +
+            "- list_activity_events: Lists events between two dates, including timer sessions. Pages with limit and offset.\n" +
+            "- log_past_activity: Logs a habit tick or a daily/to-do completion on a past date after the user confirms it.\n\n" +
             "Rules:\n" +
             "1. When the user asks what to do, what's left, or to plan their day, always call get_board_summary first.\n" +
             "2. When creating items, specify section ('Habit', 'Daily', or 'Todo') and title clearly.\n" +
             "3. Prefer rename_item, set_due_date, and archive_item over delete. Never delete without explicit user confirmation.\n" +
-            "4. Format your responses with clear Markdown bullet points, tables where helpful, and bold highlights.\n" +
-            "5. Keep answers encouraging, actionable, and concise.\n" +
+            "4. For past-week, retrospective, or consistency questions, call get_activity_overview or list_activity_events before answering.\n" +
+            "5. log_past_activity is only for dates before today. Use toggle_item, habit_plus, or habit_minus for today, and never log a future date.\n" +
+            "6. Backdate only what the user says happened. Ask which items and which dates when the answer is unclear.\n" +
+            "7. Format your responses with clear Markdown bullet points, tables where helpful, and bold highlights.\n" +
+            "8. Keep answers encouraging, actionable, and concise.\n" +
             custom;
     }
 
@@ -1459,6 +1772,121 @@ public sealed class AiAssistantService(
                     {
                         ["type"] = "object",
                         ["properties"] = new JsonObject()
+                    }
+                }
+            },
+            new JsonObject
+            {
+                ["type"] = "function",
+                ["function"] = new JsonObject
+                {
+                    ["name"] = "get_activity_overview",
+                    ["description"] = "Reads activity totals, focus minutes, streaks, and consistency for the last 370 days or a calendar year. Use for weekly or monthly reviews.",
+                    ["parameters"] = new JsonObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JsonObject
+                        {
+                            ["period"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "Period key: 'r370' for the last 370 days (default) or 'y<year>' for a calendar year."
+                            },
+                            ["tag"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "Optional tag filter, such as 'work'."
+                            }
+                        }
+                    }
+                }
+            },
+            new JsonObject
+            {
+                ["type"] = "function",
+                ["function"] = new JsonObject
+                {
+                    ["name"] = "list_activity_events",
+                    ["description"] = "Lists activity events between two dates, newest first. Use for backfill checks and weekly retrospectives. Pass offset to read the next page.",
+                    ["parameters"] = new JsonObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JsonObject
+                        {
+                            ["startDate"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "Start date as yyyy-MM-dd."
+                            },
+                            ["endDate"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "End date as yyyy-MM-dd."
+                            },
+                            ["eventType"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["enum"] = new JsonArray
+                                {
+                                    "HabitPlus", "HabitMinus", "DailyComplete", "DailyUncomplete",
+                                    "TodoComplete", "TodoUncomplete", "DailySkip", "TimerSession"
+                                },
+                                ["description"] = "Optional event type filter."
+                            },
+                            ["limit"] = new JsonObject
+                            {
+                                ["type"] = "integer",
+                                ["description"] = "Maximum events to return, from 1 to 200. Default is 50."
+                            },
+                            ["offset"] = new JsonObject
+                            {
+                                ["type"] = "integer",
+                                ["description"] = "Events to skip before the page, newest first. Default is 0."
+                            }
+                        },
+                        ["required"] = new JsonArray { "startDate", "endDate" }
+                    }
+                }
+            },
+            new JsonObject
+            {
+                ["type"] = "function",
+                ["function"] = new JsonObject
+                {
+                    ["name"] = "log_past_activity",
+                    ["description"] = "Logs a habit tick or a daily/to-do completion on a past date. Use toggle_item or habit_plus for today. Never guess: only log what the user confirms.",
+                    ["parameters"] = new JsonObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JsonObject
+                        {
+                            ["eventType"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["enum"] = new JsonArray
+                                {
+                                    "HabitPlus", "HabitMinus", "DailyComplete", "DailyUncomplete",
+                                    "TodoComplete", "TodoUncomplete", "DailySkip"
+                                },
+                                ["description"] = "The event to record."
+                            },
+                            ["itemId"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "The GUID of the habit, daily, or to-do."
+                            },
+                            ["date"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "Past local date as yyyy-MM-dd or 'yesterday'."
+                            },
+                            ["label"] = new JsonObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "Optional short note stored with the event."
+                            }
+                        },
+                        ["required"] = new JsonArray { "eventType", "itemId", "date" }
                     }
                 }
             },

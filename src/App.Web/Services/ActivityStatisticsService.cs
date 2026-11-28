@@ -459,47 +459,37 @@ public sealed class ActivityStatisticsService(
             return null;
         }
 
-        if (wantedTags.Length == 1)
-        {
-            return await GetBoardItemIdsMatchingSingleTagAsync(db, userId, wantedTags[0], cancellationToken);
-        }
-
-        HashSet<Guid> union = [];
+        // Build one UNION query so a multi-tag filter costs one round trip instead
+        // of one query per tag. Distinct collapses items that match several tags.
+        IQueryable<Guid>? union = null;
         foreach (var wanted in wantedTags)
         {
-            union.UnionWith(await GetBoardItemIdsMatchingSingleTagAsync(db, userId, wanted, cancellationToken));
+            var branch = MatchingTagQuery(db, userId, wanted);
+            union = union is null ? branch : union.Concat(branch);
         }
 
-        return union;
-    }
-
-    private static async Task<HashSet<Guid>> GetBoardItemIdsMatchingSingleTagAsync(
-        ApplicationDbContext db,
-        Guid userId,
-        string tag,
-        CancellationToken cancellationToken)
-    {
-        var t = tag.Trim();
-        if (t.Length == 0)
+        if (union is null)
         {
             return [];
         }
 
+        return [.. await union.Distinct().ToListAsync(cancellationToken)];
+    }
+
+    private static IQueryable<Guid> MatchingTagQuery(ApplicationDbContext db, Guid userId, string tag)
+    {
         // Case-insensitive match on the CSV column, mirroring the OrdinalIgnoreCase
         // in-memory semantics. LIKE wildcards in the tag are escaped so they match
         // literally. Only the id column loads, never the full row.
-        var escaped = EscapeLikePattern(t);
-        var ids = await db.BoardItems.AsNoTracking()
+        var escaped = EscapeLikePattern(tag);
+        return db.BoardItems.AsNoTracking()
             .Where(b => b.UserId == userId && b.DeletedAtUtc == null
                 && b.Tags != null
                 && (EF.Functions.ILike(b.Tags, escaped)
                     || EF.Functions.ILike(b.Tags, escaped + ",%")
                     || EF.Functions.ILike(b.Tags, "%," + escaped + ",%")
                     || EF.Functions.ILike(b.Tags, "%," + escaped)))
-            .Select(b => b.Id)
-            .ToListAsync(cancellationToken);
-
-        return [.. ids];
+            .Select(b => b.Id);
     }
 
     private static string EscapeLikePattern(string value) =>
@@ -547,14 +537,19 @@ public sealed class ActivityStatisticsService(
         ActivityEventType? eventType = null,
         Guid? boardItemId = null,
         int limit = 50,
+        int offset = 0,
         CancellationToken cancellationToken = default)
     {
         var take = Math.Clamp(limit, 1, 200);
+        var skip = Math.Max(0, offset);
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var (_, dayStart) = await TodayAndDayStartAsync(db, userId, cancellationToken);
 
-        var fromUtc = startDate.AddDays(-1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var toUtc = endDate.AddDays(2).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        // Query the exact UTC span that maps to the requested local days. This keeps
+        // paging stable because the database orders and skips rows instead of the
+        // client filtering a wider window in memory.
+        var fromUtc = LocalDayStartUtc(startDate, dayStart);
+        var toUtc = LocalDayStartUtc(endDate.AddDays(1), dayStart);
 
         var query = db.UserActivityEvents.AsNoTracking()
             .Where(e => e.UserId == userId && e.OccurredAtUtc >= fromUtc && e.OccurredAtUtc < toUtc);
@@ -569,35 +564,39 @@ public sealed class ActivityStatisticsService(
             query = query.Where(e => e.BoardItemId == boardItemId.Value);
         }
 
-        var allRows = await query
+        var rows = await query
             .OrderByDescending(e => e.OccurredAtUtc)
-            .Take(take * 2)
+            .ThenByDescending(e => e.Id)
+            .Skip(skip)
+            .Take(take)
             .Select(e => new UserActivityEventRecord(e.OccurredAtUtc, e.EventType, e.BoardItemId, e.DurationSeconds, e.CustomLabel))
             .ToListAsync(cancellationToken);
 
-        var filteredRows = allRows
-            .Where(e =>
-            {
-                var localDay = DailySchedule.LocalDay(e.OccurredAtUtc, timeZone, dayStart);
-                return localDay >= startDate && localDay <= endDate;
-            })
-            .Take(take)
-            .ToList();
-
-        List<Guid> boardIds = [.. filteredRows.Select(x => x.BoardItemId).OfType<Guid>().Distinct()];
+        List<Guid> boardIds = [.. rows.Select(x => x.BoardItemId).OfType<Guid>().Distinct()];
         IReadOnlyDictionary<Guid, string> titles = boardIds.Count == 0
             ? FrozenDictionary<Guid, string>.Empty
             : await db.BoardItems.AsNoTracking()
                 .Where(b => b.UserId == userId && boardIds.Contains(b.Id))
                 .ToDictionaryAsync(b => b.Id, b => b.Title, cancellationToken);
 
-        return filteredRows.Select(r => new ActivityDayEventDto(
+        return rows.Select(r => new ActivityDayEventDto(
             r.OccurredAtUtc,
             r.EventType,
             r.EventType.ToString(),
             r.BoardItemId.HasValue && titles.TryGetValue(r.BoardItemId.Value, out var title) ? title : null,
             r.DurationSeconds,
             r.CustomLabel)).ToList();
+    }
+
+    private DateTimeOffset LocalDayStartUtc(DateOnly day, TimeSpan? dayStartLocalTime)
+    {
+        var start = dayStartLocalTime is { } value && value > TimeSpan.Zero && value < TimeSpan.FromDays(1)
+            ? value
+            : TimeSpan.Zero;
+        var localWallTime = new DateTimeOffset(
+            day.ToDateTime(TimeOnly.MinValue).Add(start),
+            TimeSpan.Zero);
+        return timeZone.ConvertToUtc(localWallTime);
     }
 
     public async Task<TimerSummaryDto> GetTimerSummaryAsync(

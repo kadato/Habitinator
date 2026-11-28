@@ -6,6 +6,36 @@ public sealed class RemoteAiAssistantService(IHttpClientFactory http) : IAiAssis
 {
     private HttpClient Client => http.CreateClient("api");
 
+    public async Task<AiModelsResponse> GetModelsAsync(
+        AiModelsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var response = await Client.PostAsJsonAsync("api/ai/models", request, JsonDefaults.Api, cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<AiModelsResponse>(JsonDefaults.Api, cancellationToken);
+                if (result is { Models.Count: > 0 })
+                {
+                    return result;
+                }
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            // The built-in catalog below keeps the picker usable offline.
+        }
+
+        return new AiModelsResponse
+        {
+            Success = false,
+            Source = "catalog",
+            Models = [.. AiModelCatalog.GetModelsForProvider(request.Provider)],
+            Error = "Could not reach the server for the provider's model list."
+        };
+    }
+
     public async Task<AiTestConnectionResponse> TestConnectionAsync(
         AiTestConnectionRequest request,
         CancellationToken cancellationToken = default)

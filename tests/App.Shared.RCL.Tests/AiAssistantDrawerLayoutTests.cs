@@ -73,6 +73,34 @@ public sealed class AiAssistantDrawerLayoutTests : IAsyncDisposable
     }
 
     [Fact]
+    public void Disabled_AI_Blocks_The_Composer_Up_Front()
+    {
+        var prefs = UserPreferences.CreateDefault();
+        prefs.Ai.Enabled = false;
+        _preferences.GetAsync(Arg.Any<CancellationToken>()).Returns(prefs);
+
+        var cut = _ctx.Render<AiAssistantDrawer>();
+
+        cut.WaitForState(() => cut.Markup.Contains("AI is off"), TimeSpan.FromSeconds(5));
+        cut.Find(".ai-text-field textarea").HasAttribute("disabled").Should().BeTrue();
+        cut.Find(".ai-send-btn").HasAttribute("disabled").Should().BeTrue();
+    }
+
+    [Fact]
+    public void Missing_Key_Shows_A_Setup_Card_But_Keeps_The_Composer_Usable()
+    {
+        var prefs = UserPreferences.CreateDefault();
+        prefs.Ai.Enabled = true;
+        prefs.Ai.ApiKeyConfigured = false;
+        _preferences.GetAsync(Arg.Any<CancellationToken>()).Returns(prefs);
+
+        var cut = _ctx.Render<AiAssistantDrawer>();
+
+        cut.WaitForState(() => cut.Markup.Contains("No API key saved"), TimeSpan.FromSeconds(5));
+        cut.Find(".ai-text-field textarea").HasAttribute("disabled").Should().BeFalse();
+    }
+
+    [Fact]
     public void Assistant_Bubble_Has_No_Meta_Row_Model_Shown_Once_In_Header()
     {
         var cut = _ctx.Render<AiAssistantDrawer>();
@@ -212,6 +240,17 @@ public sealed class AiAssistantDrawerLayoutTests : IAsyncDisposable
             cut.Markup.Should().Contain("old question", "the remaining chat becomes active");
             cut.Markup.Should().NotContain("newer question");
         }, TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public void Composer_Explains_What_The_Assistant_Can_Do()
+    {
+        var cut = _ctx.Render<AiAssistantDrawer>();
+
+        var note = cut.WaitForElement(".ai-capability-note");
+        note.TextContent.Should().Contain("edits only what you ask");
+        note.TextContent.Should().Contain("Never deletes");
+        cut.Markup.Should().NotContain("Safe tools");
     }
 
     private static string StoredJson(params (string Id, string Title, DateTime UpdatedAt, string Question)[] threads) =>

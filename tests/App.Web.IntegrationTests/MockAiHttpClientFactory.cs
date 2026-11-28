@@ -20,6 +20,19 @@ internal sealed class MockAiHttpMessageHandler : HttpMessageHandler
 
         var url = request.RequestUri?.ToString() ?? string.Empty;
 
+        if (request.Method == HttpMethod.Get
+            && url.EndsWith("/models", StringComparison.OrdinalIgnoreCase))
+        {
+            // Two ids: one the built-in catalog knows and one that only the provider lists.
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"data":[{"id":"mimo-v2.5"},{"id":"new-provider-model"}]}""",
+                    Encoding.UTF8,
+                    "application/json")
+            };
+        }
+
         var isTest = content.Contains("Hello! Please reply with 'OK'", StringComparison.OrdinalIgnoreCase);
         var isResponses = url.Contains("/responses", StringComparison.OrdinalIgnoreCase) ||
                           content.Contains("muse-", StringComparison.OrdinalIgnoreCase);

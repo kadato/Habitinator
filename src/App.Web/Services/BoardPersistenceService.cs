@@ -790,13 +790,15 @@ public sealed class BoardPersistenceService(
             return;
         }
 
-        if (eventId is { } id && await ActivityEventExistsAsync(userId, id, cancellationToken))
-        {
-            return;
-        }
-
-        AddActivityEvent(userId, ActivityEventType.TimerSession, boardItemId, sec, customLabel, eventId: eventId);
-        await SaveActivityEventAsync(eventId, cancellationToken);
+        await LogActivityCoreAsync(
+            userId,
+            ActivityEventType.TimerSession,
+            boardItemId,
+            sec,
+            customLabel,
+            eventId,
+            occurredAtUtc: null,
+            cancellationToken);
     }
 
     internal static int DurationSeconds(TimeSpan duration) =>
@@ -1326,22 +1328,74 @@ public sealed class BoardPersistenceService(
     }
 
 
-    public async Task LogActivityAsync(
+    public Task LogActivityAsync(
         Guid userId,
         ActivityEventType type,
         Guid? boardItemId,
         int? durationSeconds = null,
         string? itemTitleSnapshot = null,
         Guid? eventId = null,
+        CancellationToken cancellationToken = default) =>
+        LogActivityCoreAsync(
+            userId,
+            type,
+            boardItemId,
+            durationSeconds,
+            itemTitleSnapshot,
+            eventId,
+            occurredAtUtc: null,
+            cancellationToken);
+
+    /// <summary>
+    ///     Logs an event on a past local date. The method sets the event time two hours
+    ///     after the user's day start so timezone and day-start rules place it on the
+    ///     requested day.
+    /// </summary>
+    public async Task LogActivityOnDateAsync(
+        Guid userId,
+        ActivityEventType type,
+        Guid? boardItemId,
+        DateOnly localDate,
+        string? customLabel = null,
+        Guid? eventId = null,
         CancellationToken cancellationToken = default)
+    {
+        var (_, dayStart) = await TodayAndDayStartAsync(userId, cancellationToken);
+        var offset = timeZone.ConvertToLocal(DateTimeOffset.UtcNow).Offset;
+        var localTime = localDate.ToDateTime(TimeOnly.MinValue)
+            .Add(dayStart ?? TimeSpan.Zero)
+            .AddHours(2);
+        var occurredAtUtc = timeZone.ConvertToUtc(new DateTimeOffset(localTime, offset));
+
+        await LogActivityCoreAsync(
+            userId,
+            type,
+            boardItemId,
+            durationSeconds: null,
+            customLabel,
+            eventId,
+            occurredAtUtc,
+            cancellationToken);
+    }
+
+    private async Task LogActivityCoreAsync(
+        Guid userId,
+        ActivityEventType type,
+        Guid? boardItemId,
+        int? durationSeconds,
+        string? customLabel,
+        Guid? eventId,
+        DateTimeOffset? occurredAtUtc,
+        CancellationToken cancellationToken)
     {
         if (eventId is { } id && await ActivityEventExistsAsync(userId, id, cancellationToken))
         {
             return;
         }
 
-        AddActivityEvent(userId, type, boardItemId, durationSeconds, itemTitleSnapshot, eventId: eventId);
+        AddActivityEvent(userId, type, boardItemId, durationSeconds, customLabel, occurredAtUtc, eventId);
         await SaveActivityEventAsync(eventId, cancellationToken);
+        await boardChangeNotifier.NotifyBoardChangedAsync(userId, cancellationToken);
     }
 
     private Task<bool> ActivityEventExistsAsync(Guid userId, Guid eventId, CancellationToken cancellationToken) =>

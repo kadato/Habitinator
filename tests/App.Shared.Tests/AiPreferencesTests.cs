@@ -114,4 +114,30 @@ public sealed class AiPreferencesTests
         Assert.Equal("Habitinator AI", AiModelCatalog.GetModelFullName(null));
         Assert.Equal("AI", AiModelCatalog.GetModelShortName(null));
     }
+
+    [Fact]
+    public void AiModelCatalog_merge_prefers_curated_entries_and_keeps_provider_order()
+    {
+        var merged = AiModelCatalog.MergeProviderModels(
+            "OpenCode Go",
+            ["brand-new-model", "MIMO-V2.5", "muse-spark-1.3-contributor", "brand-new-model", " "]);
+
+        Assert.Equal(
+            ["muse-spark-1.3-contributor", "mimo-v2.5", "brand-new-model"],
+            merged.Select(m => m.Id));
+        Assert.Equal("Muse Spark 1.3 Contributor", merged[0].DisplayName);
+        Assert.Equal("Recommended", merged[0].Badge);
+        Assert.Equal("brand-new-model", merged[2].DisplayName);
+        Assert.Empty(merged[2].Description);
+    }
+
+    [Fact]
+    public void AiModelCatalog_merge_handles_an_unknown_provider()
+    {
+        var merged = AiModelCatalog.MergeProviderModels("Nobody", ["mimo-v2.5"]);
+
+        var model = Assert.Single(merged);
+        Assert.Equal("mimo-v2.5", model.Id);
+        Assert.Equal("mimo-v2.5", model.DisplayName);
+    }
 }

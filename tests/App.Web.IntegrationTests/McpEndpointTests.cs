@@ -202,6 +202,7 @@ public sealed class McpEndpointTests(PostgresWebAppFactory factory)
         await ExpectError("put_notification_settings", new() { ["quietHoursStartUtc"] = "25:00" });
         await ExpectError("log_activity", new() { ["eventType"] = "TimerSession" });
         await ExpectError("log_activity", new() { ["eventType"] = "HabitPlus", ["boardItemId"] = Guid.NewGuid() });
+        await ExpectError("log_activity", new() { ["eventType"] = "HabitPlus", ["date"] = "2999-01-01" });
         await ExpectError("log_timer_session", new() { ["durationSeconds"] = 60, ["boardItemId"] = Guid.NewGuid() });
         await ExpectError("log_timer_session", new() { ["durationSeconds"] = 60, ["customLabel"] = new string('x', 501) });
         await ExpectError("set_checklist", new() { ["section"] = "Todo", ["itemId"] = item.Id, ["json"] = "not json" });

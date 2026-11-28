@@ -4,6 +4,8 @@ namespace App.Shared.RCL.Services;
 
 public interface IAiAssistantService
 {
+    Task<AiModelsResponse> GetModelsAsync(AiModelsRequest request, CancellationToken cancellationToken = default);
+
     Task<AiTestConnectionResponse> TestConnectionAsync(AiTestConnectionRequest request, CancellationToken cancellationToken = default);
 
     Task<AiChatResponse> SendChatAsync(AiChatRequest request, CancellationToken cancellationToken = default);

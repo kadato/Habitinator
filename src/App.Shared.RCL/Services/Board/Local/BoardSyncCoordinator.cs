@@ -54,7 +54,24 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
         _logger = logger;
         _services = services;
         _isOfflineProbe = isOfflineProbe ?? (() => false);
-        _ = Task.Run(() => PeriodicLoopAsync(_appStopping.Token), _appStopping.Token);
+        _ = Task.Run(MonitorPeriodicLoopAsync, _appStopping.Token);
+    }
+
+    /// <summary>Runs the periodic loop and observes failures instead of dropping the task.</summary>
+    private async Task MonitorPeriodicLoopAsync()
+    {
+        try
+        {
+            await PeriodicLoopAsync(_appStopping.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Shutdown.
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "The board sync loop stopped unexpectedly.");
+        }
     }
 
     public void RequestSync(bool notifyOnProgress = true)
@@ -175,7 +192,7 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
                 _status.SetLastSynced(DateTimeOffset.UtcNow);
                 if (notifyOnProgress)
                 {
-                    _ = _refresh.NotifyFromRemoteAsync(cancellationToken);
+                    _ = NotifyRefreshInBackgroundAsync(cancellationToken);
                 }
             }
 
@@ -343,6 +360,22 @@ public sealed partial class BoardSyncCoordinator : IBoardSyncRequestor, IDisposa
         catch (OperationCanceledException)
         {
             // Shutdown.
+        }
+    }
+
+    private async Task NotifyRefreshInBackgroundAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _refresh.NotifyFromRemoteAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Shutdown.
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Notifying board refresh subscribers failed.");
         }
     }
 

@@ -2,98 +2,131 @@ namespace App.Shared.RCL.Services.Board.Local;
 
 public sealed class BoardSyncStatus : IBoardSyncStatus
 {
-    private volatile bool _isOffline;
-    private volatile bool _isSyncing;
+    private readonly Lock _stateLock = new();
+    private bool _isOffline;
+    private bool _isPaused;
+    private bool _isSyncing;
+    private DateTimeOffset? _lastSyncedUtc;
+    private string? _syncProblemMessage;
+    private int _pendingCount;
 
     public bool IsOffline
     {
-        get => _isOffline;
-        private set
+        get
         {
-            if (_isOffline == value)
+            lock (_stateLock)
             {
-                return;
+                return _isOffline;
             }
-
-            _isOffline = value;
-            OnChanged();
         }
+        private set => SetBool(ref _isOffline, value);
     }
-
-    private volatile bool _isPaused;
 
     public bool IsPaused
     {
-        get => _isPaused;
-        private set
+        get
         {
-            if (_isPaused == value)
+            lock (_stateLock)
             {
-                return;
+                return _isPaused;
             }
-
-            _isPaused = value;
-            OnChanged();
         }
+        private set => SetBool(ref _isPaused, value);
     }
 
     public bool IsSyncing
     {
-        get => _isSyncing;
-        private set
+        get
         {
-            if (_isSyncing == value)
+            lock (_stateLock)
             {
-                return;
+                return _isSyncing;
             }
-
-            _isSyncing = value;
-            OnChanged();
         }
+        private set => SetBool(ref _isSyncing, value);
     }
 
     public DateTimeOffset? LastSyncedUtc
     {
-        get;
+        get
+        {
+            lock (_stateLock)
+            {
+                return _lastSyncedUtc;
+            }
+        }
         private set
         {
-            if (field == value)
+            var changed = false;
+            lock (_stateLock)
             {
-                return;
+                if (_lastSyncedUtc != value)
+                {
+                    _lastSyncedUtc = value;
+                    changed = true;
+                }
             }
 
-            field = value;
-            OnChanged();
+            if (changed)
+            {
+                OnChanged();
+            }
         }
     }
 
     public string? SyncProblemMessage
     {
-        get;
+        get
+        {
+            lock (_stateLock)
+            {
+                return _syncProblemMessage;
+            }
+        }
         private set
         {
-            if (field == value)
+            var changed = false;
+            lock (_stateLock)
             {
-                return;
+                if (!string.Equals(_syncProblemMessage, value, StringComparison.Ordinal))
+                {
+                    _syncProblemMessage = value;
+                    changed = true;
+                }
             }
 
-            field = value;
-            OnChanged();
+            if (changed)
+            {
+                OnChanged();
+            }
         }
     }
 
     public int PendingCount
     {
-        get;
+        get
+        {
+            lock (_stateLock)
+            {
+                return _pendingCount;
+            }
+        }
         private set
         {
-            if (field == value)
+            var changed = false;
+            lock (_stateLock)
             {
-                return;
+                if (_pendingCount != value)
+                {
+                    _pendingCount = value;
+                    changed = true;
+                }
             }
 
-            field = value;
-            OnChanged();
+            if (changed)
+            {
+                OnChanged();
+            }
         }
     }
 
@@ -140,9 +173,13 @@ public sealed class BoardSyncStatus : IBoardSyncStatus
 
     public void ClearSyncState()
     {
-        SetLastSynced(null);
-        SetProblem(null);
-        SetPendingCount(0);
+        lock (_stateLock)
+        {
+            _lastSyncedUtc = null;
+            _syncProblemMessage = null;
+            _pendingCount = 0;
+        }
+
         lock (_conflicts)
         {
             _conflicts.Clear();
@@ -162,6 +199,24 @@ public sealed class BoardSyncStatus : IBoardSyncStatus
         catch
         {
             UpdateOffline(false);
+        }
+    }
+
+    private void SetBool(ref bool field, bool value)
+    {
+        var changed = false;
+        lock (_stateLock)
+        {
+            if (field != value)
+            {
+                field = value;
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            OnChanged();
         }
     }
 

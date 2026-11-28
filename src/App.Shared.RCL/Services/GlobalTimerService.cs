@@ -14,36 +14,67 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
 {
     private readonly IClock _clock = clock;
     private readonly ILogger<GlobalTimerService>? _logger = logger;
+
+    /// <summary>Guards every mutable field below. Raise events after releasing the lock.</summary>
     private readonly Lock _sync = new();
+
+    private readonly Lock _heartbeatSync = new();
+
     private TimeSpan _accumulated = TimeSpan.Zero;
 
     /// <summary>Total <see cref="Elapsed" /> at which the next "time's up" event fires, when focus duration is set.</summary>
     private TimeSpan? _nextFocusMilestoneAtElapsed;
 
     private DateTimeOffset? _runningSince;
-
     private bool _pomodoroModeEnabled;
+    private PomodoroState _currentPomodoroState = PomodoroState.Idle;
+    private int _completedWorkIntervalsCount;
+    private TimeSpan? _focusAlertAfter;
+    private string? _targetType;
+    private string? _targetId;
+    private Guid? _boardItemId;
+    private bool _awaitingFocusTimeUpPrompt;
+    private TimeSpan _workDuration = TimeSpan.FromMinutes(25);
+    private TimeSpan _shortBreakDuration = TimeSpan.FromMinutes(5);
+    private TimeSpan _longBreakDuration = TimeSpan.FromMinutes(15);
+    private int _intervalsBeforeLongBreak = 4;
+    private CancellationTokenSource? _heartbeatCts;
+    private bool _disposed;
 
     public bool PomodoroModeEnabled
     {
-        get => _pomodoroModeEnabled;
+        get
+        {
+            lock (_sync)
+            {
+                return _pomodoroModeEnabled;
+            }
+        }
         set
         {
-            if (_pomodoroModeEnabled == value)
+            lock (_sync)
             {
-                return;
+                if (_pomodoroModeEnabled == value)
+                {
+                    return;
+                }
+
+                _pomodoroModeEnabled = value;
+                if (value)
+                {
+                    ResetCore();
+                    _currentPomodoroState = PomodoroState.Idle;
+                    _completedWorkIntervalsCount = 0;
+                    SetFocusAlertAfterCore(null);
+                }
+                else
+                {
+                    ResetCore();
+                }
             }
 
-            _pomodoroModeEnabled = value;
-            if (value)
-            {
-                ResetPomodoroSession();
-            }
-            else
-            {
-                Reset();
-            }
-
+            StopHeartbeat();
+            Ticked?.Invoke();
             NotifyStateChanged();
         }
     }
@@ -60,25 +91,134 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
         PomodoroModeEnabled = !PomodoroModeEnabled;
     }
 
-    public PomodoroState CurrentPomodoroState { get; private set; } = PomodoroState.Idle;
+    public PomodoroState CurrentPomodoroState
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _currentPomodoroState;
+            }
+        }
+    }
 
-    public int CompletedWorkIntervalsCount { get; private set; }
+    public int CompletedWorkIntervalsCount
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _completedWorkIntervalsCount;
+            }
+        }
+    }
 
     // Configurable durations populated from UserPreferences in the UI component
-    public TimeSpan WorkDuration { get; set; } = TimeSpan.FromMinutes(25);
+    public TimeSpan WorkDuration
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _workDuration;
+            }
+        }
+        set
+        {
+            lock (_sync)
+            {
+                _workDuration = value;
+            }
+        }
+    }
 
-    public TimeSpan ShortBreakDuration { get; set; } = TimeSpan.FromMinutes(5);
+    public TimeSpan ShortBreakDuration
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _shortBreakDuration;
+            }
+        }
+        set
+        {
+            lock (_sync)
+            {
+                _shortBreakDuration = value;
+            }
+        }
+    }
 
-    public TimeSpan LongBreakDuration { get; set; } = TimeSpan.FromMinutes(15);
+    public TimeSpan LongBreakDuration
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _longBreakDuration;
+            }
+        }
+        set
+        {
+            lock (_sync)
+            {
+                _longBreakDuration = value;
+            }
+        }
+    }
 
-    public int IntervalsBeforeLongBreak { get; set; } = 4;
+    public int IntervalsBeforeLongBreak
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _intervalsBeforeLongBreak;
+            }
+        }
+        set
+        {
+            lock (_sync)
+            {
+                _intervalsBeforeLongBreak = Math.Max(1, value);
+            }
+        }
+    }
 
-    public string? TargetType { get; private set; }
+    public string? TargetType
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _targetType;
+            }
+        }
+    }
 
-    public string? TargetId { get; private set; }
+    public string? TargetId
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _targetId;
+            }
+        }
+    }
 
     /// <summary>When the target is a board row, the item id. Otherwise null, as in a free-text session.</summary>
-    public Guid? BoardItemId { get; private set; }
+    public Guid? BoardItemId
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _boardItemId;
+            }
+        }
+    }
 
     /// <summary>
     ///     Optional total elapsed length at which a "time's up" event may fire until <see cref="Stop" />.
@@ -86,16 +226,26 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
     /// </summary>
     public TimeSpan? FocusAlertAfter
     {
-        get;
+        get
+        {
+            lock (_sync)
+            {
+                return _focusAlertAfter;
+            }
+        }
         set
         {
-            if (field == value)
+            lock (_sync)
             {
-                return;
+                if (_focusAlertAfter == value)
+                {
+                    return;
+                }
+
+                _focusAlertAfter = value;
+                RearmFocusMilestoneCore();
             }
 
-            field = value;
-            RearmFocusMilestone();
             NotifyStateChanged();
         }
     }
@@ -115,7 +265,16 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
     ///     A "time's up" dialog is showing. The stopwatch keeps running. The user must log, pick not done, or, if
     ///     misrouted, use <see cref="Start" /> which dismisses the prompt the same as not done.
     /// </summary>
-    public bool AwaitingFocusTimeUpPrompt { get; private set; }
+    public bool AwaitingFocusTimeUpPrompt
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _awaitingFocusTimeUpPrompt;
+            }
+        }
+    }
 
     public TimeSpan Elapsed
     {
@@ -123,9 +282,7 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
         {
             lock (_sync)
             {
-                return _runningSince.HasValue
-                    ? _accumulated + (_clock.UtcNow - _runningSince.Value)
-                    : _accumulated;
+                return ElapsedCore();
             }
         }
     }
@@ -134,17 +291,22 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
     ///     Captures the current session for the local store. The snapshot holds the
     ///     live elapsed time, so call this before the app suspends or closes.
     /// </summary>
-    public TimerSessionSnapshot CaptureState() =>
-        new(
-            Elapsed.Ticks,
-            TargetType,
-            TargetId,
-            BoardItemId,
-            FocusAlertAfter?.Ticks,
-            _clock.UtcNow,
-            PomodoroModeEnabled,
-            CurrentPomodoroState.ToString(),
-            CompletedWorkIntervalsCount);
+    public TimerSessionSnapshot CaptureState()
+    {
+        lock (_sync)
+        {
+            return new TimerSessionSnapshot(
+                ElapsedCore().Ticks,
+                _targetType,
+                _targetId,
+                _boardItemId,
+                _focusAlertAfter?.Ticks,
+                _clock.UtcNow,
+                _pomodoroModeEnabled,
+                _currentPomodoroState.ToString(),
+                _completedWorkIntervalsCount);
+        }
+    }
 
     /// <summary>
     ///     Restores a saved session paused. A running timer never resumes on its own
@@ -158,38 +320,45 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
             return false;
         }
 
-        if (IsRunning)
-        {
-            return false;
-        }
-
         lock (_sync)
         {
+            if (_runningSince.HasValue)
+            {
+                return false;
+            }
+
             _accumulated = TimeSpan.FromTicks(Math.Max(0, snapshot.ElapsedTicks));
             _runningSince = null;
             _nextFocusMilestoneAtElapsed = null;
+
+            // Bypass the mode setter. It resets the session, which would wipe the
+            // elapsed time restored above.
+            _pomodoroModeEnabled = snapshot.PomodoroModeEnabled;
+            _currentPomodoroState = Enum.TryParse<PomodoroState>(snapshot.PomodoroStateName, out var state)
+                ? state
+                : PomodoroState.Idle;
+            _completedWorkIntervalsCount = Math.Max(0, snapshot.CompletedIntervals);
+
+            if (snapshot.TargetType is null or "Session")
+            {
+                _targetType = string.IsNullOrWhiteSpace(snapshot.TargetId) ? null : "Session";
+                _targetId = string.IsNullOrWhiteSpace(snapshot.TargetId) ? null : snapshot.TargetId.Trim();
+                _boardItemId = null;
+            }
+            else if (snapshot.TargetId is not null)
+            {
+                _targetType = snapshot.TargetType;
+                _targetId = snapshot.TargetId;
+                _boardItemId = snapshot.BoardItemId;
+            }
+
+            SetFocusAlertAfterCore(
+                snapshot.FocusAlertAfterTicks is { } ticks && ticks > 0
+                    ? TimeSpan.FromTicks(ticks)
+                    : null);
         }
 
-        // Bypass the mode setter. It resets the session, which would wipe the
-        // elapsed time restored above.
-        _pomodoroModeEnabled = snapshot.PomodoroModeEnabled;
-        CurrentPomodoroState = Enum.TryParse<PomodoroState>(snapshot.PomodoroStateName, out var state)
-            ? state
-            : PomodoroState.Idle;
-        CompletedWorkIntervalsCount = Math.Max(0, snapshot.CompletedIntervals);
-
-        if (snapshot.TargetType is null or "Session")
-        {
-            SetManualTarget(snapshot.TargetId);
-        }
-        else if (snapshot.TargetId is not null)
-        {
-            SelectTarget(snapshot.TargetType, snapshot.TargetId, snapshot.BoardItemId);
-        }
-
-        FocusAlertAfter = snapshot.FocusAlertAfterTicks is { } ticks && ticks > 0
-            ? TimeSpan.FromTicks(ticks)
-            : null;
+        NotifyStateChanged();
         return true;
     }
 
@@ -208,73 +377,78 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
     /// </summary>
     public bool TryConsumeFocusDurationReached()
     {
-        if (!IsRunning)
+        lock (_sync)
         {
-            return false;
-        }
+            if (!_runningSince.HasValue || _awaitingFocusTimeUpPrompt)
+            {
+                return false;
+            }
 
-        if (AwaitingFocusTimeUpPrompt)
-        {
-            return false;
-        }
+            if (_focusAlertAfter is not { } alert || alert <= TimeSpan.Zero)
+            {
+                return false;
+            }
 
-        if (!FocusAlertAfter.HasValue || FocusAlertAfter <= TimeSpan.Zero)
-        {
-            return false;
+            return _nextFocusMilestoneAtElapsed is { } next && ElapsedCore() >= next;
         }
-
-        if (_nextFocusMilestoneAtElapsed is null)
-        {
-            return false;
-        }
-
-        return Elapsed >= _nextFocusMilestoneAtElapsed;
     }
 
     public void SelectTarget(string targetType, string targetId, Guid? boardItemId = null)
     {
-        // Don't change target while timer is running - preserve the session target
-        if (IsRunning)
+        lock (_sync)
         {
-            return;
+            // Don't change the target while the timer is running. Keep the session target.
+            if (_runningSince.HasValue)
+            {
+                return;
+            }
+
+            _targetType = targetType;
+            _targetId = targetId;
+            _boardItemId = boardItemId;
         }
 
-        TargetType = targetType;
-        TargetId = targetId;
-        BoardItemId = boardItemId;
         NotifyStateChanged();
     }
 
     /// <summary>Sets a user-entered focus label, or clears the target when the label is empty.</summary>
     public void SetManualTarget(string? label)
     {
-        if (string.IsNullOrWhiteSpace(label))
+        lock (_sync)
         {
-            TargetType = null;
-            TargetId = null;
-            BoardItemId = null;
-            NotifyStateChanged();
-            return;
+            if (string.IsNullOrWhiteSpace(label))
+            {
+                _targetType = null;
+                _targetId = null;
+                _boardItemId = null;
+            }
+            else
+            {
+                _targetType = "Session";
+                _targetId = label.Trim();
+                _boardItemId = null;
+            }
         }
 
-        TargetType = "Session";
-        TargetId = label.Trim();
-        BoardItemId = null;
         NotifyStateChanged();
     }
 
     public event Action? Ticked;
-    private CancellationTokenSource? _heartbeatCts;
 
     private void StartHeartbeat()
     {
-        if (_heartbeatCts is not null)
+        CancellationToken token;
+        lock (_heartbeatSync)
         {
-            return;
+            if (_heartbeatCts is not null || _disposed)
+            {
+                return;
+            }
+
+            _heartbeatCts = new CancellationTokenSource();
+            token = _heartbeatCts.Token;
         }
 
-        _heartbeatCts = new CancellationTokenSource();
-        var token = _heartbeatCts.Token;
         _ = Task.Run(async () =>
         {
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
@@ -306,48 +480,54 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
 
     private void StopHeartbeat()
     {
-        if (_heartbeatCts is null)
+        CancellationTokenSource? cts;
+        lock (_heartbeatSync)
+        {
+            cts = _heartbeatCts;
+            _heartbeatCts = null;
+        }
+
+        if (cts is null)
         {
             return;
         }
 
-        _heartbeatCts.Cancel();
-        _heartbeatCts.Dispose();
-        _heartbeatCts = null;
+        cts.Cancel();
+        cts.Dispose();
     }
 
     public void Start()
     {
-        if (IsRunning)
-        {
-            return;
-        }
-
-        if (AwaitingFocusTimeUpPrompt)
-        {
-            ResumeAfterFocusPromptNotDone();
-            return;
-        }
-
-        if (PomodoroModeEnabled && CurrentPomodoroState == PomodoroState.Idle)
-        {
-            CurrentPomodoroState = PomodoroState.Work;
-            FocusAlertAfter = WorkDuration;
-        }
-
-        if (_nextFocusMilestoneAtElapsed is null
-            && FocusAlertAfter is { } f
-            && f > TimeSpan.Zero)
-        {
-            lock (_sync)
-            {
-                _nextFocusMilestoneAtElapsed ??= _accumulated + f;
-            }
-        }
-
         lock (_sync)
         {
-            _runningSince = _clock.UtcNow;
+            if (_runningSince.HasValue)
+            {
+                return;
+            }
+
+            if (_awaitingFocusTimeUpPrompt)
+            {
+                _awaitingFocusTimeUpPrompt = false;
+                _nextFocusMilestoneAtElapsed = null;
+                _runningSince = _clock.UtcNow;
+            }
+            else
+            {
+                if (_pomodoroModeEnabled && _currentPomodoroState == PomodoroState.Idle)
+                {
+                    _currentPomodoroState = PomodoroState.Work;
+                    SetFocusAlertAfterCore(_workDuration);
+                }
+
+                if (_nextFocusMilestoneAtElapsed is null
+                    && _focusAlertAfter is { } alert
+                    && alert > TimeSpan.Zero)
+                {
+                    _nextFocusMilestoneAtElapsed = _accumulated + alert;
+                }
+
+                _runningSince = _clock.UtcNow;
+            }
         }
 
         StartHeartbeat();
@@ -361,23 +541,19 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
     /// </summary>
     public void ResumeAfterFocusPromptNotDone()
     {
-        if (!AwaitingFocusTimeUpPrompt)
-        {
-            return;
-        }
-
-        AwaitingFocusTimeUpPrompt = false;
         lock (_sync)
         {
+            if (!_awaitingFocusTimeUpPrompt)
+            {
+                return;
+            }
+
+            _awaitingFocusTimeUpPrompt = false;
             _nextFocusMilestoneAtElapsed = null;
+            _runningSince ??= _clock.UtcNow;
         }
 
-        if (!IsRunning)
-        {
-            _runningSince = _clock.UtcNow;
-            StartHeartbeat();
-        }
-
+        StartHeartbeat();
         Ticked?.Invoke();
         NotifyStateChanged();
     }
@@ -388,39 +564,28 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
     /// </summary>
     public void PauseForFocusTimeUp()
     {
-        if (!IsRunning)
+        lock (_sync)
         {
-            return;
+            if (!_runningSince.HasValue)
+            {
+                return;
+            }
+
+            _awaitingFocusTimeUpPrompt = true;
         }
 
-        AwaitingFocusTimeUpPrompt = true;
         NotifyStateChanged();
     }
 
     public void Pause()
     {
         StopHeartbeat();
-        DateTimeOffset? runningSince;
         lock (_sync)
         {
-            runningSince = _runningSince;
-        }
-
-        if (runningSince is not { } started)
-        {
-            return;
-        }
-
-        lock (_sync)
-        {
-            // Re-check under lock so a concurrent Start cannot lose time.
-            if (_runningSince is not { } current || current != started)
+            if (!PauseCore())
             {
                 return;
             }
-
-            _accumulated += _clock.UtcNow - current;
-            _runningSince = null;
         }
 
         Ticked?.Invoke();
@@ -430,11 +595,11 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
     public TimeSpan Stop()
     {
         StopHeartbeat();
-        AwaitingFocusTimeUpPrompt = false;
-        Pause();
         TimeSpan duration;
         lock (_sync)
         {
+            PauseCore();
+            _awaitingFocusTimeUpPrompt = false;
             duration = _accumulated;
             _accumulated = TimeSpan.Zero;
             _runningSince = null;
@@ -452,13 +617,9 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
     public void Reset()
     {
         StopHeartbeat();
-        AwaitingFocusTimeUpPrompt = false;
-        Pause();
         lock (_sync)
         {
-            _accumulated = TimeSpan.Zero;
-            _runningSince = null;
-            _nextFocusMilestoneAtElapsed = null;
+            ResetCore();
         }
 
         Ticked?.Invoke();
@@ -470,124 +631,196 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
     /// </summary>
     public void ClearTargetAndFocus()
     {
-        FocusAlertAfter = null;
         lock (_sync)
         {
+            if (_focusAlertAfter is not null)
+            {
+                SetFocusAlertAfterCore(null);
+            }
+
             _nextFocusMilestoneAtElapsed = null;
+            if (!_pomodoroModeEnabled)
+            {
+                _targetType = null;
+                _targetId = null;
+                _boardItemId = null;
+            }
         }
-        if (!PomodoroModeEnabled)
-        {
-            TargetType = null;
-            TargetId = null;
-            BoardItemId = null;
-        }
+
         NotifyStateChanged();
     }
 
     public void IncrementCompletedIntervals()
     {
-        CompletedWorkIntervalsCount++;
+        lock (_sync)
+        {
+            _completedWorkIntervalsCount++;
+        }
     }
 
     public void TransitionToBreak()
     {
-        var cycleNum = CompletedWorkIntervalsCount;
-        if (cycleNum > 0 && cycleNum % IntervalsBeforeLongBreak == 0)
+        lock (_sync)
         {
-            CurrentPomodoroState = PomodoroState.LongBreak;
-            FocusAlertAfter = LongBreakDuration;
+            var cycleNum = _completedWorkIntervalsCount;
+            if (cycleNum > 0 && cycleNum % _intervalsBeforeLongBreak == 0)
+            {
+                _currentPomodoroState = PomodoroState.LongBreak;
+                SetFocusAlertAfterCore(_longBreakDuration);
+            }
+            else
+            {
+                _currentPomodoroState = PomodoroState.ShortBreak;
+                SetFocusAlertAfterCore(_shortBreakDuration);
+            }
+
+            ResetCore();
         }
-        else
-        {
-            CurrentPomodoroState = PomodoroState.ShortBreak;
-            FocusAlertAfter = ShortBreakDuration;
-        }
-        Reset();
+
+        StopHeartbeat();
+        Ticked?.Invoke();
+        NotifyStateChanged();
     }
 
     public void TransitionToWork()
     {
-        CurrentPomodoroState = PomodoroState.Work;
-        FocusAlertAfter = WorkDuration;
-        Reset();
+        lock (_sync)
+        {
+            _currentPomodoroState = PomodoroState.Work;
+            SetFocusAlertAfterCore(_workDuration);
+            ResetCore();
+        }
+
+        StopHeartbeat();
+        Ticked?.Invoke();
+        NotifyStateChanged();
     }
 
     public void ResetPomodoroSession()
     {
-        Reset();
-        CurrentPomodoroState = PomodoroState.Idle;
-        CompletedWorkIntervalsCount = 0;
-        FocusAlertAfter = null;
+        lock (_sync)
+        {
+            ResetCore();
+            _currentPomodoroState = PomodoroState.Idle;
+            _completedWorkIntervalsCount = 0;
+            SetFocusAlertAfterCore(null);
+        }
+
+        StopHeartbeat();
+        Ticked?.Invoke();
+        NotifyStateChanged();
     }
 
     public void ResetSession()
     {
-        if (PomodoroModeEnabled)
-        {
-            ResetPomodoroSession();
-        }
-        else
-        {
-            Reset();
-        }
-    }
-
-    private void RearmFocusMilestone()
-    {
-        if (!FocusAlertAfter.HasValue || FocusAlertAfter <= TimeSpan.Zero)
-        {
-            lock (_sync)
-            {
-                _nextFocusMilestoneAtElapsed = null;
-            }
-
-            return;
-        }
-
-        var elapsed = Elapsed;
         lock (_sync)
         {
-            _nextFocusMilestoneAtElapsed = elapsed + FocusAlertAfter.Value;
+            if (_pomodoroModeEnabled)
+            {
+                ResetCore();
+                _currentPomodoroState = PomodoroState.Idle;
+                _completedWorkIntervalsCount = 0;
+                SetFocusAlertAfterCore(null);
+            }
+            else
+            {
+                ResetCore();
+            }
         }
+
+        StopHeartbeat();
+        Ticked?.Invoke();
+        NotifyStateChanged();
+    }
+
+    /// <summary>Rearms the milestone from the current elapsed time. Caller must hold <see cref="_sync" />.</summary>
+    private void SetFocusAlertAfterCore(TimeSpan? value)
+    {
+        _focusAlertAfter = value;
+        RearmFocusMilestoneCore();
+    }
+
+    /// <summary>Rearms the milestone from the current elapsed time. Caller must hold <see cref="_sync" />.</summary>
+    private void RearmFocusMilestoneCore()
+    {
+        _nextFocusMilestoneAtElapsed = _focusAlertAfter is { } alert && alert > TimeSpan.Zero
+            ? ElapsedCore() + alert
+            : null;
+    }
+
+    /// <summary>Computes the live elapsed time. Caller must hold <see cref="_sync" />.</summary>
+    private TimeSpan ElapsedCore() =>
+        _runningSince.HasValue
+            ? _accumulated + (_clock.UtcNow - _runningSince.Value)
+            : _accumulated;
+
+    /// <summary>Accumulates the running span and pauses. Caller must hold <see cref="_sync" />.</summary>
+    /// <returns>True when a running session was paused.</returns>
+    private bool PauseCore()
+    {
+        if (_runningSince is not { } started)
+        {
+            return false;
+        }
+
+        _accumulated += _clock.UtcNow - started;
+        _runningSince = null;
+        return true;
+    }
+
+    /// <summary>Pauses and clears the session. Caller must hold <see cref="_sync" />.</summary>
+    private void ResetCore()
+    {
+        PauseCore();
+        _awaitingFocusTimeUpPrompt = false;
+        _accumulated = TimeSpan.Zero;
+        _runningSince = null;
+        _nextFocusMilestoneAtElapsed = null;
     }
 
     public string GetDisplayTime()
     {
-        if (PomodoroModeEnabled)
+        lock (_sync)
         {
-            if (CurrentPomodoroState == PomodoroState.Idle)
+            if (_pomodoroModeEnabled)
             {
-                return FormatTimeSpan(WorkDuration);
-            }
-
-            if (FocusAlertAfter.HasValue)
-            {
-                var remaining = FocusAlertAfter.Value - Elapsed;
-                if (remaining < TimeSpan.Zero)
+                if (_currentPomodoroState == PomodoroState.Idle)
                 {
-                    remaining = TimeSpan.Zero;
+                    return FormatTimeSpan(_workDuration);
                 }
-                return FormatTimeSpan(remaining);
+
+                if (_focusAlertAfter.HasValue)
+                {
+                    var remaining = _focusAlertAfter.Value - ElapsedCore();
+                    if (remaining < TimeSpan.Zero)
+                    {
+                        remaining = TimeSpan.Zero;
+                    }
+                    return FormatTimeSpan(remaining);
+                }
             }
+            return FormatTimeSpan(ElapsedCore());
         }
-        return FormatTimeSpan(Elapsed);
     }
 
     public string StatusLabel
     {
         get
         {
-            if (PomodoroModeEnabled)
+            lock (_sync)
             {
-                return CurrentPomodoroState switch
+                if (_pomodoroModeEnabled)
                 {
-                    PomodoroState.Work => "Focusing",
-                    PomodoroState.ShortBreak => "Short Break",
-                    PomodoroState.LongBreak => "Long Break",
-                    _ => "Get Ready"
-                };
+                    return _currentPomodoroState switch
+                    {
+                        PomodoroState.Work => "Focusing",
+                        PomodoroState.ShortBreak => "Short Break",
+                        PomodoroState.LongBreak => "Long Break",
+                        _ => "Get Ready"
+                    };
+                }
+                return "Focusing";
             }
-            return "Focusing";
         }
     }
 
@@ -602,6 +835,11 @@ public sealed class GlobalTimerService(IClock clock, ILogger<GlobalTimerService>
 
     public void Dispose()
     {
+        lock (_heartbeatSync)
+        {
+            _disposed = true;
+        }
+
         StopHeartbeat();
     }
 }

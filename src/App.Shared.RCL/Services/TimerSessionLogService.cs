@@ -1,5 +1,7 @@
 using App.Shared.RCL.Models;
 
+using Microsoft.Extensions.Logging;
+
 namespace App.Shared.RCL.Services;
 
 public sealed class TimerSessionLogService(
@@ -7,7 +9,8 @@ public sealed class TimerSessionLogService(
     IBoardDataService boardData,
     IUserActivityLogService userActivityLog,
     IRemoteBoardRefreshService remoteBoardRefresh,
-    IActivityStatisticsReader? statsReader = null) : ITimerSessionLogService
+    IActivityStatisticsReader? statsReader = null,
+    ILogger<TimerSessionLogService>? logger = null) : ITimerSessionLogService
 {
     public async Task<TimerSessionLogResult> LogStoppedSessionAsync(
         TimeSpan duration,
@@ -34,8 +37,9 @@ public sealed class TimerSessionLogService(
                     _ = NotifyRefreshInBackgroundAsync();
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                logger?.LogWarning(ex, "Updating the timer target on the board failed.");
                 boardError = true;
             }
         }
@@ -48,9 +52,10 @@ public sealed class TimerSessionLogService(
                 .ConfigureAwait(false);
             statsReader?.InvalidateCache();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             // Statistics persistence is best-effort. Board feedback is primary.
+            logger?.LogDebug(ex, "Persisting the timer session activity failed.");
         }
 
         if (boardError)
@@ -82,9 +87,10 @@ public sealed class TimerSessionLogService(
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             await remoteBoardRefresh.NotifyFromRemoteAsync(cts.Token).ConfigureAwait(false);
         }
-        catch
+        catch (Exception ex)
         {
             // The periodic sync and the error toast already cover failures.
+            logger?.LogDebug(ex, "Notifying board refresh after a timer log failed.");
         }
     }
 

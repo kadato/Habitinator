@@ -2,6 +2,7 @@ using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
 
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 
 using MudBlazor;
 
@@ -20,6 +21,7 @@ public abstract class AutosaveEditDialogBase<TResult> : ComponentBase, IAsyncDis
     [Inject] protected IUserNotifier Notifier { get; set; } = default!;
     [Inject] protected IUndoService UndoService { get; set; } = default!;
     [Inject] protected IBoardDataService BoardData { get; set; } = default!;
+    [Inject] protected ILogger<AutosaveEditDialogBase<TResult>> Logger { get; set; } = default!;
 
     /// <summary>Label of the single undo entry registered when the dialog session ends.</summary>
     protected abstract string BatchDescription { get; }
@@ -195,9 +197,11 @@ public abstract class AutosaveEditDialogBase<TResult> : ComponentBase, IAsyncDis
                 _dirty = false;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Dialog is gone. There is nowhere left to surface the error.
+            // The dialog is gone, so there is no place for a toast. Keep the
+            // failure in the log instead of losing it silently.
+            Logger.LogWarning(ex, "Final autosave failed while the dialog closed.");
         }
 
         EndSession();

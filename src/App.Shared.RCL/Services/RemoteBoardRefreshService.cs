@@ -1,6 +1,8 @@
+using Microsoft.Extensions.Logging;
+
 namespace App.Shared.RCL.Services;
 
-public sealed class RemoteBoardRefreshService : IRemoteBoardRefreshService
+public sealed class RemoteBoardRefreshService(ILogger<RemoteBoardRefreshService>? logger = null) : IRemoteBoardRefreshService
 {
     private readonly List<Func<Task>> _callbacks = [];
     private readonly System.Threading.Lock _lock = new();
@@ -47,9 +49,10 @@ public sealed class RemoteBoardRefreshService : IRemoteBoardRefreshService
                 {
                     await fn();
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // best-effort. Other subscribers still run
+                    // Keep going. One bad subscriber must not block the others.
+                    logger?.LogDebug(ex, "A board refresh subscriber failed.");
                 }
             }
         }

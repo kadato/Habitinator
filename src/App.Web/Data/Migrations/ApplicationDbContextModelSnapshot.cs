@@ -17,7 +17,7 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261127115859_AddAiUsageDaily";
+    public override string LastMigrationId => "20261128071349_AddDemoGuestClones";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -276,6 +276,21 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.ToTable("BoardRequestIdempotencies");
             });
 
+        modelBuilder.Entity("App.Web.Data.DemoGuestCloneEntity", b =>
+            {
+                b.Property<Guid>("UserId")
+                    .HasColumnType("uuid");
+
+                b.Property<DateTimeOffset>("CreatedAtUtc")
+                    .HasColumnType("timestamp with time zone");
+
+                b.HasKey("UserId");
+
+                b.HasIndex("CreatedAtUtc");
+
+                b.ToTable("DemoGuestClones");
+            });
+
         modelBuilder.Entity("App.Web.Data.McpTokenEntity", b =>
             {
                 b.Property<Guid>("Id")
@@ -508,6 +523,17 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
             });
 
         modelBuilder.Entity("App.Web.Data.BoardRequestIdempotencyEntity", b =>
+            {
+                b.HasOne("App.Web.Data.ApplicationUser", "User")
+                    .WithMany()
+                    .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
+
+                b.Navigation("User");
+            });
+
+        modelBuilder.Entity("App.Web.Data.DemoGuestCloneEntity", b =>
             {
                 b.HasOne("App.Web.Data.ApplicationUser", "User")
                     .WithMany()

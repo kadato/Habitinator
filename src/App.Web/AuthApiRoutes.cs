@@ -9,7 +9,6 @@ using App.Web.Services;
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace App.Web;
 
@@ -38,8 +37,8 @@ internal static class AuthApiRoutes
     private static void MapLoginEndpoints(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPost("/api/auth/login", LoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
-        endpoints.MapPost("/api/auth/guest-jwt", GuestJwtLoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
-        endpoints.MapPost("/api/auth/guest-login", GuestLoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
+        endpoints.MapPost("/api/auth/guest-jwt", GuestJwtLoginAsync).DisableAntiforgery().RequireRateLimiting("guest");
+        endpoints.MapPost("/api/auth/guest-login", GuestLoginAsync).DisableAntiforgery().RequireRateLimiting("guest");
         endpoints.MapPost("/api/auth/cookie-login", CookieLoginAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapPost("/api/auth/cookie-logout", CookieLogoutAsync).DisableAntiforgery().RequireRateLimiting("auth");
         endpoints.MapGet("/api/auth/status", GetStatus).RequireRateLimiting("api");
@@ -260,28 +259,14 @@ internal static class AuthApiRoutes
     }
 
     private static async Task<IResult> GuestJwtLoginAsync(
-        HttpContext httpContext,
-        SignInManager<ApplicationUser> signInManager,
+        DemoGuestCloneService clones,
         JwtTokenService jwtTokenService,
-        IOptions<DemoUserOptions> demoOptions,
-        ILoggerFactory loggerFactory)
+        CancellationToken cancellationToken)
     {
-        var logger = loggerFactory.CreateLogger("AuthApiRoutes");
-        var user = await FindOrRecoverDemoGuestAsync(httpContext.RequestServices, logger, httpContext.RequestAborted);
+        var user = await clones.CreateAsync(cancellationToken);
         if (user is null)
         {
             return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
-        }
-
-        var loginResult = await signInManager.PasswordSignInAsync(
-            user,
-            demoOptions.Value.Password,
-            false,
-            true);
-
-        if (!loginResult.Succeeded)
-        {
-            return Results.Unauthorized();
         }
 
         var token = jwtTokenService.CreateToken(user);
@@ -291,16 +276,17 @@ internal static class AuthApiRoutes
     private static async Task<IResult> GuestLoginAsync(
         HttpContext httpContext,
         SignInManager<ApplicationUser> signInManager,
-        ILoggerFactory loggerFactory)
+        UserManager<ApplicationUser> userManager,
+        DemoGuestCloneService clones)
     {
-        var logger = loggerFactory.CreateLogger("AuthApiRoutes");
-        var guestUser = await FindOrRecoverDemoGuestAsync(httpContext.RequestServices, logger, httpContext.RequestAborted);
+        var guestUser = await ResolveSignedInCloneAsync(httpContext, userManager, clones);
+        guestUser ??= await clones.CreateAsync(httpContext.RequestAborted);
         if (guestUser is null)
         {
             return Results.LocalRedirect("/auth/login?guest=missing");
         }
 
-        await signInManager.SignInAsync(guestUser, true);
+        await signInManager.SignInAsync(guestUser, isPersistent: false);
 
         var form = httpContext.Request.HasFormContentType
             ? await httpContext.Request.ReadFormAsync(httpContext.RequestAborted)
@@ -379,10 +365,28 @@ internal static class AuthApiRoutes
 
     private static async Task<IResult> CookieLogoutAsync(
         HttpContext context,
-        SignInManager<ApplicationUser> signInManager)
+        SignInManager<ApplicationUser> signInManager,
+        DemoGuestCloneService clones,
+        ILoggerFactory loggerFactory)
     {
+        var userId = AuthenticatedUserId.TryGet(context.User);
         await signInManager.SignOutAsync();
         context.Response.Cookies.Delete(ThemeCookie.Name);
+
+        if (userId is { } id)
+        {
+            try
+            {
+                await clones.DeleteAsync(id, context.RequestAborted);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                loggerFactory.CreateLogger("AuthApiRoutes").LogWarning(
+                    ex,
+                    "Deleting the demo guest copy on logout failed. Cleanup will remove it later.");
+            }
+        }
+
         return Results.LocalRedirect("/");
     }
 
@@ -408,7 +412,13 @@ internal static class AuthApiRoutes
         var result = await userManager.ChangePasswordAsync(appUser, body.CurrentPassword, body.NewPassword);
         if (!result.Succeeded)
         {
-            return Results.BadRequest(new { detail = "Password change failed. Check your current password." });
+            var detail = string.Join(" ", result.Errors.Select(e => e.Description));
+            return Results.BadRequest(new
+            {
+                detail = string.IsNullOrWhiteSpace(detail)
+                    ? "Password change failed. Check your current password."
+                    : detail
+            });
         }
 
         await signInManager.RefreshSignInAsync(appUser);
@@ -451,6 +461,7 @@ internal static class AuthApiRoutes
 
     private static async Task<IResult> DeleteAccountAsync(
         CurrentUserId user,
+        DeleteAccountRequest request,
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager)
     {
@@ -458,6 +469,11 @@ internal static class AuthApiRoutes
         if (appUser is null)
         {
             return Results.NotFound();
+        }
+
+        if (!await userManager.CheckPasswordAsync(appUser, request.Password))
+        {
+            return Results.BadRequest(new { detail = "Current password is incorrect." });
         }
 
         var result = await userManager.DeleteAsync(appUser);
@@ -620,45 +636,23 @@ internal static class AuthApiRoutes
                 "Username", "Email", StringComparison.OrdinalIgnoreCase)
         })];
 
-    private static async Task<ApplicationUser?> FindOrRecoverDemoGuestAsync(
-        IServiceProvider services,
-        ILogger logger,
-        CancellationToken cancellationToken)
+    private static async Task<ApplicationUser?> ResolveSignedInCloneAsync(
+        HttpContext httpContext,
+        UserManager<ApplicationUser> userManager,
+        DemoGuestCloneService clones)
     {
-        var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
-        var email = services.GetRequiredService<IOptions<DemoUserOptions>>().Value.Email;
-
-        try
+        if (httpContext.User.Identity?.IsAuthenticated != true
+            || AuthenticatedUserId.TryGet(httpContext.User) is not { } userId)
         {
-            var user = await userManager.FindByEmailAsync(email);
-            if (user is not null)
-            {
-                // The startup seed may still be running. Wait for it and fill
-                // anything it missed before the login returns and the board loads.
-                await DemoDataSeeder.EnsureGuestReadyAsync(services, cancellationToken);
-                return user;
-            }
-        }
-        catch (Exception ex)
-        {
-            // The schema may not exist yet on a cold start. Fall through to the
-            // full seed, which runs migrations before creating or filling the guest.
-            logger.LogWarning(ex, "Demo guest preparation failed. Running the full demo seed.");
+            return null;
         }
 
-        await TryRecoverDemoGuestAsync(services, logger, cancellationToken);
-        return await userManager.FindByEmailAsync(email);
-    }
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        if (user is null || !await clones.IsCloneAsync(userId, httpContext.RequestAborted))
+        {
+            return null;
+        }
 
-    private static async Task TryRecoverDemoGuestAsync(IServiceProvider services, ILogger logger, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            await DemoDataSeeder.SeedAsync(services, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "On-demand demo data seeding failed.");
-        }
+        return user;
     }
 }

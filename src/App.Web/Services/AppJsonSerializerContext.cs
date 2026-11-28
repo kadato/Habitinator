@@ -23,6 +23,7 @@ namespace App.Web.Services;
 [JsonSerializable(typeof(McpTokenInfo))]
 [JsonSerializable(typeof(List<McpTokenInfo>))]
 [JsonSerializable(typeof(ChangePasswordRequest))]
+[JsonSerializable(typeof(DeleteAccountRequest))]
 [JsonSerializable(typeof(NotificationSettings))]
 [JsonSerializable(typeof(UserPreferences))]
 [JsonSerializable(typeof(AiPreferences))]

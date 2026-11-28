@@ -48,8 +48,11 @@ public sealed record ResetPasswordRequest(
     [Required, MinLength(8)] string NewPassword);
 
 [ValidatableType]
-public sealed record CreateMcpTokenRequest(int? Days = 90, string? Label = null, string? Scope = "full");
+public sealed record DeleteAccountRequest(
+    [Required] string Password);
 
+[ValidatableType]
+public sealed record CreateMcpTokenRequest(int? Days = 90, string? Label = null, string? Scope = "full");
 public sealed record CreateMcpTokenResponse(
     string Token,
     DateTime ExpiresAtUtc,

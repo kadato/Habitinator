@@ -14,13 +14,13 @@
     @if (BoardSync.IsOffline)
     {
         <MudAlert Severity="Severity.Warning" Dense="true" role="status">
-            Offline. Showing saved copy.
+            Offline. Showing the last synced data.
         </MudAlert>
     }
     @if (ImportService is RemoteUserDataImportService pendingImport && pendingImport.HasPendingImport())
     {
         <MudAlert Severity="Severity.Info" Dense="true" role="status">
-            Backup ready. Reconnect to restore.
+            Restore is queued. It runs when you reconnect.
         </MudAlert>
     }
     @if (Export is RemoteUserDataExportService cachedExport && cachedExport.TryGetCachedExport(out _, out var cachedAt) && cachedAt is not null)
@@ -39,11 +39,18 @@
                 You stay signed in.
             </MudText>
             <MudTextField T="string" Label="Current password" InputType="InputType.Password" Variant="Variant.Outlined" dense="true"
-                          Value="_currentPassword" ValueChanged="v => _currentPassword = v" />
+                          Value="_currentPassword" ValueChanged="v => _currentPassword = v"
+                          Error="_currentPasswordError is not null" ErrorText="@_currentPasswordError" />
             <MudTextField T="string" Label="New password" InputType="InputType.Password" Variant="Variant.Outlined" dense="true"
-                          Value="_newPassword" ValueChanged="v => _newPassword = v" />
+                          Value="_newPassword" ValueChanged="v => _newPassword = v"
+                          Error="_newPasswordError is not null" ErrorText="@_newPasswordError" />
             <MudTextField T="string" Label="Confirm new password" InputType="InputType.Password" Variant="Variant.Outlined" dense="true"
-                          Value="_confirmPassword" ValueChanged="v => _confirmPassword = v" />
+                          Value="_confirmPassword" ValueChanged="v => _confirmPassword = v"
+                          Error="_confirmPasswordError is not null" ErrorText="@_confirmPasswordError" />
+            @if (_passwordFormError is not null)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error" role="alert">@_passwordFormError</MudText>
+            }
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="align-self-end" Disabled="_savingPassword" OnClick="ChangePasswordAsync">
                 Change password
             </MudButton>
@@ -80,9 +87,41 @@
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
                 Delete account and all data. Cannot be undone.
             </MudText>
-            <MudButton Variant="Variant.Outlined" Color="Color.Error" Class="align-self-end" Disabled="_deleting" OnClick="DeleteAccountAsync">
-                Delete account
-            </MudButton>
+            @if (!_confirmingDelete)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" Class="align-self-end" Disabled="_deleting" OnClick="StartDeleteAccount">
+                    Delete account
+                </MudButton>
+            }
+            else
+            {
+                <div class="pa-3 rounded border" role="group" aria-label="Confirm account deletion">
+                    <MudText Typo="Typo.body2" Class="mb-3">
+                        Enter your current password to delete the account and all data. This cannot be undone.
+                    </MudText>
+                    <MudTextField T="string"
+                                  Label="Current password"
+                                  Variant="Variant.Outlined"
+                                  dense="true"
+                                  InputType="InputType.Password"
+                                  Value="_deletePassword"
+                                  ValueChanged="OnDeletePasswordChanged"
+                                  Error="@(_deleteError is not null)"
+                                  ErrorText="@_deleteError"
+                                  Disabled="_deleting" />
+                    <div class="d-flex align-center justify-end gap-2 mt-3">
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Error"
+                                   Disabled="_deleting"
+                                   OnClick="DeleteAccountAsync">
+                            Delete account
+                        </MudButton>
+                        <MudButton Variant="Variant.Text" Disabled="_deleting" OnClick="CancelDeleteAccount">
+                            Cancel
+                        </MudButton>
+                    </div>
+                </div>
+            }
         </MudStack>
     </MudPaper>
 </MudStack>
@@ -98,6 +137,13 @@
     private string _currentPassword = string.Empty;
     private string _newPassword = string.Empty;
     private string _confirmPassword = string.Empty;
+    private bool _confirmingDelete;
+    private string _deletePassword = string.Empty;
+    private string? _deleteError;
+    private string? _currentPasswordError;
+    private string? _newPasswordError;
+    private string? _confirmPasswordError;
+    private string? _passwordFormError;
     private bool _savingPassword;
     private bool _deleting;
     private bool _exporting;
@@ -173,15 +219,28 @@
     private async Task ChangePasswordAsync()
     {
         if (_savingPassword) return;
-        if (string.IsNullOrWhiteSpace(_currentPassword) || string.IsNullOrWhiteSpace(_newPassword))
+
+        _currentPasswordError = null;
+        _newPasswordError = null;
+        _confirmPasswordError = null;
+        _passwordFormError = null;
+
+        if (string.IsNullOrWhiteSpace(_currentPassword))
         {
-            await Notifier.NotifyAsync("Enter current and new password.", Severity.Warning);
-            return;
+            _currentPasswordError = "Enter your current password.";
         }
 
-        if (!_newPassword.Equals(_confirmPassword, StringComparison.Ordinal))
+        if (string.IsNullOrWhiteSpace(_newPassword))
         {
-            await Notifier.NotifyAsync("Passwords do not match.", Severity.Warning);
+            _newPasswordError = "Enter a new password.";
+        }
+        else if (!_newPassword.Equals(_confirmPassword, StringComparison.Ordinal))
+        {
+            _confirmPasswordError = "Passwords do not match.";
+        }
+
+        if (_currentPasswordError is not null || _newPasswordError is not null || _confirmPasswordError is not null)
+        {
             return;
         }
 
@@ -196,7 +255,19 @@
         }
         catch (Exception ex)
         {
-            await Notifier.NotifyAsync(ex.Message, Severity.Error);
+            if (ex.Message.Contains("current password", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("incorrect password", StringComparison.OrdinalIgnoreCase))
+            {
+                _currentPasswordError = ex.Message;
+            }
+            else if (ex.Message.Contains("password", StringComparison.OrdinalIgnoreCase))
+            {
+                _newPasswordError = ex.Message;
+            }
+            else
+            {
+                _passwordFormError = ex.Message;
+            }
         }
         finally
         {
@@ -204,25 +275,46 @@
         }
     }
 
+    private void StartDeleteAccount()
+    {
+        _confirmingDelete = true;
+        _deletePassword = string.Empty;
+        _deleteError = null;
+    }
+
+    private void CancelDeleteAccount()
+    {
+        _confirmingDelete = false;
+        _deletePassword = string.Empty;
+        _deleteError = null;
+    }
+
+    private void OnDeletePasswordChanged(string value)
+    {
+        _deletePassword = value;
+        if (_deleteError is not null)
+        {
+            _deleteError = null;
+        }
+    }
+
     private async Task DeleteAccountAsync()
     {
         if (_deleting) return;
 
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            "Delete your account?",
-            "Delete account and all data? Cannot be undone.",
-            "Delete account",
-            null,
-            "Cancel");
-        if (confirmed != true)
+        if (string.IsNullOrWhiteSpace(_deletePassword))
         {
+            _deleteError = "Enter your current password.";
             return;
         }
 
         _deleting = true;
+        _deleteError = null;
         try
         {
-            await AccountActions.DeleteAccountAsync();
+            await AccountActions.DeleteAccountAsync(_deletePassword);
+            _deletePassword = string.Empty;
+            _confirmingDelete = false;
             await Notifier.NotifyAsync("Account deleted.", Severity.Success);
             if (OnAccountDeleted.HasDelegate)
             {
@@ -233,8 +325,13 @@
                 Nav.NavigateTo("/?accountDeleted=1", forceLoad: true);
             }
         }
+        catch (InvalidOperationException ex)
+        {
+            _deleteError = ex.Message;
+        }
         catch (Exception ex)
         {
+            _deleteError = "Account deletion failed. Try again.";
             await Notifier.NotifyAsync(ex.Message, Severity.Error);
         }
         finally

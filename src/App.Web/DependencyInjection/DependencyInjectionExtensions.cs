@@ -77,6 +77,11 @@ public static class DependencyInjectionExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.AddOptions<DemoGuestCloneOptions>()
+            .BindConfiguration(DemoGuestCloneOptions.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         services.AddOptions<AiQuotaOptions>()
             .BindConfiguration(AiQuotaOptions.SectionName)
             .Validate(options => options.SharedKeyDailyRequests > 0
@@ -151,10 +156,12 @@ public static class DependencyInjectionExtensions
         services.AddScoped<BoardSyncDeltaService>();
         services.AddScoped<IInitialBoardLoadGate, InitialBoardLoadGate>();
         services.AddScoped<BoardIdempotencyService>();
+        services.AddScoped<DemoGuestCloneService>();
 
         if (!environment.IsEnvironment(AppEnvironment.Testing))
         {
             services.AddHostedService<DemoDataInitializationHostedService>();
+            services.AddHostedService<DemoGuestCloneCleanupHostedService>();
         }
 
         services.AddHostedService<BoardMaintenanceHostedService>();

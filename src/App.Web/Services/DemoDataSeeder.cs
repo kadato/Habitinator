@@ -80,7 +80,28 @@ public static class DemoDataSeeder
             return;
         }
 
+        await InvalidateTemplateSessionsAsync(userManager, guest, logger);
+
         await SeedModesAsync(demo, guest, dbContext, notifier, logger, cancellationToken);
+    }
+
+    /// <summary>
+    /// Old builds signed visitors into the shared template account. Rotating its security stamp
+    /// invalidates those cookies, so an old session cannot edit the demo board that new
+    /// visitor copies come from. JWT clients are unaffected until their token expires.
+    /// </summary>
+    private static async Task InvalidateTemplateSessionsAsync(
+        UserManager<ApplicationUser> userManager,
+        ApplicationUser guest,
+        ILogger logger)
+    {
+        var result = await userManager.UpdateSecurityStampAsync(guest);
+        if (!result.Succeeded)
+        {
+            logger.LogWarning(
+                "Could not rotate the demo template security stamp: {Errors}",
+                string.Join("; ", result.Errors.Select(e => e.Description)));
+        }
     }
 
     private static async Task EnsureMigrationsAsync(IConfiguration configuration, ILogger logger,

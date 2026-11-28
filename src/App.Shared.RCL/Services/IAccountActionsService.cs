@@ -6,7 +6,7 @@ public interface IAccountActionsService
 {
     Task ChangePasswordAsync(string currentPassword, string newPassword, CancellationToken cancellationToken = default);
 
-    Task DeleteAccountAsync(CancellationToken cancellationToken = default);
+    Task DeleteAccountAsync(string password, CancellationToken cancellationToken = default);
 
     Task<CreateMcpTokenResponse> CreateMcpTokenAsync(CreateMcpTokenRequest? request = null, CancellationToken cancellationToken = default);
 

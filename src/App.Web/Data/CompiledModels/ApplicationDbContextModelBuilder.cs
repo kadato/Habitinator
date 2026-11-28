@@ -12,7 +12,7 @@ namespace App.Web.Data.CompiledModels;
 public partial class ApplicationDbContextModel
 {
     private ApplicationDbContextModel()
-        : base(skipDetectChanges: false, modelId: new Guid("1a64f777-619b-464a-9f2e-423495e2e303"), entityTypeCount: 12)
+        : base(skipDetectChanges: false, modelId: new Guid("77f13328-c675-424d-aecc-0538c722d54b"), entityTypeCount: 13)
     {
     }
 
@@ -22,6 +22,7 @@ public partial class ApplicationDbContextModel
         var applicationUser = ApplicationUserEntityType.Create(this);
         var boardItemEntity = BoardItemEntityEntityType.Create(this);
         var boardRequestIdempotencyEntity = BoardRequestIdempotencyEntityEntityType.Create(this);
+        var demoGuestCloneEntity = DemoGuestCloneEntityEntityType.Create(this);
         var mcpTokenEntity = McpTokenEntityEntityType.Create(this);
         var userActivityEventEntity = UserActivityEventEntityEntityType.Create(this);
         var identityRole = IdentityRoleEntityType.Create(this);
@@ -34,6 +35,7 @@ public partial class ApplicationDbContextModel
         AiUsageDailyEntityEntityType.CreateForeignKey1(aiUsageDailyEntity, applicationUser);
         BoardItemEntityEntityType.CreateForeignKey1(boardItemEntity, applicationUser);
         BoardRequestIdempotencyEntityEntityType.CreateForeignKey1(boardRequestIdempotencyEntity, applicationUser);
+        DemoGuestCloneEntityEntityType.CreateForeignKey1(demoGuestCloneEntity, applicationUser);
         McpTokenEntityEntityType.CreateForeignKey1(mcpTokenEntity, applicationUser);
         UserActivityEventEntityEntityType.CreateForeignKey1(userActivityEventEntity, applicationUser);
         IdentityRoleClaimEntityType.CreateForeignKey1(identityRoleClaim, identityRole);
@@ -47,6 +49,7 @@ public partial class ApplicationDbContextModel
         ApplicationUserEntityType.CreateAnnotations(applicationUser);
         BoardItemEntityEntityType.CreateAnnotations(boardItemEntity);
         BoardRequestIdempotencyEntityEntityType.CreateAnnotations(boardRequestIdempotencyEntity);
+        DemoGuestCloneEntityEntityType.CreateAnnotations(demoGuestCloneEntity);
         McpTokenEntityEntityType.CreateAnnotations(mcpTokenEntity);
         UserActivityEventEntityEntityType.CreateAnnotations(userActivityEventEntity);
         IdentityRoleEntityType.CreateAnnotations(identityRole);

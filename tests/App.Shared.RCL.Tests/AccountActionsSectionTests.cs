@@ -76,11 +76,16 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         var cut = _ctx.Render<AccountActionsSection>();
         var buttons = cut.FindComponents<MudButton>();
 
-        // Act - Click Change Password with empty fields
+        var inputs = cut.FindComponents<MudTextField<string>>();
+
+        // Act: Click Change Password with empty fields
         await cut.InvokeAsync(() => buttons[0].Instance.OnClick.InvokeAsync(null));
 
         // Assert
-        await _notifier.Received(1).NotifyAsync("Enter current and new password.", Severity.Warning);
+        inputs[0].Instance.Error.Should().BeTrue();
+        inputs[0].Instance.ErrorText.Should().Be("Enter your current password.");
+        inputs[1].Instance.Error.Should().BeTrue();
+        inputs[1].Instance.ErrorText.Should().Be("Enter a new password.");
         await _accountActions.DidNotReceiveWithAnyArgs().ChangePasswordAsync(null!, null!);
     }
 
@@ -97,11 +102,12 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => inputs[1].Instance.ValueChanged.InvokeAsync("newPass123"));
         await cut.InvokeAsync(() => inputs[2].Instance.ValueChanged.InvokeAsync("newPassMismatch"));
 
-        // Act - click change password
+        // Act: click change password
         await cut.InvokeAsync(() => buttons[0].Instance.OnClick.InvokeAsync(null));
 
         // Assert
-        await _notifier.Received(1).NotifyAsync("Passwords do not match.", Severity.Warning);
+        inputs[2].Instance.Error.Should().BeTrue();
+        inputs[2].Instance.ErrorText.Should().Be("Passwords do not match.");
         await _accountActions.DidNotReceiveWithAnyArgs().ChangePasswordAsync(null!, null!);
     }
 
@@ -118,7 +124,7 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => inputs[1].Instance.ValueChanged.InvokeAsync("newPass123"));
         await cut.InvokeAsync(() => inputs[2].Instance.ValueChanged.InvokeAsync("newPass123"));
 
-        // Act - click change password
+        // Act: click change password
         await cut.InvokeAsync(() => buttons[0].Instance.OnClick.InvokeAsync(null));
 
         // Assert
@@ -132,7 +138,7 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task ChangePassword_Failure_ShowsErrorNotification()
+    public async Task ChangePassword_Failure_ShowsFieldLevelError()
     {
         // Arrange
         var cut = _ctx.Render<AccountActionsSection>();
@@ -147,11 +153,14 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         await cut.InvokeAsync(() => inputs[1].Instance.ValueChanged.InvokeAsync("newPass123"));
         await cut.InvokeAsync(() => inputs[2].Instance.ValueChanged.InvokeAsync("newPass123"));
 
-        // Act - click change password
+        // Act: click change password
         await cut.InvokeAsync(() => buttons[0].Instance.OnClick.InvokeAsync(null));
 
         // Assert
-        await _notifier.Received(1).NotifyAsync("Invalid current password", Severity.Error);
+        inputs[0].Instance.Error.Should().BeTrue();
+        inputs[0].Instance.ErrorText.Should().Be("Invalid current password");
+        inputs[1].Instance.Value.Should().Be("newPass123");
+        await _notifier.DidNotReceive().NotifyAsync("Invalid current password", Arg.Any<Severity>());
     }
 
     [Fact]
@@ -159,22 +168,17 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
     {
         // Arrange
         var cut = _ctx.Render<AccountActionsSection>();
-        var buttons = cut.FindComponents<MudButton>();
 
-        // Act - Click Delete Account, buttons[3]. Do not await: the handler waits on the confirmation dialog.
-        var deleteClick = cut.InvokeAsync(() => buttons[3].Instance.OnClick.InvokeAsync(null));
+        // Act: open the confirmation and make sure nothing is deleted yet
+        await cut.InvokeAsync(() => DeleteAccountButton(cut).Click());
+        await _accountActions.DidNotReceiveWithAnyArgs().DeleteAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
 
-        // Assert - confirmation dialog is shown and service is not called yet
-        await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Delete your account?"), TimeSpan.FromSeconds(5));
-        await _accountActions.DidNotReceiveWithAnyArgs().DeleteAccountAsync(Arg.Any<CancellationToken>());
-
-        // Act - Confirm deletion
-        var confirmButton = _dialogProvider.FindAll("button").First(b => b.TextContent.Contains("Delete account"));
-        await confirmButton.ClickAsync();
-        await deleteClick;
+        // Act: enter the password and confirm
+        await EnterDeletePasswordAsync(cut, "secret");
+        await cut.InvokeAsync(() => DeleteAccountButton(cut).Click());
 
         // Assert
-        await _accountActions.Received(1).DeleteAccountAsync();
+        await _accountActions.Received(1).DeleteAccountAsync("secret");
         await _notifier.Received(1).NotifyAsync("Account deleted.", Severity.Success);
 
         var nav = _ctx.Services.GetRequiredService<NavigationManager>();
@@ -186,18 +190,30 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
     {
         // Arrange
         var cut = _ctx.Render<AccountActionsSection>();
-        var buttons = cut.FindComponents<MudButton>();
 
-        // Act - Click Delete Account, buttons[3], then cancel the confirmation
-        var deleteClick = cut.InvokeAsync(() => buttons[3].Instance.OnClick.InvokeAsync(null));
-        await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Cancel"), TimeSpan.FromSeconds(5));
-        var cancelButton = _dialogProvider.FindAll("button").First(b => b.TextContent.Contains("Cancel"));
-        await cancelButton.ClickAsync();
-        await deleteClick;
+        // Act: open the confirmation and cancel it
+        await cut.InvokeAsync(() => DeleteAccountButton(cut).Click());
+        await cut.InvokeAsync(() => cut.FindAll("button").Single(b => b.TextContent.Trim() == "Cancel").Click());
 
         // Assert
-        await _accountActions.DidNotReceiveWithAnyArgs().DeleteAccountAsync(Arg.Any<CancellationToken>());
+        await _accountActions.DidNotReceiveWithAnyArgs().DeleteAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        cut.FindAll("[aria-label='Confirm account deletion']").Should().BeEmpty();
         _ctx.Services.GetRequiredService<NavigationManager>().Uri.Should().Be("http://localhost/");
+    }
+
+    [Fact]
+    public async Task DeleteAccount_Rejects_An_Empty_Password()
+    {
+        // Arrange
+        var cut = _ctx.Render<AccountActionsSection>();
+
+        // Act: open the confirmation and press Delete without a password
+        await cut.InvokeAsync(() => DeleteAccountButton(cut).Click());
+        await cut.InvokeAsync(() => DeleteAccountButton(cut).Click());
+
+        // Assert
+        await _accountActions.DidNotReceiveWithAnyArgs().DeleteAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        cut.Markup.Should().Contain("Enter your current password.");
     }
 
     [Fact]
@@ -207,39 +223,44 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         var callbackInvoked = false;
         var cut = _ctx.Render<AccountActionsSection>(parameters => parameters
             .Add(x => x.OnAccountDeleted, () => callbackInvoked = true));
-        var buttons = cut.FindComponents<MudButton>();
 
-        // Act - Click Delete Account, buttons[3], then confirm
-        var deleteClick = cut.InvokeAsync(() => buttons[3].Instance.OnClick.InvokeAsync(null));
-        await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Delete your account?"), TimeSpan.FromSeconds(5));
-        var confirmButton = _dialogProvider.FindAll("button").First(b => b.TextContent.Contains("Delete account"));
-        await confirmButton.ClickAsync();
-        await deleteClick;
+        // Act: open the confirmation, enter the password, and confirm
+        await cut.InvokeAsync(() => DeleteAccountButton(cut).Click());
+        await EnterDeletePasswordAsync(cut, "secret");
+        await cut.InvokeAsync(() => DeleteAccountButton(cut).Click());
 
         // Assert
-        await _accountActions.Received(1).DeleteAccountAsync();
+        await _accountActions.Received(1).DeleteAccountAsync("secret");
         callbackInvoked.Should().BeTrue();
     }
 
     [Fact]
-    public async Task DeleteAccount_Failure_ShowsErrorNotification()
+    public async Task DeleteAccount_Failure_ShowsAnInlineError()
     {
         // Arrange
         var cut = _ctx.Render<AccountActionsSection>();
-        var buttons = cut.FindComponents<MudButton>();
-        _accountActions.DeleteAccountAsync(Arg.Any<CancellationToken>())
+        _accountActions.DeleteAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(x => Task.FromException(new InvalidOperationException("Account deletion failed.")));
 
-        // Act - Click Delete Account, buttons[3], then confirm
-        var deleteClick = cut.InvokeAsync(() => buttons[3].Instance.OnClick.InvokeAsync(null));
-        await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Delete your account?"), TimeSpan.FromSeconds(5));
-        var confirmButton = _dialogProvider.FindAll("button").First(b => b.TextContent.Contains("Delete account"));
-        await confirmButton.ClickAsync();
-        await deleteClick;
+        // Act: open the confirmation, enter the password, and confirm
+        await cut.InvokeAsync(() => DeleteAccountButton(cut).Click());
+        await EnterDeletePasswordAsync(cut, "secret");
+        await cut.InvokeAsync(() => DeleteAccountButton(cut).Click());
 
         // Assert
-        await _notifier.Received(1).NotifyAsync("Account deletion failed.", Severity.Error);
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Account deletion failed."));
+        await _notifier.DidNotReceive().NotifyAsync("Account deletion failed.", Severity.Error);
         _ctx.Services.GetRequiredService<NavigationManager>().Uri.Should().Be("http://localhost/");
+    }
+
+    private static AngleSharp.Dom.IElement DeleteAccountButton(IRenderedComponent<AccountActionsSection> cut) =>
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Delete account");
+
+    private static Task EnterDeletePasswordAsync(IRenderedComponent<AccountActionsSection> cut, string password)
+    {
+        var inputs = cut.FindComponents<MudTextField<string>>();
+        var input = inputs[^1];
+        return cut.InvokeAsync(() => input.Instance.ValueChanged.InvokeAsync(password));
     }
 
     [Fact]
@@ -249,7 +270,7 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         var cut = _ctx.Render<AccountActionsSection>();
         var buttons = cut.FindComponents<MudButton>();
 
-        // Act - Click Export Data, buttons[1]
+        // Act: Click Export Data, buttons[1]
         await cut.InvokeAsync(() => buttons[1].Instance.OnClick.InvokeAsync(null));
 
         // Assert
@@ -265,11 +286,11 @@ public sealed class AccountActionsSectionTests : IAsyncDisposable
         var cut = _ctx.Render<AccountActionsSection>();
         var buttons = cut.FindComponents<MudButton>();
 
-        // Act - Click Import Data, buttons[2]
+        // Act: Click Import Data, buttons[2]
         await cut.InvokeAsync(() => buttons[2].Instance.OnClick.InvokeAsync(null));
 
         // Assert
-        await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Paste a backup"), TimeSpan.FromSeconds(5));
+        await _dialogProvider.WaitForStateAsync(() => _dialogProvider.Markup.Contains("Load or paste a backup"), TimeSpan.FromSeconds(5));
         _dialogProvider.Markup.Should().Contain("Restore replaces everything");
     }
 }

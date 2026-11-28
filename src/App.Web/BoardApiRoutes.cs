@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Security.Claims;
 using System.Text.Json;
 
 using App.Shared.RCL;
@@ -8,8 +7,6 @@ using App.Shared.RCL.Services;
 using App.Web.Auth;
 using App.Web.Data;
 using App.Web.Services;
-
-using Microsoft.Extensions.Options;
 
 namespace App.Web;
 
@@ -39,7 +36,7 @@ internal static class BoardApiRoutes
     {
         boardApi.MapGet("/",
             async (HttpContext http, CurrentUserId user, BoardPersistenceService boardPersistenceService,
-                IOptions<DemoUserOptions> demoOptions, CancellationToken cancellationToken) =>
+                CancellationToken cancellationToken) =>
             {
                 if (!TryParseLimit(http.Request, out var limit, out var limitError))
                 {
@@ -48,14 +45,6 @@ internal static class BoardApiRoutes
 
                 http.Response.Headers[BoardProtocolVersionHeader] = BoardProtocolVersion.Current.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 var snapshot = await boardPersistenceService.GetSnapshotAsync(user.Value, limit, cancellationToken);
-
-                // A launch can beat the background demo seed. Never hand the
-                // demo guest an empty board while the seed is still running.
-                if (IsEmpty(snapshot) && IsDemoGuest(http, demoOptions.Value))
-                {
-                    await DemoDataSeeder.EnsureGuestReadyAsync(http.RequestServices, cancellationToken);
-                    snapshot = await boardPersistenceService.GetSnapshotAsync(user.Value, limit, cancellationToken);
-                }
 
                 return Results.Json(snapshot, Json);
             });
@@ -129,16 +118,6 @@ internal static class BoardApiRoutes
                 var streaks = await boardPersistenceService.GetDailyStreakMapAsync(user.Value, cancellationToken);
                 return Results.Json(streaks, Json);
             });
-    }
-
-    private static bool IsEmpty(BoardSnapshot snapshot) =>
-        snapshot.Habits.Count == 0 && snapshot.Dailies.Count == 0 && snapshot.Todos.Count == 0;
-
-    private static bool IsDemoGuest(HttpContext http, DemoUserOptions demoOptions)
-    {
-        var email = http.User.FindFirst(ClaimTypes.Email)?.Value ?? http.User.Identity?.Name;
-        return !string.IsNullOrWhiteSpace(email)
-            && string.Equals(email, demoOptions.Email, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryParseLimit(HttpRequest request, out int? limit, out string? error)

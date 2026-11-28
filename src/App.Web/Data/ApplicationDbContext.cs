@@ -22,6 +22,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 
     public DbSet<AiUsageDailyEntity> AiUsageDaily => Set<AiUsageDailyEntity>();
 
+    public DbSet<DemoGuestCloneEntity> DemoGuestClones => Set<DemoGuestCloneEntity>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

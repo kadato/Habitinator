@@ -180,6 +180,7 @@ public partial class Program
             };
 
             options.AddPolicy("auth", context => CreateAuthPolicy(context, environment));
+            options.AddPolicy("guest", context => CreateGuestPolicy(context, environment));
             options.AddPolicy("api", context => CreateApiPolicy(context, environment));
             options.AddPolicy("ai", context => CreateAiPolicy(context, environment));
             options.AddPolicy("mcp", context => CreateMcpPolicy(context, environment));
@@ -194,6 +195,21 @@ public partial class Program
         {
             PermitLimit = limit,
             Window = TimeSpan.FromSeconds(10),
+            QueueLimit = 0
+        });
+    }
+
+    private static RateLimitPartition<string> CreateGuestPolicy(HttpContext context, IWebHostEnvironment environment)
+    {
+        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown-ip";
+
+        // A guest login builds a full demo board. Keep the window tight enough
+        // that one client cannot fill the database with copies.
+        var limit = IsDevOrTest(environment) ? 1_000 : 20;
+        return RateLimitPartition.GetFixedWindowLimiter($"guest:{ip}", _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = limit,
+            Window = TimeSpan.FromMinutes(10),
             QueueLimit = 0
         });
     }

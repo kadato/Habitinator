@@ -8,9 +8,7 @@ using System.Text.Json.Nodes;
 
 using App.Shared.RCL.Models;
 using App.Shared.RCL.Services;
-using App.Web.Data;
 
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
@@ -23,8 +21,7 @@ public sealed class AiAssistantService(
     IWebHostEnvironment environment,
     AiQuotaService quota,
     IOptions<AiQuotaOptions> quotaOptions,
-    IOptions<DemoUserOptions> demoUserOptions,
-    IDbContextFactory<ApplicationDbContext> dbFactory,
+    DemoGuestCloneService demoClones,
     IMemoryCache cache,
     ILogger<AiAssistantService> logger)
 {
@@ -2290,20 +2287,9 @@ public sealed class AiAssistantService(
 
     private async Task<bool> IsDemoGuestAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var demoEmail = demoUserOptions.Value.Email;
-        if (string.IsNullOrWhiteSpace(demoEmail))
-        {
-            return false;
-        }
-
         try
         {
-            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            var email = await db.Users.AsNoTracking()
-                .Where(u => u.Id == userId)
-                .Select(u => u.Email)
-                .FirstOrDefaultAsync(cancellationToken);
-            return string.Equals(email, demoEmail, StringComparison.OrdinalIgnoreCase);
+            return await demoClones.IsGuestAsync(userId, cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
